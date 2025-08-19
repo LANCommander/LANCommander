@@ -4,10 +4,11 @@
 @inject NavigationManager NavigationManager
 @inject SDK.Client Client
 @inject AuthenticationService AuthenticationService
+@inject LocalizationService LocalizationService
 
 <PageHeader>
     <TitleTemplate>
-        Connect
+        @LocalizationService.GetString("Connect")
     </TitleTemplate>
 </PageHeader>
 
@@ -15,23 +16,23 @@
 
     @if (OfflineModeAvailable)
     {
-        <Alert Message="The server appears to be offline. Please try reconnecting or use offline mode." Type="AlertType.Warning" ShowIcon="true" Style="margin-bottom: 16px;" />
+        <Alert Message="@LocalizationService.GetString("ServerOfflineMessage")" Type="AlertType.Warning" ShowIcon="true" Style="margin-bottom: 16px;" />
     }
 
     <FormItem>
         <Flex Gap="FlexGap.Small">
-            <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus Disabled="Connecting" />
-            <Button Type="ButtonType.Primary" HtmlType="submit" Disabled="Connecting" Loading="Connecting">Connect</Button>
+            <Input @bind-Value="ServerAddress" Placeholder="@LocalizationService.GetString("ServerAddressPlaceholder")" AutoFocus Disabled="Connecting" />
+            <Button Type="ButtonType.Primary" HtmlType="submit" Disabled="Connecting" Loading="Connecting">@LocalizationService.GetString("Connect")</Button>
 
             @if (OfflineModeAvailable)
             {
-                <Button OnClick="() => OfflineMode()">Offline</Button>
+                <Button OnClick="() => OfflineMode()">@LocalizationService.GetString("Offline")</Button>
             }
         </Flex>
     </FormItem>
 </Form>
 
-<Divider Text="Discovered" Orientation="DividerOrientation.Center" />
+<Divider Text="@LocalizationService.GetString("Discovered")" Orientation="DividerOrientation.Center" />
 
 <AntList DataSource="DiscoveredServers">
     <ChildContent>
@@ -47,17 +48,17 @@
                 <Dropdown Trigger="@(new [] { Trigger.Hover })">
                     <Overlay>
                         <Menu>
-                            <MenuItem Key="Cancel" OnClick="CancelBeacon">Cancel</MenuItem>
+                            <MenuItem Key="Cancel" OnClick="CancelBeacon">@LocalizationService.GetString("Cancel")</MenuItem>
                         </Menu>
                     </Overlay>
                     <ChildContent>
-                        <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+                        <Button Type="ButtonType.Primary" Loading="true" Disabled>@LocalizationService.GetString("Scanning")</Button>
                     </ChildContent>
                 </Dropdown>
             }
             else
             {
-                <Button Type="ButtonType.Primary" OnClick="() => ActivateBeacon()">Rescan</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => ActivateBeacon()">@LocalizationService.GetString("Rescan")</Button>
             }
         </Flex>
     </LoadMore>

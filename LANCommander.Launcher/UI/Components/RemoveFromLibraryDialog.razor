@@ -5,19 +5,20 @@
 @inject LibraryService LibraryService
 @inject IMessageService MessageService
 @inject ILogger<RemoveFromLibraryDialog> Logger
+@inject LocalizationService LocalizationService
 
 <div class="remove-from-library-dialog" style="padding: 16px;">
     <div class="game-item">
         <div class="icon">
             <MediaImage Id="@Options.IconId" />
         </div>
-        <span class="title-pre">Base Game</span>
+        <span class="title-pre">@LocalizationService.GetString("BaseGame")</span>
         <span class="title">@Options.Name</span>
     </div>
 
     @if (DependentGames.Any())
     {
-        <Divider Text="Addons to remove" Orientation="DividerOrientation.Left" Plain  />
+        <Divider Text="@LocalizationService.GetString("AddonsToRemove")" Orientation="DividerOrientation.Left" Plain  />
 
         <CheckboxButtonGroup @bind-Selected="SelectedDependentGames" DataSource="DependentGames" 
         KeySelector="a => a.Id" 
@@ -33,8 +34,8 @@
 </div>
 
 <Flex Gap="FlexGap.Middle" Style="padding: 16px; padding-top: 0px" Justify="FlexJustify.FlexEnd">
-    <Button Type="ButtonType.Primary" OnClick="RemoveFromLibrary">Remove</Button>
-    <Button OnClick="() => Close()">Close</Button>
+    <Button Type="ButtonType.Primary" OnClick="RemoveFromLibrary">@LocalizationService.GetString("Remove")</Button>
+    <Button OnClick="() => Close()">@LocalizationService.GetString("Close")</Button>
 </Flex>
 
 @code {
@@ -74,7 +75,7 @@
             }
             catch (Exception ex)
             {
-                MessageService.Error("Could not remove game");
+                MessageService.Error(LocalizationService.GetString("CouldNotRemoveGame"));
                 Logger?.LogError(ex, "Could not remove game {GameTitle}", game.Title);
             }
         }

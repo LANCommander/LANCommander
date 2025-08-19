@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="AppTitle" xml:space="preserve">
+    <value>LANCommander</value>
+  </data>
+  <data name="LauncherCrashed" xml:space="preserve">
+    <value>De launcher is gecrashed</value>
+  </data>
+  <data name="ReimportLibrary" xml:space="preserve">
+    <value>Bibliotheek opnieuw importeren</value>
+  </data>
+  <data name="ReconnectToServer" xml:space="preserve">
+    <value>Opnieuw verbinden met server</value>
+  </data>
+  <data name="ViewLibrary" xml:space="preserve">
+    <value>Bibliotheek bekijken</value>
+  </data>
+  <data name="YouDied" xml:space="preserve">
+    <value>Je bent gestorven.</value>
+  </data>
+  <data name="NewName" xml:space="preserve">
+    <value>Nieuwe naam</value>
+  </data>
+  <data name="ImportStarted" xml:space="preserve">
+    <value>Import gestart</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Verbinden</value>
+  </data>
+  <data name="BrowseDepot" xml:space="preserve">
+    <value>Depot doorbladeren</value>
+  </data>
+  <data name="CheckForUpdates" xml:space="preserve">
+    <value>Controleren op updates</value>
+  </data>
+  <data name="DownloadSize" xml:space="preserve">
+    <value>Downloadgrootte</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>Installeren</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Sluiten</value>
+  </data>
+  <data name="SpaceRequired" xml:space="preserve">
+    <value>Benodigde ruimte</value>
+  </data>
+  <data name="Addons" xml:space="preserve">
+    <value>Add-ons</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>Installatielocatie</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Handleiding</value>
+  </data>
+  <data name="ManageSaves" xml:space="preserve">
+    <value>Spelstanden beheren</value>
+  </data>
+  <data name="Modify" xml:space="preserve">
+    <value>Wijzigen</value>
+  </data>
+  <data name="BrowseFiles" xml:space="preserve">
+    <value>Bestanden doorbladeren</value>
+  </data>
+  <data name="ValidateFiles" xml:space="preserve">
+    <value>Bestanden valideren</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Verwijderen</value>
+  </data>
+  <data name="Uninstall" xml:space="preserve">
+    <value>Verwijderen</value>
+  </data>
+  <data name="RunInstallScripts" xml:space="preserve">
+    <value>Installatiescripts uitvoeren</value>
+  </data>
+  <data name="RunUninstallScripts" xml:space="preserve">
+    <value>Verwijderingsscripts uitvoeren</value>
+  </data>
+  <data name="RunNameChangeScripts" xml:space="preserve">
+    <value>Naamwijzigingsscripts uitvoeren</value>
+  </data>
+  <data name="RunKeyChangeScripts" xml:space="preserve">
+    <value>Sleutelwijzigingsscripts uitvoeren</value>
+  </data>
+  <data name="ReportIssue" xml:space="preserve">
+    <value>Probleem melden</value>
+  </data>
+  <data name="InstallGame" xml:space="preserve">
+    <value>{0} installeren</value>
+  </data>
+  <data name="ModifyGame" xml:space="preserve">
+    <value>{0} wijzigen</value>
+  </data>
+  <data name="FileConflicts" xml:space="preserve">
+    <value>Bestandsconflicten</value>
+  </data>
+  <data name="ReplaceSelected" xml:space="preserve">
+    <value>Geselecteerde vervangen</value>
+  </data>
+  <data name="UninstallGameMessageWithSaves" xml:space="preserve">
+    <value>Wil je {0} echt verwijderen? Alle lokale spelstanden worden gewist.</value>
+  </data>
+  <data name="UninstallGameMessageWithoutSaves" xml:space="preserve">
+    <value>Wil je {0} echt verwijderen?</value>
+  </data>
+  <data name="UninstallGame" xml:space="preserve">
+    <value>Spel verwijderen</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuleren</value>
+  </data>
+  <data name="RemoveGameFromLibrary" xml:space="preserve">
+    <value>Spel uit bibliotheek verwijderen</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>Versturen</value>
+  </data>
+  <data name="BaseGame" xml:space="preserve">
+    <value>Basisspel</value>
+  </data>
+  <data name="AddonsToRemove" xml:space="preserve">
+    <value>Te verwijderen add-ons</value>
+  </data>
+  <data name="CouldNotRemoveGame" xml:space="preserve">
+    <value>Kon het spel niet verwijderen</value>
+  </data>
+  <data name="IssueReported" xml:space="preserve">
+    <value>Probleem gemeld!</value>
+  </data>
+  <data name="UnknownErrorIssueNotReported" xml:space="preserve">
+    <value>Onbekende fout: probleem niet gemeld</value>
+  </data>
+  <data name="CreatedOn" xml:space="preserve">
+    <value>Aangemaakt op</value>
+  </data>
+  <data name="AreYouSureReplaceLocalSaves" xml:space="preserve">
+    <value>Weet je het zeker? Dit vervangt alle lokale spelstanden!</value>
+  </data>
+  <data name="AreYouSureDeleteSave" xml:space="preserve">
+    <value>Weet je zeker dat je deze spelstand wilt verwijderen?</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>Uploaden</value>
+  </data>
+  <data name="SaveDownloaded" xml:space="preserve">
+    <value>Spelstand gedownload!</value>
+  </data>
+  <data name="SaveDeleted" xml:space="preserve">
+    <value>Spelstand verwijderd!</value>
+  </data>
+  <data name="SaveUploaded" xml:space="preserve">
+    <value>Spelstand geüpload!</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="GroupBy" xml:space="preserve">
+    <value>Groeperen op</value>
+  </data>
+  <data name="SortBy" xml:space="preserve">
+    <value>Sorteren op</value>
+  </data>
+  <data name="Engine" xml:space="preserve">
+    <value>Engine</value>
+  </data>
+  <data name="Genre" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Platform" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="Developers" xml:space="preserve">
+    <value>Ontwikkelaars</value>
+  </data>
+  <data name="Publishers" xml:space="preserve">
+    <value>Uitgevers</value>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Spelers</value>
+  </data>
+  <data name="Minimum" xml:space="preserve">
+    <value>Minimum</value>
+  </data>
+  <data name="Maximum" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>Geïnstalleerd</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Toepassen</value>
+  </data>
+  <data name="DoYouWantToStopGame" xml:space="preserve">
+    <value>Wil je dit spel stoppen?</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Ja</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>Draait</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>Stopt</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Spelen</value>
+  </data>
+  <data name="NoActionsFound" xml:space="preserve">
+    <value>Geen acties gevonden!</value>
+  </data>
+  <data name="NoPrimaryActionFound" xml:space="preserve">
+    <value>Geen primaire actie gevonden!</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>{0} spelen</value>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Importeren: {0}</value>
+  </data>
+  <data name="StartingImport" xml:space="preserve">
+    <value>Import starten...</value>
+  </data>
+  <data name="SignInUsingProvider" xml:space="preserve">
+    <value>Inloggen met {0}</value>
+  </data>
+  <data name="CouldNotProcessLogin" xml:space="preserve">
+    <value>Kon de login niet verwerken</value>
+  </data>
+  <data name="LostConnectionRetrying" xml:space="preserve">
+    <value>Verbinding verloren, opnieuw proberen...</value>
+  </data>
+  <data name="LostConnectionRetryingWithCount" xml:space="preserve">
+    <value>Verbinding verloren, opnieuw proberen ({0}/{1})...</value>
+  </data>
+  <data name="ServerUnavailableEnablingOfflineMode" xml:space="preserve">
+    <value>Server niet beschikbaar, offline modus inschakelen</value>
+  </data>
+  <data name="ConnectionEstablished" xml:space="preserve">
+    <value>Verbinding tot stand gebracht!</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>Bezig</value>
+  </data>
+  <data name="UpNext" xml:space="preserve">
+    <value>Volgende</value>
+  </data>
+  <data name="TheQueueIsEmpty" xml:space="preserve">
+    <value>De wachtrij is leeg</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>Voltooid</value>
+  </data>
+  <data name="ViewInLibrary" xml:space="preserve">
+    <value>Bekijken in bibliotheek</value>
+  </data>
+  <data name="GameAddedToLibrary" xml:space="preserve">
+    <value>{0} is toegevoegd aan je bibliotheek!</value>
+  </data>
+  <data name="GameCouldNotBeAddedToLibrary" xml:space="preserve">
+    <value>{0} kon niet worden toegevoegd aan je bibliotheek!</value>
+  </data>
+  <data name="ServerAddress" xml:space="preserve">
+    <value>Serveradres</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Gebruikersnaam</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Wachtwoord</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Inloggen</value>
+  </data>
+  <data name="Register" xml:space="preserve">
+    <value>Registreren</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>Of</value>
+  </data>
+  <data name="WelcomeBack" xml:space="preserve">
+    <value>Welkom terug!</value>
+  </data>
+  <data name="ConfirmPassword" xml:space="preserve">
+    <value>Wachtwoord bevestigen</value>
+  </data>
+  <data name="ServerOfflineMessage" xml:space="preserve">
+    <value>De server lijkt offline te zijn...</value>
+  </data>
+  <data name="ServerAddressPlaceholder" xml:space="preserve">
+    <value>Serveradres</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="Discovered" xml:space="preserve">
+    <value>Ontdekt</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>Scannen</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>Opnieuw scannen</value>
+  </data>
+  <data name="NoResultsFound" xml:space="preserve">
+    <value>Geen resultaten gevonden</value>
+  </data>
+  <data name="ResetFilter" xml:space="preserve">
+    <value>Filter resetten</value>
+  </data>
+  <data name="Uncategorized" xml:space="preserve">
+    <value>Niet gecategoriseerd</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Opslaan</value>
+  </data>
+  <data name="Games" xml:space="preserve">
+    <value>Spellen</value>
+  </data>
+  <data name="StoragePaths" xml:space="preserve">
+    <value>Opslagpaden</value>
+  </data>
+  <data name="AddPath" xml:space="preserve">
+    <value>Pad toevoegen</value>
+  </data>
+  <data name="Media" xml:space="preserve">
+    <value>Media</value>
+  </data>
+  <data name="StoragePath" xml:space="preserve">
+    <value>Opslagpad</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="EnableScriptDebugging" xml:space="preserve">
+    <value>Script debugging inschakelen</value>
+  </data>
+  <data name="LoggingPath" xml:space="preserve">
+    <value>Loggingpad</value>
+  </data>
+  <data name="LoggingLevel" xml:space="preserve">
+    <value>Loggingniveau</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Instellingen opgeslagen!</value>
+  </data>
+  <data name="AnUnknownErrorOccurred" xml:space="preserve">
+    <value>Er is een onbekende fout opgetreden.</value>
+  </data>
+  <data name="YouAreOnLatestVersion" xml:space="preserve">
+    <value>Je hebt de nieuwste versie!</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>Bijwerken</value>
+  </data>
+  <data name="Queued" xml:space="preserve">
+    <value>In wachtrij</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>Installeren</value>
+  </data>
+  <data name="Uninstalling" xml:space="preserve">
+    <value>Verwijderen</value>
+  </data>
+  <data name="PlayTime" xml:space="preserve">
+    <value>Speeltijd</value>
+  </data>
+  <data name="LastPlayed" xml:space="preserve">
+    <value>Laatst gespeeld</value>
+  </data>
+  <data name="ReleasedOn" xml:space="preserve">
+    <value>Uitgebracht op</value>
+  </data>
+  <data name="InstallationFailed" xml:space="preserve">
+    <value>Installatie mislukt</value>
+  </data>
+  <data name="InstallationFailedMessage" xml:space="preserve">
+    <value>De installatie voor {0} is mislukt. Download opnieuw proberen?</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>Geen</value>
+  </data>
+  <data name="PlayTimeMinutes" xml:space="preserve">
+    <value>{0} minuten</value>
+  </data>
+  <data name="PlayTimeHours" xml:space="preserve">
+    <value>{0} uren</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>Nooit</value>
+  </data>
+  <data name="DepotResultsCouldNotBeFetched" xml:space="preserve">
+    <value>Kon depotresultaten niet ophalen</value>
+  </data>
+  <data name="UnexpectedErrorFetchingDepotResults" xml:space="preserve">
+    <value>Onverwachte fout bij ophalen depotresultaten</value>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Niet gevonden</value>
+  </data>
+  <data name="NotFoundMessage" xml:space="preserve">
+    <value>Sorry, er is niets op dit adres.</value>
+  </data>
+  <data name="NoResults" xml:space="preserve">
+    <value>Geen resultaten</value>
+  </data>
+  <data name="DepotEmptyOrUnauthorized" xml:space="preserve">
+    <value>Het depot is leeg of je bent niet geautoriseerd. Neem contact op met je beheerder.</value>
+  </data>
+  <data name="RemoveFromLibrary" xml:space="preserve">
+    <value>Uit bibliotheek verwijderen</value>
+  </data>
+  <data name="AddToLibrary" xml:space="preserve">
+    <value>Toevoegen aan bibliotheek</value>
+  </data>
+  <data name="Collection" xml:space="preserve">
+    <value>Verzameling</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="StartingUpLauncher" xml:space="preserve">
+    <value>Launcher v{0} opstarten...</value>
+  </data>
+  <data name="LoadingSettingsFromFile" xml:space="preserve">
+    <value>Instellingen uit bestand laden</value>
+  </data>
+  <data name="ConfiguringLogging" xml:space="preserve">
+    <value>Logging configureren...</value>
+  </data>
+  <data name="RegisteringServices" xml:space="preserve">
+    <value>Services registreren...</value>
+  </data>
+  <data name="BuildingApplication" xml:space="preserve">
+    <value>Applicatie bouwen...</value>
+  </data>
+  <data name="ImageNotFoundLocally" xml:space="preserve">
+    <value>Afbeelding lokaal niet gevonden</value>
+  </data>
+  <data name="FatalException" xml:space="preserve">
+    <value>Fatale uitzondering</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>Applicatie opstarten...</value>
+  </data>
+  <data name="ClosingApplication" xml:space="preserve">
+    <value>Applicatie sluiten...</value>
+  </data>
+  <data name="ErrorCopiedToClipboard" xml:space="preserve">
+    <value>Fout gekopieerd naar klembord!</value>
+  </data>
+  <data name="BackOnline" xml:space="preserve">
+    <value>Weer online!</value>
+  </data>
+  <data name="CouldNotReconnect" xml:space="preserve">
+    <value>Kon niet opnieuw verbinden!</value>
+  </data>
+  <data name="CouldNotReconnectMessage" xml:space="preserve">
+    <value>Kon de LANCommander-server niet bereiken. Wil je uitloggen en opnieuw proberen?</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>Uitloggen</value>
+  </data>
+  <data name="StayOffline" xml:space="preserve">
+    <value>Offline blijven</value>
+  </data>
+  <data name="ChangeName" xml:space="preserve">
+    <value>Naam wijzigen</value>
+  </data>
+  <data name="SwitchToOfflineMode" xml:space="preserve">
+    <value>Overschakelen naar offline modus</value>
+  </data>
+  <data name="YouAreCurrentlyOffline" xml:space="preserve">
+    <value>Je bent momenteel offline</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Binnenkort beschikbaar!</value>
+  </data>
+  <data name="Friends" xml:space="preserve">
+    <value>Vrienden</value>
+  </data>
+  <data name="Downloads" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Instellingen</value>
+  </data>
+  <data name="SignIn" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="SourceGame" xml:space="preserve">
+    <value>Bron spel</value>
+  </data>
+  <data name="UninstallGameMessage" xml:space="preserve">
+    <value>Wil je {0} verwijderen?</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>Er is een update voor v{0} beschikbaar. Wilt u deze downloaden en installeren?</value>
+  </data>
+  <data name="UpdateNow" xml:space="preserve">
+    <value>Nu bijwerken</value>
+  </data>
+  <data name="Depot" xml:space="preserve">
+    <value>Depot</value>
+  </data>
+  <data name="ImportComplete" xml:space="preserve">
+    <value>Import voltooid</value>
+  </data>
+  <data name="ImportFailed" xml:space="preserve">
+    <value>Import mislukt</value>
+  </data>
+  <data name="Later" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="LauncherUpdate" xml:space="preserve">
+    <value>Launcher update</value>
+  </data>
+  <data name="Library" xml:space="preserve">
+    <value>Bibliotheek</value>
+  </data>
+  <data name="LocalSize" xml:space="preserve">
+    <value>Lokale grootte</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>Verplaatsen</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Naam</value>
+  </data>
+  <data name="OriginalSize" xml:space="preserve">
+    <value>Originele grootte</value>
+  </data>
+</root> 

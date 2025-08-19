@@ -15,6 +15,7 @@
 @inject IJSRuntime JS
 @inject ILogger<MainLayout> Logger
 @inject ImportManagerService ImportManagerService
+@inject LocalizationService LocalizationService
 
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
@@ -39,13 +40,13 @@
                             }
                             else if (ConnectionState.IsConnected)
                             {
-                                <Tooltip Title="Re-import library" MouseEnterDelay="0.5">
+                                <Tooltip Title="@LocalizationService.GetString("ReimportLibrary")" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
                                 </Tooltip>
                             }
                             else if (!string.IsNullOrEmpty(Settings.Authentication.AccessToken))
                             {
-                                <Tooltip Title="Reconnect to server" MouseEnterDelay="0.5">
+                                <Tooltip Title="@LocalizationService.GetString("ReconnectToServer")" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
                                 </Tooltip>
                             }
@@ -65,7 +66,7 @@
             </Space>
         </HeaderExtraControlsLayout>
         <WindowContent>
-            <ErrorHandler Title="Launcher Crashed">
+            <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
                 <Body>
                     <AuthenticatedView NoAutoValidate="false">
                         <Authenticated>
@@ -89,7 +90,7 @@
                 </Body>
 
                 <Extra>
-                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
+                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">@LocalizationService.GetString("ViewLibrary")</Button>
                 </Extra>
             </ErrorHandler>
         </WindowContent>
@@ -111,36 +112,7 @@
 
     string RandomQuip = "";
 
-    string[] CrashQuips = new[]
-    {
-        "You Died.",
-        "Snake? SNAAAAAAKE!",
-        "WASTED",
-        "Major fracture detected",
-        "The past is a gaping hole. You try to run from it, but the more you run, the deeper, the darker, the bigger it gets.",
-        "Your town center has been destroyed",
-        "Your forces are under attack!",
-        "You have lost the lead",
-        "Terrorists Win",
-        "War... War never changes.",
-        "You have died of dysentery",
-        "You have failed to restore the books. The Ages are lost.",
-        "Player was splattered by a demon",
-        "Sure, blame it on your ISP",
-        "Baba is no more",
-        "Guests are complaining they are lost",
-        "The darkness has overcome you",
-        "Subject: Gordon Freeman. Status: Terminated",
-        "Mission failed: You were spotted.",
-        "Critical damage! Eject, eject!",
-        "Your minions are unhappy. They are leaving.",
-        "The Empire has triumphed",
-        "Your quest has ended in failure",
-        "You have been eaten by a grue",
-        "You no mess with Lo Wang!",
-        "Sam was killed. Serious carnage ensues.",
-        "Damn, those alien bastards are gonna pay for shooting up my ride"
-    };
+    string[] _crashQuips;
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,9 +141,40 @@
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
+        
+        _crashQuips = new[]
+        {
+            LocalizationService.GetString("CrashQuip_YouDied"),
+            LocalizationService.GetString("CrashQuip_Snake"),
+            LocalizationService.GetString("CrashQuip_Wasted"),
+            LocalizationService.GetString("CrashQuip_MajorFracture"),
+            LocalizationService.GetString("CrashQuip_PastIsGapingHole"),
+            LocalizationService.GetString("CrashQuip_TownCenterDestroyed"),
+            LocalizationService.GetString("CrashQuip_ForcesUnderAttack"),
+            LocalizationService.GetString("CrashQuip_LostLead"),
+            LocalizationService.GetString("CrashQuip_TerroristsWin"),
+            LocalizationService.GetString("CrashQuip_WarNeverChanges"),
+            LocalizationService.GetString("CrashQuip_DiedOfDysentery"),
+            LocalizationService.GetString("CrashQuip_FailedToRestoreBooks"),
+            LocalizationService.GetString("CrashQuip_PlayerSplattered"),
+            LocalizationService.GetString("CrashQuip_BlameISP"),
+            LocalizationService.GetString("CrashQuip_BabaNoMore"),
+            LocalizationService.GetString("CrashQuip_GuestsLost"),
+            LocalizationService.GetString("CrashQuip_DarknessOvercome"),
+            LocalizationService.GetString("CrashQuip_GordonFreemanTerminated"),
+            LocalizationService.GetString("CrashQuip_MissionFailedSpotted"),
+            LocalizationService.GetString("CrashQuip_CriticalDamageEject"),
+            LocalizationService.GetString("CrashQuip_MinionsUnhappy"),
+            LocalizationService.GetString("CrashQuip_EmpireTriumphed"),
+            LocalizationService.GetString("CrashQuip_QuestEndedFailure"),
+            LocalizationService.GetString("CrashQuip_EatenByGrue"),
+            LocalizationService.GetString("CrashQuip_NoMessWithLoWang"),
+            LocalizationService.GetString("CrashQuip_SamKilled"),
+            LocalizationService.GetString("CrashQuip_AlienBastardsPay")
+        };
 
-        var randIndex = new Random().Next(0, CrashQuips.Length - 1);
-        RandomQuip = CrashQuips[randIndex];
+        var randIndex = new Random().Next(0, _crashQuips.Length - 1);
+        RandomQuip = _crashQuips[randIndex];
     }
 
     public void Dispose()
@@ -199,7 +202,7 @@
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
 
-        MessageService.Info("Error copied to clipboard!");
+        MessageService.Info(LocalizationService.GetString("ErrorCopiedToClipboard"));
     }
 
     async Task Connect()
@@ -219,7 +222,7 @@
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
 
-            MessageService.Success("Back Online!");
+            MessageService.Success(LocalizationService.GetString("BackOnline"));
 
             ConnectionState.IsConnected = true;
             ConnectionState.OfflineModeEnabled = false;
@@ -236,11 +239,11 @@
             {
                 await ModalService.ConfirmAsync(new ConfirmOptions()
                 {
-                    Title = "Could Not Reconnect!",
+                    Title = LocalizationService.GetString("CouldNotReconnect"),
                     Icon = @<Icon Type="@IconType.Outline.ExclamationCircle"></Icon>,
-                    Content = "The LANCommander server could not be reached. Click stay offline and try later, or logout and enter your credentials.",
-                    OkText = "Logout",
-                    CancelText = "Stay Offline",
+                    Content = LocalizationService.GetString("CouldNotReconnectMessage"),
+                    OkText = LocalizationService.GetString("Logout"),
+                    CancelText = LocalizationService.GetString("StayOffline"),
                     Centered = true,
                     OnOk = async (e) =>
                     {

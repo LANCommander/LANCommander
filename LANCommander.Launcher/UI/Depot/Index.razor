@@ -10,6 +10,7 @@
 @inject KeepAliveService KeepAliveService
 @inject MessageService MessageService
 @inject ILogger<Index> Logger
+@inject LocalizationService LocalizationService
 
 <Spin Spinning="Disabled">
     <Layout>
@@ -57,12 +58,12 @@
         }
         catch (DepotNoResultsException ex)
         {
-            MessageService.Error("Depot results could not be fetched");
+            MessageService.Error(LocalizationService.GetString("DepotResultsCouldNotBeFetched"));
             Logger?.LogError(ex, "The depot returned no results");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Unexpected error fetching depot results");
+            MessageService.Error(LocalizationService.GetString("UnexpectedErrorFetchingDepotResults"));
             Logger?.LogError(ex, "Unexpected error fetching depot results");
         }
     }

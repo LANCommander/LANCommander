@@ -14,6 +14,7 @@
 @inject ModalService ModalService
 @inject ConfirmService ConfirmService
 @inject ImportService ImportService
+@inject LocalizationService LocalizationService
 
 <Layout>
     <Content Class="library">
@@ -50,39 +51,39 @@
                                     {
                                         <ConnectionStateView>
                                             <Online>
-                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">@LocalizationService.GetString("Install")</Button>
                                             </Online>
                                             <Offline>
-                                                <Tooltip Title="You are currently offline">
-                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Install</Button>
+                                                <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Install")</Button>
                                                 </Tooltip>
                                             </Offline>
                                         </ConnectionStateView>
                                     }
                                     else if (SelectedItem.State == ListItemState.Queued)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">@LocalizationService.GetString("Queued")</Button>
                                     }
                                     else if (SelectedItem.State == ListItemState.UpdateAvailable)
                                     {
                                         <ConnectionStateView>
                                             <Online>
-                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Update(SelectedItem)">Update</Button>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Update(SelectedItem)">@LocalizationService.GetString("Update")</Button>
                                             </Online>
                                             <Offline>
-                                                <Tooltip Title="You are currently offline">
-                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Update</Button>
+                                                <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Update")</Button>
                                                 </Tooltip>
                                             </Offline>
                                         </ConnectionStateView>
                                     }
                                     else if (SelectedItem.State == ListItemState.Installing)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Installing</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">@LocalizationService.GetString("Installing")</Button>
                                     }
                                     else if (SelectedItem.State == ListItemState.Uninstalling)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Uninstalling</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">@LocalizationService.GetString("Uninstalling")</Button>
                                     }
                                 </SpaceItem>
 
@@ -91,17 +92,17 @@
                                     <ConnectionStateView>
                                         <Online>
                                             <SpaceItem>
-                                                <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
+                                                <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
                                             </SpaceItem>
                                         </Online>
                                     </ConnectionStateView>
                                 }
 
                                 <SpaceItem>
-                                    <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                                    <Statistic Title="@LocalizationService.GetString("PlayTime")" Value="@GetPlayTime(SelectedGame)" />
                                 </SpaceItem>
                                 <SpaceItem>
-                                    <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                    <Statistic Title="@LocalizationService.GetString("LastPlayed")" Value="@GetLastPlayed(SelectedGame)" />
                                 </SpaceItem>
                             </Space>
                         </div>
@@ -115,7 +116,7 @@
                             @if (SelectedGame.ReleasedOn.HasValue)
                             {
                                 <div class="game-metadata-released-on">
-                                    <h3>Released On</h3>
+                                    <h3>@LocalizationService.GetString("ReleasedOn")</h3>
                                     <span>@SelectedGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
                                 </div>
                             }
@@ -123,7 +124,7 @@
                             @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
                             {
                                 <div class="game-metadata-developers">
-                                    <h3>Developers</h3>
+                                    <h3>@LocalizationService.GetString("Developers")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
                                 </div>
                             }
@@ -131,7 +132,7 @@
                             @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
                             {
                                 <div class="game-metadata-publishers">
-                                    <h3>Publishers</h3>
+                                    <h3>@LocalizationService.GetString("Publishers")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
                                 </div>
                             }
@@ -139,7 +140,7 @@
                             @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
                             {
                                 <div class="game-metadata-genres">
-                                    <h3>Genres</h3>
+                                    <h3>@LocalizationService.GetString("Genres")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
                                 </div>
                             }
@@ -147,7 +148,7 @@
                             @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
                             {
                                 <div class="game-metadata-tags">
-                                    <h3>Tags</h3>
+                                    <h3>@LocalizationService.GetString("Tags")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
                                 </div>
                             }
@@ -242,11 +243,11 @@
         {
             var modalOptions = new ModalOptions()
             {
-                Title = $"Install {item.Name}",
+                Title = LocalizationService.GetString("InstallGame", item.Name),
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
-                OkText = "Install",
+                OkText = LocalizationService.GetString("Install"),
                 Draggable = true,
                 Centered = true,
                 WrapClassName = "ant-modal-wrap-no-padding",
@@ -321,8 +322,8 @@
     async Task OnInstallFail(Data.Models.Game game)
     {
         var result = await ConfirmService.Show(
-            $"The installation for {game.Title} has failed. Retry download?",
-            "Installation Failed",
+            LocalizationService.GetString("InstallationFailedMessage", game.Title),
+            LocalizationService.GetString("InstallationFailed"),
             ConfirmButtons.RetryCancel,
             ConfirmIcon.Error
         );
@@ -376,11 +377,11 @@
             .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
             .Sum(ts => ts.Ticks));
         if (totalTime.TotalMinutes < 1)
-            return "None";
+            return LocalizationService.GetString("None");
         else if (totalTime.TotalHours < 1)
-            return totalTime.TotalMinutes.ToString("0") + " minutes";
+            return LocalizationService.GetString("PlayTimeMinutes", totalTime.TotalMinutes.ToString("0"));
         else
-            return totalTime.TotalHours.ToString("0.##") + " hours";
+            return LocalizationService.GetString("PlayTimeHours", totalTime.TotalHours.ToString("0.##"));
     }
 
     string GetLastPlayed(Data.Models.Game game)
@@ -388,7 +389,7 @@
         var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
 
         if (lastSession == null)
-            return "Never";
+            return LocalizationService.GetString("Never");
         else
             return lastSession.End.Value.ToRelativeDate();
     }

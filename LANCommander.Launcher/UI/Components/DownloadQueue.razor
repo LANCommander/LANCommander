@@ -1,12 +1,13 @@
 ﻿@using LANCommander.Launcher.Models
 @inject InstallService InstallService
 @inject NavigationManager NavigationManager
+@inject LocalizationService LocalizationService
 
 <Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
     @if (InstallService.Queue.Any(qi => qi.State))
     {
-        <h2>In Progress</h2>
+        <h2>@LocalizationService.GetString("InProgress")</h2>
         @foreach (var queueItem in InstallService.Queue.Where(qi => qi.State))
         {
             <div class="queue-item">
@@ -23,7 +24,7 @@
         }
     }
 
-    <h2>Up Next</h2>
+    <h2>@LocalizationService.GetString("UpNext")</h2>
     @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.InstallStatus.Queued))
     {
         <div class="queue-item">
@@ -41,12 +42,12 @@
 
     @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.InstallStatus.Queued))
     {
-        <Empty Simple Description="@("The queue is empty")" />
+        <Empty Simple Description="@LocalizationService.GetString("TheQueueIsEmpty")" />
     }
 
     @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.InstallStatus.Queued && qi.Status != SDK.Enums.InstallStatus.Failed && qi.Status != SDK.Enums.InstallStatus.Canceled))
     {
-        <h2>Completed</h2>
+        <h2>@LocalizationService.GetString("Completed")</h2>
         @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State))
         {
             <div class="queue-item">
@@ -61,7 +62,7 @@
                     <PlayButton LibraryItemId="@queueItem.Id">
                         <MenuExtra>
                             <MenuItem OnClick="() => ViewInLibrary(queueItem)">
-                                View in Library
+                                @LocalizationService.GetString("ViewInLibrary")
                             </MenuItem>
                         </MenuExtra>
                     </PlayButton>

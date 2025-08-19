@@ -5,26 +5,27 @@
 @inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject LocalizationService LocalizationService
 
 <Dropdown>
     <Overlay>
         <Menu>
             <MenuItem OnClick="ChangeAlias" Disabled="ConnectionState.OfflineModeEnabled">
-                Change Name
+                @LocalizationService.GetString("ChangeName")
             </MenuItem>
             <MenuItem OnClick="@(() => NavigationManager.NavigateTo("/Settings"))">
-                Settings
+                @LocalizationService.GetString("Settings")
             </MenuItem>
 
             @if (!Settings.Authentication.OfflineMode)
             {
                 <MenuItem OnClick="SwitchToOfflineMode">
-                    Switch to offline mode
+                    @LocalizationService.GetString("SwitchToOfflineMode")
                 </MenuItem>
             }
 
             <MenuItem OnClick="Logout">
-                Logout
+                @LocalizationService.GetString("Logout")
             </MenuItem>
         </Menu>
     </Overlay>
@@ -75,7 +76,7 @@
     {
         var modalOptions = new ModalOptions()
             {
-                Title = "Change Name",
+                Title = LocalizationService.GetString("ChangeName"),
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,

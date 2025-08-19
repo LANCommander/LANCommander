@@ -1,5 +1,6 @@
 @using LANCommander.Launcher.Models
 @inject ImportService ImportService
+@inject LocalizationService LocalizationService
 
 <div class="import-progress">
     <div class="import-progress-container">
@@ -8,11 +9,11 @@
                 <div class="import-progress-status">
                     @if (Total > 0)
                     {
-                        <Text>Importing: @(CurrentItem?.Name ?? "")</Text>
+                        <Text>@LocalizationService.GetString("Importing", CurrentItem?.Name ?? "")</Text>
                     }
                     else
                     {
-                        <Text>Starting import...</Text>
+                        <Text>@LocalizationService.GetString("StartingImport")</Text>
                     }
                 </div>
                 <div class="import-progress-progress-bar">

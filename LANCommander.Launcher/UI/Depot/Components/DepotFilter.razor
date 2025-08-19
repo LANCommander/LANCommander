@@ -1,22 +1,23 @@
 ﻿@using LANCommander.Launcher.Models.Enums
 @using LANCommander.SDK.Models
 @inject DepotService DepotService
+@inject LocalizationService LocalizationService
 
 <div class="depot-filter">
     <Form @ref="Form" Model="DepotService.Filter" OnFinish="DepotService.UpdateFilterAsync" Layout="@FormLayout.Vertical">
         <FormItem>
             <Slider @bind-Value="ColumnSize" Step="50" Min="100" Max="250" />
         </FormItem>
-        <FormItem Label="Title">
+        <FormItem Label="@LocalizationService.GetString("Title")">
             <Input @bind-Value="@context.SelectedOptions.Title" AutoFocus />
         </FormItem>
-        <FormItem Label="Group By">
+        <FormItem Label="@LocalizationService.GetString("GroupBy")">
             <Select @bind-Value="@context.SelectedOptions.GroupBy" TItem="GroupBy" TItemValue="GroupBy" DataSource="Enum.GetValues<GroupBy>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                 <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
             </Select>
         </FormItem>
-        <FormItem Label="Sort By">
+        <FormItem Label="@LocalizationService.GetString("SortBy")">
             <Flex>
                 <Select @bind-Value="@context.SelectedOptions.SortBy" TItem="SortBy" TItemValue="SortBy" DataSource="Enum.GetValues<SortBy>()">
                     <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -33,36 +34,36 @@
                 }
             </Flex>
         </FormItem>
-        <FormItem Label="Engine">
+        <FormItem Label="@LocalizationService.GetString("Engine")">
             <TagsInput Entities="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
         </FormItem>
-        <FormItem Label="Collection">
+        <FormItem Label="@LocalizationService.GetString("Collection")">
             <TagsInput Entities="context.DataSource.Collections" @bind-Values="@context.SelectedOptions.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
         </FormItem>
-        <FormItem Label="Genre">
+        <FormItem Label="@LocalizationService.GetString("Genre")">
             <TagsInput Entities="context.DataSource.Genres" @bind-Values="@context.SelectedOptions.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
         </FormItem>
-        <FormItem Label="Tag">
+        <FormItem Label="@LocalizationService.GetString("Tag")">
             <TagsInput Entities="context.DataSource.Tags" @bind-Values="@context.SelectedOptions.Tags" OptionLabelSelector="t => t.Name" TItem="SDK.Models.Tag" />
         </FormItem>
-        <FormItem Label="Platform">
+        <FormItem Label="@LocalizationService.GetString("Platform")">
             <TagsInput Entities="context.DataSource.Platforms" @bind-Values="@context.SelectedOptions.Platforms" OptionLabelSelector="p => p.Name" TItem="Platform" />
         </FormItem>
-        <FormItem Label="Developers">
+        <FormItem Label="@LocalizationService.GetString("Developers")">
             <TagsInput Entities="context.DataSource.Developers" @bind-Values="@context.SelectedOptions.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
         </FormItem>
-        <FormItem Label="Publishers">
+        <FormItem Label="@LocalizationService.GetString("Publishers")">
             <TagsInput Entities="context.DataSource.Publishers" @bind-Values="@context.SelectedOptions.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
         </FormItem>
-        <FormItem Label="Players">
+        <FormItem Label="@LocalizationService.GetString("Players")">
             <InputGroup Compact>
-                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MinPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="Minimum" Style="flex-grow: 1;" />
+                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MinPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="@LocalizationService.GetString("Minimum")" Style="flex-grow: 1;" />
                 <Input TValue="string" InputElementSuffixClass="site-input-split" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none; text-align: center;" Placeholder="~" Disabled />
-                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MaxPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="Maximum" Style="flex-grow: 1;" />
+                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MaxPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="@LocalizationService.GetString("Maximum")" Style="flex-grow: 1;" />
             </InputGroup>
         </FormItem>
         <FormItem>
-            <Button Type="ButtonType.Primary" HtmlType="submit">Apply</Button>
+            <Button Type="ButtonType.Primary" HtmlType="submit">@LocalizationService.GetString("Apply")</Button>
             <Button Type="@ButtonType.Text" OnClick="DepotService.ResetFilterAsync" Icon="@IconType.Outline.Close" Danger />
         </FormItem>
     </Form>

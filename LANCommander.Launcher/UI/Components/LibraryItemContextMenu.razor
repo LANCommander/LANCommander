@@ -10,6 +10,7 @@
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
 @inject SDK.Client Client
+@inject LocalizationService LocalizationService
 
 @if (GameActions != null && GameActions.Count() > 0)
 {
@@ -30,7 +31,7 @@
         foreach (var manual in Game.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
         {
             <MenuItem OnClick="() => OpenManual(manual)">
-                @(String.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name)
+                @(String.IsNullOrWhiteSpace(manual.Name) ? LocalizationService.GetString("Manual") : manual.Name)
             </MenuItem>
         }
 
@@ -38,36 +39,36 @@
     }
 
     <MenuItem OnClick="() => OpenSaveManager()" Disabled="ConnectionState.OfflineModeEnabled">
-        Manage Saves
+        @LocalizationService.GetString("ManageSaves")
     </MenuItem>
 
     if (Settings.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
     {
         <MenuItem OnClick="() => Modify()" Disabled="ConnectionState.OfflineModeEnabled">
-            Modify
+            @LocalizationService.GetString("Modify")
         </MenuItem>
     }
 
     <MenuItem OnClick="() => BrowseFiles()">
-        Browse Files
+        @LocalizationService.GetString("BrowseFiles")
     </MenuItem>
     <MenuItem OnClick="() => ValidateFiles()" Disabled="ConnectionState.OfflineModeEnabled">
-        Validate Files
+        @LocalizationService.GetString("ValidateFiles")
     </MenuItem>
     <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
-        Remove
+        @LocalizationService.GetString("Remove")
     </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
-        Uninstall
+        @LocalizationService.GetString("Uninstall")
     </MenuItem>
 }
 else
 {
     <MenuItem OnClick="() => Install()" Disabled="ConnectionState.OfflineModeEnabled">
-        Install
+        @LocalizationService.GetString("Install")
     </MenuItem>
     <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
-        Remove
+        @LocalizationService.GetString("Remove")
     </MenuItem>
 }
 
@@ -76,26 +77,26 @@ else
     <MenuDivider />
 
     <MenuItem OnClick="() => RunInstallScripts()">
-        Run Install Scripts
+        @LocalizationService.GetString("RunInstallScripts")
     </MenuItem>
 
     <MenuItem OnClick="() => RunUninstallScripts()">
-        Run Uninstall Scripts
+        @LocalizationService.GetString("RunUninstallScripts")
     </MenuItem>
 
     <MenuItem OnClick="() => RunNameChangeScripts()">
-        Run Name Change Scripts
+        @LocalizationService.GetString("RunNameChangeScripts")
     </MenuItem>
 
     <MenuItem OnClick="() => RunKeyChangeScripts()">
-        Run Key Change Scripts
+        @LocalizationService.GetString("RunKeyChangeScripts")
     </MenuItem>
 }
 
 <MenuDivider />
 
 <MenuItem OnClick="() => ReportIssue()" Disabled="ConnectionState.OfflineModeEnabled">
-    Report Issue
+    @LocalizationService.GetString("ReportIssue")
 </MenuItem>
 
 @MenuExtra
@@ -158,7 +159,7 @@ else
         {
             var modalOptions = new ModalOptions()
             {
-                Title = $"Install {Model.Name}",
+                Title = LocalizationService.GetString("InstallGame", Model.Name),
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
@@ -182,7 +183,7 @@ else
     {
         var modalOptions = new ModalOptions()
         {
-            Title = $"Modify {Model.Name}",
+            Title = LocalizationService.GetString("ModifyGame", Model.Name),
             Maximizable = false,
             DefaultMaximized = false,
             Closable = true,
@@ -199,13 +200,13 @@ else
     {
         var modalOptions = new ModalOptions()
         {
-            Title = $"File Conflicts",
+            Title = LocalizationService.GetString("FileConflicts"),
             Maximizable = false,
             DefaultMaximized = true,
             Closable = true,
             Draggable = true,
             Centered = true,
-            OkText = "Replace Selected",
+            OkText = LocalizationService.GetString("ReplaceSelected"),
         };
 
         var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);
@@ -215,18 +216,17 @@ else
     {
         var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
 
-        var message = $"Would you like to uninstall {Game.Title}?";
-
+        string message;
         if (manifest.SavePaths != null && manifest.SavePaths.Any())
-            message += " Your save files have been uploaded to the server.";
+            message = LocalizationService.GetString("UninstallGameMessageWithSaves", Game.Title);
         else
-            message += " Your save files may be unrecoverable if they are contained within the game's install directory.";
+            message = LocalizationService.GetString("UninstallGameMessageWithoutSaves", Game.Title);
 
         var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
         {
-            OkText = "Uninstall",
-            CancelText = "Cancel",
-            Title = "Uninstall",
+            OkText = LocalizationService.GetString("UninstallGame"),
+            CancelText = LocalizationService.GetString("Cancel"),
+            Title = LocalizationService.GetString("UninstallGame"),
             Content = message,
             OkButtonProps = new ButtonProps()
             {
@@ -259,7 +259,7 @@ else
 
         var modalOptions = new ModalOptions()
         {
-            Title = $"Remove game from library",
+            Title = LocalizationService.GetString("RemoveGameFromLibrary"),
             Maximizable = false,
             DefaultMaximized = false,
             Closable = true,
@@ -336,7 +336,7 @@ else
     {
         var modalOptions = new ModalOptions()
         {
-            Title = "Manage Saves",
+            Title = LocalizationService.GetString("ManageSaves"),
             Maximizable = false,
             DefaultMaximized = false,
             Closable = true,
@@ -353,11 +353,11 @@ else
     {
         var modalOptions = new ModalOptions()
         {
-            Title = "Report Issue",
+            Title = LocalizationService.GetString("ReportIssue"),
             Maximizable = false,
             DefaultMaximized = false,
             Closable = true,
-            OkText = "Submit",
+            OkText = LocalizationService.GetString("Submit"),
             Draggable = true
         };
 

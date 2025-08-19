@@ -5,6 +5,7 @@
 @inject ImportService ImportService
 @inject IMessageService MessageService
 @inject ILogger<DepotGame> Logger
+@inject LocalizationService LocalizationService
 
 <div class="depot-game">
     <div class="depot-game-cover" @onclick="() => OnClick.InvokeAsync(Item)">
@@ -52,7 +53,7 @@
             StateHasChanged();
             await Task.Yield();
 
-            MessageService.Success($"{Item.Name} was added to your library!");
+            MessageService.Success(LocalizationService.GetString("GameAddedToLibrary", Item.Name));
         }
         catch (Exception ex)
         {
@@ -61,7 +62,7 @@
             await Task.Yield();
 
             Logger?.LogError(ex, $"{Item.Name} ({Item.Key}) could not be added to your library!");
-            MessageService.Error($"{Item.Name} could not be added to your library!");
+            MessageService.Error(LocalizationService.GetString("GameCouldNotBeAddedToLibrary", Item.Name));
         }
     }
 }

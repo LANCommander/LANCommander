@@ -1,5 +1,6 @@
 ﻿@inject SDK.Client Client
 @inject DepotService DepotService
+@inject LocalizationService LocalizationService
 
 <Spin Spinning="!Loaded" WrapperClassName="depot-list-spinner">
     @if (ListItems.Any())
@@ -34,14 +35,14 @@
     }
     else if (DepotService.GetItemCount() > 0)
     {
-        <Result Title="No Results" />
+        <Result Title="@LocalizationService.GetString("NoResults")" />
     }
     else if (Loaded)
     {
         <Result
         Status="ResultStatus.Error"
-        Title="No Results"
-        SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
+        Title="@LocalizationService.GetString("NoResults")"
+        SubTitle="@LocalizationService.GetString("DepotEmptyOrUnauthorized")" />
     }
 </Spin>
 
@@ -75,7 +76,7 @@
         Groups = ListItems.DistinctBy(i => i.Key).SelectMany(i => i.Groups).Distinct().ToList();
 
         if (ListItems.DistinctBy(i => i.Key).Any(i => i.Groups == null || i.Groups.Length == 0))
-            Groups.Add("Uncategorized");
+            Groups.Add(LocalizationService.GetString("Uncategorized"));
 
         await InvokeAsync(StateHasChanged);
     }

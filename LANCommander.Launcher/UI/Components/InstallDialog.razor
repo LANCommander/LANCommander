@@ -4,28 +4,29 @@
 @inherits FeedbackComponent<Models.ListItem, string>
 @inject InstallService InstallService
 @inject SDK.Client Client
+@inject LocalizationService LocalizationService
 
 <div style="padding: 16px;">
     <Row Gutter="16">
         <Col Span="12">
-            <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;"/>
+            <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;"/>
         </Col>
         <Col Span="12">
-            <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;"/>
+            <Statistic Title="@LocalizationService.GetString("SpaceRequired")" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;"/>
         </Col>
     </Row>
 
 
     @if (Addons.Any())
     {
-        <Divider Text="Addons" />
+        <Divider Text="@LocalizationService.GetString("Addons")" />
 
         <CheckboxButtonGroup @bind-Selected="SelectedAddons" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
     }
 
     @if (Settings.Games.InstallDirectories.Length > 1)
     {
-        <Divider Text="Install Location" />
+        <Divider Text="@LocalizationService.GetString("InstallLocation")" />
         <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="InputSize.Large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
             @foreach (var directory in Settings.Games.InstallDirectories)
             {
@@ -46,12 +47,12 @@
 
 
 <Flex Gap="FlexGap.Middle" Style="padding: 16px; padding-top: 0px" Justify="FlexJustify.FlexEnd">
-    @if (GetOperation() != InstallOperation.None)
+    @if (GetOperation() != "None")
     {
-        <Button Type="ButtonType.Primary" OnClick="Install">@GetOperation()</Button>
+        <Button Type="ButtonType.Primary" OnClick="Install">@LocalizationService.GetString(GetOperation())</Button>
     }
 
-    <Button OnClick="() => Close()">Close</Button>
+    <Button OnClick="() => Close()">@LocalizationService.GetString("Close")</Button>
 </Flex>
 
 @code {
@@ -65,13 +66,7 @@
     List<SDK.Models.Game> Addons = new();
     IEnumerable<SDK.Models.Game> SelectedAddons = new List<SDK.Models.Game>();
 
-    enum InstallOperation
-    {
-        None,
-        Install,
-        Move,
-        Modify,
-    }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,18 +99,18 @@
         await CloseFeedbackAsync();
     }
 
-    InstallOperation GetOperation()
+    string GetOperation()
     {
         if (!Game.Installed)
-            return InstallOperation.Install;
+            return "Install";
 
         if (Game.DependentGames.Any(g => g.Installed ^ SelectedAddons.Any(a => a.Id == g.Id)))
-            return InstallOperation.Modify;
+            return "Modify";
 
         if (!Game.InstallDirectory.StartsWith(SelectedDirectory))
-            return InstallOperation.Move;
+            return "Move";
 
-        return InstallOperation.None;
+        return string.Empty;
     }
 
     long GetDownloadSize()

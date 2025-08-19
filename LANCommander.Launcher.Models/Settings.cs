@@ -10,6 +10,7 @@ namespace LANCommander.Launcher.Models
         public const string DEFAULT_GAME_USERNAME = "Player";
 
         public int LaunchCount { get; set; } = 0;
+        public string Culture { get; set; } = "en-US";
 
         public DatabaseSettings Database { get; set; } = new DatabaseSettings();
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();

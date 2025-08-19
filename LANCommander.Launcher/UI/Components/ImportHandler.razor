@@ -4,6 +4,7 @@
 @inject ImportService ImportService
 @inject IMessageService MessageService
 @inject ILogger<ImportHandler> Logger
+@inject LocalizationService LocalizationService
 
 @code 
 {
@@ -57,7 +58,7 @@
             await NotifyProgress(ImportProgressState.Importing);
 
             await InvokeAsync(StateHasChanged);
-            MessageService.Info("Import Started", 2.5);
+            MessageService.Info(LocalizationService.GetString("ImportStarted"), 2.5);
 
             Logger?.LogInformation("Starting import");
             await ImportService.ImportLibraryAsync(); // Call directly instead of using JS
@@ -85,7 +86,7 @@
         ImportStatusTotal = 0;
 
         await NotifyProgress(ImportProgressState.Imported);
-        MessageService.Success("Import Complete", 3);
+        MessageService.Success(LocalizationService.GetString("ImportComplete"), 3);
     }
 
     private async Task OnImportFailedHandler(Exception ex)
@@ -95,7 +96,7 @@
         ImportStatusTotal = 0;
 
         await NotifyProgress(ImportProgressState.Failed);
-        MessageService.Error("Import Failed", 3);
+        MessageService.Error(LocalizationService.GetString("ImportFailed"), 3);
     }
 
     private async Task OnImportUpdatedHandler(ImportStatusUpdate status)

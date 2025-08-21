@@ -19,6 +19,13 @@ namespace LANCommander.Server.Services
         private readonly int _maxCachedMessages = 200;
         
         private static string ThreadCacheKey(Guid threadId) => $"Chat/Thread/{threadId}";
+
+        public async Task<ChatThread> StartThreadAsync()
+        {
+            var thread = await chatThreadService.AddAsync(new ChatThread());
+
+            return thread;
+        }
         
         public async Task<ChatMessage> SendMessageAsync(Guid threadId, string content)
         {

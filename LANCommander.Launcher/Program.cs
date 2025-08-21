@@ -1,12 +1,5 @@
-﻿using CommandLine;
-using CommandLine.Text;
-using Emzi0767.NtfsDataStreams;
-using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Models;
-using LANCommander.Launcher.Services;
+﻿using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
-using LANCommander.SDK;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Photino.Blazor;
@@ -15,13 +8,7 @@ using Photino.NET;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Management.Automation.Language;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Web;
 
 namespace LANCommander.Launcher
@@ -170,6 +157,9 @@ namespace LANCommander.Launcher
             };
 
             app.Services.InitializeLANCommander();
+            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                SystemService.RegisterCustomScheme();
 
             if (args.Length > 0)
             {

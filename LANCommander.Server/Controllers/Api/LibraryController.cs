@@ -48,13 +48,13 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     var games = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                         Logger?.LogDebug("Mapped games cache is empty, repopulating");
-
+                        
                         var games = await GameService
                             .AsNoTracking()
                             .AsSplitQuery()
-                            .GetAsync<SDK.Models.Game>();
+                            .GetAsync();
 
-                        return games;
+                        return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
                     }, TimeSpan.MaxValue, tags: ["Games"]);
                     
                     return games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).Select(g => Mapper.Map<SDK.Models.EntityReference>(g));

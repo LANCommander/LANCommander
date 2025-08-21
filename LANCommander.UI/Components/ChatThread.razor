@@ -22,7 +22,7 @@
 </Flex>
 
 @code {
-    [Parameter] public Guid ThreadId { get; set; }
+    [Parameter] public SDK.Models.ChatThread Thread { get; set; }
     
     ICollection<ChatMessageGroup> _messageGroups;
     ICollection<ChatMessage> _messages = new List<ChatMessage>();
@@ -33,7 +33,12 @@
 
     protected override async Task OnParametersSetAsync()
     {
-
+        if (Thread != null)
+        {
+            await Client.Chat.GetMessagesAsync(Thread.Id);
+            
+            
+        }
     }
 
     async Task OnConnected(string connectionId)

@@ -60,6 +60,11 @@ public class ChatService
             .WithUrl(hubUrl)
             .Build();
 
+        _hubConnection.On<ChatThread>("AddedToThread", async (thread) =>
+        {
+            await AddedToThreadAsync(thread);
+        });
+
         _hubConnection.On<Guid, IEnumerable<ChatMessage>>("ReceiveMessages", async (threadId, messages) =>
         {
             await ReceiveMessagesAsync(threadId, messages);
@@ -92,6 +97,23 @@ public class ChatService
             {
                 Id = threadId,
             };
+    }
+
+    public async Task AddedToThreadAsync(ChatThread thread)
+    {
+        _threads[thread.Id] = thread;
+    }
+
+    public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
+    {
+        var threads = await _hubConnection.InvokeAsync<ChatThread[]>("GetThreads");
+        
+        _threads.Clear();
+        
+        foreach (var thread in threads)
+            _threads[thread.Id] = thread;
+
+        return threads;
     }
 
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)

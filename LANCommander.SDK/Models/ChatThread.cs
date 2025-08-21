@@ -10,6 +10,8 @@ public class ChatThread
     public required Guid Id { get; init; }
     public List<ChatMessageGroup> MessageGroups { get; init; }
     public List<User> Participants { get; init; }
+    
+    private List<ChatMessage> Messages { get; set; }
 
     public event OnMessageReceivedHandler OnMessageReceived;
     public delegate void OnMessageReceivedHandler(object sender, ChatMessage message);

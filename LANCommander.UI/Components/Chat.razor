@@ -1,0 +1,31 @@
+@using LANCommander.SDK
+@inject Client Client
+
+<Button OnClick="">New Thread</Button>
+
+<AntList DataSource="@_threads" TItem="SDK.Models.ChatThread">
+    <ListItem OnClick="() => OpenThread(context)">
+        <ListItemMeta Title="@context.Id.ToString()">
+        </ListItemMeta>
+    </ListItem>
+</AntList>
+
+<ChatThread Thread="_currentThread" />
+
+@code {
+    IEnumerable<SDK.Models.ChatThread> _threads;
+
+    SDK.Models.ChatThread _currentThread;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await Client.Chat.ConnectAsync();
+        
+        _threads = await Client.Chat.GetThreadsAsync();
+    }
+    
+    async Task OpenThread(SDK.Models.ChatThread thread)
+    {
+        _currentThread = thread;
+    }
+}

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Services
@@ -24,7 +25,9 @@ namespace LANCommander.SDK.Services
 
         public async Task<IEnumerable<EntityReference>> GetAsync()
         {
-            return await _client.GetRequestAsync<IEnumerable<EntityReference>>("/api/Library");
+            var results = await _client.GetRequestAsync<IEnumerable<EntityReference>>("/api/Library");
+
+            return results ?? [];
         }
 
         public async Task<bool> AddToLibrary(Guid gameId)

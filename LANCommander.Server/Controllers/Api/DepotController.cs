@@ -91,14 +91,17 @@ namespace LANCommander.Server.Controllers.Api
                 return results;
             }, TimeSpan.MaxValue, tags: ["Depot"]);
 
-            var collections = await UserService.GetCollectionsAsync(user);
+            if (Settings.Roles.RestrictGamesByCollection)
+            {
+                var collections = await UserService.GetCollectionsAsync(user);
 
-            results.Games = results
-                .Games
-                .Where(g =>
-                    g.Collections.Any(gc => 
-                        collections.Any(c => c.Id == gc.Id)))
-                .ToList();
+                results.Games = results
+                    .Games
+                    .Where(g =>
+                        g.Collections.Any(gc =>
+                            collections.Any(c => c.Id == gc.Id)))
+                    .ToList();
+            }
 
             foreach (var game in results.Games)
             {

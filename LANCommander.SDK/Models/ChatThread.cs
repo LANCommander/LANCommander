@@ -8,25 +8,35 @@ namespace LANCommander.SDK.Models;
 public class ChatThread
 {
     public required Guid Id { get; init; }
-    public required List<ChatMessageGroup> MessageGroups { get; init; }
-    public required List<User> Participants { get; init; }
-    
-    private HubConnection _hubConnection;
+    public List<ChatMessageGroup> MessageGroups { get; init; }
+    public List<User> Participants { get; init; }
 
-    public async Task Connect(Uri uri, Action<ChatMessage> onMessageReceived)
+    public event OnMessageReceivedHandler OnMessageReceived;
+    public delegate void OnMessageReceivedHandler(object sender, ChatMessage message);
+    public event OnMessagesReceivedHandler OnMessagesReceived;
+    public delegate void OnMessagesReceivedHandler(object sender, IEnumerable<ChatMessage> message);
+    public event OnStartTypingHandler OnStartTyping;
+    public delegate void OnStartTypingHandler(object sender, string userId);
+    public event OnStopTypingHandler OnStopTyping;
+    public delegate void OnStopTypingHandler(object sender, string userId);
+
+    public void MessagesReceived(IEnumerable<ChatMessage> messages)
     {
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(uri)
-            .Build();
-
-        _hubConnection.On<ChatMessage>("MessageSent", onMessageReceived);
-        
-        await _hubConnection.StartAsync();
+        OnMessagesReceived?.Invoke(this, messages);
     }
 
-    public async ValueTask DisposeAsync()
+    public void MessageReceived(ChatMessage message)
     {
-        if (_hubConnection != null)
-            await _hubConnection.DisposeAsync();
+        OnMessageReceived?.Invoke(this, message);
+    }
+
+    public void StartTyping(string userId)
+    {
+        OnStartTyping?.Invoke(this, userId);
+    }
+
+    public void StopTyping(string userId)
+    {
+        OnStopTyping?.Invoke(this, userId);
     }
 }

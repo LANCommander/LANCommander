@@ -1,0 +1,70 @@
+@using LANCommander.SDK
+@using LANCommander.SDK.Models
+@using LANCommander.SDK.Services
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject Client Client
+
+<Flex Direction="FlexDirection.Vertical">
+    <div style="flex-grow: 1;">
+        <Virtualize Items="_messageGroups" Context="messageGroup">
+            <Comment Author="@messageGroup.UserName" Datetime="@messageGroup.StartedOn.ToString()">
+                <ContentTemplate>
+                    @foreach (var message in messageGroup.Messages)
+                    {
+                        <p>@message.Content</p>
+                    }
+                </ContentTemplate>
+            </Comment>
+        </Virtualize>
+    </div>
+    
+    <TextArea MinRows="1" AutoSize="true" OnPressEnter="SendMessage"></TextArea>
+</Flex>
+
+@code {
+    [Parameter] public Guid ThreadId { get; set; }
+    
+    ICollection<ChatMessageGroup> _messageGroups;
+    ICollection<ChatMessage> _messages = new List<ChatMessage>();
+    SDK.Models.ChatThread _thread;
+
+    bool _sendingMessage = false;
+    string _inputContents = String.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+    }
+
+    async Task OnConnected(string connectionId)
+    {
+        
+    }
+
+    async Task OnMessageReceived(ChatMessage message)
+    {
+        _messages.Add(message);
+
+        //_messageGroups = ChatService.GroupConsecutiveMessages(_messages);
+    }
+
+    async Task OnStartTyping(string userIdentifier)
+    {
+        
+    }
+
+    async Task OnStopTyping(string userIdentifier)
+    {
+        
+    }
+
+    async Task SendMessage(PressEnterEventArgs args)
+    {
+        if (!args.ShiftKey)
+        {
+            _sendingMessage = true;
+
+            //await _thread.SendMessageAsync(_inputContents);
+        }
+    }
+}

@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Models;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace LANCommander.SDK.Services;
 
 public class ChatService
 {
     private readonly Client _client;
-    private readonly IList<ChatThread> _threads = new List<ChatThread>();
+    private HubConnection _hubConnection;
+    private readonly Dictionary<Guid, ChatThread> _threads = new();
 
     public ChatService(Client client)
     {
@@ -48,24 +50,87 @@ public class ChatService
         if (current is not null)
             yield return current;
     }
-    
-    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId)
-    {
-        return await _client.GetRequestAsync<IEnumerable<ChatMessage>>($"/api/Chat/Thread/{threadId}");
-    }
 
-    public async Task<ChatThread> StartThreadAsync()
+    public async Task ConnectAsync()
     {
-        return await _client.PostRequestAsync<ChatThread>("/api/Chat/Thread");
-    }
+        var hubUrl = _client.BaseUrl;
 
-    public async Task<ChatMessage> SendMessageAsync(Guid threadId, string content)
-    {
-        return await _client.PostRequestAsync<ChatMessage>($"/api/Chat/Thread/{threadId}/Message", content);
-    }
+        _hubConnection = new HubConnectionBuilder()
+            .WithAutomaticReconnect()
+            .WithUrl(hubUrl)
+            .Build();
 
-    public async Task Connect(Guid threadId)
-    {
+        _hubConnection.On<Guid, IEnumerable<ChatMessage>>("ReceiveMessages", async (threadId, messages) =>
+        {
+            await ReceiveMessagesAsync(threadId, messages);
+        });
+
+        _hubConnection.On<Guid, ChatMessage>("ReceiveMessage", async (threadId, message) =>
+        {
+            await ReceiveMessageAsync(threadId, message);
+        });
+
+        _hubConnection.On<Guid, string>("StartTyping", async (threadId, userId) =>
+        {
+            await StartTypingAsync(threadId, userId);
+        });
         
+        _hubConnection.On<Guid, string>("StopTyping", async (threadId, userId) =>
+        {
+            await StopTypingAsync(threadId, userId);
+        });
+        
+        await _hubConnection.StartAsync();
+    }
+
+    public async Task StartThreadAsync(IEnumerable<string> userIdentifiers)
+    {
+        var threadId = await _hubConnection.InvokeAsync<Guid>("StartThread", userIdentifiers);
+
+        if (threadId != Guid.Empty)
+            _threads[threadId] = new ChatThread
+            {
+                Id = threadId,
+            };
+    }
+
+    public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
+    {
+        if (_threads.TryGetValue(threadId, out var thread))
+            thread.MessagesReceived(messages);
+    }
+
+    public async Task ReceiveMessageAsync(Guid threadId, ChatMessage message)
+    {
+        if (_threads.TryGetValue(threadId, out var thread))
+            thread.MessageReceived(message);
+    }
+
+    public async Task StartTypingAsync(Guid threadId, string userId)
+    {
+        if (_threads.TryGetValue(threadId, out var thread))
+            thread.StartTyping(userId);
+    }
+
+    public async Task StopTypingAsync(Guid threadId, string userId)
+    {
+        if (_threads.TryGetValue(threadId, out var thread))
+            thread.StopTyping(userId);
+    }
+
+    public async Task GetMessagesAsync(Guid threadId)
+    {
+        await _hubConnection.SendAsync("GetMessages", threadId);
+    }
+
+    public async Task SendMessageAsync(Guid threadId, string contents)
+    {
+        await _hubConnection.SendAsync("SendMessage", threadId, contents);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
     }
 }

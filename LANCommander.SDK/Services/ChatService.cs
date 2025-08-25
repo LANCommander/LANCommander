@@ -17,39 +17,6 @@ public class ChatService
     {
         _client = client;
     }
-    
-    public static IEnumerable<ChatMessageGroup> GroupConsecutiveMessages(IEnumerable<ChatMessage> source,
-        TimeSpan? maxGap = null)
-    {
-        ChatMessageGroup? current = null;
-        ChatMessage? last = null;
-
-        foreach (var message in source.OrderBy(x => x.SentOn))
-        {
-            var mustBreak = current is null || message.UserId != current.UserId || (maxGap is not null &&
-                last is not null && (message.SentOn - last.SentOn) > maxGap.Value);
-
-            if (mustBreak)
-            {
-                if (current is not null)
-                    yield return current;
-
-                current = new ChatMessageGroup
-                {
-                    UserId = message.UserId,
-                    UserName = message.UserName,
-                    Messages = [message],
-                };
-            }
-            else
-                current!.Messages.Add(message);
-
-            last = message;
-        }
-        
-        if (current is not null)
-            yield return current;
-    }
 
     public async Task ConnectAsync()
     {
@@ -88,7 +55,12 @@ public class ChatService
         await _hubConnection.StartAsync();
     }
 
-    public async Task StartThreadAsync(IEnumerable<string> userIdentifiers)
+    public ChatThread GetThread(Guid threadId)
+    {
+        return _threads[threadId];
+    }
+
+    public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
         var threadId = await _hubConnection.InvokeAsync<Guid>("StartThread", userIdentifiers);
 
@@ -97,6 +69,8 @@ public class ChatService
             {
                 Id = threadId,
             };
+
+        return threadId;
     }
 
     public async Task AddedToThreadAsync(ChatThread thread)

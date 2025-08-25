@@ -1,20 +1,18 @@
+@using System.Collections.Specialized
 @using LANCommander.SDK
-@using LANCommander.SDK.Models
-@using LANCommander.SDK.Services
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @inject Client Client
 
 <Flex Direction="FlexDirection.Vertical">
     <div style="flex-grow: 1;">
         <Virtualize Items="_messageGroups" Context="messageGroup">
-            <Comment Author="@messageGroup.UserName" Datetime="@messageGroup.StartedOn.ToString()">
-                <ContentTemplate>
-                    @foreach (var message in messageGroup.Messages)
-                    {
-                        <p>@message.Content</p>
-                    }
-                </ContentTemplate>
-            </Comment>
+            <CascadingValue Name="Messages" Value="@messageGroup.Messages">
+                <ChatMessageGroup
+                    @key="messageGroup.Id"
+                    UserId="@messageGroup.UserId"
+                    UserName="@messageGroup.UserName"
+                    StartedOn="@messageGroup.StartedOn.LocalDateTime" />
+            </CascadingValue>
         </Virtualize>
     </div>
     
@@ -22,10 +20,10 @@
 </Flex>
 
 @code {
-    [Parameter] public SDK.Models.ChatThread Thread { get; set; }
+    [Parameter] public Guid Id { get; set; }
     
-    ICollection<ChatMessageGroup> _messageGroups;
-    ICollection<ChatMessage> _messages = new List<ChatMessage>();
+    ICollection<SDK.Models.ChatMessageGroup> _messageGroups;
+    ICollection<SDK.Models.ChatMessage> _messages = new List<SDK.Models.ChatMessage>();
     SDK.Models.ChatThread _thread;
 
     bool _sendingMessage = false;
@@ -33,34 +31,17 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Thread != null)
+        if (Id != Guid.Empty)
         {
-            await Client.Chat.GetMessagesAsync(Thread.Id);
+            _thread = Client.Chat.GetThread(Id);
             
-            
+            _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged; 
         }
     }
 
-    async Task OnConnected(string connectionId)
+    void MessageGroupsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        
-    }
-
-    async Task OnMessageReceived(ChatMessage message)
-    {
-        _messages.Add(message);
-
-        //_messageGroups = ChatService.GroupConsecutiveMessages(_messages);
-    }
-
-    async Task OnStartTyping(string userIdentifier)
-    {
-        
-    }
-
-    async Task OnStopTyping(string userIdentifier)
-    {
-        
+        StateHasChanged();
     }
 
     async Task SendMessage(PressEnterEventArgs args)
@@ -69,7 +50,7 @@
         {
             _sendingMessage = true;
 
-            //await _thread.SendMessageAsync(_inputContents);
+            await Client.Chat.SendMessageAsync(Id, _inputContents);
         }
     }
 }

@@ -6,6 +6,7 @@ namespace LANCommander.SDK.Models;
 
 public class ChatMessageGroup
 {
+    public Guid Id { get; init; }
     public required Guid UserId { get; init; }
     public required string UserName { get; set; }
     public required List<ChatMessage> Messages { get; init; }

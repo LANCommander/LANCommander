@@ -1,0 +1,17 @@
+@using System.Globalization
+
+<Comment Author="@UserName" Datetime="@StartedOn.ToString(CultureInfo.CurrentCulture)">
+    <ContentTemplate>
+        @foreach (var message in Messages)
+        {
+            <ChatMessage Id="@message.Id" Content="@message.Content" />
+        }
+    </ContentTemplate>
+</Comment>
+
+@code {
+    [CascadingParameter] public ICollection<SDK.Models.ChatMessage> Messages { get; set; }
+    [Parameter] public string UserName { get; set; }
+    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public DateTime StartedOn { get; set; }
+}

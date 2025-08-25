@@ -11,12 +11,13 @@ namespace LANCommander.Launcher.Services
 {
     public static class SettingService
     {
-        private const string SettingsFilename = "Settings.yml";
+        public const string SettingsFile = "Settings.yml";
+        
         private static string SettingsFilePath
         {
             get
             {
-                return Path.Combine(AppPaths.GetConfigDirectory(), SettingsFilename);
+                return Path.Combine(AppPaths.GetConfigDirectory(), SettingsFile);
             }
         }
 

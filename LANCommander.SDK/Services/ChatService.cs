@@ -3,56 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Models;
-using Microsoft.AspNetCore.SignalR.Client;
 
 namespace LANCommander.SDK.Services;
 
 public class ChatService
 {
     private readonly Client _client;
-    private HubConnection _hubConnection;
     private readonly Dictionary<Guid, ChatThread> _threads = new();
 
     public ChatService(Client client)
     {
         _client = client;
-    }
-
-    public async Task ConnectAsync()
-    {
-        var hubUrl = _client.BaseUrl;
-
-        _hubConnection = new HubConnectionBuilder()
-            .WithAutomaticReconnect()
-            .WithUrl(hubUrl)
-            .Build();
-
-        _hubConnection.On<ChatThread>("AddedToThread", async (thread) =>
-        {
-            await AddedToThreadAsync(thread);
-        });
-
-        _hubConnection.On<Guid, IEnumerable<ChatMessage>>("ReceiveMessages", async (threadId, messages) =>
-        {
-            await ReceiveMessagesAsync(threadId, messages);
-        });
-
-        _hubConnection.On<Guid, ChatMessage>("ReceiveMessage", async (threadId, message) =>
-        {
-            await ReceiveMessageAsync(threadId, message);
-        });
-
-        _hubConnection.On<Guid, string>("StartTyping", async (threadId, userId) =>
-        {
-            await StartTypingAsync(threadId, userId);
-        });
-        
-        _hubConnection.On<Guid, string>("StopTyping", async (threadId, userId) =>
-        {
-            await StopTypingAsync(threadId, userId);
-        });
-        
-        await _hubConnection.StartAsync();
     }
 
     public ChatThread GetThread(Guid threadId)
@@ -62,7 +23,7 @@ public class ChatService
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
-        var threadId = await _hubConnection.InvokeAsync<Guid>("StartThread", userIdentifiers);
+        var threadId = await _client.RPC.Server.Chat_StartThreadAsync(userIdentifiers.ToArray());
 
         if (threadId != Guid.Empty)
             _threads[threadId] = new ChatThread
@@ -80,7 +41,7 @@ public class ChatService
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
     {
-        var threads = await _hubConnection.InvokeAsync<ChatThread[]>("GetThreads");
+        var threads = await _client.RPC.Server.Chat_GetThreadsAsync();
         
         _threads.Clear();
         
@@ -116,17 +77,11 @@ public class ChatService
 
     public async Task GetMessagesAsync(Guid threadId)
     {
-        await _hubConnection.SendAsync("GetMessages", threadId);
+        await _client.RPC.Server.Chat_GetMessagesAsync(threadId);
     }
 
     public async Task SendMessageAsync(Guid threadId, string contents)
     {
-        await _hubConnection.SendAsync("SendMessage", threadId, contents);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_hubConnection is not null)
-            await _hubConnection.DisposeAsync();
+        await _client.RPC.Server.Chat_SendMessageAsync(threadId, contents);
     }
 }

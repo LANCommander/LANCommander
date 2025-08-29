@@ -21,8 +21,6 @@
     
     protected override async Task OnInitializedAsync()
     {
-        await Client.Chat.ConnectAsync();
-        
         _threads = await Client.Chat.GetThreadsAsync();
     }
 

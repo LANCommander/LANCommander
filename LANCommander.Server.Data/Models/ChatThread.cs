@@ -7,4 +7,5 @@ namespace LANCommander.Server.Data.Models;
 public class ChatThread : BaseModel
 {
     public ICollection<ChatMessage> Messages { get; set; }
+    public ICollection<User> Participants { get; set; }
 }

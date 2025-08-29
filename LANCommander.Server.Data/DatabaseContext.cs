@@ -89,6 +89,10 @@ namespace LANCommander.Server.Data
                 .WithMany(ct => ct.Messages)
                 .IsRequired(true);
 
+            builder.Entity<ChatThread>()
+                .HasMany(ct => ct.Participants)
+                .WithMany(u => u.ChatThreads);
+
             builder.Entity<Tag>()
                 .HasMany(t => t.Games)
                 .WithMany(g => g.Tags);

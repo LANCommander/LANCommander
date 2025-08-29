@@ -13,12 +13,14 @@ namespace LANCommander.Server.Services
         ILogger<ChatService> logger,
         IFusionCache cache,
         ChatMessageService chatMessageService,
-        ChatThreadService chatThreadService) : BaseService(logger)
+        ChatThreadService chatThreadService,
+        UserService userService) : BaseService(logger)
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
         private readonly int _maxCachedMessages = 200;
         
         private static string ThreadCacheKey(Guid threadId) => $"Chat/Thread/{threadId}";
+        private static string UserThreadCacheKey(string userIdentifier) => $"Chat/User/{userIdentifier}/Threads";
 
         public async Task<ChatThread> StartThreadAsync()
         {
@@ -80,6 +82,28 @@ namespace LANCommander.Server.Services
             });
 
             return messages;
+        }
+
+        public async Task<List<ChatThread>> GetThreadsAsync(string userIdentifier)
+        {
+            var cacheKey = UserThreadCacheKey(userIdentifier);
+
+            var threads = await cache.GetOrSetAsync(cacheKey, async _ =>
+            {
+                var user = await userService.GetAsync(userIdentifier);
+
+                var dbThreads = await chatThreadService.Query(q =>
+                {
+                    return q
+                        .Include(t => t.Participants)
+                        .OrderByDescending(t => t.CreatedOn)
+                        .Where(t => t.Participants.Any(p => p.Id == user.Id));
+                }).GetAsync();
+                
+                return dbThreads.ToList();
+            });
+
+            return threads;
         }
     }
 }

@@ -50,6 +50,9 @@ namespace LANCommander.Server.Data.Models
 
         [JsonIgnore]
         public ICollection<Media>? Media { get; set; }
+        
+        [JsonIgnore]
+        public ICollection<ChatThread>? ChatThreads { get; set; }
 
         public ICollection<UserRole> UserRoles { get; set; }
         

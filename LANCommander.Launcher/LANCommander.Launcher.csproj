@@ -65,8 +65,10 @@
 	</ItemGroup>
   
     <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
         <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.0" />
         <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+        <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
         <PackageReference Include="nulastudio.NetBeauty" Version="2.1.4.6" />
         <PackageReference Include="Photino.Blazor" Version="4.0.13" />
         <PackageReference Include="Photino.Blazor.CustomWindow" Version="1.3.1" />

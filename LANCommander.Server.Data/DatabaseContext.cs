@@ -45,6 +45,8 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Models.Action>();
             builder.ConfigureBaseRelationships<Archive>();
             builder.ConfigureBaseRelationships<Category>();
+            builder.ConfigureBaseRelationships<ChatMessage>();
+            builder.ConfigureBaseRelationships<ChatThread>();
             builder.ConfigureBaseRelationships<Collection>();
             builder.ConfigureBaseRelationships<Company>();
             builder.ConfigureBaseRelationships<Game>();
@@ -81,6 +83,15 @@ namespace LANCommander.Server.Data
                 .HasMany(c => c.Children)
                 .WithOne(c => c.Parent)
                 .IsRequired(false);
+
+            builder.Entity<ChatMessage>()
+                .HasOne(cm => cm.Thread)
+                .WithMany(ct => ct.Messages)
+                .IsRequired(true);
+
+            builder.Entity<ChatThread>()
+                .HasMany(ct => ct.Participants)
+                .WithMany(u => u.ChatThreads);
 
             builder.Entity<Tag>()
                 .HasMany(t => t.Games)

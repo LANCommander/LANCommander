@@ -20,6 +20,7 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.ServiceModel.Channels;
 using System.Threading.Tasks;
+using LANCommander.SDK.Rpc;
 
 namespace LANCommander.SDK
 {
@@ -51,6 +52,8 @@ namespace LANCommander.SDK
         public readonly PlaySessionService PlaySessions;
         public readonly TagService Tags;
         public readonly BeaconService Beacon;
+        public readonly ChatService Chat;
+        public readonly RpcClient RPC;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -88,6 +91,7 @@ namespace LANCommander.SDK
             PlaySessions = new PlaySessionService(this);
             Tags = new TagService(this);
             Beacon = new BeaconService(this);
+            Chat = new ChatService(this);
 
             BaseCmdlet.Client = this;
 
@@ -127,6 +131,8 @@ namespace LANCommander.SDK
             PlaySessions = new PlaySessionService(this, logger);
             Tags = new TagService(this, logger);
             Beacon = new BeaconService(this, logger);
+            Chat = new ChatService(this);
+            RPC = new RpcClient(this);
 
             BaseCmdlet.Client = this;
 
@@ -154,6 +160,7 @@ namespace LANCommander.SDK
             Servers = new ServerService(this);
             PlaySessions = new PlaySessionService(this);
             Tags = new TagService(this);
+            RPC = new RpcClient(this);
 
             IgnoreVersion = true;
 
@@ -220,6 +227,8 @@ namespace LANCommander.SDK
 
                             // Successful! Found our service
                             Logger?.LogInformation("Using server address {ServerAddress}", uri.ToString());
+
+                            await RPC.ConnectAsync();
 
                             return;
                         }

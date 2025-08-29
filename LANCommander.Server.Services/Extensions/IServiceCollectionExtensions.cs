@@ -51,6 +51,9 @@ public static class IServiceCollectionExtensions
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<GameCustomFieldService>();
         services.AddScoped<SteamCMDService>();
+        services.AddScoped<ChatService>();
+        services.AddScoped<ChatMessageService>();
+        services.AddScoped<ChatThreadService>();
         services.AddTransient<SetupService>();
         
         // Register server engines

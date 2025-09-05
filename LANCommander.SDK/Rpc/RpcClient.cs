@@ -28,7 +28,7 @@ public partial class RpcClient(SDK.Client client) : IRpcClient
         }
         catch
         {
-            throw;
+            
         }
     } 
 }

@@ -371,12 +371,18 @@ namespace LANCommander.Launcher.Services
         {
             var remoteLibrary = await Client.Library.GetAsync();
 
+            using var transaction = await DatabaseContext.Database.BeginTransactionAsync();
+            
             try
             {
                 await ImportLibraryAsync(remoteLibrary);
+                
+                await transaction.CommitAsync();
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
+                
                 Logger.LogError(ex, "Could not import library!");
                 OnImportFailed?.Invoke(ex);
             }
@@ -384,8 +390,6 @@ namespace LANCommander.Launcher.Services
 
         public async Task ImportLibraryAsync(IEnumerable<SDK.Models.EntityReference> games)
         {
-            var library = await LibraryService.GetByUserAsync(AuthenticationService.GetUserId());
-            
             Logger?.LogInformation("Starting library import");
 
             _importProgress.IsImporting = true;

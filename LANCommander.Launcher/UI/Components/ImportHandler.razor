@@ -61,7 +61,8 @@
             MessageService.Info(LocalizationService.GetString("ImportStarted"), 2.5);
 
             Logger?.LogInformation("Starting import");
-            await ImportService.ImportLibraryAsync(); // Call directly instead of using JS
+            
+            ImportService.ImportLibraryAsync(); // Call directly instead of using JS
         }
     }
 

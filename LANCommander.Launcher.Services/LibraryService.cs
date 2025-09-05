@@ -116,7 +116,7 @@ namespace LANCommander.Launcher.Services
                     };
                 
                     user = Context.Users.Add(user).Entity;
-
+                    
                     await Context.SaveChangesAsync();
                 }
 

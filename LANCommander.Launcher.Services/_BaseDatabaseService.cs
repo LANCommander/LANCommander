@@ -42,7 +42,8 @@ namespace LANCommander.Launcher.Services
 
             entity = result.Entity;
             
-            await Context.SaveChangesAsync();
+            if (Context.Database.CurrentTransaction == null)
+                await Context.SaveChangesAsync();
 
             return entity;
         }
@@ -85,7 +86,8 @@ namespace LANCommander.Launcher.Services
             
             entity = Context.Update(existing).Entity;
             
-            await Context.SaveChangesAsync();
+            if (Context.Database.CurrentTransaction == null)
+                await Context.SaveChangesAsync();
 
             return entity;
         }
@@ -94,7 +96,8 @@ namespace LANCommander.Launcher.Services
         {
             Context.Set<T>().Remove(entity);
             
-            await Context.SaveChangesAsync();
+            if (Context.Database.CurrentTransaction == null)
+                await Context.SaveChangesAsync();
         }
     }
 }

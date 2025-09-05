@@ -80,7 +80,8 @@ public class BulkImportBuilder<TModel, TKeyedModel>
                 
                 _databaseContext.Update(_existingTarget);
                 
-                await _databaseContext.SaveChangesAsync();
+                if (_databaseContext.Database.CurrentTransaction == null)
+                    await _databaseContext.SaveChangesAsync();
             }
             else
             {
@@ -95,7 +96,8 @@ public class BulkImportBuilder<TModel, TKeyedModel>
                 
                 var result = await _databaseContext.Set<TModel>().AddAsync(item);
                 
-                await _databaseContext.SaveChangesAsync();
+                if (_databaseContext.Database.CurrentTransaction == null)
+                    await _databaseContext.SaveChangesAsync();
 
                 _target.Add(result.Entity);
             }
@@ -111,7 +113,8 @@ public class BulkImportBuilder<TModel, TKeyedModel>
             }            
         }
 
-        await _databaseContext.SaveChangesAsync();
+        if (_databaseContext.Database.CurrentTransaction == null)
+            await _databaseContext.SaveChangesAsync();
 
         return _target;
     }

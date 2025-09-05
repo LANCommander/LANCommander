@@ -17,7 +17,7 @@ public partial class RpcClient(SDK.Client client) : IRpcClient
         try
         {
             _connection = new HubConnectionBuilder()
-                .WithUrl($"{client.BaseUrl}rpc")
+                .WithUrl(client.BaseUrl.Join("rpc"))
                 .Build();
 
             Server = _connection.ServerProxy<IRpcHub>();

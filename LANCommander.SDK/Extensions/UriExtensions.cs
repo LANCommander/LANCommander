@@ -7,6 +7,16 @@ namespace LANCommander.SDK.Extensions;
 
 public static class UriExtensions
 {
+    public static Uri Join(this Uri uri, params string[] parts)
+    {
+        var strUri = uri.ToString();
+
+        foreach (var part in parts)
+            strUri += '/' + part.Trim('/');
+        
+        return new Uri(strUri);
+    }
+    
     /// <summary>
     /// Creates an absolute URI from a string that may or may not include a scheme.
     /// If the string does not contain a scheme (e.g., "http://" or "https://"), it defaults to "http://".

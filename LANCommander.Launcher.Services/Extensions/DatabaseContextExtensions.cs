@@ -8,7 +8,7 @@ public static class DatabaseContextExtensions
 {
     public static BulkImportBuilder<TModel, TKeyedModel> BulkImport<TModel, TKeyedModel>(
         this DatabaseContext databaseContext)
-        where TModel : BaseModel
+        where TModel : BaseModel, new()
         where TKeyedModel : SDK.Models.IKeyedModel
     {
         return new BulkImportBuilder<TModel, TKeyedModel>(databaseContext);

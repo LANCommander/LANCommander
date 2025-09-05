@@ -23,6 +23,8 @@ namespace LANCommander.Launcher.Data.Models
 
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
+        
+        public DateTime? ImportedOn { get; set; }
 
         public GameType Type { get; set; }
         public Guid? BaseGameId { get; set; }

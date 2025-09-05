@@ -238,14 +238,14 @@ namespace LANCommander.Launcher.Services
         {
             var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
-            if (!library.Games.Any(g => g.Id == game.Id))
+            if (library.Games.Where(g => g != null).All(g => g.Id != game.Id))
             {
                 library.Games.Add(game);
 
                 await UpdateAsync(library);
             }
 
-            if (!Items.Any(i => i.Key == game.Id))
+            if (Items.All(i => i.Key != game.Id))
             {
                 var item = new ListItem(game);
                 Items.Add(item);

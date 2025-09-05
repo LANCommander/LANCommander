@@ -124,12 +124,19 @@ namespace LANCommander.Launcher.Services
                         };
                     else
                         existing = true;
+
+                    if (localGame.ImportedOn > game.UpdatedOn)
+                    {
+                        Logger.LogInformation($"Skipping {game.Title}, no new information to grab");
+                        return localGame;
+                    }
                     
                     localGame.Title = game.Title;
                     localGame.SortTitle = String.IsNullOrWhiteSpace(game.SortTitle) ? String.Empty : game.SortTitle;
                     localGame.Description = String.IsNullOrWhiteSpace(game.Description) ? String.Empty : game.Description;
                     localGame.Notes = String.IsNullOrWhiteSpace(game.Notes) ? String.Empty : game.Notes;
                     localGame.ReleasedOn = game.ReleasedOn;
+                    localGame.ImportedOn = DateTime.UtcNow;
                     localGame.Type = (Data.Enums.GameType)(int)game.Type;
                     localGame.Singleplayer = game.Singleplayer;
                     

@@ -68,7 +68,6 @@ namespace LANCommander.Launcher
             app
                 .RegisterMainWindow()
                 .RegisterMediaHandler()
-                .RegisterMediaHandler()
                 .RegisterChatWindow()
                 .RestoreWindowPosition();
             #endregion

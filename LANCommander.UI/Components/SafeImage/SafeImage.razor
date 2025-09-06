@@ -7,11 +7,11 @@
     {
         if (!String.IsNullOrWhiteSpace(Source))
         {
-            <img src="@Source" @onload="OnLoad" @onerror="OnError" class="@Class" style="@Style" />
+            <img src="@Source" @onload="OnLoad" @onerror="OnError" style="@Style" />
         }
         else if (Media != null)
         {
-            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(Media))" @onload="OnLoad" @onerror="OnError" class="@Class" style="@Style" />
+            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(Media))" @onload="OnLoad" @onerror="OnError" style="@Style" />
         }
         else
         {
@@ -27,6 +27,7 @@
 @code {
     [Parameter] public string Source { get; set; }
     [Parameter] public Media Media { get; set; }
+    [Parameter] public ImageFit Fit { get; set; }
     [Parameter] public string Class { get; set; }
     [Parameter] public string Style { get; set; }
     [Parameter] public RenderFragment ChildContent { get; set; }
@@ -39,6 +40,7 @@
     {
         _class = new ClassBuilder()
             .Add("safe-image")
+            .If(() => Fit == ImageFit.Cover, "safe-image-fit-cover")
             .If(() => !String.IsNullOrWhiteSpace(Class), Class)
             .Build();
     }

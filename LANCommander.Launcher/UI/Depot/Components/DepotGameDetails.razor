@@ -26,7 +26,7 @@
                         <h1>@SelectedGame.Title</h1>
                     </SafeImage>
                 
-                    <SafeImage Media="@(SelectedGame.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Background))" Class="game-details-background">
+                    <SafeImage Media="@(SelectedGame.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Background))" Fit="ImageFit.Cover" Class="game-details-background">
                         <div class="game-details-background-fallback"></div>
                     </SafeImage>
                 </div>

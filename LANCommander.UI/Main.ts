@@ -1,6 +1,6 @@
-﻿import { Uploader } from "./Scripts/Uploader"
-import { SplitPane } from "./Scripts/SplitPane"
-import { TimeProvider } from "./Scripts/TimeProvider";
+﻿import { Uploader } from "./Components/ChunkUploader/Uploader"
+import { SplitPane } from "./Components/SplitPane/SplitPane"
+import { TimeProvider } from "./Components/LocalTime/TimeProvider";
 import { Readline } from "xterm-readline"
 import { FitAddon } from "@xterm/addon-fit"
 

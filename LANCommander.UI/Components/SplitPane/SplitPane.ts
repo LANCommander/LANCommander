@@ -1,4 +1,4 @@
-﻿import Split from 'split.js'
+import Split from 'split.js'
 
 export class SplitPane {
     SplitPanes: HTMLElement[] = [];

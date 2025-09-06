@@ -3,7 +3,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-    entry: ['./Main.ts', './Styles/ui.scss'], // Adjust the path if your index.js is located elsewhere
+    entry: ['./Main.ts', './_Imports.razor.scss'], // Adjust the path if your index.js is located elsewhere
     module: {
         rules: [
             {

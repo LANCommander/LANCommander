@@ -4,6 +4,7 @@
 @inject NavigationManager Navigator
 @inject IJSRuntime JS
 @inject IMessageService MessageService
+@namespace LANCommander.UI.Components
 
 <div class="ant-upload ant-upload-select-text ant-upload-drag ant-upload-select chunk-uploader" data-status="@CurrentProgressStatus">
     <Progress Type="ProgressType.Circle" Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />

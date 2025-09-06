@@ -1,7 +1,8 @@
 @using LANCommander.SDK.Models
 @inject SDK.Client Client
+@namespace LANCommander.UI.Components
 
-<Spin Spinning="_loading">
+<Spin Spinning="_loading" WrapperClassName="@Class safe-image">
     @if (!_error)
     {
         if (!String.IsNullOrWhiteSpace(Source))

@@ -1,0 +1,12 @@
+﻿@forward 'Styles/_blazor-error';
+@forward 'Styles/_layout';
+@forward 'Styles/_panel-layout';
+@forward 'Styles/_menu';
+@forward 'Styles/_pdf-reader';
+@forward 'Styles/_transfer';
+@forward 'Styles/_markdown-editor';
+@forward 'Styles/_authentication-provider';
+@forward 'Components/FileManager/FileManager.razor';
+@forward 'Components/ChunkUploader/ChunkUploader.razor';
+@forward 'Components/SplitPane/SplitPane.razor';
+@forward 'Components/SafeImage/SafeImage.razor';

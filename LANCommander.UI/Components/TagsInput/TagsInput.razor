@@ -1,12 +1,14 @@
 ﻿@using LANCommander.SDK.Models
 @typeparam TItem where TItem : IKeyedModel
+@namespace LANCommander.UI.Components
 
 <Select 
     @ref="@Select"
-    Mode="SelectMode.Multiple"
+    Mode="SelectMode.Tags"
     DataSource="Entities"
     ItemValue="e => e.Id"
     ItemLabel="OptionLabelSelector"
+    OnCreateCustomTag="async (tag) => await OnCreateCustomTag(tag)"
     @bind-Values="@SelectedValues"
     EnableSearch
     EnableVirtualization>
@@ -15,6 +17,8 @@
 @code {
     [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
     [Parameter] public IEnumerable<TItem> Entities { get; set; }
+    
+    [Parameter] public EventCallback<string> OnCreateTag { get; set; }
 
     [Parameter] public ICollection<TItem> Values { get; set; }
     [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
@@ -37,5 +41,11 @@
                     ValuesChanged.InvokeAsync(Values);
             }
         }
+    }
+
+    private async Task OnCreateCustomTag(string tag)
+    {
+        if (OnCreateTag.HasDelegate)
+            await OnCreateTag.InvokeAsync(tag);
     }
 }

@@ -1,5 +1,6 @@
 ﻿@using Microsoft.JSInterop
 @inject IJSRuntime JS
+@namespace LANCommander.UI.Components
 
 <CascadingValue Value="this" IsFixed="@true">
     <div id="split-pane-@(PaneId.ToString())" class="split-pane @Class" style="@Style">

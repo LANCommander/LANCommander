@@ -1,4 +1,6 @@
-﻿<Modal Title="New Folder" Visible="@Visible" Draggable="true" DragInViewport="false" OnOk="OnOk" OnCancel="Close">
+﻿@namespace LANCommander.UI.Components
+
+<Modal Title="New Folder" Visible="@Visible" Draggable="true" DragInViewport="false" OnOk="OnOk" OnCancel="Close">
     <Input @bind-Value="@Name" />
 </Modal>
 

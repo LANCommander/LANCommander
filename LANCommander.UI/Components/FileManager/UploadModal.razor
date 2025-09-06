@@ -1,4 +1,6 @@
-﻿<Modal Title="Upload Files" Visible="@Visible" Draggable="true" DragInViewport="false" OnCancel="Close">
+﻿@namespace LANCommander.UI.Components
+
+<Modal Title="Upload Files" Visible="@Visible" Draggable="true" DragInViewport="false" OnCancel="Close">
     <Upload Action="/Upload/File" Name="file" Drag Multiple Data="Data" OnCompleted="OnCompleted">
         <p class="ant-upload-drag-icon">
             <Icon Type="@IconType.Outline.Upload" />

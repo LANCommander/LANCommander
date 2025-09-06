@@ -1,6 +1,6 @@
 ﻿using System.IO.Compression;
 
-namespace LANCommander.Server.UI.Components.FileManagerComponents
+namespace LANCommander.UI.Components
 {
     public class FileManagerDirectory : FileManagerEntry
     {

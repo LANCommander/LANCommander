@@ -1,10 +1,11 @@
 ﻿@inherits OwningComponentBase
 @using AntDesign.TableModels;
-@using LANCommander.Server.UI.Components.FileManagerComponents.Sources
+@using LANCommander.SDK.Services
+@using Microsoft.Extensions.Logging
+@inject IArchiveService ArchiveService
 @inject IMessageService MessageService
-@inject IJSRuntime JS
 @inject ILogger<FileManager> Logger
-@namespace LANCommander.Server.UI.Components
+@namespace LANCommander.UI.Components
 
 <div class="file-manager">
     <GridRow Class="file-manager-nav" Align="RowAlign.Middle">
@@ -153,8 +154,6 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
-    ArchiveService ArchiveService;
-
     IFileManagerSource FileSource;
 
     List<FileManagerDirectory> Past { get; set; } = new();
@@ -179,8 +178,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
-
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
             FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
         else if (ArchiveId != Guid.Empty)

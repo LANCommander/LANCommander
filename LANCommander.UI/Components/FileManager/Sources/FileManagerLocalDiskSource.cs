@@ -1,9 +1,4 @@
-﻿
-using LANCommander.Server.Services;
-using NuGet.Packaging;
-using SharpCompress.Common;
-
-namespace LANCommander.Server.UI.Components.FileManagerComponents.Sources
+﻿namespace LANCommander.UI.Components
 {
     public class FileManagerLocalDiskSource : IFileManagerSource
     {
@@ -161,7 +156,6 @@ namespace LANCommander.Server.UI.Components.FileManagerComponents.Sources
         public IEnumerable<FileManagerDirectory> GetDirectoryTree()
         {
             var roots = new List<FileManagerDirectory>();
-            var settings = SettingService.GetSettings();
 
             #if WINDOWS
             var drives = settings.GetDrives();

@@ -1,4 +1,4 @@
-﻿namespace LANCommander.Server.UI.Components.FileManagerComponents
+﻿namespace LANCommander.UI.Components
 {
     [Flags]
     public enum FileManagerFeatures

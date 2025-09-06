@@ -1,13 +1,12 @@
 ﻿
-using LANCommander.Server.Services;
-using System.IO;
 using System.IO.Compression;
+using LANCommander.SDK.Services;
 
-namespace LANCommander.Server.UI.Components.FileManagerComponents.Sources
+namespace LANCommander.UI.Components
 {
     public class FileManagerArchiveSource : IFileManagerSource
     {
-        private ArchiveService ArchiveService;
+        private IArchiveService ArchiveService;
 
         private Guid ArchiveId { get; set; }
         private FileManagerDirectory CurrentPath { get; set; }
@@ -16,7 +15,7 @@ namespace LANCommander.Server.UI.Components.FileManagerComponents.Sources
 
         private const char Separator = '/';
 
-        public FileManagerArchiveSource(ArchiveService archiveService, Guid archiveId) {
+        public FileManagerArchiveSource(IArchiveService archiveService, Guid archiveId) {
             ArchiveService = archiveService;
             ArchiveId = archiveId;
 

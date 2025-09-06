@@ -6,6 +6,7 @@ using LANCommander.SDK;
 using System.IO.Compression;
 using System.Linq.Expressions;
 using AutoMapper;
+using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
 using ZiggyCreatures.Caching.Fusion;
@@ -24,7 +25,7 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, httpContextAccessor, dbContextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveService
     {
         public async Task<Archive> GetLatestArchive(Expression<Func<Archive, bool>> predicate)
         {

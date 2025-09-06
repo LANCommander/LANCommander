@@ -2,7 +2,7 @@
 @inject SDK.Client Client
 @namespace LANCommander.UI.Components
 
-<Spin Spinning="_loading" WrapperClassName="@Class safe-image">
+<Spin Spinning="_loading" WrapperClassName="@_class">
     @if (!_error)
     {
         if (!String.IsNullOrWhiteSpace(Source))
@@ -31,8 +31,17 @@
     [Parameter] public string Style { get; set; }
     [Parameter] public RenderFragment ChildContent { get; set; }
 
+    string _class = String.Empty;
     bool _loading = true;
     bool _error = false;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("safe-image")
+            .If(() => !String.IsNullOrWhiteSpace(Class), Class)
+            .Build();
+    }
 
     void OnLoad()
     {

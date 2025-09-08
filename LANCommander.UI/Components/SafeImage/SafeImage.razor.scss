@@ -9,6 +9,10 @@
     }
     
     &-fit-cover {
-        object-fit: cover;
+        & > div,
+        .ant-spin-container,
+        img {
+            object-fit: cover;
+        }
     }
 }

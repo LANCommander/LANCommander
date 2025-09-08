@@ -43,6 +43,9 @@
             .If(() => Fit == ImageFit.Cover, "safe-image-fit-cover")
             .If(() => !String.IsNullOrWhiteSpace(Class), Class)
             .Build();
+
+        if (String.IsNullOrWhiteSpace(Source) && Media == null)
+            _loading = false;
     }
 
     void OnLoad()

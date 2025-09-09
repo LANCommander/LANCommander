@@ -212,9 +212,9 @@ namespace LANCommander.SDK.Services
                         if (_client.Scripts.Debug)
                         {
                             script.EnableDebug();
-                            script.OnDebugStart = _client.Scripts.OnDebugStart;
-                            script.OnDebugBreak = _client.Scripts.OnDebugBreak;
-                            script.OnOutput = _client.Scripts.OnOutput;
+                            script.DebugHandler.OnDebugStart = _client.Scripts.OnDebugStart;
+                            script.DebugHandler.OnDebugBreak = _client.Scripts.OnDebugBreak;
+                            script.DebugHandler.OnOutput = _client.Scripts.OnOutput;
                         }
 
                         await script.ExecuteAsync<int>();

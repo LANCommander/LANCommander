@@ -34,9 +34,7 @@ namespace LANCommander.SDK.PowerShell
 
         private TaskCompletionSource<string> Input { get; set; }
 
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
-        public Func<LogLevel, string, Task> OnOutput;
+        public PowerShellDebugHandler DebugHandler { get; private set; }
 
         private const string Logo = @"
    __   ___   _  _______                              __       
@@ -51,6 +49,7 @@ namespace LANCommander.SDK.PowerShell
             Type = type;
             Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
+            DebugHandler = new PowerShellDebugHandler();
 
             InitialSessionState = InitialSessionState.CreateDefault();
 
@@ -142,9 +141,12 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript EnableDebug()
+        public PowerShellScript EnableDebug(PowerShellDebugHandler debugHandler = null)
         {
             Debug = true;
+            
+            if (debugHandler != null)
+                DebugHandler = debugHandler;
 
             return this;
         }
@@ -184,7 +186,7 @@ namespace LANCommander.SDK.PowerShell
                     ps.Runspace = runspace;
 
                     if (Debug)
-                        await (OnDebugStart?.Invoke(ps) ?? Task.CompletedTask);
+                        await (DebugHandler.OnDebugStart?.Invoke(ps) ?? Task.CompletedTask);
 
                     ps.AddScript("Write-Host $Logo");
 
@@ -205,7 +207,7 @@ namespace LANCommander.SDK.PowerShell
                         ps.AddScript("Write-Host ''");
                         ps.AddScript("Write-Host 'Enter \"exit\" to continue'");
 
-                        if (OnOutput != null)
+                        if (DebugHandler.OnOutput != null)
                         {
                             ps.Streams.Information.DataAdded += Information_DataAdded;
                             ps.Streams.Verbose.DataAdded += Verbose_DataAdded;
@@ -218,7 +220,7 @@ namespace LANCommander.SDK.PowerShell
                     var results = await ps.InvokeAsync();
 
                     if (Debug)
-                        await (OnDebugBreak?.Invoke(ps) ?? Task.CompletedTask);
+                        await (DebugHandler.OnDebugBreak?.Invoke(ps) ?? Task.CompletedTask);
 
                     try
                     {
@@ -244,29 +246,29 @@ namespace LANCommander.SDK.PowerShell
         {
             var record = ((PSDataCollection<ErrorRecord>)sender)[e.Index];
 
-            OnOutput?.Invoke(LogLevel.Error, $"{record.InvocationInfo.InvocationName} : {record.Exception.Message}");
-            OnOutput?.Invoke(LogLevel.Error, record.InvocationInfo.PositionMessage);
+            DebugHandler.OnOutput?.Invoke(LogLevel.Error, $"{record.InvocationInfo.InvocationName} : {record.Exception.Message}");
+            DebugHandler.OnOutput?.Invoke(LogLevel.Error, record.InvocationInfo.PositionMessage);
         }
 
         private void Warning_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<WarningRecord>)sender)[e.Index];
 
-            OnOutput?.Invoke(LogLevel.Warning, record.Message);
+            DebugHandler.OnOutput?.Invoke(LogLevel.Warning, record.Message);
         }
 
         private void Debug_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<DebugRecord>)sender)[e.Index];
 
-            OnOutput?.Invoke(LogLevel.Debug, record.Message);
+            DebugHandler.OnOutput?.Invoke(LogLevel.Debug, record.Message);
         }
 
         private void Verbose_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<VerboseRecord>)sender)[e.Index];
 
-            OnOutput?.Invoke(LogLevel.Trace, record.Message);
+            DebugHandler.OnOutput?.Invoke(LogLevel.Trace, record.Message);
         }
 
         private void Information_DataAdded(object sender, DataAddedEventArgs e)
@@ -274,7 +276,7 @@ namespace LANCommander.SDK.PowerShell
             var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
 
             if (record.MessageData != null && record.MessageData is HostInformationMessage)
-                OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
+                DebugHandler.OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
         }
 
         public static string Serialize<T>(T input)

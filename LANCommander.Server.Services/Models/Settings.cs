@@ -1,7 +1,9 @@
 ﻿using LANCommander.Server.Data.Enums;
 using System.Text.RegularExpressions;
+using LANCommander.SDK.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -171,7 +173,22 @@ namespace LANCommander.Server.Services.Models
     {
         public string SteamGridDbApiKey { get; set; } = "";
         public long MaxSize { get; set; } = 25;
+        public float ThumbnailSizePercentage = 50;
+
+        public IEnumerable<ThumbnailConfiguration> ThumbnailConfigurations { get; set; } =
+            new List<ThumbnailConfiguration>()
+            {
+                new (MediaType.Icon, new Size(32, 32), new Size(128, 128), 75, true),
+                new (MediaType.Cover, new Size(120, 180), new Size(240, 360), 75, true),
+                new (MediaType.Background, new Size(960, 540), new Size(1920, 1080), 75, true),
+                new (MediaType.Avatar, new Size(64, 64), new Size(128, 128), 75, true),
+                new (MediaType.Logo, new Size(160, 90), new Size(640, 360), 75, true),
+                new (MediaType.Manual, new Size(480, 720), new Size(240, 360), 75, true),
+                new (MediaType.PageImage, new Size(480, 480), new Size(640, 640), 75, true),
+            };
     }
+
+    public record ThumbnailConfiguration(MediaType MediaType, Size MinSize, Size MaxSize, int Quality, bool Enabled);
 
     public class IPXRelaySettings
     {

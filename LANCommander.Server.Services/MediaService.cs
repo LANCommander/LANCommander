@@ -49,18 +49,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
         }
-
-        private float ThumbnailPercentage = 0.40f;
-
-        private Dictionary<MediaType, (Size MinSize, Size MaxSize)> ThumbnailSizes = new Dictionary<MediaType, (Size MinSize, Size MaxSize)>
-        {
-            { MediaType.Cover, (new Size(120, 180), MaxSize: new Size(240, 360)) },
-            { MediaType.Manual, (new Size(120, 180), new Size(180, 270)) },
-            { MediaType.Logo, (new Size(160, 90), new Size(320, 180)) },
-            { MediaType.Background, (new Size(320, 180), new Size(960, 540)) },
-            { MediaType.Icon, (new Size(32, 32), new Size(64, 64)) },
-            { MediaType.Avatar, (new Size(64, 64), new Size(128, 128)) }
-        };
+        
 
         public override async Task DeleteAsync(Media entity)
         {
@@ -129,7 +118,9 @@ namespace LANCommander.Server.Services
 
         public string GetThumbnailPath(Media media)
         {
-            if (ThumbnailSizes.ContainsKey(media.Type))
+            var config = _settings.Media.ThumbnailConfigurations.FirstOrDefault(c => c.MediaType == media.Type);
+            
+            if (config != null)
                 return $"{GetMediaPath(media)}.Thumb";
             else
                 return GetMediaPath(media);
@@ -183,6 +174,8 @@ namespace LANCommander.Server.Services
 
             if (!File.Exists(source))
                 return String.Empty;
+            
+            var config = _settings.Media.ThumbnailConfigurations.FirstOrDefault(c => c.MediaType == media.Type);
 
             Stream stream = null;
 
@@ -206,13 +199,12 @@ namespace LANCommander.Server.Services
                     stream = new FileStream(source, FileMode.Open, FileAccess.Read);
                 }
 
-                if (ThumbnailSizes.ContainsKey(media.Type))
+                if (config != null && config.Enabled)
                 {
                     using (var image = await Image.LoadAsync<Rgba32>(stream))
                     {
-                        var (MinSize, MaxSize) = ThumbnailSizes[media.Type];
-                        int thumbsizeX = (int)Math.Clamp(image.Width * ThumbnailPercentage, MinSize.Width, MaxSize.Width);
-                        int thumbsizeY = (int)Math.Clamp(image.Height * ThumbnailPercentage, MinSize.Height, MaxSize.Height);
+                        int thumbsizeX = (int)Math.Clamp(image.Width * _settings.Media.ThumbnailSizePercentage, config.MinSize.Width, config.MaxSize.Width);
+                        int thumbsizeY = (int)Math.Clamp(image.Height * _settings.Media.ThumbnailSizePercentage, config.MinSize.Height, config.MaxSize.Height);
                         var resizeOptions = new ResizeOptions
                         {
                             Mode = ResizeMode.Max,

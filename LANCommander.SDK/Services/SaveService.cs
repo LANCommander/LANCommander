@@ -208,14 +208,9 @@ namespace LANCommander.SDK.Services
                         }
 
                         script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
-
+                        
                         if (_client.Scripts.Debug)
-                        {
                             script.EnableDebug();
-                            script.DebugHandler.OnDebugStart = _client.Scripts.OnDebugStart;
-                            script.DebugHandler.OnDebugBreak = _client.Scripts.OnDebugBreak;
-                            script.DebugHandler.OnOutput = _client.Scripts.OnOutput;
-                        }
 
                         await script.ExecuteAsync<int>();
                     }

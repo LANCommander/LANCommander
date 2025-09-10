@@ -6,7 +6,58 @@ namespace LANCommander.SDK.PowerShell;
 
 public class PowerShellDebugHandler
 {
-    public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
-    public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
-    public Func<LogLevel, string, Task> OnOutput;
+    public Guid SessionId { get; set; } = Guid.NewGuid();
+    
+    public event EventHandler<OnDebugStartEventArgs> OnDebugStart;
+    public event EventHandler<OnDebugBreakEventArgs> OnDebugBreak;
+    public event EventHandler<OnDebugOutputEventArgs> OnDebugOutput;
+
+    private System.Management.Automation.PowerShell _powerShell;
+
+    internal void Start(System.Management.Automation.PowerShell ps = null)
+    {
+        if (_powerShell == null)
+            _powerShell = ps;
+        
+        OnDebugStart?.Invoke(this,  new OnDebugStartEventArgs
+        {
+            PowerShell = _powerShell,
+        });
+    }
+
+    internal void Break(System.Management.Automation.PowerShell ps = null)
+    {
+        if (_powerShell == null)
+            _powerShell = ps;
+        
+        OnDebugStart?.Invoke(this, new OnDebugStartEventArgs
+        {
+           PowerShell = _powerShell,
+        });
+    }
+
+    internal void Output(LogLevel level, string message)
+    {
+        OnDebugOutput?.Invoke(this, new OnDebugOutputEventArgs
+        {
+            LogLevel = level,
+            Message = message
+        });
+    } 
+}
+
+public class OnDebugStartEventArgs : EventArgs
+{
+    public System.Management.Automation.PowerShell PowerShell { get; set; }
+}
+
+public class OnDebugBreakEventArgs : EventArgs
+{
+    public System.Management.Automation.PowerShell PowerShell { get; set; }
+}
+
+public class OnDebugOutputEventArgs : EventArgs
+{
+    public LogLevel LogLevel { get; set; }
+    public string Message { get; set; }
 }

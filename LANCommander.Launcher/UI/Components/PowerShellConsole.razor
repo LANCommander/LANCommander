@@ -1,4 +1,5 @@
-﻿@using XtermBlazor
+﻿@using LANCommander.SDK.PowerShell
+@using XtermBlazor
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
 @inject SDK.Client Client
 
@@ -7,80 +8,86 @@
 </div>
 
 @code {
+    [Parameter] public PowerShellDebugHandler DebugHandler { get; set; }
+    
     private bool Visible { get; set; } = false;
     private Xterm Terminal;
     private TaskCompletionSource<string> InputTaskCompletionSource;
 
-    private TerminalOptions _options = new TerminalOptions
+    private TerminalOptions _options = new()
     {
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
     };
 
-    private HashSet<string> Addons = new HashSet<string>()
+    private HashSet<string> Addons = new()
     {
         "readline",
         "addon-fit"
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        Client.Scripts.OnDebugStart = async (ps) =>
+        DebugHandler.OnDebugStart += OnDebugStart;
+        DebugHandler.OnDebugBreak += OnDebugBreak;
+        DebugHandler.OnDebugOutput += OnDebugOutput;
+    }
+
+    private async void OnDebugStart(object? sender, OnDebugStartEventArgs e)
+    {
+        Terminal?.Clear();
+        Visible = true;
+        await InvokeAsync(StateHasChanged);
+
+        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+    }
+
+    private async void OnDebugBreak(object? sender, OnDebugBreakEventArgs e)
+    {
+        while (true)
         {
-            Terminal?.Clear();
-            Visible = true;
-            await InvokeAsync(StateHasChanged);
+            var input = await ReadLine();
 
-            await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
-        };
+            if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                break;
 
-        Client.Scripts.OnOutput = async (level, message) =>
+            if (input.StartsWith('$'))
+                input = "Write-Host " + input;
+
+            e.PowerShell.Commands.Clear();
+            e.PowerShell.AddScript(input);
+
+            await e.PowerShell.InvokeAsync();
+        }
+
+        Visible = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnDebugOutput(object? sender, OnDebugOutputEventArgs e)
+    {
+        switch (e.LogLevel)
         {
-            switch (level)
-            {
-                case LogLevel.Error:
-                    await Terminal.WriteLine($"\x1b[0;31m{message}");
-                    break;
+            case LogLevel.Error:
+                await Terminal.WriteLine($"\x1b[0;31m{e.Message}");
+                break;
 
-                case LogLevel.Warning:
-                    await Terminal.WriteLine($"\x1b[0;33m{message}");
-                    break;
+            case LogLevel.Warning:
+                await Terminal.WriteLine($"\x1b[0;33m{e.Message}");
+                break;
 
-                case LogLevel.Debug:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
+            case LogLevel.Debug:
+                await Terminal.WriteLine($"\x1b[0;37m{e.Message}");
+                break;
 
-                case LogLevel.Trace:
-                    await Terminal.WriteLine($"\x1b[0;36m{message}");
-                    break;
+            case LogLevel.Trace:
+                await Terminal.WriteLine($"\x1b[0;36m{e.Message}");
+                break;
 
-                case LogLevel.Information:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
-            }
-        };
-
-        Client.Scripts.OnDebugBreak = async (ps) =>
-        {
-            while (true)
-            {
-                var input = await ReadLine();
-
-                if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
-                    break;
-
-                if (input.StartsWith('$'))
-                    input = "Write-Host " + input;
-
-                ps.Commands.Clear();
-                ps.AddScript(input);
-
-                await ps.InvokeAsync();
-            }
-
-            Visible = false;
-            await InvokeAsync(StateHasChanged);
-        };
+            case LogLevel.Information:
+                await Terminal.WriteLine($"\x1b[0;37m{e.Message}");
+                break;
+        }
     }
 
     private async Task OnFirstRender()

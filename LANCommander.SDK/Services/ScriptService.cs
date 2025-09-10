@@ -22,10 +22,6 @@ namespace LANCommander.SDK.Services
 
         public bool Debug { get; set; } = false;
 
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
-        public Func<LogLevel, string, Task> OnOutput;
-
         public ScriptService(Client client)
         {
             _client = client;
@@ -38,7 +34,7 @@ namespace LANCommander.SDK.Services
         }
         
         #region Authentication Scripts
-        public async Task RunUserLoginScript(Script loginScript, User user)
+        public async Task RunUserLoginScript(Script loginScript, User user, PowerShellDebugHandler debugHandler = null)
         {
             try
             {
@@ -47,6 +43,9 @@ namespace LANCommander.SDK.Services
                     var script = new PowerShellScript(Enums.ScriptType.UserLogin);
 
                     script.AddVariable("User", user);
+
+                    if (Debug)
+                        script.EnableDebug(debugHandler);
 
                     script.UseInline(loginScript.Contents);
 
@@ -72,7 +71,7 @@ namespace LANCommander.SDK.Services
             }
         }
         
-        public async Task RunUserRegistrationScript(Script registrationScript, User user)
+        public async Task RunUserRegistrationScript(Script registrationScript, User user, PowerShellDebugHandler debugHandler = null)
         {
             try
             {
@@ -81,6 +80,9 @@ namespace LANCommander.SDK.Services
                     var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
 
                     script.AddVariable("User", user);
+                    
+                    if (Debug)
+                        script.EnableDebug(debugHandler);
 
                     script.UseInline(registrationScript.Contents);
 
@@ -108,7 +110,7 @@ namespace LANCommander.SDK.Services
         #endregion
 
         #region Redistributables
-        public async Task<bool> RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        public async Task<bool> RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, PowerShellDebugHandler debugHandler = null)
         {
             bool result = default;
             
@@ -126,7 +128,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.DetectInstall);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -161,20 +163,6 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId)));
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -194,7 +182,8 @@ namespace LANCommander.SDK.Services
                                 }
                             }
                         }
-                            result = await script.ExecuteAsync<bool>();
+                        
+                        result = await script.ExecuteAsync<bool>();
 
                         op.Complete();
                     }
@@ -208,7 +197,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -226,7 +215,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.Install);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -264,20 +253,6 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -298,7 +273,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
         
-        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -317,7 +292,7 @@ namespace LANCommander.SDK.Services
                         var playerAlias = await GameService.GetPlayerAliasAsync(installDirectory, gameId);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -357,20 +332,6 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -395,7 +356,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -413,7 +374,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.AfterStop);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -453,20 +414,6 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -492,7 +439,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, string newName)
+        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, string newName, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -520,7 +467,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -561,20 +508,6 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -602,7 +535,7 @@ namespace LANCommander.SDK.Services
         #endregion
 
         #region Games
-        public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -618,7 +551,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.Install);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -646,20 +579,6 @@ namespace LANCommander.SDK.Services
                         catch (Exception ex)
                         {
                             _logger?.LogError(ex, "Could not enrich logs");
-                        }
-
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -686,7 +605,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunUninstallScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunUninstallScriptAsync(string installDirectory, Guid gameId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -702,7 +621,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.Uninstall);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -732,20 +651,6 @@ namespace LANCommander.SDK.Services
                             _logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -770,7 +675,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -787,7 +692,7 @@ namespace LANCommander.SDK.Services
                         var playerAlias = GameService.GetPlayerAlias(installDirectory, gameId);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -819,20 +724,6 @@ namespace LANCommander.SDK.Services
                             _logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -857,7 +748,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -873,7 +764,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.AfterStop);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -904,20 +795,6 @@ namespace LANCommander.SDK.Services
                             _logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -943,7 +820,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, string newName)
+        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, string newName, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -969,7 +846,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -1005,20 +882,6 @@ namespace LANCommander.SDK.Services
 
                         GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -1043,7 +906,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunKeyChangeScriptAsync(string installDirectory, Guid gameId, string key)
+        public async Task<int> RunKeyChangeScriptAsync(string installDirectory, Guid gameId, string key, PowerShellDebugHandler debugHandler = null)
         {
             int result = default;
 
@@ -1059,7 +922,7 @@ namespace LANCommander.SDK.Services
                         var script = new PowerShellScript(Enums.ScriptType.KeyChange);
 
                         if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                            script.EnableDebug(debugHandler);
 
                         _logger?.LogTrace("New key is {Key}", key);
 
@@ -1095,20 +958,6 @@ namespace LANCommander.SDK.Services
 
                         GameService.UpdateCurrentKey(installDirectory, gameId, key);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, "Could not debug script");
-                        }
-
                         bool handled = false;
 
                         if (ExternalScriptRunner != null)
@@ -1133,7 +982,7 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<Package> RunPackageScriptAsync(Script packageScript, Game game)
+        public async Task<Package> RunPackageScriptAsync(Script packageScript, Game game, PowerShellDebugHandler debugHandler = null)
         {
             try
             {
@@ -1142,8 +991,11 @@ namespace LANCommander.SDK.Services
                     var script = new PowerShellScript(Enums.ScriptType.Package);
 
                     script.AddVariable("Game", game);
-
+                    
                     script.UseInline(packageScript.Contents);
+
+                    if (Debug)
+                        script.EnableDebug(debugHandler);
                     
                     try
                     {

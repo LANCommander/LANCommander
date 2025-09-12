@@ -1,5 +1,5 @@
 ﻿using HtmlAgilityPack;
-using SteamWebAPI2.Utilities;
+using RestSharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,17 +9,21 @@ using System.Net.Http;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace LANCommander.Steam
 {
-    public class SteamClient
+    public class SteamClient : IDisposable
     {
         private readonly HttpClient HttpClient;
+        private readonly RestSharp.RestClient ApiClient;
 
         public SteamClient()
         {
             HttpClient = new HttpClient();
             HttpClient.BaseAddress = new Uri("https://store.steampowered.com");
+
+            ApiClient = new RestSharp.RestClient();
         }
 
         public async Task<IEnumerable<GameSearchResult>> SearchGamesAsync(string keyword)
@@ -38,16 +42,26 @@ namespace LANCommander.Steam
                 try
                 {
                     var appId = match.Attributes["data-ds-appid"].Value;
+                    var packageId = match.Attributes["data-ds-packageid"]?.Value;
+                    string imageUrl = null;
                     var matchNameElement = match.SelectSingleNode(".//div[@class = 'match_name']");
+                    var matchImageElement = match.SelectSingleNode(".//div[@class = 'match_img']/img");
+                    if (matchImageElement != null && matchImageElement.Attributes.Contains("src"))
+                    {
+                        imageUrl = matchImageElement.Attributes["src"].Value;
+                    }
 
                     appId = appId.Split(',').First();
+                    packageId = packageId?.Split(',')?.FirstOrDefault();
 
                     if (matchNameElement != null)
                     {
                         results.Add(new GameSearchResult
                         {
                             Name = matchNameElement.InnerText,
-                            AppId = Convert.ToInt32(appId)
+                            AppId = Convert.ToInt32(appId),
+                            PackageId = packageId != null ? Convert.ToInt32(packageId) : (int?)null,
+                            ImageUrl = imageUrl,
                         });
                     }
                 }
@@ -57,9 +71,20 @@ namespace LANCommander.Steam
             return results;
         }
 
-        public async Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appId, WebAssetType webAssetType)
+        public async Task<IEnumerable<IconSearchResult>> SearchIconsAsync(string keyword)
         {
-            var webAssetUri = GetWebAssetUri(appId, webAssetType);
+            var queryUrl = $"https://steamcommunity.com/actions/SearchApps/{HttpUtility.UrlEncode(keyword)}";
+            return await ApiClient.GetAsync<IEnumerable<IconSearchResult>>(queryUrl);
+        }
+
+        public Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appId, WebAssetType webAssetType)
+        {
+            return HasWebAssetAsync(appId, webAssetType, isPackage: false);
+        }
+
+        public async Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appOrPackageId, WebAssetType webAssetType, bool isPackage)
+        {
+            var webAssetUri = GetWebAssetUri(appOrPackageId, webAssetType, isPackage);
             var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, webAssetUri));
 
             var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg || response.Content.Headers.ContentType.MediaType == "image/png";
@@ -98,6 +123,11 @@ namespace LANCommander.Steam
 
         public static Uri GetWebAssetUri(int appId, WebAssetType type)
         {
+            return GetWebAssetUri(appId, type, isPackage: false);
+        }
+
+        public static Uri GetWebAssetUri(int appOrPackageId, WebAssetType type, bool isPackage)
+        {
             Dictionary<WebAssetType, string> webAssetTypeMap = new Dictionary<WebAssetType, string>()
             {
                 { WebAssetType.Capsule, "capsule_231x87.jpg" },
@@ -110,7 +140,13 @@ namespace LANCommander.Steam
                 { WebAssetType.Logo, "logo.png" }
             };
 
-            return new Uri($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{appId}/{webAssetTypeMap[type]}");
+            string path = isPackage ? "subs" : "apps";
+            return new Uri($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/{path}/{appOrPackageId}/{webAssetTypeMap[type]}");
+        }
+
+        public void Dispose()
+        {
+            HttpClient?.Dispose();
         }
     }
 }

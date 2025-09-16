@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.Services;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -35,6 +36,8 @@ namespace LANCommander.SDK.PowerShell
         private TaskCompletionSource<string> Input { get; set; }
 
         public PowerShellDebugHandler DebugHandler { get; private set; }
+        
+        private ScriptService ScriptService { get; set; }
 
         private const string Logo = @"
    __   ___   _  _______                              __       
@@ -144,9 +147,13 @@ namespace LANCommander.SDK.PowerShell
         public PowerShellScript EnableDebug(PowerShellDebugHandler debugHandler = null)
         {
             Debug = true;
-            
+
             if (debugHandler != null)
+            {
                 DebugHandler = debugHandler;
+                
+                ScriptService.RegisterDebugHandler(debugHandler);
+            }
 
             return this;
         }
@@ -236,6 +243,9 @@ namespace LANCommander.SDK.PowerShell
 
             if (IgnoreWow64)
                 Wow64RevertWow64FsRedirection(ref wow64Value);
+
+            if (DebugHandler != null)
+                ScriptService.DeregisterDebugHandler(DebugHandler);
 
             return result;
         }

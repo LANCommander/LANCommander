@@ -43,7 +43,18 @@ public class PowerShellDebugHandler
             LogLevel = level,
             Message = message
         });
-    } 
+    }
+
+    public async Task ExecuteAsync(string input)
+    {
+        if (input.StartsWith('$'))
+            input = $"Write-Host {input}";
+
+        _powerShell.Commands.Clear();
+        _powerShell.AddScript(input);
+        
+        await _powerShell.InvokeAsync();
+    }
 }
 
 public class OnDebugStartEventArgs : EventArgs

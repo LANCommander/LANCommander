@@ -51,13 +51,7 @@
             if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
                 break;
 
-            if (input.StartsWith('$'))
-                input = "Write-Host " + input;
-
-            e.PowerShell.Commands.Clear();
-            e.PowerShell.AddScript(input);
-
-            await e.PowerShell.InvokeAsync();
+            await DebugHandler.ExecuteAsync(input);
         }
 
         Visible = false;

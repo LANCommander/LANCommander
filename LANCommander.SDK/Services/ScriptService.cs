@@ -4,6 +4,7 @@ using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,6 +18,8 @@ namespace LANCommander.SDK.Services
 
         private readonly Client _client;
 
+        private List<PowerShellDebugHandler> _debugHandlers = new();
+        
         public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
         public event ExternalScriptRunnerHandler ExternalScriptRunner;
 
@@ -31,6 +34,21 @@ namespace LANCommander.SDK.Services
         {
             _client = client;
             _logger = logger;
+        }
+
+        public void RegisterDebugHandler(PowerShellDebugHandler debugHandler)
+        {
+            _debugHandlers.Add(debugHandler);
+        }
+
+        public void DeregisterDebugHandler(PowerShellDebugHandler debugHandler)
+        {
+            _debugHandlers.Remove(debugHandler);
+        }
+
+        public PowerShellDebugHandler GetDebugHandler(Guid sessionId)
+        {
+            return _debugHandlers.FirstOrDefault(h => h.SessionId == sessionId);
         }
         
         #region Authentication Scripts

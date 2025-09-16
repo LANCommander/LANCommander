@@ -25,8 +25,16 @@ public partial class RpcHub
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetScriptSessionGroupName(debugHandler.SessionId));
             
-            await client.Scripts.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+            await client.Scripts.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), debugHandler);
         }
+    }
+
+    public async Task Script_ConsoleInputAsync(Guid sessionId, string input)
+    {
+        var debugHandler = client.Scripts.GetDebugHandler(sessionId);
+
+        if (debugHandler != null)
+            await debugHandler.ExecuteAsync(input);
     }
 
     private void DebugStart(object? sender, OnDebugStartEventArgs args)

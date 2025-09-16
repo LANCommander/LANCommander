@@ -1,9 +1,9 @@
 ﻿using LANCommander.Server.Data.Enums;
 using System.Text.RegularExpressions;
+using Humanizer.Bytes;
 using LANCommander.SDK.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using SixLabors.ImageSharp;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -172,23 +172,116 @@ namespace LANCommander.Server.Services.Models
     public class MediaSettings
     {
         public string SteamGridDbApiKey { get; set; } = "";
-        public long MaxSize { get; set; } = 25;
-        public float ThumbnailSizePercentage = 50;
 
-        public IEnumerable<ThumbnailConfiguration> ThumbnailConfigurations { get; set; } =
-            new List<ThumbnailConfiguration>()
+        public IEnumerable<MediaTypeSettings> MediaTypes { get; set; } =
+            new List<MediaTypeSettings>()
             {
-                new (MediaType.Icon, new Size(32, 32), new Size(128, 128), 75, true),
-                new (MediaType.Cover, new Size(120, 180), new Size(240, 360), 75, true),
-                new (MediaType.Background, new Size(960, 540), new Size(1920, 1080), 75, true),
-                new (MediaType.Avatar, new Size(64, 64), new Size(128, 128), 75, true),
-                new (MediaType.Logo, new Size(160, 90), new Size(640, 360), 75, true),
-                new (MediaType.Manual, new Size(480, 720), new Size(240, 360), 75, true),
-                new (MediaType.PageImage, new Size(480, 480), new Size(640, 640), 75, true),
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Icon,
+                    MaxFileSize = 2 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(32, 32),
+                        MaxSize = new ThumbnailSize(128, 128),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Cover,
+                    MaxFileSize = 6 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(240, 360),
+                        MaxSize = new ThumbnailSize(600, 900),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Background,
+                    MaxFileSize = 8 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(690, 310),
+                        MaxSize = new ThumbnailSize(3840, 1240),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Avatar,
+                    MaxFileSize = 2 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(64, 64),
+                        MaxSize = new ThumbnailSize(256, 256),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Logo,
+                    MaxFileSize = 4 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(400, 400),
+                        MaxSize = new ThumbnailSize(1000, 1000),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.Manual,
+                    MaxFileSize = 4 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(240, 360),
+                        MaxSize = new ThumbnailSize(600, 900),
+                    }
+                },
+                new MediaTypeSettings
+                {
+                    Type = MediaType.PageImage,
+                    MaxFileSize = 4 * ByteSize.BytesInMegabyte,
+                    Thumbnails = new MediaTypeThumbnailSettings
+                    {
+                        MinSize = new ThumbnailSize(480, 480),
+                        MaxSize = new ThumbnailSize(1920, 1920),
+                    }
+                },
             };
+
+        public MediaTypeSettings? GetMediaTypeConfig(MediaType type) => MediaTypes.FirstOrDefault(x => x.Type == type);
     }
 
-    public record ThumbnailConfiguration(MediaType MediaType, Size MinSize, Size MaxSize, int Quality, bool Enabled);
+    public class MediaTypeSettings
+    {
+        public MediaType Type { get; set; }
+        public long MaxFileSize { get; set; }
+        public MediaTypeThumbnailSettings Thumbnails { get; set; } = new();
+    }
+
+    public class MediaTypeThumbnailSettings
+    {
+        public ThumbnailSize MinSize { get; set; }
+        public ThumbnailSize MaxSize { get; set; }
+        public int Scale { get; set; } = 50;
+        public bool Enabled { get; set; } = true;
+        public int Quality { get; set; } = 75;
+    }
+
+    public class ThumbnailSize
+    {
+        public int Width { get; set; }
+        public int Height { get; set; }
+
+        public ThumbnailSize()
+        {
+        }
+
+        public ThumbnailSize(int width, int height)
+        {
+            Width = width;
+            Height = height;
+        }
+    }
 
     public class IPXRelaySettings
     {

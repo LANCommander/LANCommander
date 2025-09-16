@@ -118,9 +118,9 @@ namespace LANCommander.Server.Services
 
         public string GetThumbnailPath(Media media)
         {
-            var config = _settings.Media.ThumbnailConfigurations.FirstOrDefault(c => c.MediaType == media.Type);
+            var config = _settings.Media.GetMediaTypeConfig(media.Type);
             
-            if (config != null)
+            if (config != null && config.Thumbnails.Enabled)
                 return $"{GetMediaPath(media)}.Thumb";
             else
                 return GetMediaPath(media);
@@ -174,8 +174,8 @@ namespace LANCommander.Server.Services
 
             if (!File.Exists(source))
                 return String.Empty;
-            
-            var config = _settings.Media.ThumbnailConfigurations.FirstOrDefault(c => c.MediaType == media.Type);
+
+            var config = _settings.Media.GetMediaTypeConfig(media.Type);
 
             Stream stream = null;
 
@@ -199,12 +199,12 @@ namespace LANCommander.Server.Services
                     stream = new FileStream(source, FileMode.Open, FileAccess.Read);
                 }
 
-                if (config != null && config.Enabled)
+                if (config != null && config.Thumbnails.Enabled)
                 {
                     using (var image = await Image.LoadAsync<Rgba32>(stream))
                     {
-                        int thumbsizeX = (int)Math.Clamp(image.Width * _settings.Media.ThumbnailSizePercentage, config.MinSize.Width, config.MaxSize.Width);
-                        int thumbsizeY = (int)Math.Clamp(image.Height * _settings.Media.ThumbnailSizePercentage, config.MinSize.Height, config.MaxSize.Height);
+                        int thumbsizeX = (int)Math.Clamp(image.Width * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Width, config.Thumbnails.MaxSize.Width);
+                        int thumbsizeY = (int)Math.Clamp(image.Height * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Height, config.Thumbnails.MaxSize.Height);
                         var resizeOptions = new ResizeOptions
                         {
                             Mode = ResizeMode.Max,

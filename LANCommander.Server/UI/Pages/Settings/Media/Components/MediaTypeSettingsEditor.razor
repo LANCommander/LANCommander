@@ -1,0 +1,51 @@
+@if (Value != null)
+{
+    <Panel Header="@Value.Type.ToString()">
+        <Form Model="@Value" Layout="FormLayout.Vertical" OnFieldChanged="OnChange">
+            <FormItem Label="Enabled">
+                <Switch @bind-Value="context.Thumbnails.Enabled" />
+            </FormItem>
+            <FormItem Label="Max File Size">
+                <ByteSizeInput @bind-Value="context.MaxFileSize" />
+            </FormItem>
+
+            <Divider Text="Thumbnails"/>
+
+            <FormItem Label="Minimum Size">
+                <InputGroup Compact>
+                    <Input @bind-Value="context.Thumbnails.MinSize.Width"/>
+                    <Input TValue="string" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled />
+                    <Input @bind-Value="context.Thumbnails.MinSize.Height"/>
+                </InputGroup>
+            </FormItem>
+
+            <FormItem Label="Maximum Size">
+                <InputGroup Compact>
+                    <Input @bind-Value="context.Thumbnails.MaxSize.Width"/>
+                    <Input TValue="string" Style="width: 38px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled/>
+                    <Input @bind-Value="context.Thumbnails.MaxSize.Height"/>
+                </InputGroup>
+            </FormItem>
+                
+            <FormItem Label="Scale">
+                <Input @bind-Value="context.Thumbnails.Scale" />
+            </FormItem>
+                
+            <FormItem Label="Quality">
+                <Input @bind-Value="context.Thumbnails.Quality" />
+            </FormItem>
+        </Form>
+    </Panel>
+}
+
+
+@code {
+    [Parameter] public MediaTypeSettings Value { get; set; }
+    [Parameter] public EventCallback<MediaTypeSettings> ValueChanged { get; set; }
+
+    async Task OnChange()
+    {
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+    }
+}

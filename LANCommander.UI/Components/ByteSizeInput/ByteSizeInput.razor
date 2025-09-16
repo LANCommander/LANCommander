@@ -1,0 +1,95 @@
+@inject IMessageService MessageService
+@namespace LANCommander.UI.Components
+
+<InputGroup>
+    <InputNumber
+        TValue="long"
+        Value="_baseNumber"
+        ValueChanged="BaseNumberChanged" />
+    <Select
+        Value="_multiplier"
+        ValueChanged="MultiplierChanged"
+        DefaultValue="Default"
+        TItemValue="long"
+        TItem="long"
+        OnSelectedItemChanged="_ => MultiplierChanged(0)">
+        @foreach (var option in _availableOptions)
+        {
+            <SelectOption Value="@option.Multiplier" Label="@option.Label" />
+        }
+    </Select>
+</InputGroup>
+
+@code {
+    [Parameter] public long Value { get; set; }
+    [Parameter] public EventCallback<long> ValueChanged { get; set; }
+    [Parameter] public long Default { get; set; } = ByteSizeLib.ByteSize.BytesInMebiByte;
+    [Parameter] public long Maximum { get; set; }
+    [Parameter] public long Minimum { get; set; }
+
+    long _baseNumber = 2;
+    long _multiplier = ByteSizeLib.ByteSize.BytesInMegaByte;
+    
+    (long Multiplier, string Label)[] _options =
+    [
+        (ByteSizeLib.ByteSize.BytesInTebiByte, "TiB"),
+        (ByteSizeLib.ByteSize.BytesInGibiByte, "GiB"),
+        (ByteSizeLib.ByteSize.BytesInMebiByte, "MiB"),
+        (ByteSizeLib.ByteSize.BytesInKiloByte, "KiB"),
+        (1, "b"),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var multiplierLabel = ByteSizeLib.ByteSize.FromBytes(Value).LargestWholeNumberBinarySymbol;
+
+        _multiplier = _options.FirstOrDefault(o => o.Label == multiplierLabel).Multiplier;
+        
+        _baseNumber = Value / _multiplier;
+    }
+
+    (long Multiplier, string Label)[] _availableOptions
+    {
+        get
+        {
+            return _options.Where(o => (Maximum == 0 || o.Multiplier < Maximum) && (Minimum == 0 || o.Multiplier > Minimum)).ToArray();
+        }
+    }
+
+    async Task BaseNumberChanged(long val)
+    {
+        if (val <= 0)
+            return;
+        
+        _baseNumber = val;
+
+        await Changed();
+    }
+
+    async Task MultiplierChanged(long val)
+    {
+        if (val <= 0)
+            return;
+        
+        _multiplier = val;
+
+        await Changed();
+    }
+
+    async Task Changed()
+    {
+        Value = _baseNumber * _multiplier;
+
+        if (Maximum > 0 && Value > Maximum)
+            Value = Maximum;
+
+        if (Minimum > 0 && Value < Minimum)
+            Value = Minimum;
+
+        if (Value < 0)
+            Value = 0;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+    }
+}

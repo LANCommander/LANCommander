@@ -1,22 +1,22 @@
 ﻿@page "/Settings/Media"
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Settings.Media.Components
 @inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Media" />
+<PageHeader Title="Media">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@StorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
-
-        <FormItem Label="Max Size (MB)">
-            <AntDesign.InputNumber @bind-Value="context.Media.MaxSize" Min="1" DefaultValue="25" />
-        </FormItem>
-
         <Divider Text="SteamGridDB Credentials" />
 
         <Text Type="@TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
@@ -24,10 +24,18 @@
         <FormItem Label="API Key">
             <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" />
         </FormItem>
-
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
+        
+        <CascadingValue Value="Settings">
+            <Collapse Style="margin-bottom: 24px;">
+                @foreach (var mediaType in Enum.GetValues<MediaType>())
+                {
+                    if (_mediaTypeSettings.ContainsKey(mediaType))
+                    {
+                        <MediaTypeSettingsEditor @bind-Value="@(_mediaTypeSettings[mediaType])" />
+                    }
+                }
+            </Collapse>
+        </CascadingValue>
     </Form>
 </PageContent>
 
@@ -37,6 +45,8 @@
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     StorageLocation StorageLocation = new();
+
+    Dictionary<MediaType, MediaTypeSettings> _mediaTypeSettings = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,12 +63,16 @@
 
             StorageLocation = await StorageLocationService.AddAsync(StorageLocation);
         }
+
+        _mediaTypeSettings = Settings.Media.MediaTypes.DistinctBy(m => m.Type).ToDictionary(m => m.Type, m => m);
     }
 
     async Task Save()
     {
         try
         {
+            Settings.Media.MediaTypes = _mediaTypeSettings.Values;
+            
             SettingService.SaveSettings(Settings);
 
             await StorageLocationService.UpdateAsync(StorageLocation);

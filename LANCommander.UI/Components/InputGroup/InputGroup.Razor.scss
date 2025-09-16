@@ -1,0 +1,9 @@
+.ant-input-group {
+    display: flex;
+    
+    & > .ant-input,
+    & > .ant-input-number,
+    & > .ant-select {
+        width: auto !important;
+    }
+}

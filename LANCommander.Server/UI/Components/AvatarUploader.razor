@@ -1,4 +1,5 @@
-﻿@inherits OwningComponentBase
+﻿@using LANCommander.SDK.Enums
+@inherits OwningComponentBase
 @inject UserService UserService
 @inject MediaService MediaService
 @inject IMessageService MessageService
@@ -65,6 +66,7 @@
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
         var media = User.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
+        var config = Settings.Media.GetMediaTypeConfig(MediaType.Avatar);
 
         if (media == null)
             media = new Media
@@ -79,9 +81,9 @@
             return;
         }
 
-        if ((e.File.Size / 1024) > 512)
+        if (e.File.Size > config.MaxFileSize)
         {
-            MessageService.Error($"File size must be smaller than 512KB");
+            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
             return;
         }
 
@@ -90,13 +92,13 @@
         
         if (media.Id == Guid.Empty)
         {
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
         }
         else if (media.Id != Guid.Empty)
         {
             MediaService.DeleteLocalMediaFile(media);
             
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
             
             await MediaService.UpdateAsync(media);
         }

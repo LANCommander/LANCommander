@@ -226,9 +226,11 @@
             return;
         }
 
-        if ((e.File.Size / 1024 / 1024) > Settings.Media.MaxSize)
+        var config = Settings.Media.GetMediaTypeConfig(media.Type);
+
+        if (e.File.Size > config.MaxFileSize)
         {
-            MessageService.Error($"File size must be smaller than {Settings.Media.MaxSize}MB");
+            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
             return;
         }
 
@@ -237,7 +239,7 @@
         
         if (media.Id == Guid.Empty)
         {
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
 
             await MediaService.AddAsync(media);
         }
@@ -245,7 +247,7 @@
         {
             MediaService.DeleteLocalMediaFile(media);
             
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
             
             await MediaService.UpdateAsync(media);
         }

@@ -47,9 +47,11 @@ namespace LANCommander.SDK.PowerShell
 
 ";
 
-        public PowerShellScript(ScriptType type)
+        public PowerShellScript(ScriptType type, ScriptService scriptService)
         {
             Type = type;
+            ScriptService = scriptService;
+            
             Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
             DebugHandler = new PowerShellDebugHandler();

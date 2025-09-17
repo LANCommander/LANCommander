@@ -198,7 +198,7 @@ namespace LANCommander.SDK.Services
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload);
+                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload, _client.Scripts);
 
                         string adminArgument = string.Empty;
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))

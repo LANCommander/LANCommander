@@ -81,7 +81,7 @@ public class LocalServerEngine(
             {
                 try
                 {
-                    var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
+                    var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart, client.Scripts);
 
                     script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 
@@ -179,7 +179,7 @@ public class LocalServerEngine(
             {
                 try
                 {
-                    var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
+                    var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop, client.Scripts);
 
                     script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 

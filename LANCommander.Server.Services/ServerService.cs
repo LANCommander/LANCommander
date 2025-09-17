@@ -21,7 +21,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         IServiceProvider serviceProvider,
-        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService,
+        SDK.Client client) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
         {
@@ -118,7 +119,7 @@ namespace LANCommander.Server.Services
             {
                 try
                 {
-                    var scriptContext = new PowerShellScript(ScriptType.GameStarted);
+                    var scriptContext = new PowerShellScript(ScriptType.GameStarted, client.Scripts);
 
                     scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
                     scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));
@@ -151,7 +152,7 @@ namespace LANCommander.Server.Services
             {
                 try
                 {
-                    var scriptContext = new PowerShellScript(ScriptType.GameStopped);
+                    var scriptContext = new PowerShellScript(ScriptType.GameStopped, client.Scripts);
 
                     scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
                     scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));

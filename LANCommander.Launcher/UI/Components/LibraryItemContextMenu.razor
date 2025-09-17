@@ -3,6 +3,7 @@
 @using System.Diagnostics
 @using LANCommander.SDK
 @using LANCommander.SDK.Helpers
+@using LANCommander.SDK.PowerShell
 @inject GameService GameService
 @inject UserService UserService
 @inject LibraryService LibraryService
@@ -10,6 +11,7 @@
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
 @inject SDK.Client Client
+@inject PowerShellDebugHandler DebugHandler
 @inject LocalizationService LocalizationService
 
 @if (GameActions != null && GameActions.Count() > 0)
@@ -278,7 +280,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id, DebugHandler);
         }
     }
 
@@ -288,7 +290,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await Client.Scripts.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id, DebugHandler);
         }
     }
 
@@ -299,7 +301,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Settings.DEFAULT_GAME_USERNAME);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Settings.DEFAULT_GAME_USERNAME, DebugHandler);
         }
     }
 
@@ -311,7 +313,7 @@ else
         {
             var key = Client.Games.GetAllocatedKey(manifest.Id);
 
-            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
+            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key, DebugHandler);
         }
     }
 

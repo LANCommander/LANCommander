@@ -1,7 +1,9 @@
-﻿@using LANCommander.SDK.PowerShell
+﻿@using LANCommander.SDK
+@using LANCommander.SDK.PowerShell
 @using XtermBlazor
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
-@inject SDK.Client Client
+@inject Client Client
+@namespace LANCommander.UI.Components
 
 <div class="terminal @(Visible ? "" : "hidden")">
     <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
@@ -9,6 +11,7 @@
 
 @code {
     [Parameter] public PowerShellDebugHandler DebugHandler { get; set; }
+    [Parameter] public Guid? SessionId { get; set; }
     
     private bool Visible { get; set; } = false;
     private Xterm Terminal;
@@ -28,6 +31,9 @@
 
     protected override void OnInitialized()
     {
+        if (SessionId != null)
+            DebugHandler = Client.Scripts.GetDebugHandler(SessionId.Value);
+            
         DebugHandler.OnDebugStart += OnDebugStart;
         DebugHandler.OnDebugBreak += OnDebugBreak;
         DebugHandler.OnDebugOutput += OnDebugOutput;

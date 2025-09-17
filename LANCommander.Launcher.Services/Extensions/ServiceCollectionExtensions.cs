@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.PowerShell;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -81,6 +82,13 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<TagService>();
             services.AddScoped<UpdateService>();
 
+            var debugHandler = new PowerShellDebugHandler
+            {
+                SessionId = Guid.Empty,
+            };
+            
+            services.AddSingleton(debugHandler);
+            
             return services;
         }
 

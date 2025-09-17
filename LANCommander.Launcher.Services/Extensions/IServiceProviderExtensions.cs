@@ -7,6 +7,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LANCommander.SDK;
+using LANCommander.SDK.PowerShell;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -24,6 +25,10 @@ namespace LANCommander.Launcher.Services.Extensions
                 var logger = scope.ServiceProvider.GetService<ILogger>();
                 var authenticationService = scope.ServiceProvider.GetService<AuthenticationService>();
                 var keepAliveService = scope.ServiceProvider.GetService<KeepAliveService>();
+                var client = scope.ServiceProvider.GetService<SDK.Client>();
+                var debugHandler = scope.ServiceProvider.GetService<PowerShellDebugHandler>();
+                
+                client.Scripts.RegisterDebugHandler(debugHandler);
 
                 #region Scaffold Required Directories
                 try

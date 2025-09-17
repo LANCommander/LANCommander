@@ -58,7 +58,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = _logger.BeginOperation("Executing user login script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.UserLogin);
+                    var script = new PowerShellScript(Enums.ScriptType.UserLogin, _client.Scripts);
 
                     script.AddVariable("User", user);
 
@@ -95,7 +95,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = _logger.BeginOperation("Executing user registration script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
+                    var script = new PowerShellScript(Enums.ScriptType.UserRegistration, _client.Scripts);
 
                     script.AddVariable("User", user);
                     
@@ -143,7 +143,7 @@ namespace LANCommander.SDK.Services
                 {
                     using (var op = _logger.BeginOperation("Executing install detection script"))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.DetectInstall);
+                        var script = new PowerShellScript(Enums.ScriptType.DetectInstall, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -230,7 +230,7 @@ namespace LANCommander.SDK.Services
                 {
                     using (var op = _logger.BeginOperation("Executing install detection script"))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
+                        var script = new PowerShellScript(Enums.ScriptType.Install, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -306,7 +306,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
+                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart, _client.Scripts);
                         var playerAlias = await GameService.GetPlayerAliasAsync(installDirectory, gameId);
 
                         if (Debug)
@@ -389,7 +389,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
+                        var script = new PowerShellScript(Enums.ScriptType.AfterStop, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -482,7 +482,7 @@ namespace LANCommander.SDK.Services
 
                         _logger?.LogTrace("New Name: {NewName}", newName);
 
-                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
+                        var script = new PowerShellScript(Enums.ScriptType.NameChange, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -566,7 +566,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
+                        var script = new PowerShellScript(Enums.ScriptType.Install, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -636,7 +636,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Uninstall);
+                        var script = new PowerShellScript(Enums.ScriptType.Uninstall, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -706,7 +706,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
+                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart, _client.Scripts);
                         var playerAlias = GameService.GetPlayerAlias(installDirectory, gameId);
 
                         if (Debug)
@@ -779,7 +779,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
+                        var script = new PowerShellScript(Enums.ScriptType.AfterStop, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -861,7 +861,7 @@ namespace LANCommander.SDK.Services
 
                         _logger?.LogTrace("New Name: {NewName}", newName);
 
-                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
+                        var script = new PowerShellScript(Enums.ScriptType.NameChange, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -937,7 +937,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.KeyChange);
+                        var script = new PowerShellScript(Enums.ScriptType.KeyChange, _client.Scripts);
 
                         if (Debug)
                             script.EnableDebug(debugHandler);
@@ -1006,7 +1006,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = _logger.BeginOperation("Executing game package script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.Package);
+                    var script = new PowerShellScript(Enums.ScriptType.Package, _client.Scripts);
 
                     script.AddVariable("Game", game);
                     

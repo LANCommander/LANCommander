@@ -37,11 +37,11 @@
         DebugHandler.OnDebugStart += OnDebugStart;
         DebugHandler.OnDebugBreak += OnDebugBreak;
         DebugHandler.OnDebugOutput += OnDebugOutput;
+        DebugHandler.OnDebugStop += OnDebugStop;
     }
 
     private async void OnDebugStart(object? sender, OnDebugStartEventArgs e)
     {
-        Terminal?.Clear();
         Visible = true;
         await InvokeAsync(StateHasChanged);
 
@@ -55,7 +55,10 @@
             var input = await ReadLine();
 
             if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+            {
+                await Terminal.Clear();
                 break;
+            }
 
             await DebugHandler.ExecuteAsync(input);
         }
@@ -88,6 +91,12 @@
                 await Terminal.WriteLine($"\x1b[0;37m{e.Message}");
                 break;
         }
+    }
+
+    private async void OnDebugStop(object? sender, OnDebugStopEventArgs e)
+    {
+        await Terminal.Clear();
+        Visible = false;
     }
 
     private async Task OnFirstRender()

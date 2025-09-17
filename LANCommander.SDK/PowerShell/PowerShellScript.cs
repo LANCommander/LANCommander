@@ -193,7 +193,6 @@ namespace LANCommander.SDK.PowerShell
                 using (var ps = System.Management.Automation.PowerShell.Create())
                 {
                     ps.Runspace = runspace;
-
                     
                     if (Debug)
                         DebugHandler.Start(ps);

@@ -11,6 +11,7 @@ public class PowerShellDebugHandler
     public event EventHandler<OnDebugStartEventArgs> OnDebugStart;
     public event EventHandler<OnDebugBreakEventArgs> OnDebugBreak;
     public event EventHandler<OnDebugOutputEventArgs> OnDebugOutput;
+    public event EventHandler<OnDebugStopEventArgs> OnDebugStop;
 
     private System.Management.Automation.PowerShell _powerShell;
 
@@ -45,6 +46,17 @@ public class PowerShellDebugHandler
         });
     }
 
+    internal void Stop(System.Management.Automation.PowerShell ps = null)
+    {
+        if (_powerShell == null)
+            _powerShell = ps;
+        
+        OnDebugStop?.Invoke(this, new OnDebugStopEventArgs
+        {
+            PowerShell = _powerShell,
+        });
+    }
+
     public async Task ExecuteAsync(string input)
     {
         if (input.StartsWith('$'))
@@ -71,4 +83,9 @@ public class OnDebugOutputEventArgs : EventArgs
 {
     public LogLevel LogLevel { get; set; }
     public string Message { get; set; }
+}
+
+public class OnDebugStopEventArgs : EventArgs
+{
+    public System.Management.Automation.PowerShell PowerShell { get; set; }
 }

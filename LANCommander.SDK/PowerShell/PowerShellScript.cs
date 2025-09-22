@@ -52,7 +52,7 @@ namespace LANCommander.SDK.PowerShell
             DebugHandler = new PowerShellDebugHandler();
 
             InitialSessionState = InitialSessionState.CreateDefault();
-
+            
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Convert-AspectRatio", typeof(ConvertAspectRatioCmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertFrom-SerializedBase64", typeof(ConvertFromSerializedBase64Cmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-SerializedBase64", typeof(ConvertToSerializedBase64Cmdlet), null));

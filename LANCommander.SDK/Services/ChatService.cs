@@ -3,19 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Rpc.Client;
 
 namespace LANCommander.SDK.Services;
 
-public class ChatService
+public class ChatService(IRpcClient rpc)
 {
-    private readonly Client _client;
     private readonly Dictionary<Guid, ChatThread> _threads = new();
-
-    public ChatService(Client client)
-    {
-        _client = client;
-    }
-
     public ChatThread GetThread(Guid threadId)
     {
         return _threads[threadId];
@@ -23,7 +17,7 @@ public class ChatService
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
-        var threadId = await _client.RPC.Server.Chat_StartThreadAsync(userIdentifiers.ToArray());
+        var threadId = await rpc.Server.Chat_StartThreadAsync(userIdentifiers.ToArray());
 
         if (threadId != Guid.Empty)
             _threads[threadId] = new ChatThread
@@ -41,7 +35,7 @@ public class ChatService
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
     {
-        var threads = await _client.RPC.Server.Chat_GetThreadsAsync();
+        var threads = await rpc.Server.Chat_GetThreadsAsync();
         
         _threads.Clear();
         
@@ -77,11 +71,11 @@ public class ChatService
 
     public async Task GetMessagesAsync(Guid threadId)
     {
-        await _client.RPC.Server.Chat_GetMessagesAsync(threadId);
+        await rpc.Server.Chat_GetMessagesAsync(threadId);
     }
 
     public async Task SendMessageAsync(Guid threadId, string contents)
     {
-        await _client.RPC.Server.Chat_SendMessageAsync(threadId, contents);
+        await rpc.Server.Chat_SendMessageAsync(threadId, contents);
     }
 }

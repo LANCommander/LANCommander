@@ -3,33 +3,30 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class PlaySessionService
+    public class PlaySessionService(ApiRequestFactory apiRequestFactory)
     {
-        private readonly ILogger _logger;
-        private readonly Client _client;
-
-        public PlaySessionService(Client client)
-        {
-            _client = client;
-        }
-
-        public PlaySessionService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
-
         public async Task<IEnumerable<EntityReference>> GetAsync()
         {
-            return await _client.GetRequestAsync<IEnumerable<EntityReference>>("/api/PlaySessions");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute("/api/PlaySessions")
+                .GetAsync<IEnumerable<EntityReference>>();
         }
 
         public async Task<IEnumerable<PlaySession>> GetAsync(Guid gameId)
         {
-            return await _client.PostRequestAsync<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/PlaySessions/{gameId}")
+                .GetAsync<IEnumerable<PlaySession>>();
         }
     }
 }

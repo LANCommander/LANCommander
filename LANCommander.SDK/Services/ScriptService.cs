@@ -8,15 +8,15 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 
 namespace LANCommander.SDK.Services
 {
-    public class ScriptService
+    public class ScriptService(
+        ILogger<ScriptService> logger,
+        ILANCommanderConfiguration config,
+        IConnectionService connectionService)
     {
-        private readonly ILogger _logger;
-
-        private readonly Client _client;
-
         public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
         public event ExternalScriptRunnerHandler ExternalScriptRunner;
 
@@ -25,24 +25,13 @@ namespace LANCommander.SDK.Services
         public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
         public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
         public Func<LogLevel, string, Task> OnOutput;
-
-        public ScriptService(Client client)
-        {
-            _client = client;
-        }
-
-        public ScriptService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
         
         #region Authentication Scripts
         public async Task RunUserLoginScript(Script loginScript, User user)
         {
             try
             {
-                using (var op = _logger.BeginOperation("Executing user login script"))
+                using (var op = logger.BeginOperation("Executing user login script"))
                 {
                     var script = new PowerShellScript(Enums.ScriptType.UserLogin);
 
@@ -60,7 +49,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not enrich logs");
+                        logger?.LogError(ex, "Could not enrich logs");
                     }
 
                     await script.ExecuteAsync<int>();
@@ -68,7 +57,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not execute user login script");
+                logger?.LogError(ex, "Could not execute user login script");
             }
         }
         
@@ -76,7 +65,7 @@ namespace LANCommander.SDK.Services
         {
             try
             {
-                using (var op = _logger.BeginOperation("Executing user registration script"))
+                using (var op = logger.BeginOperation("Executing user registration script"))
                 {
                     var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
 
@@ -94,7 +83,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not enrich logs");
+                        logger?.LogError(ex, "Could not enrich logs");
                     }
 
                     await script.ExecuteAsync<int>();
@@ -102,7 +91,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not execute user registration script");
+                logger?.LogError(ex, "Could not execute user registration script");
             }
         }
         #endregion
@@ -121,7 +110,7 @@ namespace LANCommander.SDK.Services
             {
                 if (File.Exists(path))
                 {
-                    using (var op = _logger.BeginOperation("Executing install detection script"))
+                    using (var op = logger.BeginOperation("Executing install detection script"))
                     {
                         var script = new PowerShellScript(Enums.ScriptType.DetectInstall);
 
@@ -131,8 +120,8 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
 
                         try
                         {
@@ -147,7 +136,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -172,7 +161,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -202,7 +191,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
             }
 
             return result;
@@ -221,7 +210,7 @@ namespace LANCommander.SDK.Services
             {
                 if (Path.Exists(path))
                 {
-                    using (var op = _logger.BeginOperation("Executing install detection script"))
+                    using (var op = logger.BeginOperation("Executing install detection script"))
                     {
                         var script = new PowerShellScript(Enums.ScriptType.Install);
 
@@ -231,8 +220,8 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
 
                         try
                         {
@@ -248,7 +237,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -275,7 +264,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -292,7 +281,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
             }
 
             return result;
@@ -309,7 +298,7 @@ namespace LANCommander.SDK.Services
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
 
-                using (var op = _logger.BeginOperation("Executing before start script"))
+                using (var op = logger.BeginOperation("Executing before start script"))
                 {
                     if (File.Exists(path))
                     {
@@ -322,8 +311,8 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("PlayerAlias", playerAlias);
 
                         try
@@ -341,7 +330,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -368,7 +357,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -381,7 +370,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No before start script found");
+                        logger?.LogTrace("No before start script found");
                     }
 
                     op.Complete();
@@ -389,7 +378,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
             }
 
             return result;
@@ -406,7 +395,7 @@ namespace LANCommander.SDK.Services
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.AfterStop);
 
-                using (var op = _logger.BeginOperation("Executing after stop script"))
+                using (var op = logger.BeginOperation("Executing after stop script"))
                 {
                     if (File.Exists(path))
                     {
@@ -418,8 +407,8 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
 
                         try
@@ -437,7 +426,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -464,7 +453,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -477,7 +466,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No after stop script found");
+                        logger?.LogTrace("No after stop script found");
                     }
 
                     op.Complete();
@@ -486,7 +475,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
             }
 
             return result;
@@ -503,7 +492,7 @@ namespace LANCommander.SDK.Services
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
 
-                using (var op = _logger.BeginOperation("Executing name change script"))
+                using (var op = logger.BeginOperation("Executing name change script"))
                 {
                     if (File.Exists(path))
                     {
@@ -513,9 +502,9 @@ namespace LANCommander.SDK.Services
                             oldName = string.Empty;
 
                         if (!string.IsNullOrWhiteSpace(oldName))
-                            _logger?.LogTrace("Old Name: {OldName}", oldName);
+                            logger?.LogTrace("Old Name: {OldName}", oldName);
 
-                        _logger?.LogTrace("New Name: {NewName}", newName);
+                        logger?.LogTrace("New Name: {NewName}", newName);
 
                         var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
@@ -525,8 +514,8 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
 
@@ -545,7 +534,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -572,7 +561,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -585,7 +574,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No name change script found");
+                        logger?.LogTrace("No name change script found");
                     }
 
                     op.Complete();
@@ -593,7 +582,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
             }
 
             return result;
@@ -611,7 +600,7 @@ namespace LANCommander.SDK.Services
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install);
 
-                using (var op = _logger.BeginOperation("Executing install script"))
+                using (var op = logger.BeginOperation("Executing install script"))
                 {
                     if (File.Exists(path))
                     {
@@ -622,8 +611,8 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
 
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
                         {
@@ -645,7 +634,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         try
@@ -659,7 +648,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -672,7 +661,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No install script found for game");
+                        logger?.LogTrace("No install script found for game");
                     }
 
                     op.Complete();
@@ -680,7 +669,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Install script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Install script");
             }
 
             return result;
@@ -695,7 +684,7 @@ namespace LANCommander.SDK.Services
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
-                using (var op = _logger.BeginOperation("Executing uninstall script"))
+                using (var op = logger.BeginOperation("Executing uninstall script"))
                 {
                     if (File.Exists(path))
                     {
@@ -706,8 +695,8 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
                         {
@@ -729,7 +718,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         try
@@ -743,7 +732,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -756,7 +745,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No uninstall script found");
+                        logger?.LogTrace("No uninstall script found");
                     }
 
                     op.Complete();
@@ -764,7 +753,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to get an Uninstall script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to get an Uninstall script");
             }
 
             return result;
@@ -779,7 +768,7 @@ namespace LANCommander.SDK.Services
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.BeforeStart);
 
-                using (var op = _logger.BeginOperation("Executing before start script"))
+                using (var op = logger.BeginOperation("Executing before start script"))
                 {
                     if (File.Exists(path))
                     {
@@ -791,8 +780,8 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("PlayerAlias", playerAlias);
                         
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -816,7 +805,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         try
@@ -830,7 +819,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -843,7 +832,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No before start script found");
+                        logger?.LogTrace("No before start script found");
                     }
 
                     op.Complete();
@@ -851,7 +840,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
             }
 
             return result;
@@ -866,7 +855,7 @@ namespace LANCommander.SDK.Services
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.AfterStop);
 
-                using (var op = _logger.BeginOperation("Executing after stop script"))
+                using (var op = logger.BeginOperation("Executing after stop script"))
                 {
                     if (File.Exists(path))
                     {
@@ -877,8 +866,8 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
                         
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -901,7 +890,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         try
@@ -915,7 +904,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -928,7 +917,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No after stop script found");
+                        logger?.LogTrace("No after stop script found");
                     }
 
                     op.Complete();
@@ -937,7 +926,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
             }
 
             return result;
@@ -952,7 +941,7 @@ namespace LANCommander.SDK.Services
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-                using (var op = _logger.BeginOperation("Executing name change script"))
+                using (var op = logger.BeginOperation("Executing name change script"))
                 {
                     if (File.Exists(path))
                     {
@@ -962,9 +951,9 @@ namespace LANCommander.SDK.Services
                             oldName = string.Empty;
 
                         if (!string.IsNullOrWhiteSpace(oldName))
-                            _logger?.LogTrace("Old Name: {OldName}", oldName);
+                            logger?.LogTrace("Old Name: {OldName}", oldName);
 
-                        _logger?.LogTrace("New Name: {NewName}", newName);
+                        logger?.LogTrace("New Name: {NewName}", newName);
 
                         var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
@@ -973,8 +962,8 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
                         
@@ -998,7 +987,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         script.UseFile(path);
@@ -1016,7 +1005,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -1029,7 +1018,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No name change script found");
+                        logger?.LogTrace("No name change script found");
                     }
 
                     op.Complete();
@@ -1037,7 +1026,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
             }
 
             return result;
@@ -1052,7 +1041,7 @@ namespace LANCommander.SDK.Services
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange);
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-                using (var op = _logger.BeginOperation("Executing key change script"))
+                using (var op = logger.BeginOperation("Executing key change script"))
                 {
                     if (File.Exists(path))
                     {
@@ -1061,12 +1050,12 @@ namespace LANCommander.SDK.Services
                         if (Debug)
                             script.DebugHandler.OnDebugStart = OnDebugStart;
 
-                        _logger?.LogTrace("New key is {Key}", key);
+                        logger?.LogTrace("New key is {Key}", key);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", _client.DefaultInstallDirectory);
-                        script.AddVariable("ServerAddress", _client.BaseUrl.ToString());
+                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("ServerAddress", connectionService.GetServerAddress());
                         script.AddVariable("AllocatedKey", key);
                         
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -1090,7 +1079,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not enrich logs");
+                            logger?.LogError(ex, "Could not enrich logs");
                         }
 
                         GameService.UpdateCurrentKey(installDirectory, gameId, key);
@@ -1106,7 +1095,7 @@ namespace LANCommander.SDK.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogError(ex, "Could not debug script");
+                            logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -1119,7 +1108,7 @@ namespace LANCommander.SDK.Services
                     }
                     else
                     {
-                        _logger?.LogTrace("No key change script found");
+                        logger?.LogTrace("No key change script found");
                     }
 
                     op.Complete();
@@ -1127,7 +1116,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Key Change script");
+                logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Key Change script");
             }
 
             return result;
@@ -1137,7 +1126,7 @@ namespace LANCommander.SDK.Services
         {
             try
             {
-                using (var op = _logger.BeginOperation("Executing game package script"))
+                using (var op = logger.BeginOperation("Executing game package script"))
                 {
                     var script = new PowerShellScript(Enums.ScriptType.Package);
 
@@ -1155,7 +1144,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not enrich logs");
+                        logger?.LogError(ex, "Could not enrich logs");
                     }
 
                     return await script.ExecuteAsync<Package>();
@@ -1163,7 +1152,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not execute game package script");
+                logger?.LogError(ex, "Could not execute game package script");
             }
 
             return null;

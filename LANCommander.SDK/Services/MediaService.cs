@@ -1,42 +1,40 @@
 ﻿using Force.Crc32;
 using LANCommander.SDK.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class MediaService
+    public class MediaService(
+        ApiRequestFactory apiRequestFactory,
+        IConnectionService connectionService)
     {
-        private readonly ILogger _logger;
-
-        private readonly Client _client;
-
-        public MediaService(Client client)
+        public async Task<Media> GetAsync(Guid mediaId)
         {
-            _client = client;
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Media/{mediaId}")
+                .GetAsync<Media>();
         }
 
-        public MediaService(Client client, ILogger logger)
+        public async Task<FileInfo> DownloadAsync(Media media, string destination)
         {
-            _client = client;
-            _logger = logger;
-        }
-
-        public async Task<Media> Get(Guid mediaId)
-        {
-            return await _client.GetRequestAsync<Media>($"/api/Media/{mediaId}");
-        }
-
-        public async Task<string> DownloadAsync(Media media, string destination)
-        {
-            return await _client.DownloadRequestAsync(GetDownloadPath(media), destination);
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute(GetDownloadPath(media))
+                .DownloadAsync(destination);
         }
 
         public string GetAbsoluteUrl(Media media)
         {
-            return new Uri(_client.BaseUrl, GetDownloadPath(media)).ToString();
+            return connectionService.GetServerAddress().Join(GetDownloadPath(media)).ToString();
         }
 
         public string GetDownloadPath(Media media)
@@ -46,7 +44,7 @@ namespace LANCommander.SDK.Services
 
         public string GetAbsoluteThumbnailUrl(Media media)
         {
-            return new Uri(_client.BaseUrl, GetThumbnailPath(media)).ToString();
+            return connectionService.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
         }
 
         public string GetThumbnailPath(Media media)
@@ -54,7 +52,7 @@ namespace LANCommander.SDK.Services
             return $"/api/Media/{media.Id}/Thumbnail";
         }
 
-        public static string CalculateChecksum(string path)
+        public static async Task<string> CalculateChecksumAsync(string path)
         {
             uint crc = 0;
 
@@ -64,7 +62,7 @@ namespace LANCommander.SDK.Services
 
                 while (true)
                 {
-                    var count = fs.Read(buffer, 0, buffer.Length);
+                    var count = await fs.ReadAsync(buffer, 0, buffer.Length);
 
                     if (count == 0)
                         break;

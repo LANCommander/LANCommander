@@ -7,6 +7,9 @@ namespace LANCommander.SDK
     {
         public delegate void OnProgressDelegate(long Position, long Length);
         public event OnProgressDelegate OnProgress = delegate { };
+
+        public delegate void OnCompleteDelegate();
+        public event OnCompleteDelegate OnComplete = delegate { };
         private long internalStreamProgress = 0;
         private Stream internalStream;
         private bool disposeStream = false;
@@ -210,11 +213,17 @@ namespace LANCommander.SDK
             {
                 internalStream.Write(array, offset, count);
                 OnProgress(internalStream.Position, internalStream.Length);
+
+                if (internalStream.Position == internalStream.Length)
+                    OnComplete();
             }
             else
             {
                 base.Write(array, offset, count);
-                OnProgress(this.Position, this.Length);
+                OnProgress(Position, Length);
+                
+                if (Position == Length)
+                    OnComplete();
             }
         }
 
@@ -240,11 +249,17 @@ namespace LANCommander.SDK
             {
                 internalStream.WriteByte(value);
                 OnProgress(internalStream.Position, internalStream.Length);
+                
+                if (internalStream.Position == internalStream.Length)
+                    OnComplete();
             }
             else
             {
                 base.WriteByte(value);
-                OnProgress(this.Position, this.Length);
+                OnProgress(Position, Length);
+                
+                if (Position == Length)
+                    OnComplete();
             }
         }
 
@@ -289,12 +304,18 @@ namespace LANCommander.SDK
             {
                 r = internalStream.Read(array, offset, count);
                 internalStreamProgress += r;
-                OnProgress(internalStreamProgress, this.Length);
+                OnProgress(internalStreamProgress, Length);
+                
+                if (internalStreamProgress == Length)
+                    OnComplete();
             }
             else
             {
                 r = base.Read(array, offset, count);
-                OnProgress(this.Position, this.Length);
+                OnProgress(Position, Length);
+                
+                if (Position == Length)
+                    OnComplete();
             }
 
             return r;
@@ -317,12 +338,18 @@ namespace LANCommander.SDK
             {
                 r = internalStream.ReadByte();
                 internalStreamProgress += r;
-                OnProgress(internalStreamProgress, this.Length);
+                OnProgress(internalStreamProgress, Length);
+                
+                if (internalStreamProgress == Length)
+                    OnComplete();
             }
             else
             {
                 r = base.ReadByte();
-                OnProgress(this.Position, this.Length);
+                OnProgress(Position, Length);
+                
+                if (Position == Length)
+                    OnComplete();
             }
             return r;
         }

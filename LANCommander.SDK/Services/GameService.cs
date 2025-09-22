@@ -14,6 +14,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
@@ -57,12 +59,19 @@ namespace LANCommander.SDK.Services
         public GameInstallationFileList FileList { get; set; } = GameInstallationFileList.Empty;
     }
 
-    public class GameService
+    public class GameService(
+        ILogger<GameService> logger,
+        ApiRequestFactory apiRequestFactory,
+        ProcessExecutionContextFactory processExecutionContextFactory,
+        INetworkInformationProvider networkInformationProvider,
+        ILANCommanderConfiguration config,
+        IConnectionService connectionService,
+        RedistributableService redistributableService,
+        SaveService saveService,
+        ScriptService scriptService,
+        ProfileService profileService,
+        LobbyService lobbyService)
     {
-        private readonly ILogger _logger;
-        private readonly Client _client;
-        private string DefaultInstallDirectory { get; set; }
-
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
 
@@ -82,37 +91,34 @@ namespace LANCommander.SDK.Services
 
         private readonly Dictionary<Guid, CancellationTokenSource> _running = new();
 
-        public GameService(Client client, string defaultInstallDirectory)
-        {
-            _client = client;
-            DefaultInstallDirectory = defaultInstallDirectory;
-        }
-
-        public GameService(Client client, string defaultInstallDirectory, ILogger logger)
-        {
-            _client = client;
-            DefaultInstallDirectory = defaultInstallDirectory;
-            _logger = logger;
-        }
-
         public async Task<IEnumerable<Game>> GetAsync()
         {
-            return await _client.GetRequestAsync<IEnumerable<Game>>("/api/Games");
-        }
-
-        public Game Get(Guid id)
-        {
-            return _client.GetRequest<Game>($"/api/Games/{id}");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute("/api/Games")
+                .GetAsync<IEnumerable<Game>>();
         }
 
         public async Task<Game> GetAsync(Guid id)
         {
-            return await _client.GetRequestAsync<Game>($"/api/Games/{id}");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}")
+                .GetAsync<Game>();
         }
 
-        public GameManifest GetManifest(Guid id)
+        public async Task<GameManifest> GetManifestAsync(Guid id)
         {
-            return _client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Manifest")
+                .GetAsync<GameManifest>();
         }
 
         public async Task<ICollection<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
@@ -141,7 +147,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                        logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
                     }
                 }
             }
@@ -155,12 +161,21 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                if (_client.IsConnected())
-                    actions.AddRange(await _client.GetRequestAsync<IEnumerable<Models.Action>>($"/api/Games/{id}/Actions"));
+                if (connectionService.IsConnected())
+                {
+                    actions.AddRange(
+                        await apiRequestFactory
+                            .Create()
+                            .UseRoute($"/api/Games/{id}/Actions")
+                            .UseAuthenticationToken()
+                            .UseVersioning()
+                            .GetAsync<IEnumerable<Models.Action>>()
+                        );
+                }
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not get actions from server");
+                logger?.LogError(ex, "Could not get actions from server");
             }
             
             var manifests = await GetManifestsAsync(installDirectory, id);
@@ -181,7 +196,7 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var lobbies = _client.Lobbies.GetSteamLobbies(installDirectory, id);
+                    var lobbies = lobbyService.GetSteamLobbies(installDirectory, id);
 
                     foreach (var lobby in lobbies)
                     {
@@ -201,7 +216,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Could not get lobbies");
+                    logger?.LogError(ex, "Could not get lobbies");
                 }
             }
 
@@ -210,84 +225,91 @@ namespace LANCommander.SDK.Services
 
         public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
         {
-            return await _client.GetRequestAsync<IEnumerable<Game>>($"/api/Games/{id}/Addons");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Addons")
+                .GetAsync<IEnumerable<Game>>();
         }
 
         public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
         {
-            return await _client.GetRequestAsync<bool>($"/api/Games/{id}/CheckForUpdate?version={currentVersion}");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/CheckForUpdate?version={currentVersion}")
+                .GetAsync<bool>();
         }
 
-        private TrackableStream Stream(Guid id)
+        private async Task<TrackableStream> StreamAsync(Guid id)
         {
-            return _client.StreamRequest($"/api/Games/{id}/Download");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Download")
+                .StreamAsync();
         }
 
         public async Task StartedAsync(Guid id)
         {
-            _logger?.LogTrace("Signaling to the server that we started the game...");
+            logger?.LogTrace("Signaling to the server that we started the game...");
 
             try
             {
-                await _client.GetRequestAsync<object>($"/api/Games/{id}/Started");
+                await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Games/{id}/Started")
+                    .GetAsync<object>();
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed sending start request to server");
+                logger?.LogError(ex, "Failed sending start request to server");
             }
         }
 
         public async Task StoppedAsync(Guid id)
         {
-            _logger?.LogTrace("Signaling to the server that we stopped the game...");
+            logger?.LogTrace("Signaling to the server that we stopped the game...");
 
             try
             { 
-                await _client.GetRequestAsync<object>($"/api/Games/{id}/Stopped");
+                await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Games/{id}/Stopped")
+                    .GetAsync<object>();
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed sending stop request to server");
+                logger?.LogError(ex, "Failed sending stop request to server");
             }
-        }
-
-        public string GetAllocatedKey(Guid id)
-        {
-            _logger?.LogTrace("Requesting allocated key...");
-
-            var macAddress = _client.GetMacAddress();
-
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = macAddress,
-                ComputerName = Environment.MachineName,
-                IpAddress = _client.GetIpAddress(),
-            };
-
-            var response = _client.PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
-
-            if (response == null)
-                return string.Empty;
-
-            return response.Value;
         }
 
         public async Task<string> GetAllocatedKeyAsync(Guid id)
         {
-            _logger?.LogTrace("Requesting allocated key...");
-
-            var macAddress = _client.GetMacAddress();
-
+            logger?.LogTrace("Requesting allocated key...");
+            
             var request = new KeyRequest()
             {
                 GameId = id,
-                MacAddress = macAddress,
+                MacAddress = networkInformationProvider.GetMacAddress(),
                 ComputerName = Environment.MachineName,
-                IpAddress = _client.GetIpAddress(),
+                IpAddress = networkInformationProvider.GetIpAddress(),
             };
 
-            var response = await _client.PostRequestAsync<Key>($"/api/Keys/GetAllocated/{id}", request);
+            var response = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Keys/GetAllocated/{id}")
+                .AddBody(request)
+                .PostAsync<Key>();
 
             if (response == null)
                 return string.Empty;
@@ -295,21 +317,25 @@ namespace LANCommander.SDK.Services
             return response.Value;
         }
 
-        public string GetNewKey(Guid id)
+        public async Task<string> GetNewKey(Guid id)
         {
-            _logger?.LogTrace("Requesting new key allocation...");
-
-            var macAddress = _client.GetMacAddress();
+            logger?.LogTrace("Requesting new key allocation...");
 
             var request = new KeyRequest()
             {
                 GameId = id,
-                MacAddress = macAddress,
+                MacAddress = networkInformationProvider.GetMacAddress(),
                 ComputerName = Environment.MachineName,
-                IpAddress = _client.GetIpAddress(),
+                IpAddress = networkInformationProvider.GetIpAddress(),
             };
 
-            var response = _client.PostRequest<Key>($"/api/Keys/Allocate/{id}", request);
+            var response = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Keys/Allocate/{id}")
+                .AddBody(request)
+                .PostAsync<Key>();
 
             if (response == null)
                 return string.Empty;
@@ -337,9 +363,9 @@ namespace LANCommander.SDK.Services
             GameManifest manifest = null;
 
             if (string.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = _client.DefaultInstallDirectory;
+                installDirectory = config.InstallDirectories.First();
 
-            var game = Get(gameId);
+            var game = await GetAsync(gameId);
             var destination = await GetInstallDirectory(game, installDirectory);
 
             _installProgress.Game = game;
@@ -355,7 +381,7 @@ namespace LANCommander.SDK.Services
             // Handle Standalone Mods
             if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
             {
-                var baseGame = await _client.Games.GetAsync(game.BaseGameId);
+                var baseGame = await GetAsync(game.BaseGameId);
 
                 destination = await GetInstallDirectory(baseGame, installDirectory);
 
@@ -373,17 +399,17 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogTrace(ex, "Error reading manifest before install");
+                logger?.LogTrace(ex, "Error reading manifest before install");
             }
 
-            _logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
+            logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
             // Download and extract
             var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
             {
-                _logger?.LogTrace("Attempting to download and extract game");
+                logger?.LogTrace("Attempting to download and extract game");
 
-                return await Task.Run(() => DownloadAndExtract(game, destination));
+                return await Task.Run(async () => await DownloadAndExtractAsync(game, destination));
             });
 
             if (!result.Success && !result.Canceled)
@@ -397,7 +423,7 @@ namespace LANCommander.SDK.Services
             // Game is extracted, get metadata
             var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
-                _logger?.LogTrace("Attempting to get game manifest");
+                logger?.LogTrace("Attempting to get game manifest");
                 manifest = await WriteManifestAsync(game.InstallDirectory, game);
 
                 return true;
@@ -429,20 +455,20 @@ namespace LANCommander.SDK.Services
             #region Install Redistributables
             if (game.Redistributables != null && game.Redistributables.Any())
             {
-                _logger?.LogTrace("Installing redistributables");
+                logger?.LogTrace("Installing redistributables");
 
-                await _client.Redistributables.InstallAsync(game);
+                await redistributableService.InstallAsync(game);
             }
             #endregion
 
             #region Download Latest Save
-            _logger?.LogTrace("Attempting to download the latest save");
+            logger?.LogTrace("Attempting to download the latest save");
 
             _installProgress.Status = InstallStatus.DownloadingSaves;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
-            await _client.Saves.DownloadAsync(game.InstallDirectory, game.Id);
+            await saveService.DownloadAsync(game.InstallDirectory, game.Id);
             #endregion
 
             await RunPostInstallScripts(game);
@@ -464,7 +490,7 @@ namespace LANCommander.SDK.Services
 
         public async Task<InstallResult> InstallAddonsAsync(string installDirectory, Guid baseGameId, IEnumerable<Guid> addonIds)
         {
-            var game = await _client.Games.GetAsync(baseGameId);
+            var game = await GetAsync(baseGameId);
 
             return await InstallAddonsAsync(installDirectory, game, addonIds);
         }
@@ -482,11 +508,11 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        addons.Add(await _client.Games.GetAsync(addonId));
+                        addons.Add(await GetAsync(addonId));
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not get information for addon with ID {AddonId}, skipping install", addonId);
+                        logger?.LogError(ex, "Could not get information for addon with ID {AddonId}, skipping install", addonId);
                     }
                 }
 
@@ -510,7 +536,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not install expansion with ID {AddonId}", expansion.Id);
+                        logger?.LogError(ex, "Could not install expansion with ID {AddonId}", expansion.Id);
                     }
                 }
                 
@@ -534,7 +560,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not install mod with ID {AddonId}", mod.Id);
+                        logger?.LogError(ex, "Could not install mod with ID {AddonId}", mod.Id);
                     }
                 }
             }
@@ -559,7 +585,7 @@ namespace LANCommander.SDK.Services
             }
             catch (InstallCanceledException ex)
             {
-                _logger?.LogDebug("Install canceled");
+                logger?.LogDebug("Install canceled");
 
                 _installProgress.Status = InstallStatus.Canceled;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -568,7 +594,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed to install addon {AddonTitle} ({AddonId})", addon.Title, addon.Id);
+                logger?.LogError(ex, "Failed to install addon {AddonTitle} ({AddonId})", addon.Title, addon.Id);
 
                 _installProgress.Status = InstallStatus.Failed;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -588,7 +614,7 @@ namespace LANCommander.SDK.Services
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             if (manifest == null)
             {
-                _logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
+                logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
                 return installResult;
             }
 
@@ -611,7 +637,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
+                        logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
                     }
                 }
             }
@@ -625,7 +651,7 @@ namespace LANCommander.SDK.Services
                 var fileList = await File.ReadAllLinesAsync(fileListPath);
                 var files = fileList.Select(l => l.Split('|').FirstOrDefault()?.Trim());
 
-                _logger?.LogDebug("Attempting to delete the install files");
+                logger?.LogDebug("Attempting to delete the install files");
 
                 foreach (var file in files.Where(f => f != null && !f.EndsWith("/")))
                 {
@@ -641,22 +667,22 @@ namespace LANCommander.SDK.Services
                         if (File.Exists(localPath))
                             File.Delete(localPath);
 
-                        _logger?.LogTrace("Deleted file {LocalPath}", localPath);
+                        logger?.LogTrace("Deleted file {LocalPath}", localPath);
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
+                        logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
                     }
                 }
 
-                _logger?.LogDebug("Attempting to delete any empty directories");
+                logger?.LogDebug("Attempting to delete any empty directories");
 
                 DirectoryHelper.DeleteEmptyDirectories(installDirectory);
 
                 if (!Directory.Exists(installDirectory))
-                    _logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
+                    logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
                 else
-                    _logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
+                    logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
             }
             else
             {
@@ -664,7 +690,7 @@ namespace LANCommander.SDK.Services
             }
             #endregion
 
-            await _client.Scripts.RunUninstallScriptAsync(installDirectory, gameId);
+            await scriptService.RunUninstallScriptAsync(installDirectory, gameId);
 
             #region Cleanup Install Directory
             var metadataPath = GetMetadataDirectoryPath(installDirectory, gameId);
@@ -686,7 +712,7 @@ namespace LANCommander.SDK.Services
             var baseManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, baseGameId);
             if (baseManifest == null)
             {
-                _logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
+                logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
                 return installResult;
             }
 
@@ -707,7 +733,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
+                    logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
                 }
             }
 
@@ -752,7 +778,7 @@ namespace LANCommander.SDK.Services
 
             foreach (var dependentGameId in game.DependentGames)
             {
-                var dependentGame = await _client.Games.GetAsync(dependentGameId);
+                var dependentGame = await GetAsync(dependentGameId);
 
                 if (dependentGame.IsAddon)
                     gameAndAddons.Add(dependentGame);
@@ -761,7 +787,7 @@ namespace LANCommander.SDK.Services
             foreach (var entry in gameAndAddons)
             {
                 if (await IsInstalled(oldInstallDirectory, game, entry.Id))
-                    await _client.Saves.UploadAsync(oldInstallDirectory, entry.Id);
+                    await saveService.UploadAsync(oldInstallDirectory, entry.Id);
             }
 
             if (Directory.Exists(newInstallDirectory))
@@ -834,7 +860,8 @@ namespace LANCommander.SDK.Services
                 if (await IsInstalled(newInstallDirectory, game, entry.Id))
                 {
                     await RunPostInstallScripts(entry);
-                    await _client.Saves.DownloadAsync(newInstallDirectory, entry.Id);
+                    
+                    await saveService.DownloadAsync(newInstallDirectory, entry.Id);
                 }
             }
 
@@ -862,9 +889,9 @@ namespace LANCommander.SDK.Services
 
         private async Task<GameManifest> WriteManifestAsync(string installDirectory, Game game)
         {
-            _logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
-            GameManifest manifest = GetManifest(game.Id);
-            _logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
+            logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
+            GameManifest manifest = await GetManifestAsync(game.Id);
+            logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
             await ManifestHelper.WriteAsync(manifest, installDirectory);
             return manifest;
         }
@@ -873,7 +900,7 @@ namespace LANCommander.SDK.Services
         {
             if (game.Scripts != null)
             {
-                _logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
+                logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
                 
                 foreach (var script in game.Scripts)
                 {
@@ -894,27 +921,27 @@ namespace LANCommander.SDK.Services
                 {
                     var allocatedKey = await GetAllocatedKeyAsync(game.Id);
 
-                    await _client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await _client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
-                    await _client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await _client.Profile.GetAliasAsync());
+                    await scriptService.RunInstallScriptAsync(game.InstallDirectory, game.Id);
+                    await scriptService.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+                    await scriptService.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await profileService.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Scripts failed to execute for game/addon {GameTitle} ({GameId})", game.Title, game.Id);
+                    logger?.LogError(ex, "Scripts failed to execute for game/addon {GameTitle} ({GameId})", game.Title, game.Id);
                 }
             }
         }
 
-        private ExtractionResult DownloadAndExtract(Game game, string destination)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination)
         {
             if (game == null)
             {
-                _logger?.LogTrace("Game failed to download, no game was specified");
+                logger?.LogTrace("Game failed to download, no game was specified");
 
                 throw new ArgumentNullException("No game was specified");
             }
 
-            _logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
+            logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 
             var extractionResult = new ExtractionResult
             {
@@ -928,7 +955,7 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                _transferStream = Stream(game.Id);
+                _transferStream = await StreamAsync(game.Id);
                 _reader = ReaderFactory.Open(_transferStream);
 
                 using (var monitor = new FileTransferMonitor(_transferStream.Length))
@@ -1010,7 +1037,7 @@ namespace LANCommander.SDK.Services
                             }
                             catch
                             {
-                                _logger?.LogError("Could not skip to next entry in archive");
+                                logger?.LogError("Could not skip to next entry in archive");
                             }
                     }
                     catch (IOException ex)
@@ -1020,7 +1047,7 @@ namespace LANCommander.SDK.Services
                         if (errorCode == 87)
                             throw ex;
                         else
-                            _logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 
                         // Skip to next entry
                         _reader.OpenEntryStream().Dispose();
@@ -1032,24 +1059,24 @@ namespace LANCommander.SDK.Services
             }
             catch (ReaderCancelledException ex)
             {
-                _logger?.LogTrace(ex, "User cancelled the download");
+                logger?.LogTrace(ex, "User cancelled the download");
 
                 extractionResult.Canceled = true;
 
                 if (Directory.Exists(destination))
                 {
-                    _logger?.LogTrace("Cleaning up orphaned files after cancelled install");
+                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
 
                     Directory.Delete(destination, true);
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
                 if (Directory.Exists(destination))
                 {
-                    _logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
 
                     Directory.Delete(destination, true);
                 }
@@ -1070,7 +1097,7 @@ namespace LANCommander.SDK.Services
 
                 File.WriteAllText(fileListDestination, fileManifest.ToString());
 
-                _logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
+                logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }
 
             return extractionResult;
@@ -1079,7 +1106,7 @@ namespace LANCommander.SDK.Services
         public async Task<string> GetInstallDirectory(Game game, string installDirectory)
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = _client.DefaultInstallDirectory;
+                installDirectory = config.InstallDirectories.First();
 
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
             {
@@ -1091,7 +1118,7 @@ namespace LANCommander.SDK.Services
                 }
                 else
                 {
-                    var baseGame = await _client.Games.GetAsync(game.BaseGameId);
+                    var baseGame = await GetAsync(game.BaseGameId);
 
                     return await GetInstallDirectory(baseGame, installDirectory);
                 }
@@ -1128,7 +1155,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, "Could not load manifest from dependent game {DependentGameId}", dependentGameId);
+                        logger?.LogError(ex, "Could not load manifest from dependent game {DependentGameId}", dependentGameId);
                     }
                 }
             }
@@ -1150,7 +1177,13 @@ namespace LANCommander.SDK.Services
         /// </exception>
         protected async Task<IEnumerable<ArchiveEntry>> GetGameInstallationArchiveEntries(Guid gameId, GameManifest manifest)
         {
-            var entries = await _client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{manifest.Id}/{manifest.Version}");
+            var entries = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Archives/Contents/{manifest.Id}/{manifest.Version}")
+                .GetAsync<IEnumerable<ArchiveEntry>>();
+
             return entries ?? [];
         }
 
@@ -1179,7 +1212,7 @@ namespace LANCommander.SDK.Services
                 gameArchives.BaseGame.Entries.AddRange(entries);
                 manifests = manifests.Except([baseManifest]).ToList();
 
-                var savePathEntries = baseManifest.SavePaths?.SelectMany(p => _client.Saves.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                var savePathEntries = baseManifest.SavePaths?.SelectMany(p => saveService.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
                 gameArchives.BaseGame.SavePaths = savePathEntries;
             }
 
@@ -1197,7 +1230,7 @@ namespace LANCommander.SDK.Services
                 depArchiveInfo.Manifest = depManifest;
                 depArchiveInfo.Entries.AddRange(depEntries);
 
-                var savePathEntries = depManifest.SavePaths?.SelectMany(p => _client.Saves.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                var savePathEntries = depManifest.SavePaths?.SelectMany(p => saveService.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
                 depArchiveInfo.SavePaths = savePathEntries;
             }
 
@@ -1208,9 +1241,9 @@ namespace LANCommander.SDK.Services
         {
             var screen = DisplayHelper.GetScreen();
 
-            using (var context = new ProcessExecutionContext(_client, _logger))
+            using (var context = processExecutionContextFactory.Create())
             {
-                context.AddVariable("ServerAddress", _client.GetServerAddress());
+                context.AddVariable("ServerAddress", connectionService.GetServerAddress().ToString());
                 
                 try
                 {
@@ -1221,20 +1254,20 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Could not get display information for execution context variables");
+                    logger?.LogError(ex, "Could not get display information for execution context variables");
                 }
 
                 try
                 {
-                    if (_client.IsConnected() && !String.IsNullOrWhiteSpace(_client.Settings.IPXRelayHost))
+                    if (connectionService.IsConnected() && !String.IsNullOrWhiteSpace(config.IPXRelayHost))
                     {
-                        context.AddVariable("IPXRelayHost", await _client.GetIPXRelayHostAsync());
-                        context.AddVariable("IPXRelayPort", _client.Settings.IPXRelayPort.ToString());
+                        context.AddVariable("IPXRelayHost", config.IPXRelayHost);
+                        context.AddVariable("IPXRelayPort", config.IPXRelayPort.ToString());
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Could not connect to IPXRelay host");
+                    logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
                 #region Run Scripts
@@ -1247,19 +1280,19 @@ namespace LANCommander.SDK.Services
                     var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
                     #region Check Game's Player Name
-                    if (_client.IsConnected())
+                    if (connectionService.IsConnected())
                     {
-                        var alias = await _client.Profile.GetAliasAsync();
+                        var alias = await profileService.GetAliasAsync();
 
                         if (currentGamePlayerAlias != alias)
                         {
-                            await _client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+                            await scriptService.RunNameChangeScriptAsync(installDirectory, gameId, alias);
 
                             if (manifest.Redistributables != null)
                             {
                                 foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                                 {
-                                    await _client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    await scriptService.RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
                                 }
                             }
                         }
@@ -1267,26 +1300,26 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Check Key Allocation
-                    if (_client.IsConnected())
+                    if (connectionService.IsConnected())
                     {
-                        var newKey = await _client.Games.GetAllocatedKeyAsync(manifest.Id);
+                        var newKey = await GetAllocatedKeyAsync(manifest.Id);
 
                         if (currentGameKey != newKey)
-                            await _client.Scripts.RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                            await scriptService.RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
                     }
                     #endregion
 
                     #region Download Latest Saves
-                    if (_client.IsConnected())
+                    if (connectionService.IsConnected())
                     {
                         await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                         {
-                            _logger?.LogTrace("Attempting to download save");
+                            logger?.LogTrace("Attempting to download save");
 
-                            var latestSave = await _client.Saves.GetLatestAsync(manifest.Id);
+                            var latestSave = await saveService.GetLatestAsync(manifest.Id);
 
                             if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
-                                await _client.Saves.DownloadAsync(installDirectory, manifest.Id);
+                                await saveService.DownloadAsync(installDirectory, manifest.Id);
 
                             return true;
                         });
@@ -1294,13 +1327,13 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Run Before Start Script
-                    await _client.Scripts.RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+                    await scriptService.RunBeforeStartScriptAsync(installDirectory, manifest.Id);
                     
                     if (manifest.Redistributables != null)
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await _client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await scriptService.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion
@@ -1322,19 +1355,19 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Game failed to run");
+                    logger?.LogError(ex, "Game failed to run");
                 }
 
                 foreach (var manifest in manifests)
                 {
                     #region Run After Stop Script
-                    await _client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId);
+                    await scriptService.RunAfterStopScriptAsync(installDirectory, gameId);
                     
                     if (manifest.Redistributables != null)
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await _client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await scriptService.RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion
@@ -1344,15 +1377,15 @@ namespace LANCommander.SDK.Services
 
         private async Task UploadSavesAsync(ICollection<GameManifest> manifests, string installDirectory)
         {
-            if (_client.IsConnected())
+            if (connectionService.IsConnected())
             {
                 foreach (var manifest in manifests)
                 {
                     await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                     {
-                        _logger?.LogTrace("Attempting to upload save");
+                        logger?.LogTrace("Attempting to upload save");
 
-                        await _client.Saves.UploadAsync(installDirectory, manifest.Id);
+                        await saveService.UploadAsync(installDirectory, manifest.Id);
 
                         return true;
                     });
@@ -1382,32 +1415,57 @@ namespace LANCommander.SDK.Services
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
-                    await _client.PostRequestAsync<object>($"/api/Games/Import/{objectKey}");
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute($"/api/Games/Import/{objectKey}")
+                        .PostAsync<object>();
             }
         }
 
+        [Obsolete("Servers no longer do \"Full\" exports")]
         public async Task ExportAsync(string destinationPath, Guid gameId)
         {
-            await _client.DownloadRequestAsync($"/Games/{gameId}/Export/Full", destinationPath);
+            await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/Export/Full")
+                .DownloadAsync(destinationPath);
         }
 
         public async Task UploadArchiveAsync(string archivePath, Guid gameId, string version, string changelog = "")
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
-                    await _client.PostRequestAsync<object>($"/api/Games/UploadArchive", new UploadArchiveRequest
-                    {
-                        Id = gameId,
-                        ObjectKey = objectKey,
-                        Version = version,
-                        Changelog = changelog,
-                    });
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute("/api/Games/UploadArchive")
+                        .AddBody(new UploadArchiveRequest
+                        {
+                            Id = gameId,
+                            ObjectKey = objectKey,
+                            Version = version,
+                            Changelog = changelog
+                        })
+                        .PostAsync<object>();
             }
         }
 
@@ -1535,13 +1593,12 @@ namespace LANCommander.SDK.Services
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries)
         {
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
-            var archive = await _client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 try
                 {
-                    _transferStream = Stream(gameId);
+                    _transferStream = await StreamAsync(gameId);
                     _reader = ReaderFactory.Open(_transferStream);
 
                     while (_reader.MoveToNextEntry())
@@ -1568,7 +1625,7 @@ namespace LANCommander.SDK.Services
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger?.LogError(ex, "Could not skip to the next entry in the archive");
+                                    logger?.LogError(ex, "Could not skip to the next entry in the archive");
                                 }
                         }
                         catch (IOException ex)
@@ -1578,7 +1635,7 @@ namespace LANCommander.SDK.Services
                             if (errorCode == 87)
                                 throw;
                             else
-                                _logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                                logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 
                             // Skip to next entry
                             _reader.OpenEntryStream().Dispose();

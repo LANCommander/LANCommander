@@ -1,13 +1,11 @@
-﻿using PeanutButter.INI;
-using System;
-using System.IO;
-using System.Management.Automation;
+﻿using System.Management.Automation;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Update, "UserCustomField")]
     [OutputType(typeof(string))]
-    public class UpdateUserCustomFieldCmdlet : BaseCmdlet
+    public class UpdateUserCustomFieldCmdlet(ProfileService profileService) : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Name { get; set; }
@@ -17,7 +15,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            var result = Client.Profile.UpdateCustomField(Name, Value).GetAwaiter().GetResult();
+            var result = profileService.UpdateCustomFieldAsync(Name, Value).GetAwaiter().GetResult();
 
             WriteObject(result);
         }

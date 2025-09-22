@@ -1,41 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
 
-public class BeaconService
+public class BeaconService(
+    ILogger<BeaconService> logger,
+    INetworkInformationProvider networkInformationProvider)
 {
     public delegate void OnBeaconResponseHandler(object sender, BeaconResponseArgs e);
     public event OnBeaconResponseHandler OnBeaconResponse;
-    
-    private readonly Client _client;
-    private readonly ILogger _logger;
     
     private List<DiscoveryProbe> _probeClients = new();
     private List<DiscoveryBeacon> _beaconClients = new();
     
     private List<IBeaconMessageInterceptor> _beaconMessageInterceptors = new();
-
-    public BeaconService(Client client)
-    {
-        _client = client;
-    }
-
-    public BeaconService(Client client, ILogger logger)
-    {
-        _client = client;
-        _logger = logger;
-    }
 
     public void Initialize()
     {
@@ -61,7 +48,7 @@ public class BeaconService
     {
         int attempt = 0;
         
-        foreach (var networkInterface in GetNetworkInterfaces())
+        foreach (var networkInterface in networkInformationProvider.GetNetworkInterfaces())
         {
             DiscoveryProbe probeClient = null;
             try
@@ -140,7 +127,7 @@ public class BeaconService
         string address,
         string name)
     {
-        foreach (var networkInterface in GetNetworkInterfaces())
+        foreach (var networkInterface in networkInformationProvider.GetNetworkInterfaces())
         {
             try
             {
@@ -154,7 +141,7 @@ public class BeaconService
                     {
                         Address = address,
                         Name = name,
-                        Version = Client.GetCurrentVersion().ToString(),
+                        Version = VersionHelper.GetCurrentVersion().ToString(),
                     };
 
                     foreach (var interceptor in _beaconMessageInterceptors)
@@ -169,12 +156,12 @@ public class BeaconService
             }
             catch (NetworkInformationException)
             {
-                _logger?.LogError("Unable to start beacon on network interface {NetworkInterface}",
+                logger?.LogError("Unable to start beacon on network interface {NetworkInterface}",
                     networkInterface.Name);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Unknown error while starting beacon on network interface {NetworkInterface}", networkInterface.Name);
+                logger?.LogError(ex, "Unknown error while starting beacon on network interface {NetworkInterface}", networkInterface.Name);
             }
         }
     }
@@ -187,49 +174,6 @@ public class BeaconService
         foreach (var beaconClient in _beaconClients)
         {
             beaconClient.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Get active network interfaces on the system
-    /// </summary>
-    /// <returns></returns>
-    private IEnumerable<NetworkInterface> GetNetworkInterfaces()
-    {
-        var networkInterfaces = NetworkInterface
-            .GetAllNetworkInterfaces()
-            .Where(i => i.OperationalStatus == OperationalStatus.Up &&
-                        i.NetworkInterfaceType != NetworkInterfaceType.Loopback);
-
-        return networkInterfaces;
-    }
-
-    private IEnumerable<IPAddress> GetBroadcastAddresses()
-    {
-        var networkInterfaces = GetNetworkInterfaces();
-        
-        foreach (var nic in networkInterfaces)
-        {
-            foreach (var ua in nic.GetIPProperties().UnicastAddresses)
-            {
-                if (ua.Address.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    var ip = ua.Address;
-                    var mask = ua.IPv4Mask;
-
-                    if (mask == null)
-                        continue;
-                    
-                    var ipBytes = ip.GetAddressBytes();
-                    var maskBytes = mask.GetAddressBytes();
-                    var broadcastBytes = new byte[4];
-                    
-                    for (var i = 0; i < 4; i++)
-                        broadcastBytes[i] = (byte)(ipBytes[i] | (maskBytes[i] ^ 255));
-                    
-                    yield return new IPAddress(broadcastBytes);
-                }
-            }
         }
     }
 }

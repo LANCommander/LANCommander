@@ -3,61 +3,71 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class ServerService
+    public class ServerService(
+        ILANCommanderConfiguration config,
+        ApiRequestFactory apiRequestFactory)
     {
-        private readonly ILogger _logger;
-        private Client Client { get; set; }
-
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
 
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
-        public ServerService(Client client)
-        {
-            Client = client;
-        }
-
-        public ServerService(Client client, ILogger logger)
-        {
-            Client = client;
-            _logger = logger;
-        }
-
         public async Task ImportAsync(string archivePath)
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
-                    await Client.PostRequestAsync<object>($"/api/Servers/Import/{objectKey}");
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute($"/api/Servers/Import/{objectKey}")
+                        .PostAsync<object>();
             }
         }
 
+        [Obsolete]
         public async Task ExportAsync(string destinationPath, Guid serverId)
         {
-            await Client.DownloadRequestAsync($"/Servers/{serverId}/Export/Full", destinationPath);
+            throw new NotImplementedException();
         }
 
         public async Task UploadArchiveAsync(string archivePath, Guid serverId, string version, string changelog = "")
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
-
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
+                
                 if (objectKey != Guid.Empty)
-                    await Client.PostRequestAsync<object>($"/api/Servers/UploadArchive", new UploadArchiveRequest
-                    {
-                        Id = serverId,
-                        ObjectKey = objectKey,
-                        Version = version,
-                        Changelog = changelog,
-                    });
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute($"/api/Servers/UploadArchive")
+                        .AddBody(new UploadArchiveRequest
+                        {
+                            Id = serverId,
+                            ObjectKey = objectKey,
+                            Version = version,
+                            Changelog = changelog,
+                        })
+                        .PostAsync<object>();
             }
         }
     }

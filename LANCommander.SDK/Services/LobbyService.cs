@@ -7,22 +7,8 @@ using System.IO;
 
 namespace LANCommander.SDK.Services
 {
-    public class LobbyService
+    public class LobbyService(ILogger<LobbyService> logger)
     {
-        private readonly ILogger _logger;
-        private readonly Client _client;
-
-        public LobbyService(Client client)
-        {
-            _client = client;
-        }
-
-        public LobbyService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
-
         /// <summary>
         /// Get all Steam lobbies for a specified game. Game install directory must contain a file called steam_appid.txt.
         /// Remember to call ReleaseSteam() when the game is done playing or lobby join is canceled!
@@ -45,7 +31,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                _logger?.LogTrace("Initializing Steamworks with app ID {AppId}", appId);
+                logger?.LogTrace("Initializing Steamworks with app ID {AppId}", appId);
 
                 SteamClient.Init(appId, true);
 
@@ -64,13 +50,13 @@ namespace LANCommander.SDK.Services
 
                         lobbies.Add(lobby);
 
-                        _logger?.LogTrace("Found lobby | {FriendName} ({FriendId}): {LobbyId}", lobby.ExternalUsername, lobby.ExternalUserId, lobby.Id);
+                        logger?.LogTrace("Found lobby | {FriendName} ({FriendId}): {LobbyId}", lobby.ExternalUsername, lobby.ExternalUserId, lobby.Id);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Couldn't initialize Steamworks");
+                logger?.LogError(ex, "Couldn't initialize Steamworks");
             }
 
             return lobbies;

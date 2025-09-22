@@ -9,15 +9,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class RedistributableService
+    public class RedistributableService(
+        ILogger<RedistributableService> _logger,
+        ILANCommanderConfiguration config,
+        ApiRequestFactory apiRequestFactory,
+        ScriptService scriptService,
+        ProfileService profileService)
     {
-        private readonly ILogger _logger;
-        private readonly Client _client;
-
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
 
@@ -28,21 +32,15 @@ namespace LANCommander.SDK.Services
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
         
         private InstallProgress _installProgress;
-
-        public RedistributableService(Client client)
+        
+        public async Task<TrackableStream> Stream(Guid id)
         {
-            _client = client;
-        }
-
-        public RedistributableService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
-
-        public TrackableStream Stream(Guid id)
-        {
-            return _client.StreamRequest($"/api/Redistributables/{id}/Download");
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributable/{id}/Download")
+                .StreamAsync();
         }
 
         public async Task InstallAsync(Game game)
@@ -80,8 +78,9 @@ namespace LANCommander.SDK.Services
                 {
                     await ScriptHelper.SaveScriptAsync(game, redistributable, script.Type);
                 }
-                
-                var installed = await _client.Scripts.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+
+                var installed =
+                    await scriptService.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
 
                 _logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
@@ -99,7 +98,7 @@ namespace LANCommander.SDK.Services
                             {
                                 _logger?.LogTrace("Attempting to download and extract redistributable");
 
-                                return await Task.Run(() => DownloadAndExtract(redistributable, game));
+                                return await Task.Run(async () => await DownloadAndExtractAsync(redistributable, game));
                             });
                         
                         if (!result.Success && !result.Canceled)
@@ -143,8 +142,8 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    await _client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
-                    await _client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await _client.Profile.GetAliasAsync());
+                    await scriptService.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                    await scriptService.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await profileService.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {
@@ -153,7 +152,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private ExtractionResult DownloadAndExtract(Redistributable redistributable, Game game)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Redistributable redistributable, Game game)
         {
             if (redistributable == null)
             {
@@ -170,11 +169,10 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                using (var redistributableStream = Stream(redistributable.Id))
+                using (var redistributableStream = await Stream(redistributable.Id))
                 using (var reader = ReaderFactory.Open(redistributableStream))
                 using (var monitor = new FileTransferMonitor(redistributableStream.Length))
                 {
-                    
                     redistributableStream.OnProgress += (pos, len) =>
                     {
                         if (monitor.CanUpdate())
@@ -246,32 +244,57 @@ namespace LANCommander.SDK.Services
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
-                    await _client.PostRequestAsync<object>($"/api/Redistributables/Import/{objectKey}");
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute($"/api/Redistributables/Import/{objectKey}")
+                        .PostAsync<object>();
             }
         }
 
+        [Obsolete("Exporter no longer provides \"full\" exports")]
         public async Task ExportAsync(string destinationPath, Guid redistributableId)
         {
-            await _client.DownloadRequestAsync($"/Redistributables/{redistributableId}/Export/Full", destinationPath);
+            await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/Redistributables/{redistributableId}/Export/Full")
+                .DownloadAsync(destinationPath);
         }
 
         public async Task UploadArchiveAsync(string archivePath, Guid redistributableId, string version, string changelog = "")
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(config.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
-                    await _client.PostRequestAsync<object>($"/api/Redistributables/UploadArchive", new UploadArchiveRequest
-                    {
-                        Id = redistributableId,
-                        ObjectKey = objectKey,
-                        Version = version,
-                        Changelog = changelog,
-                    });
+                    await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute("/api/Redistributables/UploadArchive")
+                        .AddBody(new UploadArchiveRequest
+                        {
+                            Id = redistributableId,
+                            ObjectKey = objectKey,
+                            Version = version,
+                            Changelog = changelog,
+                        })
+                        .PostAsync<object>();
             }
         }
     }

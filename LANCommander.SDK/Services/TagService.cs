@@ -1,39 +1,41 @@
 ﻿using LANCommander.SDK.Models;
-using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class TagService
+    public class TagService(ApiRequestFactory apiRequestFactory)
     {
-        private readonly ILogger _logger;
-
-        private readonly Client _client;
-
-        public TagService(Client client)
-        {
-            _client = client;
-        }
-
-        public TagService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
-
         public async Task<Tag> CreateAsync(Tag tag)
         {
-            return await _client.PostRequestAsync<Tag>("/api/Tags", tag);
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute("/api/Tags")
+                .AddBody(tag)
+                .PostAsync<Tag>();
         }
 
         public async Task<Tag> UpdateAsync(Tag tag)
         {
-            return await _client.PostRequestAsync<Tag>($"/api/Tags/{tag.Id}", tag);
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Tags/{tag.Id}")
+                .AddBody(tag)
+                .PostAsync<Tag>();
         }
 
         public async Task DeleteAsync(Tag tag)
         {
-            await _client.DeleteRequestAsync<Tag>($"/api/Tags/{tag.Id}");
+            await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Tags/{tag.Id}")
+                .DeleteAsync<object>();
         }
     }
 }

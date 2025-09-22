@@ -1,41 +1,27 @@
 ﻿using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
-using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Enums;
-using YamlDotNet.Serialization;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.SDK
 {
-    public class ProcessExecutionContext : IDisposable
+    public class ProcessExecutionContext(
+        ILogger<ProcessExecutionContext> logger,
+        LobbyService lobbyService) : IDisposable
     {
-        private readonly Client Client;
-        private readonly ILogger Logger;
-
         private Process Process;
 
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
         public event DataReceivedEventHandler? OutputDataReceived;
         public event DataReceivedEventHandler? ErrorDataReceived;
-        
-        public ProcessExecutionContext(Client client)
-        {
-            Client = client;
-        }
-
-        public ProcessExecutionContext(Client client, ILogger logger)
-        {
-            Client = client;
-            Logger = logger;
-        }
 
         public void AddVariable(string key, string value)
         {
@@ -64,7 +50,7 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not expand runtime variables");
+                logger?.LogError(ex, "Could not expand runtime variables");
 
                 return input;
             }
@@ -102,10 +88,10 @@ namespace LANCommander.SDK
             if (OutputDataReceived != null && !processStartInfo.UseShellExecute)
                 Process.ErrorDataReceived += ErrorDataReceived;
             
-            Logger?.LogTrace("Running server executable");
-            Logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
-            Logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
-            Logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
+            logger?.LogTrace("Running server executable");
+            logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
+            logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
+            logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
             
             bool exited = false;
 
@@ -196,11 +182,11 @@ namespace LANCommander.SDK
             if (!String.IsNullOrWhiteSpace(args))
                 Process.StartInfo.Arguments += " " + args;
 
-            Logger?.LogTrace("Running game executable");
-            Logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
-            Logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
-            Logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
-            Logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
+            logger?.LogTrace("Running game executable");
+            logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
+            logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
+            logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
+            logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
             bool exited = false;
 
@@ -223,7 +209,7 @@ namespace LANCommander.SDK
             }
             catch { }
 
-            Client.Lobbies.ReleaseSteam();
+            lobbyService.ReleaseSteam();
         }
     }
 }

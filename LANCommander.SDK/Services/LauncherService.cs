@@ -1,38 +1,27 @@
 ﻿using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
-using RestSharp;
 using System;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class LauncherService
+    public class LauncherService(
+        ILogger<LauncherService> logger,
+        ApiRequestFactory apiRequestFactory)
     {
-        private readonly ILogger _logger;
-        private readonly Client _client;
-
-        public LauncherService(Client client)
-        {
-            _client = client;
-        }
-
-        public LauncherService(Client client, ILogger logger)
-        {
-            _client = client;
-            _logger = logger;
-        }
-
         public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
         {
             try
             {
-                var request = new RestRequest("/api/Launcher", Method.Get);
-
-                return await _client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
+                return await apiRequestFactory
+                    .Create()
+                    .UseRoute("/api/Launcher/CheckForUpdate")
+                    .GetAsync<CheckForUpdateResponse>();
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Could not check for updates from server");
+                logger?.LogError(ex, "Could not check for updates from server");
             }
 
             return null;
@@ -40,9 +29,14 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> DownloadAsync(string destination)
         {
-            _logger?.LogTrace("Downloading the launcher");
+            logger?.LogTrace("Downloading the launcher");
 
-            return await _client.DownloadRequestAsync("/api/Launcher/Download", destination);
+            var result = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Launcher/Download")
+                .DownloadAsync(destination);
+
+            return result.FullName;
         }
     }
 }

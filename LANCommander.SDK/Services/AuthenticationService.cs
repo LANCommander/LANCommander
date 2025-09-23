@@ -42,7 +42,7 @@ public class AuthenticationService(
                 
                 logger?.LogError("Authentication failed for user {UserName}: {Message}", username, message);
                 
-                errorResponse = ParseErrorResponse(response);
+                errorResponse = await ParseErrorResponseAsync(response);
             } 
 
             switch (response.StatusCode)
@@ -63,7 +63,7 @@ public class AuthenticationService(
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Unauthorized:
                     logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
-                    throw new AuthFailedException(AuthFailedException.AuthenticationErrorCode.InvalidCredentials, "Invalid username or password", errorData: errorResponse, innerException: response.ErrorException);
+                    throw new AuthFailedException(AuthFailedException.AuthenticationErrorCode.InvalidCredentials, "Invalid username or password", errorData: errorResponse);
 
                 default:
                     logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
@@ -110,11 +110,9 @@ public class AuthenticationService(
             
             if (!response.IsSuccessStatusCode)
             {
-                string message = response.ReasonPhrase;
+                logger?.LogError("Registration failed for user {UserName}: {Message}", username, response.ErrorMessage);
                 
-                logger?.LogError("Registration failed for user {UserName}: {Message}", username, message);
-                
-                errorResponse = ParseErrorResponse(response);
+                errorResponse = await ParseErrorResponseAsync(response);
             } 
 
             switch (response.StatusCode)
@@ -156,14 +154,14 @@ public class AuthenticationService(
         return connectionService.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");
     }
     
-    internal ErrorResponse ParseErrorResponse(bool defaultToGenericResponse = false)
+    internal async Task<ErrorResponse> ParseErrorResponseAsync(HttpResponseMessage response, bool defaultToGenericResponse = false)
     {
         ErrorResponse errorResponse = null;
 
         // Try to deserialize the error response.
         try
         {
-            errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Content);
+            errorResponse = JsonSerializer.Deserialize<ErrorResponse>(await response.Content.ReadAsStringAsync());
             
             return errorResponse;
         }
@@ -172,7 +170,7 @@ public class AuthenticationService(
             // Log error and create a fallback message if deserialization fails.
             if (defaultToGenericResponse)
             {
-                logger?.LogError(deserializationEx, "Error deserializing error response for route {Route}", response.Request);
+                logger?.LogError(deserializationEx, "Error deserializing error response");
                 
                 errorResponse = new ErrorResponse
                 {

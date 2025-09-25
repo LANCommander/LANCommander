@@ -11,7 +11,7 @@ namespace LANCommander.Launcher.Services
     {
         protected DatabaseContext Context { get; set; }
 
-        public BaseDatabaseService(DatabaseContext dbContext, SDK.Client client, ILogger logger) : base(client, logger)
+        public BaseDatabaseService(DatabaseContext dbContext, ILogger logger) : base(logger)
         {
             Context = dbContext;
         }

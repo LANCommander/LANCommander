@@ -13,12 +13,11 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddLANCommanderServer(this IServiceCollection services, Settings settings)
     {
-        services.AddSingleton(new Client("", ""));
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<SettingService>();
         services.AddScoped<AuthenticationService>();
-        services.AddScoped<ArchiveService>();
+        services.AddScoped<ArchiveClient>();
         services.AddScoped<StorageLocationService>();
         services.AddScoped<ActionService>();
         services.AddScoped<CategoryService>();

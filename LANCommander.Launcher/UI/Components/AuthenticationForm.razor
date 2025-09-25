@@ -53,7 +53,7 @@
         State = new()
         {
             Stage = AuthenticationStage.None,
-            ServerAddress = AuthenticationService.GetServerAddress(),
+            ServerAddress = Client.Connection.GetServerAddress(),
         };
 
         bool hasServer = await AuthenticationService.IsServerOnlineAsync();
@@ -72,14 +72,14 @@
         }
     }
 
-    async Task ServerSelected(string serverAddress)
+    async Task ServerSelected(Uri serverAddress)
     {
         try
         {
             _connecting = true;
 
-            await Client.ChangeServerAddressAsync(serverAddress);
-            State.ServerAddress = Client.GetServerAddress();
+            await Client.Connection.UpdateServerAddressAsync(serverAddress);
+            State.ServerAddress = Client.Connection.GetServerAddress();
             State.Stage = AuthenticationStage.Login;
         }
         catch (Exception ex)

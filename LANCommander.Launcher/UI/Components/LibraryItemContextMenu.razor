@@ -309,7 +309,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            var key = Client.Games.GetAllocatedKey(manifest.Id);
+            var key = await Client.Games.GetAllocatedKeyAsync(manifest.Id);
 
             await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }

@@ -1,27 +1,22 @@
 ﻿using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using Semver;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class UpdateService : BaseService
+    public class UpdateService(
+        ILogger<UpdateService> logger,
+        SDK.Client client) : BaseService(logger)
     {
         public delegate Task OnUpdateAvailableHandler(CheckForUpdateResponse response);
         public event OnUpdateAvailableHandler OnUpdateAvailable;
 
-        public UpdateService(SDK.Client client, ILogger<UpdateService> logger) : base(client, logger) { }
-
         public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
         {
-            var response = await Client.Launcher.CheckForUpdateAsync();
+            var response = await client.Launcher.CheckForUpdateAsync();
 
             if (response != null && response.UpdateAvailable)
                 OnUpdateAvailable?.Invoke(response);
@@ -37,7 +32,7 @@ namespace LANCommander.Launcher.Services
 
             string path = Path.Combine(settings.Updates.StoragePath, $"{version}.zip");
 
-            await Client.Launcher.DownloadAsync(path);
+            await client.Launcher.DownloadAsync(path);
 
             Logger?.LogInformation("Update version {Version} has been downloaded", version);
 

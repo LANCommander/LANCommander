@@ -1,5 +1,6 @@
 @using LANCommander.SDK.Models
-@inject SDK.Client Client
+@using LANCommander.SDK.Services
+@inject MediaService MediaService
 @namespace LANCommander.UI.Components
 
 <Spin Spinning="_loading" WrapperClassName="@_class">
@@ -11,7 +12,7 @@
         }
         else if (Media != null)
         {
-            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(Media))" @onload="OnLoad" @onerror="OnError" style="@Style" />
+            <img src="@(MediaService.GetAbsoluteThumbnailUrl(Media))" @onload="OnLoad" @onerror="OnError" style="@Style" />
         }
         else
         {

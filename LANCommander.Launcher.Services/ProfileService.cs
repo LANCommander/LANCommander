@@ -1,13 +1,7 @@
-﻿using JetBrains.Annotations;
-using LANCommander.Launcher.Data.Models;
+﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mime;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
@@ -16,6 +10,7 @@ namespace LANCommander.Launcher.Services
         private readonly AuthenticationService AuthenticationService;
         private readonly MediaService MediaService;
         private readonly UserService UserService;
+        private readonly SDK.Client Client;
 
         private Settings Settings;
 
@@ -26,7 +21,7 @@ namespace LANCommander.Launcher.Services
             ILogger<ProfileService> logger,
             AuthenticationService authenticationService,
             MediaService mediaService,
-            UserService userService) : base(client, logger)
+            UserService userService) : base(logger)
         {
             AuthenticationService = authenticationService;
             MediaService = mediaService;
@@ -90,7 +85,7 @@ namespace LANCommander.Launcher.Services
                             FileId = Guid.NewGuid(),
                             Type = SDK.Enums.MediaType.Avatar,
                             MimeType = MediaTypeNames.Image.Png,
-                            Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
+                            Crc32 = await SDK.Services.MediaService.CalculateChecksumAsync(tempAvatarPath),
                             UserId = remoteProfile.Id,
                         };
 

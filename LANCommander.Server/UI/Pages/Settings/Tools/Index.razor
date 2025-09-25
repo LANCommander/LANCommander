@@ -4,7 +4,7 @@
 @using LANCommander.Server.Jobs.Background
 @using LANCommander.Server.Services.Exceptions
 @using ZiggyCreatures.Caching.Fusion
-@inject ArchiveService ArchiveService
+@inject ArchiveClient ArchiveClient
 @inject PageService PageService
 @inject UpdateService UpdateService
 @inject StorageLocationService StorageLocationService
@@ -80,13 +80,13 @@
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
         
-        var archives = await ArchiveService.AsNoTracking().GetAsync();
+        var archives = await ArchiveClient.AsNoTracking().GetAsync();
 
         var results = new List<bool>();
 
         foreach (var archive in archives)
         {
-            var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
+            var result = await ArchiveClient.RecalculateFileSizeArchiveAsync(archive);
             results.Add(result);
         }
 

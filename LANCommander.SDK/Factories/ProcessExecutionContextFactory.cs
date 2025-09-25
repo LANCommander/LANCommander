@@ -11,6 +11,6 @@ public class ProcessExecutionContextFactory(IServiceProvider serviceProvider)
     {
         return new ProcessExecutionContext(
             serviceProvider.GetService<ILogger<ProcessExecutionContext>>(),
-            serviceProvider.GetService<LobbyService>());
+            serviceProvider.GetService<LobbyClient>());
     }
 }

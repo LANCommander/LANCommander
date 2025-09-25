@@ -2,47 +2,25 @@
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services
 {
-    public class CommandLineService : BaseService
+    public class CommandLineService(
+        ILogger<CommandLineService> logger,
+        AuthenticationService authenticationService,
+        UserService userService,
+        GameService gameService,
+        InstallService installService,
+        ImportService importService,
+        ProfileService profileService,
+        SDK.Client client) : BaseService(logger)
     {
-        private readonly AuthenticationService AuthenticationService;
-        private readonly UserService UserService;
-        private readonly GameService GameService;
-        private readonly InstallService InstallService;
-        private readonly ImportService ImportService;
-        private readonly ProfileService ProfileService;
-
         private Settings Settings = SettingService.GetSettings();
-
-        public CommandLineService(
-            SDK.Client client,
-            ILogger<CommandLineService> logger,
-            AuthenticationService authenticationService,
-            UserService userService,
-            GameService gameService,
-            InstallService installService,
-            ImportService importService,
-            ProfileService profileService) : base(client, logger)
-        {
-            AuthenticationService = authenticationService;
-            UserService = userService;
-            GameService = gameService;
-            InstallService = installService;
-            ImportService = importService;
-            ProfileService = profileService;
-        }
 
         public async Task ParseCommandLineAsync(string[] args)
         {
-            await Client.ValidateTokenAsync();
+            await client.Authentication.ValidateTokenAsync();
 
                 
             var result = Parser.Default.ParseArguments
@@ -77,27 +55,27 @@ namespace LANCommander.Launcher.Services
             switch (options.Type)
             {
                 case SDK.Enums.ScriptType.Install:
-                    await Client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.Uninstall:
-                    await Client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.BeforeStart:
-                    await Client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
+                    await client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.AfterStop:
-                    await Client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
+                    await client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.NameChange:
-                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.DEFAULT_GAME_USERNAME);
+                    await client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.DEFAULT_GAME_USERNAME);
                     break;
 
                 case SDK.Enums.ScriptType.KeyChange:
-                    await Client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
+                    await client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
                     break;
             }
         }
@@ -108,12 +86,12 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.GetAsync(options.GameId);
+                var game = await gameService.GetAsync(options.GameId);
 
-                await InstallService.Add(game, options.InstallDirectory);
-                await InstallService.Next();
+                await installService.Add(game, options.InstallDirectory);
+                await installService.Next();
 
-                game = await GameService.GetAsync(options.GameId);
+                game = await gameService.GetAsync(options.GameId);
 
                 Logger.LogInformation($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
             }
@@ -129,9 +107,9 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.GetAsync(options.GameId);
+                var game = await gameService.GetAsync(options.GameId);
 
-                await GameService.UninstallAsync(game);
+                await gameService.UninstallAsync(game);
 
                 Logger.LogInformation($"Game successfully uninstalled from {game.InstallDirectory}");
             }
@@ -147,14 +125,14 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.GetAsync(options.GameId);
+                var game = await gameService.GetAsync(options.GameId);
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(game.InstallDirectory, game.Id);
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
                 if (action == null)
                     action = manifest.Actions.OrderBy(a => a.SortOrder).FirstOrDefault(a => a.IsPrimaryAction);
 
-                await GameService.Run(game, action);
+                await gameService.Run(game, action);
             }
             catch (Exception ex)
             {
@@ -166,17 +144,17 @@ namespace LANCommander.Launcher.Services
         {
             Logger.LogInformation("Syncing games from server...");
 
-            ImportService.OnImportComplete += async () =>
+            importService.OnImportComplete += async () =>
             {
                 Logger.LogInformation("Sync complete!");
             };
 
-            ImportService.OnImportFailed += async (Exception ex) =>
+            importService.OnImportFailed += async (Exception ex) =>
             {
                 Logger.LogError(ex, "Sync failed!");
             };
 
-            await ImportService.ImportAsync();
+            await importService.ImportAsync();
         }
 
         private async Task Import(ImportCommandLineOptions options)
@@ -192,19 +170,19 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Uploading game import file to server...");
 
-                    await Client.Games.ImportAsync(options.Path);
+                    await client.Games.ImportAsync(options.Path);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Uploading redistributable archive file to server...");
 
-                    await Client.Redistributables.ImportAsync(options.Path);
+                    await client.Redistributables.ImportAsync(options.Path);
                     break;
 
                 case ArchiveType.Server:
                     Logger.LogInformation("Uploading server archive file to server...");
 
-                    await Client.Servers.ImportAsync(options.Path);
+                    await client.Servers.ImportAsync(options.Path);
                     break;
             }
 
@@ -224,19 +202,19 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Exporting game from server...");
 
-                    await Client.Games.ExportAsync(options.Path, options.Id);
+                    await client.Games.ExportAsync(options.Path, options.Id);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Exporting redistributable from server...");
 
-                    await Client.Redistributables.ExportAsync(options.Path, options.Id);
+                    await client.Redistributables.ExportAsync(options.Path, options.Id);
                     break;
 
                 case ArchiveType.Server:
                     Logger.LogInformation("Exporting server from server...");
 
-                    await Client.Servers.ExportAsync(options.Path, options.Id);
+                    await client.Servers.ExportAsync(options.Path, options.Id);
                     break;
             }
 
@@ -256,13 +234,13 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Uploading game archive to server...");
 
-                    await Client.Games.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    await client.Games.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Uploading redistributable archive to server...");
 
-                    await Client.Redistributables.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    await client.Redistributables.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
                     break;
             }
         }
@@ -277,13 +255,12 @@ namespace LANCommander.Launcher.Services
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
                     throw new ArgumentException("A server address must be specified");
 
-                await Client.ChangeServerAddressAsync(options.ServerAddress);
+                await client.Connection.UpdateServerAddressAsync(options.ServerAddress);
 
-                var token = await Client.AuthenticateAsync(options.Username, options.Password);
+                var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password);
 
                 Settings.Authentication.AccessToken = token.AccessToken;
-                Settings.Authentication.RefreshToken = token.RefreshToken;
-                Settings.Authentication.ServerAddress = Client.GetServerAddress();
+                Settings.Authentication.ServerAddress = client.Connection.GetServerAddress().ToString();
 
                 SettingService.SaveSettings(Settings);
 
@@ -297,7 +274,7 @@ namespace LANCommander.Launcher.Services
 
         private async Task Logout(LogoutCommandLineOptions options)
         {
-            await Client.LogoutAsync();
+            await client.Authentication.LogoutAsync();
 
             Settings.Authentication.AccessToken = "";
             Settings.Authentication.RefreshToken = "";
@@ -308,9 +285,9 @@ namespace LANCommander.Launcher.Services
 
         private async Task ChangeAlias(ChangeAliasCommandLineOptions options)
         {
-            var currentUser = await UserService.GetAsync(AuthenticationService.GetUserId());
+            var currentUser = await userService.GetAsync(authenticationService.GetUserId());
             
-            await ProfileService.ChangeAlias(options.Alias);
+            await profileService.ChangeAlias(options.Alias);
 
             Logger.LogInformation($"Changed current user's alias from {currentUser.Alias} to {options.Alias}");
         }

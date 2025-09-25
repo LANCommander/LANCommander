@@ -2,23 +2,15 @@
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services
 {
-    public class MediaService : BaseDatabaseService<Media>
+    public class MediaService(
+        ILogger<MediaService> logger,
+        DatabaseContext dbContext) : BaseDatabaseService<Media>(dbContext, logger)
     {
-        private readonly Settings Settings;
-
-        public MediaService(DatabaseContext dbContext, SDK.Client client, ILogger<CollectionService> logger) : base(dbContext, client, logger)
-        {
-            Settings = SettingService.GetSettings();
-        }
+        private readonly Settings Settings = SettingService.GetSettings();
 
         public override Task DeleteAsync(Media entity)
         {

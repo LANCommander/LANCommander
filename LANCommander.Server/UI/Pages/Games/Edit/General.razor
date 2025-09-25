@@ -121,22 +121,22 @@
                 <Checkbox @bind-Checked="@context.Singleplayer" />
             </FormItem>
             <FormItem Label="Developers">
-                <TagsInput Entities="Companies" @bind-Values="context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                
             </FormItem>
             <FormItem Label="Publishers">
-                <TagsInput Entities="Companies" @bind-Values="context.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                
             </FormItem>
             <FormItem Label="Platforms">
-                <TagsInput Entities="Platforms" @bind-Values="context.Platforms" OptionLabelSelector="c => c.Name" TItem="Platform" />
+                <TaxonomyInput DataService="PlatformService" @bind-Values="context.Platforms" />
             </FormItem>
             <FormItem Label="Genres">
-                <TagsInput Entities="Genres" @bind-Values="context.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+                <TaxonomyInput DataService="GenreService" @bind-Values="context.Genres" />
             </FormItem>
             <FormItem Label="Tags">
-                <TagsInput Entities="Tags" @bind-Values="context.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+                <TaxonomyInput DataService="TagService" @bind-Values="context.Tags" />
             </FormItem>
             <FormItem Label="Collections">
-                <TagsInput Entities="Collections" @bind-Values="context.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+                <TaxonomyInput DataService="CollectionService" @bind-Values="context.Collections" />
             </FormItem>
             <FormItem Label="Redistributables">
                 <TransferInput

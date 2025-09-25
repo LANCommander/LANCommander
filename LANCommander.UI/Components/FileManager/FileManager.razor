@@ -2,7 +2,7 @@
 @using AntDesign.TableModels;
 @using LANCommander.SDK.Services
 @using Microsoft.Extensions.Logging
-@inject IArchiveService ArchiveService
+@inject IArchiveClient ArchiveClient
 @inject IMessageService MessageService
 @inject ILogger<FileManager> Logger
 @namespace LANCommander.UI.Components
@@ -181,7 +181,7 @@
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
             FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
         else if (ArchiveId != Guid.Empty)
-            FileSource = new FileManagerArchiveSource(ArchiveService, ArchiveId);
+            FileSource = new FileManagerArchiveSource(ArchiveClient, ArchiveId);
 
         Directories = FileSource.GetDirectoryTree().ToHashSet();
 

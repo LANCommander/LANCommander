@@ -5,11 +5,11 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Out, "PlayerAvatar")]
     [OutputType(typeof(string))]
-    public class OutPlayerAvatarCmdlet(ProfileService profileService) : BaseCmdlet
+    public class OutPlayerAvatarCmdlet(ProfileClient profileClient) : BaseCmdlet
     {
         protected override void ProcessRecord()
         {
-            var result = profileService.GetAvatarAsync().GetAwaiter().GetResult();
+            var result = profileClient.GetAvatarAsync().GetAwaiter().GetResult();
 
             WriteObject(result, false);
         }

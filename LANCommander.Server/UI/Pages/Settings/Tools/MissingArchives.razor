@@ -1,5 +1,5 @@
 ﻿@page "/Settings/Tools/MissingArchives"
-@inject ArchiveService ArchiveService
+@inject ArchiveClient ArchiveClient
 @inject IMessageService MessageService
 @inject ILogger<MissingArchives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -53,10 +53,10 @@
 
         Archives = new List<Archive>();
     
-        foreach (var archive in await ArchiveService.GetAsync())
+        foreach (var archive in await ArchiveClient.GetAsync())
         {
-            var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
-            var exists = await ArchiveService.ExistsAsync(archive.Id);
+            var archivePath = await ArchiveClient.GetArchiveFileLocationAsync(archive);
+            var exists = await ArchiveClient.ExistsAsync(archive.Id);
 
             if (!exists)
                 Archives.Add(archive);
@@ -69,9 +69,9 @@
 
     async Task Upload(Archive archive)
     {
-        var archiveFilePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
+        var archiveFilePath = await ArchiveClient.GetArchiveFileLocationAsync(archive);
 
-        if (await ArchiveService.ExistsAsync(archive.Id))
+        if (await ArchiveClient.ExistsAsync(archive.Id))
             File.Delete(archiveFilePath);
 
         File.Create(archiveFilePath).Close();
@@ -83,7 +83,7 @@
     {
         try
         {
-            await ArchiveService.DeleteAsync(archive);
+            await ArchiveClient.DeleteAsync(archive);
 
             await LoadData();
 

@@ -4,16 +4,8 @@ using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK.Models;
-using Microsoft.EntityFrameworkCore.Storage;
 using BaseModel = LANCommander.Launcher.Data.Models.BaseModel;
 using Collection = LANCommander.Launcher.Data.Models.Collection;
 using Company = LANCommander.Launcher.Data.Models.Company;
@@ -29,17 +21,16 @@ using Tag = LANCommander.Launcher.Data.Models.Tag;
 
 namespace LANCommander.Launcher.Services
 {
-    public class ImportService : BaseService
+    public class ImportService(
+        ILogger<ImportService> logger,
+        DatabaseContext databaseContext,
+        LibraryService libraryService,
+        MediaService mediaService,
+        EngineService engineService,
+        GameService gameService,
+        MessageBusService messageBusService,
+        SDK.Client client) : BaseService(logger)
     {
-        private readonly AuthenticationService AuthenticationService;
-        private readonly MediaService MediaService;
-        private readonly EngineService EngineService;
-        private readonly GameService GameService;
-        private readonly LibraryService LibraryService;
-        private readonly MessageBusService MessageBusService;
-        private readonly Settings Settings;
-        private readonly DatabaseContext DatabaseContext;
-
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
 
@@ -60,27 +51,7 @@ namespace LANCommander.Launcher.Services
         private IEnumerable<Tag> Tags;
         private IEnumerable<MultiplayerMode> MultiplayerModes;
 
-        public ImportService(
-            SDK.Client client,
-            ILogger<ImportService> logger,
-            AuthenticationService authenticationService,
-            LibraryService libraryService,
-            MediaService mediaService,
-            EngineService engineService,
-            GameService gameService,
-            MessageBusService messageBusService,
-            DatabaseContext databaseContext) : base(client, logger)
-        {
-            AuthenticationService = authenticationService;
-            LibraryService = libraryService;
-            MediaService = mediaService;
-            EngineService = engineService;
-            GameService = gameService;
-            MessageBusService = messageBusService;
-            DatabaseContext = databaseContext;
-
-            Settings = SettingService.GetSettings();
-        }
+        private Settings Settings = SettingService.GetSettings();
 
         public void ImportHasCompleted()
         {
@@ -103,7 +74,7 @@ namespace LANCommander.Launcher.Services
         
         public async Task<Game> ImportGameAsync(Guid id)
         {
-            var game = await Client.Games.GetAsync(id);
+            var game = await client.Games.GetAsync(id);
             
             return await ImportGameAsync(game);
         }
@@ -115,7 +86,7 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     var existing = false;
-                    var localGame = await GameService.GetAsync(game.Id);
+                    var localGame = await gameService.GetAsync(game.Id);
 
                     if (localGame == null)
                         localGame = new Game()
@@ -141,17 +112,17 @@ namespace LANCommander.Launcher.Services
                     localGame.Singleplayer = game.Singleplayer;
                     
                     if (!existing)
-                        localGame = await GameService.AddAsync(localGame);
+                        localGame = await gameService.AddAsync(localGame);
 
                     if (game.BaseGameId != Guid.Empty && localGame.BaseGameId != game.BaseGameId)
                     {
-                        var baseGame = await GameService.GetAsync(game.BaseGameId);
+                        var baseGame = await gameService.GetAsync(game.BaseGameId);
 
                         if (baseGame == null)
                         {
                             await ImportGameAsync(game.BaseGameId);
 
-                            localGame.BaseGame = await GameService.GetAsync(game.BaseGameId);
+                            localGame.BaseGame = await gameService.GetAsync(game.BaseGameId);
                         }
                         else
                         {
@@ -174,7 +145,7 @@ namespace LANCommander.Launcher.Services
                     }
                     else if (game.Engine != null)
                     {
-                        var engine = await EngineService.GetAsync(game.Engine.Id);
+                        var engine = await engineService.GetAsync(game.Engine.Id);
 
                         if (engine != null)
                         {
@@ -185,7 +156,7 @@ namespace LANCommander.Launcher.Services
 
                     #endregion
 
-                    await DatabaseContext.BulkImport<Collection, SDK.Models.Collection>()
+                    await databaseContext.BulkImport<Collection, SDK.Models.Collection>()
                         .SetTarget(localGame.Collections)
                         .UseSource(game.Collections)
                         .AsBatch()
@@ -196,11 +167,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.Games)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -210,7 +181,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<Genre, SDK.Models.Genre>()
+                    await databaseContext.BulkImport<Genre, SDK.Models.Genre>()
                         .SetTarget(localGame.Genres)
                         .UseSource(game.Genres)
                         .AsBatch()
@@ -221,11 +192,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.Games)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -235,7 +206,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<Company, SDK.Models.Company>()
+                    await databaseContext.BulkImport<Company, SDK.Models.Company>()
                         .SetTarget(localGame.Publishers)
                         .UseSource(game.Publishers)
                         .AsBatch()
@@ -246,11 +217,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.PublishedGames)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -260,7 +231,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<Company, SDK.Models.Company>()
+                    await databaseContext.BulkImport<Company, SDK.Models.Company>()
                         .SetTarget(localGame.Developers)
                         .UseSource(game.Developers)
                         .AsBatch()
@@ -271,11 +242,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.DevelopedGames)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -285,7 +256,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<Tag, SDK.Models.Tag>()
+                    await databaseContext.BulkImport<Tag, SDK.Models.Tag>()
                         .SetTarget(localGame.Tags)
                         .UseSource(game.Tags)
                         .AsBatch()
@@ -296,11 +267,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.Games)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -310,7 +281,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<MultiplayerMode, SDK.Models.MultiplayerMode>()
+                    await databaseContext.BulkImport<MultiplayerMode, SDK.Models.MultiplayerMode>()
                         .SetTarget(localGame.MultiplayerModes)
                         .UseSource(game.MultiplayerModes)
                         .AsBatch()
@@ -327,8 +298,8 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
 
                             var linked = t.GameId == localGame.Id;
                             
@@ -337,7 +308,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<Platform, SDK.Models.Platform>()
+                    await databaseContext.BulkImport<Platform, SDK.Models.Platform>()
                         .SetTarget(localGame.Platforms)
                         .UseSource(game.Platforms)
                         .AsBatch()
@@ -349,11 +320,11 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
                             
                             // Check if the relationship already exists
-                            var linked = DatabaseContext.Entry(t)
+                            var linked = databaseContext.Entry(t)
                                 .Collection(x => x.Games)
                                 .Query()
                                 .Any(g => g.Id == localGame.Id);
@@ -363,7 +334,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    /*await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                    /*await databaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
                         .SetTarget(localGame.PlaySessions)
                         .UseSource(game.PlaySessions)
                         .Include(p => p.Game)
@@ -377,7 +348,7 @@ namespace LANCommander.Launcher.Services
                         .AsNoRemove()
                         .ImportAsync();*/
                     
-                    var importedMedia = await DatabaseContext.BulkImport<Media, SDK.Models.Media>()
+                    var importedMedia = await databaseContext.BulkImport<Media, SDK.Models.Media>()
                         .SetTarget(localGame.Media)
                         .UseSource(game.Media)
                         .AsBatch()
@@ -393,8 +364,8 @@ namespace LANCommander.Launcher.Services
                         .AssignRelationships((t, s) =>
                         {
                             // Ensure the game is tracked before checking relationships
-                            if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                DatabaseContext.Attach(localGame);
+                            if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                databaseContext.Attach(localGame);
 
                             var linked = t.GameId == localGame.Id;
                             
@@ -410,13 +381,13 @@ namespace LANCommander.Launcher.Services
 
                         if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
                         {
-                            await Client.Media.DownloadAsync(new SDK.Models.Media
+                            await client.Media.DownloadAsync(new SDK.Models.Media
                             {
                                 Id = media.Id,
                                 FileId = media.FileId
                             }, localPath);
 
-                            MessageBusService.MediaChanged(media);
+                            messageBusService.MediaChanged(media);
                         }
                     }
 
@@ -424,7 +395,7 @@ namespace LANCommander.Launcher.Services
 
                     foreach (var installDirectory in Settings.Games.InstallDirectories)
                     {
-                        var gameDirectory = await Client.Games.GetInstallDirectory(game, installDirectory);
+                        var gameDirectory = await client.Games.GetInstallDirectory(game, installDirectory);
 
                         if (Directory.Exists(gameDirectory))
                         {
@@ -444,11 +415,11 @@ namespace LANCommander.Launcher.Services
 
                     #endregion
 
-                    var playSessions = await Client.PlaySessions.GetAsync(localGame.Id);
+                    var playSessions = await client.PlaySessions.GetAsync(localGame.Id);
 
                     if (playSessions != null)
                     {
-                        await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                        await databaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
                             .SetTarget(localGame.PlaySessions)
                             .UseSource(playSessions)
                             .Include(p => p.Game)
@@ -461,8 +432,8 @@ namespace LANCommander.Launcher.Services
                             .AssignRelationships((t, s) =>
                             {
                                 // Ensure the game is tracked before checking relationships
-                                if (DatabaseContext.Entry(localGame).State == EntityState.Detached)
-                                    DatabaseContext.Attach(localGame);
+                                if (databaseContext.Entry(localGame).State == EntityState.Detached)
+                                    databaseContext.Attach(localGame);
 
                                 var linked = t.GameId == localGame.Id;
                             
@@ -474,9 +445,9 @@ namespace LANCommander.Launcher.Services
                     }
                     
                     // Save all pending changes from batch operations
-                    await DatabaseContext.SaveChangesAsync();
+                    await databaseContext.SaveChangesAsync();
                     
-                    localGame = await GameService.UpdateAsync(localGame);
+                    localGame = await gameService.UpdateAsync(localGame);
 
                     return localGame;
                 }
@@ -495,7 +466,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task ImportLibraryAsync()
         {
-            var remoteLibrary = await Client.Library.GetAsync();
+            var remoteLibrary = await client.Library.GetAsync();
             
             try
             {
@@ -518,11 +489,11 @@ namespace LANCommander.Launcher.Services
 
             foreach (var game in games)
             {
-                using var transaction = await DatabaseContext.Database.BeginTransactionAsync();
+                using var transaction = await databaseContext.Database.BeginTransactionAsync();
                 
                 try
                 {
-                    var remoteGame = await Client.Games.GetAsync(game.Id);
+                    var remoteGame = await client.Games.GetAsync(game.Id);
 
                     _importProgress.CurrentItem = new ImportItem(game.Id, game.Name);
                     
@@ -540,10 +511,10 @@ namespace LANCommander.Launcher.Services
                     {
                         var importedGame = await ImportGameAsync(remoteGame);
 
-                        await LibraryService.AddToLibraryAsync(importedGame);
+                        await libraryService.AddToLibraryAsync(importedGame);
                     }
                     
-                    await DatabaseContext.SaveChangesAsync();
+                    await databaseContext.SaveChangesAsync();
                     await transaction.CommitAsync();
                 }
                 catch (Exception ex)
@@ -567,7 +538,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task ImportGamesAsync(params Guid[] ids)
         {
-            var games = await Client.Library.GetAsync();
+            var games = await client.Library.GetAsync();
             var toImport = new List<EntityReference>();
 
             foreach (var id in ids)
@@ -596,16 +567,16 @@ namespace LANCommander.Launcher.Services
             SDK.Models.Game game = null;
 
             if (gameId.HasValue)
-                game = await Client.Games.GetAsync(gameId.Value);
+                game = await client.Games.GetAsync(gameId.Value);
 
-            var media = await Client.Media.Get(importMediaId);
+            var media = await client.Media.GetAsync(importMediaId);
 
             return await ImportMediaAsync(media, game);
         }
 
         public async Task<Media> ImportMediaAsync(SDK.Models.Media importMedia, SDK.Models.Game game = null)
         {
-            var media = await MediaService.GetAsync(importMedia.Id);
+            var media = await mediaService.GetAsync(importMedia.Id);
 
             if (media == null)
                 media = new Media();
@@ -622,23 +593,23 @@ namespace LANCommander.Launcher.Services
             {
                 media.Id = importMedia.Id;
 
-                await MediaService.AddAsync(media);
+                await mediaService.AddAsync(media);
             }
             else
-                await MediaService.UpdateAsync(media);
+                await mediaService.UpdateAsync(media);
 
             var mediaStoragePath = MediaService.GetStoragePath();
             var localPath = MediaService.GetImagePath(media);
 
             if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
             {
-                await Client.Media.DownloadAsync(new SDK.Models.Media
+                await client.Media.DownloadAsync(new SDK.Models.Media
                 {
                     Id = media.Id,
                     FileId = media.FileId
                 }, localPath);
 
-                MessageBusService.MediaChanged(media);
+                messageBusService.MediaChanged(media);
             }
 
             return media;
@@ -657,7 +628,7 @@ namespace LANCommander.Launcher.Services
 
             foreach (var importModel in importModels)
             {
-                using (var transaction = DatabaseContext.Database.BeginTransaction())
+                using (var transaction = databaseContext.Database.BeginTransaction())
                 {
                     try
                     {

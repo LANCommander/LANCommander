@@ -1,5 +1,7 @@
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
@@ -29,14 +31,17 @@ public static class ApplicationSettings
         
         Log.Debug("Loading settings file");
 
-        var configBuilder = new ConfigurationBuilder()
-            .AddYamlFile(SettingService.SettingsFile)
+        IServerConfigurationRefresher refresher;
+        
+        var configuration = new ConfigurationBuilder()
+            .AddLANCommanderConfiguration(out refresher)
             .Build();
         
-        builder.Services.Configure<Settings>(configBuilder);
+        builder.Services.Configure<Settings>(configuration);
+        builder.Services.AddSingleton(refresher);
 
         settings = new Settings();
-        configBuilder.Bind(settings);
+        configuration.Bind(settings);
         
         Log.Debug("Validating settings");
 

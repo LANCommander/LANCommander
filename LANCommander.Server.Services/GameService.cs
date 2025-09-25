@@ -6,6 +6,7 @@ using LANCommander.Server.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using System.Linq.Expressions;
+using LANCommander.SDK.Services;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
@@ -20,8 +21,9 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        ArchiveService archiveService,
-        MediaService mediaService) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        ArchiveClient archiveClient,
+        MediaService mediaService,
+        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {
@@ -101,7 +103,7 @@ namespace LANCommander.Server.Services
 
             if (game.Archives != null)
                 foreach (var archive in game.Archives.ToList())
-                    await archiveService.DeleteAsync(archive);
+                    await archiveClient.DeleteAsync(archive);
 
             if (game.Media != null)
                 foreach (var media in game.Media.ToList())
@@ -326,11 +328,9 @@ namespace LANCommander.Server.Services
 
             if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
-                var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-                
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await client.Scripts.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+                    var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
                     
                     var archive = new Archive
                     {
@@ -341,11 +341,11 @@ namespace LANCommander.Server.Services
                         StorageLocationId = storageLocationId.GetValueOrDefault(),
                     };
 
-                    archive = await archiveService.AddAsync(archive);
+                    archive = await archiveClient.AddAsync(archive);
 
                     if (Directory.Exists(package.Path))
                     {
-                        var destination = await archiveService.GetArchiveFileLocationAsync(archive);
+                        var destination = await archiveClient.GetArchiveFileLocationAsync(archive);
                         
                         ZipFile.CreateFromDirectory(package.Path, destination);
                         
@@ -355,7 +355,7 @@ namespace LANCommander.Server.Services
                     {
                         logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
                         
-                        await archiveService.DeleteAsync(archive);
+                        await archiveClient.DeleteAsync(archive);
                     }
                 }
             }

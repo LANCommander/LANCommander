@@ -11,7 +11,7 @@ namespace LANCommander.Launcher.Services
 {
     public class EngineService : BaseDatabaseService<Engine>
     {
-        public EngineService(DatabaseContext dbContext, SDK.Client client, ILogger<EngineService> logger) : base(dbContext, client, logger)
+        public EngineService(DatabaseContext dbContext, ILogger<EngineService> logger) : base(dbContext, logger)
         {
         }
     }

@@ -1,23 +1,12 @@
 ﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
-using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Helpers;
-using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Steamworks.Ugc;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Management.Automation.Language;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
@@ -26,7 +15,7 @@ namespace LANCommander.Launcher.Services
         private readonly AuthenticationService AuthenticationService;
         private readonly InstallService InstallService;
         private readonly GameService GameService;
-        private readonly UserService UserService;
+        private readonly SDK.Client Client;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -53,12 +42,12 @@ namespace LANCommander.Launcher.Services
             AuthenticationService authenticationService,
             InstallService installService,
             GameService gameService,
-            UserService userService) : base(databaseContext, client, logger)
+            UserService userService) : base(databaseContext, logger)
         {
             AuthenticationService = authenticationService;
             InstallService = installService;
             GameService = gameService;
-            UserService = userService;
+            Client = client;
 
             InstallService.OnInstallComplete += InstallService_OnInstallComplete;
             Filter.OnChanged += Filter_OnChanged;

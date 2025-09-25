@@ -8,14 +8,14 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "UserCustomField")]
     [OutputType(typeof(string))]
-    public class GetUserCustomFieldCmdlet(ProfileService profileService) : BaseCmdlet
+    public class GetUserCustomFieldCmdlet(ProfileClient profileClient) : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Name { get; set; }
 
         protected override void ProcessRecord()
         {
-            var result = profileService.GetCustomFieldAsync(Name).GetAwaiter().GetResult();
+            var result = profileClient.GetCustomFieldAsync(Name).GetAwaiter().GetResult();
 
             WriteObject(result);
         }

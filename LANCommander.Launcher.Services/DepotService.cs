@@ -18,10 +18,13 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnItemsFilteredHandler OnItemsFiltered;
 
+        private SDK.Client _client;
+
         public DepotService(
             Client client,
-            ILogger<DepotService> logger) : base(client, logger)
+            ILogger<DepotService> logger) : base(logger)
         {
+            _client = client;
             Filter.OnChanged += Filter_OnChanged;
         }
 
@@ -54,7 +57,7 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading depot items from host"))
             {
-                var results = await Client.Depot.GetAsync();
+                var results = await _client.Depot.GetAsync();
 
                 Filter.Populate(results);
 

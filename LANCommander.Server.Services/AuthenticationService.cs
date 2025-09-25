@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using AutoMapper;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Exceptions;
@@ -18,7 +19,9 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         UserService userService,
         RoleService roleService,
-        ScriptService scriptService) : BaseService(logger)
+        ScriptService scriptService,
+        ITokenProvider tokenProvider,
+        SDK.Services.ScriptClient scriptClient) : BaseService(logger)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
@@ -34,13 +37,11 @@ namespace LANCommander.Server.Services
 
                 if (scripts.Any())
                 {
-                    var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-
-                    client.UseToken(token);
+                    tokenProvider.SetToken(token.AccessToken);
 
                     foreach (var script in scripts)
                     {
-                        await client.Scripts.RunUserLoginScript(script, user);
+                        await scriptClient.RunUserLoginScript(script, user);
                     }
                 }
             }
@@ -188,13 +189,11 @@ namespace LANCommander.Server.Services
 
                         if (scripts.Any())
                         {
-                            var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-
-                            client.UseToken(token);
+                            tokenProvider.SetToken(token.AccessToken);
 
                             foreach (var script in scripts)
                             {
-                                await client.Scripts.RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
+                                await scriptClient.RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
                             }
                         }
                     }

@@ -31,9 +31,8 @@ public class KeepAliveService : BaseService
     public event EventHandler ConnectionEstablished;
     
     public KeepAliveService(
-        Client client,
         ILogger<KeepAliveService> logger,
-        AuthenticationService authenticationService) : base(client, logger)
+        AuthenticationService authenticationService) : base(logger)
     {
         AuthenticationService = authenticationService;
 
@@ -134,7 +133,7 @@ public class KeepAliveService : BaseService
 
                 ConnectionEstablished?.Invoke(this, EventArgs.Empty);
 
-                AuthenticationService.SetOfflineMode(false);
+                await AuthenticationService.SetOfflineModeAsync(false);
             }
             else
             {
@@ -150,7 +149,7 @@ public class KeepAliveService : BaseService
 
                     ConnectionLostPermanently?.Invoke(this, EventArgs.Empty);
 
-                    AuthenticationService.SetOfflineMode(true);
+                    await AuthenticationService.SetOfflineModeAsync(true);
                 }
             }
         }

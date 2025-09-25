@@ -1,22 +1,14 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
-using LANCommander.Launcher.Models.Enums;
 using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Logging;
-using Steamworks.Ugc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class FilterService : BaseService
+    public class FilterService(
+        ILogger<FilterService> logger,
+        LibraryService libraryService) : BaseService(logger)
     {
-        private readonly LibraryService LibraryService;
-        private readonly GameService GameService;
-
         public LibraryFilterModel Filter { get; set; }
 
         public ICollection<Engine> Engines { get; private set; }
@@ -30,16 +22,6 @@ namespace LANCommander.Launcher.Services
 
         public delegate Task OnFilterChangedHandler();
         public event OnFilterChangedHandler OnFilterChanged;
-
-        public FilterService(
-            SDK.Client client,
-            ILogger<FilterService> logger,
-            LibraryService libraryService,
-            GameService gameService) : base(client, logger)
-        {
-            GameService = gameService;
-            LibraryService = libraryService;
-        }
 
         public void Populate(IEnumerable<Game> games)
         {
@@ -139,7 +121,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task ApplyFilter()
         {
-            await LibraryService.FilterChanged();
+            await libraryService.FilterChanged();
 
             SaveSettings();
         }
@@ -148,7 +130,7 @@ namespace LANCommander.Launcher.Services
         {
             Filter = new LibraryFilterModel();
 
-            await LibraryService.FilterChanged();
+            await libraryService.FilterChanged();
 
             SaveSettings();
         }

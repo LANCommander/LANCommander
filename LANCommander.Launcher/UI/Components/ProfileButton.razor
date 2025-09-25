@@ -103,9 +103,9 @@
         NavigationManager.NavigateTo("/Authenticate");
     }
 
-    void SwitchToOfflineMode()
+    async Task SwitchToOfflineMode()
     {
-        AuthenticationService.SetOfflineMode(true);
+        await AuthenticationService.SetOfflineModeAsync(true);
 
         NavigationManager.NavigateTo("/", forceLoad: true);
     }

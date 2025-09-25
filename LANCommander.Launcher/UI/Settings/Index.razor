@@ -118,7 +118,7 @@
 
             SettingService.SaveSettings(_settings);
 
-            Client.DefaultInstallDirectory = _settings.Games.InstallDirectories.First();
+            // Client.DefaultInstallDirectory = _settings.Games.InstallDirectories.First();
             Client.Scripts.Debug = _settings.Debug.EnableScriptDebugging;
 
             MessageService.Success(LocalizationService.GetString("SettingsSaved"));

@@ -4,19 +4,19 @@ namespace LANCommander.Server.Jobs.Background
 {
     public class PatchArchiveBackgroundJob
     {
-        private readonly ArchiveService ArchiveService;
+        private readonly ArchiveClient _archiveClient;
 
-        public PatchArchiveBackgroundJob(ArchiveService archiveService)
+        public PatchArchiveBackgroundJob(ArchiveClient archiveClient)
         {
-            ArchiveService = archiveService;
+            _archiveClient = archiveClient;
         }
 
         public async Task Execute(Guid originalArchiveId, Guid alteredArchiveId)
         {
-            var originalArchive = await ArchiveService.GetAsync(originalArchiveId);
-            var alteredArchive = await ArchiveService.GetAsync(alteredArchiveId);
+            var originalArchive = await _archiveClient.GetAsync(originalArchiveId);
+            var alteredArchive = await _archiveClient.GetAsync(alteredArchiveId);
 
-            await ArchiveService.PatchArchiveAsync(originalArchive, alteredArchive);
+            await _archiveClient.PatchArchiveAsync(originalArchive, alteredArchive);
         }
     }
 }

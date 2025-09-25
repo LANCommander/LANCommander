@@ -36,7 +36,7 @@
 
 <AntList DataSource="DiscoveredServers">
     <ChildContent>
-        <ListItem OnClick="() => SelectServer(context.Address.ToString())">
+        <ListItem OnClick="() => SelectServer(context.Address)">
             <ListItemMeta Title="@context.Name" Description="@context.Address.ToString()"/>
         </ListItem>
     </ChildContent>
@@ -65,14 +65,14 @@
 </AntList>
 
 @code {
-    [Parameter] public EventCallback<string> OnSelected { get; set; }
+    [Parameter] public EventCallback<Uri> OnSelected { get; set; }
     [Parameter] public bool Connecting { get; set; } = false;
     bool IsInitializing = false;
 
     bool BeaconActive = false;
     bool OfflineModeAvailable = false;
 
-    string ServerAddress = String.Empty;
+    Uri ServerAddress;
 
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
@@ -84,10 +84,7 @@
     {
         IsInitializing = true;
 
-        if (Client.IsConfigured())
-        {
-            ServerAddress = Client.GetServerAddress() ?? string.Empty;
-        }
+        ServerAddress = Client.Connection.GetServerAddress();
 
         Connecting = true;
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
@@ -111,7 +108,7 @@
             DiscoveredServers.Add(discoveredServer);
     }
 
-    async Task SelectServer(string serverAddress)
+    async Task SelectServer(Uri serverAddress)
     {
         await Client.Beacon.StopProbeAsync();
 

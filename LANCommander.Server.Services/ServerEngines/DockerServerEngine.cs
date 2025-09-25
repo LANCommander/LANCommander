@@ -2,6 +2,7 @@ using AutoMapper;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using LANCommander.SDK;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Data.Enums;
@@ -18,7 +19,7 @@ public class DockerServerEngine(
     ILogger<DockerServerEngine> logger,
     IServiceProvider serviceProvider,
     IMapper mapper,
-    SDK.Client client) : IServerEngine
+    ILANCommanderConfiguration config) : IServerEngine
 {
     private ServerEngineConfiguration _config;
     private Dictionary<Guid, DockerClient> _dockerClients = new();
@@ -116,7 +117,7 @@ public class DockerServerEngine(
 
                 logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                if (client.Scripts.Debug)
+                if (config.DebugScripts)
                     script.EnableDebug();
 
                 await script.ExecuteAsync<int>();
@@ -169,7 +170,7 @@ public class DockerServerEngine(
 
                     logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                    if (client.Scripts.Debug)
+                    if (config.DebugScripts)
                         script.EnableDebug();
 
                     await script.ExecuteAsync<int>();

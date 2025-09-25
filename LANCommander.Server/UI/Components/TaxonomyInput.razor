@@ -1,0 +1,36 @@
+@typeparam TTaxonomy where TTaxonomy : BaseTaxonomyModel
+
+<TagsInput
+    Entities="_entities"
+    OnCreateTag="Add"
+    Values="Values"
+    ValuesChanged="ValuesChanged"
+    OptionLabelSelector="t => t.Name" />
+
+@code {
+    [Parameter] public BaseDatabaseService<TTaxonomy> DataService { get; set; }
+    [Parameter] public ICollection<TTaxonomy> Values { get; set; }
+    [Parameter] public EventCallback<ICollection<TTaxonomy>> ValuesChanged { get; set; }
+
+    ICollection<TTaxonomy> _entities = new List<TTaxonomy>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entities = await DataService.AsNoTracking().GetAsync();
+    }
+
+    async Task Add(string name)
+    {
+        var taxonomy = Activator.CreateInstance(typeof(TTaxonomy)) as TTaxonomy;
+
+        taxonomy.Name = name;
+
+        taxonomy = await DataService.AddAsync(taxonomy);
+        
+        _entities.Add(taxonomy);
+        Values.Add(taxonomy);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
+    }
+}

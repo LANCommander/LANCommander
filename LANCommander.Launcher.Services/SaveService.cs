@@ -1,21 +1,15 @@
-﻿using LANCommander.Launcher.Data.Models;
-using LANCommander.SDK.Models;
+﻿using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class SaveService : BaseService
+    public class SaveService(
+        ILogger<SaveService> logger,
+        SDK.Client client) : BaseService(logger)
     {
-        public SaveService(SDK.Client client, ILogger<SaveService> saveService) : base(client, saveService) { }
-
         public async Task<IEnumerable<GameSave>> Get(Guid gameId)
         {
-            var saves = await Client.Saves.GetAsync(gameId);
+            var saves = await client.Saves.GetAsync(gameId);
             
             if (saves == null)
                 saves = new List<GameSave>();
@@ -25,28 +19,28 @@ namespace LANCommander.Launcher.Services
 
         public async Task DownloadLatestAsync(string installDirectory, Guid gameId)
         {
-            await Client.Saves.DownloadAsync(installDirectory, gameId);
+            await client.Saves.DownloadAsync(installDirectory, gameId);
         }
 
         public async Task DownloadLatest(string installDirectory, Guid gameId)
         {
 
-            await Client.Saves.DownloadAsync(installDirectory, gameId);
+            await client.Saves.DownloadAsync(installDirectory, gameId);
         }
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid saveId)
         {
-            await Client.Saves.DownloadAsync(installDirectory, gameId, saveId);
+            await client.Saves.DownloadAsync(installDirectory, gameId, saveId);
         }
 
         public async Task UploadAsync(string installDirectory, Guid gameId)
         {
-            await Client.Saves.UploadAsync(installDirectory, gameId);
+            await client.Saves.UploadAsync(installDirectory, gameId);
         }
 
         public async Task DeleteAsync(Guid saveId)
         {
-            await Client.Saves.DeleteAsync(saveId);
+            await client.Saves.DeleteAsync(saveId);
         }
     }
 }

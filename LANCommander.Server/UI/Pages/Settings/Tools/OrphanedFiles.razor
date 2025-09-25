@@ -1,7 +1,7 @@
 ﻿@page "/Settings/Tools/OrphanedFiles"
 @using LANCommander.Helpers;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ArchiveService ArchiveService
+@inject ArchiveClient ArchiveClient
 @inject StorageLocationService StorageLocationService
 @inject MediaService MediaService
 
@@ -55,8 +55,8 @@
         Orphans = new List<OrphanedFile>();
         
         var storageLocations = await StorageLocationService.GetAsync();
-        var archives = await ArchiveService.GetAsync();
-        var archiveFiles = await Task.WhenAll(archives.Select(a => ArchiveService.GetArchiveFileLocationAsync(a)));
+        var archives = await ArchiveClient.GetAsync();
+        var archiveFiles = await Task.WhenAll(archives.Select(a => ArchiveClient.GetArchiveFileLocationAsync(a)));
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
         {

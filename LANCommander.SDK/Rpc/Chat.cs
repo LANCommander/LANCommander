@@ -8,30 +8,30 @@ namespace LANCommander.SDK.Rpc;
 
 public partial class RpcClient
 {
-    private readonly ChatService _chatService = serviceProvider.GetService<ChatService>();
+    private readonly ChatClient _chatClient = serviceProvider.GetService<ChatClient>();
 
     public async Task Chat_AddedToThreadAsync(ChatThread thread)
     {
-        await _chatService.AddedToThreadAsync(thread);
+        await _chatClient.AddedToThreadAsync(thread);
     }
 
     public async Task Chat_ReceiveMessagesAsync(Guid threadId, ChatMessage[] messages)
     {
-        await _chatService.ReceiveMessagesAsync(threadId, messages);
+        await _chatClient.ReceiveMessagesAsync(threadId, messages);
     }
 
     public async Task Chat_ReceiveMessageAsync(Guid threadId, ChatMessage message)
     {
-        await _chatService.ReceiveMessageAsync(threadId, message);
+        await _chatClient.ReceiveMessageAsync(threadId, message);
     }
 
     public async Task Chat_StartTyping(Guid threadId, string userIdentifier)
     {
-        await _chatService.StartTypingAsync(threadId, userIdentifier);
+        await _chatClient.StartTypingAsync(threadId, userIdentifier);
     }
 
     public async Task Chat_StopTyping(Guid threadId, string userIdentifier)
     {
-        await _chatService.StopTypingAsync(threadId, userIdentifier);
+        await _chatClient.StopTypingAsync(threadId, userIdentifier);
     }
 }

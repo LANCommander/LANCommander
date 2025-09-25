@@ -48,12 +48,12 @@ namespace LANCommander.Launcher.Services.Extensions
 
             configure(options);
 
-            var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
+            /*var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
 
             client.Scripts.Debug = settings.Debug.EnableScriptDebugging;
-            client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;
+            client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;*/
 
-            services.AddSingleton(client);
+            // services.AddSingleton(client);
             services.AddSingleton<MessageBusService>();
             services.AddSingleton<AuthenticationService>();
             services.AddSingleton<KeepAliveService>();

@@ -11,14 +11,14 @@ namespace LANCommander.Server.ImportExport.Exporters;
 /// Implements exporting for archive records
 /// </summary>
 /// <param name="mapper">AutoMapper instance for mapping between models</param>
-/// <param name="archiveService">Service for archive operations</param>
+/// <param name="archiveClient">Service for archive operations</param>
 public class ArchiveExporter(
     IMapper mapper,
-    ArchiveService archiveService) : BaseExporter<Archive, Data.Models.Archive>
+    ArchiveClient archiveClient) : BaseExporter<Archive, Data.Models.Archive>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Archive record)
     {
-        var archivePath = await archiveService.GetArchiveFileLocationAsync(record.ObjectKey);
+        var archivePath = await archiveClient.GetArchiveFileLocationAsync(record.ObjectKey);
 
         var info = new ExportItemInfo
         {
@@ -42,11 +42,11 @@ public class ArchiveExporter(
 
     public override async Task<Archive> ExportAsync(Guid id)
     {
-        var entity = await archiveService.GetAsync(id);
+        var entity = await archiveClient.GetAsync(id);
         
         try
         {
-            var path = await archiveService.GetArchiveFileLocationAsync(entity);
+            var path = await archiveClient.GetArchiveFileLocationAsync(entity);
             var fileInfo = new FileInfo(path);
 
             if (fileInfo.Exists)

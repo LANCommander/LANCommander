@@ -1,4 +1,4 @@
-﻿@inject ArchiveService ArchiveService
+﻿@inject ArchiveClient ArchiveClient
 @inject ModalService ModalService
 
 @if (ArchiveId != Guid.Empty)
@@ -32,7 +32,7 @@ else if (!String.IsNullOrWhiteSpace(Root))
     protected override async Task OnInitializedAsync()
     {
         if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.ExistsAsync(ArchiveId);
+            ArchiveExists = await ArchiveClient.ExistsAsync(ArchiveId);
     }
 
     private async void BrowseForFile()

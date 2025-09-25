@@ -10,7 +10,7 @@ using ZiggyCreatures.Caching.Fusion;
 namespace LANCommander.Server.Services
 {
     public sealed class RedistributableService(
-        ILogger<SDK.Services.RedistributableService> logger,
+        ILogger<SDK.Services.RedistributableClient> logger,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,

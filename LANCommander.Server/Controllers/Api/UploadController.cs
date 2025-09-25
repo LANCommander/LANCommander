@@ -14,17 +14,17 @@ namespace LANCommander.Server.Controllers.Api
     public class UploadController : BaseApiController
     {
         private readonly StorageLocationService StorageLocationService;
-        private readonly ArchiveService ArchiveService;
+        private readonly ArchiveClient _archiveClient;
         private readonly IFusionCache Cache;
 
         public UploadController(
             ILogger<UploadController> logger,
             StorageLocationService storageLocationService,
-            ArchiveService archiveService,
+            ArchiveClient archiveClient,
             IFusionCache cache) : base(logger)
         {
             StorageLocationService = storageLocationService;
-            ArchiveService = archiveService;
+            _archiveClient = archiveClient;
             Cache = cache;
         }
 
@@ -43,9 +43,9 @@ namespace LANCommander.Server.Controllers.Api
                 Version = ""
             };
 
-            archive = await ArchiveService.AddAsync(archive);
+            archive = await _archiveClient.AddAsync(archive);
 
-            var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
+            var archivePath = await _archiveClient.GetArchiveFileLocationAsync(archive);
 
             await Cache.SetAsync($"ChunkArchivePath/{archive.ObjectKey}", archivePath, TimeSpan.FromHours(6));
 

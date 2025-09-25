@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Actions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ArchiveService ArchiveService
+@inject ArchiveClient ArchiveClient
 
 <GameEditView Id="Id" Title="Actions">
     <TitleExtraTemplate>
@@ -25,7 +25,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var latestArchive = await ArchiveService.GetLatestArchive(a => a.GameId == Id);
+        var latestArchive = await ArchiveClient.GetLatestArchive(a => a.GameId == Id);
 
         if (latestArchive != null)
             ArchiveId = latestArchive.Id;

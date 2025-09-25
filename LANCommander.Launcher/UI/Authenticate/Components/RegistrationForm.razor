@@ -40,20 +40,20 @@
 </Form>
 
 @code {
-    [Parameter] public string ServerAddress { get; set; }
+    [Parameter] public Uri ServerAddress { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public IEnumerable<string> Errors { get; set; } = [];
 
     RegistrationRequest Model = new();
     bool Loading = false;
-    private string? PreviousServerAddress;
+    private Uri? PreviousServerAddress;
 
     Models.Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
         if (ServerAddress != PreviousServerAddress)
-            await Client.ChangeServerAddressAsync(ServerAddress);
+            await Client.Connection.UpdateServerAddressAsync(ServerAddress.ToString());
 
         PreviousServerAddress = ServerAddress;
 
@@ -75,7 +75,7 @@
         {
             ClearErrors();
 
-            await AuthenticationService.Register(Client.GetServerAddress(), Model.UserName, Model.Password, Model.PasswordConfirmation);
+            await AuthenticationService.Register(Model.UserName, Model.Password, Model.PasswordConfirmation);
 
             await ImportManagerService.RequestImport();
 
@@ -93,27 +93,6 @@
         }
         finally
         {
-            Loading = false;
-        }
-    }
-    
-    async Task UseToken(AuthToken token)
-    {
-        Settings.Authentication.AccessToken = token.AccessToken;
-        Settings.Authentication.RefreshToken = token.RefreshToken;
-        
-        try
-        {
-            await AuthenticationService.Login(ServerAddress, token);
-
-            await ImportManagerService.RequestImport();
-
-            NavigationManager.NavigateTo("/");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error(ex.Message, 5);
-            Logger.LogError(ex, ex.Message);
             Loading = false;
         }
     }

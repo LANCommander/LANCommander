@@ -10,7 +10,7 @@ namespace LANCommander.SDK.Services
 {
     public class MediaService(
         ApiRequestFactory apiRequestFactory,
-        IConnectionService connectionService)
+        IConnectionClient connectionClient)
     {
         public async Task<Media> GetAsync(Guid mediaId)
         {
@@ -34,7 +34,7 @@ namespace LANCommander.SDK.Services
 
         public string GetAbsoluteUrl(Media media)
         {
-            return connectionService.GetServerAddress().Join(GetDownloadPath(media)).ToString();
+            return connectionClient.GetServerAddress().Join(GetDownloadPath(media)).ToString();
         }
 
         public string GetDownloadPath(Media media)
@@ -44,7 +44,7 @@ namespace LANCommander.SDK.Services
 
         public string GetAbsoluteThumbnailUrl(Media media)
         {
-            return connectionService.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
+            return connectionClient.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
         }
 
         public string GetThumbnailPath(Media media)

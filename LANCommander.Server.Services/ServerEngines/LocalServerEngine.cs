@@ -1,6 +1,8 @@
 using AutoMapper;
 using LANCommander.SDK;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Factories;
 using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
@@ -17,8 +19,9 @@ namespace LANCommander.Server.Services.ServerEngines;
 public class LocalServerEngine(
     ILogger<LocalServerEngine> logger,
     IMapper mapper,
-    SDK.Client client,
-    IServiceProvider serviceProvider) : IServerEngine
+    IServiceProvider serviceProvider,
+    ProcessExecutionContextFactory processExecutionContextFactory,
+    ILANCommanderConfiguration config) : IServerEngine
 {
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
@@ -99,7 +102,7 @@ public class LocalServerEngine(
                 }
             }
 
-            using (var executionContext = new ProcessExecutionContext(client, logger))
+            using (var executionContext = processExecutionContextFactory.Create())
             {
                 try
                 {
@@ -189,7 +192,7 @@ public class LocalServerEngine(
 
                     logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                    if (client.Scripts.Debug)
+                    if (config.DebugScripts)
                         script.EnableDebug();
 
                     await script.ExecuteAsync<int>();

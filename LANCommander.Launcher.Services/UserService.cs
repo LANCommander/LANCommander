@@ -5,18 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services
 {
-    public class UserService : BaseDatabaseService<User>
+    public class UserService(
+        ILogger<UserService> logger,
+        DatabaseContext dbContext,
+        AuthenticationService authenticationService) : BaseDatabaseService<User>(dbContext, logger)
     {
-        private readonly AuthenticationService AuthenticationService;
-        public UserService(
-            DatabaseContext dbContext,
-            SDK.Client client,
-            ILogger<UserService> logger,
-            AuthenticationService authenticationService) : base(dbContext, client, logger)
-        {
-            AuthenticationService = authenticationService;
-        }
-
         public override async Task<User> GetAsync(Guid id)
         {
             return await Context
@@ -32,7 +25,7 @@ namespace LANCommander.Launcher.Services
                 .Users
                 .AsQueryable()
                 .Include(u => u.Avatar)
-                .FirstOrDefaultAsync(u => u.Id == AuthenticationService.GetUserId());
+                .FirstOrDefaultAsync(u => u.Id == authenticationService.GetUserId());
         }
         
         public async Task<string> GetAliasAsync(Guid id)

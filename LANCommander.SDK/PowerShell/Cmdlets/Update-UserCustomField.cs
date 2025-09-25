@@ -5,7 +5,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Update, "UserCustomField")]
     [OutputType(typeof(string))]
-    public class UpdateUserCustomFieldCmdlet(ProfileService profileService) : BaseCmdlet
+    public class UpdateUserCustomFieldCmdlet(ProfileClient profileClient) : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Name { get; set; }
@@ -15,7 +15,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            var result = profileService.UpdateCustomFieldAsync(Name, Value).GetAwaiter().GetResult();
+            var result = profileClient.UpdateCustomFieldAsync(Name, Value).GetAwaiter().GetResult();
 
             WriteObject(result);
         }

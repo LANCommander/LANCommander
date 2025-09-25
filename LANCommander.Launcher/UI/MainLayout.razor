@@ -128,7 +128,7 @@
             RefreshToken = Settings.Authentication.RefreshToken
         };
 
-        if (await LANCommander.ValidateTokenAsync(token))
+        if (await LANCommander.Authentication.ValidateTokenAsync())
         {
             ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
@@ -188,7 +188,7 @@
     async void OnOfflineModeChanged(bool state)
     {
         ConnectionState.OfflineModeEnabled = state;
-        ConnectionState.IsConnected = LANCommander.IsConnected();
+        ConnectionState.IsConnected = LANCommander.Connection.IsConnected();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -217,7 +217,7 @@
             RefreshToken = Settings.Authentication.RefreshToken
         };
 
-        if (await LANCommander.ValidateTokenAsync(token))
+        if (await LANCommander.Authentication.ValidateTokenAsync())
         {
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
@@ -231,7 +231,7 @@
         }
         else
         {
-            if (await LANCommander.PingAsync())
+            if (await LANCommander.Connection.PingAsync())
             {
                 await Logout();
             }

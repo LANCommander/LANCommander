@@ -13,17 +13,17 @@ namespace LANCommander.Server.Controllers
     public class UploadController : BaseController
     {
         private readonly StorageLocationService StorageLocationService;
-        private readonly ArchiveService ArchiveService;
+        private readonly ArchiveClient _archiveClient;
         private readonly IFusionCache Cache;
 
         public UploadController(
             ILogger<UploadController> logger,
             StorageLocationService storageLocationService,
-            ArchiveService archiveService,
+            ArchiveClient archiveClient,
             IFusionCache cache) : base(logger)
         {
             StorageLocationService = storageLocationService;
-            ArchiveService = archiveService;
+            _archiveClient = archiveClient;
             Cache = cache;
         }
 

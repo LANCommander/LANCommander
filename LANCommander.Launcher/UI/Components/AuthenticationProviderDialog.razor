@@ -2,7 +2,6 @@
 @using Newtonsoft.Json
 @using Photino.NET
 @inject SDK.Client Client
-@inject IJSRuntime JSRuntime
 @inject IMessageService MessageService
 @inject ILogger<AuthenticationProviderDialog> Logger
 @inject LocalizationService LocalizationService
@@ -10,15 +9,15 @@
 @code {
     [Parameter] public EventCallback<AuthToken> OnTokenReceived { get; set; }
     
-    string AuthenticationProviderLoginUrl;
+    Uri AuthenticationProviderLoginUrl;
 
     PhotinoWindow Window;
     
-    public async Task Open(string baseUrl, AuthenticationProvider authenticationProvider)
+    public async Task Open(Uri baseUrl, AuthenticationProvider authenticationProvider)
     {
-        await Client.ChangeServerAddressAsync(baseUrl);
+        await Client.Connection.UpdateServerAddressAsync(baseUrl);
         
-        AuthenticationProviderLoginUrl = Client.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
+        AuthenticationProviderLoginUrl = Client.Authentication.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
 
         Window = new PhotinoWindow()
             .SetTitle(LocalizationService.GetString("SignInUsingProvider", authenticationProvider.Name))

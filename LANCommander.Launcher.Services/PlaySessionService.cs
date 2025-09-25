@@ -1,21 +1,15 @@
-﻿using JetBrains.Annotations;
-using LANCommander.Launcher.Data;
+﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class PlaySessionService : BaseDatabaseService<PlaySession>
+    public class PlaySessionService(
+        ILogger<PlaySessionService> logger,
+        DatabaseContext dbContext,
+        SDK.Client client) : BaseDatabaseService<PlaySession>(dbContext, logger)
     {
-
-        public PlaySessionService(DatabaseContext dbContext, SDK.Client client, ILogger<CollectionService> logger) : base(dbContext, client, logger) { }
-
         public async Task<PlaySession> GetLatestSession(Guid gameId, Guid userId)
         {
             return await Query(ps => ps.GameId == gameId && ps.UserId == userId).OrderByDescending(ps => ps.End).FirstOrDefaultAsync();
@@ -38,9 +32,8 @@ namespace LANCommander.Launcher.Services
                 };
 
                 await AddAsync(session);
-
-                if (Client.IsConnected())
-                    await Client.Games.StartedAsync(gameId);
+                
+                await client.Games.StartedAsync(gameId);
             }
             catch (Exception ex)
             {
@@ -67,7 +60,7 @@ namespace LANCommander.Launcher.Services
             }
             finally
             {
-                await Client.Games.StoppedAsync(gameId);
+                await client.Games.StoppedAsync(gameId);
             }
         }
     }

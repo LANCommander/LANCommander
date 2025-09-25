@@ -6,7 +6,7 @@ namespace LANCommander.UI.Components
 {
     public class FileManagerArchiveSource : IFileManagerSource
     {
-        private IArchiveService ArchiveService;
+        private IArchiveClient _archiveClient;
 
         private Guid ArchiveId { get; set; }
         private FileManagerDirectory CurrentPath { get; set; }
@@ -15,11 +15,11 @@ namespace LANCommander.UI.Components
 
         private const char Separator = '/';
 
-        public FileManagerArchiveSource(IArchiveService archiveService, Guid archiveId) {
-            ArchiveService = archiveService;
+        public FileManagerArchiveSource(IArchiveClient archiveClient, Guid archiveId) {
+            _archiveClient = archiveClient;
             ArchiveId = archiveId;
 
-            var task = ArchiveService.GetContentsAsync(ArchiveId);
+            var task = _archiveClient.GetContentsAsync(ArchiveId);
 
             task.Wait();
 

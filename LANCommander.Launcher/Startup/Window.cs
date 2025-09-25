@@ -2,11 +2,15 @@ using System.Configuration;
 using System.Web;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Photino.Blazor;
+using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using Serilog;
+using Serilog.Extensions.Logging;
 using Services_LocalizationService = LANCommander.Launcher.Services.LocalizationService;
 
 namespace LANCommander.Launcher.Startup;
@@ -62,6 +66,17 @@ public static class MainWindow
         return app;
     }
 
+    public static PhotinoBlazorApp RegisterNotificationHandler(this PhotinoBlazorApp app)
+    {
+        app.MainWindow.RegisterWebMessageReceivedHandler(async (object sender, string message) =>
+        {
+            if (message == "notification")
+                app.MainWindow.SendNotification("Test", "test");
+        });
+
+        return app;
+    }
+
     public static PhotinoBlazorApp RegisterImportHandler(this PhotinoBlazorApp app)
     {
         app.MainWindow.RegisterWebMessageReceivedHandler(async (object sender, string message) =>
@@ -88,14 +103,28 @@ public static class MainWindow
         {
             if (message == "openChat")
             {
-                var parent = (PhotinoWindow)sender;
+                var settings = SettingService.GetSettings();
+                var builder = PhotinoBlazorAppBuilder.CreateDefault();
+                
+                builder.RootComponents.Add<App>("app");
+                
+                builder.Services.AddCustomWindow();
+                builder.Services.AddAntDesign();
+                builder.Services.AddSingleton<LocalizationService>();
+                
+                builder.Services.AddLANCommander(options =>
+                {
+                    options.ServerAddress = settings.Authentication.ServerAddress;
+                    //options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
+                });
+                
+                var app = builder.Build();
 
-                new PhotinoWindow(parent)
-                    .SetTitle("Chat")
-                    .SetUseOsDefaultSize(true)
-                    .SetUseOsDefaultLocation(true)
-                    .Load("wwwroot/chat.html")
-                    .WaitForClose();
+                app.MainWindow
+                    .SetTitle("LANCommander Chat")
+                    .Load("wwwroot/index.html");
+
+                app.Run();
             }
         });
 

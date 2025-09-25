@@ -69,7 +69,7 @@
 <AuthenticationProviderDialog @ref="AuthenticationProviderDialog" OnTokenReceived="UseToken" />
 
 @code {
-    [Parameter] public string ServerAddress { get; set; }
+    [Parameter] public Uri ServerAddress { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnRegister { get; set; }
     [Parameter] public IEnumerable<string> Errors { get; set; } = [];
@@ -78,7 +78,7 @@
 
     AuthRequest Model = new();
     bool Loading = false;
-    private string? PreviousServerAddress;
+    private Uri? PreviousServerAddress;
     AuthenticationProviderDialog AuthenticationProviderDialog;
 
     Models.Settings Settings = SettingService.GetSettings();
@@ -87,12 +87,12 @@
     {
         AuthenticationProviders = new();
 
-        await Client.ChangeServerAddressAsync(ServerAddress);
+        await Client.Connection.UpdateServerAddressAsync(ServerAddress);
         ClearErrors();
 
         try
         {
-            var authenticationProviders = await Client.GetAuthenticationProvidersAsync();
+            var authenticationProviders = await Client.Authentication.GetAuthenticationProvidersAsync();
 
             if (authenticationProviders != null && authenticationProviders.Any())
                 AuthenticationProviders = authenticationProviders.ToList();
@@ -114,9 +114,8 @@
     protected override async Task OnParametersSetAsync()
     {
         if (ServerAddress != PreviousServerAddress)
-        {
-            await Client.ChangeServerAddressAsync(ServerAddress);
-        }
+            await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+        
         PreviousServerAddress = ServerAddress;
     }
 
@@ -128,7 +127,7 @@
         {
             ClearErrors();
 
-            await AuthenticationService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
+            await AuthenticationService.Login(Client.Connection.GetServerAddress(), Model.UserName, Model.Password);
 
             await ImportManagerService.RequestImport();
 

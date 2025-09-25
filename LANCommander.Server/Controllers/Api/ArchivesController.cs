@@ -18,27 +18,27 @@ namespace LANCommander.Server.Controllers.Api
     public class ArchivesController : BaseApiController
     {
         private readonly IFusionCache Cache;
-        private readonly ArchiveService ArchiveService;
+        private readonly ArchiveClient _archiveClient;
 
         public ArchivesController(
             ILogger<ArchivesController> logger,
             IFusionCache cache,
-            ArchiveService archiveService) : base(logger)
+            ArchiveClient archiveClient) : base(logger)
         {
             Cache = cache;
-            ArchiveService = archiveService;
+            _archiveClient = archiveClient;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Archive>>> GetAsync()
         {
-            return Ok(await ArchiveService.GetAsync<SDK.Models.Archive>());
+            return Ok(await _archiveClient.GetAsync<SDK.Models.Archive>());
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Archive>> GetAsync(Guid id)
         {
-            var archive = await ArchiveService.GetAsync<SDK.Models.Archive>(id);
+            var archive = await _archiveClient.GetAsync<SDK.Models.Archive>(id);
 
             if (archive != null)
                 return Ok(archive);
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Download/{id}")]
         public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var archive = await ArchiveService.GetAsync(id);
+            var archive = await _archiveClient.GetAsync(id);
 
             if (archive == null)
             {
@@ -57,7 +57,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
+            var filename = await _archiveClient.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
             {
@@ -71,7 +71,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Contents/{gameId}/{version}")]
         public async Task<IActionResult> ByVersionAsync(Guid gameId, string version)
         {
-            var archive = await ArchiveService.FirstOrDefaultAsync(a => a.GameId == gameId && a.Version == version);
+            var archive = await _archiveClient.FirstOrDefaultAsync(a => a.GameId == gameId && a.Version == version);
 
             if (archive == null)
                 return NotFound();
@@ -82,7 +82,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Contents/{id}")]
         public async Task<IActionResult> ContentsAsync(Guid id, string version = null)
         {
-            var archive = await ArchiveService.GetAsync(id);
+            var archive = await _archiveClient.GetAsync(id);
 
             if (archive == null)
             {
@@ -92,7 +92,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var entries = await Cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>($"Archive/{archive.Id}/Contents", async _ =>
             {
-                var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                var filename = await _archiveClient.GetArchiveFileLocationAsync(archive);
 
                 if (!System.IO.File.Exists(filename))
                 {

@@ -153,7 +153,7 @@ namespace LANCommander.Server.Services
                 await stream.CopyToAsync(fs);
             }
 
-            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
+            media.Crc32 = await SDK.Services.MediaService.CalculateChecksumAsync(path);
 
             await GenerateThumbnailAsync(media);
 

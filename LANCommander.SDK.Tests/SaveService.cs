@@ -3,12 +3,12 @@ using System.Management.Automation.Language;
 
 namespace LANCommander.SDK.Tests
 {
-    public class SaveServiceTests
+    public class SaveClientTests
     {
         Guid SaveId;
         Client Client;
 
-        public SaveServiceTests() {
+        public SaveClientTests() {
             Client = new Client("http://localhost:1337", "C:\\Games");
         }
 

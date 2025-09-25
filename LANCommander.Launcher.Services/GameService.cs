@@ -10,41 +10,23 @@ using System.Diagnostics;
 
 namespace LANCommander.Launcher.Services
 {
-    public class GameService : BaseDatabaseService<Game>
+    public class GameService(
+        DatabaseContext dbContext,
+        ILogger<GameService> logger,
+        AuthenticationService authenticationService,
+        PlaySessionService playSessionService,
+        SDK.Client client,
+        IServiceProvider serviceProvider) : BaseDatabaseService<Game>(dbContext, logger)
     {
-        private readonly AuthenticationService AuthenticationService;
-        private readonly PlaySessionService PlaySessionService;
-        private readonly IServiceProvider ServiceProvider;
-        private readonly SaveService SaveService;
-        private readonly MessageBusService MessageBusService;
-
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
-        private Settings Settings { get; set; }
+        private Settings Settings = SettingService.GetSettings();
 
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
         public delegate Task OnUninstallHandler(Game game);
         public event OnUninstallHandler OnUninstall;
-
-        public GameService(
-            DatabaseContext dbContext,
-            SDK.Client client,
-            ILogger<GameService> logger,
-            AuthenticationService authenticationService,
-            PlaySessionService playSessionService,
-            IServiceProvider serviceProvider,
-            SaveService saveService,
-            MessageBusService messageBusService) : base(dbContext, client, logger)
-        {
-            Settings = SettingService.GetSettings();
-            AuthenticationService = authenticationService;
-            PlaySessionService = playSessionService;
-            ServiceProvider = serviceProvider;
-            SaveService = saveService;
-            MessageBusService = messageBusService;
-        }
 
         public async Task UninstallAsync(Game game)
         {
@@ -54,18 +36,18 @@ namespace LANCommander.Launcher.Services
                 {
                     OnUninstall?.Invoke(game);
 
-                    await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
+                    await client.Games.UninstallAsync(game.InstallDirectory, game.Id);
 
                     if (game.BaseGameId.HasValue)
                     {
-                        var libraryService = ServiceProvider.GetService<LibraryService>();
+                        var libraryService = serviceProvider.GetService<LibraryService>();
                         var isInstalled = await libraryService!.IsInstalledAsync(game.BaseGameId.Value);
 
                         if (!isInstalled)
                         {
                             var baseGame = await GetAsync(game.BaseGameId.Value);
 
-                            await Client.Games.UninstallAsync(game.InstallDirectory, baseGame?.Id ?? game.BaseGameId.Value);
+                            await client.Games.UninstallAsync(game.InstallDirectory, baseGame?.Id ?? game.BaseGameId.Value);
 
                             ClearGameState(baseGame!, skipAddons: true);
                         }
@@ -89,24 +71,24 @@ namespace LANCommander.Launcher.Services
         {
             Guid userId;
 
-            if (Client.IsConnected())
+            if (client.Connection.IsConnected())
             {
-                var profile = await Client.Profile.GetAsync();
+                var profile = await client.Profile.GetAsync();
 
                 userId = profile.Id;
             }
             else
             {
-                userId = AuthenticationService.GetUserId();
+                userId = authenticationService.GetUserId();
             }
 
             try
             {
-                var latestSession = await PlaySessionService.GetLatestSession(game.Id, userId);
+                var latestSession = await playSessionService.GetLatestSession(game.Id, userId);
 
-                await PlaySessionService.StartSession(game.Id, userId);
+                await playSessionService.StartSession(game.Id, userId);
 
-                await Client.Games.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.CreatedOn);
+                await client.Games.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.CreatedOn);
             }
             catch (Exception ex)
             {
@@ -114,7 +96,7 @@ namespace LANCommander.Launcher.Services
             }
             finally
             {
-                await PlaySessionService.EndSession(game.Id, userId);
+                await playSessionService.EndSession(game.Id, userId);
             }
         }
 

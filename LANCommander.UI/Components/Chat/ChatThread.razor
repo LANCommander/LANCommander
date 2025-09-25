@@ -1,7 +1,8 @@
 @using System.Collections.Specialized
 @using LANCommander.SDK
+@using LANCommander.SDK.Services
 @using Microsoft.AspNetCore.Components.Web.Virtualization
-@inject Client Client
+@inject ChatClient ChatClient
 @namespace LANCommander.UI.Components
 
 <Flex Direction="FlexDirection.Vertical">
@@ -34,7 +35,7 @@
     {
         if (Id != Guid.Empty)
         {
-            _thread = Client.Chat.GetThread(Id);
+            _thread = ChatClient.GetThread(Id);
             
             _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged; 
         }
@@ -51,7 +52,7 @@
         {
             _sendingMessage = true;
 
-            await Client.Chat.SendMessageAsync(Id, _inputContents);
+            await ChatClient.SendMessageAsync(Id, _inputContents);
         }
     }
 }

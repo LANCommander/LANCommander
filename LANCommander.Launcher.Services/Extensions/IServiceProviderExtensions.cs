@@ -22,8 +22,6 @@ namespace LANCommander.Launcher.Services.Extensions
             using (var scope = serviceProvider.CreateScope())
             {
                 var logger = scope.ServiceProvider.GetService<ILogger>();
-                var authenticationService = scope.ServiceProvider.GetService<AuthenticationService>();
-                var keepAliveService = scope.ServiceProvider.GetService<KeepAliveService>();
 
                 #region Scaffold Required Directories
                 try

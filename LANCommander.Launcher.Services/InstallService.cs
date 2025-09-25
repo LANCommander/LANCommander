@@ -3,18 +3,9 @@ using LANCommander.Launcher.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Helpers;
-using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
-
-// using Microsoft.Toolkit.Uwp.Notifications;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
@@ -22,6 +13,7 @@ namespace LANCommander.Launcher.Services
     public class InstallService : BaseService
     {
         private readonly GameService GameService;
+        private readonly SDK.Client Client;
 
         private Stopwatch Stopwatch { get; set; }
 
@@ -43,8 +35,9 @@ namespace LANCommander.Launcher.Services
         public InstallService(
             SDK.Client client,
             ILogger<InstallService> logger,
-            GameService gameService) : base(client, logger)
+            GameService gameService) : base(logger)
         {
+            Client = client;
             GameService = gameService;
             Stopwatch = new Stopwatch();
 

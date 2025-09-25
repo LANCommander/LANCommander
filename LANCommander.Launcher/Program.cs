@@ -11,6 +11,7 @@ using Serilog.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Web;
 using LANCommander.Launcher.Startup;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.Launcher
 {
@@ -54,6 +55,7 @@ namespace LANCommander.Launcher
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
             builder.Services.AddSingleton<LocalizationService>();
+            builder.Services.AddLANCommander();
             builder.Services.AddLANCommander(options =>
             {
                 options.ServerAddress = settings.Authentication.ServerAddress;

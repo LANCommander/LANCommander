@@ -1,6 +1,6 @@
-@using LANCommander.SDK
+@using LANCommander.SDK.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@inject Client Client
+@inject ChatClient ChatClient
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @namespace LANCommander.UI.Components
 
@@ -22,14 +22,14 @@
     
     protected override async Task OnInitializedAsync()
     {
-        _threads = await Client.Chat.GetThreadsAsync();
+        _threads = await ChatClient.GetThreadsAsync();
     }
 
     async Task StartThread()
     {
         var user = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         
-        var newThreadId = await Client.Chat.StartThreadAsync([user.User.Identity.Name]);
+        var newThreadId = await ChatClient.StartThreadAsync([user.User.Identity.Name]);
 
         _currentThreadId = newThreadId;
 

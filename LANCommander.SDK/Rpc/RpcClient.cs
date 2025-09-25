@@ -12,7 +12,7 @@ namespace LANCommander.SDK.Rpc;
 public partial class RpcClient(IServiceProvider serviceProvider) : IRpcClient
 {
     private HubConnection _connection = default!;
-    private readonly IConnectionService _connectionService = serviceProvider.GetService<IConnectionService>();
+    private readonly IConnectionClient _connectionClient = serviceProvider.GetService<IConnectionClient>();
     
     public IRpcHub Server { get; set; } = default!;
     
@@ -21,7 +21,7 @@ public partial class RpcClient(IServiceProvider serviceProvider) : IRpcClient
         try
         {
             _connection = new HubConnectionBuilder()
-                .WithUrl(_connectionService.GetServerAddress().Join("rpc"))
+                .WithUrl(_connectionClient.GetServerAddress().Join("rpc"))
                 .Build();
 
             Server = _connection.ServerProxy<IRpcHub>();

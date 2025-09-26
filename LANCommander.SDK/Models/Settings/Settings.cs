@@ -5,6 +5,7 @@ public class Settings
     public const string DEFAULT_GAME_USERNAME = "Player";
     public const string SETTINGS_FILE_NAME = "Settings.yml";
 
+    public ArchiveSettings Archives { get; set; } = new();
     public AuthenticationSettings Authentication { get; set; } = new();
     public LibrarySettings Library { get; set; } = new();
     public GameSettings Games { get; set; } = new();

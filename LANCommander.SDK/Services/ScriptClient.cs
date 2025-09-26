@@ -8,13 +8,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LANCommander.SDK.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services
 {
     public class ScriptClient(
         ILogger<ScriptClient> logger,
-        ILANCommanderConfiguration config,
+        IOptions<Settings> settings,
         IConnectionClient connectionClient)
     {
         public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
@@ -120,7 +120,7 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
 
                         try
@@ -220,7 +220,7 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
 
                         try
@@ -311,7 +311,7 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("PlayerAlias", playerAlias);
 
@@ -407,7 +407,7 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("PlayerAlias", GameClient.GetPlayerAlias(installDirectory, gameId));
 
@@ -514,7 +514,7 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
@@ -611,7 +611,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
 
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -695,7 +695,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         
                         if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -780,7 +780,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("PlayerAlias", playerAlias);
                         
@@ -866,7 +866,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("PlayerAlias", GameClient.GetPlayerAlias(installDirectory, gameId));
                         
@@ -962,7 +962,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
@@ -1054,7 +1054,7 @@ namespace LANCommander.SDK.Services
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", config.InstallDirectories.FirstOrDefault());
+                        script.AddVariable("DefaultInstallDirectory", settings.Value.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                         script.AddVariable("AllocatedKey", key);
                         

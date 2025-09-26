@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services
 {
@@ -64,7 +65,7 @@ namespace LANCommander.SDK.Services
         ApiRequestFactory apiRequestFactory,
         ProcessExecutionContextFactory processExecutionContextFactory,
         INetworkInformationProvider networkInformationProvider,
-        ILANCommanderConfiguration config,
+        IOptions<Settings> settings,
         IConnectionClient connectionClient,
         RedistributableClient redistributableClient,
         SaveClient saveClient,
@@ -369,7 +370,7 @@ namespace LANCommander.SDK.Services
             GameManifest manifest = null;
 
             if (string.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = config.InstallDirectories.First();
+                installDirectory = settings.Value.Games.InstallDirectories.First();
 
             var game = await GetAsync(gameId);
             var destination = await GetInstallDirectory(game, installDirectory);
@@ -1112,7 +1113,7 @@ namespace LANCommander.SDK.Services
         public async Task<string> GetInstallDirectory(Game game, string installDirectory)
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = config.InstallDirectories.First();
+                installDirectory = settings.Value.Games.InstallDirectories.First();
 
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
             {
@@ -1265,10 +1266,10 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    if (connectionClient.IsConnected() && !String.IsNullOrWhiteSpace(config.IPXRelayHost))
+                    if (connectionClient.IsConnected() && !String.IsNullOrWhiteSpace(settings.Value.IPXRelay.Host))
                     {
-                        context.AddVariable("IPXRelayHost", config.IPXRelayHost);
-                        context.AddVariable("IPXRelayPort", config.IPXRelayPort.ToString());
+                        context.AddVariable("IPXRelayHost", settings.Value.IPXRelay.Host);
+                        context.AddVariable("IPXRelayPort", settings.Value.IPXRelay.Port.ToString());
                     }
                 }
                 catch (Exception ex)
@@ -1425,7 +1426,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(config.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory
@@ -1456,7 +1457,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(config.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory

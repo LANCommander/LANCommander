@@ -12,12 +12,13 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Factories;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services
 {
     public class RedistributableClient(
         ILogger<RedistributableClient> _logger,
-        ILANCommanderConfiguration config,
+        IOptions<Settings> settings,
         ApiRequestFactory apiRequestFactory,
         ScriptClient scriptClient,
         ProfileClient profileClient)
@@ -248,7 +249,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(config.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory
@@ -279,7 +280,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(config.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory

@@ -15,7 +15,7 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    ILANCommanderConfiguration config)
+    Settings settings)
 {
     private string _token { get; set; }
     private bool _ignoreVersion { get; set; }
@@ -26,7 +26,7 @@ public class ApiRequestBuilder(
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
-    private Uri _baseAddress { get; set; } = config.BaseAddress;
+    private Uri _baseAddress { get; set; } = settings.Authentication.ServerAddress;
 
     private ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
@@ -266,7 +266,7 @@ public class ApiRequestBuilder(
     {
         try
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, config)
+            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settings)
                 .UseRoute("/Upload/Init")
                 .UseVersioning()
                 .UseAuthenticationToken()
@@ -296,7 +296,7 @@ public class ApiRequestBuilder(
                     Key = initResponse.Key,
                 };
 
-                await new ApiRequestBuilder(httpClient, tokenProvider, config)
+                await new ApiRequestBuilder(httpClient, tokenProvider, settings)
                     .AddBody(chunkRequest)
                     .UseRoute("/Upload/Chunk")
                     .UseVersioning()

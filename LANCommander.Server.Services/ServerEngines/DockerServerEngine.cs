@@ -12,6 +12,7 @@ using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.Server.Services.ServerEngines;
 
@@ -19,7 +20,7 @@ public class DockerServerEngine(
     ILogger<DockerServerEngine> logger,
     IServiceProvider serviceProvider,
     IMapper mapper,
-    ILANCommanderConfiguration config) : IServerEngine
+    IOptions<SDK.Models.Settings> settings) : IServerEngine
 {
     private ServerEngineConfiguration _config;
     private Dictionary<Guid, DockerClient> _dockerClients = new();
@@ -117,7 +118,7 @@ public class DockerServerEngine(
 
                 logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                if (config.DebugScripts)
+                if (settings.Value.Debug.EnableScriptDebugging)
                     script.EnableDebug();
 
                 await script.ExecuteAsync<int>();
@@ -170,7 +171,7 @@ public class DockerServerEngine(
 
                     logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                    if (config.DebugScripts)
+                    if (settings.Value.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
                     await script.ExecuteAsync<int>();

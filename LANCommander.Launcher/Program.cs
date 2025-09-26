@@ -55,7 +55,7 @@ namespace LANCommander.Launcher
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
             builder.Services.AddSingleton<LocalizationService>();
-            builder.Services.AddLANCommander();
+            builder.Services.AddLANCommanderClient();
             builder.Services.AddLANCommander(options =>
             {
                 options.ServerAddress = settings.Authentication.ServerAddress;

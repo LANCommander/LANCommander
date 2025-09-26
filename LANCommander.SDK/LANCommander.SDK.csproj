@@ -16,25 +16,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CommandLineParser" Version="2.9.1" />
-        <PackageReference Include="Crc32.NET" Version="1.2.0" />
-        <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
-        <PackageReference Include="MadMilkman.Ini" Version="1.0.6" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" Version="7.0.0-preview.7.22376.6" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-        <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
-        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
-        <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-        <PackageReference Include="PeanutButter.INI" Version="3.0.339" />
-        <PackageReference Include="Semver" Version="3.0.0" />
-        <PackageReference Include="Serilog" Version="4.2.0" />
-        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-        <PackageReference Include="SharpCompress" Version="0.39.0" />
-        <PackageReference Include="System.Management.Automation" Version="7.4.7" />
-        <PackageReference Include="YamlDotNet" Version="16.3.0" />
+        <PackageReference Include="CommandLineParser" />
+        <PackageReference Include="Crc32.NET" />
+        <PackageReference Include="Facepunch.Steamworks" />
+        <PackageReference Include="MadMilkman.Ini" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" />
+        <PackageReference Include="Microsoft.PowerShell.SDK" />
+        <PackageReference Include="NetEscapades.Configuration.Yaml" />
+        <PackageReference Include="PeanutButter.INI" />
+        <PackageReference Include="Semver" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Sinks.File" />
+        <PackageReference Include="SharpCompress" />
+        <PackageReference Include="System.Management.Automation" />
+        <PackageReference Include="YamlDotNet" />
     </ItemGroup>
 
     <ItemGroup>

@@ -7,26 +7,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="13.0.1" />
-    <PackageReference Include="CoreRCON" Version="5.0.5" />
-    <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
-    <PackageReference Include="Docker.DotNet.Enhanced" Version="3.126.1" />
-    <PackageReference Include="IGDB" Version="5.1.0" />
-    <PackageReference Include="IPXRelayDotNet" Version="1.1.3" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
-    <PackageReference Include="Octokit" Version="14.0.0" />
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
-    <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
-    <PackageReference Include="Semver" Version="3.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
-    <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="28.2.4" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+    <PackageReference Include="AutoMapper" />
+    <PackageReference Include="CoreRCON" />
+    <PackageReference Include="craftersmine.SteamGridDB.Net" />
+    <PackageReference Include="Docker.DotNet.Enhanced" />
+    <PackageReference Include="IGDB" />
+    <PackageReference Include="IPXRelayDotNet" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Octokit" />
+    <PackageReference Include="rix0rrr.BeaconLib" />
+    <PackageReference Include="Semver" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="Syncfusion.PdfToImageConverter.Net" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="System.Linq.Async" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,7 @@ using System.Text;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Models;
 using Company = LANCommander.Server.Data.Models.Company;
+using GameType = LANCommander.SDK.Enums.GameType;
 
 namespace LANCommander.Server.Services
 {
@@ -68,24 +69,12 @@ namespace LANCommander.Server.Services
 
             fields.AddRange(additionalFields);
 
-            int[] categories = new int[]
-            {
-                (int)Category.MainGame,
-                (int)Category.Port,
-                (int)Category.StandaloneExpansion,
-                (int)Category.Expansion,
-                (int)Category.Mod,
-                (int)Category.Remake,
-                (int)Category.Remaster
-            };
-
             var sb = new StringBuilder();
 
             sb.Append($"search \"{input}\";");
             sb.Append($"fields {String.Join(',', fields)};");
             sb.Append($"limit {limit};");
             sb.Append($"offset {offset};");
-            sb.Append($"where category = ({String.Join(',', categories)});");
 
             var games = await Client.QueryAsync<Game>(IGDBClient.Endpoints.Games, sb.ToString());
 
@@ -94,22 +83,11 @@ namespace LANCommander.Server.Services
 
         public async Task<Data.Models.Game> ImportGameAsync(GameLookupResult result, Data.Models.Game game)
         {
-            var categoryMap = new Dictionary<IGDB.Models.Category, GameType>()
-            {
-                { IGDB.Models.Category.MainGame, GameType.MainGame },
-                { IGDB.Models.Category.Expansion, GameType.Expansion },
-                { IGDB.Models.Category.StandaloneExpansion, GameType.StandaloneExpansion },
-                { IGDB.Models.Category.Mod, GameType.Mod }
-            };
-
             game.IGDBId = result.IGDBMetadata.Id.GetValueOrDefault();
             game.Title = result.IGDBMetadata.Name;
             game.Description = result.IGDBMetadata.Summary;
             game.ReleasedOn = result.IGDBMetadata.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
             game.MultiplayerModes = result.MultiplayerModes.ToList();
-
-            if (categoryMap.Keys.Contains(result.IGDBMetadata.Category.GetValueOrDefault()))
-                game.Type = categoryMap[result.IGDBMetadata.Category.GetValueOrDefault()];
 
             if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
                 game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Single player");

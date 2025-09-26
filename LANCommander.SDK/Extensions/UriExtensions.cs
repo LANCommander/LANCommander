@@ -9,7 +9,7 @@ public static class UriExtensions
 {
     public static Uri Join(this Uri uri, params string[] parts)
     {
-        var strUri = uri.ToString();
+        var strUri = uri.ToString().TrimEnd('/');
 
         foreach (var part in parts)
             strUri += '/' + part.Trim('/');

@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
 using Microsoft.Extensions.Configuration;
 
@@ -47,7 +48,15 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/Settings", cancellationToken);
+            var settings = new Settings();
+            
+            _source.Configuration.Bind(settings);
+            
+            var request = new HttpRequestMessage(HttpMethod.Get, settings.Authentication.ServerAddress.Join("/api/Settings"));
+            
+            request.Headers.Add("Authorization", $"Bearer {settings.Authentication.AccessToken}");
+            
+            var response = await _httpClient.SendAsync(request, cancellationToken);
 
             response.EnsureSuccessStatusCode();
 

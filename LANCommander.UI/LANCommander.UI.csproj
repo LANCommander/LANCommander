@@ -26,11 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Components\ScriptLoader.razor" />
-    <None Include="Components\StylesheetLoader.razor" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
   </ItemGroup>
 

@@ -3,7 +3,7 @@ using Serilog;
 
 namespace LANCommander.SDK.Models;
 
-public class DebugSettings : IDebugSettings
+public class DebugSettings
 {
     public bool EnableScriptDebugging { get; set; } = false;
     public LogLevel LogLevel { get; set; } = LogLevel.Warning;

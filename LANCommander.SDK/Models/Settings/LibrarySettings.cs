@@ -1,6 +1,6 @@
 namespace LANCommander.SDK.Models;
 
-public class LibrarySettings : ILibrarySettings
+public class LibrarySettings
 {
     public bool EnableUserLibraries { get; set; }
 }

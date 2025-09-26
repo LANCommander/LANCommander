@@ -1,6 +1,6 @@
 namespace LANCommander.SDK.Models;
 
-public class MediaSettings : IMediaSettings
+public class MediaSettings
 {
     public string StoragePath { get; set; } = "Media";
 }

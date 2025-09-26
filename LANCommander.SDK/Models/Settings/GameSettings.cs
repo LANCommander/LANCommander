@@ -1,6 +1,6 @@
 namespace LANCommander.SDK.Models;
 
-public class GameSettings : IGameSettings
+public class GameSettings
 {
     public string[] InstallDirectories { get; set; } = [];
 }

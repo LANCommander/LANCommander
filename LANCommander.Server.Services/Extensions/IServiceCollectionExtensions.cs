@@ -64,7 +64,7 @@ public static class IServiceCollectionExtensions
         
         services.AddSingleton<IPXRelayService>();
 
-        services.AddAutoMapper(typeof(MappingProfile));
+        services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
         services.AddFusionCache();
 
         return services;

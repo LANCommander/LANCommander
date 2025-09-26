@@ -1,0 +1,152 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup Label="Aspire">
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+  </ItemGroup>
+  <ItemGroup Label="AutoMapper">
+    <PackageVersion Include="AutoMapper" Version="15.0.1" />
+  </ItemGroup>
+  <ItemGroup Label="AntDesign">
+    <PackageVersion Include="AntDesign" Version="1.4.3" />
+    <PackageVersion Include="AntDesign.Charts" Version="0.8.0" />
+  </ItemGroup>
+  <ItemGroup Label="Blazor">
+    <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
+    <PackageVersion Include="BootstrapBlazor.PdfReader" Version="9.0.1" />
+    <PackageVersion Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
+    <PackageVersion Include="Razor.Templating.Core" Version="2.1.0" />
+    <PackageVersion Include="XtermBlazor" Version="2.1.2" />
+  </ItemGroup>
+  <ItemGroup Label="Utility">
+    <PackageVersion Include="ByteSize" Version="2.1.2" />
+    <PackageVersion Include="CaseConverter" Version="2.0.1" />
+    <PackageVersion Include="CommandLineParser" Version="2.9.1" />
+    <PackageVersion Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageVersion Include="Crc32.NET" Version="1.2.0" />
+    <PackageVersion Include="Emzi0767.NtfsDataStreams" Version="1.0.0" />
+    <PackageVersion Include="MadMilkman.Ini" Version="1.0.6" />
+    <PackageVersion Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+    <PackageVersion Include="PeanutButter.INI" Version="3.0.396" />
+    <PackageVersion Include="RegParserDotNet" Version="1.1.1" />
+    <PackageVersion Include="nulastudio.NetBeauty" Version="2.1.4.6" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+  <ItemGroup Label="ASP.NET Core">
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" Version="7.0.0-preview.7.22376.6" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.0.11" />
+  </ItemGroup>
+  <ItemGroup Label="Code Analysis">
+    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Features" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Features" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Scripting.Common" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.12.0" />
+  </ItemGroup>
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <PackageVersion Include="Microsoft.TypeScript.MSBuild" Version="5.7.1" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageVersion Include="Syncfusion.PdfToImageConverter.Net" Version="28.2.4" />
+    <PackageVersion Include="Xunit.Extensions.TestDependency" Version="1.1.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
+  </ItemGroup>
+  <ItemGroup Label="External">
+    <PackageVersion Include="CoreRCON" Version="5.0.5" />
+    <PackageVersion Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
+    <PackageVersion Include="Docker.DotNet.Enhanced" Version="3.129.0" />
+    <PackageVersion Include="Facepunch.Steamworks" Version="2.3.3" />
+    <PackageVersion Include="IGDB" Version="6.1.0" />
+    <PackageVersion Include="IPXRelayDotNet" Version="1.1.3" />
+    <PackageVersion Include="Octokit" Version="14.0.0" />
+    <PackageVersion Include="RestSharp" Version="112.1.0" />
+    <PackageVersion Include="rix0rrr.BeaconLib" Version="1.0.2" />
+    <PackageVersion Include="Semver" Version="3.0.0" />
+    <PackageVersion Include="SharpCompress" Version="0.40.0" />
+    <PackageVersion Include="SteamWebAPI2" Version="4.4.1" />
+  </ItemGroup>
+  <ItemGroup Label="Logging">
+    <PackageVersion Include="Elastic.Serilog.Sinks" Version="8.12.3" />
+    <PackageVersion Include="Serilog" Version="4.3.0" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Sinks.AspNetCore.App.SignalR" Version="1.2.2" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Entity Framework Core">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+  </ItemGroup>
+  <ItemGroup Label="Hangfire">
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.17" />
+    <PackageVersion Include="Hangfire.Core" Version="1.8.17" />
+    <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="PowerShell">
+    <PackageVersion Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
+    <PackageVersion Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
+    <PackageVersion Include="System.Management.Automation" Version="7.4.7" />
+  </ItemGroup>
+  <ItemGroup Label="Microsoft Extensions">
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Localization" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.4.0" />
+  </ItemGroup>
+  <ItemGroup Label="OpenTelemetry">
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
+  </ItemGroup>
+  <ItemGroup Label="Photino">
+    <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
+    <PackageVersion Include="Photino.Blazor.CustomWindow" Version="1.3.1" />
+    <PackageVersion Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
+  <ItemGroup Label="System">
+    <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.1" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
+    <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
+    <PackageVersion Include="System.Management.Automation" Version="7.4.7" />
+    <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.0" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.1" />
+  </ItemGroup>
+  <ItemGroup Label="Caching">
+    <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+  </ItemGroup>
+</Project>

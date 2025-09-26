@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
-    <PackageReference Include="SteamWebAPI2" Version="4.4.1" />
-    <PackageReference Include="System.Text.Json" Version="9.0.1" />
+    <PackageReference Include="HtmlAgilityPack" />
+    <PackageReference Include="SteamWebAPI2" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>

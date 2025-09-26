@@ -16,13 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign" Version="1.4.3" />
-    <PackageReference Include="BlazorMonaco" Version="3.3.0" />
-    <PackageReference Include="BootstrapBlazor.PdfReader" Version="9.0.1" />
-    <PackageReference Include="ByteSize" Version="2.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.8" />
-    <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
-    <PackageReference Include="XtermBlazor" Version="2.1.2" />
+    <PackageReference Include="AntDesign" />
+    <PackageReference Include="BlazorMonaco" />
+    <PackageReference Include="BootstrapBlazor.PdfReader" />
+    <PackageReference Include="ByteSize" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" />
+    <PackageReference Include="XtermBlazor" />
   </ItemGroup>
 
   <ItemGroup>

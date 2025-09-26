@@ -32,17 +32,6 @@ namespace LANCommander.Server
             
             CreateEntityReferenceMap<SDK.Models.Game>(g => g.Title);
 
-            CreateMap<Services.Models.Settings, SDK.Models.Settings>()
-                .ForMember(dest =>
-                    dest.IPXRelayHost,
-                    opt => opt.MapFrom(src => src.IPXRelay.Host))
-                .ForMember(dest =>
-                    dest.IPXRelayPort,
-                    opt => opt.MapFrom(src => src.IPXRelay.Port))
-                .ForMember(dest =>
-                    dest.EnableUserLibraries,
-                    opt => opt.MapFrom(src => src.Library.EnableUserLibraries));
-
             CreateMap<Data.Models.Action, SDK.Models.Action>()
                 .ForMember(dest =>
                     dest.IsPrimaryAction,

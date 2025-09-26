@@ -1,0 +1,40 @@
+﻿<Solution>
+  <Folder Name="/Configuration/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/LANCommander.Launcher/">
+    <Project Path="LANCommander.Launcher.CLI\LANCommander.Launcher.CLI.csproj" />
+    <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
+    <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
+    <Project Path="LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
+    <Project Path="LANCommander.Launcher\LANCommander.Launcher.csproj" />
+  </Folder>
+  <Folder Name="/LANCommander.Server/">
+    <Project Path="LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
+    <Project Path="LANCommander.Server\LANCommander.Server.csproj" />
+  </Folder>
+  <Folder Name="/LANCommander.Server/LANCommander.Server.Data/">
+    <Project Path="LANCommander.Server.Data.MySQL\LANCommander.Server.Data.MySQL.csproj" />
+    <Project Path="LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj" />
+    <Project Path="LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj" />
+    <Project Path="LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
+  </Folder>
+  <Folder Name="/LANCommander.Tests/">
+    <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
+    <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Scripts/">
+    <File Path="Scripts\Clean.ps1" />
+    <File Path="Scripts\Send-UdpBroadcast.ps1" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Microsoft.Common.props" />
+  </Folder>
+  <Project Path="LANCommander.AppHost\LANCommander.AppHost.csproj" Type="Classic C#" />
+  <Project Path="LANCommander.AutoUpdater\LANCommander.AutoUpdater.csproj" />
+  <Project Path="LANCommander.SDK\LANCommander.SDK.csproj" />
+  <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" Type="Classic C#" />
+  <Project Path="LANCommander.Steam\LANCommander.Steam.csproj" />
+  <Project Path="LANCommander.UI\LANCommander.UI.csproj" />
+</Solution>

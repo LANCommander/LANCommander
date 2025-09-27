@@ -6,21 +6,24 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Models;
 using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services;
 
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
-    IRpcClient rpc) : IConnectionClient
+    IOptions<Settings> settings) : IConnectionClient
 {
-    private Uri _serverAddress;
+    private Uri _serverAddress = settings.Value.Authentication.ServerAddress;
     
     public bool IsConnected()
     {
-        return rpc.IsConnected();
+        return true;
+        //return rpc.IsConnected();
     }
 
     public Uri GetServerAddress() => _serverAddress;
@@ -54,7 +57,7 @@ public class ConnectionClient(
 
                     logger?.LogInformation("Successfully discovered server at {ServerAddress}", uri.ToString());
 
-                    await rpc.ConnectAsync();
+                    //await rpc.ConnectAsync();
 
                     return;
                 }
@@ -63,14 +66,14 @@ public class ConnectionClient(
             {
                 logger?.LogError("Failed to discover server at {ServerAddress}", uri.ToString());
             }
-            
-            throw new InvalidAddressException("Could not find a server at that address");
         }
+        
+        throw new InvalidAddressException("Could not find a server at that address");
     }
 
     public async Task<bool> DisconnectAsync()
     {
-        return await rpc.DisconnectAsync();
+        return true;//return await rpc.DisconnectAsync();
     }
 
     public async Task<bool> PingAsync(Uri serverAddress = null)

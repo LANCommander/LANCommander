@@ -85,7 +85,7 @@ namespace LANCommander.Launcher.Services
                             FileId = Guid.NewGuid(),
                             Type = SDK.Enums.MediaType.Avatar,
                             MimeType = MediaTypeNames.Image.Png,
-                            Crc32 = await SDK.Services.MediaService.CalculateChecksumAsync(tempAvatarPath),
+                            Crc32 = await SDK.Services.MediaClient.CalculateChecksumAsync(tempAvatarPath),
                             UserId = remoteProfile.Id,
                         };
 

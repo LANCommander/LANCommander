@@ -8,7 +8,7 @@ using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class MediaService(
+    public class MediaClient(
         ApiRequestFactory apiRequestFactory,
         IConnectionClient connectionClient)
     {

@@ -15,29 +15,29 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ITokenProvider, TokenProvider>();
         services.AddSingleton<INetworkInformationProvider, NetworkInformationProvider>();
         services.AddSingleton<IRpcClient, RpcClient>();
-        services.AddScoped<ApiRequestFactory>();
-        services.AddScoped<ProcessExecutionContextFactory>();
+        services.AddSingleton<ApiRequestFactory>();
+        services.AddSingleton<ProcessExecutionContextFactory>();
 
-        services.AddScoped<AuthenticationClient>();
+        services.AddSingleton<AuthenticationClient>();
         services.AddSingleton<BeaconClient>();
-        services.AddScoped<ChatClient>();
+        services.AddSingleton<ChatClient>();
         services.AddSingleton<IConnectionClient, ConnectionClient>();
-        services.AddScoped<DepotClient>();
-        services.AddScoped<GameClient>();
-        services.AddScoped<IssueClient>();
-        services.AddScoped<LauncherClient>();
-        services.AddScoped<LibraryClient>();
-        services.AddScoped<LobbyClient>();
-        services.AddScoped<MediaService>();
-        services.AddScoped<PlaySessionClient>();
-        services.AddScoped<ProfileClient>();
-        services.AddScoped<RedistributableClient>();
-        services.AddScoped<SaveClient>();
-        services.AddScoped<ScriptClient>();
-        services.AddScoped<ServerClient>();
-        services.AddScoped<TagClient>();
+        services.AddSingleton<DepotClient>();
+        services.AddSingleton<GameClient>();
+        services.AddSingleton<IssueClient>();
+        services.AddSingleton<LauncherClient>();
+        services.AddSingleton<LibraryClient>();
+        services.AddSingleton<LobbyClient>();
+        services.AddSingleton<MediaClient>();
+        services.AddSingleton<PlaySessionClient>();
+        services.AddSingleton<ProfileClient>();
+        services.AddSingleton<RedistributableClient>();
+        services.AddSingleton<SaveClient>();
+        services.AddSingleton<ScriptClient>();
+        services.AddSingleton<ServerClient>();
+        services.AddSingleton<TagClient>();
 
-        services.AddScoped<Client>();
+        services.AddSingleton<Client>();
         
         return services;
     }

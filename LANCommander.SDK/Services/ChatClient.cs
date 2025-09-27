@@ -7,7 +7,7 @@ using LANCommander.SDK.Rpc.Client;
 
 namespace LANCommander.SDK.Services;
 
-public class ChatClient(IRpcClient rpc)
+public class ChatClient
 {
     private readonly Dictionary<Guid, ChatThread> _threads = new();
     public ChatThread GetThread(Guid threadId)

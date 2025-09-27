@@ -1,6 +1,7 @@
 ﻿@using System.Management.Automation.Remoting
 @using LANCommander.Launcher.Models
 @using LANCommander.SDK
+@using LANCommander.SDK.Rpc.Client
 @using Photino.Blazor.CustomWindow.Components
 @using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inherits LayoutComponentBase
@@ -16,6 +17,7 @@
 @inject ILogger<MainLayout> Logger
 @inject ImportManagerService ImportManagerService
 @inject LocalizationService LocalizationService
+@inject IRpcClient RpcClient
 
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
@@ -141,6 +143,8 @@
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
+
+        await RpcClient.ConnectAsync();
         
         _crashQuips = new[]
         {

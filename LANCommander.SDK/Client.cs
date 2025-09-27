@@ -13,7 +13,7 @@ public class Client(
     LauncherClient launcherClient,
     LibraryClient libraryClient,
     LobbyClient lobbyClient,
-    MediaService mediaClient,
+    MediaClient mediaClient,
     PlaySessionClient playSessionClient,
     ProfileClient profileClient,
     RedistributableClient redistributableClient,
@@ -32,7 +32,7 @@ public class Client(
     public LauncherClient Launcher = launcherClient;
     public LibraryClient Library = libraryClient;
     public LobbyClient Lobbies = lobbyClient;
-    public MediaService Media = mediaClient;
+    public MediaClient Media = mediaClient;
     public PlaySessionClient PlaySessions = playSessionClient;
     public ProfileClient Profile = profileClient;
     public RedistributableClient Redistributables = redistributableClient;

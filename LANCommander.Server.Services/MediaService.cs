@@ -19,7 +19,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace LANCommander.Server.Services
 {
     public sealed class MediaService(
-        ILogger<SDK.Services.MediaService> logger,
+        ILogger<SDK.Services.MediaClient> logger,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
@@ -153,7 +153,7 @@ namespace LANCommander.Server.Services
                 await stream.CopyToAsync(fs);
             }
 
-            media.Crc32 = await SDK.Services.MediaService.CalculateChecksumAsync(path);
+            media.Crc32 = await SDK.Services.MediaClient.CalculateChecksumAsync(path);
 
             await GenerateThumbnailAsync(media);
 

@@ -1,0 +1,272 @@
+name: LANCommander Development
+
+on:
+  workflow_dispatch:
+    
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lancommander/lancommander
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1) PREP JOB: figure out the latest semver, build development version,
+  #    check if there are commits since the last development tag. If none,
+  #    skip the rest of the workflow.
+  # --------------------------------------------------------------------------
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
+      version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
+      changed: ${{ steps.check_diff.outputs.changed }}
+      build_dotnet_version: 9.0.102
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # Ensure we get all tags so we can find the latest
+          fetch-depth: 0
+
+      - name: Determine last semver and build development version
+        id: set_version
+        shell: bash
+        run: |
+          # Fetch all tags
+          git fetch --tags
+
+          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-development")
+          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+
+          if [ -z "$LAST_SEMVER_TAG" ]; then
+            echo "No semver tag found; defaulting to 0.0.0"
+            LAST_SEMVER_TAG="0.0.0"
+          fi
+
+          # Remove prefix 'v' and any suffix like "-debug", "-development", etc.
+          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
+
+          # Build a development version string, e.g., "1.2.3-development.20250127"
+          DATE=$(date +'%Y%m%d')
+          FINAL_VERSION="${CLEAN_TAG}-development.${DATE}"
+
+          echo "Last semver tag: $LAST_SEMVER_TAG"
+          echo "Clean semver tag: $CLEAN_TAG"
+          echo "Development version: $FINAL_VERSION"
+
+          # Set output variables for GitHub Actions
+          echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
+          echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "::set-output name=VERSION_SEMVER::$CLEAN_TAG"
+          echo "::set-output name=VERSION_TAG::$FINAL_VERSION"
+
+      - name: Check if commits since last development tag
+        id: check_diff
+        shell: bash
+        run: |
+          # Fetch the last development tag
+          LAST_DEVELOPMENT_TAG="$(git tag --list --sort=-v:refname | grep -E 'development\.20[0-9]+' | head -n1 || true)"
+
+          if [ -z "$LAST_DEVELOPMENT_TAG" ]; then
+            echo "No previous development tag found. Marking as changed."
+            echo "::set-output name=changed::true"
+            exit 0
+          fi
+
+          # Check for commits since that tag
+          set +e  # Disable exit on error temporarily
+          COMMITS=$(git log "${LAST_DEVELOPMENT_TAG}"..HEAD --oneline 2>/dev/null || true)
+          set -e  # Re-enable exit on error
+
+          if [ -z "$COMMITS" ]; then
+            echo "No commits since last development tag: $LAST_DEVELOPMENT_TAG"
+            echo "::set-output name=changed::false"
+          else
+            echo "Found commits since $LAST_DEVELOPMENT_TAG"
+            echo "::set-output name=changed::true"
+          fi
+
+  # --------------------------------------------------------------------------
+  # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'
+  #    Each calls your local workflow YAML with correct indentation
+  # --------------------------------------------------------------------------
+  build_server_linux_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_server_win_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
+
+  build_launcher_win_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
+
+  # --------------------------------------------------------------------------
+  # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:development
+  # --------------------------------------------------------------------------
+  publish_docker_image:
+    needs: 
+      - prep
+      - build_server_linux_x64
+      - build_server_win_x64
+      - build_launcher_win_x64
+    if: needs.prep.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # 3c) Build and push Docker image with tag "development"
+      - name: Checkout Repo for Docker build
+        uses: actions/checkout@v4
+
+      - name: Log in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=development
+            type=raw,value=${{ needs.prep.outputs.version_tag }}
+
+      - name: Download Server x64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./
+
+      - name: Extract Server Artifacts
+        run: |
+          mkdir -p ./LANCommander.Server/published
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published
+
+      # - name: Download Server arm64 Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+      #     path: ./published
+
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v2
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./LANCommander.Server
+          file: ./LANCommander.Server/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:development
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version_tag }}
+            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          provenance: true
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Save version to artifact
+        run: echo "${{ needs.prep.outputs.version_tag }}" > version.txt
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: version.${{ needs.prep.outputs.version_tag }}
+          path: version.txt
+  publish_development_release:
+    runs-on: ubuntu-latest
+    needs:
+      - prep
+      - publish_docker_image
+    steps:
+      - name: Create Temp Directory
+        run: mkdir -p artifacts
+
+      - name: Download Server Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+          
+      - name: Delete existing release assets
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: development
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create development release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: development
+          name: Development Build v${{ needs.prep.outputs.version_tag }}
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          body: This is the latest development build. These builds are generated automatically and should be considered unstable.
+          files: |
+            artifacts/LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

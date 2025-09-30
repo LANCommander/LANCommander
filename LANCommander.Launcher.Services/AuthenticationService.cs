@@ -1,19 +1,20 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using LANCommander.Launcher.Models;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Models;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Settings = LANCommander.Launcher.Models.Settings;
 
 namespace LANCommander.Launcher.Services;
 
 public class AuthenticationService(
     ITokenProvider tokenProvider,
     SDK.Client client,
-    IOptions<SDK.Models.Settings> settings,
+    SettingsProvider<Settings> settingsProvider,
     ILogger<AuthenticationService> logger) : BaseService(logger)
 {
-    private Settings Settings = SettingService.GetSettings();
     private bool TemporarilyOffline;
 
     public event EventHandler OnLogin;
@@ -43,10 +44,10 @@ public class AuthenticationService(
 
     public async Task Login()
     {
-        await Login(settings.Value.Authentication.ServerAddress, new SDK.Models.AuthToken
+        await Login(settingsProvider.CurrentValue.Authentication.ServerAddress, new SDK.Models.AuthToken
         {
-            AccessToken = Settings.Authentication.AccessToken,
-            RefreshToken = Settings.Authentication.RefreshToken,
+            AccessToken = settingsProvider.CurrentValue.Authentication.AccessToken,
+            RefreshToken = settingsProvider.CurrentValue.Authentication.RefreshToken,
         });
     }
     
@@ -65,12 +66,6 @@ public class AuthenticationService(
         {
             await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
 
-            Settings = SettingService.GetSettings();
-
-            Settings.Authentication.ServerAddress = serverAddress.ToString();
-            Settings.Authentication.AccessToken = token.AccessToken;
-            Settings.Authentication.RefreshToken = token.RefreshToken;
-
             tokenProvider.SetToken(token.AccessToken);
 
             if (await client.Authentication.ValidateTokenAsync())
@@ -78,7 +73,12 @@ public class AuthenticationService(
                 //SetOfflineMode(false);
                 TemporarilyOffline = false;
 
-                SettingService.SaveSettings(Settings);
+                await settingsProvider.UpdateAsync(s =>
+                {
+                    s.Authentication.ServerAddress = serverAddress;
+                    s.Authentication.AccessToken = token.AccessToken;
+                    s.Authentication.RefreshToken = token.RefreshToken;
+                });
 
                 var user = await client.Profile.GetAsync();
 
@@ -103,12 +103,11 @@ public class AuthenticationService(
 
         await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
 
-        Settings = SettingService.GetSettings();
-
-        Settings.Authentication.ServerAddress = client.Connection.GetServerAddress().ToString();
-        Settings.Authentication.AccessToken = tokenProvider.GetToken();
-
-        SettingService.SaveSettings(Settings);
+        await settingsProvider.UpdateAsync(s =>
+        {
+            s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+            s.Authentication.AccessToken = tokenProvider.GetToken();
+        });
         
         OnRegister?.Invoke(this, EventArgs.Empty);
     }
@@ -120,7 +119,7 @@ public class AuthenticationService(
 
     public bool OfflineModeEnabled()
     {
-        return TemporarilyOffline || Settings.Authentication.OfflineMode;
+        return TemporarilyOffline || settingsProvider.CurrentValue.Authentication.OfflineModeEnabled;
     }
 
     public void LoginOffline()
@@ -131,14 +130,13 @@ public class AuthenticationService(
 
     public async Task SetOfflineModeAsync(bool state)
     {
-        Settings = SettingService.GetSettings();
-
-        Settings.Authentication.OfflineMode = state;
+        await settingsProvider.UpdateAsync(s =>
+        {
+            s.Authentication.OfflineModeEnabled = true;
+        });
 
         if (state)
             await client.Connection.DisconnectAsync();
-
-        SettingService.SaveSettings(Settings);
         
         OnOfflineModeChanged?.Invoke(state);
     }
@@ -148,15 +146,6 @@ public class AuthenticationService(
         await client.Authentication.LogoutAsync();
 
         TemporarilyOffline = false;
-
-        Settings = SettingService.GetSettings();
-
-        Settings.Authentication = new AuthenticationSettings
-        {
-            ServerAddress = Settings.Authentication.ServerAddress, // keep server address when logging out
-        };
-
-        SettingService.SaveSettings(Settings);
         
         OnLogout?.Invoke(this, EventArgs.Empty);
     }
@@ -188,16 +177,16 @@ public class AuthenticationService(
 
     public JwtSecurityToken? DecodeToken()
     {
-        Settings = SettingService.GetSettings();
-
-        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
+        var token = tokenProvider.GetToken();
+        
+        if (string.IsNullOrEmpty(token))
             return null;
 
         try
         {
             var handler = new JwtSecurityTokenHandler();
             
-            return handler.ReadToken(Settings.Authentication.AccessToken) as JwtSecurityToken;
+            return handler.ReadToken(token) as JwtSecurityToken;
         }
         catch
         {
@@ -207,7 +196,7 @@ public class AuthenticationService(
 
     public bool HasStoredCredentials()
     {
-        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
+        if (string.IsNullOrEmpty(tokenProvider.GetToken()))
             return false;
 
         var decodedToken = DecodeToken();

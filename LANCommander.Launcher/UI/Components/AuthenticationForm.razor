@@ -1,14 +1,7 @@
-@using System.Security.Policy
-@using LANCommander.Launcher.Models
-@using LANCommander.SDK
-@using LANCommander.SDK.Models
 @using LANCommander.Launcher.UI.Authenticate.Components
-@inject ProfileService ProfileService
-@inject NavigationManager NavigationManager
 @inject SDK.Client Client
 @inject AuthenticationService AuthenticationService
 @inject IMessageService MessageService
-@inject ILogger<System.Index> Logger
 
 <CascadingValue Value="State">
     <Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
@@ -44,8 +37,6 @@
 
     bool _connecting { get; set; } = false;
 
-    private Models.Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -61,7 +52,7 @@
         {
             if (!ConnectionState.IsStartup)
             {
-                State.Stage = AuthenticationService.HasStoredCredentials() || Settings.LaunchCount > 0
+                State.Stage = AuthenticationService.HasStoredCredentials() || Client.Settings.CurrentValue.Launcher.LaunchCount > 0
                     ? AuthenticationStage.Login
                     : AuthenticationStage.Register;
             }

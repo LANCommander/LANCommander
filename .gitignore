@@ -368,3 +368,5 @@ LANCommander.Server/LANCommander.db*
 LANCommander.Server/wwwroot/css/custom.css
 LANCommander.Server/wwwroot/css/app.css*
 LANCommander.Launcher/wwwroot/css/app.css*
+LANCommander.Launcher/wwwroot/css/main.js
+LANCommander.Server/wwwroot/css/main.js

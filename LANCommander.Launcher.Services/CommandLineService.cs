@@ -16,8 +16,6 @@ namespace LANCommander.Launcher.Services
         ProfileService profileService,
         SDK.Client client) : BaseService(logger)
     {
-        private Settings Settings = SettingService.GetSettings();
-
         public async Task ParseCommandLineAsync(string[] args)
         {
             await client.Authentication.ValidateTokenAsync();
@@ -250,7 +248,7 @@ namespace LANCommander.Launcher.Services
             try
             {
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
-                    options.ServerAddress = Settings.Authentication.ServerAddress;
+                    options.ServerAddress = client.Settings.CurrentValue.Authentication.ServerAddress.ToString();
 
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
                     throw new ArgumentException("A server address must be specified");
@@ -259,10 +257,12 @@ namespace LANCommander.Launcher.Services
 
                 var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password);
 
-                Settings.Authentication.AccessToken = token.AccessToken;
-                Settings.Authentication.ServerAddress = client.Connection.GetServerAddress().ToString();
-
-                SettingService.SaveSettings(Settings);
+                await client.Settings.UpdateAsync(s =>
+                {
+                    s.Authentication.AccessToken = token.AccessToken;
+                    s.Authentication.RefreshToken = token.RefreshToken;
+                    s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+                });
 
                 Logger.LogInformation("Logged in!");
             }
@@ -275,12 +275,13 @@ namespace LANCommander.Launcher.Services
         private async Task Logout(LogoutCommandLineOptions options)
         {
             await client.Authentication.LogoutAsync();
-
-            Settings.Authentication.AccessToken = "";
-            Settings.Authentication.RefreshToken = "";
-            Settings.Authentication.OfflineMode = false;
-
-            SettingService.SaveSettings(Settings);
+            
+            await client.Settings.UpdateAsync(s =>
+            {
+                s.Authentication.AccessToken = String.Empty;
+                s.Authentication.RefreshToken = String.Empty;
+                s.Authentication.OfflineModeEnabled = false;
+            });
         }
 
         private async Task ChangeAlias(ChangeAliasCommandLineOptions options)

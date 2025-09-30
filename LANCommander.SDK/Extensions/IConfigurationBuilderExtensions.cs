@@ -1,20 +1,36 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Configuration;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+using Settings = LANCommander.SDK.Models.Settings;
 
 namespace LANCommander.SDK.Extensions;
 
 public static class IConfigurationBuilderExtensions
 {
-    public static IConfigurationBuilder AddLANCommanderConfiguration(
+    public static IConfigurationBuilder AddLANCommanderConfiguration<TSettings>(
         this IConfigurationBuilder configurationBuilder,
-        out IServerConfigurationRefresher refresher)
+        out IServerConfigurationRefresher refresher) where TSettings : Settings
     {
+        var filePath = Path.Join(AppPaths.GetConfigDirectory(), Settings.SETTINGS_FILE_NAME);
+
+        if (!File.Exists(filePath))
+        {
+            var settings = Activator.CreateInstance<TSettings>();
+            
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+
+            File.WriteAllText(filePath, serializer.Serialize(settings));
+        }
+        
         var bootstrap = new ConfigurationBuilder()
-            .AddYamlFile(Settings.SETTINGS_FILE_NAME)
+            .AddYamlFile(Settings.SETTINGS_FILE_NAME, false, false)
             .Build();
 
         return configurationBuilder

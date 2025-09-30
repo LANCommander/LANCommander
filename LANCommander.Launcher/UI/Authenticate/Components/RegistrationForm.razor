@@ -48,8 +48,6 @@
     bool Loading = false;
     private Uri? PreviousServerAddress;
 
-    Models.Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnParametersSetAsync()
     {
         if (ServerAddress != PreviousServerAddress)

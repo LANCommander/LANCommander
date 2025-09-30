@@ -12,8 +12,6 @@ namespace LANCommander.Launcher.Services
         private readonly UserService UserService;
         private readonly SDK.Client Client;
 
-        private Settings Settings;
-
         public event EventHandler OnProfileDownloaded;
 
         public ProfileService(
@@ -23,10 +21,10 @@ namespace LANCommander.Launcher.Services
             MediaService mediaService,
             UserService userService) : base(logger)
         {
+            Client = client;
             AuthenticationService = authenticationService;
             MediaService = mediaService;
             UserService = userService;
-            Settings = SettingService.GetSettings();
 
             AuthenticationService.OnLogin += async (sender, args) => await DownloadProfileInfoAsync();
             AuthenticationService.OnRegister += async (sender, args) => await DownloadProfileInfoAsync();
@@ -102,15 +100,8 @@ namespace LANCommander.Launcher.Services
                     Logger?.LogError(ex, "Could not download avatar");
                 }
             }
-
-            SettingService.SaveSettings(Settings);
             
             OnProfileDownloaded?.Invoke(this, EventArgs.Empty);
-        }
-
-        public bool IsAuthenticated()
-        {
-            return !String.IsNullOrWhiteSpace(Settings.Authentication.AccessToken);
         }
     }
 }

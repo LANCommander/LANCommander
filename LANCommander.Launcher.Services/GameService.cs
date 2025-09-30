@@ -20,8 +20,6 @@ namespace LANCommander.Launcher.Services
     {
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
-        private Settings Settings = SettingService.GetSettings();
-
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 

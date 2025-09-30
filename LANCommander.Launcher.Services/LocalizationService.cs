@@ -6,15 +6,13 @@ namespace LANCommander.Launcher.Services
 {
     public class LocalizationService
     {
-        private readonly Settings _settings;
         private readonly ResourceManager _resourceManager;
 
-        public LocalizationService()
+        public LocalizationService(SDK.Client client)
         {
-            _settings = SettingService.GetSettings();
             _resourceManager = new ResourceManager("LANCommander.Launcher.Resources.SharedResources", typeof(LocalizationService).Assembly);
             
-            var culture = new CultureInfo(_settings.Culture);
+            var culture = new CultureInfo(client.Settings.CurrentValue.Culture);
             
             Thread.CurrentThread.CurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;

@@ -1,16 +1,20 @@
 ﻿using Force.Crc32;
 using LANCommander.SDK.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Providers;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services
 {
     public class MediaClient(
         ApiRequestFactory apiRequestFactory,
-        IConnectionClient connectionClient)
+        IConnectionClient connectionClient,
+        IOptionsMonitor<Settings> settings) 
     {
         public async Task<Media> GetAsync(Guid mediaId)
         {
@@ -35,6 +39,21 @@ namespace LANCommander.SDK.Services
         public string GetAbsoluteUrl(Media media)
         {
             return connectionClient.GetServerAddress().Join(GetDownloadPath(media)).ToString();
+        }
+
+        public string GetLocalPath(Media media)
+        {
+            return GetLocalPath(media.FileId, media.Crc32);
+        }
+
+        public string GetLocalPath(Guid fileId, string crc32)
+        {
+            return Path.Combine(settings.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
+        }
+
+        public IEnumerable<string> GetStaleLocalPaths(Media media)
+        {
+            return Directory.EnumerateFiles(settings.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
         }
 
         public string GetDownloadPath(Media media)

@@ -1,23 +1,22 @@
 using System.Globalization;
 using System.Resources;
 using LANCommander.Launcher.Models;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.Launcher.Services
 {
     public class LocalizationService
     {
-        private readonly Settings _settings;
         private readonly ResourceManager _resourceManager;
 
-        public LocalizationService()
-        {
-            _settings = SettingService.GetSettings();
+        public LocalizationService(IOptions<Settings> settings)
+        { ;
             _resourceManager = new ResourceManager("LANCommander.Launcher.Resources.SharedResources", typeof(LocalizationService).Assembly);
             
-            var culture = new CultureInfo(_settings.Culture);
+            var cultureInfo = new CultureInfo(settings.Value.Culture);
             
-            Thread.CurrentThread.CurrentCulture = culture;
-            Thread.CurrentThread.CurrentUICulture = culture;
+            Thread.CurrentThread.CurrentCulture = cultureInfo;
+            Thread.CurrentThread.CurrentUICulture = cultureInfo;
         }
 
         public string GetString(string key)

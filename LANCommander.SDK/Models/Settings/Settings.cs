@@ -7,10 +7,13 @@ public class Settings
 
     public ArchiveSettings Archives { get; set; } = new();
     public AuthenticationSettings Authentication { get; set; } = new();
+    public LauncherSettings Launcher { get; set; } = new();
     public LibrarySettings Library { get; set; } = new();
     public GameSettings Games { get; set; } = new();
     public MediaSettings Media { get; set; } = new();
     public DebugSettings Debug { get; set; } = new();
     public UpdateSettings Updates { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();
+
+    public string Culture { get; set; } = "en-US";
 }

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using Microsoft.Extensions.Options;
 using Action = System.Action;
 
 namespace LANCommander.SDK.Helpers;
@@ -15,7 +16,7 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    Settings settings)
+    IOptions<Settings> settings)
 {
     private string _token { get; set; }
     private bool _ignoreVersion { get; set; }
@@ -26,7 +27,7 @@ public class ApiRequestBuilder(
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
-    private Uri _baseAddress { get; set; } = settings.Authentication.ServerAddress;
+    private Uri _baseAddress { get; set; } = settings.Value.Authentication.ServerAddress;
 
     private ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {

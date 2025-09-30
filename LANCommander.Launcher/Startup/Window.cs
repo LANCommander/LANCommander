@@ -3,6 +3,7 @@ using System.Web;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,8 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RegisterMediaHandler(this PhotinoBlazorApp app)
     {
+        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+        
         app.MainWindow.RegisterCustomSchemeHandler("media",
             (object sender, string scheme, string url, out string contentType) =>
             {
@@ -46,7 +49,7 @@ public static class MainWindow
 
                     contentType = mime;
 
-                    var filePath = Path.Combine(MediaService.GetStoragePath(), $"{fileId}-{crc32}");
+                    var filePath = Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
 
                     if (File.Exists(filePath))
                         return new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -103,7 +106,6 @@ public static class MainWindow
         {
             if (message == "openChat")
             {
-                var settings = SettingService.GetSettings();
                 var builder = PhotinoBlazorAppBuilder.CreateDefault();
                 
                 builder.RootComponents.Add<App>("app");
@@ -112,9 +114,9 @@ public static class MainWindow
                 builder.Services.AddAntDesign();
                 builder.Services.AddSingleton<LocalizationService>();
                 
-                builder.Services.AddLANCommander(options =>
+                builder.Services.AddLANCommanderLauncher(options =>
                 {
-                    options.ServerAddress = settings.Authentication.ServerAddress;
+                    //options.ServerAddress = settings.Authentication.ServerAddress;
                     //options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
                 });
                 
@@ -157,8 +159,8 @@ public static class MainWindow
     private static bool SaveWindowPosition(object sender, EventArgs e)
     {
         var window = sender as PhotinoWindow;
-
-        var settings = SettingService.GetSettings();
+        
+        /*var settings = SettingService.GetSettings();
 
         settings.Window.Maximized = window.Maximized;
         settings.Window.Width = window.Width;
@@ -166,7 +168,7 @@ public static class MainWindow
         settings.Window.X = window.Left;
         settings.Window.Y = window.Top;
 
-        SettingService.SaveSettings(settings);
+        SettingService.SaveSettings(settings);*/
 
         return true;
     }

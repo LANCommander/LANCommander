@@ -42,7 +42,7 @@
         @LocalizationService.GetString("ManageSaves")
     </MenuItem>
 
-    if (Settings.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+    if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
     {
         <MenuItem OnClick="() => Modify()" Disabled="ConnectionState.OfflineModeEnabled">
             @LocalizationService.GetString("Modify")
@@ -72,7 +72,7 @@ else
     </MenuItem>
 }
 
-@if (Settings.Debug.EnableScriptDebugging)
+@if (Client.Settings.CurrentValue.Debug.EnableScriptDebugging)
 {
     <MenuDivider />
 
@@ -109,13 +109,6 @@ else
 
     Data.Models.Game Game { get; set; }
     IEnumerable<SDK.Models.Action> GameActions { get; set; } = [];
-
-    Settings Settings;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -155,7 +148,7 @@ else
 
     async Task Install()
     {
-        if (Settings.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
         {
             var modalOptions = new ModalOptions()
             {

@@ -1,5 +1,6 @@
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
@@ -10,10 +11,11 @@ namespace LANCommander.SDK.Extensions;
 
 public static class IServiceCollectionExtensions
 {
-    public static IServiceCollection AddLANCommanderClient(this IServiceCollection services)
+    public static IServiceCollection AddLANCommanderClient<TSettings>(this IServiceCollection services) where TSettings : Settings
     {
         services.AddSingleton<ITokenProvider, TokenProvider>();
         services.AddSingleton<INetworkInformationProvider, NetworkInformationProvider>();
+        services.AddSingleton<SettingsProvider<TSettings>>();
         services.AddSingleton<IRpcClient, RpcClient>();
         services.AddSingleton<ApiRequestFactory>();
         services.AddSingleton<ProcessExecutionContextFactory>();

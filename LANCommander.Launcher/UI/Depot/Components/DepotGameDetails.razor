@@ -162,8 +162,6 @@
     bool AddingToLibrary { get; set; } = false;
     bool RemovingFromLibrary { get; set; } = false;
 
-    Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnParametersSetAsync()
     {
         Installing = false;
@@ -234,7 +232,7 @@
 
         await Hide();
 
-        if (Settings.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)) ?? false))
+        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)) ?? false))
         {
             var modalOptions = new ModalOptions()
             {

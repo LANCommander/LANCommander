@@ -51,7 +51,7 @@ public class ConnectionClient(
 
             try
             {
-                if (await PingAsync())
+                if (await PingAsync(uri))
                 {
                     _serverAddress = uri;
 

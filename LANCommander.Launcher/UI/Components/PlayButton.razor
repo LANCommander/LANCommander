@@ -55,7 +55,6 @@ else
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Timer StateTimer;
-    Settings Settings;
     PlayButtonState State = PlayButtonState.Idle;
 
     public enum PlayButtonState
@@ -69,7 +68,6 @@ else
     protected override async Task OnInitializedAsync()
     {
         StateTimer = new Timer(state => { InvokeAsync(UpdateState); }, null, 0, 250);
-        Settings = SettingService.GetSettings();
     }
 
     protected override async Task OnParametersSetAsync()

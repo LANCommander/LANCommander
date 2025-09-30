@@ -19,7 +19,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace LANCommander.Server.Services
 {
     public sealed class MediaService(
-        ILogger<SDK.Services.MediaClient> logger,
+        ILogger<MediaService> logger,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,

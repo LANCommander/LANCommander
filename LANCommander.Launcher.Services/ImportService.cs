@@ -5,6 +5,7 @@ using LANCommander.SDK.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.SDK;
 using LANCommander.SDK.Models;
 using BaseModel = LANCommander.Launcher.Data.Models.BaseModel;
 using Collection = LANCommander.Launcher.Data.Models.Collection;
@@ -50,8 +51,6 @@ namespace LANCommander.Launcher.Services
         private IEnumerable<Platform> Platforms;
         private IEnumerable<Tag> Tags;
         private IEnumerable<MultiplayerMode> MultiplayerModes;
-
-        private Settings Settings = SettingService.GetSettings();
 
         public void ImportHasCompleted()
         {
@@ -377,7 +376,7 @@ namespace LANCommander.Launcher.Services
 
                     foreach (var media in importedMedia)
                     {
-                        var localPath = MediaService.GetImagePath(media);
+                        var localPath = client.Media.GetLocalPath(media.FileId, media.Crc32);
 
                         if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
                         {
@@ -393,7 +392,7 @@ namespace LANCommander.Launcher.Services
 
                     #region Check Installation Status
 
-                    foreach (var installDirectory in Settings.Games.InstallDirectories)
+                    foreach (var installDirectory in client.Settings.CurrentValue.Games.InstallDirectories)
                     {
                         var gameDirectory = await client.Games.GetInstallDirectory(game, installDirectory);
 
@@ -598,8 +597,7 @@ namespace LANCommander.Launcher.Services
             else
                 await mediaService.UpdateAsync(media);
 
-            var mediaStoragePath = MediaService.GetStoragePath();
-            var localPath = MediaService.GetImagePath(media);
+            var localPath = client.Media.GetLocalPath(media.FileId, media.Crc32);
 
             if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
             {

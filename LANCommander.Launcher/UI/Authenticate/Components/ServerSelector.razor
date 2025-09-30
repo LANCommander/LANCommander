@@ -78,8 +78,6 @@
     List<DiscoveredServer> DiscoveredServers = new();
     private CancellationTokenSource DiscoveryToken = new CancellationTokenSource();
 
-    Models.Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnInitializedAsync()
     {
         IsInitializing = true;

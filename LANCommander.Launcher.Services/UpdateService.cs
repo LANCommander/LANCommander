@@ -26,11 +26,9 @@ namespace LANCommander.Launcher.Services
 
         public async Task UpdateAsync(SemVersion version)
         {
-            var settings = SettingService.GetSettings();
-
             Logger?.LogInformation("Downloading launcher v{Version}", version);
 
-            string path = Path.Combine(settings.Updates.StoragePath, $"{version}.zip");
+            string path = Path.Combine(client.Settings.CurrentValue.Updates.StoragePath, $"{version}.zip");
 
             await client.Launcher.DownloadAsync(path);
 
@@ -59,14 +57,15 @@ namespace LANCommander.Launcher.Services
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{settings.Updates.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
+            process.Arguments = $"-Version {version} -Path \"{client.Settings.CurrentValue.Updates.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);
 
-            settings.LaunchCount = 0;
-
-            SettingService.SaveSettings(settings);
+            await client.Settings.UpdateAsync(s =>
+            {
+                s.Launcher.LaunchCount = 0;
+            });
 
             Logger?.LogInformation("Shutting down to get out of the way");
 

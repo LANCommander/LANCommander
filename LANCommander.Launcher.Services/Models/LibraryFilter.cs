@@ -208,7 +208,7 @@ namespace LANCommander.Launcher.Models
 
         void LoadSelectedOptions()
         {
-            var settings = SettingService.GetSettings();
+            /*var settingsProvider = SettingService.GetSettings();
 
             SelectedOptions.Title = settings.Filter.Title;
             SelectedOptions.GroupBy = settings.Filter.GroupBy;
@@ -222,12 +222,12 @@ namespace LANCommander.Launcher.Models
             SelectedOptions.Developers = settings.Filter.Developers != null ? DataSource.Developers?.Where(e => settings.Filter.Developers.Contains(e.Name)).ToList() : null;
             SelectedOptions.MinPlayers = settings.Filter.MinPlayers;
             SelectedOptions.MaxPlayers = settings.Filter.MaxPlayers;
-            SelectedOptions.Installed = settings.Filter.Installed;
+            SelectedOptions.Installed = settings.Filter.Installed;*/
         }
 
         void SaveSelectedOptions()
         {
-            var settings = SettingService.GetSettings();
+            /*var settings = SettingService.GetSettings();
 
             settings.Filter = new FilterSettings()
             {
@@ -246,7 +246,7 @@ namespace LANCommander.Launcher.Models
                 Installed = SelectedOptions.Installed
             };
 
-            SettingService.SaveSettings(settings);
+            SettingService.SaveSettings(settings);*/
         }
     }
 }

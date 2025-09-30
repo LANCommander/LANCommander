@@ -183,8 +183,6 @@
     Data.Models.Game SelectedGame { get; set; }
     SDK.Models.Game RemoteGame { get; set; }
 
-    Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnInitializedAsync()
     {
         InstallService.OnQueueChanged += OnQueueChanged;
@@ -239,7 +237,7 @@
 
         var addons = await Client.Games.GetAddonsAsync(game.Id);
 
-        if (Settings.Games.InstallDirectories.Length > 1 || (addons != null && addons.Any()))
+        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (addons != null && addons.Any()))
         {
             var modalOptions = new ModalOptions()
             {

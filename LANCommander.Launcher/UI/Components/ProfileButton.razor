@@ -6,6 +6,7 @@
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject LocalizationService LocalizationService
+@inject SDK.Client Client
 
 <Dropdown>
     <Overlay>
@@ -17,7 +18,7 @@
                 @LocalizationService.GetString("Settings")
             </MenuItem>
 
-            @if (!Settings.Authentication.OfflineMode)
+            @if (!Client.Settings.CurrentValue.Authentication.OfflineModeEnabled)
             {
                 <MenuItem OnClick="SwitchToOfflineMode">
                     @LocalizationService.GetString("SwitchToOfflineMode")
@@ -44,7 +45,6 @@
 
 @code {
     [CascadingParameter] public ConnectionState ConnectionState { get; set; }
-    Models.Settings Settings = SettingService.GetSettings();
 
     User User;
     Guid AvatarId = Guid.Empty;
@@ -89,8 +89,6 @@
         {
             await ProfileService.ChangeAlias(newName);
             await ProfileService.DownloadProfileInfoAsync();
-
-            Settings = SettingService.GetSettings();
 
             await InvokeAsync(StateHasChanged);
         };

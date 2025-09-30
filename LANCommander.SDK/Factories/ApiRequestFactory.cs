@@ -10,6 +10,6 @@ public class ApiRequestFactory(HttpClient httpClient, ITokenProvider tokenProvid
 {
     public ApiRequestBuilder Create()
     {
-        return new ApiRequestBuilder(httpClient, tokenProvider, settings.Value);
+        return new ApiRequestBuilder(httpClient, tokenProvider, settings);
     }
 }

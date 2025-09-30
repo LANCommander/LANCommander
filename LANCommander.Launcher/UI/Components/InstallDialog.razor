@@ -24,11 +24,11 @@
         <CheckboxButtonGroup @bind-Selected="SelectedAddons" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
     }
 
-    @if (Settings.Games.InstallDirectories.Length > 1)
+    @if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1)
     {
         <Divider Text="@LocalizationService.GetString("InstallLocation")" />
         <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="InputSize.Large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
-            @foreach (var directory in Settings.Games.InstallDirectories)
+            @foreach (var directory in Client.Settings.CurrentValue.Games.InstallDirectories)
             {
                 <Radio RadioButton Value="@directory">
                     <GridRow>
@@ -56,8 +56,6 @@
 </Flex>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string SelectedDirectory = "";
 
     SDK.Models.Game RemoteGame;
@@ -73,10 +71,10 @@
         Game = Options.DataItem as Game;
 
         if (Game.Installed)
-            SelectedDirectory = Settings.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
+            SelectedDirectory = Client.Settings.CurrentValue.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
 
         if (String.IsNullOrWhiteSpace(SelectedDirectory))
-            SelectedDirectory = Settings.Games.InstallDirectories.First();
+            SelectedDirectory = Client.Settings.CurrentValue.Games.InstallDirectories.First();
 
         RemoteGame = await Client.Games.GetAsync(Options.Key);
         Addons = (await Client.Games.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();

@@ -1,13 +1,15 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services
 {
     public class FilterService(
         ILogger<FilterService> logger,
-        LibraryService libraryService) : BaseService(logger)
+        LibraryService libraryService,
+        SettingsProvider<Settings> settingsProvider) : BaseService(logger)
     {
         public LibraryFilterModel Filter { get; set; }
 
@@ -123,7 +125,7 @@ namespace LANCommander.Launcher.Services
         {
             await libraryService.FilterChanged();
 
-            SaveSettings();
+            await SaveSettingsAsync();
         }
 
         public async Task ResetFilter()
@@ -132,46 +134,40 @@ namespace LANCommander.Launcher.Services
 
             await libraryService.FilterChanged();
 
-            SaveSettings();
+            await SaveSettingsAsync();
         }
 
         void LoadSettings()
         {
-            var settings = SettingService.GetSettings();
-
-            Filter.Title = settings.Filter.Title;
-            Filter.GroupBy = settings.Filter.GroupBy;
-            Filter.Engines = settings.Filter.Engines != null ? Engines?.Where(e => settings.Filter.Engines.Contains(e.Name)).ToList() : null;
-            Filter.Genres = settings.Filter.Genres != null ? Genres?.Where(e => settings.Filter.Genres.Contains(e.Name)).ToList() : null;
-            Filter.Tags = settings.Filter.Tags != null ? Tags?.Where(e => settings.Filter.Tags.Contains(e.Name)).ToList() : null;
-            Filter.Platforms = settings.Filter.Platforms != null ? Platforms?.Where(e => settings.Filter.Platforms.Contains(e.Name)).ToList() : null;
-            Filter.Publishers = settings.Filter.Publishers != null ? Publishers?.Where(e => settings.Filter.Publishers.Contains(e.Name)).ToList() : null;
-            Filter.Developers = settings.Filter.Developers != null ? Developers?.Where(e => settings.Filter.Developers.Contains(e.Name)).ToList() : null;
-            Filter.MinPlayers = settings.Filter.MinPlayers;
-            Filter.MaxPlayers = settings.Filter.MaxPlayers;
-            Filter.Installed = settings.Filter.Installed;
+            Filter.Title = settingsProvider.CurrentValue.Filter.Title;
+            Filter.GroupBy = settingsProvider.CurrentValue.Filter.GroupBy;
+            Filter.Engines = settingsProvider.CurrentValue.Filter.Engines != null ? Engines?.Where(e => settingsProvider.CurrentValue.Filter.Engines.Contains(e.Name)).ToList() : null;
+            Filter.Genres = settingsProvider.CurrentValue.Filter.Genres != null ? Genres?.Where(e => settingsProvider.CurrentValue.Filter.Genres.Contains(e.Name)).ToList() : null;
+            Filter.Tags = settingsProvider.CurrentValue.Filter.Tags != null ? Tags?.Where(e => settingsProvider.CurrentValue.Filter.Tags.Contains(e.Name)).ToList() : null;
+            Filter.Platforms = settingsProvider.CurrentValue.Filter.Platforms != null ? Platforms?.Where(e => settingsProvider.CurrentValue.Filter.Platforms.Contains(e.Name)).ToList() : null;
+            Filter.Publishers = settingsProvider.CurrentValue.Filter.Publishers != null ? Publishers?.Where(e => settingsProvider.CurrentValue.Filter.Publishers.Contains(e.Name)).ToList() : null;
+            Filter.Developers = settingsProvider.CurrentValue.Filter.Developers != null ? Developers?.Where(e => settingsProvider.CurrentValue.Filter.Developers.Contains(e.Name)).ToList() : null;
+            Filter.MinPlayers = settingsProvider.CurrentValue.Filter.MinPlayers;
+            Filter.MaxPlayers = settingsProvider.CurrentValue.Filter.MaxPlayers;
+            Filter.Installed = settingsProvider.CurrentValue.Filter.Installed;
         }
 
-        void SaveSettings()
+        async Task SaveSettingsAsync()
         {
-            var settings = SettingService.GetSettings();
-
-            settings.Filter = new FilterSettings()
+            await settingsProvider.UpdateAsync(s =>
             {
-                Title = Filter.Title,
-                GroupBy = Filter.GroupBy,
-                Engines = Filter.Engines?.Select(e => e.Name),
-                Genres = Filter.Genres?.Select(g => g.Name),
-                Tags = Filter.Tags?.Select(t => t.Name),
-                Platforms = Filter.Platforms?.Select(p => p.Name),
-                Developers = Filter.Developers?.Select(c => c.Name),
-                Publishers = Filter.Publishers?.Select(c => c.Name),
-                MinPlayers = Filter.MinPlayers,
-                MaxPlayers = Filter.MaxPlayers,
-                Installed = Filter.Installed
-            };
-
-            SettingService.SaveSettings(settings);
+                s.Filter.Title = Filter.Title;
+                s.Filter.GroupBy = Filter.GroupBy;
+                s.Filter.Engines = Filter.Engines?.Select(e => e.Name);
+                s.Filter.Genres = Filter.Genres?.Select(g => g.Name);
+                s.Filter.Tags = Filter.Tags?.Select(t => t.Name);
+                s.Filter.Platforms = Filter.Platforms?.Select(p => p.Name);
+                s.Filter.Developers = Filter.Developers?.Select(c => c.Name);
+                s.Filter.Publishers = Filter.Publishers?.Select(c => c.Name);
+                s.Filter.MinPlayers = Filter.MinPlayers;
+                s.Filter.MaxPlayers = Filter.MaxPlayers;
+                s.Filter.Installed = Filter.Installed;
+            });
         }
     }
 }

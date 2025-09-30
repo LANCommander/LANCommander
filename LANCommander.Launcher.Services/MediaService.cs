@@ -8,10 +8,9 @@ namespace LANCommander.Launcher.Services
 {
     public class MediaService(
         ILogger<MediaService> logger,
-        DatabaseContext dbContext) : BaseDatabaseService<Media>(dbContext, logger)
+        DatabaseContext dbContext,
+        SDK.Client client) : BaseDatabaseService<Media>(dbContext, logger)
     {
-        private readonly Settings Settings = SettingService.GetSettings();
-
         public override Task DeleteAsync(Media entity)
         {
             DeleteLocalMediaFile(entity);
@@ -40,14 +39,12 @@ namespace LANCommander.Launcher.Services
             return GetImagePath(entity);
         }
 
-        public static string GetStoragePath()
+        public string GetStoragePath()
         {
-            var settings = SettingService.GetSettings();
-
-            return Path.Combine(AppPaths.GetConfigDirectory(), settings.Media.StoragePath);
+            return Path.Combine(AppPaths.GetConfigDirectory(), client.Settings.CurrentValue.Media.StoragePath);
         }
 
-        public static string GetImagePath(Media entity)
+        public string GetImagePath(Media entity)
         {
             if (entity == null)
                 return "";

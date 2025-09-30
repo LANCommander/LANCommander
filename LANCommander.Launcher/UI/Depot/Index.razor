@@ -39,8 +39,6 @@
 
     Models.ListItem SelectedItem { get; set; }
 
-    Settings Settings = SettingService.GetSettings();
-
     bool Disabled = false;
 
     protected override async Task OnInitializedAsync()

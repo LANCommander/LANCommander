@@ -81,8 +81,6 @@
     private Uri? PreviousServerAddress;
     AuthenticationProviderDialog AuthenticationProviderDialog;
 
-    Models.Settings Settings = SettingService.GetSettings();
-
     protected override async Task OnInitializedAsync()
     {
         AuthenticationProviders = new();
@@ -160,9 +158,6 @@
     
     async Task UseToken(AuthToken token)
     {
-        Settings.Authentication.AccessToken = token.AccessToken;
-        Settings.Authentication.RefreshToken = token.RefreshToken;
-        
         try
         {
             await AuthenticationService.Login(ServerAddress, token);
@@ -181,8 +176,10 @@
 
     async Task OfflineMode()
     {
-        Settings.Authentication.OfflineMode = true;
-        SettingService.SaveSettings(Settings);
+        await Client.Settings.UpdateAsync(s =>
+        {
+            s.Authentication.OfflineModeEnabled = true;
+        });
 
         NavigationManager.NavigateTo("/");
     }

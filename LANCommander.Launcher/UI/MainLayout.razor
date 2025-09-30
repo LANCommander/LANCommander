@@ -1,6 +1,7 @@
 ﻿@using System.Management.Automation.Remoting
 @using LANCommander.Launcher.Models
 @using LANCommander.SDK
+@using LANCommander.SDK.Providers
 @using LANCommander.SDK.Rpc.Client
 @using Photino.Blazor.CustomWindow.Components
 @using ConnectionState = LANCommander.Launcher.Models.ConnectionState
@@ -12,12 +13,13 @@
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
-@inject LANCommander.SDK.Client LANCommander
+@inject LANCommander.SDK.Client Client
 @inject IJSRuntime JS
 @inject ILogger<MainLayout> Logger
 @inject ImportManagerService ImportManagerService
 @inject LocalizationService LocalizationService
 @inject IRpcClient RpcClient
+@inject SettingsProvider<Models.Settings> Settings
 
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
@@ -46,8 +48,6 @@
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
                                 </Tooltip>
                             }
-                            else if (!string.IsNullOrEmpty(Settings.Authentication.AccessToken))
-                            {
                                 <Tooltip Title="@LocalizationService.GetString("ReconnectToServer")" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
                                 </Tooltip>
@@ -74,7 +74,7 @@
                         <Authenticated>
                             @Body
 
-                            @if (Settings.Debug.EnableScriptDebugging)
+                            @if (Client.Settings.CurrentValue.Debug.EnableScriptDebugging)
                             {
                                 <PowerShellConsole/>
                             }
@@ -99,8 +99,6 @@
     </CustomWindow>
 
 @code {
-    Models.Settings Settings = null;
-
     public bool Importing;
     public bool Connecting;
 
@@ -118,19 +116,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
         ConnectionState = KeepAliveService.GetConnectionState();
         Messages = MessageService;
 
         AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
 
-        var token = new SDK.Models.AuthToken
-        {
-            AccessToken = Settings.Authentication.AccessToken,
-            RefreshToken = Settings.Authentication.RefreshToken
-        };
-
-        if (await LANCommander.Authentication.ValidateTokenAsync())
+        if (await Client.Authentication.ValidateTokenAsync())
         {
             ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
@@ -192,7 +183,7 @@
     async void OnOfflineModeChanged(bool state)
     {
         ConnectionState.OfflineModeEnabled = state;
-        ConnectionState.IsConnected = LANCommander.Connection.IsConnected();
+        ConnectionState.IsConnected = Client.Connection.IsConnected();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -213,15 +204,7 @@
     {
         Connecting = true;
 
-        Settings = SettingService.GetSettings();
-
-        var token = new SDK.Models.AuthToken
-        {
-            AccessToken = Settings.Authentication.AccessToken,
-            RefreshToken = Settings.Authentication.RefreshToken
-        };
-
-        if (await LANCommander.Authentication.ValidateTokenAsync())
+        if (await Client.Authentication.ValidateTokenAsync())
         {
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
@@ -235,7 +218,7 @@
         }
         else
         {
-            if (await LANCommander.Connection.PingAsync())
+            if (await Client.Connection.PingAsync())
             {
                 await Logout();
             }

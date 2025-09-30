@@ -282,13 +282,11 @@ namespace LANCommander.Launcher.Services
                 {
                     foreach (var manual in remoteGame.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
                     {
-                        var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
+                        var localPath = Path.Combine(Client.Media.GetLocalPath(manual), $"{manual.FileId}-{manual.Crc32}");
 
                         if (!File.Exists(localPath))
                         {
-                            var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{manual.FileId}-*");
-
-                            foreach (var staleFile in staleFiles)
+                            foreach (var staleFile in Client.Media.GetStaleLocalPaths(manual))
                                 File.Delete(staleFile);
 
                             await Client.Media.DownloadAsync(new SDK.Models.Media

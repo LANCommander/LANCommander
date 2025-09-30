@@ -10,8 +10,10 @@ using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Web;
+using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Startup;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Providers;
 
 namespace LANCommander.Launcher
 {
@@ -20,10 +22,8 @@ namespace LANCommander.Launcher
         [STAThread]
         static void Main(string[] args)
         {
-            var settings = SettingService.GetSettings();
-
             // Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
-            var serilogLogLevel = MapLogLevel(settings.Debug.LoggingLevel);
+            var serilogLogLevel = MapLogLevel(LogLevel.Debug);
 
             using var Logger = new LoggerConfiguration()
                 .MinimumLevel.Is(serilogLogLevel)
@@ -31,19 +31,16 @@ namespace LANCommander.Launcher
                 .MinimumLevel.Override("Microsoft.AspNetCore.Components", LogEventLevel.Warning)
                 .MinimumLevel.Override("AntDesign", LogEventLevel.Warning)
                 .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
-                .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
+                //.WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
 #if DEBUG
                 .WriteTo.Seq("http://localhost:5341")
 #endif
                 .CreateLogger();
-
-            var localizationService = new LocalizationService();
-            Logger?.Information(localizationService.GetString("StartingUpLauncher", UpdateService.GetCurrentVersion()));
-            Logger?.Debug(localizationService.GetString("LoadingSettingsFromFile"));
+            
+            Logger?.Information("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
 
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-
-            builder.AddSettings();
+            
             builder.AddLogging();
             
             #if DEBUG
@@ -55,15 +52,16 @@ namespace LANCommander.Launcher
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
             builder.Services.AddSingleton<LocalizationService>();
-            builder.Services.AddLANCommanderClient();
-            builder.Services.AddLANCommander(options =>
+            builder.Services.AddLANCommanderClient<Settings>();
+            builder.Services.AddLANCommanderLauncher(options =>
             {
-                options.ServerAddress = settings.Authentication.ServerAddress;
                 options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
             });
+            
+            builder.AddSettings();
 
             #region Build Application
-            Logger?.Debug(localizationService.GetString("BuildingApplication"));
+            Logger?.Debug("Building application");
 
             var app = builder.Build();
 
@@ -76,7 +74,7 @@ namespace LANCommander.Launcher
 
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
-                app.MainWindow.ShowMessage(localizationService.GetString("FatalException"), error.ExceptionObject.ToString());
+                app.MainWindow.ShowMessage("Fatal Exception", error.ExceptionObject.ToString());
             };
 
             app.Services.InitializeLANCommander();
@@ -86,15 +84,18 @@ namespace LANCommander.Launcher
 
             if (!app.ParseCommandLine(args))
             {
-                settings.LaunchCount++;
+                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
 
-                SettingService.SaveSettings(settings);
+                settingsProvider.UpdateAsync(s =>
+                {
+                    s.LaunchCount++;
+                });
 
-                Logger?.Debug(localizationService.GetString("StartingApplication"));
+                Logger?.Debug("Starting application!");
 
                 app.Run();
 
-                Logger?.Debug(localizationService.GetString("ClosingApplication"));
+                Logger?.Debug("Closing application");
             }
         }
 

@@ -9,8 +9,6 @@ using Serilog.Core;
 using Serilog.Extensions.Logging;
 using Serilog.Events;
 
-var settings = SettingService.GetSettings();
-
 // Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
 var serilogLogLevel = MapLogLevel(settings.Debug.LoggingLevel);
 

@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.Providers;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -25,11 +26,9 @@ namespace LANCommander.Launcher.Services.Extensions
 
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddLANCommander(this IServiceCollection services, Action<LANCommanderOptions> configure)
+        public static IServiceCollection AddLANCommanderLauncher(this IServiceCollection services, Action<LANCommanderOptions> configure)
         {
-            var settings = SettingService.GetSettings();
-
-            if (settings.Games.InstallDirectories.Length == 0)
+            /*(if (settings.Games.InstallDirectories.Length == 0)
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     settings.Games.InstallDirectories = new string[] { "C:\\Games" };
@@ -39,7 +38,7 @@ namespace LANCommander.Launcher.Services.Extensions
                     settings.Games.InstallDirectories = new string[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games") };
 
                 SettingService.SaveSettings(settings);
-            }
+            }*/
 
             services.AddDbContext<DbContext, DatabaseContext>();
 
@@ -59,6 +58,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<KeepAliveService>();
             #endregion
             
+            services.AddSingleton<SettingsProvider<SDK.Models.Settings>>();
             services.AddSingleton<ImportManagerService>();
             services.AddScoped<CollectionService>();
             services.AddScoped<CommandLineService>();

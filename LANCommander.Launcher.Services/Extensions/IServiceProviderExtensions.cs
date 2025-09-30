@@ -6,7 +6,9 @@ using Microsoft.Extensions.Logging;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using LANCommander.Launcher.Models;
 using LANCommander.SDK;
+using LANCommander.SDK.Providers;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -14,10 +16,11 @@ namespace LANCommander.Launcher.Services.Extensions
     {
         public static IServiceProvider InitializeLANCommander(this IServiceProvider serviceProvider)
         {
-            var settings = SettingService.GetSettings();
+            var settingsProvider = serviceProvider.GetService<SettingsProvider<Settings>>();
+            
             var connectionStringBuilder = new DbConnectionStringBuilder();
                 
-            connectionStringBuilder.ConnectionString = settings.Database.ConnectionString;
+            connectionStringBuilder.ConnectionString = settingsProvider.CurrentValue.Database.ConnectionString;
 
             using (var scope = serviceProvider.CreateScope())
             {
@@ -30,13 +33,13 @@ namespace LANCommander.Launcher.Services.Extensions
 
                     List<string> requiredDirectories = new List<string>()
                     {
-                        settings.Debug.LoggingPath,
-                        settings.Media.StoragePath,
-                        settings.Database.BackupsPath,
-                        settings.Updates.StoragePath
+                        settingsProvider.CurrentValue.Debug.LoggingPath,
+                        settingsProvider.CurrentValue.Media.StoragePath,
+                        settingsProvider.CurrentValue.Database.BackupsPath,
+                        settingsProvider.CurrentValue.Updates.StoragePath
                     };
 
-                    requiredDirectories.AddRange(settings.Games.InstallDirectories);
+                    requiredDirectories.AddRange(settingsProvider.CurrentValue.Games.InstallDirectories);
 
                     foreach (var directory in requiredDirectories)
                     {
@@ -65,10 +68,10 @@ namespace LANCommander.Launcher.Services.Extensions
                         string backupPath;
                         string dataSource = connectionStringBuilder["Data Source"] as string;
 
-                        if (Directory.Exists(settings.Database.BackupsPath))
-                            backupPath = settings.Database.BackupsPath;
+                        if (Directory.Exists(settingsProvider.CurrentValue.Database.BackupsPath))
+                            backupPath = settingsProvider.CurrentValue.Database.BackupsPath;
                         else
-                            backupPath = Path.Combine(AppPaths.GetConfigDirectory(), settings.Database.BackupsPath);
+                            backupPath = Path.Combine(AppPaths.GetConfigDirectory(), settingsProvider.CurrentValue.Database.BackupsPath);
 
                         if (!File.Exists(dataSource))
                             dataSource = Path.Combine(AppPaths.GetConfigDirectory(), dataSource);
@@ -87,7 +90,7 @@ namespace LANCommander.Launcher.Services.Extensions
                 }
                 #endregion
 
-                if (settings.LaunchCount == 0)
+                if (settingsProvider.CurrentValue.LaunchCount == 0)
                 {
                     var workingDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
 

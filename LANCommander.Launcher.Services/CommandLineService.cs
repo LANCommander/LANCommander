@@ -255,7 +255,7 @@ namespace LANCommander.Launcher.Services
 
                 await client.Connection.UpdateServerAddressAsync(options.ServerAddress);
 
-                var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password);
+                var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password, client.Connection.GetServerAddress());
 
                 await client.Settings.UpdateAsync(s =>
                 {

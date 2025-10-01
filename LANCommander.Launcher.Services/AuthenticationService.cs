@@ -55,7 +55,7 @@ public class AuthenticationService(
     {
         await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
 
-        var token = await client.Authentication.AuthenticateAsync(username, password);
+        var token = await client.Authentication.AuthenticateAsync(username, password, serverAddress);
 
         await Login(serverAddress, token);
     }

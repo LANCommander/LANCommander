@@ -33,7 +33,7 @@ namespace LANCommander.SDK.Services
                         .UseAuthenticationToken()
                         .UseVersioning()
                         .UseRoute($"/api/Servers/Import/{objectKey}")
-                        .PostAsync<object>();
+                        .PostAsync();
             }
         }
 
@@ -66,7 +66,7 @@ namespace LANCommander.SDK.Services
                             Version = version,
                             Changelog = changelog,
                         })
-                        .PostAsync<object>();
+                        .PostAsync();
             }
         }
     }

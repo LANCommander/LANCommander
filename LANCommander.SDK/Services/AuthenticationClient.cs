@@ -19,12 +19,13 @@ public class AuthenticationClient(
     ApiRequestFactory apiRequestFactory,
     IConnectionClient connectionClient)
 {
-    public async Task<AuthToken> AuthenticateAsync(string username, string password)
+    public async Task<AuthToken> AuthenticateAsync(string username, string password, Uri serverAddress)
     {
         try
         {
-            var response = await apiRequestFactory
+            var result = await apiRequestFactory
                 .Create()
+                .UseBaseAddress(serverAddress)
                 .UseRoute("/api/Auth/Login")
                 .UseMethod(HttpMethod.Post)
                 .AddBody(new AuthRequest
@@ -36,23 +37,23 @@ public class AuthenticationClient(
 
             ErrorResponse errorResponse = null;
             
-            if (!response.IsSuccessStatusCode)
+            if (!result.Response.IsSuccessStatusCode)
             {
-                string message = response.ReasonPhrase;
+                string message = result.Response.ReasonPhrase;
                 
                 logger?.LogError("Authentication failed for user {UserName}: {Message}", username, message);
                 
-                errorResponse = await ParseErrorResponseAsync(response);
+                errorResponse = await ParseErrorResponseAsync(result.Response);
             } 
 
-            switch (response.StatusCode)
+            switch (result.Response.StatusCode)
             {
                 case HttpStatusCode.OK:
                     var token = new AuthToken
                     {
-                        AccessToken = response.Data.AccessToken,
-                        RefreshToken = response.Data.RefreshToken,
-                        Expiration = response.Data.Expiration
+                        AccessToken = result.Data.AccessToken,
+                        RefreshToken = result.Data.RefreshToken,
+                        Expiration = result.Data.Expiration
                     };
 
                     tokenProvider.SetToken(token.AccessToken);
@@ -84,7 +85,7 @@ public class AuthenticationClient(
             .Create()
             .UseRoute("/api/Auth/Logout")
             .UseAuthenticationToken()
-            .PostAsync<object>();
+            .PostAsync();
         
         tokenProvider.SetToken(null);
 
@@ -95,7 +96,7 @@ public class AuthenticationClient(
     {
         try
         {
-            var response = await apiRequestFactory
+            var result = await apiRequestFactory
                 .Create()
                 .UseRoute("/api/Auth/Register")
                 .UseMethod(HttpMethod.Post)
@@ -108,17 +109,17 @@ public class AuthenticationClient(
 
             ErrorResponse errorResponse = null;
             
-            if (!response.IsSuccessStatusCode)
+            if (!result.Response.IsSuccessStatusCode)
             {
-                logger?.LogError("Registration failed for user {UserName}: {Message}", username, response.ErrorMessage);
+                logger?.LogError("Registration failed for user {UserName}: {Message}", username, result.ErrorMessage);
                 
-                errorResponse = await ParseErrorResponseAsync(response);
+                errorResponse = await ParseErrorResponseAsync(result.Response);
             } 
 
-            switch (response.StatusCode)
+            switch (result.Response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    tokenProvider.SetToken(response.Data.AccessToken);
+                    tokenProvider.SetToken(result.Data.AccessToken);
                     return;
 
                 case HttpStatusCode.BadRequest:
@@ -155,7 +156,7 @@ public class AuthenticationClient(
                 .Create()
                 .UseAuthenticationToken()
                 .UseRoute("/api/Auth/Validate")
-                .PostAsync<object>();
+                .PostAsync();
             
             logger?.LogTrace("Validated token successfully");
 

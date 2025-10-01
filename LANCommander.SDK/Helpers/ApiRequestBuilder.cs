@@ -2,12 +2,15 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Options;
 using Action = System.Action;
 
@@ -16,22 +19,25 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    IOptions<Settings> settings)
+    IConnectionClient connectionClient,
+    IOptionsMonitor<Settings> settings)
 {
-    private string _token { get; set; }
+    private string _token { get; set; } = tokenProvider.GetToken();
     private bool _ignoreVersion { get; set; }
     private object _body { get; set; }
     private string _route { get; set; }
-    private HttpClient _httpClient { get; set; }
+    private HttpClient _httpClient { get; set; } = httpClient;
     private HttpRequestMessage _request { get; set; } = new();
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
-    private Uri _baseAddress { get; set; } = settings.Value.Authentication.ServerAddress;
+    private Uri _baseAddress { get; set; } = connectionClient.GetServerAddress();
 
-    private ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
+    private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
-        return JsonSerializer.DeserializeAsync<TResult>(response.Content.ReadAsStream(), cancellationToken: _cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(_cancellationToken);
+        
+        return JsonSerializer.Deserialize<TResult>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 
     public ApiRequestBuilder UseAuthenticationToken()
@@ -87,7 +93,7 @@ public class ApiRequestBuilder(
 
     public ApiRequestBuilder AddBody(object body)
     {
-        _request.Content = new StringContent(JsonSerializer.Serialize(body));
+        _request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, MediaTypeNames.Application.Json);
 
         return this;
     }
@@ -115,11 +121,15 @@ public class ApiRequestBuilder(
 
     public async Task<ApiResponseMessage<TResult>> SendAsync<TResult>() where TResult : class
     {
-        var response = (ApiResponseMessage<TResult>)await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await _httpClient.SendAsync(_request, _cancellationToken);
 
-        response.Data = await DeserializeResultAsync<TResult>(response);
+        var result = new ApiResponseMessage<TResult>
+        {
+            Response = response,
+            Data = await DeserializeResultAsync<TResult>(response)
+        };
         
-        return response;
+        return result;
     }
 
     public async Task<TResult> GetAsync<TResult>()
@@ -144,6 +154,16 @@ public class ApiRequestBuilder(
             .EnsureSuccessStatusCode();
 
         return await DeserializeResultAsync<TResult>(response);
+    }
+
+    public async Task PostAsync()
+    {
+        _request.Method = HttpMethod.Post;
+        
+        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        
+        response
+            .EnsureSuccessStatusCode();
     }
 
     public async Task<TResult> PutAsync<TResult>()
@@ -267,7 +287,7 @@ public class ApiRequestBuilder(
     {
         try
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settings)
+            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, connectionClient, settings)
                 .UseRoute("/Upload/Init")
                 .UseVersioning()
                 .UseAuthenticationToken()
@@ -297,13 +317,13 @@ public class ApiRequestBuilder(
                     Key = initResponse.Key,
                 };
 
-                await new ApiRequestBuilder(httpClient, tokenProvider, settings)
+                await new ApiRequestBuilder(httpClient, tokenProvider, connectionClient, settings)
                     .AddBody(chunkRequest)
                     .UseRoute("/Upload/Chunk")
                     .UseVersioning()
                     .UseAuthenticationToken()
                     .UseCancellationToken(_cancellationToken)
-                    .PostAsync<object>();
+                    .PostAsync();
             }
 
             return initResponse.Key;

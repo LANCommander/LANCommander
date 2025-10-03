@@ -12,7 +12,7 @@ namespace LANCommander.Launcher.Services;
 public class AuthenticationService(
     ITokenProvider tokenProvider,
     SDK.Client client,
-    SettingsProvider<Settings> settingsProvider,
+    ISettingsProvider settingsProvider,
     ILogger<AuthenticationService> logger) : BaseService(logger)
 {
     private bool TemporarilyOffline;

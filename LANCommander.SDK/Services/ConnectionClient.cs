@@ -3,10 +3,12 @@ using System.Buffers.Text;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
 using Microsoft.Extensions.Logging;
@@ -16,17 +18,15 @@ namespace LANCommander.SDK.Services;
 
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
-    IOptions<Settings> settings) : IConnectionClient
+    ISettingsProvider settingsProvider) : IConnectionClient
 {
-    private Uri _serverAddress = settings.Value.Authentication.ServerAddress;
-    
     public bool IsConnected()
     {
         return true;
         //return rpc.IsConnected();
     }
 
-    public Uri GetServerAddress() => _serverAddress;
+    public Uri GetServerAddress() => settingsProvider.CurrentValue.Authentication.ServerAddress;
 
     public async Task UpdateServerAddressAsync(Uri address) => await UpdateServerAddressAsync(address.ToString());
 
@@ -53,7 +53,10 @@ public class ConnectionClient(
             {
                 if (await PingAsync(uri))
                 {
-                    _serverAddress = uri;
+                    await settingsProvider.UpdateAsync(s =>
+                    {
+                        s.Authentication.ServerAddress = uri;
+                    });
 
                     logger?.LogInformation("Successfully discovered server at {ServerAddress}", uri.ToString());
 
@@ -84,7 +87,7 @@ public class ConnectionClient(
 
             var pingHttpClient = new HttpClient();
 
-            pingHttpClient.BaseAddress = serverAddress ?? _serverAddress;
+            pingHttpClient.BaseAddress = serverAddress ?? GetServerAddress();
             pingHttpClient.Timeout = TimeSpan.FromSeconds(1);
 
             var httpRequest = new HttpRequestMessage();

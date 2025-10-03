@@ -19,7 +19,6 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    IConnectionClient connectionClient,
     IOptionsMonitor<Settings> settings)
 {
     private string _token { get; set; } = tokenProvider.GetToken();
@@ -31,13 +30,21 @@ public class ApiRequestBuilder(
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
-    private Uri _baseAddress { get; set; } = connectionClient.GetServerAddress();
+    private Uri _baseAddress { get; set; } = settings.CurrentValue.Authentication.ServerAddress;
 
     private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
         var body = await response.Content.ReadAsStringAsync(_cancellationToken);
-        
-        return JsonSerializer.Deserialize<TResult>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        try
+        {
+            return JsonSerializer.Deserialize<TResult>(body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch
+        {
+            return default;
+        }
     }
 
     public ApiRequestBuilder UseAuthenticationToken()
@@ -287,7 +294,7 @@ public class ApiRequestBuilder(
     {
         try
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, connectionClient, settings)
+            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settings)
                 .UseRoute("/Upload/Init")
                 .UseVersioning()
                 .UseAuthenticationToken()
@@ -317,7 +324,7 @@ public class ApiRequestBuilder(
                     Key = initResponse.Key,
                 };
 
-                await new ApiRequestBuilder(httpClient, tokenProvider, connectionClient, settings)
+                await new ApiRequestBuilder(httpClient, tokenProvider, settings)
                     .AddBody(chunkRequest)
                     .UseRoute("/Upload/Chunk")
                     .UseVersioning()

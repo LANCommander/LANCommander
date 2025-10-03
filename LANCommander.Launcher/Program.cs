@@ -12,8 +12,10 @@ using System.Runtime.InteropServices;
 using System.Web;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Startup;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher
 {
@@ -84,7 +86,10 @@ namespace LANCommander.Launcher
 
             if (!app.ParseCommandLine(args))
             {
-                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>()!;
+                var tokenProvider = app.Services.GetService<ITokenProvider>()!;
+                
+                tokenProvider.SetToken(settingsProvider.CurrentValue.Authentication.AccessToken);
 
                 settingsProvider.UpdateAsync(s =>
                 {

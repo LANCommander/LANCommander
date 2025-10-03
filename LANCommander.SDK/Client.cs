@@ -1,3 +1,4 @@
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
@@ -22,7 +23,7 @@ public class Client(
     SaveClient saveClient,
     ScriptClient scriptClient,
     ServerClient serverClient,
-    SettingsProvider<Settings> settingsProvider,
+    ISettingsProvider settingsProvider,
     TagClient tagClient)
 {
     public AuthenticationClient Authentication = authenticationClient;
@@ -42,6 +43,6 @@ public class Client(
     public SaveClient Saves = saveClient;
     public ScriptClient Scripts = scriptClient;
     public ServerClient Servers = serverClient;
-    public SettingsProvider<Settings> Settings = settingsProvider;
+    public ISettingsProvider Settings = settingsProvider;
     public TagClient Tags = tagClient;
 }

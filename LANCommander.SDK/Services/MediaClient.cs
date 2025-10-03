@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Providers;
@@ -14,7 +15,7 @@ namespace LANCommander.SDK.Services
     public class MediaClient(
         ApiRequestFactory apiRequestFactory,
         IConnectionClient connectionClient,
-        IOptionsMonitor<Settings> settings) 
+        ISettingsProvider settingsProvider) 
     {
         public async Task<Media> GetAsync(Guid mediaId)
         {
@@ -48,12 +49,12 @@ namespace LANCommander.SDK.Services
 
         public string GetLocalPath(Guid fileId, string crc32)
         {
-            return Path.Combine(settings.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
+            return Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
         }
 
         public IEnumerable<string> GetStaleLocalPaths(Media media)
         {
-            return Directory.EnumerateFiles(settings.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
+            return Directory.EnumerateFiles(settingsProvider.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
         }
 
         public string GetDownloadPath(Media media)

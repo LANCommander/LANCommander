@@ -19,7 +19,7 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    IOptionsMonitor<Settings> settings)
+    ISettingsProvider settingsProvider)
 {
     private string _token { get; set; } = tokenProvider.GetToken();
     private bool _ignoreVersion { get; set; }
@@ -30,7 +30,7 @@ public class ApiRequestBuilder(
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
-    private Uri _baseAddress { get; set; } = settings.CurrentValue.Authentication.ServerAddress;
+    private Uri _baseAddress { get; set; } = settingsProvider.CurrentValue.Authentication.ServerAddress;
 
     private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
@@ -294,7 +294,7 @@ public class ApiRequestBuilder(
     {
         try
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settings)
+            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
                 .UseRoute("/Upload/Init")
                 .UseVersioning()
                 .UseAuthenticationToken()
@@ -324,7 +324,7 @@ public class ApiRequestBuilder(
                     Key = initResponse.Key,
                 };
 
-                await new ApiRequestBuilder(httpClient, tokenProvider, settings)
+                await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
                     .AddBody(chunkRequest)
                     .UseRoute("/Upload/Chunk")
                     .UseVersioning()

@@ -3,8 +3,8 @@
 @using LANCommander.SDK
 @using LANCommander.SDK.Providers
 @using LANCommander.SDK.Rpc.Client
+@using LANCommander.SDK.Services
 @using Photino.Blazor.CustomWindow.Components
-@using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inherits LayoutComponentBase
 @inject ImportService ImportService
 @inject ProfileService ProfileService
@@ -18,6 +18,7 @@
 @inject ILogger<MainLayout> Logger
 @inject ImportManagerService ImportManagerService
 @inject LocalizationService LocalizationService
+@inject IConnectionClient ConnectionClient
 @inject IRpcClient RpcClient
 @inject SettingsProvider<Models.Settings> Settings
 
@@ -42,12 +43,13 @@
                                     </ContentTemplate>
                                 </Popover>
                             }
-                            else if (ConnectionState.IsConnected)
+                            else if (ConnectionClient.IsConnected())
                             {
                                 <Tooltip Title="@LocalizationService.GetString("ReimportLibrary")" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
                                 </Tooltip>
                             }
+                            else if (ConnectionClient.IsConfigured())
                                 <Tooltip Title="@LocalizationService.GetString("ReconnectToServer")" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
                                 </Tooltip>
@@ -102,8 +104,6 @@
     public bool Importing;
     public bool Connecting;
 
-    public ConnectionState ConnectionState = default!;
-
     public IMessageService Messages { get; set; }
 
     ImportHandler ImportHandler;
@@ -116,20 +116,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ConnectionState = KeepAliveService.GetConnectionState();
-        Messages = MessageService;
-
-        AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
+        ConnectionClient.OnOfflineModeEnabled += OnOfflineModeChanged;
+        ConnectionClient.OnConnect += OnConnect;
 
         if (await Client.Authentication.ValidateTokenAsync())
         {
-            ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
-
-            ConnectionState.IsConnected = true;
-            ConnectionState.OfflineModeEnabled = false;
-            ConnectionState.IsStartup = false;
 
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
@@ -172,19 +165,20 @@
         RandomQuip = _crashQuips[randIndex];
     }
 
-    public void Dispose()
+    private async void OnConnect(object? sender, EventArgs e)
     {
-        if (AuthenticationService != null)
-        {
-            AuthenticationService.OnOfflineModeChanged -= OnOfflineModeChanged;
-        }
+        await ImportManagerService.RequestImport();
     }
 
-    async void OnOfflineModeChanged(bool state)
+    public void Dispose()
     {
-        ConnectionState.OfflineModeEnabled = state;
-        ConnectionState.IsConnected = Client.Connection.IsConnected();
-        await InvokeAsync(StateHasChanged);
+        if (ConnectionClient != null)
+            ConnectionClient.OnOfflineModeEnabled -= OnOfflineModeChanged;
+    }
+
+    void OnOfflineModeChanged(object? sender, EventArgs eventArgs)
+    {
+        StateHasChanged();
     }
 
     async void OnImportProcess(ImportHandler.ImportProgressEventArgs importProgress)
@@ -204,52 +198,39 @@
     {
         Connecting = true;
 
-        if (await Client.Authentication.ValidateTokenAsync())
+        if (await ConnectionClient.ConnectAsync())
         {
-            await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
-
+            
             MessageService.Success(LocalizationService.GetString("BackOnline"));
-
-            ConnectionState.IsConnected = true;
-            ConnectionState.OfflineModeEnabled = false;
 
             await InvokeAsync(StateHasChanged);
         }
         else
         {
-            if (await Client.Connection.PingAsync())
+            await ModalService.ConfirmAsync(new ConfirmOptions()
             {
-                await Logout();
-            }
-            else
-            {
-                await ModalService.ConfirmAsync(new ConfirmOptions()
+                Title = LocalizationService.GetString("CouldNotReconnect"),
+                Icon = @<Icon Type="@IconType.Outline.ExclamationCircle"></Icon>,
+                Content = LocalizationService.GetString("CouldNotReconnectMessage"),
+                OkText = LocalizationService.GetString("Logout"),
+                CancelText = LocalizationService.GetString("StayOffline"),
+                Centered = true,
+                OnOk = async (e) =>
                 {
-                    Title = LocalizationService.GetString("CouldNotReconnect"),
-                    Icon = @<Icon Type="@IconType.Outline.ExclamationCircle"></Icon>,
-                    Content = LocalizationService.GetString("CouldNotReconnectMessage"),
-                    OkText = LocalizationService.GetString("Logout"),
-                    CancelText = LocalizationService.GetString("StayOffline"),
-                    Centered = true,
-                    OnOk = async (e) =>
-                    {
-                        await Logout();
-                    }
-                });
-            }
+                    await Logout();
+                }
+            });
         }
-
+        
         Connecting = false;
         await InvokeAsync(StateHasChanged);
     }
 
     async Task Logout()
     {
+        await ConnectionClient.DisconnectAsync();
         await AuthenticationService.Logout();
-
-        ConnectionState.IsConnected = false;
-        ConnectionState.OfflineModeEnabled = false;
 
         NavigationManager.NavigateTo("/Authenticate");
     }

@@ -6,24 +6,39 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Factories;
-using LANCommander.SDK.Models;
-using LANCommander.SDK.Providers;
-using LANCommander.SDK.Rpc;
-using LANCommander.SDK.Rpc.Client;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services;
 
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
-    ISettingsProvider settingsProvider) : IConnectionClient
+    ISettingsProvider settingsProvider,
+    ITokenProvider tokenProvider) : IConnectionClient
 {
+    public event EventHandler OnConnect;
+    public event EventHandler OnDisconnect;
+    public event EventHandler OnServerAddressChanged;
+    public event EventHandler OnOfflineModeEnabled;
+
     public bool IsConnected()
     {
         return true;
         //return rpc.IsConnected();
+    }
+
+    public bool IsConfigured()
+    {
+        return HasServerAddress() && !String.IsNullOrEmpty(tokenProvider.GetToken());
+    }
+
+    public bool IsOfflineMode()
+    {
+        return settingsProvider.CurrentValue.Authentication.OfflineModeEnabled;
+    }
+
+    public bool HasServerAddress()
+    {
+        return GetServerAddress() != null;
     }
 
     public Uri GetServerAddress() => settingsProvider.CurrentValue.Authentication.ServerAddress;
@@ -60,7 +75,9 @@ public class ConnectionClient(
 
                     logger?.LogInformation("Successfully discovered server at {ServerAddress}", uri.ToString());
 
-                    //await rpc.ConnectAsync();
+                    OnServerAddressChanged?.Invoke(this, EventArgs.Empty);
+
+                    await ConnectAsync();
 
                     return;
                 }
@@ -74,9 +91,36 @@ public class ConnectionClient(
         throw new InvalidAddressException("Could not find a server at that address");
     }
 
+    public async Task<bool> ConnectAsync()
+    {
+        if (IsConfigured())
+        {
+            // await rpc.ConnectAsync();
+            OnConnect?.Invoke(this, EventArgs.Empty);
+
+            return true;
+        }
+
+        return false;
+    }
+    
     public async Task<bool> DisconnectAsync()
     {
+        OnDisconnect?.Invoke(this, EventArgs.Empty);
+        
         return true;//return await rpc.DisconnectAsync();
+    }
+
+    public async Task EnableOfflineModeAsync()
+    {
+        await DisconnectAsync();
+        
+        await settingsProvider.UpdateAsync(s =>
+        {
+            s.Authentication.OfflineModeEnabled = true;
+        });
+        
+        OnOfflineModeEnabled?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task<bool> PingAsync(Uri serverAddress = null)

@@ -1,6 +1,7 @@
 using System.Management.Automation.Language;
 using LANCommander.SDK;
 using System.Timers;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
 using Timer = System.Timers.Timer;
 
@@ -22,8 +23,6 @@ public class KeepAliveService : BaseService
     private bool ConnectionLost = false;
     private bool IsCheckConnectionActive = false;
     private bool IsRetryConnectionActive = false;
-    
-    private Models.ConnectionState ConnectionState = new();
 
     public event EventHandler ConnectionSevered;
     public event EventHandler ConnectionRetryNext;
@@ -32,27 +31,15 @@ public class KeepAliveService : BaseService
     
     public KeepAliveService(
         ILogger<KeepAliveService> logger,
-        AuthenticationService authenticationService) : base(logger)
+        AuthenticationService authenticationService,
+        IConnectionClient connectionClient) : base(logger)
     {
         AuthenticationService = authenticationService;
-
-        AuthenticationService.OnLogin += (sender, args) => StartMonitoring();
-        AuthenticationService.OnLogout += (sender, args) => StopMonitoring();
-        AuthenticationService.OnRegister += (sender, args) => StartMonitoring();
-        AuthenticationService.OnOfflineModeChanged += (state) =>
-        {
-            if (state)
-                StopMonitoring();
-            else
-                StartMonitoring();
-        };
+        
+        connectionClient.OnConnect += (sender, args) => StartMonitoring();
+        connectionClient.OnDisconnect += (sender, args) => StopMonitoring();
 
         ConnectionEstablished += (sender, args) => StartMonitoring();
-    }
-
-    public Models.ConnectionState GetConnectionState()
-    {
-        return ConnectionState;
     }
 
     public (int current, int total) GetRetryCount()

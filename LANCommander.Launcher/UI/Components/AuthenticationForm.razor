@@ -1,66 +1,43 @@
 @using LANCommander.Launcher.UI.Authenticate.Components
-@inject SDK.Client Client
-@inject AuthenticationService AuthenticationService
+@using LANCommander.SDK.Services
 @inject IMessageService MessageService
+@inject IConnectionClient ConnectionClient
 
-<CascadingValue Value="State">
-    <Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
-        <Content Class="authentication-form">
-            <div class="authentication-logo">
-                <img src="/assets/logo.svg" width="300" />
-            </div>
+<Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
+    <Content Class="authentication-form">
+        <div class="authentication-logo">
+            <img src="/assets/logo.svg" width="300" />
+        </div>
 
-            <div class="authentication-box">
-                @if (State.Stage == AuthenticationStage.SelectServer)
-                {
-                    <ServerSelector OnSelected="ServerSelected" Connecting="_connecting" />
-                }
-
-                @if (State.Stage == AuthenticationStage.Login)
-                {
-                    <LoginForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.SelectServer" OnRegister="() => State.Stage = AuthenticationStage.Register" />
-                }
-
-                @if (State.Stage == AuthenticationStage.Register)
-                {
-                    <RegistrationForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.Login" />
-                }
-            </div>
-        </Content>
-    </Layout>
-</CascadingValue>
+        <div class="authentication-box">
+            @if (_stage == AuthenticationStage.SelectServer)
+            {
+                <ServerSelector OnSelected="ServerSelected" Connecting="_connecting" />
+            }
+            else if (_stage == AuthenticationStage.Login)
+            {
+                <LoginForm ServerAddress="@ConnectionClient.GetServerAddress()" OnBack="() => _stage = AuthenticationStage.SelectServer" OnRegister="() => _stage = AuthenticationStage.Register" />
+            }
+            else if (_stage == AuthenticationStage.Register)
+            {
+                <RegistrationForm ServerAddress="@ConnectionClient.GetServerAddress()" OnBack="() => _stage = AuthenticationStage.Login" />
+            }
+        </div>
+    </Content>
+</Layout>
 
 @code {
-    [CascadingParameter] public Models.ConnectionState ConnectionState { get; set; }
-
-    AuthenticationFormState State { get; set; }
-
     bool _connecting { get; set; } = false;
+    AuthenticationStage _stage = AuthenticationStage.None;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        State = new()
-        {
-            Stage = AuthenticationStage.None,
-            ServerAddress = Client.Connection.GetServerAddress(),
-        };
-
-        bool hasServer = await AuthenticationService.IsServerOnlineAsync();
-        if (hasServer)
-        {
-            if (!ConnectionState.IsStartup)
-            {
-                State.Stage = AuthenticationService.HasStoredCredentials() || Client.Settings.CurrentValue.Launcher.LaunchCount > 0
-                    ? AuthenticationStage.Login
-                    : AuthenticationStage.Register;
-            }
-        }
+        if (ConnectionClient.HasServerAddress())
+            _stage = AuthenticationStage.Login;
         else
-        {
-            State.Stage = AuthenticationStage.SelectServer;
-        }
+            _stage = AuthenticationStage.SelectServer;
     }
 
     async Task ServerSelected(Uri serverAddress)
@@ -69,9 +46,9 @@
         {
             _connecting = true;
 
-            await Client.Connection.UpdateServerAddressAsync(serverAddress);
-            State.ServerAddress = Client.Connection.GetServerAddress();
-            State.Stage = AuthenticationStage.Login;
+            await ConnectionClient.UpdateServerAddressAsync(serverAddress);
+            
+            _stage = AuthenticationStage.Login;
         }
         catch (Exception ex)
         {

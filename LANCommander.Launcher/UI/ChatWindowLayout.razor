@@ -1,5 +1,4 @@
 ﻿@using Photino.Blazor.CustomWindow.Components
-@using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inherits LayoutComponentBase
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
@@ -33,10 +32,6 @@
 
 @code {
     Models.Settings Settings = null;
-    
-    public bool Connecting;
-
-    public ConnectionState ConnectionState = default!;
 
     string RandomQuip = "";
 
@@ -46,12 +41,7 @@
     {
         if (await Client.Authentication.ValidateTokenAsync())
         {
-            ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
-
-            ConnectionState.IsConnected = true;
-            ConnectionState.OfflineModeEnabled = false;
-            ConnectionState.IsStartup = false;
             
             await InvokeAsync(StateHasChanged);
         }

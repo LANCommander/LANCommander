@@ -3,13 +3,14 @@
 @using System.Diagnostics
 @using LANCommander.SDK
 @using LANCommander.SDK.Helpers
+@using LANCommander.SDK.Services
 @inject GameService GameService
 @inject UserService UserService
 @inject LibraryService LibraryService
 @inject InstallService InstallService
 @inject ModalService ModalService
-@inject MessageBusService MessageBusService
 @inject SDK.Client Client
+@inject IConnectionClient ConnectionClient
 @inject LocalizationService LocalizationService
 
 @if (GameActions != null && GameActions.Count() > 0)
@@ -38,13 +39,13 @@
         <MenuDivider />
     }
 
-    <MenuItem OnClick="() => OpenSaveManager()" Disabled="ConnectionState.OfflineModeEnabled">
+    <MenuItem OnClick="() => OpenSaveManager()" Disabled="@ConnectionClient.IsOfflineMode()">
         @LocalizationService.GetString("ManageSaves")
     </MenuItem>
 
     if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
     {
-        <MenuItem OnClick="() => Modify()" Disabled="ConnectionState.OfflineModeEnabled">
+        <MenuItem OnClick="() => Modify()" Disabled="@ConnectionClient.IsOfflineMode()">
             @LocalizationService.GetString("Modify")
         </MenuItem>
     }
@@ -52,10 +53,10 @@
     <MenuItem OnClick="() => BrowseFiles()">
         @LocalizationService.GetString("BrowseFiles")
     </MenuItem>
-    <MenuItem OnClick="() => ValidateFiles()" Disabled="ConnectionState.OfflineModeEnabled">
+    <MenuItem OnClick="() => ValidateFiles()" Disabled="@ConnectionClient.IsOfflineMode()">
         @LocalizationService.GetString("ValidateFiles")
     </MenuItem>
-    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="@ConnectionClient.IsOfflineMode()">
         @LocalizationService.GetString("Remove")
     </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
@@ -64,10 +65,10 @@
 }
 else
 {
-    <MenuItem OnClick="() => Install()" Disabled="ConnectionState.OfflineModeEnabled">
+    <MenuItem OnClick="() => Install()" Disabled="@ConnectionClient.IsOfflineMode()">
         @LocalizationService.GetString("Install")
     </MenuItem>
-    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="@ConnectionClient.IsOfflineMode()">
         @LocalizationService.GetString("Remove")
     </MenuItem>
 }
@@ -95,7 +96,7 @@ else
 
 <MenuDivider />
 
-<MenuItem OnClick="() => ReportIssue()" Disabled="ConnectionState.OfflineModeEnabled">
+<MenuItem OnClick="() => ReportIssue()" Disabled="@ConnectionClient.IsOfflineMode()">
     @LocalizationService.GetString("ReportIssue")
 </MenuItem>
 
@@ -105,7 +106,6 @@ else
     [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
     [Parameter] public bool ShowPrimaryActions { get; set; }
-    [CascadingParameter] public ConnectionState ConnectionState { get; set; }
 
     Data.Models.Game Game { get; set; }
     IEnumerable<SDK.Models.Action> GameActions { get; set; } = [];

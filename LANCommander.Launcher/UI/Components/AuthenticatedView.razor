@@ -1,57 +1,23 @@
-@using ConnectionState = LANCommander.Launcher.Models.ConnectionState
-@inject AuthenticationService AuthenticationService
-@inject NavigationManager NavigationManager
-@inject KeepAliveService KeepAliveService
+@using LANCommander.SDK.Services
+@inject IConnectionClient ConnectionClient
 
-<CascadingValue Value="ConnectionState">
-    @if (ConnectionState.IsConnected || ConnectionState.OfflineModeEnabled)
-    {
-        @Authenticated
-    }
-    else if (!IsValidating)
-    {
-        @NotAuthenticated
-    }
-</CascadingValue>
+@if (ConnectionClient.IsConnected() || ConnectionClient.IsOfflineMode())
+{
+    @Authenticated
+}
+else if (!ConnectionClient.IsConfigured())
+{
+    @NotAuthenticated
+}
 
 @code {
     [Parameter] public RenderFragment Authenticated { get; set; }
     [Parameter] public RenderFragment NotAuthenticated { get; set; }
     [Parameter] public bool NoAutoValidate { get; set; }
 
-    private ConnectionState ConnectionState = default!;
-    private bool IsValidating = false;
-
     protected override async Task OnInitializedAsync()
     {
-        ConnectionState = KeepAliveService.GetConnectionState();
-
-        AuthenticationService.OnLogin += async (sender, args) =>
-        {
-            await Validate();
-        };
-        AuthenticationService.OnRegister += async (sender, args) =>
-        {
-            await Validate();
-        };
-
-        if (!NoAutoValidate)
-            await Validate();
-    }
-
-    public async Task Validate()
-    {
-        try
-        {
-            IsValidating = true;
-            ConnectionState.IsConnected = await AuthenticationService.ValidateConnectionAsync();
-            ConnectionState.OfflineModeEnabled = AuthenticationService.OfflineModeEnabled();
-        }
-        finally
-        {
-            IsValidating = false;
-        }
-
-        await InvokeAsync(StateHasChanged);
+        ConnectionClient.OnConnect += (sender, args) => StateHasChanged();
+        ConnectionClient.OnOfflineModeEnabled += (sender, args) => StateHasChanged();
     }
 }

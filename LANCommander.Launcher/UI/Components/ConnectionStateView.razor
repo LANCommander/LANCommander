@@ -1,4 +1,7 @@
-@if (!ConnectionState.IsConnected || ConnectionState.OfflineModeEnabled)
+@using LANCommander.SDK.Services
+@inject IConnectionClient ConnectionClient
+
+@if (!ConnectionClient.IsConnected() || ConnectionClient.IsOfflineMode())
 {
     @Offline
 }
@@ -10,6 +13,4 @@ else
 @code {
     [Parameter] public RenderFragment Online { get; set; }
     [Parameter] public RenderFragment Offline { get; set; }
-    
-    [CascadingParameter] public Models.ConnectionState ConnectionState { get; set; }
 }

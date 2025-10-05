@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Rpc.Client;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
@@ -13,6 +14,7 @@ namespace LANCommander.SDK.Services;
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
     ISettingsProvider settingsProvider,
+    IRpcClient rpc,
     ITokenProvider tokenProvider) : IConnectionClient
 {
     public event EventHandler OnConnect;
@@ -22,8 +24,7 @@ public class ConnectionClient(
 
     public bool IsConnected()
     {
-        return true;
-        //return rpc.IsConnected();
+        return rpc.IsConnected();
     }
 
     public bool IsConfigured()
@@ -95,7 +96,10 @@ public class ConnectionClient(
     {
         if (IsConfigured())
         {
-            // await rpc.ConnectAsync();
+            await rpc.ConnectAsync(GetServerAddress());
+            
+            await settingsProvider.UpdateAsync(s => s.Authentication.OfflineModeEnabled = false);
+            
             OnConnect?.Invoke(this, EventArgs.Empty);
 
             return true;
@@ -108,7 +112,7 @@ public class ConnectionClient(
     {
         OnDisconnect?.Invoke(this, EventArgs.Empty);
         
-        return true;//return await rpc.DisconnectAsync();
+        return await rpc.DisconnectAsync();
     }
 
     public async Task EnableOfflineModeAsync()

@@ -43,16 +43,20 @@
                                     </ContentTemplate>
                                 </Popover>
                             }
-                            else if (ConnectionClient.IsConnected())
+                            else
                             {
-                                <Tooltip Title="@LocalizationService.GetString("ReimportLibrary")" MouseEnterDelay="0.5">
-                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
-                                </Tooltip>
-                            }
-                            else if (ConnectionClient.IsConfigured())
-                                <Tooltip Title="@LocalizationService.GetString("ReconnectToServer")" MouseEnterDelay="0.5">
-                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
-                                </Tooltip>
+                                if (ConnectionClient.IsOfflineMode())
+                                {
+                                    <Tooltip Title="@LocalizationService.GetString("ReconnectToServer")" MouseEnterDelay="0.5">
+                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
+                                    </Tooltip>
+                                }
+                                else if (ConnectionClient.IsConnected())
+                                {
+                                    <Tooltip Title="@LocalizationService.GetString("ReimportLibrary")" MouseEnterDelay="0.5">
+                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
+                                    </Tooltip>
+                                }
                             }
                         </SpaceItem>
 
@@ -127,8 +131,6 @@
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
-
-        await RpcClient.ConnectAsync();
         
         _crashQuips = new[]
         {

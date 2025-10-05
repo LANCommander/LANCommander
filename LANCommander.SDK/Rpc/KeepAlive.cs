@@ -10,6 +10,6 @@ public partial class RpcClient : IRpcClient
 {
     public bool IsConnected()
     {
-        return _connection.State == HubConnectionState.Connected;
+        return _connection?.State == HubConnectionState.Connected;
     }
 }

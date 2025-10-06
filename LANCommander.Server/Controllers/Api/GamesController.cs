@@ -73,9 +73,9 @@ namespace LANCommander.Server.Controllers.Api
                 var games = await GameService
                     .AsNoTracking()
                     .AsSplitQuery()
-                    .GetAsync<SDK.Models.Game>();
+                    .GetAsync();
 
-                return games;
+                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
             }, TimeSpan.MaxValue, tags: ["Games"]);
 
             foreach (var mappedGame in mappedGames)
@@ -110,7 +110,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
             {
-                return await GameService
+                var result = await GameService
                     .Include(g => g.Actions)
                     .Include(g => g.Archives)
                     .Include(g => g.BaseGame)
@@ -129,7 +129,9 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.Tags)
                     .AsNoTracking()
                     .AsSplitQuery()
-                    .GetAsync<SDK.Models.Game>(id);
+                    .GetAsync(id);
+                
+                return Mapper.Map<SDK.Models.Game>(result);
             }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
             return game;
@@ -181,11 +183,13 @@ namespace LANCommander.Server.Controllers.Api
         {
             var addons = await Cache.GetOrSetAsync($"Games/{id}/Addons", async _ =>
             {
-                return await GameService
+                var results = await GameService
                     .Include(g => g.Archives)
                     .AsSplitQuery()
                     .AsNoTracking()
-                    .GetAsync<SDK.Models.Game>(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
+                    .GetAsync(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
+                
+                return Mapper.Map<IEnumerable<SDK.Models.Game>>(results);
             }, tags: ["Games", $"Games/{id}"]);
 
             return addons;

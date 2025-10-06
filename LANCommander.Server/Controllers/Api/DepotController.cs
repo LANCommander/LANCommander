@@ -79,13 +79,13 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var results = new SDK.Models.DepotResults()
                 {
-                    Games = await GameService.AsNoTracking().GetAsync<DepotGame>(),
-                    Collections = await CollectionService.AsNoTracking().GetAsync<SDK.Models.Collection>(),
-                    Companies = await CompanyService.AsNoTracking().GetAsync<SDK.Models.Company>(),
-                    Engines = await EngineService.AsNoTracking().GetAsync<SDK.Models.Engine>(),
-                    Genres = await GenreService.AsNoTracking().GetAsync<SDK.Models.Genre>(),
-                    Platforms = await PlatformService.AsNoTracking().GetAsync<SDK.Models.Platform>(),
-                    Tags = await TagService.AsNoTracking().GetAsync<SDK.Models.Tag>(),
+                    Games = Mapper.Map<ICollection<DepotGame>>(await GameService.AsNoTracking().GetAsync()),
+                    Collections = Mapper.Map<ICollection<SDK.Models.Collection>>(await CollectionService.AsNoTracking().GetAsync()),
+                    Companies = Mapper.Map<ICollection<SDK.Models.Company>>(await CompanyService.AsNoTracking().GetAsync()),
+                    Engines = Mapper.Map<ICollection<SDK.Models.Engine>>(await EngineService.AsNoTracking().GetAsync()),
+                    Genres = Mapper.Map<ICollection<SDK.Models.Genre>>(await GenreService.AsNoTracking().GetAsync()),
+                    Platforms = Mapper.Map<ICollection<SDK.Models.Platform>>(await PlatformService.AsNoTracking().GetAsync()),
+                    Tags = Mapper.Map<ICollection<SDK.Models.Tag>>(await TagService.AsNoTracking().GetAsync()),
                 };
 
                 return results;

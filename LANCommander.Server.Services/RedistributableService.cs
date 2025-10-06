@@ -58,9 +58,9 @@ namespace LANCommander.Server.Services
                         .Include(r => r.Archives)
                         .Include(r => r.Scripts);
                 })
-                .GetAsync<SDK.Models.Manifest.Redistributable>(manifestId);
+                .GetAsync(manifestId);
             
-            return redistributable;
+            return mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
         }
     }
 }

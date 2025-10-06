@@ -66,9 +66,9 @@ namespace LANCommander.Server.Services
                         .Include(s => s.Scripts);
 
                 })
-                .GetAsync<SDK.Models.Manifest.Server>(serverId);
+                .GetAsync(serverId);
 
-            return server;
+            return mapper.Map<SDK.Models.Manifest.Server>(server);
         }
 
         public async Task StartAsync(Guid serverId)

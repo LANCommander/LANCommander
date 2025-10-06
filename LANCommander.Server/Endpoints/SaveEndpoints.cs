@@ -118,6 +118,7 @@ public static class SaveEndpoints
     public static async Task<IResult> GetLatestSaveByGameAsync(
         Guid gameId,
         ClaimsPrincipal userPrincipal,
+        [FromServices] IMapper mapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -132,12 +133,12 @@ public static class SaveEndpoints
         
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
-            .FirstOrDefaultAsync<SDK.Models.GameSave>(gs => gs.GameId == gameId && gs.UserId == user.Id);
+            .FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == user.Id);
         
         if (latestSave == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(latestSave);
+        return TypedResults.Ok(mapper.Map<SDK.Models.Save>(latestSave));
     }
 
     public static async Task<IResult> DownloadLatestSaveByGameAsync(

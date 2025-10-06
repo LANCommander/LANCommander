@@ -14,16 +14,12 @@ namespace LANCommander.Server.Services.Abstractions
         IBaseDatabaseService<T> AsSplitQuery();
 
         Task<ICollection<T>> GetAsync();
-        Task<ICollection<U>> GetAsync<U>();
 
         Task<T> GetAsync(Guid id);
-        Task<U> GetAsync<U>(Guid id);
 
         Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate);
-        Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate);
 
         Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate);
-        Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate);
 
         Task<bool> ExistsAsync(Guid id);
         Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);

@@ -1,0 +1,55 @@
+@inject LocalizationService LocalizationService
+
+<div class="game-metadata">
+    @if (CurrentGame is not null)
+    {
+        if (!String.IsNullOrWhiteSpace(CurrentGame.Description))
+        {
+            <div class="game-metadata-description">@CurrentGame.Description</div>
+        }
+
+        if (CurrentGame.ReleasedOn.HasValue)
+        {
+            <div class="game-metadata-released-on">
+                <h3>@LocalizationService.GetString("ReleasedOn")</h3>
+                <span>@CurrentGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
+            </div>
+        }
+
+        if (CurrentGame.Developers != null && CurrentGame.Developers.Any())
+        {
+            <div class="game-metadata-developers">
+                <h3>@LocalizationService.GetString("Developers")</h3>
+                <span>@(String.Join(", ", CurrentGame.Developers.Select(c => c.Name)))</span>
+            </div>
+        }
+
+        if (CurrentGame.Publishers != null && CurrentGame.Publishers.Any())
+        {
+            <div class="game-metadata-publishers">
+                <h3>@LocalizationService.GetString("Publishers")</h3>
+                <span>@(String.Join(", ", CurrentGame.Publishers.Select(c => c.Name)))</span>
+            </div>
+        }
+
+        if (CurrentGame.Genres != null && CurrentGame.Genres.Any())
+        {
+            <div class="game-metadata-genres">
+                <h3>@LocalizationService.GetString("Genres")</h3>
+                <span>@(String.Join(", ", CurrentGame.Genres.Select(g => g.Name)))</span>
+            </div>
+        }
+
+        if (CurrentGame.Tags != null && CurrentGame.Tags.Any())
+        {
+            <div class="game-metadata-tags">
+                <h3>@LocalizationService.GetString("Tags")</h3>
+                <span>@(String.Join(", ", CurrentGame.Tags.Select(t => t.Name)))</span>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter] public Data.Models.Game? CurrentGame { get; set; }
+}

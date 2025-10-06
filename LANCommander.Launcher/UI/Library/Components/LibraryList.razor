@@ -1,9 +1,5 @@
-﻿@using LANCommander.Launcher.Models
-@using LANCommander.Launcher.Services.Extensions
-@using LANCommander.SDK.Extensions
+﻿@using LANCommander.SDK.Extensions
 @inject LibraryService LibraryService
-@inject ImportService ImportService
-@inject MessageBusService MessageBusService
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
 
@@ -31,7 +27,7 @@
                     {
                         <Panel Header="@group" Key="@group">
                             <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
-                                <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
+                                <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" SelectedItem="_currentItemId"/>
                             </AntList>
                         </Panel>
                     }
@@ -40,7 +36,7 @@
                 {
                     <Panel Class="no-header">
                         <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
-                            <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
+                            <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" SelectedItem="_currentItemId" />
                         </AntList>
                     </Panel>
                 }
@@ -52,12 +48,13 @@
 </Flex>
 
 @code {
-    [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
     List<string> Groups = new();
     IEnumerable<Models.ListItem> LibraryItems;
     LibraryItemFilter Filter;
+    
+    Guid _currentItemId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,6 +73,8 @@
 
     async Task SelectItem(Models.ListItem item)
     {
+        _currentItemId = item.Key;
+        
         if (OnItemSelected.HasDelegate)
             await OnItemSelected.InvokeAsync(item.Key);
     }

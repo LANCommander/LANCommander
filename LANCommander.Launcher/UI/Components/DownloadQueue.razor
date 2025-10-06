@@ -1,7 +1,13 @@
 ﻿@using LANCommander.Launcher.Models
+@using LANCommander.SDK.Services
 @inject InstallService InstallService
+@inject LibraryService LibraryService
+@inject GameClient GameClient
+@inject SettingsProvider<Settings> SettingsProvider
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
+@inject ConfirmService ConfirmService
+@inject ModalService ModalService
 
 <Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
@@ -75,6 +81,11 @@
 @code {
     bool Visible { get; set; } = false;
 
+    protected override void OnInitialized()
+    {
+        InstallService.OnInstallFail += OnInstallFail;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         InstallService.OnQueueChanged += async () =>
@@ -106,5 +117,51 @@
         Visible = false;
 
         await InvokeAsync(StateHasChanged);
+    }
+    
+    async Task OnInstallFail(Data.Models.Game game)
+    {
+        var result = await ConfirmService.Show(
+            LocalizationService.GetString("InstallationFailedMessage", game.Title),
+            LocalizationService.GetString("InstallationFailed"),
+            ConfirmButtons.RetryCancel,
+            ConfirmIcon.Error
+        );
+
+        await LibraryService.LibraryChanged();
+
+        if (result == ConfirmResult.Retry)
+        {
+            var libraryItem = LibraryService.GetItem(game.Id);
+
+            Install(libraryItem);
+        }
+    }
+    
+    async Task Install(Models.ListItem libraryItem)
+    {
+        var addons = await GameClient.GetAddonsAsync(libraryItem.Key);
+
+        if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1 || (addons != null && addons.Any()))
+        {
+            var modalOptions = new ModalOptions
+            {
+                Title = LocalizationService.GetString("InstallGame", libraryItem.Name),
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = LocalizationService.GetString("Install"),
+                Draggable = true,
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, libraryItem);
+        }
+        else
+        {
+            await InstallService.Add(libraryItem.DataItem as Data.Models.Game);
+        }
     }
 }

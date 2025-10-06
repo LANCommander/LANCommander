@@ -1,0 +1,153 @@
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK
+@using LANCommander.SDK.Services
+@using Button = AntDesign.Button
+@using ButtonType = AntDesign.ButtonType
+@using Tooltip = AntDesign.Tooltip
+@inject LocalizationService LocalizationService
+@inject InstallService InstallService
+@inject GameClient GameClient
+@inject SettingsProvider<Settings> SettingsProvider
+@inject ModalService ModalService
+
+<div class="game-action-bar">
+    <Space Direction="SpaceDirection.Horizontal" Size="SpaceSize.Large">
+        <SpaceItem>
+            @if (CurrentItem?.State == ListItemState.Installed)
+            {
+                <PlayButton LibraryItem="CurrentItem" />
+            }
+            else if (CurrentItem?.State == ListItemState.NotInstalled)
+            {
+                <ConnectionStateView>
+                    <Online>
+                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install()">@LocalizationService.GetString("Install")</Button>
+                    </Online>
+                    <Offline>
+                        <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")">
+                            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Install")</Button>
+                        </Tooltip>
+                    </Offline>
+                </ConnectionStateView>
+            }
+            else if (CurrentItem?.State == ListItemState.Queued)
+            {
+                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">@LocalizationService.GetString("Queued")</Button>
+            }
+            else if (CurrentItem?.State == ListItemState.UpdateAvailable)
+            {
+                <ConnectionStateView>
+                    <Online>
+                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Update()">@LocalizationService.GetString("Update")</Button>
+                    </Online>
+                    <Offline>
+                        <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")">
+                            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Update")</Button>
+                        </Tooltip>
+                    </Offline>
+                </ConnectionStateView>
+            }
+            else if (CurrentItem?.State == ListItemState.Installing)
+            {
+                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">@LocalizationService.GetString("Installing")</Button>
+            }
+            else if (CurrentItem?.State == ListItemState.Uninstalling)
+            {
+                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">@LocalizationService.GetString("Uninstalling")</Button>
+            }
+        </SpaceItem>
+
+        @if (CurrentItem?.State == ListItemState.NotInstalled)
+        {
+            <ConnectionStateView>
+                <Online>
+                    <SpaceItem>
+                        <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
+                    </SpaceItem>
+                </Online>
+            </ConnectionStateView>
+        }
+
+        @if (CurrentGame is not null)
+        {
+            <SpaceItem>
+                <Statistic Title="@LocalizationService.GetString("PlayTime")" Value="@GetPlayTime(CurrentGame)" />
+            </SpaceItem>
+            <SpaceItem>
+                <Statistic Title="@LocalizationService.GetString("LastPlayed")" Value="@GetLastPlayed(CurrentGame)" />
+            </SpaceItem>
+        }
+    </Space>
+</div>
+
+@code {
+    [CascadingParameter] public Models.ListItem? CurrentItem { get; set; }
+    [CascadingParameter] public Data.Models.Game? CurrentGame { get; set; }
+    [CascadingParameter] public SDK.Models.Game? RemoteGame { get; set; }
+    
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+            size = RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+        return size;
+    }
+
+    string GetPlayTime(Data.Models.Game game)
+    {
+        var totalTime = new TimeSpan(game.PlaySessions
+            .Where(ps => ps.End != null && ps.Start != null)
+            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Sum(ts => ts.Ticks));
+        if (totalTime.TotalMinutes < 1)
+            return LocalizationService.GetString("None");
+        else if (totalTime.TotalHours < 1)
+            return LocalizationService.GetString("PlayTimeMinutes", totalTime.TotalMinutes.ToString("0"));
+        else
+            return LocalizationService.GetString("PlayTimeHours", totalTime.TotalHours.ToString("0.##"));
+    }
+
+    string GetLastPlayed(Data.Models.Game game)
+    {
+        var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
+
+        if (lastSession == null)
+            return LocalizationService.GetString("Never");
+        else
+            return lastSession.End.Value.ToRelativeDate();
+    }
+    
+    async Task Install()
+    {
+        var addons = await GameClient.GetAddonsAsync(CurrentGame.Id);
+
+        if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1 || (addons != null && addons.Any()))
+        {
+            var modalOptions = new ModalOptions
+            {
+                Title = LocalizationService.GetString("InstallGame", CurrentItem.Name),
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = LocalizationService.GetString("Install"),
+                Draggable = true,
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, CurrentItem);
+        }
+        else
+        {
+            await InstallService.Add(CurrentGame);
+        }
+    }
+    
+    async Task Update()
+    {
+        await InstallService.Add(CurrentGame);
+    }
+}

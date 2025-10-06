@@ -1,0 +1,65 @@
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.SDK.Services
+@inject GameClient GameClient
+
+<CascadingValue Value="CurrentGame">
+    <CascadingValue Value="RemoteGame">
+        <div class="game-details no-scrollbar">
+            @if (CurrentGame != null)
+            {
+                <div class="game-hero">
+                    @if (CurrentGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
+                    {
+                        <MediaImage Id="@(CurrentGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Key="GameDetailsLogo" Class="game-details-logo"/>
+                    }
+                    else
+                    {
+                        <h1>@CurrentGame.Title</h1>
+                    }
+
+                    @if (CurrentGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                    {
+                        <MediaImage Id="@(CurrentGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Key="GameDetailsBackground" Class="game-details-background"/>
+                    }
+                </div>
+                <GridRow Gutter="32" Class="game-info" Wrap="false">
+                    <GridCol Flex="@("auto")">
+                        <GameActionBar/>
+                        <GameMetadata/>
+                    </GridCol>
+
+                    <GridCol Flex="@("256px")" Class="game-cover">
+                        @if (CurrentGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        {
+                            <MediaImage Key="GameDetailsCover" Id="@(CurrentGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)"/>
+                        }
+                    </GridCol>
+                </GridRow>
+            }
+        </div>
+    </CascadingValue>
+</CascadingValue>
+
+@code {
+    [CascadingParameter] public Models.ListItem CurrentItem { get; set; }
+    
+    Guid _currentId { get; set; }
+    
+    Game? CurrentGame { get; set; }
+    SDK.Models.Game? RemoteGame { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CurrentItem.Key != _currentId)
+        {
+            // Selection has changed, either through list click or nav
+            _currentId = CurrentItem.Key;
+            CurrentGame = CurrentItem.DataItem as Game;
+
+            RemoteGame = await GameClient.GetAsync(_currentId);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+}

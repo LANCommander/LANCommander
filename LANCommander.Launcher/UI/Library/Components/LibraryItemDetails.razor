@@ -1,0 +1,10 @@
+@using ListItem = LANCommander.Launcher.Models.ListItem
+
+@if (CurrentItem?.DataItem is Data.Models.Game)
+{
+    <GameDetails @key="CurrentItem.Key" />
+}
+
+@code {
+    [CascadingParameter] ListItem? CurrentItem { get; set; }
+}

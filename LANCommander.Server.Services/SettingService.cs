@@ -8,7 +8,7 @@ namespace LANCommander.Server.Services
     public class SettingService
     {
         public static string WorkingDirectory { get; set; } = "";
-        private const string FileName = "Settings.yml";
+        private const string FileName = "Settings.Server.yml";
 
         public static string SettingsFile
         {

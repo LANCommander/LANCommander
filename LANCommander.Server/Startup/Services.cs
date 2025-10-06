@@ -1,3 +1,4 @@
+using LANCommander.SDK.Extensions;
 using LANCommander.Server.ImportExport.Extensions;
 using LANCommander.Server.Providers;
 using LANCommander.Server.Services;
@@ -17,6 +18,7 @@ public static class Services
         
         builder.Services.AddLANCommanderServer(settings);
         builder.Services.AddLANCommanderImportExport();
+        builder.Services.AddLANCommanderClient<SDK.Models.Settings>();
         builder.Services.AddLANCommanderUI();
 
         builder.Services.AddSingleton<IVersionProvider, VersionProvider>();

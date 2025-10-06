@@ -21,9 +21,6 @@ public class AuthenticationService(
     public event EventHandler OnLogout;
     public event EventHandler OnRegister;
 
-    public delegate void OnOfflineModeChangedHandler(bool state);
-    public event OnOfflineModeChangedHandler OnOfflineModeChanged;
-
     public bool IsConnected()
     {
         return client.Connection.IsConnected();
@@ -112,33 +109,17 @@ public class AuthenticationService(
         OnRegister?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task<bool> ValidateConnectionAsync()
-    {
-        return await client.Authentication.ValidateTokenAsync();
-    }
-
-    public bool OfflineModeEnabled()
-    {
-        return TemporarilyOffline || settingsProvider.CurrentValue.Authentication.OfflineModeEnabled;
-    }
-
     public void LoginOffline()
     {
         TemporarilyOffline = true;
-        OnOfflineModeChanged?.Invoke(true);
     }
 
     public async Task SetOfflineModeAsync(bool state)
     {
-        await settingsProvider.UpdateAsync(s =>
-        {
-            s.Authentication.OfflineModeEnabled = true;
-        });
+        await client.Connection.EnableOfflineModeAsync();
 
         if (state)
             await client.Connection.DisconnectAsync();
-        
-        OnOfflineModeChanged?.Invoke(state);
     }
 
     public async Task Logout()

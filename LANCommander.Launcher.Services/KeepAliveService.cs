@@ -1,5 +1,3 @@
-using System.Management.Automation.Language;
-using LANCommander.SDK;
 using System.Timers;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
@@ -9,20 +7,21 @@ namespace LANCommander.Launcher.Services;
 
 public class KeepAliveService : BaseService
 {
-    private readonly AuthenticationService AuthenticationService;
+    private readonly AuthenticationService _authenticationService;
+    private readonly IConnectionClient _connectionClient;
 
-    private Timer? CheckConnectionTimer;
-    private Timer? RetryConnectionTimer;
+    private Timer? _checkConnectionTimer;
+    private Timer? _retryConnectionTimer;
     
-    private int PingInterval = 2000;
-    private int RetryInterval = 1000;
+    private readonly int _pingInterval = 2000;
+    private readonly int _retryInterval = 1000;
 
-    private int RetryCount;
-    private int MaxRetries = 10;
+    private int _retryCount;
+    private readonly int _maxRetries = 10;
 
-    private bool ConnectionLost = false;
-    private bool IsCheckConnectionActive = false;
-    private bool IsRetryConnectionActive = false;
+    private bool _connectionLost = false;
+    private bool _isCheckConnectionActive = false;
+    private bool _isRetryConnectionActive = false;
 
     public event EventHandler ConnectionSevered;
     public event EventHandler ConnectionRetryNext;
@@ -34,7 +33,8 @@ public class KeepAliveService : BaseService
         AuthenticationService authenticationService,
         IConnectionClient connectionClient) : base(logger)
     {
-        AuthenticationService = authenticationService;
+        _authenticationService = authenticationService;
+        _connectionClient = connectionClient;
         
         connectionClient.OnConnect += (sender, args) => StartMonitoring();
         connectionClient.OnDisconnect += (sender, args) => StopMonitoring();
@@ -44,105 +44,103 @@ public class KeepAliveService : BaseService
 
     public (int current, int total) GetRetryCount()
     {
-        return (RetryCount, MaxRetries);
+        return (_retryCount, _maxRetries);
     }
 
     public void StartMonitoring()
     {
-        RetryCount = 0;
-        ConnectionLost = false;
+        _retryCount = 0;
+        _connectionLost = false;
 
-        CheckConnectionTimer?.Stop();
-        CheckConnectionTimer?.Dispose();
+        _checkConnectionTimer?.Stop();
+        _checkConnectionTimer?.Dispose();
         
-        CheckConnectionTimer = new Timer(PingInterval);
-        CheckConnectionTimer.Elapsed += CheckConnection!;
-        CheckConnectionTimer.AutoReset = true;
-        CheckConnectionTimer.Start();
+        _checkConnectionTimer = new Timer(_pingInterval);
+        _checkConnectionTimer.Elapsed += CheckConnection!;
+        _checkConnectionTimer.AutoReset = true;
+        _checkConnectionTimer.Start();
     }
 
     public void StopMonitoring()
     {
-        RetryCount = 0;
-        CheckConnectionTimer?.Stop();
-        CheckConnectionTimer?.Dispose();
-        RetryConnectionTimer?.Stop();
-        RetryConnectionTimer?.Dispose();
+        _retryCount = 0;
+        _checkConnectionTimer?.Stop();
+        _checkConnectionTimer?.Dispose();
+        _retryConnectionTimer?.Stop();
+        _retryConnectionTimer?.Dispose();
     }
 
     private async void CheckConnection(object sender, ElapsedEventArgs e)
     {
-        if (IsCheckConnectionActive) return;
-        IsCheckConnectionActive = true;
+        if (_isCheckConnectionActive) return;
+        _isCheckConnectionActive = true;
 
         try
         {
-            var serverOnline = await AuthenticationService.IsServerOnlineAsync();
+            var serverOnline = await _authenticationService.IsServerOnlineAsync();
 
-            if (!serverOnline && !ConnectionLost)
+            if (!serverOnline && !_connectionLost)
             {
-                CheckConnectionTimer?.Stop();
-                CheckConnectionTimer?.Dispose();
-                CheckConnectionTimer = null;
+                _checkConnectionTimer?.Stop();
+                _checkConnectionTimer?.Dispose();
+                _checkConnectionTimer = null;
 
-                ConnectionLost = true;
+                _connectionLost = true;
 
                 ConnectionSevered?.Invoke(this, EventArgs.Empty);
 
-                RetryConnectionTimer = new Timer(RetryInterval);
-                RetryConnectionTimer.Elapsed += RetryConnection!;
-                RetryConnectionTimer.AutoReset = false;
-                RetryConnectionTimer.Start();
+                _retryConnectionTimer = new Timer(_retryInterval);
+                _retryConnectionTimer.Elapsed += RetryConnection!;
+                _retryConnectionTimer.AutoReset = false;
+                _retryConnectionTimer.Start();
             }
         }
         finally
         {
-            IsCheckConnectionActive = false;
+            _isCheckConnectionActive = false;
         }
     }
 
     private async void RetryConnection(object sender, ElapsedEventArgs e)
     {
-        if (IsRetryConnectionActive) return;
-        IsRetryConnectionActive = true;
+        if (_isRetryConnectionActive) return;
+        _isRetryConnectionActive = true;
 
         try
         {
-            var serverOnline = await AuthenticationService.IsServerOnlineAsync();
-
-            if (serverOnline && ConnectionLost)
+            if (_connectionClient.IsConnected() && _connectionLost)
             {
-                ConnectionLost = false;
+                _connectionLost = false;
 
-                RetryConnectionTimer?.Stop();
-                RetryConnectionTimer?.Dispose();
-                RetryConnectionTimer = null;
+                _retryConnectionTimer?.Stop();
+                _retryConnectionTimer?.Dispose();
+                _retryConnectionTimer = null;
 
                 ConnectionEstablished?.Invoke(this, EventArgs.Empty);
 
-                await AuthenticationService.SetOfflineModeAsync(false);
+                await _connectionClient.ConnectAsync();
             }
             else
             {
-                RetryCount++;
-                RetryConnectionTimer?.Start();
+                _retryCount++;
+                _retryConnectionTimer?.Start();
                 ConnectionRetryNext?.Invoke(this, EventArgs.Empty);
 
-                if (RetryCount == MaxRetries)
+                if (_retryCount == _maxRetries)
                 {
-                    RetryConnectionTimer?.Stop();
-                    RetryConnectionTimer?.Dispose();
-                    RetryConnectionTimer = null;
+                    _retryConnectionTimer?.Stop();
+                    _retryConnectionTimer?.Dispose();
+                    _retryConnectionTimer = null;
 
                     ConnectionLostPermanently?.Invoke(this, EventArgs.Empty);
 
-                    await AuthenticationService.SetOfflineModeAsync(true);
+                    await _connectionClient.EnableOfflineModeAsync();
                 }
             }
         }
         finally
         {
-            IsRetryConnectionActive = false;
+            _isRetryConnectionActive = false;
         }
     }
 }

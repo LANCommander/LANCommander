@@ -96,7 +96,8 @@ public class ConnectionClient(
     {
         if (IsConfigured())
         {
-            await rpc.ConnectAsync(GetServerAddress());
+            if (!rpc.IsConnected())
+                await rpc.ConnectAsync(GetServerAddress());
             
             await settingsProvider.UpdateAsync(s => s.Authentication.OfflineModeEnabled = false);
             

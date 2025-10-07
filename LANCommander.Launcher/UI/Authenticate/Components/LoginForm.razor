@@ -173,14 +173,4 @@
             Loading = false;
         }
     }
-
-    async Task OfflineMode()
-    {
-        await Client.Settings.UpdateAsync(s =>
-        {
-            s.Authentication.OfflineModeEnabled = true;
-        });
-
-        NavigationManager.NavigateTo("/");
-    }
 }

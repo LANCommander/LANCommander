@@ -120,7 +120,7 @@
             // Client.DefaultInstallDirectory = _settings.Games.InstallDirectories.First();
             Client.Scripts.Debug = SettingsProvider.CurrentValue.Debug.EnableScriptDebugging;
 
-            await SettingsProvider.UpdateAsync(s =>
+            SettingsProvider.Update(s =>
             {
                 s.Games.InstallDirectories = _installDirectories.Select(d => d.Path).ToArray();
                 s.Media.StoragePath = _settings.Media.StoragePath;

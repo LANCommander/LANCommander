@@ -257,7 +257,7 @@ namespace LANCommander.Launcher.Services
 
                 var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password, client.Connection.GetServerAddress());
 
-                await client.Settings.UpdateAsync(s =>
+                client.Settings.Update(s =>
                 {
                     s.Authentication.AccessToken = token.AccessToken;
                     s.Authentication.RefreshToken = token.RefreshToken;
@@ -276,7 +276,7 @@ namespace LANCommander.Launcher.Services
         {
             await client.Authentication.LogoutAsync();
             
-            await client.Settings.UpdateAsync(s =>
+            client.Settings.Update(s =>
             {
                 s.Authentication.AccessToken = String.Empty;
                 s.Authentication.RefreshToken = String.Empty;

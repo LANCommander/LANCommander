@@ -17,7 +17,7 @@ else if (!ConnectionClient.IsConfigured())
 
     protected override async Task OnInitializedAsync()
     {
-        ConnectionClient.OnConnect += (sender, args) => StateHasChanged();
-        ConnectionClient.OnOfflineModeEnabled += (sender, args) => StateHasChanged();
+        ConnectionClient.OnConnect += (sender, args) => InvokeAsync(StateHasChanged);
+        ConnectionClient.OnOfflineModeEnabled += (sender, args) => InvokeAsync(StateHasChanged);
     }
 }

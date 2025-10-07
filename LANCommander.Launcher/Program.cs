@@ -90,11 +90,8 @@ namespace LANCommander.Launcher
                 var tokenProvider = app.Services.GetService<ITokenProvider>()!;
                 
                 tokenProvider.SetToken(settingsProvider.CurrentValue.Authentication.AccessToken);
-
-                settingsProvider.UpdateAsync(s =>
-                {
-                    s.LaunchCount++;
-                });
+                
+                settingsProvider.Update(s => s.LaunchCount++);
 
                 Logger?.Debug("Starting application!");
 

@@ -1,9 +1,13 @@
 using System;
 using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Factories;
 using Microsoft.Extensions.Options;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Settings = LANCommander.SDK.Models.Settings;
@@ -13,6 +17,13 @@ public class SettingsProvider<TSettings> : ISettingsProvider
 {
     private readonly string _filePath;
     private readonly IOptionsMonitor<TSettings> _optionsMonitor;
+    
+    private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(250);
+
+    private readonly SemaphoreSlim _ioGate = new(1, 1);
+    private readonly object _debounceLock = new();
+
+    private CancellationTokenSource? _saveCts;
 
     public TSettings CurrentValue => _optionsMonitor.CurrentValue;
 
@@ -22,62 +33,81 @@ public class SettingsProvider<TSettings> : ISettingsProvider
     {
         _filePath = Path.Join(AppPaths.GetConfigDirectory(), Settings.SETTINGS_FILE_NAME);
 
-        if (!File.Exists(_filePath))
-        {
-            var template = new TSettings();
-            Save(template);
-        }
-
         _optionsMonitor = optionsMonitor;
     }
 
-    public async Task UpdateAsync(TSettings settings) => await SaveAsync(settings);
-
-    public async Task UpdateAsync(Action<TSettings> patch)
+    public void Update(Action<TSettings> mutator)
     {
-        patch.Invoke(_optionsMonitor.CurrentValue);
-        await SaveAsync(_optionsMonitor.CurrentValue);
+        mutator.Invoke(_optionsMonitor.CurrentValue);
+
+        ScheduleSave();
     }
 
-    // ISettingsProvider (non-generic) explicit impls
-    async Task ISettingsProvider.UpdateAsync(Settings settings)
+    void ISettingsProvider.Update(Action<Settings> mutator)
     {
-        // Allow callers who only know about base Settings to update
-        if (settings is TSettings typed)
+        mutator.Invoke(_optionsMonitor.CurrentValue);
+        
+        ScheduleSave();
+    }
+
+    private void ScheduleSave()
+    {
+        CancellationTokenSource? ctsToStart;
+
+        lock (_debounceLock)
         {
-            await UpdateAsync(typed);
+            _saveCts?.Cancel();
+            _saveCts?.Dispose();
+            _saveCts = new CancellationTokenSource();
+            ctsToStart = _saveCts;
         }
-        else
+        
+        _ = DebouncedSaveAsync(ctsToStart!.Token);
+    }
+
+    private async Task DebouncedSaveAsync(CancellationToken token)
+    {
+        try
         {
-            var current = _optionsMonitor.CurrentValue;
+            await Task.Delay(_debounceDelay, token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
             
-            await UpdateAsync(current);
+        }
+
+        await _ioGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            await SaveAsync(CurrentValue, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ioGate.Release();
         }
     }
 
-    async Task ISettingsProvider.UpdateAsync(Action<Settings> patch)
+    private async Task SaveAsync(TSettings settings, CancellationToken ct)
     {
-        // Patch the current derived instance through the base type view
-        var current = _optionsMonitor.CurrentValue;
-        patch(current);
-        await UpdateAsync(current);
-    }
-
-    private void Save(TSettings settings)
-    {
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(PascalCaseNamingConvention.Instance)
-            .Build();
-
-        File.WriteAllText(_filePath, serializer.Serialize(settings));
-    }
-
-    private async Task SaveAsync(TSettings settings)
-    {
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(PascalCaseNamingConvention.Instance)
-            .Build();
-
-        await File.WriteAllTextAsync(_filePath, serializer.Serialize(settings));
+        var fso = new FileStreamOptions
+        {
+            Mode = FileMode.OpenOrCreate,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            Options = FileOptions.Asynchronous | FileOptions.WriteThrough,
+        };
+        
+        await using (var fs = new FileStream(_filePath, fso))
+        await using (var writer = new StreamWriter(fs, Encoding.UTF8))
+        {
+            var serializer = YamlSerializerFactory.Create();
+            var serialization = serializer.Serialize(settings);
+            
+            await writer.WriteAsync(serialization).WaitAsync(ct);
+            
+            await writer.FlushAsync(ct).ConfigureAwait(false);
+            await fs.FlushAsync(ct).ConfigureAwait(false);
+        }
     }
 }

@@ -55,7 +55,7 @@
             Importing = true;
             ImportStatusIndex = 0;
             ImportStatusTotal = 0;
-            await NotifyProgress(ImportProgressState.Importing);
+            NotifyProgress(ImportProgressState.Importing);
 
             await InvokeAsync(StateHasChanged);
             MessageService.Info(LocalizationService.GetString("ImportStarted"), 2.5);
@@ -66,12 +66,12 @@
         }
     }
 
-    private async Task NotifyProgress(ImportProgressState state)
+    private void NotifyProgress(ImportProgressState state)
     {
         if (!Progress.HasDelegate)
             return;
 
-        await Progress.InvokeAsync(new ImportProgressEventArgs
+        Progress.InvokeAsync(new ImportProgressEventArgs
         {
             State = state,
             Index = ImportStatusIndex,
@@ -86,7 +86,7 @@
         ImportStatusIndex = 0;
         ImportStatusTotal = 0;
 
-        await NotifyProgress(ImportProgressState.Imported);
+        NotifyProgress(ImportProgressState.Imported);
         MessageService.Success(LocalizationService.GetString("ImportComplete"), 3);
     }
 
@@ -96,7 +96,7 @@
         ImportStatusIndex = 0;
         ImportStatusTotal = 0;
 
-        await NotifyProgress(ImportProgressState.Failed);
+        NotifyProgress(ImportProgressState.Failed);
         MessageService.Error(LocalizationService.GetString("ImportFailed"), 3);
     }
 
@@ -106,7 +106,7 @@
         ImportStatusIndex = status.Index;
         ImportStatusTotal = status.Total;
 
-        await NotifyProgress(ImportProgressState.Updated);
+        NotifyProgress(ImportProgressState.Updated);
     }
 
     public enum ImportProgressState

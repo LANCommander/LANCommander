@@ -69,10 +69,7 @@ public class ConnectionClient(
             {
                 if (await PingAsync(uri))
                 {
-                    await settingsProvider.UpdateAsync(s =>
-                    {
-                        s.Authentication.ServerAddress = uri;
-                    });
+                    settingsProvider.Update(s => s.Authentication.ServerAddress = uri);
 
                     logger?.LogInformation("Successfully discovered server at {ServerAddress}", uri.ToString());
 
@@ -99,7 +96,7 @@ public class ConnectionClient(
             if (!rpc.IsConnected())
                 await rpc.ConnectAsync(GetServerAddress());
             
-            await settingsProvider.UpdateAsync(s => s.Authentication.OfflineModeEnabled = false);
+            settingsProvider.Update(s => s.Authentication.OfflineModeEnabled = false);
             
             OnConnect?.Invoke(this, EventArgs.Empty);
 
@@ -120,10 +117,7 @@ public class ConnectionClient(
     {
         await DisconnectAsync();
         
-        await settingsProvider.UpdateAsync(s =>
-        {
-            s.Authentication.OfflineModeEnabled = true;
-        });
+        settingsProvider.Update(s => s.Authentication.OfflineModeEnabled = true);
         
         OnOfflineModeEnabled?.Invoke(this, EventArgs.Empty);
     }

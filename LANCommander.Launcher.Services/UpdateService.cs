@@ -62,10 +62,7 @@ namespace LANCommander.Launcher.Services
 
             Process.Start(process);
 
-            await client.Settings.UpdateAsync(s =>
-            {
-                s.Launcher.LaunchCount = 0;
-            });
+            client.Settings.Update(s => s.Launcher.LaunchCount = 0);
 
             Logger?.LogInformation("Shutting down to get out of the way");
 

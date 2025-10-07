@@ -7,6 +7,5 @@ namespace LANCommander.SDK.Abstractions;
 public interface ISettingsProvider
 {
     Settings CurrentValue { get; }
-    Task UpdateAsync(Settings settings);
-    Task UpdateAsync(Action<Settings> patch);
+    void Update(Action<Settings> patch);
 }

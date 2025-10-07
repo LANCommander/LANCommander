@@ -70,7 +70,7 @@ public class AuthenticationService(
                 //SetOfflineMode(false);
                 TemporarilyOffline = false;
 
-                await settingsProvider.UpdateAsync(s =>
+                settingsProvider.Update(s =>
                 {
                     s.Authentication.ServerAddress = serverAddress;
                     s.Authentication.AccessToken = token.AccessToken;
@@ -100,7 +100,7 @@ public class AuthenticationService(
 
         await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
 
-        await settingsProvider.UpdateAsync(s =>
+        settingsProvider.Update(s =>
         {
             s.Authentication.ServerAddress = client.Connection.GetServerAddress();
             s.Authentication.AccessToken = tokenProvider.GetToken();

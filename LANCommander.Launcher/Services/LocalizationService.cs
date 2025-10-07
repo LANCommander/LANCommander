@@ -10,7 +10,7 @@ namespace LANCommander.Launcher.Services
         private readonly ResourceManager _resourceManager;
 
         public LocalizationService(IOptions<Settings> settings)
-        { ;
+        {
             _resourceManager = new ResourceManager("LANCommander.Launcher.Resources.SharedResources", typeof(LocalizationService).Assembly);
             
             var cultureInfo = new CultureInfo(settings.Value.Culture);

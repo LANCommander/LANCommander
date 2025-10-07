@@ -154,7 +154,7 @@ namespace LANCommander.Launcher.Services
 
         async Task SaveSettingsAsync()
         {
-            await settingsProvider.UpdateAsync(s =>
+            settingsProvider.Update(s =>
             {
                 s.Filter.Title = Filter.Title;
                 s.Filter.GroupBy = Filter.GroupBy;

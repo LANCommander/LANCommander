@@ -81,7 +81,7 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
                         break;
 
                     default:
-                        data[keyPrefix.TrimEnd(':')] = node?.ToJsonString();
+                        data[keyPrefix.TrimEnd(':')] = node?.ToString();
                         break;
                 }
             }

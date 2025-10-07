@@ -6,6 +6,7 @@ using System.Text;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 
@@ -152,9 +153,7 @@ namespace LANCommander.SDK.Helpers
 
         public static string Serialize<T>(T manifest)
         {
-            var serializer = new SerializerBuilder()
-                .WithNamingConvention(new PascalCaseNamingConvention())
-                .Build();
+            var serializer = YamlSerializerFactory.Create();
 
             Logger?.LogTrace("Serializing manifest");
 

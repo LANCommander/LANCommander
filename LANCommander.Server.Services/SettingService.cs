@@ -1,4 +1,6 @@
-﻿using LANCommander.Server.Models;
+﻿using LANCommander.SDK.Factories;
+using LANCommander.Server.Models;
+using LANCommander.Server.Services.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -51,9 +53,7 @@ namespace LANCommander.Server.Services
             if (settings == null)
                 return;
 
-            var serializer = new SerializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                .Build();
+            var serializer = YamlSerializerFactory.Create();
 
             File.WriteAllText(SettingsFile, serializer.Serialize(settings));
         }

@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -281,9 +282,7 @@ namespace LANCommander.SDK.PowerShell
 
         public static string Serialize<T>(T input)
         {
-            var serializer = new SerializerBuilder()
-                .WithNamingConvention(new PascalCaseNamingConvention())
-                .Build();
+            var serializer = YamlSerializerFactory.Create();
 
             // Use the YamlDotNet serializer to generate a string for our input. Then convert to base64 so we can put it on one line.
             return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializer.Serialize(input)));

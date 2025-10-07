@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Factories;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Configuration;
 using YamlDotNet.Serialization;
@@ -30,7 +31,7 @@ public static class IConfigurationBuilderExtensions
         }
         
         var bootstrap = new ConfigurationBuilder()
-            .AddYamlFile(Settings.SETTINGS_FILE_NAME, false, false)
+            .AddYamlFile(Settings.SETTINGS_FILE_NAME, false, true)
             .Build();
 
         return configurationBuilder

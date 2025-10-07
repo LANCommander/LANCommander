@@ -135,16 +135,16 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RestoreWindowPosition(this PhotinoBlazorApp app)
     {
-        var settings = app.Services.GetService<IOptions<Settings>>();
+        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
 
-        if (settings.Value.Window.Maximized)
+        if (settingsProvider.CurrentValue.Window.Maximized)
             app.MainWindow.SetMaximized(true);
         else
         {
-            if (settings.Value.Window.Width != 0 && settings.Value.Window.Height != 0)
+            if (settingsProvider.CurrentValue.Window.Width != 0 && settingsProvider.CurrentValue.Window.Height != 0)
             {
-                app.MainWindow.SetSize(settings.Value.Window.Width, settings.Value.Window.Height);
-                app.MainWindow.SetLocation(new System.Drawing.Point(settings.Value.Window.X, settings.Value.Window.Y));
+                app.MainWindow.SetSize(settingsProvider.CurrentValue.Window.Width, settingsProvider.CurrentValue.Window.Height);
+                app.MainWindow.SetLocation(new System.Drawing.Point(settingsProvider.CurrentValue.Window.X, settingsProvider.CurrentValue.Window.Y));
             }
             else
             {

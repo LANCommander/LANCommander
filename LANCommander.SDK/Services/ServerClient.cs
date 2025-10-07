@@ -2,13 +2,13 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
-using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Services
 {
     public class ServerClient(
-        IOptions<Settings> settings,
+        ISettingsProvider settingsProvider,
         ApiRequestFactory apiRequestFactory)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
@@ -25,7 +25,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory
@@ -51,7 +51,7 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settings.Value.Archives.UploadChunkSize, fs);
+                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
                 
                 if (objectKey != Guid.Empty)
                     await apiRequestFactory

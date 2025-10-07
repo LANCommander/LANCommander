@@ -11,9 +11,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Utilities;
-using Microsoft.Extensions.Options;
 using Action = System.Action;
 
 // Some terms for this file since they're probably going to be needed in the future:
@@ -28,7 +28,7 @@ namespace LANCommander.SDK.Services
 {
     public class SaveClient(
         ApiRequestFactory apiRequestFactory,
-        IOptions<Settings> settings,
+        ISettingsProvider settingsProvider,
         ILogger<SaveClient> logger)
     {
         public delegate void OnDownloadProgressHandler(DownloadProgressChangedEventArgs e);
@@ -215,7 +215,7 @@ namespace LANCommander.SDK.Services
 
                         script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
 
-                        if (settings.Value.Debug.EnableScriptDebugging)
+                        if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
                         {
                             script.EnableDebug();
                             /*script.DebugHandler.OnDebugStart = _client.Scripts.OnDebugStart;

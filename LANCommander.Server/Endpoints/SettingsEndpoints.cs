@@ -19,11 +19,18 @@ public static class SettingsEndpoints
     {
         var settings = SettingService.GetSettings();
 
-        var clientSettings = new SDK.Models.Settings();
-        
-        clientSettings.IPXRelay.Host = settings.IPXRelay.Host;
-        clientSettings.IPXRelay.Port = settings.IPXRelay.Port;
-        clientSettings.Library.EnableUserLibraries = settings.Library.EnableUserLibraries;
+        var clientSettings = new
+        {
+            IPXRelay = new
+            {
+                Host = settings.IPXRelay.Host,
+                Port = settings.IPXRelay.Port,
+            },
+            Library = new
+            {
+                EnableUserLibraries = settings.Library.EnableUserLibraries,
+            }
+        };
 
         return TypedResults.Ok(clientSettings);
     }

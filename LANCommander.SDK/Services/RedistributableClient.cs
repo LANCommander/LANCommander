@@ -33,7 +33,7 @@ namespace LANCommander.SDK.Services
         
         private InstallProgress _installProgress;
         
-        public async Task<TrackableStream> Stream(Guid id)
+        public async Task<Stream> Stream(Guid id)
         {
             return await apiRequestFactory
                 .Create()
@@ -173,7 +173,7 @@ namespace LANCommander.SDK.Services
                 using (var reader = ReaderFactory.Open(redistributableStream))
                 using (var monitor = new FileTransferMonitor(redistributableStream.Length))
                 {
-                    redistributableStream.OnProgress += (pos, len) =>
+                    /*(redistributableStream.OnProgress += (pos, len) =>
                     {
                         if (monitor.CanUpdate())
                         {
@@ -186,7 +186,7 @@ namespace LANCommander.SDK.Services
                             
                             OnInstallProgressUpdate?.Invoke(_installProgress);
                         }
-                    };
+                    };*/
 
                     reader.EntryExtractionProgress += (sender, e) =>
                     {

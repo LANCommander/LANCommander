@@ -386,7 +386,7 @@ namespace LANCommander.SDK.Services
         private void ExtractFilesFromZip(string zipPath, string destination)
         {
             using (var fs = File.OpenRead(zipPath))
-            using (var ts = new TrackableStream(fs))
+            using (var ts = new TrackableStream(fs, fs.Length))
             using (var reader = ReaderFactory.Open(ts))
             {
                 reader.WriteAllToDirectory(destination, new ExtractionOptions()

@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
+using Action = System.Action;
 
 namespace LANCommander.SDK.Services
 {
@@ -961,37 +962,36 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                _transferStream = await StreamAsync(game.Id);
-                _reader = ReaderFactory.Open(_transferStream);
+                var stream = await StreamAsync(game.Id);
 
-                using (var monitor = new FileTransferMonitor(_transferStream.Length))
+                _reader = ReaderFactory.Open(stream);
+
+                using (var monitor = new FileTransferMonitor(stream.Length))
                 {
-                    _transferStream.OnProgress += (pos, len) =>
+                    _reader.EntryExtractionProgress += (sender, e) =>
                     {
                         if (monitor.CanUpdate())
                         {
-                            monitor.Update(pos);
+                            monitor.Update(stream.Position);
 
                             _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = len;
+                            _installProgress.TotalBytes = stream.Length;
                             _installProgress.TransferSpeed = monitor.GetSpeed();
                             _installProgress.TimeRemaining = monitor.GetTimeRemaining();
                             
                             OnInstallProgressUpdate?.Invoke(_installProgress);
+
                         }
+                        
+                        // Do we need this granular of control? If so, invocations should be rate limited
+                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                        {
+                            Entry = e.Item,
+                            Progress = e.ReaderProgress,
+                            Game = game,
+                        });
                     };
                 }
-
-                _reader.EntryExtractionProgress += (sender, e) =>
-                {
-                    // Do we need this granular of control? If so, invocations should be rate limited
-                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                    {
-                        Entry = e.Item,
-                        Progress = e.ReaderProgress,
-                        Game = game,
-                    });
-                };
 
                 while (_reader.MoveToNextEntry())
                 {
@@ -1061,7 +1061,8 @@ namespace LANCommander.SDK.Services
                 }
 
                 _reader.Dispose();
-                _transferStream.Dispose();
+                await stream.DisposeAsync();
+                // _transferStream.Dispose();
             }
             catch (ReaderCancelledException ex)
             {
@@ -1604,8 +1605,8 @@ namespace LANCommander.SDK.Services
             {
                 try
                 {
-                    _transferStream = await StreamAsync(gameId);
-                    _reader = ReaderFactory.Open(_transferStream);
+                    var stream = await StreamAsync(gameId);
+                    _reader = ReaderFactory.Open(stream);
 
                     while (_reader.MoveToNextEntry())
                     {

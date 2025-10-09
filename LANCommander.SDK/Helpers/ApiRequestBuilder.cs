@@ -214,41 +214,11 @@ public class ApiRequestBuilder(
         _request.Method = HttpMethod.Get;
         
         var response = await _httpClient.SendAsync(_request, _cancellationToken);
-        
-        using (var fs = new FileStream(destination, FileMode.Create))
+
+        await using (var fs = new FileStream(destination, FileMode.Create))
         {
-            var responseStream = new TrackableStream(await response.Content.ReadAsStreamAsync(_cancellationToken));
-            
-            if (_progressHandler != null)
-                responseStream.OnProgress += (position, length) =>
-                {
-                    _progressHandler.Invoke(new DownloadProgressChangedEventArgs
-                    {
-                        BytesReceived = position,
-                        TotalBytes = length,
-                    });
-                };
+            var responseStream = await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
 
-            if (_completeHandler != null)
-                responseStream.OnComplete += () => _completeHandler();
-
-            await responseStream.CopyToAsync(fs, _cancellationToken);
-        }
-
-        return new FileInfo(destination);
-    }
-
-    public async Task<TrackableStream> StreamAsync()
-    {
-        _request.Method = HttpMethod.Get;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
-        
-        var stream = await response.Content.ReadAsStreamAsync(_cancellationToken);;
-
-        var responseStream = new TrackableStream(stream);
-        
-        if (_progressHandler != null)
             responseStream.OnProgress += (position, length) =>
             {
                 _progressHandler.Invoke(new DownloadProgressChangedEventArgs
@@ -258,10 +228,22 @@ public class ApiRequestBuilder(
                 });
             };
 
-        if (_completeHandler != null)
-            responseStream.OnComplete += () => _completeHandler();
+            await responseStream.CopyToAsync(fs, _cancellationToken);
 
-        return responseStream;
+            if (_completeHandler != null)
+                _completeHandler();
+        }
+
+        return new FileInfo(destination);
+    }
+
+    public async Task<TrackableStream> StreamAsync()
+    {
+        _request.Method = HttpMethod.Get;
+        
+        var response = await _httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
+        
+        return await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
     }
 
     public async Task<TResult> UploadAsync<TResult>(string fileName, byte[] data)

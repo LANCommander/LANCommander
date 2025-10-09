@@ -18,7 +18,7 @@ public class SettingsProvider<TSettings> : ISettingsProvider
     private readonly string _filePath;
     private readonly IOptionsMonitor<TSettings> _optionsMonitor;
     
-    private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(250);
+    private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(1000);
 
     private readonly SemaphoreSlim _ioGate = new(1, 1);
     private readonly object _debounceLock = new();
@@ -76,7 +76,7 @@ public class SettingsProvider<TSettings> : ISettingsProvider
             
         }
 
-        await _ioGate.WaitAsync().ConfigureAwait(false);
+        await _ioGate.WaitAsync(token).ConfigureAwait(false);
 
         try
         {
@@ -90,24 +90,9 @@ public class SettingsProvider<TSettings> : ISettingsProvider
 
     private async Task SaveAsync(TSettings settings, CancellationToken ct)
     {
-        var fso = new FileStreamOptions
-        {
-            Mode = FileMode.OpenOrCreate,
-            Access = FileAccess.Write,
-            Share = FileShare.None,
-            Options = FileOptions.Asynchronous | FileOptions.WriteThrough,
-        };
-        
-        await using (var fs = new FileStream(_filePath, fso))
-        await using (var writer = new StreamWriter(fs, Encoding.UTF8))
-        {
-            var serializer = YamlSerializerFactory.Create();
-            var serialization = serializer.Serialize(settings);
-            
-            await writer.WriteAsync(serialization).WaitAsync(ct);
-            
-            await writer.FlushAsync(ct).ConfigureAwait(false);
-            await fs.FlushAsync(ct).ConfigureAwait(false);
-        }
+        var serializer = YamlSerializerFactory.Create();
+        var serialization = serializer.Serialize(settings);
+
+        await File.WriteAllTextAsync(_filePath, serialization, ct);
     }
 }

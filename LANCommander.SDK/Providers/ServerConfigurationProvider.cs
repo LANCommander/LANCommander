@@ -44,6 +44,10 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
 
     public override void Load() => RefreshAsync().GetAwaiter().GetResult();
 
+    /// <summary>
+    /// Repopulates configuration with values grabbed from the LANCommander server
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         try

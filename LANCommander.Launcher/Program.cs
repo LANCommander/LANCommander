@@ -59,8 +59,6 @@ namespace LANCommander.Launcher
             {
                 options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
             });
-            
-            builder.AddSettings();
 
             #region Build Application
             Logger?.Debug("Building application");

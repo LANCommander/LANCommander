@@ -9,13 +9,16 @@ using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
+using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
 
 namespace LANCommander.SDK.Services;
 
 public class AuthenticationClient(
     ILogger<AuthenticationClient> logger,
     ITokenProvider tokenProvider,
+    IServerConfigurationRefresher configRefresher,
     ApiRequestFactory apiRequestFactory,
     IConnectionClient connectionClient)
 {
@@ -57,6 +60,8 @@ public class AuthenticationClient(
                     };
 
                     tokenProvider.SetToken(token.AccessToken);
+
+                    await configRefresher.RefreshAsync();
 
                     return token;
 

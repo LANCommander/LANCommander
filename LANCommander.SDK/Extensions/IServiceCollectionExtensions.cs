@@ -5,7 +5,9 @@ using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.SDK.Extensions;
 
@@ -13,6 +15,14 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddLANCommanderClient<TSettings>(this IServiceCollection services) where TSettings : Settings, new()
     {
+        IServerConfigurationRefresher configRefresher;
+
+        var configuration = new ConfigurationBuilder()
+            .AddLANCommanderConfiguration<TSettings>(out configRefresher)
+            .Build();
+
+        services.AddSingleton(configRefresher);
+        
         services.AddSingleton<SettingsProvider<TSettings>>();
         services.AddSingleton<ISettingsProvider>(sp =>
             sp.GetRequiredService<SettingsProvider<TSettings>>());

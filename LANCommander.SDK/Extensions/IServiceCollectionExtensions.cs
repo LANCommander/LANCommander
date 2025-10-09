@@ -21,6 +21,10 @@ public static class IServiceCollectionExtensions
             .AddLANCommanderConfiguration<TSettings>(out configRefresher)
             .Build();
 
+        services
+            .AddOptions<TSettings>()
+            .Bind(configuration);
+
         services.AddSingleton(configRefresher);
         
         services.AddSingleton<SettingsProvider<TSettings>>();

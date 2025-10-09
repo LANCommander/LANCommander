@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
   </ItemGroup>
   <ItemGroup Label="AutoMapper">
     <PackageVersion Include="AutoMapper" Version="15.0.1" />

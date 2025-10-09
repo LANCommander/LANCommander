@@ -68,7 +68,6 @@
         <PackageReference Include="Microsoft.Extensions.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Localization" />
         <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" />
-        <PackageReference Include="NetEscapades.Configuration.Yaml" />
         <PackageReference Include="nulastudio.NetBeauty" />
         <PackageReference Include="Photino.Blazor" />
         <PackageReference Include="Photino.Blazor.CustomWindow" />

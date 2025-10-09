@@ -35,6 +35,14 @@ namespace LANCommander.SDK.Extensions
             return this;
         }
 
+        public LoggingOperation Enrich(string name, object[] values)
+        {
+            for (var i = 0; i < values.Length; i++)
+                AdditionalData[$"{name}[{i}]"] = values[i];
+
+            return this;
+        }
+
         public void Complete()
         {
             Completed = true;
@@ -73,13 +81,24 @@ namespace LANCommander.SDK.Extensions
     public static class LoggerExtensions
     {
         public static LoggingOperation BeginOperation(this ILogger logger, string message, params object[] parameters)
-        {
-            return new LoggingOperation(logger, LogLevel.Information, message, parameters);
-        }
+            => new LoggingOperation(logger, LogLevel.Information, message, parameters);
 
         public static LoggingOperation BeginOperation(this ILogger logger, LogLevel level, string message, params object[] parameters)
-        {
-            return new LoggingOperation(logger, level, message, parameters);
-        }
+            => new LoggingOperation(logger, level, message, parameters);
+
+        public static LoggingOperation BeginDebugOperation(this ILogger logger, string message, params object[] parameters)
+            => BeginOperation(logger, LogLevel.Debug, message, parameters);
+        
+        public static LoggingOperation BeginErrorOperation(this ILogger logger, string message, params object[] parameters)
+            => BeginOperation(logger, LogLevel.Error, message, parameters);
+        
+        public static LoggingOperation BeginWarningOperation(this ILogger logger, string message, params object[] parameters)
+            => BeginOperation(logger, LogLevel.Warning, message, parameters);
+        
+        public static LoggingOperation BeginInfoOperation(this ILogger logger, string message, params object[] parameters)
+            => BeginOperation(logger, LogLevel.Information, message, parameters);
+        
+        public static LoggingOperation BeginTraceOperation(this ILogger logger, string message, params object[] parameters)
+            => BeginOperation(logger, LogLevel.Trace, message, parameters);
     }
 }

@@ -151,6 +151,8 @@ public class BeaconClient(
 
                     await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
                 };
+                
+                logger?.LogInformation("Started beacon on network interface {NetworkInterface}", networkInterface.Name);
 
                 _beaconClients.Add(beaconClient);
             }

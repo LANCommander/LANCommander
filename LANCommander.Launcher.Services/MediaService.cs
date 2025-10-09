@@ -3,6 +3,7 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
 using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.Launcher.Services
 {
@@ -54,16 +55,23 @@ namespace LANCommander.Launcher.Services
 
         public void DeleteLocalMediaFile(Media entity)
         {
-            try
+            using (var op = Logger.BeginOperation("Deleting local media file"))
             {
-                var path = GetImagePath(entity);
+                op.Enrich("Id", entity.Id);
+                
+                try
+                {
+                    var path = GetImagePath(entity);
 
-                if (File.Exists(path))
-                    File.Delete(path);
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "An unknown error occurred while trying to delete a local file");
+                    op.Enrich("Path", path);
+
+                    if (File.Exists(path))
+                        File.Delete(path);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred while trying to delete a local file");
+                }
             }
         }
     }

@@ -36,14 +36,19 @@ namespace LANCommander.Launcher.Services
 
         public async Task<IEnumerable<ListItem>> RefreshItemsAsync()
         {
-            Items = new ObservableCollection<ListItem>(await GetItemsAsync());
+            using (var op = Logger.BeginDebugOperation( "Refreshing items from depot"))
+            {
+                Items = new ObservableCollection<ListItem>(await GetItemsAsync());
 
-            if (OnItemsLoaded != null)
-                await OnItemsLoaded.Invoke(Items);
-            if (OnItemsFiltered != null)
-                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
+                if (OnItemsLoaded != null)
+                    await OnItemsLoaded.Invoke(Items);
+                if (OnItemsFiltered != null)
+                    await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
 
-            return Items;
+                op.Complete();
+                
+                return Items;
+            }
         }
 
         public int GetItemCount()
@@ -55,7 +60,7 @@ namespace LANCommander.Launcher.Services
         {
             Items.Clear();
 
-            using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading depot items from host"))
+            using (var op = Logger.BeginDebugOperation("Loading depot items from host"))
             {
                 var results = await _client.Depot.GetAsync();
 

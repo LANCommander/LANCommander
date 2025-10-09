@@ -27,6 +27,8 @@ namespace LANCommander.Launcher.Services
 
         public void Populate(IEnumerable<Game> games)
         {
+            logger.LogDebug("Populating filter with metadata from {Count} game(s)", games.Count());
+            
             var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
 
             Engines = games
@@ -84,7 +86,9 @@ namespace LANCommander.Launcher.Services
 
         public IEnumerable<ListItem> FilterLibraryItems(IEnumerable<ListItem> items)
         {
-            using (var op = Logger.BeginOperation(LogLevel.Trace, "Filtering library items"))
+            logger.LogDebug("Filtering {Count} library item(s)", items.Count());
+            
+            using (var op = Logger.BeginDebugOperation("Filtering library items"))
             {
                 if (!String.IsNullOrWhiteSpace(Filter.Title))
                     items = items.Where(i => i.Name?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -123,6 +127,8 @@ namespace LANCommander.Launcher.Services
 
         public async Task ApplyFilter()
         {
+            logger.LogDebug("Applying filter");
+            
             await libraryService.FilterChanged();
 
             await SaveSettingsAsync();
@@ -130,6 +136,8 @@ namespace LANCommander.Launcher.Services
 
         public async Task ResetFilter()
         {
+            logger.LogDebug("Resetting filter");
+            
             Filter = new LibraryFilterModel();
 
             await libraryService.FilterChanged();
@@ -139,6 +147,8 @@ namespace LANCommander.Launcher.Services
 
         void LoadSettings()
         {
+            logger.LogDebug("Loading filter settings");
+            
             Filter.Title = settingsProvider.CurrentValue.Filter.Title;
             Filter.GroupBy = settingsProvider.CurrentValue.Filter.GroupBy;
             Filter.Engines = settingsProvider.CurrentValue.Filter.Engines != null ? Engines?.Where(e => settingsProvider.CurrentValue.Filter.Engines.Contains(e.Name)).ToList() : null;
@@ -154,6 +164,8 @@ namespace LANCommander.Launcher.Services
 
         async Task SaveSettingsAsync()
         {
+            logger.LogDebug("Saving filter settings");
+            
             settingsProvider.Update(s =>
             {
                 s.Filter.Title = Filter.Title;

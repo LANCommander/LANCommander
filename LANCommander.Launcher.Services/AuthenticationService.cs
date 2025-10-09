@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,8 @@ public class AuthenticationService(
     {
         try
         {
+            logger.LogDebug("Checking if server is online");
+            
             return await client.Connection.PingAsync();
         }
         catch
@@ -41,72 +44,93 @@ public class AuthenticationService(
 
     public async Task Login()
     {
-        await Login(settingsProvider.CurrentValue.Authentication.ServerAddress, new SDK.Models.AuthToken
+        using (var op = logger.BeginDebugOperation("Logging in using stored credentials"))
         {
-            AccessToken = settingsProvider.CurrentValue.Authentication.AccessToken,
-            RefreshToken = settingsProvider.CurrentValue.Authentication.RefreshToken,
-        });
+            await Login(settingsProvider.CurrentValue.Authentication.ServerAddress, new SDK.Models.AuthToken
+            {
+                AccessToken = settingsProvider.CurrentValue.Authentication.AccessToken,
+                RefreshToken = settingsProvider.CurrentValue.Authentication.RefreshToken,
+            });
+            
+            op.Complete();
+        }
     }
     
     public async Task Login(Uri serverAddress, string username, string password)
     {
-        await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
+        using (var op = logger.BeginDebugOperation("Logging in using username/password"))
+        {
+            await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
 
-        var token = await client.Authentication.AuthenticateAsync(username, password, serverAddress);
+            var token = await client.Authentication.AuthenticateAsync(username, password, serverAddress);
 
-        await Login(serverAddress, token);
+            await Login(serverAddress, token);
+            
+            op.Complete();
+        } 
     }
 
     public async Task Login(Uri serverAddress, SDK.Models.AuthToken token)
     {
         try
         {
-            await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
-
-            tokenProvider.SetToken(token.AccessToken);
-
-            if (await client.Authentication.ValidateTokenAsync())
+            using (var op = logger.BeginDebugOperation("Logging in using token"))
             {
-                //SetOfflineMode(false);
-                TemporarilyOffline = false;
+                await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
 
-                settingsProvider.Update(s =>
+                tokenProvider.SetToken(token.AccessToken);
+
+                if (await client.Authentication.ValidateTokenAsync())
                 {
-                    s.Authentication.ServerAddress = serverAddress;
-                    s.Authentication.AccessToken = token.AccessToken;
-                    s.Authentication.RefreshToken = token.RefreshToken;
-                });
+                    //SetOfflineMode(false);
+                    TemporarilyOffline = false;
 
-                var user = await client.Profile.GetAsync();
+                    settingsProvider.Update(s =>
+                    {
+                        s.Authentication.ServerAddress = serverAddress;
+                        s.Authentication.AccessToken = token.AccessToken;
+                        s.Authentication.RefreshToken = token.RefreshToken;
+                    });
 
-                OnLogin?.Invoke(this, EventArgs.Empty);
+                    var user = await client.Profile.GetAsync();
+
+                    OnLogin?.Invoke(this, EventArgs.Empty);
+                }
+                
+                op.Complete();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error while logging in");
         }
     }
 
     public async Task Register(string username, string password, string passwordConfirmation)
     {
-        if (String.IsNullOrWhiteSpace(username))
-            throw new Exception("Username cannot be blank");
-
-        if (String.IsNullOrWhiteSpace(password))
-            throw new Exception("Password cannot be blank");
-
-        if (password != passwordConfirmation)
-            throw new Exception("Passwords do not match");
-
-        await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
-
-        settingsProvider.Update(s =>
+        using (var op = logger.BeginDebugOperation("Registering using username/password"))
         {
-            s.Authentication.ServerAddress = client.Connection.GetServerAddress();
-            s.Authentication.AccessToken = tokenProvider.GetToken();
-        });
+            if (String.IsNullOrWhiteSpace(username))
+                throw new Exception("Username cannot be blank");
+
+            if (String.IsNullOrWhiteSpace(password))
+                throw new Exception("Password cannot be blank");
+
+            if (password != passwordConfirmation)
+                throw new Exception("Passwords do not match");
+
+            await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
+
+            settingsProvider.Update(s =>
+            {
+                s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+                s.Authentication.AccessToken = tokenProvider.GetToken();
+            });
         
-        OnRegister?.Invoke(this, EventArgs.Empty);
+            OnRegister?.Invoke(this, EventArgs.Empty);
+            
+            op.Complete();
+        }
     }
 
     public void LoginOffline()
@@ -116,6 +140,7 @@ public class AuthenticationService(
 
     public async Task SetOfflineModeAsync(bool state)
     {
+        logger.LogDebug("Going into offline mode, state: {State}", state);
         await client.Connection.EnableOfflineModeAsync();
 
         if (state)
@@ -124,11 +149,16 @@ public class AuthenticationService(
 
     public async Task Logout()
     {
-        await client.Authentication.LogoutAsync();
+        using (var op = logger.BeginDebugOperation("Logging out"))
+        {
+            await client.Authentication.LogoutAsync();
 
-        TemporarilyOffline = false;
+            TemporarilyOffline = false;
         
-        OnLogout?.Invoke(this, EventArgs.Empty);
+            OnLogout?.Invoke(this, EventArgs.Empty);
+            
+            op.Complete();
+        }
     }
 
     public Guid GetUserId()

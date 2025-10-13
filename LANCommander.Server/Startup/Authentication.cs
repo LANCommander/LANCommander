@@ -58,22 +58,17 @@ public static class Authentication
         if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
             return authBuilder;
         
+        
+        
         return authBuilder.AddOpenIdConnect(authenticationProvider.Slug, authenticationProvider.Name, options =>
         {
             options.ClientId = authenticationProvider.ClientId;
             options.ClientSecret = authenticationProvider.ClientSecret;
-            options.Authority = authenticationProvider.Authority;
+            options.MetadataAddress = authenticationProvider.ConfigurationUrl;
             options.ResponseType = OpenIdConnectResponseType.Code;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = false
-            };
-
-            options.Configuration = new OpenIdConnectConfiguration
-            {
-                AuthorizationEndpoint = authenticationProvider.AuthorizationEndpoint,
-                TokenEndpoint = authenticationProvider.TokenEndpoint,
-                UserInfoEndpoint = authenticationProvider.UserInfoEndpoint,
             };
 
             // Callbacks for middleware to properly correlate

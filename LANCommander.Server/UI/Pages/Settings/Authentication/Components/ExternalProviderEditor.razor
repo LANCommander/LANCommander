@@ -76,22 +76,27 @@
                         <FormItem Label="Client Secret">
                             <InputPassword @bind-Value="context.ClientSecret"/>
                         </FormItem>
+                        
+                        @if (context.Type == AuthenticationProviderType.OAuth2)
+                        {
+                            <FormItem Label="Authorization Endpoint">
+                                <Input @bind-Value="context.AuthorizationEndpoint"/>
+                            </FormItem>
 
-                        <FormItem Label="Authority">
-                            <Input @bind-Value="context.Authority"/>
-                        </FormItem>
+                            <FormItem Label="Token Endpoint">
+                                <Input @bind-Value="context.TokenEndpoint"/>
+                            </FormItem>
 
-                        <FormItem Label="Authorization Endpoint">
-                            <Input @bind-Value="context.AuthorizationEndpoint"/>
-                        </FormItem>
-
-                        <FormItem Label="Token Endpoint">
-                            <Input @bind-Value="context.TokenEndpoint"/>
-                        </FormItem>
-
-                        <FormItem Label="User Info Endpoint">
-                            <Input @bind-Value="context.UserInfoEndpoint"/>
-                        </FormItem>
+                            <FormItem Label="User Info Endpoint">
+                                <Input @bind-Value="context.UserInfoEndpoint"/>
+                            </FormItem>
+                        }
+                        else if (context.Type == AuthenticationProviderType.OpenIdConnect)
+                        {
+                            <FormItem Label="Configuration Endpoint">
+                                <Input @bind-Value="context.ConfigurationUrl"/>
+                            </FormItem>
+                        }
 
                         <FormItem Label="Scopes">
                             <ScopesEditor @bind-Values="context.Scopes"/>
@@ -153,8 +158,6 @@
 
     async Task UseTemplate(AuthenticationProvider authenticationProvider, AuthenticationProvider template)
     {
-        authenticationProvider.Authority = template.Authority;
-        authenticationProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
         authenticationProvider.ClaimMappings = template.ClaimMappings;
         authenticationProvider.ClientId = template.ClientId;
         authenticationProvider.ClientSecret = template.ClientSecret;
@@ -163,6 +166,8 @@
         authenticationProvider.Icon = template.Icon;
         authenticationProvider.Name = template.Name;
         authenticationProvider.Scopes = template.Scopes;
+        authenticationProvider.ConfigurationUrl = template.ConfigurationUrl;
+        authenticationProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
         authenticationProvider.TokenEndpoint = template.TokenEndpoint;
         authenticationProvider.UserInfoEndpoint = template.UserInfoEndpoint;
 

@@ -44,7 +44,11 @@
     </TitleExtraTemplate>
 
     <ChildContent>
-        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+        <Form
+            @ref="_form"
+            Model="@context"
+            Layout="@FormLayout.Vertical"
+            Context="formContext">
             <FormItem Label="Title">
                 <GameMetadataLookup
                     ButtonText="Lookup"
@@ -80,7 +84,7 @@
             </FormItem>
             @if (context.Type != GameType.MainGame)
             {
-                <FormItem Label="Base Game">
+                <FormItem Label="Base Game" Rules="@(new[] { new FormValidationRule { Required = true } })">
                     <Flex Gap="FlexGap.Small" Wrap="FlexWrap.NoWrap">
                         <Select TItem="Game"
                                 TItemValue="Guid?"
@@ -170,6 +174,8 @@
 
     private GameMetadataLookup? GameMetadataLookup;
 
+    Form<Game> _form;
+
     protected override async Task OnParametersSetAsync()
     {
         if (!Loaded)
@@ -199,20 +205,27 @@
     {
         try
         {
-            if (game.Id != Guid.Empty)
+            if (_form.Validate())
             {
-                game.BaseGame = null; // clearing base game, model setup will write the BaseGameId value, referenced model will be loaded on update/get
-                game = await GameService.UpdateAsync(game);
+                if (game.Id != Guid.Empty)
+                {
+                    game.BaseGame = null; // clearing base game, model setup will write the BaseGameId value, referenced model will be loaded on update/get
+                    game = await GameService.UpdateAsync(game);
 
-                await MessageService.SuccessAsync("Game updated!");
+                    await MessageService.SuccessAsync("Game updated!");
+                }
+                else
+                {
+                    game = await GameService.AddAsync(game);
+
+                    NavigationManager.LocationChanged += NotifyGameAdded;
+
+                    NavigationManager.NavigateTo($"/Games/{game.Id}");
+                }
             }
             else
             {
-                game = await GameService.AddAsync(game);
-
-                NavigationManager.LocationChanged += NotifyGameAdded;
-
-                NavigationManager.NavigateTo($"/Games/{game.Id}");
+                MessageService.Error("Could not save! Check fields and try again");
             }
         }
         catch (Exception ex)

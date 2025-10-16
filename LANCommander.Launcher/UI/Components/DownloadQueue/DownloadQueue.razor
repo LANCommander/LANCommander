@@ -3,11 +3,12 @@
 @inject InstallService InstallService
 @inject LibraryService LibraryService
 @inject GameClient GameClient
-@inject SettingsProvider<Settings> SettingsProvider
+@inject SettingsProvider<Models.Settings> SettingsProvider
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
 @inject ConfirmService ConfirmService
 @inject ModalService ModalService
+@namespace LANCommander.Launcher.UI
 
 <Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
@@ -26,6 +27,8 @@
                 <div class="queue-item-current-download">
                     <CurrentDownloadItem />
                 </div>
+                
+                <Button Type="ButtonType.Text" Danger Icon="@IconType.Outline.Close" OnClick="() => Cancel(queueItem)" />
             </div>
         }
     }
@@ -92,6 +95,11 @@
         {
             StateHasChanged();
         };
+    }
+    
+    async Task Cancel(IInstallQueueItem queueItem)
+    {
+        await InstallService.CancelInstallAsync(queueItem.Id);
     }
 
     async Task Remove(IInstallQueueItem queueItem)

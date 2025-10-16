@@ -26,5 +26,6 @@ namespace LANCommander.Launcher.Models
         double TransferSpeed { get; set; }
         long BytesDownloaded { get; set; }
         long TotalBytes { get; set; }
+        CancellationTokenSource CancellationToken { get; set; }
     }
 }

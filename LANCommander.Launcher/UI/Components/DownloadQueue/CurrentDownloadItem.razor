@@ -1,9 +1,9 @@
 ﻿@using LANCommander.Launcher.Models
+@using LANCommander.SDK.Enums
 @using LANCommander.SDK.Services
-@using RedistributableService = LANCommander.Launcher.Services.RedistributableService
-@using GameService = LANCommander.Launcher.Services.GameService
+@namespace LANCommander.Launcher.UI
 @inject InstallService InstallService
-@inject SDK.Client Client
+@inject LocalizationService LocalizationService
 
 @if (CurrentQueueItem != null)
 {
@@ -34,11 +34,20 @@
                 }
             </div>
             <div class="downloader-current-progress">
-                <Progress Percent="(Progress.Progress * 100)" />
+                <Progress Percent="(Progress.Progress * 100)"/>
             </div>
             <div class="downloader-current-lower">
                 <div class="downloader-current-lower-data">
-                    <ByteSize Value="Progress.BytesTransferred" /> / <ByteSize Value="Progress.TotalBytes" />
+                    @if (Progress.Status == InstallStatus.Canceled)
+                    {
+                        LocalizationService.GetString("Cancelling");
+                    }
+                    else
+                    {
+                        <Text>
+                            <ByteSize Value="Progress.BytesTransferred"/> / <ByteSize Value="Progress.TotalBytes"/>
+                        </Text>
+                    }
                 </div>
                 <div class="downloader-current-lower-speed">
                     <ByteSize Value="Progress.TransferSpeed" />/s
@@ -49,9 +58,9 @@
 }
 
 @code {
-    [Parameter] public bool ShowIcon { get; set; }
-
-    IInstallQueueItem CurrentQueueItem = null;
+    [Parameter] public bool ShowIcon { get; set; } 
+    [Parameter] public IInstallQueueItem CurrentQueueItem { get; set; }
+    [Parameter] public EventCallback<IInstallQueueItem> CurrentQueueItemChanged { get; set; }
 
     InstallProgress Progress = new();
 
@@ -60,6 +69,13 @@
         InstallService.OnProgress += async (progress) =>
         {
             Progress = progress;
+
+            if (Progress.Status == InstallStatus.Canceled)
+            {
+                Progress.TransferSpeed = 0;
+                Progress.Progress = 1;
+                Progress.Indeterminate = true;
+            }
 
             if (Progress.Progress < 0)
                 Progress.Progress = 0;
@@ -70,10 +86,18 @@
 
         InstallService.OnQueueChanged += async () =>
         {
-            CurrentQueueItem = InstallService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+            var activeQueueItem = InstallService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
-            await InvokeAsync(StateHasChanged);
-            await Task.Yield();
+            if (CurrentQueueItem == null || CurrentQueueItem.Id != activeQueueItem.Id)
+            {
+                CurrentQueueItem = activeQueueItem;
+
+                if (CurrentQueueItemChanged.HasDelegate)
+                    await CurrentQueueItemChanged.InvokeAsync(CurrentQueueItem);
+                
+                await InvokeAsync(StateHasChanged);
+                await Task.Yield();
+            }
         };
     }
 }

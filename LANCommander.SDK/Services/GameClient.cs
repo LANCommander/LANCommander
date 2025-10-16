@@ -363,7 +363,7 @@ namespace LANCommander.SDK.Services
         /// <exception cref="Exception">
         /// Thrown if installation fails after the maximum retry attempts.
         /// </exception>
-        public async Task<InstallResult> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10)
+        public async Task<InstallResult> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10, CancellationToken cancellationToken = default)
         {
             var installResult = new InstallResult(installDirectory, gameId);
             var gameFileList = installResult.FileList;
@@ -394,7 +394,7 @@ namespace LANCommander.SDK.Services
 
                 if (!Directory.Exists(destination))
                 {
-                    var baseGameFileList = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts);
+                    var baseGameFileList = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts, cancellationToken);
                     destination = installResult.InstallDirectory;
                 }
             }
@@ -416,7 +416,7 @@ namespace LANCommander.SDK.Services
             {
                 logger?.LogTrace("Attempting to download and extract game");
 
-                return await Task.Run(async () => await DownloadAndExtractAsync(game, destination));
+                return await Task.Run(async () => await DownloadAndExtractAsync(game, destination, cancellationToken));
             });
 
             if (!result.Success && !result.Canceled)
@@ -939,7 +939,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default)
         {
             if (game == null)
             {
@@ -970,6 +970,17 @@ namespace LANCommander.SDK.Services
                 {
                     _reader.EntryExtractionProgress += (sender, e) =>
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            _reader.Cancel();
+                            
+                            _installProgress.Status = InstallStatus.Canceled;
+                            
+                            OnInstallProgressUpdate?.Invoke(_installProgress);
+
+                            return;
+                        }
+                        
                         if (monitor.CanUpdate())
                         {
                             monitor.Update(stream.Position);
@@ -980,7 +991,6 @@ namespace LANCommander.SDK.Services
                             _installProgress.TimeRemaining = monitor.GetTimeRemaining();
                             
                             OnInstallProgressUpdate?.Invoke(_installProgress);
-
                         }
                         
                         // Do we need this granular of control? If so, invocations should be rate limited

@@ -1,4 +1,5 @@
-﻿@inject InstallService InstallService
+﻿@using LANCommander.Launcher.Models
+@inject InstallService InstallService
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
 @inject IJSRuntime JS
@@ -31,9 +32,13 @@
         <Online>
             @if (InstallService.Queue.Any(qi => qi.State))
             {
-                <div class="downloader" @onclick="() => ShowDownloadQueue()" style="flex-shrink: 0;">
-                    <CurrentDownloadItem ShowIcon="true"/>
-                </div>
+                <Flex Align="FlexAlign.Center" Style="flex-shrink: 0" Class="downloader">
+                    <div class="downloader" @onclick="ShowDownloadQueue">
+                        <CurrentDownloadItem ShowIcon="true" @bind-CurrentQueueItem="_currentQueueItem"/>
+                    </div>
+                    
+                    <Button OnClick="Cancel" Type="ButtonType.Text" Size="ButtonSize.Small" Danger Icon="@IconType.Outline.Close"/>
+                </Flex>
             }
             else
             {
@@ -58,6 +63,8 @@
     [CascadingParameter] public bool Connected { get; set; }
 
     bool DownloadQueueVisible = false;
+    
+    IInstallQueueItem _currentQueueItem { get; set; }
 
     DownloadQueue DownloadQueue;
 
@@ -67,6 +74,11 @@
         {
             await InvokeAsync(StateHasChanged);
         };
+    }
+    
+    async Task Cancel()
+    {
+        await InstallService.CancelInstallAsync(_currentQueueItem.Id);
     }
 
     async Task ShowDownloadQueue()

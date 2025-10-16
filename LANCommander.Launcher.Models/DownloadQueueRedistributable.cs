@@ -45,6 +45,7 @@ namespace LANCommander.Launcher.Models
         public double TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public long BytesDownloaded { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public long TotalBytes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public CancellationTokenSource CancellationToken { get; set; } = new();
 
         public DownloadQueueRedistributable(SDK.Models.Redistributable redistributable)
         {

@@ -53,6 +53,7 @@ namespace LANCommander.Launcher.Models
         public double TransferSpeed { get; set; }
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }
+        public CancellationTokenSource CancellationToken { get; set; } = new();
 
         public InstallQueueGame(SDK.Models.Game game)
         {

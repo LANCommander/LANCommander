@@ -167,9 +167,17 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task CancelInstall()
+        public async Task CancelInstallAsync(Guid queueItemId)
         {
-
+            var queueItem = Queue.FirstOrDefault(i => i.Id == queueItemId);
+            
+            await queueItem.CancellationToken.CancelAsync();
+            
+            queueItem.Status = InstallStatus.Canceled;
+            
+            OnQueueChanged?.Invoke();
+            
+            Logger?.LogTrace("Canceling install queue item {QueueItem}", queueItem.Title);
         }
 
         public async Task Next()
@@ -254,7 +262,7 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    var gameFileList = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds);
+                    var gameFileList = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds, cancellationToken: currentItem.CancellationToken.Token);
                     installDirectory = gameFileList.InstallDirectory;
                     UpdateGameState(currentItem, localGame, installDirectory);
                 }

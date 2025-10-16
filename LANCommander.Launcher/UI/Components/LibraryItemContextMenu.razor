@@ -9,6 +9,8 @@
 @inject LibraryService LibraryService
 @inject InstallService InstallService
 @inject ModalService ModalService
+@inject MessageService MessageService
+@inject ILogger<LibraryItemContextMenu> Logger
 @inject SDK.Client Client
 @inject IConnectionClient ConnectionClient
 @inject LocalizationService LocalizationService
@@ -141,9 +143,18 @@ else
         await task;
     }
 
-    async Task BrowseFiles()
+    void BrowseFiles()
     {
-        Process.Start("explorer", Game.InstallDirectory);
+        try
+        {
+            if (!SystemService.TryBrowseFiles(Game.InstallDirectory))
+                MessageService.Error("Could not open file manager!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening file manager to {Path}", Game.InstallDirectory);
+            MessageService.Error("Could not open file manager!");
+        }
     }
 
     async Task Install()

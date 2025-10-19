@@ -13,6 +13,11 @@ using Serilog;
 
 namespace LANCommander.Server.Startup;
 
+public class AuthenticationFailure
+{
+    public const string CallbackUrlMismatch = "Correlation failed.";
+}
+
 public static class Authentication
 {
     public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder, Settings settings)
@@ -94,8 +99,17 @@ public static class Authentication
             options.Events.OnRemoteFailure = async context =>
             {
                 context.Response.Redirect("/Login");
-                
-                Log.Error(context.Failure, "OIDC authentication failed");
+
+                switch (context.Failure?.Message)
+                {
+                    case AuthenticationFailure.CallbackUrlMismatch:
+                        Log.Error(context.Failure, "The identity provider is not configured for the callback URL {CallbackUrl}", $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}{context.Request.Path}{context.Request.QueryString}");
+                        break;
+                    
+                    default:
+                        Log.Error(context.Failure, "OIDC authentication failed");
+                        break;
+                }
 
                 await context.Response.CompleteAsync();
             };

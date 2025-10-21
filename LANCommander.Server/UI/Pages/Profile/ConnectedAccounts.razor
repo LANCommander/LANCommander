@@ -30,14 +30,9 @@
                     }
                     else
                     {
-                        <form method="post" action="/AccountLink">
-                            <input type="hidden" name="providerSlug" value="@context.Slug" />
-                            <input type="hidden" name="returnUrl" value="@NavigationManager.Uri" />
-
-                            <button class="ant-btn ant-btn-primary" type="submit">
-                                <span>Link</span>
-                            </button>
-                        </form>
+                        <Button Type="@ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/AccountLink?Provider={context.Slug}&ReturnUrl={NavigationManager.Uri}", true))">
+                            Link
+                        </Button>
                     }
                 }
             </Flex>

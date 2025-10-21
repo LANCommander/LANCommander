@@ -21,6 +21,7 @@ public static class Endpoints
         
         app.UseEndpoints(endpoints =>
         {
+            endpoints.MapAuthenticationEndpoints();
             endpoints.MapChatEndpoints();
             endpoints.MapDownloadEndpoints();
             endpoints.MapSaveEndpoints();

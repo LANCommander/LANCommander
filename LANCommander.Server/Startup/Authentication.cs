@@ -58,8 +58,6 @@ public static class Authentication
         if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
             return authBuilder;
         
-        
-        
         return authBuilder.AddOpenIdConnect(authenticationProvider.Slug, authenticationProvider.Name, options =>
         {
             options.ClientId = authenticationProvider.ClientId;
@@ -70,7 +68,27 @@ public static class Authentication
             {
                 ValidateIssuer = false
             };
+            
+            options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
+            if (options.MetadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.NonceCookie.SameSite = SameSiteMode.None;
+                
+                options.ResponseMode = OpenIdConnectResponseMode.Query;
+            }
+            else
+            {
+                options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+                options.NonceCookie.SameSite = SameSiteMode.Lax;
+                options.NonceCookie.SecurePolicy = CookieSecurePolicy.None;
+                
+                options.ResponseMode = OpenIdConnectResponseMode.Query;
+            }
+                
             // Callbacks for middleware to properly correlate
             options.CallbackPath = new PathString($"/SignInOIDC");
             options.SignedOutCallbackPath = new PathString($"/SignOutOIDC");

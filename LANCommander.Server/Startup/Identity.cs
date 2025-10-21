@@ -60,8 +60,8 @@ public static class Identity
         
         builder.Services.Configure<CookiePolicyOptions>(options =>
         {
-            options.Secure = settings.Authentication.CookieSecurePolicy;
-            options.MinimumSameSitePolicy = settings.Authentication.MinimumSameSitePolicy;
+            options.Secure = CookieSecurePolicy.SameAsRequest;
+            options.MinimumSameSitePolicy = SameSiteMode.Lax;
         });
 
         builder.Services.ConfigureApplicationCookie(options =>
@@ -69,6 +69,8 @@ public static class Identity
             options.LoginPath = "/Login";
             options.LogoutPath = "/Logout";
             options.AccessDeniedPath = "/AccessDenied";
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Cookie.SameSite = SameSiteMode.Lax;
         });
 
         return builder;

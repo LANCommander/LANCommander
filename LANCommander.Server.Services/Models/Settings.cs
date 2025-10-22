@@ -116,9 +116,26 @@ namespace LANCommander.Server.Services.Models
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
-        public SameSiteMode MinimumSameSitePolicy { get; set; } = SameSiteMode.Lax;
-        public CookieSecurePolicy CookieSecurePolicy { get; set; } = CookieSecurePolicy.SameAsRequest;
+
+        public CookiePolicy HttpCookiePolicy { get; set; } = new()
+        {
+            SameSite = SameSiteMode.Lax,
+            Secure = CookieSecurePolicy.None
+        };
+
+        public CookiePolicy HttpsCookiePolicy { get; set; } = new()
+        {
+            SameSite = SameSiteMode.None,
+            Secure = CookieSecurePolicy.SameAsRequest
+        };
+        
         public IEnumerable<AuthenticationProvider> AuthenticationProviders { get; set; } = new List<AuthenticationProvider>();
+    }
+
+    public class CookiePolicy
+    {
+        public SameSiteMode SameSite { get; set; } = SameSiteMode.None;
+        public CookieSecurePolicy Secure { get; set; } = CookieSecurePolicy.SameAsRequest;
     }
 
     public class AuthenticationProvider

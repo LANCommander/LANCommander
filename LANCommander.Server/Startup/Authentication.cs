@@ -68,23 +68,29 @@ public static class Authentication
             {
                 ValidateIssuer = false
             };
+
+            var settings = SettingService.GetSettings();
             
             options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
             if (options.MetadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                options.CorrelationCookie.SameSite = SameSiteMode.None;
-                options.NonceCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
+                options.CorrelationCookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
+                
+                options.NonceCookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
+                options.NonceCookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
                 
                 options.ResponseMode = OpenIdConnectResponseMode.Query;
             }
             else
             {
-                options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
-                options.NonceCookie.SameSite = SameSiteMode.Lax;
-                options.NonceCookie.SecurePolicy = CookieSecurePolicy.None;
+                options.CorrelationCookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
+                options.CorrelationCookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
+                
+                options.NonceCookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
+                options.NonceCookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
                 
                 options.ResponseMode = OpenIdConnectResponseMode.Query;
             }

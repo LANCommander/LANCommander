@@ -60,8 +60,16 @@ public static class Identity
         
         builder.Services.Configure<CookiePolicyOptions>(options =>
         {
-            options.Secure = CookieSecurePolicy.SameAsRequest;
-            options.MinimumSameSitePolicy = SameSiteMode.Lax;
+            if (settings.UseSSL)
+            {
+                options.Secure = settings.Authentication.HttpsCookiePolicy.Secure;
+                options.MinimumSameSitePolicy = settings.Authentication.HttpsCookiePolicy.SameSite;
+            }
+            else
+            {
+                options.Secure = settings.Authentication.HttpCookiePolicy.Secure;
+                options.MinimumSameSitePolicy = settings.Authentication.HttpCookiePolicy.SameSite;
+            }
         });
 
         builder.Services.ConfigureApplicationCookie(options =>
@@ -69,8 +77,17 @@ public static class Identity
             options.LoginPath = "/Login";
             options.LogoutPath = "/Logout";
             options.AccessDeniedPath = "/AccessDenied";
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-            options.Cookie.SameSite = SameSiteMode.Lax;
+            
+            if (settings.UseSSL)
+            {
+                options.Cookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
+                options.Cookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
+            }
+            else
+            {
+                options.Cookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
+                options.Cookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
+            }
         });
 
         return builder;

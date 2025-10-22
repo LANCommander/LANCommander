@@ -44,14 +44,26 @@
         </FormItem>
 
         <Divider Text="Security" />
-
-        <FormItem Label="Minimum Same Site Cookie Policy">
-            <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.MinimumSameSitePolicy" />
-        </FormItem>
-
-        <FormItem Label="Cookie Secure Policy">
-            <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.CookieSecurePolicy" />
-        </FormItem>
+        
+        <Collapse>
+            <Panel Header="HTTP">
+                <FormItem Label="Minimum Same Site Cookie Policy">
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.HttpCookiePolicy.SameSite" />
+                </FormItem>
+                <FormItem Label="Cookie Secure Policy">
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.HttpCookiePolicy.Secure" />
+                </FormItem>
+            </Panel>
+            
+            <Panel Header="HTTPS">
+                <FormItem Label="Minimum Same Site Cookie Policy">
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.HttpsCookiePolicy.SameSite" />
+                </FormItem>
+                <FormItem Label="Cookie Secure Policy">
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.HttpsCookiePolicy.Secure" />
+                </FormItem>
+            </Panel>
+        </Collapse>
     </Form>
 
     <Divider Text="External Providers" />

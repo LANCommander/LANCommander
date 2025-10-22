@@ -17,7 +17,8 @@ public class KeepAliveService : BaseService
     private readonly int _retryInterval = 1000;
 
     private int _retryCount;
-    private readonly int _maxRetries = 10;
+    private readonly int _maxRetries = 30;
+    private readonly int _retryGracePeriod = 10;
 
     private bool _connectionLost = false;
     private bool _isCheckConnectionActive = false;
@@ -87,8 +88,6 @@ public class KeepAliveService : BaseService
 
                 _connectionLost = true;
 
-                ConnectionSevered?.Invoke(this, EventArgs.Empty);
-
                 _retryConnectionTimer = new Timer(_retryInterval);
                 _retryConnectionTimer.Elapsed += RetryConnection!;
                 _retryConnectionTimer.AutoReset = false;
@@ -125,6 +124,9 @@ public class KeepAliveService : BaseService
                 _retryCount++;
                 _retryConnectionTimer?.Start();
                 ConnectionRetryNext?.Invoke(this, EventArgs.Empty);
+                
+                if (_retryCount == _retryGracePeriod)
+                    ConnectionSevered?.Invoke(this, EventArgs.Empty);
 
                 if (_retryCount == _maxRetries)
                 {

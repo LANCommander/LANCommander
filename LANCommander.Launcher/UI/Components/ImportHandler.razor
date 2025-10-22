@@ -55,9 +55,10 @@
             Importing = true;
             ImportStatusIndex = 0;
             ImportStatusTotal = 0;
-            NotifyProgress(ImportProgressState.Importing);
-
+            
+            await InvokeAsync(() => NotifyProgress(ImportProgressState.Importing));
             await InvokeAsync(StateHasChanged);
+            
             MessageService.Info(LocalizationService.GetString("ImportStarted"), 2.5);
 
             Logger?.LogInformation("Starting import");
@@ -66,12 +67,12 @@
         }
     }
 
-    private void NotifyProgress(ImportProgressState state)
+    private async Task NotifyProgress(ImportProgressState state)
     {
         if (!Progress.HasDelegate)
             return;
 
-        Progress.InvokeAsync(new ImportProgressEventArgs
+        await Progress.InvokeAsync(new ImportProgressEventArgs
         {
             State = state,
             Index = ImportStatusIndex,

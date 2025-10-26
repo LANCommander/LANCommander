@@ -1,15 +1,29 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Models;
-using LANCommander.SDK.Rpc.Client;
 
 namespace LANCommander.SDK.Services;
 
 public class ChatClient
 {
+    public static Func<ChatThread, Task> OnAddedToThreadAsync { get; set; }
+    public static Func<Guid, ChatMessage[], Task> OnReceivedMessagesAsync { get; set; }
+    public static Func<Guid, ChatMessage, Task> OnReceivedMessageAsync { get; set; }
+    public static Func<Guid, string, Task> OnStartTypingAsync { get; set; }
+    public static Func<Guid, string, Task> OnStopTypingAsync { get; set; }
+
+    public ChatClient()
+    {
+        OnAddedToThreadAsync = AddedToThreadAsync;
+        OnReceivedMessageAsync = ReceiveMessageAsync;
+        OnReceivedMessagesAsync = ReceiveMessagesAsync;
+        OnStartTypingAsync = StartTypingAsync;
+        OnStopTypingAsync = StopTypingAsync;
+    }
+
     private readonly Dictionary<Guid, ChatThread> _threads = new();
+
     public ChatThread GetThread(Guid threadId)
     {
         return _threads[threadId];
@@ -17,8 +31,7 @@ public class ChatClient
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
-        var threadId = Guid.NewGuid();
-        // var threadId = await rpc.Server.Chat_StartThreadAsync(userIdentifiers.ToArray());
+        var threadId = Guid.NewGuid(); // await rpc.Chat.StartThreadAsync(userIdentifiers.ToArray());
 
         if (threadId != Guid.Empty)
             _threads[threadId] = new ChatThread
@@ -38,9 +51,9 @@ public class ChatClient
     {
         var threads = new List<ChatThread>();
         //var threads = await rpc.Server.Chat_GetThreadsAsync();
-        
+
         _threads.Clear();
-        
+
         foreach (var thread in threads)
             _threads[thread.Id] = thread;
 
@@ -69,15 +82,5 @@ public class ChatClient
     {
         if (_threads.TryGetValue(threadId, out var thread))
             thread.StopTyping(userId);
-    }
-
-    public async Task GetMessagesAsync(Guid threadId)
-    {
-        //await rpc.Server.Chat_GetMessagesAsync(threadId);
-    }
-
-    public async Task SendMessageAsync(Guid threadId, string contents)
-    {
-        //await rpc.Server.Chat_SendMessageAsync(threadId, contents);
     }
 }

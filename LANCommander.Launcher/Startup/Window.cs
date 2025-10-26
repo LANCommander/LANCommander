@@ -22,6 +22,7 @@ public static class MainWindow
     {
         app.MainWindow
             .SetTitle("LANCommander Launcher")
+            .RegisterWebMessageReceivedHandler(ChatWindowMessageDelegate)
             .SetChromeless(true);
 
         app.MainWindow.WindowClosing += SaveWindowPosition;
@@ -100,37 +101,17 @@ public static class MainWindow
         return app;
     }
 
-    public static PhotinoBlazorApp RegisterChatWindow(this PhotinoBlazorApp app)
+    static void ChatWindowMessageDelegate(object sender, string message)
     {
-        app.MainWindow.RegisterWebMessageReceivedHandler(async (object sender, string message) =>
+        var parent = (PhotinoWindow)sender;
+
+        if (message == "openChat")
         {
-            if (message == "openChat")
-            {
-                var builder = PhotinoBlazorAppBuilder.CreateDefault();
-                
-                builder.RootComponents.Add<App>("app");
-                
-                builder.Services.AddCustomWindow();
-                builder.Services.AddAntDesign();
-                builder.Services.AddSingleton<LocalizationService>();
-                
-                builder.Services.AddLANCommanderLauncher(options =>
-                {
-                    //options.ServerAddress = settings.Authentication.ServerAddress;
-                    //options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
-                });
-                
-                var app = builder.Build();
-
-                app.MainWindow
-                    .SetTitle("LANCommander Chat")
-                    .Load("wwwroot/index.html");
-
-                app.Run();
-            }
-        });
-
-        return app;
+            new PhotinoWindow(parent)
+                .SetTitle("LANCommander Chat")
+                .Load("wwwroot/index.html")
+                .WaitForClose();
+        }
     }
 
     public static PhotinoBlazorApp RestoreWindowPosition(this PhotinoBlazorApp app)

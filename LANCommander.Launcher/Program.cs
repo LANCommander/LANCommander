@@ -10,6 +10,7 @@ using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Web;
+using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Startup;
 using LANCommander.SDK.Abstractions;
@@ -41,65 +42,12 @@ namespace LANCommander.Launcher
             
             Logger?.Information("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
 
-            var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-            
-            builder.AddLogging();
-            
-            #if DEBUG
-            builder.AddAspire();
-            #endif
-            
-            builder.RootComponents.Add<App>("app");
-            
-            builder.Services.AddCustomWindow();
-            builder.Services.AddAntDesign();
-            builder.Services.AddSingleton<LocalizationService>();
-            builder.Services.AddLANCommanderClient<Settings>();
-            builder.Services.AddLANCommanderLauncher(options =>
+            WindowService.CreateWindow<UI.App_Main>(new WindowOptions
             {
-                options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
-            });
-
-            #region Build Application
-            Logger?.Debug("Building application");
-
-            var app = builder.Build();
-
-            app
-                .RegisterMainWindow()
-                .RegisterMediaHandler()
-                .RegisterChatWindow()
-                .RestoreWindowPosition();
-            #endregion
-
-            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
-            {
-                app.MainWindow.ShowMessage("Fatal Exception", error.ExceptionObject.ToString());
-            };
-
-            app.Services.InitializeLANCommander();
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                SystemService.RegisterCustomScheme();
-
-            if (!app.ParseCommandLine(args))
-            {
-                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>()!;
-                var tokenProvider = app.Services.GetService<ITokenProvider>()!;
-                
-                tokenProvider.SetToken(settingsProvider.CurrentValue.Authentication.AccessToken);
-                
-                settingsProvider.Update(s => s.LaunchCount++);
-
-                Logger?.Debug("Starting application!");
-
-                app.Run();
-
-                Logger?.Debug("Closing application");
-            }
+                Title = "LANCommander",
+                Type = WindowType.Main
+            }, null, null, args);
         }
-
-
 
         /// <summary>
         /// Maps Microsoft.Extensions.Logging.LogLevel to Serilog.Events.LogEventLevel.

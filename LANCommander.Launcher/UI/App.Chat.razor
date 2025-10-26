@@ -1,0 +1,14 @@
+﻿@using Photino.Blazor.CustomWindow.Components
+@inject LocalizationService LocalizationService
+
+<CustomWindow HeaderHeight="37">
+    <WindowContent>
+        <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
+            <Body>
+                <Chat />
+            
+                <AntContainer/>
+            </Body>
+        </ErrorHandler>
+    </WindowContent>
+</CustomWindow>

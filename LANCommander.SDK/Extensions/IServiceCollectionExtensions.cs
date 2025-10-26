@@ -8,6 +8,7 @@ using LANCommander.SDK.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using RpcSubscriber = LANCommander.SDK.Rpc.Clients.RpcSubscriber;
 
 namespace LANCommander.SDK.Extensions;
 
@@ -34,7 +35,8 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ITokenProvider, TokenProvider>();
         services.AddSingleton<INetworkInformationProvider, NetworkInformationProvider>();
         
-        services.AddSingleton<IRpcClient, RpcClient>();
+        services.AddSingleton<IRpcSubscriber, RpcSubscriber>();
+        services.AddSingleton<RpcClient>();
         services.AddSingleton<ApiRequestFactory>();
         services.AddSingleton<ProcessExecutionContextFactory>();
 

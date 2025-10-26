@@ -1,12 +1,9 @@
-using System.Threading.Tasks;
 using LANCommander.SDK.Rpc.Client;
-using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace LANCommander.SDK.Rpc;
+namespace LANCommander.SDK.Rpc.Clients;
 
-public partial class RpcClient : IRpcClient
+internal partial class RpcSubscriber : IRpcSubscriber
 {
     public bool IsConnected()
     {

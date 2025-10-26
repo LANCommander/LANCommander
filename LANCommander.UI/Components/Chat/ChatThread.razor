@@ -24,7 +24,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     
-    ICollection<SDK.Models.ChatMessageGroup> _messageGroups;
+    ICollection<SDK.Models.ChatMessageGroup> _messageGroups = new List<SDK.Models.ChatMessageGroup>();
     ICollection<SDK.Models.ChatMessage> _messages = new List<SDK.Models.ChatMessage>();
     SDK.Models.ChatThread _thread;
 

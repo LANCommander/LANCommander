@@ -4,7 +4,7 @@ using LANCommander.SDK.Models;
 
 namespace LANCommander.SDK.Rpc.Client;
 
-public partial interface IRpcClient
+public partial interface IRpcSubscriber
 {
     Task Chat_AddedToThreadAsync(ChatThread thread);
     Task Chat_ReceiveMessagesAsync(Guid threadId, ChatMessage[] messages);

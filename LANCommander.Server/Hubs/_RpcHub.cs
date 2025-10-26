@@ -11,7 +11,7 @@ public partial class RpcHub(
     IFusionCache cache,
     IMapper mapper,
     ChatService chatService,
-    ServerService serverService) : Hub<IRpcClient>, IRpcHub
+    ServerService serverService) : Hub<IRpcSubscriber>, IRpcHub
 {
     
 }

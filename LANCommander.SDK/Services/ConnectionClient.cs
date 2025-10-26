@@ -14,7 +14,7 @@ namespace LANCommander.SDK.Services;
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
     ISettingsProvider settingsProvider,
-    IRpcClient rpc,
+    RpcClient rpc,
     ITokenProvider tokenProvider) : IConnectionClient
 {
     public event EventHandler OnConnect;
@@ -23,9 +23,7 @@ public class ConnectionClient(
     public event EventHandler OnOfflineModeEnabled;
 
     public bool IsConnected()
-    {
-        return rpc.IsConnected();
-    }
+        => rpc.IsConnected;
 
     public bool IsConfigured()
     {
@@ -93,7 +91,7 @@ public class ConnectionClient(
     {
         if (IsConfigured())
         {
-            if (!rpc.IsConnected())
+            if (!IsConnected())
                 await rpc.ConnectAsync(GetServerAddress());
             
             settingsProvider.Update(s => s.Authentication.OfflineModeEnabled = false);

@@ -221,11 +221,12 @@ public class ApiRequestBuilder(
 
             responseStream.OnProgress += (position, length) =>
             {
-                _progressHandler.Invoke(new DownloadProgressChangedEventArgs
-                {
-                    BytesReceived = position,
-                    TotalBytes = length,
-                });
+                if (_progressHandler != null)
+                    _progressHandler.Invoke(new DownloadProgressChangedEventArgs
+                    {
+                        BytesReceived = position,
+                        TotalBytes = length,
+                    });
             };
 
             await responseStream.CopyToAsync(fs, _cancellationToken);

@@ -11,40 +11,40 @@ namespace LANCommander.SDK.Models;
 public class ChatThread
 {
     public required Guid Id { get; init; }
-    public ObservableCollection<ChatMessageGroup> MessageGroups { get; init; }
-    public List<User> Participants { get; init; }
+    public ObservableCollection<ChatMessageGroup> MessageGroups { get; init; } = new();
+    public List<User> Participants { get; init; } = new();
+    
+    public Func<ChatMessage, Task> OnMessageReceivedAsync { get; set; }
+    public Func<IEnumerable<ChatMessage>, Task> OnMessagesReceivedAsync { get; set; }
+    public Func<string, Task> OnStartTypingAsync { get; set; }
+    public Func<string, Task> OnStopTypingAsync { get; set; }
 
-    public event OnMessageReceivedHandler OnMessageReceived;
-    public delegate void OnMessageReceivedHandler(object sender, ChatMessage message);
-    public event OnMessagesReceivedHandler OnMessagesReceived;
-    public delegate void OnMessagesReceivedHandler(object sender, IEnumerable<ChatMessage> message);
-    public event OnStartTypingHandler OnStartTyping;
-    public delegate void OnStartTypingHandler(object sender, string userId);
-    public event OnStopTypingHandler OnStopTyping;
-    public delegate void OnStopTypingHandler(object sender, string userId);
-
-    public void MessagesReceived(IEnumerable<ChatMessage> messages)
+    public async Task MessagesReceivedAsync(IEnumerable<ChatMessage> messages)
     {
         AddToMessageGroups(messages);
-        
-        OnMessagesReceived?.Invoke(this, messages);
+
+        if (OnMessagesReceivedAsync != null)
+            await OnMessagesReceivedAsync.Invoke(messages);
     }
 
-    public void MessageReceived(ChatMessage message)
+    public async Task MessageReceivedAsync(ChatMessage message)
     {
         AddToMessageGroups([message]);
         
-        OnMessageReceived?.Invoke(this, message);
+        if (OnMessageReceivedAsync != null)
+            await OnMessageReceivedAsync.Invoke(message);
     }
 
-    public void StartTyping(string userId)
+    public async Task StartTypingAsync(string userId)
     {
-        OnStartTyping?.Invoke(this, userId);
+        if (OnStartTypingAsync != null)
+            await OnStartTypingAsync.Invoke(userId);
     }
 
-    public void StopTyping(string userId)
+    public async Task StopTypingAsync(string userId)
     {
-        OnStopTyping?.Invoke(this, userId);
+        if (OnStopTypingAsync != null)
+            await OnStopTypingAsync.Invoke(userId);
     }
     
     private void AddToMessageGroups(IEnumerable<ChatMessage> source,

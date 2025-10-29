@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Rpc.Server;
@@ -8,7 +9,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace LANCommander.SDK.Rpc.Clients;
 
-internal partial class RpcSubscriber : IRpcSubscriber
+internal partial class RpcSubscriber(ITokenProvider tokenProvider) : IRpcSubscriber
 {
     private HubConnection _connection = default!;
     
@@ -17,7 +18,10 @@ internal partial class RpcSubscriber : IRpcSubscriber
         try
         {
             _connection = new HubConnectionBuilder()
-                .WithUrl(serverAddress.Join("rpc"))
+                .WithUrl(serverAddress.Join("rpc"), options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(tokenProvider.GetToken());
+                })
                 .Build();
 
             RpcClient.Hub = _connection.ServerProxy<IRpcHub>();

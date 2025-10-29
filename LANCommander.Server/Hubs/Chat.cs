@@ -4,8 +4,16 @@ namespace LANCommander.Server.Hubs;
 
 public partial class RpcHub
 {
-    private string GetThreadGroupName(Guid threadId) => $"Chat/Thread/{threadId}";
-    private string GetConnectionsCacheKey(string userIdentifier) => $"Chat/Connections/{userIdentifier}";
+    private string GetThreadParticipantCacheKey(Guid threadId) => $"Chat/Thread/{threadId}/Participants";
+
+    private async Task<List<string>> GetThreadParticipants(Guid threadId)
+    {
+        var cacheKey = GetThreadParticipantCacheKey(threadId);
+
+        var participants = await cache.TryGetAsync<List<string>>(cacheKey);
+
+        return participants.GetValueOrDefault([]);
+    }
     
     public async Task<Guid> Chat_StartThreadAsync(string[] userIdentifiers)
     {
@@ -19,26 +27,49 @@ public partial class RpcHub
 
     public async Task Chat_AddParticipantAsync(Guid threadId, string participantId)
     {
-        var cacheKey = GetConnectionsCacheKey(participantId);
-        var connections = await cache.TryGetAsync<List<string>>(cacheKey);
+        var cacheKey = GetThreadParticipantCacheKey(threadId);
         
-        if (connections.HasValue)
-            foreach (var connection in connections.Value)
-                await Groups.AddToGroupAsync(connection, threadId.ToString());
+        var participants = await cache.TryGetAsync<List<string>>(cacheKey);
+
+        if (participants.HasValue && !participants.Value.Contains(participantId))
+        {
+            if (Guid.TryParse(participantId, out var userId))
+                await chatService.AddParticipantAsync(threadId, userId);
+            
+            participants.Value.Add(participantId);
+
+            await cache.SetAsync(cacheKey, participants.Value);
+        }
     }
 
     public async Task<IEnumerable<ChatThread>> Chat_GetThreadsAsync()
     {
-        var threads = await chatService.GetThreadsAsync(Context.UserIdentifier);
+        if (Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            var threads = await chatService.GetThreadsAsync(userId);
+
+            // Populate participant cache
+            foreach (var thread in threads)
+            {
+                var cacheKey = GetThreadParticipantCacheKey(thread.Id);
+                var participants = await cache.TryGetAsync<List<string>>(cacheKey);
+
+                if (!participants.HasValue && thread.Participants != null)
+                    await cache.SetAsync(cacheKey, thread.Participants.Select(p => p.Id).ToList());
+            } 
+            
+            return mapper.Map<IEnumerable<ChatThread>>(threads);
+        }
         
-        return mapper.Map<IEnumerable<ChatThread>>(threads);
+        return [];
     }
 
     public async Task Chat_SendMessageAsync(Guid threadId, string content)
     {
         var message = await chatService.SendMessageAsync(threadId, content);
-
-        await Clients.Group(GetThreadGroupName(threadId)).Chat_ReceiveMessagesAsync(threadId, new [] { mapper.Map<ChatMessage>(message) });
+        var participants = await GetThreadParticipants(threadId);
+        
+        await Clients.Users(participants).Chat_ReceiveMessageAsync(threadId, mapper.Map<ChatMessage>(message));
     }
 
     public async Task Chat_GetMessagesAsync(Guid threadId)
@@ -50,11 +81,15 @@ public partial class RpcHub
 
     public async Task Chat_StartTyping(Guid threadId)
     {
-        await Clients.Group(GetThreadGroupName(threadId)).Chat_StartTyping(threadId, Context.UserIdentifier);
+        var participants = await GetThreadParticipants(threadId);
+
+        await Clients.Users(participants).Chat_StartTyping(threadId, Context.UserIdentifier);
     }
 
     public async Task Chat_StopTyping(Guid threadId)
     {
-        await Clients.Group(GetThreadGroupName(threadId)).Chat_StopTyping(threadId, Context.UserIdentifier);
+        var participants = await GetThreadParticipants(threadId);
+
+        await Clients.Users(participants).Chat_StopTyping(threadId, Context.UserIdentifier);
     }
 }

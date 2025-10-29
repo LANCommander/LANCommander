@@ -20,13 +20,27 @@ namespace LANCommander.Server.Services
         private readonly int _maxCachedMessages = 200;
         
         private static string ThreadCacheKey(Guid threadId) => $"Chat/Thread/{threadId}";
-        private static string UserThreadCacheKey(string userIdentifier) => $"Chat/User/{userIdentifier}/Threads";
+        private static string UserThreadCacheKey(Guid userId) => $"Chat/User/{userId}/Threads";
 
         public async Task<ChatThread> StartThreadAsync()
         {
             var thread = await chatThreadService.AddAsync(new ChatThread());
 
             return thread;
+        }
+
+        public async Task AddParticipantAsync(Guid threadId, Guid userId)
+        {
+            var thread = await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
+            
+            var user = await userService.GetAsync(userId);
+
+            if (thread != null && thread.Participants.All(p => p.Id != user.Id))
+            {
+                thread.Participants.Add(user);
+                
+                await chatThreadService.UpdateAsync(thread);
+            }
         }
         
         public async Task<ChatMessage> SendMessageAsync(Guid threadId, string content)
@@ -84,23 +98,24 @@ namespace LANCommander.Server.Services
             return messages;
         }
 
-        public async Task<List<ChatThread>> GetThreadsAsync(string userIdentifier)
+        public async Task<List<ChatThread>> GetThreadsAsync(Guid userId)
         {
-            var cacheKey = UserThreadCacheKey(userIdentifier);
-
+            var cacheKey = UserThreadCacheKey(userId);
+            
             var threads = await cache.GetOrSetAsync(cacheKey, async _ =>
             {
-                var user = await userService.GetAsync(userIdentifier);
+                var user = await userService.GetAsync(userId);
 
                 var dbThreads = await chatThreadService.Query(q =>
                 {
                     return q
+                        .AsNoTracking()
+                        .AsSplitQuery()
                         .Include(t => t.Participants)
-                        .OrderByDescending(t => t.CreatedOn)
                         .Where(t => t.Participants.Any(p => p.Id == user.Id));
                 }).GetAsync();
                 
-                return dbThreads.ToList();
+                return dbThreads.OrderByDescending(t => t.CreatedOn).ToList();
             });
 
             return threads;

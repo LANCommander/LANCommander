@@ -27,6 +27,7 @@ namespace LANCommander.Server.Services
         {
             return await base.UpdateAsync(entity, async context =>
             {
+                await context.UpdateRelationshipAsync(ct => ct.Participants); 
                 await context.UpdateRelationshipAsync(ct => ct.Messages);
             });
         }

@@ -9,6 +9,7 @@ public partial interface IRpcHub
 {
     Task<Guid> Chat_StartThreadAsync(string[] userIdentifiers);
     Task Chat_AddParticipantAsync(Guid threadId, string participantId);
+    Task<ChatThread> Chat_GetThreadAsync(Guid threadId);
     Task<IEnumerable<ChatThread>> Chat_GetThreadsAsync();
     Task Chat_SendMessageAsync(Guid threadId, string message);
     Task Chat_GetMessagesAsync(Guid threadId);

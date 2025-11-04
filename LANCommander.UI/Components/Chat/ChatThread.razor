@@ -18,7 +18,7 @@
         </Virtualize>
     </div>
     
-    <TextArea MinRows="1" AutoSize="true" OnPressEnter="SendMessage"></TextArea>
+    <ChatMessageInput OnSendMessage="SendMessage" />
 </Flex>
 
 @code {
@@ -46,13 +46,8 @@
         StateHasChanged();
     }
 
-    async Task SendMessage(PressEnterEventArgs args)
+    async Task SendMessage(string contents)
     {
-        if (!args.ShiftKey)
-        {
-            _sendingMessage = true;
-
-            await ChatClient.SendMessageAsync(Id, _inputContents);
-        }
+        await ChatClient.SendMessageAsync(Id, contents);
     }
 }

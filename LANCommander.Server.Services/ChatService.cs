@@ -98,6 +98,9 @@ namespace LANCommander.Server.Services
             return messages;
         }
 
+        public async Task<ChatThread> GetThreadAsync(Guid threadId)
+            => await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
+
         public async Task<List<ChatThread>> GetThreadsAsync(Guid userId)
         {
             var cacheKey = UserThreadCacheKey(userId);

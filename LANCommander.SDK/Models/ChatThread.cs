@@ -11,6 +11,7 @@ namespace LANCommander.SDK.Models;
 public class ChatThread
 {
     public required Guid Id { get; init; }
+    public string Name { get; init; }
     public ObservableCollection<ChatMessageGroup> MessageGroups { get; init; } = new();
     public List<User> Participants { get; init; } = new();
     
@@ -18,6 +19,8 @@ public class ChatThread
     public Func<IEnumerable<ChatMessage>, Task> OnMessagesReceivedAsync { get; set; }
     public Func<string, Task> OnStartTypingAsync { get; set; }
     public Func<string, Task> OnStopTypingAsync { get; set; }
+
+    public string Title => String.IsNullOrWhiteSpace(Name) ? String.Join(", ", Participants.Select(p => p.Name)) : Name;
 
     public async Task MessagesReceivedAsync(IEnumerable<ChatMessage> messages)
     {

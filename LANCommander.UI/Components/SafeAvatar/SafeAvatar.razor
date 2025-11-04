@@ -1,0 +1,64 @@
+@using LANCommander.SDK.Services
+@namespace LANCommander.UI.Components
+@inject ProfileClient ProfileClient
+
+<Spin Spinning="_loading" WrapperClassName="@_class">
+    @if (!_error)
+    {
+        <img 
+            src="@_avatarUrl"
+            @onload="OnLoad"
+            @onerror="OnError"
+            style="display: none;" />
+        
+        <Avatar
+            Shape="Shape"
+            Size="Size"
+            Src="@_avatarUrl"
+            Alt="@_alt" />
+    }
+    else
+    {
+        <Avatar
+            Shape="Shape"
+            Size="Size"
+            Text="@Username.Substring(0, 1).ToUpper()"
+            Alt="@_alt" />
+    }
+</Spin>
+
+@code {
+    [Parameter] public required string Username { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public AvatarShape Shape { get; set; } = AvatarShape.Square;
+    [Parameter] public AvatarSize Size { get; set; } = AvatarSize.Default;
+
+    string _avatarUrl => ProfileClient.GetAvatarUri(Username).ToString();
+    string _alt => Alt ?? Username;
+    string _class = String.Empty;
+    bool _loading = true;
+    bool _error = false;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("safe-avatar")
+            .If(() => !String.IsNullOrWhiteSpace(Class), Class)
+            .Build();
+    }
+
+    void OnLoad()
+    {
+        _error = false;
+        _loading = false;
+        StateHasChanged();
+    }
+
+    void OnError()
+    {
+        _error = true;
+        _loading = false;
+        StateHasChanged();
+    }
+}

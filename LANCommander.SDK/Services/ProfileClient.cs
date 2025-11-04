@@ -3,11 +3,15 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 
 namespace LANCommander.SDK.Services
 {
-    public class ProfileClient(ApiRequestFactory apiRequestFactory, ILogger<ProfileClient> logger)
+    public class ProfileClient(
+        ApiRequestFactory apiRequestFactory, 
+        ILogger<ProfileClient> logger,
+        IConnectionClient connectionClient)
     {
         private User _user;
         
@@ -97,6 +101,9 @@ namespace LANCommander.SDK.Services
 
             return result.FullName;
         }
+
+        public Uri GetAvatarUri(string userName) 
+            => connectionClient.GetServerAddress().Join("api", "Profile", userName, "Avatar");
 
         public async Task<string> GetCustomFieldAsync(string name)
         {

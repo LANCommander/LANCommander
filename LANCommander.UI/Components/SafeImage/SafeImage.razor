@@ -52,7 +52,6 @@
     void OnLoad()
     {
         _loading = false;
-        Console.WriteLine("Image error " + Source);
         StateHasChanged();
     }
 
@@ -60,6 +59,7 @@
     {
         _error = true;
         _loading = false;
+        Console.WriteLine("Image error " + Source);
         StateHasChanged();
     }
 }

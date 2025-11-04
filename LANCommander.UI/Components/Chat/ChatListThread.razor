@@ -1,0 +1,39 @@
+@using LANCommander.SDK.Services
+@namespace LANCommander.UI.Components
+@inject ProfileClient ProfileClient
+
+<div class="chat-list-thread @_class" @onclick="OnClick">
+    <div class="chat-list-thread-avatar">
+        @if (Thread.Participants.Count == 2)
+        {
+            <SafeAvatar
+                Shape="AvatarShape.Square"
+                Size="AvatarSize.Large"
+                Username="@Thread.Participants.First().UserName" />
+        }
+    </div>
+    <div class="chat-list-thread-title">
+        @Thread.Name
+    </div>
+</div>
+
+@code {
+    [Parameter] public required SDK.Models.ChatThread Thread { get; set; }
+    [Parameter] public EventCallback<SDK.Models.ChatThread> OnSelected { get; set; }
+    [Parameter] public bool Active { get; set; }
+
+    string _class = String.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .If(() => Active, "chat-list-thread-active")
+            .Build();
+    }
+
+    async Task OnClick(MouseEventArgs args)
+    {
+        if (OnSelected.HasDelegate)
+            await OnSelected.InvokeAsync(Thread);
+    }
+}

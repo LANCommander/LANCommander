@@ -42,6 +42,13 @@ public partial class RpcHub
         }
     }
 
+    public async Task<ChatThread> Chat_GetThreadAsync(Guid threadId)
+    {
+        var thread = await chatService.GetThreadAsync(threadId);
+        
+        return mapper.Map<ChatThread>(thread);
+    }
+
     public async Task<IEnumerable<ChatThread>> Chat_GetThreadsAsync()
     {
         if (Guid.TryParse(Context.UserIdentifier, out var userId))

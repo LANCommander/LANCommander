@@ -1,0 +1,39 @@
+@namespace LANCommander.UI.Components
+
+<TextArea 
+    @ref="_textArea"
+    Disabled="_sendingMessage"
+    MinRows="1"
+    AutoSize="true"
+    BindOnInput
+    OnPressEnter="SendMessage"
+    @bind-Value="_contents">
+</TextArea>
+
+@code {
+    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+    TextArea _textArea;
+
+    string _contents;
+    bool _sendingMessage;
+    
+    async Task SendMessage(PressEnterEventArgs args)
+    {
+        if (!args.ShiftKey)
+        {
+            args.PreventLineBreak();
+            
+            _sendingMessage = true;
+
+            if (OnSendMessage.HasDelegate)
+                await OnSendMessage.InvokeAsync(_contents);
+
+            _contents = String.Empty;
+
+            _sendingMessage = false;
+            
+            await Task.Yield();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

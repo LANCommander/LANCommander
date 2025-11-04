@@ -40,10 +40,9 @@ public class ChatClient
         var threadId = await _rpc.Chat.StartThreadAsync(userIdentifiers.ToArray());
 
         if (threadId != Guid.Empty)
-            _threads[threadId] = new ChatThread
-            {
-                Id = threadId,
-            };
+        {
+            _threads[threadId] = await _rpc.Chat.GetThreadAsync(threadId);
+        }
 
         return threadId;
     }

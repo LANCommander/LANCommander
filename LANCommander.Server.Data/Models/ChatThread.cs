@@ -6,6 +6,8 @@ namespace LANCommander.Server.Data.Models;
 [Table("ChatThreads")]
 public class ChatThread : BaseModel
 {
-    public ICollection<ChatMessage> Messages { get; set; }
-    public ICollection<User> Participants { get; set; }
+    [MaxLength(64)]
+    public string? Name { get; set; }
+    public ICollection<ChatMessage>? Messages { get; set; }
+    public ICollection<User>? Participants { get; set; }
 }

@@ -28,7 +28,7 @@ public partial class RpcHub(
         connections.Value.RemoveAll(c => c == Context.ConnectionId);
         connections.Value.Add(Context.ConnectionId);
         
-        await cache.SetAsync(cacheKey, connections);
+        await cache.SetAsync(cacheKey, connections.Value);
         
         await base.OnConnectedAsync();
     }

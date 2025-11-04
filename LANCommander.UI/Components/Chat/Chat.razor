@@ -1,22 +1,16 @@
 @using LANCommander.SDK.Services
-@using Microsoft.AspNetCore.Components.Authorization
 @inject ChatClient ChatClient
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @namespace LANCommander.UI.Components
+
 
 <Button OnClick="StartThread">New Thread</Button>
 
-<AntList DataSource="@_threads" TItem="SDK.Models.ChatThread">
-    <ListItem OnClick="() => OpenThread(context.Id)">
-        <ListItemMeta Title="@context.Id.ToString()">
-        </ListItemMeta>
-    </ListItem>
-</AntList>
+<ChatList Threads="_threads" />
 
 <ChatThread Id="_currentThreadId" />
 
 @code {
-    IEnumerable<SDK.Models.ChatThread> _threads;
+    IEnumerable<SDK.Models.ChatThread> _threads = [];
 
     Guid _currentThreadId;
     
@@ -27,12 +21,10 @@
 
     async Task StartThread()
     {
-        var user = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        await ChatClient.StartThreadAsync(["DoctorDalek"]);
         
-        var newThreadId = await ChatClient.StartThreadAsync([user.User.Identity.Name]);
-
-        _currentThreadId = newThreadId;
-
+        _threads = await ChatClient.GetThreadsAsync();
+        
         await InvokeAsync(StateHasChanged);
     }
     

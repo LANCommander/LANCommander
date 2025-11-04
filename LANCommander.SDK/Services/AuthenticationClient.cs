@@ -86,15 +86,22 @@ public class AuthenticationClient(
     
     public async Task LogoutAsync()
     {
-        await apiRequestFactory
-            .Create()
-            .UseRoute("/api/Auth/Logout")
-            .UseAuthenticationToken()
-            .PostAsync();
+        try
+        {
+            apiRequestFactory
+                .Create()
+                .UseRoute("/api/Auth/Logout")
+                .UseAuthenticationToken()
+                .PostAsync();
+
+            connectionClient.DisconnectAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Could not logout, server inaccessible");
+        }
         
         tokenProvider.SetToken(null);
-
-        await connectionClient.DisconnectAsync();
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)

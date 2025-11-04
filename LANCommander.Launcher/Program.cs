@@ -46,7 +46,13 @@ namespace LANCommander.Launcher
             {
                 Title = "LANCommander",
                 Type = WindowType.Main
-            }, null, null, args);
+            }, null, async (app) =>
+            {
+                var connectionClient = app.Services.GetService<IConnectionClient>();
+
+                if (!(await connectionClient.PingAsync()))
+                    await connectionClient.EnableOfflineModeAsync();
+            }, args);
         }
 
         /// <summary>

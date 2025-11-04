@@ -16,12 +16,16 @@
     }
 
     &-content {
-        top: 0 !important;
+        top: var(--pb-custom-window-header-height) !important;
         left: 0 !important;
-        height: 100vh !important;
-        width: 100vw !important;
+        right: 0 !important;
+        bottom: 0 !important;
         display: flex;
         flex-direction: column;
+        
+        &.overflow {
+            top: 0 !important;
+        }
 
         &::before {
             content: '';

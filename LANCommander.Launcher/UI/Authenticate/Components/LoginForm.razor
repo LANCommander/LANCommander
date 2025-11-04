@@ -84,9 +84,18 @@
     protected override async Task OnInitializedAsync()
     {
         AuthenticationProviders = new();
-
-        await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+        
         ClearErrors();
+
+        try
+        {
+            await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+        }
+        catch (InvalidAddressException)
+        {
+            MessageService.Error("Specified Server Unavailable");
+            return;
+        }
 
         try
         {
@@ -112,7 +121,17 @@
     protected override async Task OnParametersSetAsync()
     {
         if (ServerAddress != PreviousServerAddress)
-            await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+        {
+            try
+            {
+                await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+            }
+            catch (InvalidAddressException)
+            {
+                MessageService.Error("Specified Server Unavailable");
+                return;
+            }
+        }
         
         PreviousServerAddress = ServerAddress;
     }

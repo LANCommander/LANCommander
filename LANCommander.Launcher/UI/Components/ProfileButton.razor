@@ -9,6 +9,7 @@
 @inject LocalizationService LocalizationService
 @inject SDK.Client Client
 @inject IConnectionClient ConnectionClient
+@inject ILogger<ProfileButton> Logger
 
 <Dropdown>
     <Overlay>
@@ -52,6 +53,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine(NavigationManager.Uri);
+        Console.WriteLine(NavigationManager.BaseUri);
+        
         ProfileService.OnProfileDownloaded += async (sender, args) =>
         {
             User = await UserService.GetCurrentUser();
@@ -67,7 +71,14 @@
         }
         else
         {
-            await ProfileService.DownloadProfileInfoAsync();
+            try
+            {
+                await ProfileService.DownloadProfileInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not download profile info");
+            }
         }
     }
     

@@ -6,6 +6,7 @@ using LANCommander.Launcher.Startup;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
+using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
@@ -66,8 +67,11 @@ internal static class WindowService
 
         var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
         var tokenProvider = app.Services.GetService<ITokenProvider>();
+        var connectionClient = app.Services.GetService<IConnectionClient>();
         
         tokenProvider?.SetToken(settingsProvider.CurrentValue.Authentication.AccessToken);
+
+        connectionClient.ConnectAsync().Wait();
 
         if (options.Type == WindowType.Main)
             app.MainWindow.RegisterWindowClosingHandler((_, _) =>

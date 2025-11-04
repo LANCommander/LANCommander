@@ -106,9 +106,16 @@ public class ConnectionClient(
     
     public async Task<bool> DisconnectAsync()
     {
-        OnDisconnect?.Invoke(this, EventArgs.Empty);
-        
-        return await rpc.DisconnectAsync();
+        try
+        {
+            OnDisconnect?.Invoke(this, EventArgs.Empty);
+
+            return await rpc.DisconnectAsync();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task EnableOfflineModeAsync()

@@ -88,7 +88,7 @@ namespace LANCommander.SDK.Services
                 {
                     _logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
                     
-                    if (redistributable.Archives.Any())
+                    if (redistributable.Archives?.Any() ?? false)
                     {
                         _logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
 

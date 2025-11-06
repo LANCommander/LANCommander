@@ -108,6 +108,9 @@ namespace LANCommander.Server.Services
             var threads = await cache.GetOrSetAsync(cacheKey, async _ =>
             {
                 var user = await userService.GetAsync(userId);
+                
+                if (user == null)
+                    return new List<ChatThread>();
 
                 var dbThreads = await chatThreadService.Query(q =>
                 {
@@ -115,7 +118,7 @@ namespace LANCommander.Server.Services
                         .AsNoTracking()
                         .AsSplitQuery()
                         .Include(t => t.Participants)
-                        .Where(t => t.Participants.Any(p => p.Id == user.Id));
+                        .Where(t => t.Participants != null && t.Participants.Any(p => p.Id == user.Id));
                 }).GetAsync();
                 
                 return dbThreads.OrderByDescending(t => t.CreatedOn).ToList();

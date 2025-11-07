@@ -1,7 +1,9 @@
 @using LANCommander.SDK.Exceptions
 @using LANCommander.SDK.Models
+@using LANCommander.SDK.Services
 @inject AuthenticationService AuthenticationService
 @inject SDK.Client Client
+@inject IConnectionClient ConnectionClient
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<LoginForm> Logger
@@ -13,7 +15,7 @@
         @LocalizationService.GetString("SignIn")
     </TitleTemplate>
 </PageHeader>
-<Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
+<Form Model="@Model" Loading="@_loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
 
     @foreach (var item in Errors)
     {
@@ -77,7 +79,7 @@
     List<AuthenticationProvider> AuthenticationProviders = new();
 
     AuthRequest Model = new();
-    bool Loading = false;
+    bool _loading;
     private Uri? PreviousServerAddress;
     AuthenticationProviderDialog AuthenticationProviderDialog;
 
@@ -89,7 +91,7 @@
 
         try
         {
-            await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+            await ConnectionClient.UpdateServerAddressAsync(ServerAddress);
         }
         catch (InvalidAddressException)
         {
@@ -138,7 +140,7 @@
 
     async Task OnFinish(EditContext editContext)
     {
-        Loading = true;
+        _loading = true;
 
         try
         {
@@ -164,16 +166,10 @@
         }
         finally
         {
-            Loading = false;
+            _loading = false;
         }
     }
-
-    void Back()
-    {
-        AuthenticationProviders = new();
-        
-        NavigationManager.NavigateTo("/Authenticate");
-    }
+    
     
     async Task UseToken(AuthToken token)
     {
@@ -189,7 +185,10 @@
         {
             MessageService.Error(ex.Message, 5);
             Logger.LogError(ex, ex.Message);
-            Loading = false;
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 }

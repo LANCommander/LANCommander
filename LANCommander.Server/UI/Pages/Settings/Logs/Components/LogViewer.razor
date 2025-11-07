@@ -2,6 +2,8 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using Serilog.Events
 @using XtermBlazor
+@inject ILogger<LogViewer> Logger
+@inject MessageService MessageService
 @inject NavigationManager NavigationManager
 
 <Xterm @ref="Terminal" Options="TerminalOptions" Addons="@Addons" />
@@ -23,7 +25,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Connect();
+        try
+        {
+            await Connect();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Log viewer failed to connect");
+            MessageService.Error("Log viewer failed to connect");
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

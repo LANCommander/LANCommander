@@ -10,6 +10,7 @@ using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Web;
+using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Startup;
@@ -17,6 +18,7 @@ using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Launcher
 {
@@ -49,9 +51,32 @@ namespace LANCommander.Launcher
             }, null, async (app) =>
             {
                 var connectionClient = app.Services.GetService<IConnectionClient>();
+                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+                var databaseContext = app.Services.GetService<DatabaseContext>();
 
                 if (!(await connectionClient.PingAsync()))
                     await connectionClient.EnableOfflineModeAsync();
+                
+                if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        settingsProvider.Update(s =>
+                        {
+                            s.Games.InstallDirectories = [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")];
+                        });
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                        settingsProvider.Update(s =>
+                        {
+                            s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+                        });
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                        settingsProvider.Update(s =>
+                        {
+                            s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+                        });
+                }
+
+                await databaseContext.Database.MigrateAsync();
             }, args);
         }
 

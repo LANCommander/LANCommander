@@ -28,18 +28,6 @@ namespace LANCommander.Launcher.Services.Extensions
     {
         public static IServiceCollection AddLANCommanderLauncher(this IServiceCollection services, Action<LANCommanderOptions> configure)
         {
-            /*(if (settings.Games.InstallDirectories.Length == 0)
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    settings.Games.InstallDirectories = new string[] { "C:\\Games" };
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    settings.Games.InstallDirectories = new string[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games") };
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    settings.Games.InstallDirectories = new string[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games") };
-
-                SettingService.SaveSettings(settings);
-            }*/
-
             services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Register Client

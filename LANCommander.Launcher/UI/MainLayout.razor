@@ -1,25 +1,18 @@
-﻿@using System.Management.Automation.Remoting
-@using LANCommander.Launcher.Models
-@using LANCommander.SDK
-@using LANCommander.SDK.Providers
-@using LANCommander.SDK.Rpc.Client
+﻿@using LANCommander.Launcher.Models
 @using LANCommander.SDK.Services
 @using Photino.Blazor.CustomWindow.Components
 @inherits LayoutComponentBase
 @inject ImportService ImportService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
-@inject KeepAliveService KeepAliveService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject LANCommander.SDK.Client Client
 @inject IJSRuntime JS
-@inject ILogger<MainLayout> Logger
 @inject ImportManagerService ImportManagerService
 @inject LocalizationService LocalizationService
 @inject IConnectionClient ConnectionClient
-@inject SettingsProvider<Models.Settings> Settings
 
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>

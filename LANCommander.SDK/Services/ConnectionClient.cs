@@ -42,7 +42,7 @@ public class ConnectionClient(
 
     public Uri GetServerAddress() => settingsProvider.CurrentValue.Authentication.ServerAddress;
 
-    public async Task UpdateServerAddressAsync(Uri address) => await UpdateServerAddressAsync(address.ToString());
+    public async Task UpdateServerAddressAsync(Uri address) => await UpdateServerAddressAsync(address?.ToString() ?? String.Empty);
 
     public async Task UpdateServerAddressAsync(string address)
     {

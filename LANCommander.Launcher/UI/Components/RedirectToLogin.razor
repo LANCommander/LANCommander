@@ -7,6 +7,6 @@
         var currentUri = new Uri(NavigationManager.Uri);
 
         if (String.IsNullOrEmpty(Client.Settings.CurrentValue.Authentication.AccessToken) && currentUri.LocalPath != "/Authenticate")
-            NavigationManager.NavigateTo("/Authenticate");
+            NavigationManager.NavigateTo("/Authenticate", true);
     }
 }

@@ -1,13 +1,12 @@
-﻿@using LANCommander.Launcher.Services
-@inject LocalizationService LocalizationService
+﻿@inject LocalizationService LocalizationService
 
 <Router AppAssembly="@typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(UI.MainLayout)" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Windows.MainWindow)" />
     </Found>
     <NotFound>
         <PageTitle>@LocalizationService.GetString("NotFound")</PageTitle>
-        <LayoutView Layout="@typeof(UI.MainLayout)">
+        <LayoutView Layout="@typeof(Windows.MainWindow)">
             <p role="alert">@LocalizationService.GetString("NotFoundMessage")</p>
         </LayoutView>
     </NotFound>

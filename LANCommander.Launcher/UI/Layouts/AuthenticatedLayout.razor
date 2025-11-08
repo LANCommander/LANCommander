@@ -1,0 +1,12 @@
+@using LANCommander.Launcher.UI.Windows
+@inherits LayoutComponentBase
+@layout MainWindow
+
+<AuthenticatedView NoAutoValidate="false">
+    <Authenticated>
+        @Body
+    </Authenticated>
+    <NotAuthenticated>
+        <RedirectToLogin/>
+    </NotAuthenticated>
+</AuthenticatedView>

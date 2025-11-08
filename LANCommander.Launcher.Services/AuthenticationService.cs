@@ -2,18 +2,17 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Models;
-using LANCommander.SDK.Providers;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Settings = LANCommander.Launcher.Models.Settings;
 
 namespace LANCommander.Launcher.Services;
 
 public class AuthenticationService(
     ITokenProvider tokenProvider,
-    SDK.Client client,
     ISettingsProvider settingsProvider,
+    IConnectionClient connectionClient,
+    AuthenticationClient authenticationClient,
+    ProfileClient profileClient,
     ILogger<AuthenticationService> logger) : BaseService(logger)
 {
     private bool TemporarilyOffline;
@@ -22,10 +21,7 @@ public class AuthenticationService(
     public event EventHandler OnLogout;
     public event EventHandler OnRegister;
 
-    public bool IsConnected()
-    {
-        return client.Connection.IsConnected();
-    }
+    public bool IsConnected() => connectionClient.IsConnected();
 
     public async Task<bool> IsServerOnlineAsync()
     {
@@ -33,10 +29,11 @@ public class AuthenticationService(
         {
             logger.LogDebug("Checking if server is online");
             
-            return await client.Connection.PingAsync();
+            return await connectionClient.PingAsync();
         }
         catch
         {
+            logger.LogDebug("Server could not be reached");
         }
 
         return false;
@@ -60,9 +57,9 @@ public class AuthenticationService(
     {
         using (var op = logger.BeginDebugOperation("Logging in using username/password"))
         {
-            await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
+            await connectionClient.UpdateServerAddressAsync(serverAddress.ToString());
 
-            var token = await client.Authentication.AuthenticateAsync(username, password, serverAddress);
+            var token = await authenticationClient.AuthenticateAsync(username, password, serverAddress);
 
             await Login(serverAddress, token);
             
@@ -76,11 +73,11 @@ public class AuthenticationService(
         {
             using (var op = logger.BeginDebugOperation("Logging in using token"))
             {
-                await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
+                await connectionClient.UpdateServerAddressAsync(serverAddress.ToString());
 
                 tokenProvider.SetToken(token.AccessToken);
 
-                if (await client.Authentication.ValidateTokenAsync())
+                if (await authenticationClient.ValidateTokenAsync())
                 {
                     //SetOfflineMode(false);
                     TemporarilyOffline = false;
@@ -92,7 +89,7 @@ public class AuthenticationService(
                         s.Authentication.RefreshToken = token.RefreshToken;
                     });
 
-                    var user = await client.Profile.GetAsync();
+                    var user = await profileClient.GetAsync();
 
                     OnLogin?.Invoke(this, EventArgs.Empty);
                 }
@@ -119,11 +116,11 @@ public class AuthenticationService(
             if (password != passwordConfirmation)
                 throw new Exception("Passwords do not match");
 
-            await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
+            await authenticationClient.RegisterAsync(username, password, passwordConfirmation);
 
             settingsProvider.Update(s =>
             {
-                s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+                s.Authentication.ServerAddress = connectionClient.GetServerAddress();
                 s.Authentication.AccessToken = tokenProvider.GetToken();
             });
         
@@ -141,17 +138,17 @@ public class AuthenticationService(
     public async Task SetOfflineModeAsync(bool state)
     {
         logger.LogDebug("Going into offline mode, state: {State}", state);
-        await client.Connection.EnableOfflineModeAsync();
+        await connectionClient.EnableOfflineModeAsync();
 
         if (state)
-            await client.Connection.DisconnectAsync();
+            await connectionClient.DisconnectAsync();
     }
 
     public async Task Logout()
     {
         using (var op = logger.BeginDebugOperation("Logging out"))
         {
-            await client.Authentication.LogoutAsync();
+            await authenticationClient.LogoutAsync();
 
             TemporarilyOffline = false;
         

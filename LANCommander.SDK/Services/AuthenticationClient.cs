@@ -19,6 +19,7 @@ public class AuthenticationClient(
     ILogger<AuthenticationClient> logger,
     ITokenProvider tokenProvider,
     IServerConfigurationRefresher configRefresher,
+    ISettingsProvider settingsProvider,
     ApiRequestFactory apiRequestFactory,
     IConnectionClient connectionClient)
 {
@@ -88,7 +89,7 @@ public class AuthenticationClient(
     {
         try
         {
-            apiRequestFactory
+            await apiRequestFactory
                 .Create()
                 .UseRoute("/api/Auth/Logout")
                 .UseAuthenticationToken()
@@ -102,6 +103,12 @@ public class AuthenticationClient(
         }
         
         tokenProvider.SetToken(null);
+        settingsProvider.Update(s =>
+        {
+            s.Authentication.AccessToken = null;
+            s.Authentication.RefreshToken = null;
+            s.Authentication.OfflineModeEnabled = false;
+        });
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)

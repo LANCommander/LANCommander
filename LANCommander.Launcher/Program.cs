@@ -50,33 +50,36 @@ namespace LANCommander.Launcher
                 Type = WindowType.Main
             }, null, async (app) =>
             {
-                var connectionClient = app.Services.GetService<IConnectionClient>();
-                var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
-                var databaseContext = app.Services.GetService<DatabaseContext>();
-
-                if (!(await connectionClient.PingAsync()))
-                    await connectionClient.EnableOfflineModeAsync();
-                
-                if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+                using (var scope = app.Services.CreateScope())
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        settingsProvider.Update(s =>
-                        {
-                            s.Games.InstallDirectories = [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")];
-                        });
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                        settingsProvider.Update(s =>
-                        {
-                            s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
-                        });
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                        settingsProvider.Update(s =>
-                        {
-                            s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
-                        });
-                }
+                    var connectionClient = scope.ServiceProvider.GetService<IConnectionClient>();
+                    var settingsProvider = scope.ServiceProvider.GetService<SettingsProvider<Settings>>();
+                    var databaseContext = scope.ServiceProvider.GetService<DatabaseContext>();
 
-                await databaseContext.Database.MigrateAsync();
+                    if (!(await connectionClient.PingAsync()))
+                        await connectionClient.EnableOfflineModeAsync();
+                
+                    if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            settingsProvider.Update(s =>
+                            {
+                                s.Games.InstallDirectories = [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")];
+                            });
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                            settingsProvider.Update(s =>
+                            {
+                                s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+                            });
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                            settingsProvider.Update(s =>
+                            {
+                                s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+                            });
+                    }
+
+                    await databaseContext.Database.MigrateAsync();
+                }
             }, args);
         }
 

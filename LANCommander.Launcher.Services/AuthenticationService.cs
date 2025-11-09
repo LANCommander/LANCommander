@@ -4,6 +4,8 @@ using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
+using LANCommander.SDK.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Settings = LANCommander.Launcher.Models.Settings;
@@ -12,19 +14,17 @@ namespace LANCommander.Launcher.Services;
 
 public class AuthenticationService(
     ITokenProvider tokenProvider,
-    SDK.Client client,
     ISettingsProvider settingsProvider,
+    IServiceScopeFactory scopeFactory,
+    IConnectionClient connectionClient,
+    AuthenticationClient authenticationClient,
     ILogger<AuthenticationService> logger) : BaseService(logger)
 {
     private bool TemporarilyOffline;
 
-    public event EventHandler OnLogin;
-    public event EventHandler OnLogout;
-    public event EventHandler OnRegister;
-
     public bool IsConnected()
     {
-        return client.Connection.IsConnected();
+        return connectionClient.IsConnected();
     }
 
     public async Task<bool> IsServerOnlineAsync()
@@ -33,7 +33,7 @@ public class AuthenticationService(
         {
             logger.LogDebug("Checking if server is online");
             
-            return await client.Connection.PingAsync();
+            return await connectionClient.PingAsync();
         }
         catch
         {
@@ -60,9 +60,9 @@ public class AuthenticationService(
     {
         using (var op = logger.BeginDebugOperation("Logging in using username/password"))
         {
-            await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
+            await connectionClient.UpdateServerAddressAsync(serverAddress.ToString());
 
-            var token = await client.Authentication.AuthenticateAsync(username, password, serverAddress);
+            var token = await authenticationClient.AuthenticateAsync(username, password, serverAddress);
 
             await Login(serverAddress, token);
             
@@ -76,11 +76,11 @@ public class AuthenticationService(
         {
             using (var op = logger.BeginDebugOperation("Logging in using token"))
             {
-                await client.Connection.UpdateServerAddressAsync(serverAddress.ToString());
+                await connectionClient.UpdateServerAddressAsync(serverAddress.ToString());
 
                 tokenProvider.SetToken(token.AccessToken);
 
-                if (await client.Authentication.ValidateTokenAsync())
+                if (await authenticationClient.ValidateTokenAsync())
                 {
                     //SetOfflineMode(false);
                     TemporarilyOffline = false;
@@ -92,9 +92,10 @@ public class AuthenticationService(
                         s.Authentication.RefreshToken = token.RefreshToken;
                     });
 
-                    var user = await client.Profile.GetAsync();
+                    await using var scope = scopeFactory.CreateAsyncScope();
+                    var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
 
-                    OnLogin?.Invoke(this, EventArgs.Empty);
+                    await profileService.DownloadProfileInfoAsync();
                 }
                 
                 op.Complete();
@@ -119,15 +120,18 @@ public class AuthenticationService(
             if (password != passwordConfirmation)
                 throw new Exception("Passwords do not match");
 
-            await client.Authentication.RegisterAsync(username, password, passwordConfirmation);
+            await authenticationClient.RegisterAsync(username, password, passwordConfirmation);
 
             settingsProvider.Update(s =>
             {
-                s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+                s.Authentication.ServerAddress = connectionClient.GetServerAddress();
                 s.Authentication.AccessToken = tokenProvider.GetToken();
             });
         
-            OnRegister?.Invoke(this, EventArgs.Empty);
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
+
+            await profileService.DownloadProfileInfoAsync();
             
             op.Complete();
         }
@@ -141,21 +145,19 @@ public class AuthenticationService(
     public async Task SetOfflineModeAsync(bool state)
     {
         logger.LogDebug("Going into offline mode, state: {State}", state);
-        await client.Connection.EnableOfflineModeAsync();
+        await connectionClient.EnableOfflineModeAsync();
 
         if (state)
-            await client.Connection.DisconnectAsync();
+            await connectionClient.DisconnectAsync();
     }
 
     public async Task Logout()
     {
         using (var op = logger.BeginDebugOperation("Logging out"))
         {
-            await client.Authentication.LogoutAsync();
+            await authenticationClient.LogoutAsync();
 
             TemporarilyOffline = false;
-        
-            OnLogout?.Invoke(this, EventArgs.Empty);
             
             op.Complete();
         }

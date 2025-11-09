@@ -1,4 +1,5 @@
 ﻿@page "/Settings/Logs"
+@using LANCommander.Server.UI.Pages.Settings.Logs.Components
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -21,37 +22,7 @@
                         </Flex>
                     </ExtraTemplate>
                     <ChildContent>
-                        <Form Model="provider" Layout="FormLayout.Vertical">
-                            <FormItem Label="Name">
-                                <Input @bind-Value="provider.Name" BindOnInput/>
-                            </FormItem>
-                            <FormItem Label="Type">
-                                <EnumSelect TEnum="LoggingProviderType" @bind-Value="provider.Type"/>
-                            </FormItem>
-                            <FormItem Label="Minimum Level">
-                                <EnumSelect TEnum="LogLevel" @bind-Value="provider.MinimumLevel"/>
-                            </FormItem>
-
-                            @if (provider.Type == LoggingProviderType.File)
-                            {
-                                <FormItem Label="Path">
-                                    <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@provider.ConnectionString" OkText="Select Path" Title="Choose Path" OnSelected="(p) => OnPathSelected(p, provider)"/>
-                                </FormItem>
-                                <FormItem Label="Archive Every">
-                                    <EnumSelect TEnum="LogInterval?" DefaultValue="LogInterval.Day" @bind-Value="provider.ArchiveEvery"/>
-                                </FormItem>
-                                <FormItem Label="Max Archive Files">
-                                    <AntDesign.InputNumber @bind-Value="provider.MaxArchiveFiles"/>
-                                </FormItem>
-                            }
-
-                            @if (provider.Type == LoggingProviderType.Seq || provider.Type == LoggingProviderType.ElasticSearch)
-                            {
-                                <FormItem Label="Connection String">
-                                    <Input @bind-Value="provider.ConnectionString"/>
-                                </FormItem>
-                            }
-                        </Form>
+                        <ProviderEditorPanel Provider="provider" />
                     </ChildContent>
                 </Panel>
             }
@@ -75,8 +46,6 @@
 
 @code {
     Settings Settings = SettingService.GetSettings();
-
-    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     List<LoggingProvider> Providers = new();
 
@@ -115,15 +84,5 @@
     void RemoveProvider(LoggingProvider provider)
     {
         Providers.Remove(provider);
-    }
-
-    void OnPathSelected(string path, LoggingProvider context)
-    {
-        var appPath = Directory.GetCurrentDirectory();
-
-        if (path != null && path.StartsWith(appPath))
-            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
-
-        context.ConnectionString = path;
     }
 }

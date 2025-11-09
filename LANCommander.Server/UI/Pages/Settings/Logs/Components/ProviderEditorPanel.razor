@@ -1,0 +1,72 @@
+@using LANCommander.Server.Parsers
+<Form Model="Provider" Layout="FormLayout.Vertical" OnFieldChanged="OnChanged">
+    <FormItem Label="Name">
+        <Input @bind-Value="Provider.Name" BindOnInput/>
+    </FormItem>
+    <FormItem Label="Type">
+        <EnumSelect TEnum="LoggingProviderType" @bind-Value="Provider.Type" OnSelectedItemChanged="ProviderTypeChanged" />
+    </FormItem>
+    <FormItem Label="Minimum Level">
+        <EnumSelect TEnum="LogLevel" @bind-Value="Provider.MinimumLevel"/>
+    </FormItem>
+
+    @if (Provider.Type == LoggingProviderType.File)
+    {
+        <FormItem Label="Path">
+            <FilePicker Root="@_rootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Provider.ConnectionString" OkText="Select Path" Title="Choose Path" OnSelected="(p) => OnPathSelected(p)"/>
+        </FormItem>
+        <FormItem Label="Archive Every">
+            <EnumSelect TEnum="LogInterval?" DefaultValue="LogInterval.Day" @bind-Value="Provider.ArchiveEvery"/>
+        </FormItem>
+        <FormItem Label="Max Archive Files">
+            <AntDesign.InputNumber @bind-Value="Provider.MaxArchiveFiles"/>
+        </FormItem>
+    }
+
+    @if (Provider.Type == LoggingProviderType.Seq || Provider.Type == LoggingProviderType.ElasticSearch)
+    {
+        <FormItem Label="Connection String">
+            <Input @bind-Value="Provider.ConnectionString"/>
+        </FormItem>
+    }
+</Form>
+
+@code {
+    [Parameter] public LoggingProvider Provider { get; set; }
+    [Parameter] public EventCallback<LoggingProvider> ProviderChanged { get; set; }
+    
+    string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? string.Empty;
+
+    public async Task OnChanged(FieldChangedEventArgs args)
+    {
+        await InvokeAsync(StateHasChanged);
+        
+        if (ProviderChanged.HasDelegate)
+            await ProviderChanged.InvokeAsync(Provider);
+        
+    }
+    
+    void ProviderTypeChanged(LoggingProviderType type)
+    {
+        switch (type)
+        {
+            case LoggingProviderType.Seq:
+                Provider.ConnectionString = SeqOptions.DefaultConnectionString;
+                break;
+        }
+        
+        StateHasChanged();
+    }
+
+    void OnPathSelected(string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        Provider.ConnectionString = path;
+        
+        StateHasChanged();
+    }
+}

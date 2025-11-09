@@ -1,5 +1,7 @@
 using Elastic.Serilog.Sinks;
+using LANCommander.Server.Configuration;
 using LANCommander.Server.Hubs;
+using LANCommander.Server.Parsers;
 using LANCommander.Server.Services.Models;
 using Serilog;
 using Serilog.Events;
@@ -58,7 +60,18 @@ public static class Logger
                         break;
                     
                     case LoggingProviderType.Seq:
-                        config.WriteTo.Seq(provider.ConnectionString, restrictedToMinimumLevel: minimumLevel);
+                        try
+                        {
+                            var options = ConnectionStringBinder.Bind<SeqOptions>(provider.ConnectionString);
+
+                            config.WriteTo.Seq(
+                                serverUrl: options.ServerUrl,
+                                apiKey: options.ApiKey);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Could not bind Seq connection string");
+                        }
                         break;
                     
                     case LoggingProviderType.ElasticSearch:

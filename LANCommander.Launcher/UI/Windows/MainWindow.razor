@@ -102,10 +102,9 @@
         ConnectionClient.OnOfflineModeEnabled += OnOfflineModeChanged;
         ConnectionClient.OnConnect += OnConnect;
 
-        if (await Client.Authentication.ValidateTokenAsync())
+        if (!await Client.Authentication.ValidateTokenAsync())
         {
             await AuthenticationService.Login();
-            await ProfileService.DownloadProfileInfoAsync();
 
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);

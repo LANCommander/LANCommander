@@ -12,13 +12,6 @@ services:
       # - WINE=1
     volumes:
       - /path/to/appdata/config:/app/config
-      - /path/to/appdata/Backups:/app/Backups
-      - /path/to/appdata/Launcher:/app/Launcher
-      - /path/to/appdata/Media:/app/Media
-      - /path/to/appdata/Saves:/app/Saves
-      - /path/to/appdata/Servers:/app/Servers
-      - /path/to/appdata/Uploads:/app/Uploads
-      - /path/to/appdata/Updates:/app/Updates
     ports:
       - 1337:1337/tcp   # Webinterface
       - 35891:35891/udp # Beacon Broadcast

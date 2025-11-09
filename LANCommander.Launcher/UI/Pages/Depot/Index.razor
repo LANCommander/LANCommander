@@ -1,9 +1,9 @@
 ﻿@page "/Depot"
 @page "/Depot/{id:guid}"
 @using LANCommander.Launcher.Models
-@using LANCommander.Launcher.UI.Depot.Components
 @using LANCommander.SDK.Exceptions
 @implements IDisposable
+@layout AuthenticatedLayout
 @inject NavigationManager NavigationManager
 @inject DepotService DepotService
 @inject LibraryService LibraryService

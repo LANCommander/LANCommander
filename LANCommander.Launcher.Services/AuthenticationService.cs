@@ -7,8 +7,6 @@ using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Settings = LANCommander.Launcher.Models.Settings;
 
 namespace LANCommander.Launcher.Services;
 
@@ -37,6 +35,7 @@ public class AuthenticationService(
         }
         catch
         {
+            logger.LogDebug("Server could not be reached");
         }
 
         return false;

@@ -77,9 +77,21 @@ namespace LANCommander.Server.Controllers.Api
 
             var results = await Cache.GetOrSetAsync("Depot/Results", async _ =>
             {
+                var games = await GameService
+                    .AsNoTracking()
+                    .Include(g => g.Media)
+                    .Include(g => g.Collections)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Tags)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Engine)
+                    .GetAsync();
+                
                 var results = new SDK.Models.DepotResults()
                 {
-                    Games = Mapper.Map<ICollection<DepotGame>>(await GameService.AsNoTracking().GetAsync()),
+                    Games = Mapper.Map<ICollection<DepotGame>>(games),
                     Collections = Mapper.Map<ICollection<SDK.Models.Collection>>(await CollectionService.AsNoTracking().GetAsync()),
                     Companies = Mapper.Map<ICollection<SDK.Models.Company>>(await CompanyService.AsNoTracking().GetAsync()),
                     Engines = Mapper.Map<ICollection<SDK.Models.Engine>>(await EngineService.AsNoTracking().GetAsync()),

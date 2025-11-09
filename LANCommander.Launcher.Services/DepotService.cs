@@ -4,6 +4,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
@@ -18,13 +19,13 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnItemsFilteredHandler OnItemsFiltered;
 
-        private SDK.Client _client;
+        private DepotClient _depotClient;
 
         public DepotService(
-            Client client,
+            DepotClient depotClient,
             ILogger<DepotService> logger) : base(logger)
         {
-            _client = client;
+            _depotClient = depotClient;
             Filter.OnChanged += Filter_OnChanged;
         }
 
@@ -62,7 +63,7 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginDebugOperation("Loading depot items from host"))
             {
-                var results = await _client.Depot.GetAsync();
+                var results = await _depotClient.GetAsync();
 
                 Filter.Populate(results);
 

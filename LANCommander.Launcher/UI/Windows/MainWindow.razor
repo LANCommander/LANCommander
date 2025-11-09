@@ -68,22 +68,9 @@
         <WindowContent>
             <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
                 <Body>
-                    <AuthenticatedView NoAutoValidate="false">
-                        <Authenticated>
-                            @Body
+                    @Body
 
-                            @if (Client.Settings.CurrentValue.Debug.EnableScriptDebugging)
-                            {
-                                <PowerShellConsole/>
-                            }
-                            
-                        </Authenticated>
-                        <NotAuthenticated>
-                            <RedirectToLogin />
-                        </NotAuthenticated>
-                    </AuthenticatedView>
-
-                    <ImportHandler @ref="ImportHandler" Progress="OnImportProcess" />
+                    <ImportHandler @ref="ImportHandler" Progress="OnImportProcess"/>
                     <UpdateChecker/>
                     <AntContainer/>
                     <KeepAliveContainer/>

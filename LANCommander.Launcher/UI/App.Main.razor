@@ -1,24 +1,8 @@
-﻿@inject LocalizationService LocalizationService
-@inject NavigationManager NavigationManager
-
-<Router AppAssembly="@typeof(Program).Assembly">
+﻿<Router AppAssembly="@typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(Windows.MainWindow)" />
     </Found>
     <NotFound>
-        <PageTitle>@LocalizationService.GetString("NotFound")</PageTitle>
-        <LayoutView Layout="@typeof(Windows.MainWindow)">
-            <p role="alert">@LocalizationService.GetString("NotFoundMessage")</p>
-        </LayoutView>
+        <RedirectToRoute Route="/Library" />
     </NotFound>
 </Router>
-
-@code {
-    protected override void OnInitialized()
-    {
-        var currentUri = new Uri(NavigationManager.Uri);
-
-        if (currentUri.LocalPath == "/")
-            NavigationManager.NavigateTo("/Library", true);
-    }
-}

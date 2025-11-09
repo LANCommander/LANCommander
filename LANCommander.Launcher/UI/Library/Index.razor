@@ -1,5 +1,5 @@
-﻿@page "/"
-@page "/{id:guid}"
+﻿@page "/Library"
+@page "/Library/{id:guid}"
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using LANCommander.Launcher.UI.Library.Components
@@ -59,7 +59,7 @@
 
     async Task SelectLibraryItem(Guid id)
     {
-        NavigationManager.NavigateTo($"/{id}");
+        NavigationManager.NavigateTo($"/Library/{id}");
     }
 
     async Task OnLibraryItemSelected(Models.ListItem item)

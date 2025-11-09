@@ -1,16 +1,24 @@
-﻿@using Photino.Blazor.CustomWindow.Components
-@inject LocalizationService LocalizationService
+﻿@inject LocalizationService LocalizationService
+@inject NavigationManager NavigationManager
 
-<CustomWindow HeaderHeight="37">
-    <WindowContent>
-        <div style="padding-top: 37px">
-            <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
-                <Body>
-                <Chat/>
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Windows.ChatWindow)" />
+    </Found>
+    <NotFound>
+        <PageTitle>@LocalizationService.GetString("NotFound")</PageTitle>
+        <LayoutView Layout="@typeof(Windows.ChatWindow)">
+            <p role="alert">@LocalizationService.GetString("NotFoundMessage")</p>
+        </LayoutView>
+    </NotFound>
+</Router>
 
-                <AntContainer/>
-                </Body>
-            </ErrorHandler>
-        </div>
-    </WindowContent>
-</CustomWindow>
+@code {
+    protected override void OnInitialized()
+    {
+        var currentUri = new Uri(NavigationManager.Uri);
+
+        if (currentUri.LocalPath == "/")
+            NavigationManager.NavigateTo("/Chat", true);
+    }
+}

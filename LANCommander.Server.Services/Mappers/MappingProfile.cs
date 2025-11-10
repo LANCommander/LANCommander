@@ -33,6 +33,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Tag, SDK.Models.Tag>().ReverseMap();
             CreateMap<Data.Models.User, SDK.Models.User>();
             CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
+            CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>().ReverseMap();
             
             CreateEntityReferenceMap<SDK.Models.Game>(g => g.Title);
 

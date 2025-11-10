@@ -117,8 +117,8 @@ namespace LANCommander.Server.Services
                     return q
                         .AsNoTracking()
                         .AsSplitQuery()
-                        .Include(t => t.Participants)
-                        .Where(t => t.Participants != null && t.Participants.Any(p => p.Id == user.Id));
+                        .Where(t => t.Participants.Any(p => p.Id == userId))
+                        .Include(t => t.Participants);
                 }).GetAsync();
                 
                 return dbThreads.OrderByDescending(t => t.CreatedOn).ToList();

@@ -4,28 +4,31 @@
 <div class="data-list">
     <CascadingValue Value="_radio" Name="Radio">
         <CascadingValue Value="_checkbox" Name="Checkbox">
-            @foreach (var item in DataSource)
-            {
-                <CascadingValue Value="@(Value.Equals(item) || Values.Contains(item))" Name="Selected">
-                    <DataListItem 
-                        TItem="TItem"
-                        Item="item"
-                        OnSelectedChanged="(selected) => SelectionChanged(item, selected)" 
-                        ItemTemplate="ChildContent" />
-                </CascadingValue>
-            }
+            <Flex Direction="FlexDirection.Vertical" Gap="Gap">
+                @foreach (var item in DataSource)
+                {
+                    <CascadingValue Value="@(Value?.Equals(item) ?? Values.Contains(item))" Name="Selected">
+                        <DataListItem
+                            TItem="TItem"
+                            Item="item"
+                            OnSelectedChanged="(selected) => SelectionChanged(item, selected)"
+                            ItemTemplate="ChildContent"/>
+                    </CascadingValue>
+                }
+            </Flex>
         </CascadingValue>
     </CascadingValue>
 </div>
 
 @code {
     [Parameter] public IEnumerable<TItem> DataSource { get; set; }
-    [Parameter] public TItem Value { get; set; }
+    [Parameter] public TItem Value { get; set; } = default!;
     [Parameter] public EventCallback<TItem> ValueChanged { get; set; }
-    [Parameter] public IEnumerable<TItem> Values { get; set; }
+    [Parameter] public IEnumerable<TItem> Values { get; set; } = null!;
     [Parameter] public EventCallback<IEnumerable<TItem>> ValuesChanged { get; set; }
     [Parameter] public RenderFragment<TItem> ChildContent { get; set; }
     [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; }
+    [Parameter] public FlexGap Gap { get; set; } = FlexGap.Middle;
 
     bool _radio;
     bool _checkbox;

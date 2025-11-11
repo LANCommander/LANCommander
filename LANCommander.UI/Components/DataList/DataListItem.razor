@@ -2,19 +2,21 @@
 @typeparam TItem
 
 <CascadingValue Value="Item" Name="Item">
-    <Flex @onclick="ToggleSelection" Align="Align" Justify="Justify" Gap="Gap" Class="data-list-item">
-        @if (InputPosition == DataListInputPosition.Left)
-        {
-            <DataListItemInput TItem="TItem" />
-        }
-    
-        @ItemTemplate(Item)
-    
-        @if (InputPosition == DataListInputPosition.Right)
-        {
-            <DataListItemInput TItem="TItem" />
-        }
-    </Flex>
+    <div class="data-list-item" @onclick="ToggleSelection">
+        <Flex Align="Align" Justify="Justify" Gap="Gap">
+            @if (InputPosition == DataListInputPosition.Left)
+            {
+                <DataListItemInput TItem="TItem"/>
+            }
+
+            @ItemTemplate(Item)
+
+            @if (InputPosition == DataListInputPosition.Right)
+            {
+                <DataListItemInput TItem="TItem"/>
+            }
+        </Flex>
+    </div>
 </CascadingValue>
 
 @code {
@@ -36,9 +38,9 @@
     [Parameter] public TItem Item { get; set; }
     [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; }
     [Parameter] public EventCallback<bool> OnSelectedChanged { get; set; }
-    [Parameter] public FlexAlign Align { get; set; } = FlexAlign.Normal;
+    [Parameter] public FlexAlign Align { get; set; } = FlexAlign.Center;
     [Parameter] public FlexJustify Justify { get; set; } = FlexJustify.Center;
-    [Parameter] public FlexGap Gap { get; set; } = FlexGap.Normal;
+    [Parameter] public FlexGap Gap { get; set; } = FlexGap.Middle;
 
     private async Task ToggleSelection()
     {

@@ -1,11 +1,8 @@
 @namespace LANCommander.UI.Components
 
-<div class="chat-list">
-    @foreach (var thread in Threads)
-    {
-        <ChatListThread Thread="thread" OnSelected="SelectThread" Active="@(SelectedThread?.Id == thread.Id)"/>
-    }
-</div>
+<DataList DataSource="Threads">
+    <ChatListThread Thread="context" OnSelected="SelectThread" Active="@(SelectedThread?.Id == context.Id)" />
+</DataList>
 
 @code {
     [Parameter] public required IEnumerable<SDK.Models.ChatThread> Threads { get; set; } = [];

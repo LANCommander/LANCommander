@@ -2,15 +2,17 @@
 @namespace LANCommander.UI.Components
 @inherits FeedbackComponent<IEnumerable<LANCommander.SDK.Models.User>, IEnumerable<LANCommander.SDK.Models.User>>
 
-<Search Placeholder="Search" ClassicSearchIcon BindOnInput @bind-Value="_search" />
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle" Style="width: 100%;">
+    <Search Placeholder="Search" ClassicSearchIcon BindOnInput @bind-Value="_search" />
 
-<DataList DataSource="_filteredUsers" @bind-Values="_selectedUsers">
-    <SafeAvatar Username="@context.UserName" />
-    <Text>@context.Name</Text>
-</DataList>
+    <DataList DataSource="_filteredUsers" @bind-Values="_selectedUsers">
+        <SafeAvatar Username="@context.UserName" />
+        <Text Style="flex-grow: 1;">@context.Name</Text>
+    </DataList>
+</Flex>
 
 @code {
-    string? _search;
+    string _search = String.Empty;
 
     IEnumerable<User> _filteredUsers => Options.Where(u => u.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
     IEnumerable<User> _selectedUsers = [];

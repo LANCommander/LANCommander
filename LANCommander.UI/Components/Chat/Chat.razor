@@ -1,8 +1,8 @@
+@using LANCommander.SDK.Models
 @using LANCommander.SDK.Services
 @inject ChatClient ChatClient
 @inject ModalService ModalService
 @namespace LANCommander.UI.Components
-
 
 <Button OnClick="StartThread">New Thread</Button>
 
@@ -22,27 +22,25 @@
 
     async Task StartThread()
     {
-        ModalRef modalRef = default;
-        modalRef = ModalService.CreateModal<ChatUsersDialog>(new()
-        {
-            OnOk = async e =>
-            {
-                modalRef?.SetConfirmLoading(true);
-                await Task.Delay(1000);
+        var users = await ChatClient.GetUsersAsync();
 
-                await modalRef.CloseAsync();
-            },
-            OnCancel = async e =>
-            {   
-                await modalRef.CloseAsync();
-            },
-        });
+        var modalOptions = new ModalOptions
+        {
+            Draggable = false,
+            Centered = true,
+            Title = "New Thread",
+        };
         
-        //await ChatClient.StartThreadAsync(["DoctorDalek"]);
-        
-        //_threads = await ChatClient.GetThreadsAsync();
-        
-        await InvokeAsync(StateHasChanged);
+        var modalRef = await ModalService.CreateModalAsync<ChatUsersDialog, IEnumerable<User>, IEnumerable<User>>(modalOptions, users);
+
+        modalRef.OnOk = async (users) =>
+        {
+            _currentThreadId = await ChatClient.StartThreadAsync(users.Select(u => u.Id.ToString()));
+
+            _threads = await ChatClient.GetThreadsAsync();
+
+            await InvokeAsync(StateHasChanged);
+        };
     }
     
     async Task OpenThread(Guid threadId)

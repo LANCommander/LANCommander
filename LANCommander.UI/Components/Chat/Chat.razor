@@ -1,5 +1,6 @@
 @using LANCommander.SDK.Services
 @inject ChatClient ChatClient
+@inject ModalService ModalService
 @namespace LANCommander.UI.Components
 
 
@@ -21,9 +22,25 @@
 
     async Task StartThread()
     {
-        await ChatClient.StartThreadAsync(["DoctorDalek"]);
+        ModalRef modalRef = default;
+        modalRef = ModalService.CreateModal<ChatUsersDialog>(new()
+        {
+            OnOk = async e =>
+            {
+                modalRef?.SetConfirmLoading(true);
+                await Task.Delay(1000);
+
+                await modalRef.CloseAsync();
+            },
+            OnCancel = async e =>
+            {   
+                await modalRef.CloseAsync();
+            },
+        });
         
-        _threads = await ChatClient.GetThreadsAsync();
+        //await ChatClient.StartThreadAsync(["DoctorDalek"]);
+        
+        //_threads = await ChatClient.GetThreadsAsync();
         
         await InvokeAsync(StateHasChanged);
     }

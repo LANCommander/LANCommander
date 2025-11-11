@@ -72,6 +72,11 @@ public class ChatClient
         return threads;
     }
 
+    public async Task<IEnumerable<User>> GetUsersAsync()
+    {
+        return await _rpc.Chat.GetUsersAsync();
+    }
+
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
     {
         if (_threads.TryGetValue(threadId, out var thread))

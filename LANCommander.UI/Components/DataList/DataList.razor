@@ -1,0 +1,65 @@
+@namespace LANCommander.UI.Components
+@typeparam TItem
+
+<div class="data-list">
+    <CascadingValue Value="_radio" Name="Radio">
+        <CascadingValue Value="_checkbox" Name="Checkbox">
+            @foreach (var item in DataSource)
+            {
+                <CascadingValue Value="@(Value.Equals(item) || Values.Contains(item))" Name="Selected">
+                    <DataListItem 
+                        Item="item" 
+                        OnSelectedChanged="(selected) => SelectionChanged(item, selected)" 
+                        ItemTemplate="ChildContent" />
+                </CascadingValue>
+            }
+        </CascadingValue>
+    </CascadingValue>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
+    [Parameter] public TItem Value { get; set; }
+    [Parameter] public EventCallback<TItem> ValueChanged { get; set; }
+    [Parameter] public IEnumerable<TItem> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<TItem>> ValuesChanged { get; set; }
+    [Parameter] public RenderFragment<TItem> ChildContent { get; set; }
+    [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; }
+
+    bool _radio;
+    bool _checkbox;
+
+    List<TItem> _selectedValues = new();
+
+    protected override void OnInitialized()
+    {
+        if (ValueChanged.HasDelegate)
+            _radio = true;
+        else if (ValuesChanged.HasDelegate)
+            _checkbox = true;
+
+        if (ChildContent == null && ItemTemplate != null)
+            ChildContent = ItemTemplate;
+    }
+
+    async Task SelectionChanged(TItem item, bool selected)
+    {
+        if (_radio && selected)
+        {
+            Value = item;
+
+            await ValueChanged.InvokeAsync(Value);
+        }
+        else if (_checkbox)
+        {
+            _selectedValues.Remove(item);
+            
+            if (selected)
+                _selectedValues.Add(item);
+
+            Values = _selectedValues;
+            
+            await ValuesChanged.InvokeAsync(Values);
+        }
+    }
+}

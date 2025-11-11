@@ -1,0 +1,31 @@
+@namespace LANCommander.UI.Components
+@typeparam TItem
+
+@if (SelectionTemplate != null)
+{
+    @SelectionTemplate((Item, Selected))
+}
+else if (Radio)
+{
+    <Radio Checked="Selected"></Radio>
+}
+else if (Checkbox)
+{
+    <Checkbox Checked="Selected"></Checkbox>
+}
+
+@code {
+    [CascadingParameter(Name = "Item")]
+    public TItem Item { get; set; }
+    
+    [CascadingParameter(Name = "Selected")]
+    public bool Selected { get; set; }
+    
+    [CascadingParameter(Name = "Radio")]
+    public bool Radio { get; set; }
+    
+    [CascadingParameter(Name = "Checkbox")]
+    public bool Checkbox { get; set; }
+    
+    [Parameter] public RenderFragment<(TItem, bool)> SelectionTemplate { get; set; }
+}

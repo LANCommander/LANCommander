@@ -1,0 +1,48 @@
+@namespace LANCommander.UI.Components
+@typeparam TItem
+
+<CascadingValue Value="Item" Name="Item">
+    <Flex @onclick="ToggleSelection" Align="Align" Justify="Justify" Gap="Gap" Class="data-list-item">
+        @if (InputPosition == DataListInputPosition.Left)
+        {
+            <DataListItemInput />
+        }
+    
+        @ItemTemplate(Item)
+    
+        @if (InputPosition == DataListInputPosition.Right)
+        {
+            <DataListItemInput />
+        }
+    </Flex>
+</CascadingValue>
+
+@code {
+    [CascadingParameter(Name = "Selected")]
+    public bool Selected { get; set; }
+    
+    [CascadingParameter(Name = "Radio")]
+    public bool Radio { get; set; }
+    
+    [CascadingParameter(Name = "Checkbox")]
+    public bool Checkbox { get; set; }
+    
+    [CascadingParameter(Name = "InputPosition")]
+    public DataListInputPosition InputPosition { get; set; }
+    
+    [CascadingParameter(Name = "SelectionTemplate")]
+    public RenderFragment<TItem> SelectionTemplate { get; set; }
+    
+    [Parameter] public TItem Item { get; set; }
+    [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; }
+    [Parameter] public EventCallback<bool> OnSelectedChanged { get; set; }
+    [Parameter] public FlexAlign Align { get; set; } = FlexAlign.Normal;
+    [Parameter] public FlexJustify Justify { get; set; } = FlexJustify.Center;
+    [Parameter] public FlexGap Gap { get; set; } = FlexGap.Normal;
+
+    private async Task ToggleSelection()
+    {
+        if (OnSelectedChanged.HasDelegate)
+            await OnSelectedChanged.InvokeAsync(!Selected);
+    }
+}

@@ -1,6 +1,7 @@
-namespace LANCommander.UI.Components.DataList;
+namespace LANCommander.UI.Components;
 
-public class DataListInputPosition
+public enum DataListInputPosition
 {
-    
+    Left,
+    Right,
 }

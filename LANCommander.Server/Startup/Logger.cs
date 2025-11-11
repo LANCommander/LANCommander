@@ -65,6 +65,7 @@ public static class Logger
                             var options = ConnectionStringBinder.Bind<SeqOptions>(provider.ConnectionString);
 
                             config.WriteTo.Seq(
+                                restrictedToMinimumLevel: minimumLevel,
                                 serverUrl: options.ServerUrl,
                                 apiKey: options.ApiKey);
                         }

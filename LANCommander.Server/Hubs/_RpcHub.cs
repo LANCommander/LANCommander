@@ -10,6 +10,7 @@ namespace LANCommander.Server.Hubs;
 public partial class RpcHub(
     IFusionCache cache,
     IMapper mapper,
+    ILogger<RpcHub> logger,
     ChatService chatService,
     ServerService serverService) : Hub<IRpcSubscriber>, IRpcHub
 {

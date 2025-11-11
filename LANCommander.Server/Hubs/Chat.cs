@@ -8,6 +8,8 @@ public partial class RpcHub
 
     private async Task<List<string>> GetThreadParticipants(Guid threadId)
     {
+        logger.LogDebug("Getting thread participants for {ThreadId}", threadId);
+        
         var cacheKey = GetThreadParticipantCacheKey(threadId);
 
         var participants = await cache.TryGetAsync<List<string>>(cacheKey);
@@ -17,16 +19,22 @@ public partial class RpcHub
     
     public async Task<Guid> Chat_StartThreadAsync(string[] userIdentifiers)
     {
+        logger.LogDebug("Starting new thread with {ParticipantCount} participants}", userIdentifiers.Length);
+        
         var thread = await chatService.StartThreadAsync();
 
         foreach (var userIdentifier in userIdentifiers)
             await Chat_AddParticipantAsync(thread.Id, userIdentifier);
 
+        logger.LogDebug("Created new thread with ID {ThreadId}", thread.Id);
+        
         return thread.Id;
     }
 
     public async Task Chat_AddParticipantAsync(Guid threadId, string participantId)
     {
+        logger.LogDebug("Adding participant {ParticipantId} to thread {ThreadId}", participantId, threadId);
+        
         var cacheKey = GetThreadParticipantCacheKey(threadId);
         
         var participants = await cache.TryGetAsync<List<string>>(cacheKey);

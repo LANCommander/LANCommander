@@ -99,4 +99,11 @@ public partial class RpcHub
 
         await Clients.Users(participants).Chat_StopTyping(threadId, Context.UserIdentifier);
     }
+
+    public async Task<IEnumerable<User>> Chat_GetUsersAsync()
+    {
+        var users = await chatService.GetUsersAsync();
+        
+        return mapper.Map<IEnumerable<User>>(users);
+    }
 }

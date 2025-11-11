@@ -126,5 +126,21 @@ namespace LANCommander.Server.Services
 
             return threads;
         }
+
+        
+        /// <summary>
+        /// Gets a list of users stripped down to only IDs and usernames
+        /// </summary>
+        public async Task<List<User>> GetUsersAsync()
+        {
+            var users = await userService.AsNoTracking().GetAsync();
+
+            return users.Select(u => new User
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Alias = u.Alias,
+            }).ToList();
+        }
     }
 }

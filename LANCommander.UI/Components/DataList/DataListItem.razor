@@ -5,14 +5,14 @@
     <Flex @onclick="ToggleSelection" Align="Align" Justify="Justify" Gap="Gap" Class="data-list-item">
         @if (InputPosition == DataListInputPosition.Left)
         {
-            <DataListItemInput />
+            <DataListItemInput TItem="TItem" />
         }
     
         @ItemTemplate(Item)
     
         @if (InputPosition == DataListInputPosition.Right)
         {
-            <DataListItemInput />
+            <DataListItemInput TItem="TItem" />
         }
     </Flex>
 </CascadingValue>

@@ -438,6 +438,20 @@ namespace LANCommander.Server.Data
                     pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId").OnDelete(DeleteBehavior.Cascade)
                 );
             #endregion
+            
+            #region Chat Relationships
+
+            builder.Entity<ChatThreadReadStatus>()
+                .HasNoKey();
+            
+            builder.Entity<ChatThreadReadStatus>()
+                .HasOne(rs => rs.Thread)
+                .WithMany();
+
+            builder.Entity<ChatThreadReadStatus>()
+                .HasOne(rs => rs.User)
+                .WithMany();
+            #endregion
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -468,5 +482,8 @@ namespace LANCommander.Server.Data
         public DbSet<StorageLocation>? StorageLocations { get; set; }
         public DbSet<Role>? Roles { get; set; }
         public DbSet<User>? Users { get; set; }
+        public DbSet<ChatThread>? ChatThreads { get; set; }
+        public DbSet<ChatMessage>? ChatMessages { get; set; }
+        public DbSet<ChatThreadReadStatus>? ChatThreadReadStatuses { get; set; }
     }
 }

@@ -104,8 +104,12 @@ public class ChatClient
     public async Task SendMessageAsync(Guid threadId, string message)
     {
         if (_threads.TryGetValue(threadId, out var thread))
-        {
-            await _rpc.Chat.SendMessageAsync(threadId, message);
-        }
+            await _rpc.Chat.SendMessageAsync(thread.Id, message);
+    }
+
+    public async Task UpdatedReadStatus(Guid threadId)
+    {
+        if (_threads.TryGetValue(threadId, out var thread))
+            await _rpc.Chat.UpdateReadStatusAsync(thread.Id);
     }
 }

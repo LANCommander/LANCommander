@@ -1,8 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using AutoMapper;
-using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -14,6 +11,7 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         ChatMessageService chatMessageService,
         ChatThreadService chatThreadService,
+        ChatThreadReadStatusService chatThreadReadStatusService,
         UserService userService) : BaseService(logger)
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
@@ -141,6 +139,21 @@ namespace LANCommander.Server.Services
                 UserName = u.UserName,
                 Alias = u.Alias,
             }).ToList();
+        }
+
+        public async Task UpdateReadStatus(Guid threadId, Guid userId)
+        {
+            await chatThreadReadStatusService.UpdateReadStatus(threadId, userId);
+        }
+
+        public async Task<int> GetUnreadMessageCountAsync(Guid threadId, Guid userId)
+        {
+            var lastRead = await chatThreadReadStatusService.GetLastReadAsync(threadId, userId);
+
+            if (lastRead == null)
+                return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastRead.GetValueOrDefault());
+
+            return 0;
         }
     }
 }

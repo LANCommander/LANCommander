@@ -15,5 +15,7 @@ public partial interface IRpcHub
     Task Chat_GetMessagesAsync(Guid threadId);
     Task Chat_StartTyping(Guid threadId);
     Task Chat_StopTyping(Guid threadId);
+    Task Chat_UpdateReadStatus(Guid threadId);
+    Task<int> Chat_GetUnreadMessageCountAsync(Guid threadId);
     Task<IEnumerable<User>> Chat_GetUsersAsync();
 }

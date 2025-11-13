@@ -53,6 +53,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ChatService>();
         services.AddScoped<ChatMessageService>();
         services.AddScoped<ChatThreadService>();
+        services.AddScoped<ChatThreadReadStatusService>();
         services.AddTransient<SetupService>();
         
         // Register server engines

@@ -108,6 +108,20 @@ public partial class RpcHub
         await Clients.Users(participants).Chat_StopTyping(threadId, Context.UserIdentifier);
     }
 
+    public async Task Chat_UpdateReadStatus(Guid threadId)
+    {
+        if (Guid.TryParse(Context.UserIdentifier, out var userId))
+            await chatService.UpdateReadStatus(threadId, userId);
+    }
+
+    public async Task<int> Chat_GetUnreadMessageCountAsync(Guid threadId)
+    {
+        if (Guid.TryParse(Context.UserIdentifier, out var userId))
+            return await chatService.GetUnreadMessageCountAsync(threadId, userId);
+
+        return 0;
+    }
+
     public async Task<IEnumerable<User>> Chat_GetUsersAsync()
     {
         var users = await chatService.GetUsersAsync();

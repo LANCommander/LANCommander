@@ -1,0 +1,18 @@
+@namespace LANCommander.UI.Components
+
+<div class="safe-avatar-group">
+    <Avatar Icon="@IconType.Outline.Group" />
+
+    <div class="safe-avatar-group-users">
+        @foreach (var username in Usernames)
+        {
+            <SafeAvatar Username="@username" Shape="Shape" Size="Size" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<string> Usernames { get; set; }
+    [Parameter] public AvatarShape Shape { get; set; }
+    [Parameter] public AvatarSize Size { get; set; }
+}

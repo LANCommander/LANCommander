@@ -52,6 +52,12 @@ public class RpcChatClient(IRpcSubscriber subscriber)
     public async Task StopTypingAsync(Guid threadId)
         => await RpcClient.Hub.Chat_StopTyping(threadId);
     
+    public async Task UpdateReadStatusAsync(Guid threadId)
+        => await RpcClient.Hub.Chat_UpdateReadStatus(threadId);
+    
+    public async Task<int> GetUnreadMessageCountAsync(Guid threadId)
+        => await RpcClient.Hub.Chat_GetUnreadMessageCountAsync(threadId);
+    
     public async Task<IEnumerable<User>> GetUsersAsync()
         => await RpcClient.Hub.Chat_GetUsersAsync();
 }

@@ -1,19 +1,30 @@
 @using LANCommander.SDK.Services
 @namespace LANCommander.UI.Components
-@inject ProfileClient ProfileClient
+@inject RpcClient RpcClient
 
 <div class="chat-list-thread @_class" @onclick="OnClick">
     <div class="chat-list-thread-avatar">
         @if (Thread.Participants.Count == 2)
         {
-            <SafeAvatar
-                Shape="AvatarShape.Square"
-                Size="AvatarSize.Large"
-                Username="@Thread.Participants.First().UserName" />
+            <Badge Count="_unreadCount" OverflowCount="99">
+                <SafeAvatar
+                    Shape="AvatarShape.Square"
+                    Size="AvatarSize.Large"
+                    Username="@Thread.Participants.First().Name" />
+            </Badge>
+        }
+        else
+        {
+            <Badge Count="_unreadCount" OverflowCount="99">
+                <SafeAvatarGroup
+                    Shape="AvatarShape.Square"
+                    Size="AvatarSize.Large"
+                    Usernames="@Thread.Participants.Select(p => p.Name)" />
+            </Badge>
         }
     </div>
     <div class="chat-list-thread-title">
-        @Thread.Name
+        @Thread.Title
     </div>
 </div>
 
@@ -22,10 +33,13 @@
     [Parameter] public EventCallback<SDK.Models.ChatThread> OnSelected { get; set; }
     [Parameter] public bool Active { get; set; }
 
+    int _unreadCount = 0;
     string _class = String.Empty;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
+        _unreadCount = await RpcClient.Chat.GetUnreadMessageCountAsync(Thread.Id);
+        
         _class = new ClassBuilder()
             .If(() => Active, "chat-list-thread-active")
             .Build();

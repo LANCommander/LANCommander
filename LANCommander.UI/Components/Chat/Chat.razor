@@ -6,9 +6,14 @@
 
 <Button OnClick="StartThread">New Thread</Button>
 
-<ChatList Threads="_threads" />
-
-<ChatThread Id="_currentThreadId" />
+<SplitPane>
+    <Pane>
+        <ChatList Threads="_threads" />
+    </Pane>
+    <Pane>
+        <ChatThread Id="_currentThreadId" />
+    </Pane>
+</SplitPane>
 
 @code {
     IEnumerable<SDK.Models.ChatThread> _threads = [];

@@ -35,6 +35,8 @@ namespace LANCommander.Server.Services
 
             if (thread != null && thread.Participants.All(p => p.Id != user.Id))
             {
+                logger.LogInformation("Adding participant {UserId} to thread {ThreadId}", user.UserName, thread.Id);
+                
                 thread.Participants.Add(user);
                 
                 await chatThreadService.UpdateAsync(thread);

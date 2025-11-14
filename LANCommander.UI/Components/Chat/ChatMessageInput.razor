@@ -2,26 +2,28 @@
 @namespace LANCommander.UI.Components
 @inject ILogger<ChatMessageInput> Logger
 
-<FormItem 
-    HasFeedback="_hasError" 
-    ValidateStatus="_validateStatus"
-    Help="@_errorMessage">
-    <TextArea 
-        @ref="_textArea"
-        Disabled="_sendingMessage"
-        MinRows="1"
-        AutoSize="true"
-        BindOnInput
-        OnPressEnter="SendMessage"
-        @bind-Value="_contents">
-    </TextArea>
-</FormItem>
+<Form Model="_message">
+    <FormItem 
+        HasFeedback="_hasError" 
+        ValidateStatus="_validateStatus"
+        Help="@_errorMessage">
+        <TextArea 
+            @ref="_textArea"
+            Disabled="_sendingMessage"
+            MinRows="1"
+            AutoSize="true"
+            BindOnInput
+            OnPressEnter="SendMessage"
+            @bind-Value="context.Content">
+        </TextArea>
+    </FormItem>
+</Form>
 
 @code {
     [Parameter] public EventCallback<string> OnSendMessage { get; set; }
     TextArea _textArea;
 
-    string _contents;
+    ChatMessage _message = new();
     bool _sendingMessage;
 
     string _errorMessage = String.Empty;
@@ -39,9 +41,9 @@
             try
             {
                 if (OnSendMessage.HasDelegate)
-                    await OnSendMessage.InvokeAsync(_contents);
+                    await OnSendMessage.InvokeAsync(_message.Content);
                 
-                _contents = String.Empty;
+                _message.Content = String.Empty;
             }
             catch (Exception ex)
             {

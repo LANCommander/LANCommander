@@ -19,7 +19,7 @@ public partial class RpcHub
     
     public async Task<Guid> Chat_StartThreadAsync(string[] userIdentifiers)
     {
-        logger.LogDebug("Starting new thread with {ParticipantCount} participants}", userIdentifiers.Length);
+        logger.LogDebug("Starting new thread with {ParticipantCount} participants", userIdentifiers.Length);
         
         var thread = await chatService.StartThreadAsync();
 

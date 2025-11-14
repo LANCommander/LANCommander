@@ -33,8 +33,6 @@ public partial class RpcHub
 
     public async Task Chat_AddParticipantAsync(Guid threadId, string participantId)
     {
-        logger.LogDebug("Adding participant {ParticipantId} to thread {ThreadId}", participantId, threadId);
-        
         var cacheKey = GetThreadParticipantCacheKey(threadId);
         
         var participants = await cache.TryGetAsync<List<string>>(cacheKey);

@@ -10,7 +10,7 @@
     <PackageVersion Include="AutoMapper" Version="14.0.0" />
   </ItemGroup>
   <ItemGroup Label="AntDesign">
-    <PackageVersion Include="AntDesign" Version="1.4.3" />
+    <PackageVersion Include="AntDesign" Version="1.5.0" />
     <PackageVersion Include="AntDesign.Charts" Version="0.8.0" />
   </ItemGroup>
   <ItemGroup Label="Blazor">

@@ -16,4 +16,10 @@
 
     IEnumerable<User> _filteredUsers => Options.Where(u => u.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
     IEnumerable<User> _selectedUsers = [];
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await OkCancelRefWithResult!.OnOk(_selectedUsers);
+    }
+
 }

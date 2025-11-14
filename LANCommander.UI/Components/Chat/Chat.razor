@@ -31,7 +31,7 @@
             Title = "New Thread",
         };
         
-        var modalRef = await ModalService.CreateModalAsync<ChatUsersDialog, IEnumerable<User>, IEnumerable<User>>(modalOptions, users);
+        var modalRef = ModalService.CreateModal<ChatUsersDialog, IEnumerable<User>, IEnumerable<User>>(modalOptions, users);
 
         modalRef.OnOk = async (users) =>
         {

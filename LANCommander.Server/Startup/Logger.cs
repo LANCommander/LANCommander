@@ -15,13 +15,17 @@ public static class Logger
     public static WebApplicationBuilder AddLogger(this WebApplicationBuilder builder)
     {
         Log.Logger = new LoggerConfiguration()
-                        .WriteTo.Console()
-                        .CreateBootstrapLogger();
+            .MinimumLevel.Verbose()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
 
         builder.Services.AddSerilogHub<LoggingHub>();
 
         builder.Services.AddSerilog((serviceProvider, config) =>
         {
+            config.MinimumLevel.Verbose();
+            config.Enrich.FromLogContext();
+            
             var settings = serviceProvider.GetRequiredService<Settings>();
             
             if (settings.Logs.IgnorePings)
@@ -31,7 +35,7 @@ public static class Logger
             {
                 LogEventLevel minimumLevel = provider.MinimumLevel switch
                 {
-                    LogLevel.Trace => LogEventLevel.Debug,
+                    LogLevel.Trace => LogEventLevel.Verbose,
                     LogLevel.Debug => LogEventLevel.Debug,
                     LogLevel.Warning => LogEventLevel.Warning,
                     LogLevel.Information => LogEventLevel.Information,

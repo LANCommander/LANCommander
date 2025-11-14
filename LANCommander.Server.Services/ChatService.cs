@@ -32,10 +32,13 @@ namespace LANCommander.Server.Services
             var thread = await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
             
             var user = await userService.GetAsync(userId);
-
-            if (thread != null && thread.Participants.All(p => p.Id != user.Id))
+            
+            if (thread != null && (thread.Participants == null || thread.Participants.All(p => p.Id != user.Id)))
             {
                 logger.LogInformation("Adding participant {UserId} to thread {ThreadId}", user.UserName, thread.Id);
+
+                if (thread.Participants == null)
+                    thread.Participants = new List<User>();
                 
                 thread.Participants.Add(user);
                 

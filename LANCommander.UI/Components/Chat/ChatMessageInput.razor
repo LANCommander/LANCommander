@@ -1,14 +1,21 @@
+@using Microsoft.Extensions.Logging
 @namespace LANCommander.UI.Components
+@inject ILogger<ChatMessageInput> Logger
 
-<TextArea 
-    @ref="_textArea"
-    Disabled="_sendingMessage"
-    MinRows="1"
-    AutoSize="true"
-    BindOnInput
-    OnPressEnter="SendMessage"
-    @bind-Value="_contents">
-</TextArea>
+<FormItem 
+    HasFeedback="_hasError" 
+    ValidateStatus="_validateStatus"
+    Help="@_errorMessage">
+    <TextArea 
+        @ref="_textArea"
+        Disabled="_sendingMessage"
+        MinRows="1"
+        AutoSize="true"
+        BindOnInput
+        OnPressEnter="SendMessage"
+        @bind-Value="_contents">
+    </TextArea>
+</FormItem>
 
 @code {
     [Parameter] public EventCallback<string> OnSendMessage { get; set; }
@@ -16,6 +23,10 @@
 
     string _contents;
     bool _sendingMessage;
+
+    string _errorMessage = String.Empty;
+    FormValidateStatus _validateStatus => _hasError ? FormValidateStatus.Error : FormValidateStatus.Default;
+    bool _hasError => !String.IsNullOrWhiteSpace(_errorMessage);
     
     async Task SendMessage(PressEnterEventArgs args)
     {
@@ -25,10 +36,19 @@
             
             _sendingMessage = true;
 
-            if (OnSendMessage.HasDelegate)
-                await OnSendMessage.InvokeAsync(_contents);
-
-            _contents = String.Empty;
+            try
+            {
+                if (OnSendMessage.HasDelegate)
+                    await OnSendMessage.InvokeAsync(_contents);
+                
+                _contents = String.Empty;
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = "Could not send message";
+                
+                Logger.LogError(ex, "Failure sending message");
+            }
 
             _sendingMessage = false;
             

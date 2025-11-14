@@ -4,5 +4,5 @@ namespace LANCommander.SDK.Rpc.Client;
 
 public partial interface IRpcSubscriber
 {
-    public bool IsConnected();
+    public Task<bool> IsConnectedAsync();
 }

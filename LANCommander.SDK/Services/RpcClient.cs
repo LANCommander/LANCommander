@@ -17,7 +17,7 @@ public class RpcClient(IRpcSubscriber subscriber)
     public RpcChatClient Chat => new(_subscriber);
     public RpcServerClient Servers => new(_subscriber);
 
-    public bool IsConnected => _subscriber.IsConnected();
+    public bool IsConnected => _subscriber.IsConnectedAsync().Result;
 
     public async Task ConnectAsync(Uri address)
         => await _subscriber.ConnectAsync(address);

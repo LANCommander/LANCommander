@@ -15,6 +15,6 @@ public partial class RedirectToRoute : ComponentBase
         var uri = new Uri(NavigationManager.Uri);
         
         if (uri.LocalPath != Route)
-            NavigationManager.NavigateTo(Route);
+            NavigationManager.NavigateTo(Route, true);
     }
 }

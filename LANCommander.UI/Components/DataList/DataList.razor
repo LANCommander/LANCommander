@@ -7,7 +7,7 @@
             <Flex Direction="FlexDirection.Vertical" Gap="Gap">
                 @foreach (var item in DataSource)
                 {
-                    <CascadingValue Value="@(Value?.Equals(item) ?? Values.Contains(item))" Name="Selected">
+                    <CascadingValue Value="@(Value?.Equals(item) ?? Values?.Contains(item) ?? false)" Name="Selected">
                         <DataListItem
                             TItem="TItem"
                             Item="item"

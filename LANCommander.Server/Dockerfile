@@ -1,8 +1,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /script
 
+RUN mkdir -p /app
+
+COPY entrypoint.sh /app/entrypoint.sh
+COPY steamcmd.sh /usr/local/bin/steamcmd
+
 COPY . .
-RUN dotnet publish LANCommander.Server/LANCommander.Server.csproj -c Debug -p /app
+RUN dotnet publish LANCommander.Server/LANCommander.Server.csproj -c Debug -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
@@ -10,9 +15,6 @@ WORKDIR /app
 EXPOSE 1337
 EXPOSE 213/udp
 EXPOSE 35891/udp
-
-COPY /script/LANCommander.Server/entrypoint.sh /app/entrypoint.sh
-COPY /script/LANCommander.Server/steamcmd.sh /usr/local/bin/steamcmd
 
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh

@@ -8,8 +8,6 @@
 </Spin>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     object[] Data;
 
     bool Loading = true;
@@ -48,7 +46,7 @@
             .Include(ps => ps.User)
             .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
 
-        Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+        Config.Theme = "dark";
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
 

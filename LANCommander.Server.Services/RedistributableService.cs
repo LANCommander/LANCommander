@@ -11,10 +11,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class RedistributableService(
         ILogger<SDK.Services.RedistributableClient> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Redistributable> AddAsync(Redistributable entity)
         {

@@ -10,10 +10,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class StorageLocationService(
         ILogger<StorageLocationService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<StorageLocation> AddAsync(StorageLocation entity)
         {

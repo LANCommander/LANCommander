@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using System.Configuration;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
@@ -11,12 +12,13 @@ namespace LANCommander.Server.Services
 {
     public sealed class LibraryService(
         ILogger<LibraryService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         GameService gameService,
-        UserService userService) : BaseDatabaseService<Library>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Library> AddAsync(Library entity)
         {

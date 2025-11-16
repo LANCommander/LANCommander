@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using System.Configuration;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
@@ -10,10 +11,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class IssueService(
         ILogger<IssueService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Issue>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Issue>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Issue> AddAsync(Issue entity)
         {

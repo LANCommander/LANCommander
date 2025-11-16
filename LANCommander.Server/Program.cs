@@ -1,7 +1,4 @@
-using LANCommander.Server;
-using LANCommander.Server.Services;
 using Serilog;
-using LANCommander.Server.Services.Models;
 using LANCommander.Server.UI;
 using LANCommander.Server.Startup;
 
@@ -10,34 +7,33 @@ var builder = WebApplication.CreateBuilder(args);
 if (args.Contains("--debugger"))
     builder.WaitForDebugger();
 
-if (args.Contains("--docker"))
-    SettingService.WorkingDirectory = "/app/config";
-
 builder.AddAsService();
 builder.AddLogger();
 
-Settings settings;
-
-builder.AddSettings(out settings);
+builder.AddSettings();
 
 builder.AddRazor();
 builder.AddSignalR();
 builder.AddCors();
 builder.AddControllers();
 builder.ConfigureKestrel();
-builder.ConfigureAuthentication(settings);
-builder.AddIdentity(settings);
+builder.ConfigureAuthentication();
+builder.AddIdentity();
 builder.AddHangfire();
 builder.AddOpenApi();
 builder.AddServerProcessStatusMonitor();
-builder.AddLANCommanderServices(settings);
-builder.AddDatabase(settings, args);
+builder.AddLANCommanderServices();
+builder.AddDatabase(args);
+
+builder.Services.AddHealthChecks();
 
 Log.Debug("Building Application");
 var app = builder.Build();
 
 app.UseCors("CorsPolicy");
 app.UseHttpsRedirection();
+
+app.MapHealthChecks("/Health");
 
 app.UseMiddlewares();
 

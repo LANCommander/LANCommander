@@ -1,19 +1,23 @@
 ﻿@page "/Settings/Library"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject IMessageService MessageService
 @inject ILogger<Servers> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Library" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable User Libraries">
             <HelpButton>
                 <Description>
                     Allows users to manage the games they see in their library. This also enables the Depot!
                 </Description>
                 <ChildContent>
-                    <Switch @bind-Checked="Settings.Library.EnableUserLibraries"/>
+                    <Switch @bind-Checked="context.Server.Library.EnableUserLibraries"/>
                 </ChildContent>
             </HelpButton>
         </FormItem>
@@ -24,7 +28,7 @@
                     Restricts the games that users can see in their library and the depot based on their role. Visit Settings / Roles to assign collections to roles.
                 </Description>
                 <ChildContent>
-                    <Switch @bind-Checked="Settings.Roles.RestrictGamesByCollection"/>
+                    <Switch @bind-Checked="context.Server.Roles.RestrictGamesByCollection"/>
                 </ChildContent>
             </HelpButton>
         </FormItem>
@@ -36,13 +40,16 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     void Save()
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Library = Settings.Value.Server.Library;
+                s.Server.Roles.RestrictGamesByCollection = Settings.Value.Server.Roles.RestrictGamesByCollection;
+            });
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

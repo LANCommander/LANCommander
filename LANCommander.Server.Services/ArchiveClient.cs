@@ -21,11 +21,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class ArchiveClient(
         ILogger<ArchiveClient> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveClient
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveClient
     {
         public async Task<Archive> GetLatestArchive(Expression<Func<Archive, bool>> predicate)
         {

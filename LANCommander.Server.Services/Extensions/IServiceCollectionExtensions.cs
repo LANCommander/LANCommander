@@ -1,21 +1,21 @@
 using LANCommander.SDK;
+using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
+using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
-using Settings = LANCommander.Server.Services.Models.Settings;
 
 namespace LANCommander.Server.Services.Extensions;
 
 public static class IServiceCollectionExtensions
 {
-    public static IServiceCollection AddLANCommanderServer(this IServiceCollection services, Settings settings)
+    public static IServiceCollection AddLANCommanderServer(this IServiceCollection services)
     {
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
-        services.AddScoped<SettingService>();
         services.AddScoped<AuthenticationService>();
         services.AddScoped<ArchiveClient>();
         services.AddScoped<StorageLocationService>();
@@ -63,6 +63,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
         
         services.AddSingleton<IPXRelayService>();
+        services.AddSingleton<IBeaconMessageInterceptor, BeaconMessageInterceptor>();
 
         services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
         services.AddFusionCache();

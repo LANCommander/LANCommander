@@ -22,8 +22,9 @@ namespace LANCommander.Server.Controllers.Api
 
         public ArchivesController(
             ILogger<ArchivesController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IFusionCache cache,
-            ArchiveClient archiveClient) : base(logger)
+            ArchiveClient archiveClient) : base(logger, settingsProvider)
         {
             Cache = cache;
             _archiveClient = archiveClient;

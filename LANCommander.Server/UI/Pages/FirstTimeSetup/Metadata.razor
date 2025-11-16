@@ -1,13 +1,16 @@
 ﻿@page "/FirstTimeSetup/Metadata"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
 <PageTitle>Metadata Connections - First Time Setup</PageTitle>
 
-<Form Model="@Settings" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="FormLayout.Vertical">
+<Form Model="@Settings.Value" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="FormLayout.Vertical">
     <FormItem>
         LANCommander has the ability to pull metadata and media from external sources. Required credentials can be added here, or can be set later in Settings.
     </FormItem>
@@ -19,10 +22,10 @@
     </p>
 
     <FormItem Label="Client ID">
-        <Input @bind-Value="context.IGDBClientId" />
+        <Input @bind-Value="context.Server.IGDB.ClientId" />
     </FormItem>
     <FormItem Label="Client Secret">
-        <InputPassword @bind-Value="context.IGDBClientSecret" AutoComplete="false" />
+        <InputPassword @bind-Value="context.Server.IGDB.ClientSecret" AutoComplete="false" />
     </FormItem>
 
     <Divider Text="SteamGridDB Credentials" />
@@ -32,7 +35,7 @@
     </p>
 
     <FormItem Label="API Key">
-        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" AutoComplete="false" />
+        <InputPassword @bind-Value="context.Server.Media.SteamGridDbApiKey" AutoComplete="false" />
     </FormItem>
 
     <FormItem>
@@ -50,8 +53,6 @@
     [CascadingParameter]
     FirstTimeSetupLayout Layout { get; set; }
 
-    Settings Settings;
-
     bool Loading = false;
 
     protected override async Task OnInitializedAsync()
@@ -65,12 +66,22 @@
 
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
 
-        Settings = SettingService.GetSettings();
+        SettingsProvider.Update(s =>
+        {
+            s.Server.IGDB.ClientId = Settings.Value.Server.IGDB.ClientId;
+            s.Server.IGDB.ClientSecret = Settings.Value.Server.IGDB.ClientSecret;
+            s.Server.Media.SteamGridDbApiKey = Settings.Value.Server.Media.SteamGridDbApiKey;
+        });
     }
 
     async Task ValidateMetadataConnections()
     {
-        SettingService.SaveSettings(Settings);
+        SettingsProvider.Update(s =>
+        {
+            s.Server.IGDB.ClientId = Settings.Value.Server.IGDB.ClientId;
+            s.Server.IGDB.ClientSecret = Settings.Value.Server.IGDB.ClientSecret;
+            s.Server.Media.SteamGridDbApiKey = Settings.Value.Server.Media.SteamGridDbApiKey;
+        });
 
         NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
     }

@@ -1,5 +1,4 @@
 ﻿using LANCommander.Server.Data.Enums;
-using System.Text.RegularExpressions;
 using Humanizer.Bytes;
 using LANCommander.SDK.Enums;
 using Microsoft.AspNetCore.Http;

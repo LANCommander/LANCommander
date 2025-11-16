@@ -2,8 +2,6 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
-using LANCommander.SDK;
-using LANCommander.SDK.Enums;
 using System.Linq.Expressions;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
@@ -15,10 +13,11 @@ namespace LANCommander.Server.Services
 {
     public class GameCustomFieldService(
         ILogger<GameCustomFieldService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameCustomField>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameCustomField>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<GameCustomField> AddAsync(GameCustomField entity)
         {

@@ -1,7 +1,11 @@
 ﻿@page "/Settings/Servers"
+@using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Pages.Settings.Components
+@using Microsoft.Extensions.Options
 @inject IMessageService MessageService
 @inject ILogger<Servers> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Servers">
@@ -11,31 +15,28 @@
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Servers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
     </Form>
     
     <Divider Text="Docker Hosts" />
     
-    <ServerEngineEditor @bind-Values="Settings.Servers.ServerEngines" />
+    <ServerEngineEditor @bind-Values="Settings.Value.Server.GameServers.ServerEngines" />
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     void Save()
     {
         try
         {
-            var settings = SettingService.GetSettings();
-
-            settings.Servers = Settings.Servers;
-            
-            SettingService.SaveSettings(settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.GameServers = Settings.Value.Server.GameServers;
+            });
             
             MessageService.Success("Settings saved!");
         }
@@ -53,6 +54,6 @@
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.Servers.StoragePath = path;
+        Settings.Value.Server.GameServers.StoragePath = path;
     }
 }

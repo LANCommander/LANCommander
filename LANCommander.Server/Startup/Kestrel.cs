@@ -8,23 +8,23 @@ public static class Kestrel
 {
     public static WebApplicationBuilder ConfigureKestrel(this WebApplicationBuilder builder)
     {
-        var settings = builder.Configuration.Get<Settings>();
+        var settings = builder.Configuration.Get<Settings.Settings>();
 
-        if (settings?.UseSSL ?? false)
-            builder.WebHost.UseUrls($"http://*:{settings.Port}", $"https://*:{settings.SSLPort}");
+        if (settings?.Server.Http.UseSSL ?? false)
+            builder.WebHost.UseUrls($"http://*:{settings.Server.Http.Port}", $"https://*:{settings.Server.Http.SSLPort}");
         else
-            builder.WebHost.UseUrls($"http://*:{settings.Port}");
+            builder.WebHost.UseUrls($"http://*:{settings.Server.Http.Port}");
         
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.Limits.MaxRequestBodySize = long.MaxValue;
             options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
             
-            if (settings.UseSSL)
+            if (settings.Server.Http.UseSSL)
             {
-                options.Listen(IPAddress.Any, settings.SSLPort, listenOptions =>
+                options.Listen(IPAddress.Any, settings.Server.Http.SSLPort, listenOptions =>
                 {
-                    listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                    listenOptions.UseHttps(settings.Server.Http.CertificatePath, settings.Server.Http.CertificatePassword);
                 });
             }
         });

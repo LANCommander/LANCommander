@@ -209,13 +209,13 @@ public static class SaveEndpoints
         Guid gameId,
         ClaimsPrincipal userPrincipal,
         HttpContext httpContext,
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] IMapper mapper,
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] StorageLocationService storageLocationService,
         [FromServices] GameSaveService saveService)
     {
-        var settings = SettingService.GetSettings();
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
@@ -270,7 +270,7 @@ public static class SaveEndpoints
                     await stream.CopyToAsync(fs);
                 }
 
-                if (settings.UserSaves.MaxSaves > 0)
+                if (settingsProvider.CurrentValue.Server.UserSaves.MaxSaves > 0)
                 {
                     var savesToCull = await saveService
                         .Query(q =>
@@ -278,7 +278,7 @@ public static class SaveEndpoints
                             return q
                                 .Where(s => s.UserId == user.Id && s.GameId == game.Id)
                                 .OrderByDescending(s => s.CreatedOn)
-                                .Skip(settings.UserSaves.MaxSaves);
+                                .Skip(settingsProvider.CurrentValue.Server.UserSaves.MaxSaves);
                         })
                         .GetAsync();
 

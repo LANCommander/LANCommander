@@ -12,10 +12,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class ServerConsoleService(
         ILogger<ServerConsoleService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<ServerConsole> AddAsync(ServerConsole entity)
         {

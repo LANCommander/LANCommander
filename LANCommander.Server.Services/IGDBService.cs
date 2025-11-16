@@ -11,11 +11,12 @@ namespace LANCommander.Server.Services
 {
     public class IGDBService(
         ILogger<IGDBService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         GameService gameService,
         EngineService engineService,
         CompanyService companyService,
         GenreService genreService,
-        TagService tagService) : BaseService(logger), IDisposable
+        TagService tagService) : BaseService(logger, settingsProvider), IDisposable
     {
         private const string DefaultFields = "*";
         private IGDBClient Client;
@@ -32,8 +33,8 @@ namespace LANCommander.Server.Services
 
         public void Authenticate()
         {
-            ClientId = _settings.IGDBClientId;
-            ClientSecret = _settings.IGDBClientSecret;
+            ClientId = _settingsProvider.CurrentValue.Server.IGDB.ClientId;
+            ClientSecret = _settingsProvider.CurrentValue.Server.IGDB.ClientSecret;
 
             try
             {

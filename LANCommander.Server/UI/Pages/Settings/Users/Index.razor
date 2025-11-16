@@ -1,6 +1,10 @@
 ﻿@page "/Settings/Users"
+@using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
+@using Microsoft.Extensions.Options
 @inject UserService UserService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -35,7 +39,7 @@
             <LocalTime Value="context.CreatedOn" />
         </BoundDataColumn>
         
-        @if (Settings.Authentication.RequireApproval)
+        @if (Settings.Value.Server.Authentication.RequireApproval)
         {
             <DataColumn TData="bool" Title="Approved">
                 <Checkbox Checked="context.Approved" />
@@ -50,7 +54,7 @@
             <DropdownButton Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
                 <Overlay>
                     <Menu>
-                        @if (Settings.Authentication.RequireApproval && !context.Approved)
+                        @if (Settings.Value.Server.Authentication.RequireApproval && !context.Approved)
                         {
                             <MenuItem OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</MenuItem>
                         }
@@ -93,8 +97,7 @@
 
 @code {
     ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();
-
-    Settings Settings = SettingService.GetSettings();
+    
     bool Loading = true;
 
     DataTable<User> Table;

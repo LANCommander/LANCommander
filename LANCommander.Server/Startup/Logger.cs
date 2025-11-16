@@ -3,6 +3,8 @@ using LANCommander.Server.Configuration;
 using LANCommander.Server.Hubs;
 using LANCommander.Server.Parsers;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using Serilog.Filters;
@@ -26,12 +28,12 @@ public static class Logger
             config.MinimumLevel.Verbose();
             config.Enrich.FromLogContext();
             
-            var settings = serviceProvider.GetRequiredService<Settings>();
+            var settings = serviceProvider.GetRequiredService<IOptions<Settings.Settings>>();
             
-            if (settings.Logs.IgnorePings)
+            if (settings.Value.Server.Logs.IgnorePings)
                 config.Filter.ByExcluding(Matching.WithProperty<string>("RequestPath", v => v.StartsWith("/api/Ping", StringComparison.OrdinalIgnoreCase)));
 
-            foreach (var provider in settings.Logs.Providers)
+            foreach (var provider in settings.Value.Server.Logs.Providers)
             {
                 LogEventLevel minimumLevel = provider.MinimumLevel switch
                 {

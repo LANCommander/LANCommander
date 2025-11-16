@@ -23,6 +23,8 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Models;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.Server.UI.Pages.Account
 {
@@ -40,6 +42,7 @@ namespace LANCommander.Server.UI.Pages.Account
         private readonly ILogger<RegisterModel> Logger;
         private readonly RoleManager<Role> RoleManager;
         private readonly UserCustomFieldService UserCustomFieldService;
+        private readonly IOptions<Server.Settings.Settings> Settings;
 
         public RegisterModel(
             UserManager<User> userManager,
@@ -47,7 +50,8 @@ namespace LANCommander.Server.UI.Pages.Account
             SignInManager<User> signInManager,
             ILogger<RegisterModel> logger,
             RoleManager<Role> roleManager,
-            UserCustomFieldService userCustomFieldService)
+            UserCustomFieldService userCustomFieldService,
+            IOptions<Server.Settings.Settings> settings)
         {
             UserManager = userManager;
             UserStore = userStore;
@@ -55,6 +59,7 @@ namespace LANCommander.Server.UI.Pages.Account
             Logger = logger;
             RoleManager = roleManager;
             UserCustomFieldService = userCustomFieldService;
+            Settings = settings;
         }
 
         /// <summary>
@@ -79,8 +84,6 @@ namespace LANCommander.Server.UI.Pages.Account
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public IList<AuthenticationScheme> ExternalLogins { get; set; }
-        
-        public Services.Models.Settings Settings = SettingService.GetSettings();
 
         public async Task OnGetAsync(string returnUrl = null, string provider = null)
         {
@@ -95,7 +98,7 @@ namespace LANCommander.Server.UI.Pages.Account
                 Model.Password = Guid.Empty.ToString();
                 Model.PasswordConfirmation = Model.Password;
                 
-                AuthenticationProvider = Settings.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
+                AuthenticationProvider = Settings.Value.Server.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
             }
             else
             {
@@ -123,7 +126,7 @@ namespace LANCommander.Server.UI.Pages.Account
             {
                 var user = CreateUser();
 
-                if (!Settings.Authentication.RequireApproval)
+                if (!Settings.Value.Server.Authentication.RequireApproval)
                 {
                     user.Approved = true;
                     user.ApprovedOn = DateTime.UtcNow;
@@ -142,9 +145,9 @@ namespace LANCommander.Server.UI.Pages.Account
                 {
                     Logger.LogInformation("User created a new account.");
 
-                    if (Settings.Roles.DefaultRoleId != Guid.Empty)
+                    if (Settings.Value.Server.Roles.DefaultRoleId != Guid.Empty)
                     {
-                        var defaultRole = await RoleManager.FindByIdAsync(Settings.Roles.DefaultRoleId.ToString());
+                        var defaultRole = await RoleManager.FindByIdAsync(Settings.Value.Server.Roles.DefaultRoleId.ToString());
 
                         if (defaultRole != null)
                             await UserManager.AddToRoleAsync(user, defaultRole.Name);
@@ -153,7 +156,7 @@ namespace LANCommander.Server.UI.Pages.Account
                     // Registering using SSO
                     if (Model.RegistrationType == RegistrationType.AuthenticationProvider)
                     {
-                        AuthenticationProvider = Settings.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
+                        AuthenticationProvider = Settings.Value.Server.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
                         
                         await UserCustomFieldService.AddAsync(new UserCustomField
                         {

@@ -1,7 +1,12 @@
 ﻿@page "/Settings/Media"
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Settings.Media.Components
+@using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -13,7 +18,7 @@
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@StorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
@@ -22,7 +27,7 @@
         <Text Type="@TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
 
         <FormItem Label="API Key">
-            <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" />
+            <InputPassword @bind-Value="context.Server.Media.SteamGridDbApiKey" />
         </FormItem>
         
         <CascadingValue Value="Settings">
@@ -40,8 +45,6 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     StorageLocation StorageLocation = new();
@@ -64,16 +67,19 @@
             StorageLocation = await StorageLocationService.AddAsync(StorageLocation);
         }
 
-        _mediaTypeSettings = Settings.Media.MediaTypes.DistinctBy(m => m.Type).ToDictionary(m => m.Type, m => m);
+        _mediaTypeSettings = Settings.Value.Server.Media.MediaTypes.DistinctBy(m => m.Type).ToDictionary(m => m.Type, m => m);
     }
 
     async Task Save()
     {
         try
         {
-            Settings.Media.MediaTypes = _mediaTypeSettings.Values;
+            Settings.Value.Server.Media.MediaTypes = _mediaTypeSettings.Values;
             
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Media = Settings.Value.Server.Media;
+            });
 
             await StorageLocationService.UpdateAsync(StorageLocation);
             

@@ -1,9 +1,14 @@
 ﻿@page "/Settings/Authentication"
 @using CaseConverter
+@using LANCommander.SDK.Extensions
+@using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Pages.Settings.Authentication.Components
+@using Microsoft.Extensions.Options
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 @inject IServiceProvider ServiceProvider
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Authentication">
@@ -13,34 +18,34 @@
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Require Account Approval">
-            <Switch @bind-Checked="context.Authentication.RequireApproval" />
+            <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
         </FormItem>
 
         <FormItem Label="Token Secret">
-            <InputPassword @bind-Value="context.Authentication.TokenSecret" />
+            <InputPassword @bind-Value="context.Server.Authentication.TokenSecret" />
         </FormItem>
         <FormItem Label="Token Lifetime">
-            <AntDesign.InputNumber @bind-Value="context.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
+            <AntDesign.InputNumber @bind-Value="context.Server.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
         </FormItem>
 
         <Divider Text="Password Requirements" />
 
         <FormItem Label="Require non-alphanumeric characters">
-            <Switch @bind-Checked="@context.Authentication.PasswordRequireNonAlphanumeric" />
+            <Switch @bind-Checked="@context.Server.Authentication.PasswordRequireNonAlphanumeric" />
         </FormItem>
         <FormItem Label="Require Lowercase characters">
-            <Switch @bind-Checked="context.Authentication.PasswordRequireLowercase" />
+            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireLowercase" />
         </FormItem>
         <FormItem Label="Require Uppercase characters">
-            <Switch @bind-Checked="context.Authentication.PasswordRequireUppercase" />
+            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireUppercase" />
         </FormItem>
         <FormItem Label="Require digits">
-            <Switch @bind-Checked="context.Authentication.PasswordRequireDigit" />
+            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireDigit" />
         </FormItem>
         <FormItem Label="Minimum Length">
-            <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
+            <AntDesign.InputNumber @bind-Value="context.Server.Authentication.PasswordRequiredLength" Min="1" />
         </FormItem>
 
         <Divider Text="Security" />
@@ -48,19 +53,19 @@
         <Collapse>
             <Panel Header="HTTP">
                 <FormItem Label="Minimum Same Site Cookie Policy">
-                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.HttpCookiePolicy.SameSite" />
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Server.Authentication.HttpCookiePolicy.SameSite" />
                 </FormItem>
                 <FormItem Label="Cookie Secure Policy">
-                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.HttpCookiePolicy.Secure" />
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Server.Authentication.HttpCookiePolicy.Secure" />
                 </FormItem>
             </Panel>
             
             <Panel Header="HTTPS">
                 <FormItem Label="Minimum Same Site Cookie Policy">
-                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.HttpsCookiePolicy.SameSite" />
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Server.Authentication.HttpsCookiePolicy.SameSite" />
                 </FormItem>
                 <FormItem Label="Cookie Secure Policy">
-                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.HttpsCookiePolicy.Secure" />
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Server.Authentication.HttpsCookiePolicy.Secure" />
                 </FormItem>
             </Panel>
         </Collapse>
@@ -68,13 +73,10 @@
 
     <Divider Text="External Providers" />
 
-    <ExternalProviderEditor @bind-Values="Settings.Authentication.AuthenticationProviders" />
+    <ExternalProviderEditor @bind-Values="Settings.Value.Server.Authentication.AuthenticationProviders" />
 </PageContent>
 
 @code {
-
-    Settings Settings = SettingService.GetSettings();
-
     string FormatTokenLifetime(int value)
     {
         return value.ToString() + " days";
@@ -84,13 +86,16 @@
     {
         try
         {
-            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+            SettingsProvider.Update(s =>
             {
-                if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
-                    authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
-            }
-
-            SettingService.SaveSettings(Settings, ServiceProvider);
+                foreach (var authenticationProvider in Settings.Value.Server.Authentication.AuthenticationProviders)
+                {
+                    if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
+                        authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
+                }
+                
+                s.Server.Authentication.AuthenticationProviders = Settings.Value.Server.Authentication.AuthenticationProviders;
+            });
 
             MessageService.Success("Settings saved!");
         }

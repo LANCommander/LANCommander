@@ -3,6 +3,7 @@ using System.Reflection;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Semver;
 
 namespace LANCommander.Server.Providers;

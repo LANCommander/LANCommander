@@ -9,19 +9,22 @@ namespace LANCommander.Server.Startup;
 
 public static class Identity
 {
-    public static WebApplicationBuilder AddIdentity(this WebApplicationBuilder builder, Settings settings)
+    public static WebApplicationBuilder AddIdentity(this WebApplicationBuilder builder)
     {
+        var settings = new Settings.Settings();
+        builder.Configuration.Bind(settings);
+        
         Log.Debug("Initializing Identity");
         builder.Services.AddIdentityCore<User>((options) =>
         {
             options.SignIn.RequireConfirmedAccount = false;
             options.SignIn.RequireConfirmedEmail = false;
 
-            options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
-            options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
-            options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
-            options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
-            options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
+            options.Password.RequireNonAlphanumeric = settings.Server.Authentication.PasswordRequireNonAlphanumeric;
+            options.Password.RequireLowercase = settings.Server.Authentication.PasswordRequireLowercase;
+            options.Password.RequireUppercase = settings.Server.Authentication.PasswordRequireUppercase;
+            options.Password.RequireDigit = settings.Server.Authentication.PasswordRequireDigit;
+            options.Password.RequiredLength = settings.Server.Authentication.PasswordRequiredLength;
         })
         .AddRoles<Role>()
         .AddEntityFrameworkStores<Data.DatabaseContext>()
@@ -47,7 +50,7 @@ public static class Identity
                     ValidateAudience = false,
                     // ValidAudience = configuration["JWT:ValidAudience"],
                     // ValidIssuer = configuration["JWT:ValidIssuer"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Server.Authentication.TokenSecret))
                 };
             })
             .AddAuthenticationProviders(settings)
@@ -60,15 +63,15 @@ public static class Identity
         
         builder.Services.Configure<CookiePolicyOptions>(options =>
         {
-            if (settings.UseSSL)
+            if (settings.Server.Http.UseSSL)
             {
-                options.Secure = settings.Authentication.HttpsCookiePolicy.Secure;
-                options.MinimumSameSitePolicy = settings.Authentication.HttpsCookiePolicy.SameSite;
+                options.Secure = settings.Server.Authentication.HttpsCookiePolicy.Secure;
+                options.MinimumSameSitePolicy = settings.Server.Authentication.HttpsCookiePolicy.SameSite;
             }
             else
             {
-                options.Secure = settings.Authentication.HttpCookiePolicy.Secure;
-                options.MinimumSameSitePolicy = settings.Authentication.HttpCookiePolicy.SameSite;
+                options.Secure = settings.Server.Authentication.HttpCookiePolicy.Secure;
+                options.MinimumSameSitePolicy = settings.Server.Authentication.HttpCookiePolicy.SameSite;
             }
         });
 
@@ -78,15 +81,15 @@ public static class Identity
             options.LogoutPath = "/Logout";
             options.AccessDeniedPath = "/AccessDenied";
             
-            if (settings.UseSSL)
+            if (settings.Server.Http.UseSSL)
             {
-                options.Cookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
-                options.Cookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
+                options.Cookie.SecurePolicy = settings.Server.Authentication.HttpsCookiePolicy.Secure;
+                options.Cookie.SameSite = settings.Server.Authentication.HttpsCookiePolicy.SameSite;
             }
             else
             {
-                options.Cookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
-                options.Cookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
+                options.Cookie.SecurePolicy = settings.Server.Authentication.HttpCookiePolicy.Secure;
+                options.Cookie.SameSite = settings.Server.Authentication.HttpCookiePolicy.SameSite;
             }
         });
 

@@ -16,12 +16,13 @@ namespace LANCommander.Server.Services
 {
     public sealed class ServerService(
         ILogger<ServerService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         IServiceProvider serviceProvider,
-        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
         {

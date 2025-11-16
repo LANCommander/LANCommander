@@ -12,6 +12,7 @@
   <Folder Name="/LANCommander.Server/">
     <Project Path="LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" Type="Classic C#" />
     <Project Path="LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
+    <Project Path="LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" Type="Classic C#" />
     <Project Path="LANCommander.Server\LANCommander.Server.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Server/LANCommander.Server.Data/">

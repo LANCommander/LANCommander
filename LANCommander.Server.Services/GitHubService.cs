@@ -1,5 +1,6 @@
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using Semver;

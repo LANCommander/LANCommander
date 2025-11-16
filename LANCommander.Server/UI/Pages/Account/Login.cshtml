@@ -1,9 +1,8 @@
 ﻿@page "/Login"
 @using LANCommander.Server.Extensions
-@using LANCommander.Server.Models
-@using LANCommander.Server.Services
-@using LANCommander.Server.Services.Models
+@using LANCommander.Server.Settings
 @model LANCommander.Server.UI.Pages.Account.LoginModel
+@inject SettingsProvider<Settings> SettingsProvider
 @{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
 
 @{
@@ -17,16 +16,7 @@
     <div class="ant-row login-box">
         <div class="ant-col ant-col-xs-24 ant-col-md-8 ant-col-lg-6 ant-col-md-push-4 ant-col-lg-push-6 login-form-pane">
             <div class="login-box-logo">
-                @switch (SettingService.GetSettings().Theme)
-                {
-                    case LANCommanderTheme.Light:
-                        <img src="~/static/logo.svg"/>
-                        break;
-
-                    case LANCommanderTheme.Dark:
-                        <img src="~/static/logo-dark.svg"/>
-                        break;
-                }
+                <img src="~/static/logo-dark.svg"/>
             </div>
 
             @foreach (var error in ModelState.SelectMany(x => x.Value.Errors))

@@ -9,23 +9,21 @@ namespace LANCommander.Server.Services
         private Task? _relayTask;
         private IPXRelay? _relay;
 
-        public IPXRelayService(ILogger<IPXRelayService> logger) : base(logger)
+        public IPXRelayService(ILogger<IPXRelayService> logger, SettingsProvider<Settings.Settings> settingsProvider) : base(logger, settingsProvider)
         {
             Init(logger);
         }
 
         public void Init(ILogger logger)
         {
-            var settings = SettingService.GetSettings();
-
             StopAsync().Wait();
 
-            _relay = new IPXRelay(settings.IPXRelay.Port, logger);
+            _relay = new IPXRelay(_settingsProvider.CurrentValue.Server.IPXRelay.Port, logger);
 
-            if (!settings.IPXRelay.Logging)
+            if (!_settingsProvider.CurrentValue.Server.IPXRelay.Logging)
                 _relay.DisableLogging();
 
-            if (settings.IPXRelay.Enabled)
+            if (_settingsProvider.CurrentValue.Server.IPXRelay.Enabled)
             {
                 _relayCts = new CancellationTokenSource();
                 _relayTask = Task.Run(async () =>

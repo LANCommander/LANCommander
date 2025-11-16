@@ -2,11 +2,9 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -23,11 +21,12 @@ namespace LANCommander.Server.Controllers.Api
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             RedistributableService redistributableService,
             StorageLocationService storageLocationService,
             ArchiveClient archiveClient,
-            ImportContext importContext) : base(logger)
+            ImportContext importContext) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;

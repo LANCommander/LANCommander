@@ -15,10 +15,11 @@ namespace LANCommander.Server.Services
 {
     public abstract class BaseDatabaseService<T>(
         ILogger logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> dbContextFactory) : BaseService(logger), IBaseDatabaseService<T> where T : class, IBaseModel
+        IDbContextFactory<DatabaseContext> dbContextFactory) : BaseService(logger, settingsProvider), IBaseDatabaseService<T> where T : class, IBaseModel
     {
         protected readonly List<Func<IQueryable<T>, IQueryable<T>>> _modifiers = new();
 

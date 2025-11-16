@@ -17,8 +17,9 @@ namespace LANCommander.Server.Controllers.Api
 
         public LauncherController(
             ILogger<LauncherController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IVersionProvider versionProvider,
-            IGitHubService gitHubService) : base(logger)
+            IGitHubService gitHubService) : base(logger, settingsProvider)
         {
             _versionProvider = versionProvider;
             _gitHubService = gitHubService;
@@ -29,11 +30,10 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<IActionResult> DownloadAsync()
         {
             var version = _versionProvider.GetCurrentVersion();
-            var settings = SettingService.GetSettings();
             var fileName = $"LANCommander.Launcher-Windows-x64-v{version.WithoutMetadata()}.zip";
-            var path = Path.Combine(settings.Launcher.StoragePath, fileName);
+            var path = Path.Combine(SettingsProvider.CurrentValue.Server.Launcher.StoragePath, fileName);
 
-            if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
+            if (!System.IO.File.Exists(path) || !SettingsProvider.CurrentValue.Server.Launcher.HostUpdates)
             {
                 var release = await _gitHubService.GetReleaseAsync(version);
 

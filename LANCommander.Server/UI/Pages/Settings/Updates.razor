@@ -1,6 +1,9 @@
 ﻿@page "/Settings/Updates"
 @using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
 @using Markdig
+@using Microsoft.Extensions.Options
 @using Octokit
 @using Semver
 @inject IMessageService MessageService
@@ -8,13 +11,15 @@
 @inject IGitHubService GitHubService
 @inject IVersionProvider VersionProvider
 @inject ILogger<Updates> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Updates">
     <PageHeaderExtra>
         <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="FlexGap.Small">
             Release Channel:
-            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" @bind-Value="Settings.Update.ReleaseChannel" Disabled="Loading" />
+            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" @bind-Value="Settings.Value.Server.Update.ReleaseChannel" Disabled="Loading" />
             <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
         </Flex>
     </PageHeaderExtra>
@@ -73,8 +78,6 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     bool Loading { get; set; } = true;
@@ -98,7 +101,7 @@
         
         CurrentVersion = VersionProvider.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailableAsync();
-        LatestVersion = await GitHubService.GetLatestVersionAsync(Settings.Update.ReleaseChannel);
+        LatestVersion = await GitHubService.GetLatestVersionAsync(Settings.Value.Server.Update.ReleaseChannel);
         Releases = await GitHubService.GetReleasesAsync(5);
 
         Loading = false;
@@ -111,11 +114,10 @@
     {
         if (!Loading)
         {
-            Settings = SettingService.GetSettings();
-
-            Settings.Update.ReleaseChannel = releaseChannel;
-        
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Update.ReleaseChannel = releaseChannel;
+            });
 
             MessageService.Success($"Changed release channel to {releaseChannel}!");
         }
@@ -126,7 +128,7 @@
         try {
             Updating = true;
 
-            if (Settings.Launcher.HostUpdates)
+            if (Settings.Value.Server.Launcher.HostUpdates)
                 await UpdateService.DownloadLauncherReleaseAsync(Releases.First());
 
             await UpdateService.DownloadServerReleaseAsync(Releases.First());

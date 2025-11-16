@@ -15,6 +15,8 @@ using Settings = LANCommander.SDK.Models.Settings;
 public class SettingsProvider<TSettings> : ISettingsProvider
     where TSettings : Settings, new()
 {
+    public const string FileName = "Settings.yaml";
+    
     private readonly string _filePath;
     private readonly IOptionsMonitor<TSettings> _optionsMonitor;
     

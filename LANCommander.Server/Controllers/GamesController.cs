@@ -1,6 +1,6 @@
 ﻿using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using LANCommander.SDK.Enums;
+
 using LANCommander.Server.ImportExport.Factories;
 
 namespace LANCommander.Server.Controllers
@@ -13,8 +13,9 @@ namespace LANCommander.Server.Controllers
 
         public GamesController(
             ILogger<GamesController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             GameService gameService,
-            ExportContextFactory exportContextFactory) : base(logger)
+            ExportContextFactory exportContextFactory) : base(logger, settingsProvider)
         {
             GameService = gameService;
             ExportContextFactory = exportContextFactory;

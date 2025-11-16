@@ -12,8 +12,6 @@ namespace LANCommander.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var settings = SettingService.GetSettings();
-
             // Migrate any old icons from the filesystem
             if (Directory.Exists("Icon"))
                 foreach (var file in Directory.EnumerateFiles("Icon"))

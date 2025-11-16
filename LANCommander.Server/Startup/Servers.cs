@@ -4,6 +4,7 @@ using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Hubs;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Startup;

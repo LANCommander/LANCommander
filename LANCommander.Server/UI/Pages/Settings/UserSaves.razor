@@ -1,24 +1,28 @@
 ﻿@page "/Settings/UserSaves"
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<UserSaves> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="User Saves" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SaveStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
 
         <FormItem Label="Max Size (MB)">
-            <AntDesign.InputNumber @bind-Value="context.UserSaves.MaxSize" Min="1" DefaultValue="25" />
+            <AntDesign.InputNumber @bind-Value="context.Server.UserSaves.MaxSize" Min="1" DefaultValue="25" />
         </FormItem>
 
         <FormItem Label="Maximum Number of Saves">
-            <AntDesign.InputNumber @bind-Value="context.UserSaves.MaxSaves" Min="0" DefaultValue="0" />
+            <AntDesign.InputNumber @bind-Value="context.Server.UserSaves.MaxSaves" Min="0" DefaultValue="0" />
         </FormItem>
 
         <FormItem>
@@ -28,8 +32,6 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     StorageLocation SaveStorageLocation = new();
@@ -43,8 +45,13 @@
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.UserSaves = Settings.Value.Server.UserSaves;
+            });
+            
             await StorageLocationService.UpdateAsync(SaveStorageLocation);
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

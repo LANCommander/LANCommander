@@ -1,46 +1,40 @@
-using LANCommander.Server.Services;
-using LANCommander.Server.Services.Models;
+using LANCommander.SDK;
 using Serilog;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Server.Startup;
 
 public static class ApplicationSettings
 {
-    public static WebApplicationBuilder AddSettings(this WebApplicationBuilder builder, out Settings settings)
+    public static WebApplicationBuilder AddSettings(this WebApplicationBuilder builder)
     {
-        // Ensure that our default settings are persisted
-        if (!File.Exists(SettingService.SettingsFile))
+        var filePath = Path.Join(AppPaths.GetConfigDirectory(), SDK.Models.Settings.SETTINGS_FILE_NAME);
+        var settings = new Settings.Settings();
+
+        if (!File.Exists(filePath))
         {
-            var workingDirectory = Path.GetDirectoryName(SettingService.SettingsFile);
-    
-            if (!String.IsNullOrWhiteSpace(workingDirectory))
-                Directory.CreateDirectory(workingDirectory);
-    
-            settings = new Settings();
-            SettingService.SaveSettings(settings);
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+            
+            File.WriteAllText(filePath, serializer.Serialize(settings));
         }
+
+        var boostrap = new ConfigurationBuilder()
+            .AddYamlFile(filePath, false, true)
+            .Build();
         
-        builder.Configuration.AddYamlFile(SettingService.SettingsFile);
-        builder.Services.Configure<Settings>(builder.Configuration);
-        
-        settings = new Settings();
+        builder.Services.Configure<Settings.Settings>(boostrap);
         builder.Configuration.Bind(settings);
-        
-        // Add services to the container.
-        Log.Debug("Loading settings");
 
         Log.Debug("Validating settings");
         
-        if (settings.Authentication.TokenSecret.Length < 16)
+        if (settings.Server.Authentication.TokenSecret.Length < 16)
         {
             Log.Debug("JWT token secret is too short. Regenerating...");
-            settings.Authentication.TokenSecret = Guid.NewGuid().ToString();
-            SettingService.SaveSettings(settings);
+            settings.Server.Authentication.TokenSecret = Guid.NewGuid().ToString();
         }
-        
-        Log.Debug("Done validating settings");
-        
-        builder.Services.AddSingleton(settings);
 
         return builder;
     }

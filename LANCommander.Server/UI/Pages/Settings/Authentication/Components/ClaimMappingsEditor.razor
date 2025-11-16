@@ -1,4 +1,5 @@
-﻿<Flex Vertical Gap="@("16")">
+﻿@using LANCommander.Server.Settings.Models
+<Flex Vertical Gap="@("16")">
     <Table DataSource="ClaimMappings" Size="TableSize.Small" HidePagination>
         <PropertyColumn Property="cm => cm.Name">
             <Input @bind-Value="context.Name" OnBlur="Update" />

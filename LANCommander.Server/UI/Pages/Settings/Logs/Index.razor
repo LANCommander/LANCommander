@@ -1,5 +1,11 @@
 ﻿@page "/Settings/Logs"
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Settings.Logs.Components
+@using Microsoft.Extensions.Options
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -45,22 +51,23 @@
 }
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     List<LoggingProvider> Providers = new();
 
     protected override void OnInitialized()
     {
-        Providers = Settings.Logs.Providers.ToList();
+        Providers = Settings.Value.Server.Logs.Providers.ToList();
     }
 
     void Save()
     {
         try
         {
-            Settings.Logs.Providers = Providers;
+            Settings.Value.Server.Logs.Providers = Providers;
             
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Logs = Settings.Value.Server.Logs;
+            }); 
             
             MessageService.Success("Settings saved!");
         }

@@ -9,6 +9,8 @@ using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
+using LANCommander.Server.Settings.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ namespace LANCommander.Server.Services.ServerEngines;
 
 public class DockerServerEngine(
     ILogger<DockerServerEngine> logger,
+    SettingsProvider<Settings.Settings> settingsProvider,
     IServiceProvider serviceProvider,
     IMapper mapper,
     IOptions<SDK.Models.Settings> settings) : IServerEngine
@@ -30,9 +33,7 @@ public class DockerServerEngine(
 
     public async Task InitializeAsync()
     {
-        var settings = SettingService.GetSettings();
-
-        foreach (var serverEngineConfig in settings.Servers.ServerEngines.Where(se => se.Type == ServerEngine.Docker))
+        foreach (var serverEngineConfig in settingsProvider.CurrentValue.Server.GameServers.ServerEngines.Where(se => se.Type == ServerEngine.Docker))
         {
             if (serverEngineConfig != null && !String.IsNullOrWhiteSpace(serverEngineConfig.Address) && Uri.TryCreate(serverEngineConfig.Address, UriKind.Absolute, out var hostAddress))
                 _dockerClients[serverEngineConfig.Id] = new DockerClientConfiguration(hostAddress).CreateClient();
@@ -118,7 +119,7 @@ public class DockerServerEngine(
 
                 logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                if (settings.Value.Debug.EnableScriptDebugging)
+                if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
                     script.EnableDebug();
 
                 await script.ExecuteAsync<int>();
@@ -171,7 +172,7 @@ public class DockerServerEngine(
 
                     logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                    if (settings.Value.Debug.EnableScriptDebugging)
+                    if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
                     await script.ExecuteAsync<int>();

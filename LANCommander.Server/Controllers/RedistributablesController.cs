@@ -16,9 +16,10 @@ namespace LANCommander.Server.Controllers
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             RedistributableService redistributableService,
-            ArchiveClient archiveClient) : base(logger)
+            ArchiveClient archiveClient) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;

@@ -12,8 +12,6 @@ namespace LANCommander.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var settings = SettingService.GetSettings();
-
             if (Directory.Exists("Media"))
             {
                 var files = Directory.EnumerateFiles("Media");

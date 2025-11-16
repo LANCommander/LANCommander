@@ -6,9 +6,9 @@ namespace LANCommander.Server.Jobs.Background
 {
     public class DownloadLauncherArtifacts(
         ILogger<DownloadLauncherArtifacts> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         HttpClient httpClient,
-        UpdateService updateService,
-        Settings settings) : BaseBackgroundJob(logger)
+        UpdateService updateService) : BaseBackgroundJob(logger)
     {
         public override async Task ExecuteAsync()
         {
@@ -16,8 +16,8 @@ namespace LANCommander.Server.Jobs.Background
             var localArtifacts = updateService.GetLauncherArtifactsFromLocalFiles();
 
             var allowedArtifacts = artifacts.Where(a =>
-                settings.Launcher.Architectures.Contains(a.Architecture) &&
-                settings.Launcher.Platforms.Contains(a.Platform))
+                settingsProvider.CurrentValue.Server.Launcher.Architectures.Contains(a.Architecture) &&
+                settingsProvider.CurrentValue.Server.Launcher.Platforms.Contains(a.Platform))
                 .ToList();
 
             foreach (var artifact in allowedArtifacts)
@@ -27,7 +27,7 @@ namespace LANCommander.Server.Jobs.Background
                     if (!localArtifacts.Any(a => a.Name.EndsWith(artifact.Name)))
                     {
                         using (var downloadStream = await httpClient.GetStreamAsync(artifact.Url))
-                        using (var fs = new FileStream(Path.Combine(settings.Launcher.StoragePath, artifact.Name), FileMode.Create))
+                        using (var fs = new FileStream(Path.Combine(settingsProvider.CurrentValue.Server.Launcher.StoragePath, artifact.Name), FileMode.Create))
                         {
                             await downloadStream.CopyToAsync(fs);
                             op.Complete();

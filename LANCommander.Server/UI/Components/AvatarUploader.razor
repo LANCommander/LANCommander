@@ -2,6 +2,7 @@
 @inherits OwningComponentBase
 @inject UserService UserService
 @inject MediaService MediaService
+@inject SettingsProvider<Settings.Settings> SettingsProvider
 @inject IMessageService MessageService
 
 <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
@@ -27,8 +28,6 @@
 @code {
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public string Width { get; set; } = "104px";
-
-    Settings Settings = SettingService.GetSettings();
 
     string AvatarUrl;
 
@@ -66,7 +65,7 @@
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
         var media = User.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
-        var config = Settings.Media.GetMediaTypeConfig(MediaType.Avatar);
+        var config = SettingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
 
         if (media == null)
             media = new Media

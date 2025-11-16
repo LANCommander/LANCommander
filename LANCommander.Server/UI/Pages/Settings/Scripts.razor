@@ -1,19 +1,23 @@
 ﻿@page "/Settings/Scripts"
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject MessageService MessageService
 @inject ILogger<Scripts> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Scripts" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Automatically Repackage">
-            <Switch @bind-Checked="context.Scripts.EnableAutomaticRepackaging" />
+            <Switch @bind-Checked="context.Server.Scripts.EnableAutomaticRepackaging" />
         </FormItem>
         <FormItem Label="Repackage Every">
             <Flex Direction="FlexDirection.Horizontal">
-                <AntDesign.InputNumber @bind-Value="context.Scripts.RepackageEvery" Min="1" DefaultValue="25" />
+                <AntDesign.InputNumber @bind-Value="context.Server.Scripts.RepackageEvery" Min="1" DefaultValue="25" />
                 <Text>Hours</Text>
             </Flex>
         </FormItem>
@@ -27,13 +31,15 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     void Save()
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Scripts = Settings.Value.Server.Scripts;
+            });
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

@@ -3,17 +3,11 @@ using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using AutoMapper;
 using LANCommander.SDK.Models;
 using Microsoft.AspNetCore.Authentication;
 using ZiggyCreatures.Caching.Fusion;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
-using User = LANCommander.Server.Data.Models.User;
 using LANCommander.Server.Services.Exceptions;
 
 namespace LANCommander.Server.Controllers.Api
@@ -46,7 +40,8 @@ namespace LANCommander.Server.Controllers.Api
             RoleService roleService,
             IFusionCache cache,
             IMapper mapper,
-            ILogger<AuthController> logger) : base(logger)
+            ILogger<AuthController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider) : base(logger, settingsProvider)
         {
             AuthenticationService = authenticationService;
             UserService = userService;
@@ -192,7 +187,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("AuthenticationProviders")]
         public IActionResult GetAuthenticationProviders()
         {
-            return Ok(Mapper.Map<IEnumerable<AuthenticationProvider>>(Settings.Authentication.AuthenticationProviders));
+            return Ok(Mapper.Map<IEnumerable<AuthenticationProvider>>(SettingsProvider.CurrentValue.Server.Authentication.AuthenticationProviders));
         }
 
         static ErrorResponse.ErrorInfo FromIdentityResult(IdentityError error)

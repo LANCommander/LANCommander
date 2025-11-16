@@ -1,24 +1,29 @@
 ﻿@page "/FirstTimeSetup"
 @page "/FirstTimeSetup/Database"
 @layout FirstTimeSetupLayout
-@using LANCommander.Server.Data.Enums
+@using LANCommander.SDK
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
 @using Microsoft.Data.Sqlite
+@using Microsoft.Extensions.Options
 @using MySqlConnector
 @using Npgsql
 @inject SetupService SetupService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IOptions<Settings> Settings 
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
 <PageTitle>Database Config - First Time Setup</PageTitle>
 
-<Form Model="@Settings" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="FormLayout.Vertical">
+<Form Model="@Settings.Value" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="FormLayout.Vertical">
     <FormItem>
         LANCommander requires a database to run. If you require something other than SQLite, configure that here.
     </FormItem>
     <FormItem Label="Database Provider">
         <Select
-            @bind-Value="context.DatabaseProvider"
+            @bind-Value="context.Server.Database.Provider"
             TItem="DatabaseProvider"
             TItemValue="DatabaseProvider"
             DataSource="Enum.GetValues<DatabaseProvider>()"
@@ -28,7 +33,7 @@
         </Select>
     </FormItem>
     <FormItem Label="Connection String">
-        <Input @bind-Value="context.DatabaseConnectionString" />
+        <Input @bind-Value="context.Server.Database.ConnectionString" />
     </FormItem>
     <FormItem WrapperColOffset="8" WrapperColSpan="16">
         <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
@@ -43,16 +48,14 @@
 
 @code {
     [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
-
-    Settings Settings = SettingService.GetSettings();
-
+    
     bool Loading = false;
 
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
 
-        if (Settings.DatabaseProvider != Data.Enums.DatabaseProvider.Unknown)
+        if (SettingsProvider.CurrentValue.Server.Database.Provider != DatabaseProvider.Unknown)
         {
             var isSetupInitialized = await SetupService.IsSetupInitialized();
             if (isSetupInitialized)
@@ -62,19 +65,28 @@
 
     void OnDatabaseProviderChanged()
     {
-        switch (Settings.DatabaseProvider)
+        switch (SettingsProvider.CurrentValue.Server.Database.Provider)
         {
             case DatabaseProvider.SQLite:
-                var dbPath = Path.Combine(SettingService.WorkingDirectory, "LANCommander.db");
-                Settings.DatabaseConnectionString = $"Data Source={dbPath};Cache=Shared";
+                var dbPath = Path.Join(AppPaths.GetConfigDirectory(), "LANCommander.db");
+                SettingsProvider.Update(s =>
+                {
+                    s.Server.Database.ConnectionString = $"Data Source={dbPath};Cache=Shared";
+                });
                 break;
 
             case DatabaseProvider.MySQL:
-                Settings.DatabaseConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
+                SettingsProvider.Update(s =>
+                {
+                    s.Server.Database.ConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
+                });
                 break;
 
             case DatabaseProvider.PostgreSQL:
-                Settings.DatabaseConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password";
+                SettingsProvider.Update(s =>
+                {
+                    s.Server.Database.ConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password"; 
+                });
                 break;
         }
     }
@@ -89,7 +101,7 @@
 
         try
         {
-            SetupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+            SetupService.ValidateConnectionString(SettingsProvider.CurrentValue.Server.Database.Provider, SettingsProvider.CurrentValue.Server.Database.ConnectionString);
 
             valid = true;
         }
@@ -120,9 +132,13 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    await SetupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    await SetupService.ChangeProviderAsync(SettingsProvider.CurrentValue.Server.Database.Provider, SettingsProvider.CurrentValue.Server.Database.ConnectionString);
                     
-                    SettingService.SaveSettings(Settings);
+                    SettingsProvider.Update(s =>
+                    {
+                        s.Server.Database.Provider = Settings.Value.Server.Database.Provider;
+                        s.Server.Database.ConnectionString = Settings.Value.Server.Database.ConnectionString;
+                    });
 
                     NavigationManager.NavigateTo("/FirstTimeSetup/Paths", true);
                 });

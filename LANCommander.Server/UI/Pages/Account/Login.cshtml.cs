@@ -20,7 +20,9 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.Data;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 using User = LANCommander.Server.Data.Models.User;
 
@@ -33,19 +35,22 @@ namespace LANCommander.Server.UI.Pages.Account
         private readonly RoleService RoleService;
         private readonly IFusionCache Cache;
         private readonly ILogger<LoginModel> Logger;
+        private readonly IOptions<Server.Settings.Settings> Settings;
 
         public LoginModel(
             SignInManager<User> signInManager,
             UserService userService,
             RoleService roleService,
             IFusionCache cache,
-            ILogger<LoginModel> logger)
+            ILogger<LoginModel> logger,
+            IOptions<Server.Settings.Settings> settings)
         {
             SignInManager = signInManager;
             UserService = userService;
             RoleService = roleService;
             Cache = cache;
             Logger = logger;
+            Settings = settings;
         }
 
         /// <summary>
@@ -94,7 +99,7 @@ namespace LANCommander.Server.UI.Pages.Account
 
             ReturnUrl = returnUrl;
 
-            if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
+            if (DatabaseContext.Provider == DatabaseProvider.Unknown)
                 return Redirect("/FirstTimeSetup");
 
             var administratorRole = await RoleService
@@ -147,9 +152,7 @@ namespace LANCommander.Server.UI.Pages.Account
 
             if (ModelState.IsValid)
             {
-                var settings = SettingService.GetSettings();
-
-                if (settings.Authentication.RequireApproval)
+                if (Settings.Value.Server.Authentication.RequireApproval)
                 {
                     var user = await UserService.GetAsync(Model.Username);
 

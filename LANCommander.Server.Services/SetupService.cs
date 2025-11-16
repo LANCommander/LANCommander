@@ -2,6 +2,7 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +15,9 @@ namespace LANCommander.Server.Services
 {
     public class SetupService(
         ILogger<SetupService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         UserManager<User> userManager,
-        IServiceProvider serviceProvider) : BaseService(logger), IDisposable
+        IServiceProvider serviceProvider) : BaseService(logger, settingsProvider), IDisposable
     {
         public async Task<bool> IsSetupInitialized()
         {

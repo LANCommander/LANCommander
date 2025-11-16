@@ -1,12 +1,17 @@
-@using LANCommander.Server.Data.Enums
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Settings.Models
+@using Microsoft.Extensions.Options
+@inject IOptions<Settings> Settings
+
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    @if (!Settings.Servers.ServerEngines.Any())
+    @if (!Settings.Value.Server.GameServers.ServerEngines.Any())
     {
         <Empty Description="@("No Docker hosts have been configured")" />
     }
     
     <Collapse>
-        @foreach (var serverEngine in Settings.Servers.ServerEngines)
+        @foreach (var serverEngine in Settings.Value.Server.GameServers.ServerEngines)
         {
             @if (serverEngine.Type == ServerEngine.Local)
             {
@@ -54,8 +59,6 @@
 @code {
     [Parameter] public IEnumerable<ServerEngineConfiguration> Values { get; set; }
     [Parameter] public EventCallback<IEnumerable<ServerEngineConfiguration>> ValuesChanged { get; set; }
-        
-    Settings Settings = SettingService.GetSettings();
 
     List<ServerEngineConfiguration> ServerEngines = new();
 

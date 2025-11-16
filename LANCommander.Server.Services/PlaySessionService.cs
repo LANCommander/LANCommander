@@ -11,11 +11,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class PlaySessionService(
         ILogger<PlaySessionService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<PlaySession> AddAsync(PlaySession entity)
         {

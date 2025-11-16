@@ -20,11 +20,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
             SteamGridDbFormats.Webp
         };
 
-        public SteamGridDBMediaGrabber()
+        public SteamGridDBMediaGrabber(SettingsProvider<Settings.Settings> settingsProvider)
         {
-            var settings = SettingService.GetSettings();
-
-            SteamGridDb = new SteamGridDb(settings.Media.SteamGridDbApiKey);
+            SteamGridDb = new SteamGridDb(settingsProvider.CurrentValue.Server.Media.SteamGridDbApiKey);
             SteamClient = new SteamClient();
         }
 

@@ -130,6 +130,7 @@
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />

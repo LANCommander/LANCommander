@@ -3,7 +3,6 @@ using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.SDK.Enums;
-using LANCommander.Server.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,11 +12,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class GameSaveService(
         ILogger<GameSaveService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<GameSave> AddAsync(GameSave entity)
         {

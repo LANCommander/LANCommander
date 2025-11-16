@@ -4,6 +4,7 @@ using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
@@ -13,8 +14,11 @@ namespace LANCommander.Server.Startup;
 
 public static class Database
 {
-    public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder, Settings settings, string[] args)
+    public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder, string[] args)
     {
+        var settings = new Settings.Settings();
+        builder.Configuration.Bind(settings);
+        
         builder.Services.AddDbContextFactory<DatabaseContext>();
         builder.Services.AddDbContext<DatabaseContext>();
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -25,12 +29,12 @@ public static class Database
         if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
             DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
         else
-            DatabaseContext.Provider = settings.DatabaseProvider;
+            DatabaseContext.Provider = settings.Server.Database.Provider;
 
         if (!String.IsNullOrWhiteSpace(connectionStringParameter))
             DatabaseContext.ConnectionString = connectionStringParameter;
         else
-            DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
+            DatabaseContext.ConnectionString = settings.Server.Database.ConnectionString;
 
         return builder;
     }
@@ -42,14 +46,14 @@ public static class Database
             using var scope = app.Services.CreateAsyncScope();
             using var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            var settings = scope.ServiceProvider.GetRequiredService<Settings>();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
             logger.LogDebug("Migrating database if required");
 
             if ((await db.Database.GetPendingMigrationsAsync()).Any())
             {
                 if (DatabaseContext.Provider == DatabaseProvider.SQLite)
                 {
-                    var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+                    var dataSource = new SqliteConnectionStringBuilder(settingsProvider.CurrentValue.Server.Database.ConnectionString).DataSource;
 
                     var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
 

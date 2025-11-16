@@ -1,5 +1,9 @@
 ﻿@page "/Settings/Roles"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject RoleService RoleService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -46,7 +50,7 @@
                 LabelName="Name"
                 ValueName="Id"
                 DefaultActiveFirstOption="false"
-                Value="Settings.Roles.DefaultRoleId"
+                Value="Settings.Value.Server.Roles.DefaultRoleId"
                 Disabled="Loading"
                 Style="min-width: 100px;"></Select>
             <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
@@ -63,7 +67,6 @@
 </Modal>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
     bool Loading = true;
     bool AddRoleDialogVisible = false;
 
@@ -134,13 +137,12 @@
 
     async Task DefaultRoleChanged(Role defaultRole)
     {
-        if (!Loading && defaultRole.Id != Settings.Roles.DefaultRoleId)
+        if (!Loading && defaultRole.Id != Settings.Value.Server.Roles.DefaultRoleId)
         {
-            Settings = SettingService.GetSettings();
-
-            Settings.Roles.DefaultRoleId = defaultRole.Id;
-        
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Roles.DefaultRoleId = defaultRole.Id;
+            });
 
             MessageService.Success($"Default role updated!");
         }

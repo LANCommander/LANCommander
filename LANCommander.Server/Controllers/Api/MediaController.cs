@@ -1,9 +1,4 @@
 ﻿using AutoMapper;
-using LANCommander.Server.Data;
-using LANCommander.Server.Data.Models;
-using LANCommander.Server.Extensions;
-using LANCommander.Server.Models;
-using LANCommander.SDK;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,8 +15,9 @@ namespace LANCommander.Server.Controllers.Api
 
         public MediaController(
             ILogger<MediaController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
-            MediaService mediaService) : base(logger)
+            MediaService mediaService) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             MediaService = mediaService;

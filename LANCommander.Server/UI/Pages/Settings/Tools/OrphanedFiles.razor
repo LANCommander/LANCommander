@@ -1,5 +1,7 @@
 ﻿@page "/Settings/Tools/OrphanedFiles"
 @using LANCommander.Helpers;
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ArchiveClient ArchiveClient
 @inject StorageLocationService StorageLocationService
@@ -40,8 +42,6 @@
 @code {
     ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
     bool Loading = true;
-
-    readonly Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {

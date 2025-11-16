@@ -6,7 +6,6 @@ using LANCommander.Server.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using System.Linq.Expressions;
-using LANCommander.SDK.Services;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
@@ -17,13 +16,14 @@ namespace LANCommander.Server.Services
 {
     public class GameService(
         ILogger<GameService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveClient archiveClient,
         MediaService mediaService,
-        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {

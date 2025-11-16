@@ -1,43 +1,48 @@
 ﻿@page "/Settings/Launcher"
 @using LANCommander.Server.Jobs.Background
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
+@using Microsoft.Extensions.Options
 @inject IMessageService MessageService
 @inject ILogger<Updates> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Launcher">
     <PageHeaderExtra>
-        <Button OnClick="DownloadLaunchers" Disabled="!Settings.Launcher.HostUpdates">Download Launchers</Button>
+        <Button OnClick="DownloadLaunchers" Disabled="!Settings.Value.Server.Launcher.HostUpdates">Download Launchers</Button>
     </PageHeaderExtra>
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Server.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
 
         <FormItem Label="Host Client Updates">
-            <Switch @bind-Checked="context.Launcher.HostUpdates" />
+            <Switch @bind-Checked="context.Server.Launcher.HostUpdates" />
         </FormItem>
 
         <FormItem Label="Always include Online Updates">
-            <Switch @bind-Checked="context.Launcher.IncludeOnlineUpdates" />
+            <Switch @bind-Checked="context.Server.Launcher.IncludeOnlineUpdates" />
         </FormItem>
 
         <FormItem Label="Architectures">
             <EnumSelect
                 TEnum="LauncherArchitecture"
                 Mode="SelectMode.Multiple"
-                Disabled="!context.Launcher.HostUpdates"
-                @bind-Values="context.Launcher.Architectures" />
+                Disabled="!context.Server.Launcher.HostUpdates"
+                @bind-Values="context.Server.Launcher.Architectures" />
         </FormItem>
 
         <FormItem Label="Platforms">
             <EnumSelect
                 TEnum="LauncherPlatform"
                 Mode="SelectMode.Multiple"
-                Disabled="!context.Launcher.HostUpdates"
-                @bind-Values="context.Launcher.Platforms" />
+                Disabled="!context.Server.Launcher.HostUpdates"
+                @bind-Values="context.Server.Launcher.Platforms" />
         </FormItem>
 
         <FormItem>
@@ -47,15 +52,17 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     void Save()
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Launcher = Settings.Value.Server.Launcher;
+            });
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)
@@ -72,7 +79,7 @@
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.Launcher.StoragePath = path;
+        Settings.Value.Server.Launcher.StoragePath = path;
     }
 
     async Task DownloadLaunchers()

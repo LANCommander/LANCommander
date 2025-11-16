@@ -1,10 +1,13 @@
 ﻿@using LANCommander.Server.Data
+@using LANCommander.Server.Settings.Enums
+@@using LANCommander.Server.Settings.Enums
+using LANCommander.Server.Data
 @inject NavigationManager NavigationManager
 
 @code {
     protected override void OnInitialized()
     {
-        if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
+        if (DatabaseContext.Provider == DatabaseProvider.Unknown)
         {
             NavigationManager.NavigateTo("/FirstTimeSetup");
         }

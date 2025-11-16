@@ -1,7 +1,10 @@
 @page "/Profile/ConnectedAccounts"
+@using LANCommander.Server.Settings
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Options
 @inject UserService UserService
 @inject UserCustomFieldService UserCustomFieldService
+@inject IOptions<Settings> Settings
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
@@ -9,7 +12,7 @@
 <PageHeader Title="Connected Accounts" />
 
 <div style="padding: 0 24px">
-    <AntList DataSource="Settings.Authentication.AuthenticationProviders" Bordered Size="ListSize.Large">
+    <AntList DataSource="Settings.Value.Server.Authentication.AuthenticationProviders" Bordered Size="ListSize.Large">
         <ListItem>
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.SpaceBetween" Style="width: 100%">
                 <Flex Align="FlexAlign.Center" Gap="FlexGap.Large">
@@ -41,8 +44,6 @@
 </div>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     User User = new();
     List<UserCustomField> CustomFields = new();
 
@@ -60,7 +61,7 @@
 
     async Task LoadData()
     {
-        foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+        foreach (var authenticationProvider in Settings.Value.Server.Authentication.AuthenticationProviders)
         {
             var customField = await UserCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
             

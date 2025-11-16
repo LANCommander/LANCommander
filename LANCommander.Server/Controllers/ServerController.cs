@@ -13,8 +13,9 @@ namespace LANCommander.Server.Controllers
 
         public ServerController(
             ILogger<ServerController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
-            ServerService serverService) : base(logger)
+            ServerService serverService) : base(logger, settingsProvider)
         {
             ServerService = serverService;
             Mapper = mapper;

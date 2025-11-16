@@ -2,8 +2,7 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Jobs.Background;
 @inject ArchiveClient ArchiveClient
-@inject HttpClient HttpClient
-@inject NavigationManager Navigator
+@inject SettingsProvider<Settings.Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ArchiveUploader> Logger
@@ -134,16 +133,14 @@
 
             Archive? lastArchive = null;
 
-            var settings = SettingService.GetSettings();
-
-            if (settings.Archives.EnablePatching)
+            if (SettingsProvider.CurrentValue.Server.Archives.EnablePatching)
             {
                 if (Archive.GameId != Guid.Empty)
                     lastArchive = await ArchiveClient.GetLatestArchive(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
                 else if (Archive.RedistributableId != Guid.Empty)
                     lastArchive = await ArchiveClient.GetLatestArchive(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
 
-                if (lastArchive != null && settings.Archives.EnablePatching)
+                if (lastArchive != null && SettingsProvider.CurrentValue.Server.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
             }
 

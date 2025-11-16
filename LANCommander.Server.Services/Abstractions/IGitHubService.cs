@@ -1,4 +1,5 @@
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Octokit;
 using Semver;
 

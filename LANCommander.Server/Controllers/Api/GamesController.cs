@@ -1,15 +1,12 @@
 ﻿using AutoMapper;
 using LANCommander.SDK.Enums;
-using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -35,6 +32,7 @@ namespace LANCommander.Server.Controllers.Api
 
         public GamesController(
             ILogger<GamesController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IServiceProvider serviceProvider,
             IFusionCache cache,
             IMapper mapper,
@@ -45,7 +43,7 @@ namespace LANCommander.Server.Controllers.Api
             UserService userService,
             PlaySessionService playSessionService,
             ServerService serverService,
-            ImportContext importContext) : base(logger)
+            ImportContext importContext) : base(logger, settingsProvider)
         {
             GameService = gameService;
 
@@ -84,7 +82,7 @@ namespace LANCommander.Server.Controllers.Api
                     mappedGame.InLibrary = userLibrary.Games.Any(g => g.Id == mappedGame.Id);
             }
 
-            if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
+            if (SettingsProvider.CurrentValue.Server.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
             {
                 var roles = await UserService.GetRolesAsync(user);
 
@@ -305,7 +303,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}/Download")]
         public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            if (!Settings.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
+            if (!SettingsProvider.CurrentValue.Server.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
             {
                 Logger?.LogError("User is not authorized to download game with ID {GameId}", id);
                 return Unauthorized();

@@ -53,7 +53,7 @@ namespace LANCommander.Server
                     dest.Cover,
                     opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()));
 
-            CreateMap<Services.Models.AuthenticationProvider, SDK.Models.AuthenticationProvider>();
+            CreateMap<Settings.Models.AuthenticationProvider, SDK.Models.AuthenticationProvider>();
 
             CreateMap<Data.Models.Game, EntityReference>()
                 .ForMember(dest => dest.Name,

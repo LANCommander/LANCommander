@@ -1,4 +1,6 @@
 @using LANCommander.Server.Parsers
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Settings.Models
 <Form Model="Provider" Layout="FormLayout.Vertical" OnFieldChanged="OnChanged">
     <FormItem Label="Name">
         <Input @bind-Value="Provider.Name" BindOnInput/>

@@ -1,7 +1,12 @@
 ﻿@page "/Settings/Integrations/Steam"
 @using LANCommander.Server.Services.Enums
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Settings.Components
+@using Microsoft.Extensions.Options
 @inject SteamCMDService SteamCmdService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -13,9 +18,9 @@
 </PageHeader>
 
 <PageContent>
-    <Form Model="_settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="SteamCMD Path">
-            <FilePicker @bind-Value="_settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
+            <FilePicker @bind-Value="context.Server.SteamCMD.Path" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
         </FormItem>
     </Form>
     
@@ -23,7 +28,7 @@
     
     <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
         <Collapse>
-            @foreach (var profile in _settings.SteamCMD.Profiles)
+            @foreach (var profile in Settings.Value.Server.SteamCMD.Profiles)
             {
                 <Panel Header="@(String.IsNullOrWhiteSpace(profile.Username) ? "New Profile" : profile.Username)">
                     <ExtraTemplate>
@@ -48,8 +53,6 @@
 </PageContent>
 
 @code {
-    Settings _settings = SettingService.GetSettings();
-    
     string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     SteamCmdConnectionStatus _connectionStatus;
@@ -61,18 +64,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!_settings.SteamCMD.Profiles.Any())
+        if (!Settings.Value.Server.SteamCMD.Profiles.Any())
             AddProfile();
     }
 
     void AddProfile()
     {
-        _settings.SteamCMD.Profiles.Add(new SteamCmdProfile());
+        Settings.Value.Server.SteamCMD.Profiles.Add(new SteamCmdProfile());
     }
 
     async Task RemoveProfile(SteamCmdProfile profile)
     {
-        _settings.SteamCMD.Profiles.Remove(profile);
+        Settings.Value.Server.SteamCMD.Profiles.Remove(profile);
 
         if (!String.IsNullOrWhiteSpace(profile.Username))
         {
@@ -93,7 +96,7 @@
             MessageService.Success(logoutMessage);
         }
 
-        if (!_settings.SteamCMD.Profiles.Any())
+        if (!Settings.Value.Server.SteamCMD.Profiles.Any())
             AddProfile();
     }
 
@@ -101,8 +104,13 @@
     {
         try
         {
-            _settings.SteamCMD.Profiles = _settings.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
-            SettingService.SaveSettings(_settings);
+            Settings.Value.Server.SteamCMD.Profiles = Settings.Value.Server.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
+
+            SettingsProvider.Update(s =>
+            {
+                s.Server.SteamCMD = Settings.Value.Server.SteamCMD;
+            });
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

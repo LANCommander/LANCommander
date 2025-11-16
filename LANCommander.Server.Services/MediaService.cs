@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using System.Configuration;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
@@ -20,11 +21,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class MediaService(
         ILogger<MediaService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Media> AddAsync(Media entity)
         {
@@ -118,7 +120,7 @@ namespace LANCommander.Server.Services
 
         public string GetThumbnailPath(Media media)
         {
-            var config = _settings.Media.GetMediaTypeConfig(media.Type);
+            var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
             
             if (config != null && config.Thumbnails.Enabled)
                 return $"{GetMediaPath(media)}.Thumb";
@@ -175,7 +177,7 @@ namespace LANCommander.Server.Services
             if (!File.Exists(source))
                 return String.Empty;
 
-            var config = _settings.Media.GetMediaTypeConfig(media.Type);
+            var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
 
             Stream stream = null;
 

@@ -1,8 +1,11 @@
-﻿@using System.Net.Mime
+﻿@using Microsoft.Extensions.Options
+@using LANCommander.Server.Settings
+@using System.Net.Mime
 @inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject IOptions<Settings> Settings
 @inject ILogger<MediaEditor> Logger
 
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
@@ -57,7 +60,7 @@
                         <Icon Type="@IconType.Outline.Upload"/>
                     </label>
 
-                    @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
+                    @if (String.IsNullOrWhiteSpace(Settings.Value.Server.Media.SteamGridDbApiKey))
                     {
                         <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
                             <Button Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
@@ -92,8 +95,6 @@
 
     IEnumerable<Media> Selected = new List<Media>();
     ITable? ResultsTable;
-
-    Settings Settings = SettingService.GetSettings();
 
     MediaType[] AllowedMediaTypes = new MediaType[]
     {
@@ -226,7 +227,7 @@
             return;
         }
 
-        var config = Settings.Media.GetMediaTypeConfig(media.Type);
+        var config = Settings.Value.Server.Media.GetMediaTypeConfig(media.Type);
 
         if (e.File.Size > config.MaxFileSize)
         {

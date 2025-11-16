@@ -13,8 +13,6 @@ namespace LANCommander.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var settings = SettingService.GetSettings();
-
             migrationBuilder.AddColumn<Guid>(
                 name: "StorageLocationId",
                 table: "Media",

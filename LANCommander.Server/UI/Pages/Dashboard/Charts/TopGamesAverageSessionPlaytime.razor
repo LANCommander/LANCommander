@@ -10,8 +10,6 @@
 @code {
     ICollection<PlaySession> PlaySessions;
 
-    Settings Settings = SettingService.GetSettings();
-
     object[] Data;
 
     bool Loading = true;
@@ -44,7 +42,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+        Config.Theme = "dark";
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
         

@@ -17,11 +17,12 @@ namespace LANCommander.Server.Services
     public class AuthenticationService(
         ILogger<AuthenticationService> logger,
         IMapper mapper,
+        SettingsProvider<Settings.Settings> settingsProvider,
         UserService userService,
         RoleService roleService,
         ScriptService scriptService,
         ITokenProvider tokenProvider,
-        SDK.Services.ScriptClient scriptClient) : BaseService(logger)
+        SDK.Services.ScriptClient scriptClient) : BaseService(logger, settingsProvider)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
@@ -62,7 +63,7 @@ namespace LANCommander.Server.Services
                 
             _logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-            if (_settings.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user, RoleService.AdministratorRoleName))
+            if (_settingsProvider.CurrentValue.Server.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user, RoleService.AdministratorRoleName))
                 throw new UserAuthenticationException("Account must be approved by an administrator");
                 
             var userRoles = await userService.GetRolesAsync(user);
@@ -85,7 +86,7 @@ namespace LANCommander.Server.Services
             var refreshToken = GenerateRefreshToken();
                 
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(_settings.Authentication.TokenLifetime);
+            user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime);
                 
             await userService.UpdateAsync(user);
 
@@ -171,9 +172,9 @@ namespace LANCommander.Server.Services
 
                 try
                 {
-                    if (_settings.Roles.DefaultRoleId == Guid.Empty)
+                    if (_settingsProvider.CurrentValue.Server.Roles.DefaultRoleId == Guid.Empty)
                     {
-                        var defaultRole = await roleService.GetAsync(_settings.Roles.DefaultRoleId);
+                        var defaultRole = await roleService.GetAsync(_settingsProvider.CurrentValue.Server.Roles.DefaultRoleId);
 
                         if (defaultRole != null)
                             await userService.AddToRoleAsync(user.UserName, defaultRole.Name);
@@ -221,7 +222,7 @@ namespace LANCommander.Server.Services
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Authentication.TokenSecret)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settingsProvider.CurrentValue.Server.Authentication.TokenSecret)),
                 ValidateLifetime = false
             };
 
@@ -247,10 +248,10 @@ namespace LANCommander.Server.Services
         
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Authentication.TokenSecret));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settingsProvider.CurrentValue.Server.Authentication.TokenSecret));
 
             var token = new JwtSecurityToken(
-                expires: DateTime.UtcNow.AddDays(_settings.Authentication.TokenLifetime),
+                expires: DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
@@ -258,11 +259,11 @@ namespace LANCommander.Server.Services
             return token;
         }
 
-        public static async Task<List<Models.AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
+        public static async Task<List<Settings.Models.AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
         {
             var files = Directory.GetFiles(@"Templates/AuthenticationProviders", "*.yml", SearchOption.AllDirectories);
 
-            var externalProviders = new List<Models.AuthenticationProvider>();
+            var externalProviders = new List<Settings.Models.AuthenticationProvider>();
 
 
             var deserializer = new DeserializerBuilder()
@@ -275,7 +276,7 @@ namespace LANCommander.Server.Services
                 {
                     var contents = await File.ReadAllTextAsync(file);
 
-                    externalProviders.Add(deserializer.Deserialize<Models.AuthenticationProvider>(contents));
+                    externalProviders.Add(deserializer.Deserialize<Settings.Models.AuthenticationProvider>(contents));
                 }
                 catch { }
             }

@@ -27,11 +27,12 @@ namespace LANCommander.Server.Services
 
         public UserService(
             ILogger<UserService> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             IFusionCache cache,
             CollectionService collectionService,
             IDbContextFactory<DatabaseContext> contextFactory,
-            IdentityContextFactory identityContextFactory) : base(logger)
+            IdentityContextFactory identityContextFactory) : base(logger, settingsProvider)
         {
             IdentityContext = identityContextFactory.Create();
             CollectionService = collectionService;
@@ -40,17 +41,17 @@ namespace LANCommander.Server.Services
             Cache = cache;
         }
 
-        public void Reconfigure(Settings settings)
+        public void Reconfigure()
         {
             var options = IdentityContext.UserManager.Options;
-            if (options == null || settings == null) 
+            if (options == null) 
                 return;
 
-            options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
-            options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
-            options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
-            options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
-            options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
+            options.Password.RequireNonAlphanumeric = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequireNonAlphanumeric;
+            options.Password.RequireLowercase = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequireLowercase;
+            options.Password.RequireUppercase = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequireUppercase;
+            options.Password.RequireDigit = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequireDigit;
+            options.Password.RequiredLength = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequiredLength;
         }
 
         public async Task<User> GetAsync(string userName)

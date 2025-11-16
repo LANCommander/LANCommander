@@ -14,10 +14,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class ServerHttpPathService(
         ILogger<ServerHttpPathService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerHttpPath>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerHttpPath>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<ServerHttpPath> AddAsync(ServerHttpPath entity)
         {

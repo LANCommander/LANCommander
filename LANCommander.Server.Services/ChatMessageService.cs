@@ -10,10 +10,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class ChatMessageService(
         ILogger<ChatMessageService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<ChatMessage>(logger, cache, mapper, httpContextAccessor, context)
+        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<ChatMessage>(logger, settingsProvider, cache, mapper, httpContextAccessor, context)
     {
         public override async Task<ChatMessage> AddAsync(ChatMessage entity)
         {

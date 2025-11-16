@@ -1,5 +1,9 @@
 ﻿@page "/Settings/Archives"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -7,17 +11,17 @@
 <PageHeader Title="Archives" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable Patching">
-            <Switch @bind-Checked="context.Archives.EnablePatching" />
+            <Switch @bind-Checked="context.Server.Archives.EnablePatching" />
         </FormItem>
 
         <FormItem Label="Allow Insecure Downloads">
-            <Switch @bind-Checked="context.Archives.AllowInsecureDownloads" />
+            <Switch @bind-Checked="context.Server.Archives.AllowInsecureDownloads" />
         </FormItem>
 
         <FormItem Label="Max Upload Chunk Size (MB)">
-            <AntDesign.InputNumber @bind-Value="context.Archives.MaxChunkSize" Min="1" DefaultValue="50" />
+            <AntDesign.InputNumber @bind-Value="context.Server.Archives.MaxChunkSize" Min="1" DefaultValue="50" />
         </FormItem>
 
         <FormItem Label="Storage Paths">
@@ -53,15 +57,12 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
     ICollection<StorageLocation> StorageLocations;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
-        
         StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }
 
@@ -69,7 +70,10 @@
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Archives = Settings.Value.Server.Archives;
+            });
 
             foreach (var storageLocation in StorageLocations)
             {

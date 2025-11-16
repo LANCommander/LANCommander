@@ -24,12 +24,13 @@ namespace LANCommander.Server.Controllers.Api
 
         public LibraryController(
             ILogger<LibraryController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
             LibraryService libraryService,
             DatabaseContext databaseContext,
-            UserService userService) : base(logger)
+            UserService userService) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             Cache = cache;
@@ -44,7 +45,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                if (!Settings.Library.EnableUserLibraries)
+                if (!SettingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
                 {
                     var games = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                         Logger?.LogDebug("Mapped games cache is empty, repopulating");

@@ -2,13 +2,7 @@
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -23,9 +17,10 @@ namespace LANCommander.Server.Controllers.Api
 
         public ProfileController(
             ILogger<ProfileController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             UserService userService,
             MediaService mediaService,
-            UserCustomFieldService userCustomFieldService) : base(logger)
+            UserCustomFieldService userCustomFieldService) : base(logger, settingsProvider)
         {
             UserService = userService;
             MediaService = mediaService;

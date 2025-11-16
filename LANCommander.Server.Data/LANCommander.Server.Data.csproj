@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
   </ItemGroup>
 
 </Project>

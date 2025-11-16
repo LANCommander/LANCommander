@@ -32,6 +32,7 @@ namespace LANCommander.Server.Controllers.Api
 
         public DepotController(
             ILogger<DepotController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
@@ -42,7 +43,7 @@ namespace LANCommander.Server.Controllers.Api
             PlatformService platformService,
             TagService tagService,
             LibraryService libraryService,
-            UserService userService) : base(logger)
+            UserService userService) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             Cache = cache;
@@ -103,7 +104,7 @@ namespace LANCommander.Server.Controllers.Api
                 return results;
             }, TimeSpan.MaxValue, tags: ["Depot"]);
 
-            if (Settings.Roles.RestrictGamesByCollection)
+            if (SettingsProvider.CurrentValue.Server.Roles.RestrictGamesByCollection)
             {
                 var collections = await UserService.GetCollectionsAsync(user);
 

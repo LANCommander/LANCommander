@@ -18,9 +18,10 @@ namespace LANCommander.Server.Controllers.Api
 
         public IssueController(
             ILogger<IssueController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             GameService gameService,
             IssueService issueService,
-            UserService userService) : base(logger)
+            UserService userService) : base(logger, settingsProvider)
         {
             GameService = gameService;
             IssueService = issueService;

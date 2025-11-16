@@ -1,8 +1,10 @@
 ﻿@page "/Settings/Beacon"
 @using LANCommander.SDK.Services
-@@using LANCommander.SDK.Services
-using LANCommander.SDK
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject BeaconClient BeaconClient
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -10,20 +12,20 @@ using LANCommander.SDK
 <PageHeader Title="Beacon" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable">
             <Text Type="@TextElementType.Secondary">Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Text>
-            <Switch @bind-Checked="context.Beacon.Enabled" />
+            <Switch @bind-Checked="context.Server.Beacon.Enabled" />
         </FormItem>
 
         <FormItem Label="Name">
             <Text Type="@TextElementType.Secondary">Use this to customize the name that is broadcasted to clients.</Text>
-            <Input @bind-Value="Settings.Beacon.Name" />
+            <Input @bind-Value="context.Server.Beacon.Name" />
         </FormItem>
 
         <FormItem Label="Address">
-            <Text Type="@TextElementType.Secondary">Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@context.Port</Text>
-            <Input @bind-Value="Settings.Beacon.Address" />
+            <Text Type="@TextElementType.Secondary">Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@context.Server.Beacon.Port</Text>
+            <Input @bind-Value="context.Server.Beacon.Address" />
         </FormItem>
 
         <FormItem>
@@ -33,17 +35,18 @@ using LANCommander.SDK
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
-
     async Task Save()
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Beacon = Settings.Value.Server.Beacon;
+            });
             MessageService.Success("Settings saved!");
 
-            if (Settings.Beacon.Enabled)
-                await BeaconClient.StartBeaconAsync(Settings.Beacon.Port, Settings.Beacon.Address, Settings.Beacon.Name);
+            if (Settings.Value.Server.Beacon.Enabled)
+                await BeaconClient.StartBeaconAsync(Settings.Value.Server.Beacon.Port, Settings.Value.Server.Beacon.Address, Settings.Value.Server.Beacon.Name);
             else
                 await BeaconClient.StopBeaconAsync();
         }

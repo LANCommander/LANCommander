@@ -5,6 +5,8 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
+using LANCommander.Server.Settings.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -15,27 +17,27 @@ namespace LANCommander.Server.Startup;
 
 public static class Authentication
 {
-    public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder, Settings settings)
+    public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder)
     {
         builder.Services.AddCascadingAuthenticationState();
 
         return builder;
     }
     
-    public static AuthenticationBuilder AddAuthenticationProviders(this AuthenticationBuilder authBuilder, Settings settings)
+    public static AuthenticationBuilder AddAuthenticationProviders(this AuthenticationBuilder authBuilder, Settings.Settings settings)
     {
-        foreach (var authenticationProvider in settings.Authentication.AuthenticationProviders)
+        foreach (var authenticationProvider in settings.Server.Authentication.AuthenticationProviders)
         {
             try
             {
                 switch (authenticationProvider.Type)
                 {
                     case AuthenticationProviderType.OAuth2:
-                        authBuilder.AddOAuth(authenticationProvider);
+                        authBuilder.AddOAuth(authenticationProvider, settings);
                         break;
 
                     case AuthenticationProviderType.OpenIdConnect:
-                        authBuilder.AddOpenIdConnect(authenticationProvider);
+                        authBuilder.AddOpenIdConnect(authenticationProvider, settings);
                         break;
 
                     case AuthenticationProviderType.Saml:
@@ -53,7 +55,7 @@ public static class Authentication
         return authBuilder;
     }
     
-    public static AuthenticationBuilder AddOpenIdConnect(this AuthenticationBuilder authBuilder, AuthenticationProvider authenticationProvider)
+    public static AuthenticationBuilder AddOpenIdConnect(this AuthenticationBuilder authBuilder, AuthenticationProvider authenticationProvider, Settings.Settings settings)
     {
         if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
             return authBuilder;
@@ -68,29 +70,27 @@ public static class Authentication
             {
                 ValidateIssuer = false
             };
-
-            var settings = SettingService.GetSettings();
             
             options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
             if (options.MetadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                options.CorrelationCookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
-                options.CorrelationCookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
+                options.CorrelationCookie.SameSite = settings.Server.Authentication.HttpsCookiePolicy.SameSite;
+                options.CorrelationCookie.SecurePolicy = settings.Server.Authentication.HttpsCookiePolicy.Secure;
                 
-                options.NonceCookie.SameSite = settings.Authentication.HttpsCookiePolicy.SameSite;
-                options.NonceCookie.SecurePolicy = settings.Authentication.HttpsCookiePolicy.Secure;
+                options.NonceCookie.SameSite = settings.Server.Authentication.HttpsCookiePolicy.SameSite;
+                options.NonceCookie.SecurePolicy = settings.Server.Authentication.HttpsCookiePolicy.Secure;
                 
                 options.ResponseMode = OpenIdConnectResponseMode.Query;
             }
             else
             {
-                options.CorrelationCookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
-                options.CorrelationCookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
+                options.CorrelationCookie.SameSite = settings.Server.Authentication.HttpCookiePolicy.SameSite;
+                options.CorrelationCookie.SecurePolicy = settings.Server.Authentication.HttpCookiePolicy.Secure;
                 
-                options.NonceCookie.SameSite = settings.Authentication.HttpCookiePolicy.SameSite;
-                options.NonceCookie.SecurePolicy = settings.Authentication.HttpCookiePolicy.Secure;
+                options.NonceCookie.SameSite = settings.Server.Authentication.HttpCookiePolicy.SameSite;
+                options.NonceCookie.SecurePolicy = settings.Server.Authentication.HttpCookiePolicy.Secure;
                 
                 options.ResponseMode = OpenIdConnectResponseMode.Query;
             }
@@ -131,7 +131,7 @@ public static class Authentication
     }
 
     public static AuthenticationBuilder AddOAuth(this AuthenticationBuilder authBuilder,
-        AuthenticationProvider authenticationProvider)
+        AuthenticationProvider authenticationProvider, Settings.Settings settings)
     {
         if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
             return authBuilder;

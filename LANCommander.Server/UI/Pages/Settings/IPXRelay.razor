@@ -1,28 +1,32 @@
 ﻿@page "/Settings/IPXRelay"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<IPXRelay> Logger
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="IPX Relay" />
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable">
-            <Switch @bind-Checked="context.IPXRelay.Enabled" />
+            <Switch @bind-Checked="context.Server.IPXRelay.Enabled" />
         </FormItem>
 
         <FormItem Label="Host">
             <Text Type="@TextElementType.Secondary">Use this to customize the host that is broadcasted to clients.</Text>
-            <Input @bind-Value="context.IPXRelay.Host" />
+            <Input @bind-Value="context.Server.IPXRelay.Host" />
         </FormItem>
 
         <FormItem Label="Port">
-            <AntDesign.InputNumber @bind-Value="context.IPXRelay.Port" Max="65535" />
+            <AntDesign.InputNumber @bind-Value="context.Server.IPXRelay.Port" Max="65535" />
         </FormItem>
 
         <FormItem Label="Logging">
-            <Switch @bind-Checked="context.IPXRelay.Logging" />
+            <Switch @bind-Checked="context.Server.IPXRelay.Logging" />
         </FormItem>
 
         <FormItem>
@@ -32,13 +36,16 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
 
     async Task Save()
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            SettingsProvider.Update(s =>
+            {
+                s.Server.IPXRelay = Settings.Value.Server.IPXRelay;
+            });
+            
             MessageService.Success("Settings saved!");
 
             await IPXRelayService.StopAsync();

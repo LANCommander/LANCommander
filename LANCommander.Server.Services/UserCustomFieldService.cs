@@ -10,10 +10,11 @@ namespace LANCommander.Server.Services
 {
     public sealed class UserCustomFieldService(
         ILogger<UserCustomFieldService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<UserCustomField>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<UserCustomField>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<UserCustomField> AddAsync(UserCustomField entity)
         {

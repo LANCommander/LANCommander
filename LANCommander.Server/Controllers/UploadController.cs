@@ -1,9 +1,5 @@
-﻿using HarfBuzzSharp;
-using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
-using LANCommander.Server.Services;
+﻿using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -18,9 +14,10 @@ namespace LANCommander.Server.Controllers
 
         public UploadController(
             ILogger<UploadController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             StorageLocationService storageLocationService,
             ArchiveClient archiveClient,
-            IFusionCache cache) : base(logger)
+            IFusionCache cache) : base(logger, settingsProvider)
         {
             StorageLocationService = storageLocationService;
             _archiveClient = archiveClient;

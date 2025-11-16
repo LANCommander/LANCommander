@@ -8,11 +8,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class ChatService(
         ILogger<ChatService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         ChatMessageService chatMessageService,
         ChatThreadService chatThreadService,
         ChatThreadReadStatusService chatThreadReadStatusService,
-        UserService userService) : BaseService(logger)
+        UserService userService) : BaseService(logger, settingsProvider)
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
         private readonly int _maxCachedMessages = 200;

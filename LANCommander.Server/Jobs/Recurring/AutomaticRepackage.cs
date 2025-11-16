@@ -5,6 +5,7 @@ using LANCommander.Server.Services;
 namespace LANCommander.Server.Jobs.Recurring;
 
 public sealed class AutomaticRepackage(
+    SettingsProvider<Settings.Settings> settingsProvider,
     GameService gameService,
     ScriptService scriptService,
     ILogger<AutomaticRepackage> logger) : BaseRecurringJob(logger)
@@ -13,10 +14,8 @@ public sealed class AutomaticRepackage(
     {
         get
         {
-            var settings = SettingService.GetSettings();
-
-            var minutes = settings.Scripts.RepackageEvery % 60;
-            var hours = settings.Scripts.RepackageEvery / 60;
+            var minutes = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery % 60;
+            var hours = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery / 60;
             var days = hours % 24;
 
             var minuteExpression = minutes > 0 ? $"*/{minutes}" : "*";
@@ -29,9 +28,7 @@ public sealed class AutomaticRepackage(
 
     public override async Task ExecuteAsync()
     {
-        var settings = SettingService.GetSettings();
-
-        if (!settings.Scripts.EnableAutomaticRepackaging)
+        if (!settingsProvider.CurrentValue.Server.Scripts.EnableAutomaticRepackaging)
         {
             logger.LogWarning("The automatic repackaging job attempted to execute, but automatic repackaging is disabled");
             return;

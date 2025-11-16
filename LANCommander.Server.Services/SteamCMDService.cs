@@ -6,20 +6,21 @@ using System.Text;
 namespace LANCommander.Server.Services;
 
 public class SteamCMDService(
-    ILogger<SteamCMDService> logger) : BaseService(logger)
+    ILogger<SteamCMDService> logger,
+    SettingsProvider<Settings.Settings> settingsProvider) : BaseService(logger, settingsProvider)
 {
     public async Task<SteamCmdConnectionStatus> GetConnectionStatusAsync(string username)
     {
         try
         {
             // Auto-populate SteamCMD path if not configured
-            if (String.IsNullOrWhiteSpace(_settings.SteamCMD.Path))
+            if (String.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 var detectedPath = await AutoDetectSteamCmdPathAsync();
                 
                 if (!String.IsNullOrWhiteSpace(detectedPath))
                 {
-                    _settings.SteamCMD.Path = detectedPath;
+                    _settingsProvider.CurrentValue.Server.SteamCMD.Path = detectedPath;
                     _logger.LogInformation("Auto-detected SteamCMD at: {Path}", detectedPath);
                 }
                 else
@@ -29,9 +30,9 @@ public class SteamCMDService(
                 }
             }
 
-            if (!File.Exists(_settings.SteamCMD.Path))
+            if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
-                _logger.LogWarning("SteamCMD executable not found at configured path: {Path}", _settings.SteamCMD.Path);
+                _logger.LogWarning("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
                 return SteamCmdConnectionStatus.NotInstalled;
             }
 
@@ -164,15 +165,15 @@ public class SteamCMDService(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(_settings.SteamCMD.Path))
+            if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
                 return false;
             }
 
-            if (!File.Exists(_settings.SteamCMD.Path))
+            if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
-                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settings.SteamCMD.Path);
+                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
                 return false;
             }
 
@@ -204,15 +205,15 @@ public class SteamCMDService(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(_settings.SteamCMD.Path))
+            if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
                 return false;
             }
 
-            if (!File.Exists(_settings.SteamCMD.Path))
+            if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
-                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settings.SteamCMD.Path);
+                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
                 return false;
             }
 
@@ -242,15 +243,15 @@ public class SteamCMDService(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(_settings.SteamCMD.Path))
+            if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
                 return false;
             }
 
-            if (!File.Exists(_settings.SteamCMD.Path))
+            if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
-                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settings.SteamCMD.Path);
+                _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
                 return false;
             }
 
@@ -330,7 +331,7 @@ public class SteamCMDService(
     {
         try
         {
-            var executablePath = String.IsNullOrWhiteSpace(steamCmdPath) ? _settings.SteamCMD.Path : steamCmdPath;
+            var executablePath = String.IsNullOrWhiteSpace(steamCmdPath) ? _settingsProvider.CurrentValue.Server.SteamCMD.Path : steamCmdPath;
             
             var processStartInfo = new ProcessStartInfo
             {

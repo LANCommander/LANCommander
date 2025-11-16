@@ -1,7 +1,7 @@
 ﻿using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Interceptors;
 using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Identity;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 

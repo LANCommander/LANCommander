@@ -12,6 +12,7 @@ using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -19,11 +20,12 @@ namespace LANCommander.Server.Services
 {
     public sealed class UpdateService(
         ILogger<UpdateService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IHostApplicationLifetime applicationLifetime,
         IServiceProvider serviceProvider,
         IVersionProvider versionProvider,
         IGitHubService gitHubService,
-        ServerService serverService) : BaseService(logger)
+        ServerService serverService) : BaseService(logger, settingsProvider)
     {
         public const string ArtifactUrlBase = "/download/Launcher/";
 
@@ -31,12 +33,12 @@ namespace LANCommander.Server.Services
         {
             List<LauncherArtifact> launchers = [];
 
-            if (_settings.Launcher.HostUpdates)
+            if (_settingsProvider.CurrentValue.Server.Launcher.HostUpdates)
             {
                 launchers.AddRange(GetLauncherArtifactsFromLocalFiles());
             }
 
-            if (launchers.Count == 0 || _settings.Launcher.IncludeOnlineUpdates)
+            if (launchers.Count == 0 || _settingsProvider.CurrentValue.Server.Launcher.IncludeOnlineUpdates)
             {
                 var githubLaunchers = await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
                 launchers.AddRange(githubLaunchers);
@@ -48,8 +50,8 @@ namespace LANCommander.Server.Services
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
         {
             var currentVersion = versionProvider.GetCurrentVersion();
-            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
-            var downloadedInstallers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
+            var downloadedLaunchers = Directory.GetFiles(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
+            var downloadedInstallers = Directory.GetFiles(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
 
             var downloads = downloadedLaunchers.Concat(downloadedInstallers).Distinct();
 
@@ -61,21 +63,21 @@ namespace LANCommander.Server.Services
         {
             var currentVersion = versionProvider.GetCurrentVersion();
             
-            if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
-                currentVersion = SemVersion.Parse(_settings.Launcher.VersionOverride, SemVersionStyles.AllowV);
+            if (!String.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.Launcher.VersionOverride))
+                currentVersion = SemVersion.Parse(_settingsProvider.CurrentValue.Server.Launcher.VersionOverride, SemVersionStyles.AllowV);
 
             var releaseChannel = versionProvider.GetReleaseChannel(currentVersion);
             
-            if (releaseChannel != _settings.Update.ReleaseChannel)
-                releaseChannel = _settings.Update.ReleaseChannel;
+            if (releaseChannel != _settingsProvider.CurrentValue.Server.Update.ReleaseChannel)
+                releaseChannel = _settingsProvider.CurrentValue.Server.Update.ReleaseChannel;
             
             var tag = $"v{currentVersion.WithoutMetadata()}";
 
             if (releaseChannel == ReleaseChannel.Nightly)
                 tag = "nightly";
             
-            if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
-                tag = _settings.Launcher.VersionOverride;
+            if (!String.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.Launcher.VersionOverride))
+                tag = _settingsProvider.CurrentValue.Server.Launcher.VersionOverride;
             
             logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
 
@@ -127,7 +129,7 @@ namespace LANCommander.Server.Services
 
         public async Task<bool> UpdateAvailableAsync()
         {
-            var latestVersion = await gitHubService.GetLatestVersionAsync(_settings.Update.ReleaseChannel);
+            var latestVersion = await gitHubService.GetLatestVersionAsync(_settingsProvider.CurrentValue.Server.Update.ReleaseChannel);
 
             var sortOrder = versionProvider.GetCurrentVersion().ComparePrecedenceTo(latestVersion);
 
@@ -164,7 +166,7 @@ namespace LANCommander.Server.Services
                 client.DownloadFileCompleted += ReleaseDownloaded;
                 client.QueryString.Add("Version", release.TagName);
 
-                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(_settings.Update.StoragePath, $"{release.TagName}.zip"));
+                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
             }
         }
         
@@ -196,7 +198,7 @@ namespace LANCommander.Server.Services
                     var uri = new Uri(releaseFile);
 
                     client.QueryString.Add("Version", release.TagName);
-                    await client.DownloadFileTaskAsync(uri, Path.Combine(_settings.Update.StoragePath, $"{release.TagName}.zip"));
+                    await client.DownloadFileTaskAsync(uri, Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
                 }
             }
         }
@@ -231,7 +233,7 @@ namespace LANCommander.Server.Services
         private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             string version = ((WebClient)sender).QueryString["Version"];
-            string path = Path.Combine(_settings.Update.StoragePath, $"{version}.zip");
+            string path = Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{version}.zip");
 
             _logger?.LogInformation("Update version {Version} has been downloaded", version);
 
@@ -257,7 +259,7 @@ namespace LANCommander.Server.Services
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{_settings.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
+            process.Arguments = $"-Version {version} -Path \"{_settingsProvider.CurrentValue.Server.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);
@@ -274,12 +276,12 @@ namespace LANCommander.Server.Services
 
         public string GetLauncherFileLocation(string objectKey)
         {
-            return Path.Combine(_settings.Launcher.StoragePath, objectKey);
+            return Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
         }
 
         public LauncherArtifact GetLauncherArtifact(string objectKey)
         {
-            string name = Path.Combine(_settings.Launcher.StoragePath, objectKey);
+            string name = Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
             return GetArtifactFromName(name);
         }
     }

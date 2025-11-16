@@ -1,15 +1,9 @@
 ﻿using AutoMapper;
-using LANCommander.Server.Data;
-using LANCommander.Server.Data.Models;
-using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
 using LANCommander.SDK.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
-using LANCommander.Server.Models;
 using LANCommander.SDK.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -25,10 +19,11 @@ namespace LANCommander.Server.Controllers.Api
 
         public KeysController(
             ILogger<KeysController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             KeyService keyService,
             GameService gameService,
-            UserService userService) : base(logger)
+            UserService userService) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             KeyService = keyService;

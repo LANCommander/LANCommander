@@ -1,6 +1,4 @@
-﻿using LANCommander.Server.Services;
-using LANCommander.Server.Services.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
 namespace LANCommander.Server.Controllers
@@ -8,12 +6,11 @@ namespace LANCommander.Server.Controllers
     public abstract class BaseController : Controller
     {
         protected readonly ILogger Logger;
-        protected readonly Settings Settings;
+        protected readonly SettingsProvider<Settings.Settings> SettingsProvider;
 
-        public BaseController(ILogger logger)
+        public BaseController(ILogger logger, SettingsProvider<Settings.Settings> settingsProvider)
         {
             Logger = logger;
-            Settings = SettingService.GetSettings();
         }
 
         protected void Alert(string message, string type = "info", bool dismissable = true)

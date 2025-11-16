@@ -10,6 +10,7 @@ using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Services.Utilities;
+using LANCommander.Server.Settings.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

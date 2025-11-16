@@ -14,21 +14,20 @@ public static class SettingsEndpoints
     }
     
     public static async Task<IResult> GetAsync(
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] ServerService serverService,
         [FromServices] IMapper mapper)
     {
-        var settings = SettingService.GetSettings();
-
         var clientSettings = new
         {
             IPXRelay = new
             {
-                Host = settings.IPXRelay.Host,
-                Port = settings.IPXRelay.Port,
+                Host = settingsProvider.CurrentValue.Server.IPXRelay.Host,
+                Port = settingsProvider.CurrentValue.Server.IPXRelay.Port,
             },
             Library = new
             {
-                EnableUserLibraries = settings.Library.EnableUserLibraries,
+                EnableUserLibraries = settingsProvider.CurrentValue.Server.Library.EnableUserLibraries,
             }
         };
 

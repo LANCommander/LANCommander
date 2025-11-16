@@ -8,10 +8,15 @@
 @using LANCommander.Server.Data.Enums
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Services.ServerEngines
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Servers.Components
+@using Microsoft.Extensions.Options
 @inject ServerService ServerService
 @inject GameService GameService
 @inject DockerServerEngine DockerServerEngine
+@inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
@@ -80,7 +85,7 @@
                     <Select
                         TItem="ServerEngineConfiguration"
                         TItemValue="Guid?"
-                        DataSource="Settings.Servers.ServerEngines"
+                        DataSource="Settings.Value.Server.GameServers.ServerEngines"
                         LabelName="Name"
                         ValueName="Id"
                         @bind-Value="context.DockerHostId"
@@ -140,8 +145,6 @@
     
     IEnumerable<Game> Games = new List<Game>();
     IEnumerable<DockerContainer> Containers = new List<DockerContainer>();
-    
-    Settings Settings = SettingService.GetSettings();
 
     Guid GameId;
     

@@ -1,8 +1,13 @@
 ﻿@page "/FirstTimeSetup/Paths"
+@using LANCommander.SDK
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
 @inject StorageLocationService StorageLocationService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,19 +66,19 @@
     <Divider Text="Backups" />
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Backups.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.Backups.StoragePath = OnPathSelected(path)" />
     </FormItem>
 
     <Divider Text="Launchers" />
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Launcher.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.Launcher.StoragePath = OnPathSelected(path)" />
     </FormItem>
 
     <Divider Text="Servers" />
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Servers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Servers.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.GameServers.StoragePath = OnPathSelected(path)" />
     </FormItem>
 
     <FormItem>
@@ -92,19 +97,17 @@
 
     StorageLocation MediaStorageLocation = new()
     {
-        Path = Path.Combine(SettingService.WorkingDirectory, "Media"),
+        Path = Path.Join(AppPaths.GetConfigDirectory(), "Media"),
         Type = StorageLocationType.Media,
         Default = true,
     };
 
     StorageLocation SavesStorageLocation = new()
     {
-        Path = Path.Combine(SettingService.WorkingDirectory, "Saves"),
+        Path = Path.Join(AppPaths.GetConfigDirectory(), "Saves"),
         Type = StorageLocationType.Save,
         Default = true,
     };
-
-    Settings Settings = SettingService.GetSettings();
 
     bool Loading = false;
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -135,7 +138,7 @@
             if (!ArchiveStorageLocations.Any())
                 ArchiveStorageLocations.Add(new StorageLocation
                 {
-                    Path = Path.Combine(SettingService.WorkingDirectory, "Uploads"),
+                    Path = Path.Join(AppPaths.GetConfigDirectory(), "Uploads"),
                     Type = StorageLocationType.Archive,
                     Default = true,
                 });
@@ -153,7 +156,7 @@
 
             SavesStorageLocation = new StorageLocation
             {
-                Path = Path.Combine(SettingService.WorkingDirectory, "Saves"),
+                Path = Path.Join(AppPaths.GetConfigDirectory(), "Saves"),
                 Type = StorageLocationType.Save,
                 Default = true,
             };
@@ -171,7 +174,7 @@
 
             MediaStorageLocation = new StorageLocation
             {
-                Path = Path.Combine(SettingService.WorkingDirectory, "Media"),
+                Path = Path.Join(AppPaths.GetConfigDirectory(), "Media"),
                 Type = StorageLocationType.Media,
                 Default = true,
             };
@@ -188,8 +191,6 @@
             locations.Add(MediaStorageLocation);
 
             await SetupService.UpdatePaths(locations);
-            
-            SettingService.SaveSettings(Settings);
             
             NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
         }

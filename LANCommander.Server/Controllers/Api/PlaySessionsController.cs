@@ -1,8 +1,6 @@
 ﻿using AutoMapper;
-using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,10 +18,11 @@ namespace LANCommander.Server.Controllers.Api
 
         public PlaySessionsController(
             ILogger<PlaySessionsController> logger,
+            SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
             PlaySessionService playSessionService,
             GameService gameService,
-            UserService userService) : base(logger)
+            UserService userService) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             PlaySessionService = playSessionService;

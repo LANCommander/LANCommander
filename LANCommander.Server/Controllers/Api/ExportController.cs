@@ -16,7 +16,8 @@ public class ExportController : BaseApiController
     
     public ExportController(
         ExportService exportService,
-        ILogger<ExportController> logger) : base(logger)
+        ILogger<ExportController> logger,
+        SettingsProvider<Settings.Settings> settingsProvider) : base(logger, settingsProvider)
     {
         ExportService = exportService;
     }

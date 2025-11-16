@@ -14,13 +14,14 @@ namespace LANCommander.Server.Services
 {
     public sealed class RoleService(
         ILogger<RoleService> logger,
+        SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         CollectionService collectionService,
         IdentityContextFactory identityContextFactory,
-        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public const string AdministratorRoleName = "Administrator";
 

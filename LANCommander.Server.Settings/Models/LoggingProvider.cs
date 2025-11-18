@@ -5,7 +5,7 @@ namespace LANCommander.Server.Settings.Models;
 
 public class LoggingProvider
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = "Console";
     public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
     public bool Enabled { get; set; } = true;
     public LoggingProviderType Type { get; set; } = LoggingProviderType.Console;

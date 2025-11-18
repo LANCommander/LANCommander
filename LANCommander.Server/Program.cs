@@ -10,8 +10,6 @@ if (args.Contains("--debugger"))
 builder.AddAsService();
 builder.AddLogger();
 
-builder.AddSettings();
-
 builder.AddRazor();
 builder.AddSignalR();
 builder.AddCors();
@@ -29,6 +27,8 @@ builder.Services.AddHealthChecks();
 
 Log.Debug("Building Application");
 var app = builder.Build();
+
+app.ValidateSettings();
 
 app.UseCors("CorsPolicy");
 app.UseHttpsRedirection();

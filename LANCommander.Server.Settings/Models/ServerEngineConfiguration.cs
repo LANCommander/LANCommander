@@ -8,4 +8,9 @@ public class ServerEngineConfiguration
     public string Name { get; set; } = "Local";
     public ServerEngine Type { get; set; } = ServerEngine.Local;
     public string Address { get; set; } = String.Empty;
+
+    public ServerEngineConfiguration()
+    {
+        
+    }
 }

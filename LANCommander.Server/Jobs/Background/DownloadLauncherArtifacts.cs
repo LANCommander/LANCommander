@@ -1,12 +1,13 @@
 ﻿using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.Server.Jobs.Background
 {
     public class DownloadLauncherArtifacts(
         ILogger<DownloadLauncherArtifacts> logger,
-        SettingsProvider<Settings.Settings> settingsProvider,
+        IOptions<Settings.Settings> settings,
         HttpClient httpClient,
         UpdateService updateService) : BaseBackgroundJob(logger)
     {
@@ -16,8 +17,8 @@ namespace LANCommander.Server.Jobs.Background
             var localArtifacts = updateService.GetLauncherArtifactsFromLocalFiles();
 
             var allowedArtifacts = artifacts.Where(a =>
-                settingsProvider.CurrentValue.Server.Launcher.Architectures.Contains(a.Architecture) &&
-                settingsProvider.CurrentValue.Server.Launcher.Platforms.Contains(a.Platform))
+                settings.Value.Server.Launcher.Architectures.Contains(a.Architecture) &&
+                settings.Value.Server.Launcher.Platforms.Contains(a.Platform))
                 .ToList();
 
             foreach (var artifact in allowedArtifacts)
@@ -27,7 +28,7 @@ namespace LANCommander.Server.Jobs.Background
                     if (!localArtifacts.Any(a => a.Name.EndsWith(artifact.Name)))
                     {
                         using (var downloadStream = await httpClient.GetStreamAsync(artifact.Url))
-                        using (var fs = new FileStream(Path.Combine(settingsProvider.CurrentValue.Server.Launcher.StoragePath, artifact.Name), FileMode.Create))
+                        using (var fs = new FileStream(Path.Combine(settings.Value.Server.Launcher.StoragePath, artifact.Name), FileMode.Create))
                         {
                             await downloadStream.CopyToAsync(fs);
                             op.Complete();

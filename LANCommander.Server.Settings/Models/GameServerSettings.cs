@@ -5,18 +5,18 @@ namespace LANCommander.Server.Settings.Models;
 public class GameServerSettings
 {
     public string StoragePath { get; set; } = "Servers";
-    public IEnumerable<ServerEngineConfiguration> ServerEngines { get; set; } = new List<ServerEngineConfiguration>()
-    {
-        new ServerEngineConfiguration
+    public IEnumerable<ServerEngineConfiguration> ServerEngines { get; set; } = 
+    [
+        new()
         {
             Name = "Local",
             Type = ServerEngine.Local,
         },
-        new ServerEngineConfiguration
+        new()
         {
             Name = "Docker",
             Type = ServerEngine.Docker,
             Address = "unix:///var/run/docker.sock",
         }
-    };
+    ];
 }

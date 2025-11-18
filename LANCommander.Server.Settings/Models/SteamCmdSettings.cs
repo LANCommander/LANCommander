@@ -4,5 +4,5 @@ public class SteamCmdSettings
 {
     public string Path { get; set; } = String.Empty;
     public string InstallDirectory { get; set; } = "";
-    public ICollection<SteamCmdProfile> Profiles { get; set; } = new List<SteamCmdProfile>();
+    public ICollection<SteamCmdProfile> Profiles { get; set; } = [];
 }

@@ -55,7 +55,7 @@
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
 
-        if (SettingsProvider.CurrentValue.Server.Database.Provider != DatabaseProvider.Unknown)
+        if (Settings.Value.Server.Database.Provider != DatabaseProvider.Unknown)
         {
             var isSetupInitialized = await SetupService.IsSetupInitialized();
             if (isSetupInitialized)
@@ -65,28 +65,20 @@
 
     void OnDatabaseProviderChanged()
     {
-        switch (SettingsProvider.CurrentValue.Server.Database.Provider)
+        switch (Settings.Value.Server.Database.Provider)
         {
             case DatabaseProvider.SQLite:
-                var dbPath = Path.Join(AppPaths.GetConfigDirectory(), "LANCommander.db");
-                SettingsProvider.Update(s =>
-                {
-                    s.Server.Database.ConnectionString = $"Data Source={dbPath};Cache=Shared";
-                });
+                var dbPath = Path.Combine(AppPaths.GetConfigDirectory(), "LANCommander.db");
+                
+                Settings.Value.Server.Database.ConnectionString = $"Data Source={dbPath};Cache=Shared";
                 break;
 
             case DatabaseProvider.MySQL:
-                SettingsProvider.Update(s =>
-                {
-                    s.Server.Database.ConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
-                });
+                Settings.Value.Server.Database.ConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
                 break;
 
             case DatabaseProvider.PostgreSQL:
-                SettingsProvider.Update(s =>
-                {
-                    s.Server.Database.ConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password"; 
-                });
+                Settings.Value.Server.Database.ConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password";
                 break;
         }
     }
@@ -101,7 +93,7 @@
 
         try
         {
-            SetupService.ValidateConnectionString(SettingsProvider.CurrentValue.Server.Database.Provider, SettingsProvider.CurrentValue.Server.Database.ConnectionString);
+            SetupService.ValidateConnectionString(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
 
             valid = true;
         }
@@ -132,7 +124,7 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    await SetupService.ChangeProviderAsync(SettingsProvider.CurrentValue.Server.Database.Provider, SettingsProvider.CurrentValue.Server.Database.ConnectionString);
+                    await SetupService.ChangeProviderAsync(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
                     
                     SettingsProvider.Update(s =>
                     {

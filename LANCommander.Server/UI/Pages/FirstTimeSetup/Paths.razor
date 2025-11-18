@@ -97,14 +97,14 @@
 
     StorageLocation MediaStorageLocation = new()
     {
-        Path = Path.Join(AppPaths.GetConfigDirectory(), "Media"),
+        Path = Path.Combine(AppPaths.GetConfigDirectory(), "Media"),
         Type = StorageLocationType.Media,
         Default = true,
     };
 
     StorageLocation SavesStorageLocation = new()
     {
-        Path = Path.Join(AppPaths.GetConfigDirectory(), "Saves"),
+        Path = Path.Combine(AppPaths.GetConfigDirectory(), "Saves"),
         Type = StorageLocationType.Save,
         Default = true,
     };

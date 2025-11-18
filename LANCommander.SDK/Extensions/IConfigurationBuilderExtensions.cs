@@ -31,7 +31,7 @@ public static class IConfigurationBuilderExtensions
         }
         
         var bootstrap = new ConfigurationBuilder()
-            .AddYamlFile(Settings.SETTINGS_FILE_NAME, false, true)
+            .AddYamlFile(filePath, false, true)
             .Build();
 
         return configurationBuilder

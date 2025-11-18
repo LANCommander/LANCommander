@@ -6,7 +6,8 @@ namespace LANCommander.Server.Settings.Models;
 public class LogSettings
 {
     public bool IgnorePings { get; set; } = true;
-    public IEnumerable<LoggingProvider> Providers { get; set; } = [
+    public IEnumerable<LoggingProvider> Providers { get; set; } = 
+    [
         new()
         {
             Name = "Console",

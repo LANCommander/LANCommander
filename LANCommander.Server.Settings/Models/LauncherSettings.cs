@@ -14,6 +14,6 @@ public class LauncherSettings
     /// </summary>
     public bool IncludeOnlineUpdates { get; set; } = false;
     public string VersionOverride { get; set; } = String.Empty;
-    public IEnumerable<LauncherArchitecture> Architectures { get; set; } = new[] { LauncherArchitecture.x64, LauncherArchitecture.arm64 };
-    public IEnumerable<LauncherPlatform> Platforms { get; set; } = new[] { LauncherPlatform.Windows };
+    public IEnumerable<LauncherArchitecture> Architectures { get; set; } = [LauncherArchitecture.x64, LauncherArchitecture.arm64];
+    public IEnumerable<LauncherPlatform> Platforms { get; set; } = [LauncherPlatform.Windows];
 }

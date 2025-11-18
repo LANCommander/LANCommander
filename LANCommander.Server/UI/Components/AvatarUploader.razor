@@ -1,8 +1,9 @@
-﻿@using LANCommander.SDK.Enums
+﻿@using Microsoft.Extensions.Options
+@using LANCommander.SDK.Enums
 @inherits OwningComponentBase
 @inject UserService UserService
 @inject MediaService MediaService
-@inject SettingsProvider<Settings.Settings> SettingsProvider
+@inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
 
 <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
@@ -65,7 +66,7 @@
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
         var media = User.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
-        var config = SettingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
+        var config = Settings.Value.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
 
         if (media == null)
             media = new Media

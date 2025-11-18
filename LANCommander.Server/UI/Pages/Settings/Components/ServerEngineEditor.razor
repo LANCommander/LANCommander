@@ -1,17 +1,14 @@
-@using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
-@using Microsoft.Extensions.Options
-@inject IOptions<Settings> Settings
 
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    @if (!Settings.Value.Server.GameServers.ServerEngines.Any())
+    @if (!ServerEngines.Any())
     {
         <Empty Description="@("No Docker hosts have been configured")" />
     }
     
     <Collapse>
-        @foreach (var serverEngine in Settings.Value.Server.GameServers.ServerEngines)
+        @foreach (var serverEngine in ServerEngines)
         {
             @if (serverEngine.Type == ServerEngine.Local)
             {

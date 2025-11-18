@@ -13,7 +13,7 @@ public static class AppPaths
         if (!String.IsNullOrWhiteSpace(_configDirectory))
             return _configDirectory;
 
-        var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        var baseDirectory = Directory.GetCurrentDirectory();
 
         if (IsDirectoryWritable(baseDirectory))
         {
@@ -31,6 +31,11 @@ public static class AppPaths
 
             _configDirectory = appDataPath;
         }
+        
+        _configDirectory = Path.Combine(_configDirectory, "config");
+        
+        if (!Directory.Exists(_configDirectory))
+            Directory.CreateDirectory(_configDirectory);
         
         return _configDirectory;
     }

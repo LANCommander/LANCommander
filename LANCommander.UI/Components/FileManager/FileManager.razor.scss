@@ -1,13 +1,14 @@
 ﻿.file-manager {
-    background: #fff;
     display: flex;
     flex-direction: column;
+    background: #141414;
 
     &-nav {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #303030;
         padding-left: 8px;
         padding-right: 8px;
         height: 58px;
+        background: #141414;
 
         .ant-space,
         &-breadcrumbs {
@@ -46,7 +47,7 @@
 
         &:hover,
         &:active {
-            background: rgba(0, 0, 0, 0.018);
+            background: rgba(255, 255, 255, 0.03);
         }
     }
 
@@ -56,7 +57,7 @@
 
     &-tree {
         padding-top: 8px;
-        border-right: 1px solid #f0f0f0;
+        border-right: 1px solid #303030;
     }
 
     .ant-tree-node-content-wrapper {
@@ -66,7 +67,7 @@
 
         &:hover,
         &:active {
-            background: none;
+            background: rgba(255, 255, 255, 0.03);
         }
     }
 
@@ -74,27 +75,4 @@
         vertical-align: middle;
         margin-top: 4px;
     }
-}
-
-[data-theme="Dark"] .file-manager .pane {
-    background: #141414;
-}
-
-[data-theme="Dark"] .file-manager,
-[data-theme="Dark"] .file-manager-list,
-[data-theme="Dark"] .file-picker-dialog .file-manager tbody tr {
-    background: #141414;
-}
-
-[data-theme="Dark"] .file-manager-tree,
-[data-theme="Dark"] .file-manager-nav {
-    border-color: #303030;
-    background: #141414;
-}
-
-[data-theme="Dark"] .file-manager .ant-tree-treenode:hover,
-[data-theme="Dark"] .file-manager .ant-tree-treenode:active,
-[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:hover,
-[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:active {
-    background: rgba(255, 255, 255, 0.03);
 }

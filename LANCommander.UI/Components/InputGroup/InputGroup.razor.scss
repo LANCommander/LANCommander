@@ -6,4 +6,9 @@
     & > .ant-select {
         width: auto !important;
     }
+    
+    &-addon,
+    &-wrap {
+        width: auto;
+    }
 }

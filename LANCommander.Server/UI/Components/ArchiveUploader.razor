@@ -2,7 +2,7 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.Extensions.Options
-@inject ArchiveClient ArchiveClient
+@inject ArchiveService ArchiveService
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -94,7 +94,7 @@
     {
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
-                Archive = await ArchiveClient.GetAsync(archiveId.Value);
+                Archive = await ArchiveService.GetAsync(archiveId.Value);
         }
         else
         {
@@ -117,16 +117,16 @@
 
         if (Guid.TryParse(data, out var objectKey))
         {
-            var uploadedArchive = await ArchiveClient.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var uploadedArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
 
             uploadedArchive.GameId = Archive.GameId;
             uploadedArchive.RedistributableId = Archive.RedistributableId;
             uploadedArchive.Version = Archive.Version;
             uploadedArchive.Changelog = Archive.Changelog;
-            uploadedArchive.CompressedSize = await ArchiveClient.GetCompressedSizeAsync(uploadedArchive);
-            uploadedArchive.UncompressedSize = await ArchiveClient.GetUncompressedSizeAsync(uploadedArchive);
+            uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
+            uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 
-            await ArchiveClient.UpdateAsync(uploadedArchive);
+            await ArchiveService.UpdateAsync(uploadedArchive);
 
             Visible = false;
 
@@ -137,9 +137,9 @@
             if (Settings.Value.Server.Archives.EnablePatching)
             {
                 if (Archive.GameId != Guid.Empty)
-                    lastArchive = await ArchiveClient.GetLatestArchive(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
+                    lastArchive = await ArchiveService.GetLatestArchive(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
                 else if (Archive.RedistributableId != Guid.Empty)
-                    lastArchive = await ArchiveClient.GetLatestArchive(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
+                    lastArchive = await ArchiveService.GetLatestArchive(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
 
                 if (lastArchive != null && Settings.Value.Server.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
@@ -178,7 +178,7 @@
     {
         try
         {
-            var objectKey = await ArchiveClient.CopyFromLocalFileAsync(path);
+            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path);
 
             await OnUploadCompleted(objectKey.ToString());
         }

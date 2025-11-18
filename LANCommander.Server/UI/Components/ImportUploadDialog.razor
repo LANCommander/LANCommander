@@ -5,7 +5,7 @@
 @using LANCommander.Server.ImportExport.Services
 @inherits FeedbackComponent<ImportDialogOptions>
 @inject GameService GameService
-@inject ArchiveClient ArchiveClient
+@inject ArchiveService ArchiveService
 @inject StorageLocationService StorageLocationService
 @inject ImportContextFactory ImportContextFactory
 @inject IMessageService MessageService
@@ -231,7 +231,7 @@ else if (_stage == ImportStage.Importing)
         {
             try
             {
-                var archivePath = await ArchiveClient.GetArchiveFileLocationAsync(objectKey.ToString());
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 ImportItems = await ImportContext.InitializeImportAsync(archivePath);
 

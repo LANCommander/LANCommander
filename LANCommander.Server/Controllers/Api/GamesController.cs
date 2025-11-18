@@ -21,7 +21,7 @@ namespace LANCommander.Server.Controllers.Api
         private readonly GameService GameService;
         private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
-        private readonly ArchiveClient _archiveClient;
+        private readonly ArchiveService _archiveService;
         private readonly UserService UserService;
         private readonly PlaySessionService PlaySessionService;
         private readonly ServerService ServerService;
@@ -39,7 +39,7 @@ namespace LANCommander.Server.Controllers.Api
             GameService gameService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
-            ArchiveClient archiveClient,
+            ArchiveService archiveService,
             UserService userService,
             PlaySessionService playSessionService,
             ServerService serverService,
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers.Api
 
             LibraryService = libraryService;
             StorageLocationService = storageLocationService;
-            _archiveClient = archiveClient;
+            _archiveService = archiveService;
             UserService = userService;
             PlaySessionService = playSessionService;
             ServerService = serverService;
@@ -289,7 +289,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}/CheckForUpdate")]
         public async Task<bool> CheckForUpdateAsync(Guid id, string version)
         {
-            var gameArchives = await _archiveClient.GetAsync(a => a.GameId == id);
+            var gameArchives = await _archiveService.GetAsync(a => a.GameId == id);
 
             var latestArchive = gameArchives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
 
@@ -327,7 +327,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = await _archiveClient.GetArchiveFileLocationAsync(archive);
+            var filename = await _archiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
             {
@@ -344,7 +344,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var uploadedPath = await _archiveClient.GetArchiveFileLocationAsync(objectKey.ToString());
+                var uploadedPath = await _archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 var result = await ImportContext.InitializeImportAsync(uploadedPath);
 
@@ -364,12 +364,12 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-                var archive = await _archiveClient.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
-                var archivePath = await _archiveClient.GetArchiveFileLocationAsync(archive);
+                var archive = await _archiveService.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
+                var archivePath = await _archiveService.GetArchiveFileLocationAsync(archive);
 
                 if (archive != null)
                 {
-                    var existingArchivePath = await _archiveClient.GetArchiveFileLocationAsync(archive);
+                    var existingArchivePath = await _archiveService.GetArchiveFileLocationAsync(archive);
 
                     System.IO.File.Delete(existingArchivePath);
 
@@ -378,7 +378,7 @@ namespace LANCommander.Server.Controllers.Api
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
                     archive.StorageLocation = storageLocation;
 
-                    archive = await _archiveClient.UpdateAsync(archive);
+                    archive = await _archiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -391,7 +391,7 @@ namespace LANCommander.Server.Controllers.Api
                         StorageLocation = storageLocation
                     };
 
-                    await _archiveClient.AddAsync(archive);
+                    await _archiveService.AddAsync(archive);
                 }
 
                 return Ok();

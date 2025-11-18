@@ -3,7 +3,7 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject ArchiveClient ArchiveClient
+@inject ArchiveService ArchiveService
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -79,7 +79,7 @@
         var results = new List<bool>();
         foreach (var archive in archives)
         {
-            var result = await ArchiveClient.RecalculateFileSizeArchiveAsync(archive);
+            var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
             results.Add(result);
         }
 
@@ -97,8 +97,8 @@
     {
         MessageService.Info("Recalculating File Sizes...");
 
-        archive = await ArchiveClient.AsNoTracking().GetAsync(archive.Id);
-        var result = await ArchiveClient.RecalculateFileSizeArchiveAsync(archive);
+        archive = await ArchiveService.AsNoTracking().GetAsync(archive.Id);
+        var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
         await ArchiveUploaded(archive.Id);
 
         if(result)
@@ -142,7 +142,7 @@
     {
         try
         {
-            await ArchiveClient.UpdateAsync(archive);
+            await ArchiveService.UpdateAsync(archive);
 
             Table.Reload();
 
@@ -159,7 +159,7 @@
     {
         try
         {
-            await ArchiveClient.DeleteAsync(archive);
+            await ArchiveService.DeleteAsync(archive);
 
             Table.Reload();
 

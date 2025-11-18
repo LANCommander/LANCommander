@@ -17,7 +17,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<AuthenticationService>();
-        services.AddScoped<ArchiveClient>();
+        services.AddScoped<ArchiveService>();
         services.AddScoped<StorageLocationService>();
         services.AddScoped<ActionService>();
         services.AddScoped<CategoryService>();

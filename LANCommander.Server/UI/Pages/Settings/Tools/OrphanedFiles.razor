@@ -3,7 +3,7 @@
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ArchiveClient ArchiveClient
+@inject ArchiveService ArchiveService
 @inject StorageLocationService StorageLocationService
 @inject MediaService MediaService
 
@@ -55,8 +55,8 @@
         Orphans = new List<OrphanedFile>();
         
         var storageLocations = await StorageLocationService.GetAsync();
-        var archives = await ArchiveClient.GetAsync();
-        var archiveFiles = await Task.WhenAll(archives.Select(a => ArchiveClient.GetArchiveFileLocationAsync(a)));
+        var archives = await ArchiveService.GetAsync();
+        var archiveFiles = await Task.WhenAll(archives.Select(a => ArchiveService.GetArchiveFileLocationAsync(a)));
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
         {

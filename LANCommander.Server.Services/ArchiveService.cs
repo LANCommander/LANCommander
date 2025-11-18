@@ -19,8 +19,8 @@ using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.Pa
 
 namespace LANCommander.Server.Services
 {
-    public sealed class ArchiveClient(
-        ILogger<ArchiveClient> logger,
+    public sealed class ArchiveService(
+        ILogger<ArchiveService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,

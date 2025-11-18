@@ -16,7 +16,7 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
         private readonly StorageLocationService StorageLocationService;
-        private readonly ArchiveClient _archiveClient;
+        private readonly ArchiveService _archiveService;
         private readonly ImportContext ImportContext;
 
         public RedistributablesController(
@@ -25,13 +25,13 @@ namespace LANCommander.Server.Controllers.Api
             IMapper mapper,
             RedistributableService redistributableService,
             StorageLocationService storageLocationService,
-            ArchiveClient archiveClient,
+            ArchiveService archiveService,
             ImportContext importContext) : base(logger, settingsProvider)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
             StorageLocationService = storageLocationService;
-            _archiveClient = archiveClient;
+            _archiveService = archiveService;
             ImportContext = importContext;
         }
 
@@ -70,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = redistributable.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = await _archiveClient.GetArchiveFileLocationAsync(archive);
+            var filename = await _archiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();
@@ -84,7 +84,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var uploadedPath = await _archiveClient.GetArchiveFileLocationAsync(objectKey.ToString());
+                var uploadedPath = await _archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 var result = await ImportContext.InitializeImportAsync(uploadedPath);
 
@@ -104,8 +104,8 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-                var archive = await _archiveClient.FirstOrDefaultAsync(a => a.RedistributableId == request.Id && a.Version == request.Version);
-                var archivePath = await _archiveClient.GetArchiveFileLocationAsync(archive);
+                var archive = await _archiveService.FirstOrDefaultAsync(a => a.RedistributableId == request.Id && a.Version == request.Version);
+                var archivePath = await _archiveService.GetArchiveFileLocationAsync(archive);
 
                 if (archive != null)
                 {
@@ -116,7 +116,7 @@ namespace LANCommander.Server.Controllers.Api
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
                     archive.StorageLocation = storageLocation;
 
-                    archive = await _archiveClient.UpdateAsync(archive);
+                    archive = await _archiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -129,7 +129,7 @@ namespace LANCommander.Server.Controllers.Api
                         StorageLocation = storageLocation,
                     };
 
-                    await _archiveClient.AddAsync(archive);
+                    await _archiveService.AddAsync(archive);
                 }
 
                 return Ok();

@@ -4,7 +4,7 @@
 @using LANCommander.Server.ImportExport.Models
 @using LANCommander.Server.ImportExport.Services
 @inherits FeedbackComponent<ExportDialogOptions>
-@inject ArchiveClient ArchiveClient
+@inject ArchiveService ArchiveService
 @inject ExportService ExportService
 @inject ExportContextFactory ExportContextFactory
 @inject IMessageService MessageService
@@ -149,7 +149,7 @@
         {
             try
             {
-                var archivePath = await ArchiveClient.GetArchiveFileLocationAsync(objectKey.ToString());
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 ExportItems = await ExportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
 

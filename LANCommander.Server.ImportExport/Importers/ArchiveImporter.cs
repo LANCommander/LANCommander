@@ -14,7 +14,7 @@ namespace LANCommander.Server.ImportExport.Importers;
 /// <param name="ImportContext">The context (archive, parent record> of the import</param>
 public class ArchiveImporter(
     IMapper mapper,
-    ArchiveClient archiveClient) : BaseImporter<Archive, Data.Models.Archive>
+    ArchiveService archiveService) : BaseImporter<Archive, Data.Models.Archive>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Archive record)
     {
@@ -59,15 +59,15 @@ public class ArchiveImporter(
                 throw new ImportSkippedException<Archive>(record,
                     $"Cannot import an archive for a {record.GetType().Name}");
             
-            archive = await archiveClient.AddAsync(newArchive);
-            archive = await archiveClient.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+            archive = await archiveService.AddAsync(newArchive);
+            archive = await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
 
             return archive;
         }
         catch (Exception ex)
         {
             if (archive != null)
-                await archiveClient.DeleteAsync(archive);
+                await archiveService.DeleteAsync(archive);
             
             throw new ImportSkippedException<Archive>(record, "An unknown error occured while importing archive file", ex);
         }
@@ -76,8 +76,8 @@ public class ArchiveImporter(
     public override async Task<Data.Models.Archive> UpdateAsync(Archive archive)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
-        var existing = await archiveClient.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
-        var existingPath = await archiveClient.GetArchiveFileLocationAsync(existing);
+        var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
+        var existingPath = await archiveService.GetArchiveFileLocationAsync(existing);
         
         if (archiveEntry == null)
             throw new ImportSkippedException<Archive>(archive, "Matching archive file does not exist in import archive");
@@ -88,8 +88,8 @@ public class ArchiveImporter(
             existing.Changelog = archive.Changelog;
             existing.StorageLocation = ImportContext.ArchiveStorageLocation;
             
-            existing = await archiveClient.UpdateAsync(existing);
-            existing = await archiveClient.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
+            existing = await archiveService.UpdateAsync(existing);
+            existing = await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
             
             if (File.Exists(existingPath))
                 File.Delete(existingPath);
@@ -105,10 +105,10 @@ public class ArchiveImporter(
     public override async Task<bool> ExistsAsync(Archive archive)
     {
         if (ImportContext.DataRecord is Data.Models.Game game)
-            return await archiveClient.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
+            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
         
         if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
-            return await archiveClient.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
+            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
         
         throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {ImportContext.DataRecord.GetType().Name}");
     }

@@ -21,7 +21,7 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        ArchiveClient archiveClient,
+        ArchiveService archiveService,
         MediaService mediaService,
         SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
@@ -103,7 +103,7 @@ namespace LANCommander.Server.Services
 
             if (game.Archives != null)
                 foreach (var archive in game.Archives.ToList())
-                    await archiveClient.DeleteAsync(archive);
+                    await archiveService.DeleteAsync(archive);
 
             if (game.Media != null)
                 foreach (var media in game.Media.ToList())
@@ -341,11 +341,11 @@ namespace LANCommander.Server.Services
                         StorageLocationId = storageLocationId.GetValueOrDefault(),
                     };
 
-                    archive = await archiveClient.AddAsync(archive);
+                    archive = await archiveService.AddAsync(archive);
 
                     if (Directory.Exists(package.Path))
                     {
-                        var destination = await archiveClient.GetArchiveFileLocationAsync(archive);
+                        var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                         
                         ZipFile.CreateFromDirectory(package.Path, destination);
                         
@@ -355,7 +355,7 @@ namespace LANCommander.Server.Services
                     {
                         logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
                         
-                        await archiveClient.DeleteAsync(archive);
+                        await archiveService.DeleteAsync(archive);
                     }
                 }
             }

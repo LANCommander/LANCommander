@@ -20,9 +20,9 @@ public static class DownloadEndpoints
 
     internal static async Task<IResult> DownloadArchiveAsync(
         Guid id,
-        [FromServices] ArchiveClient archiveClient)
+        [FromServices] ArchiveService archiveService)
     {
-        var archive = await archiveClient
+        var archive = await archiveService
             .Include(a => a.Game)
             .Include(a => a.Redistributable)
             .GetAsync(id);
@@ -30,7 +30,7 @@ public static class DownloadEndpoints
         if (archive == null)
             return TypedResults.NotFound();
         
-        var fileName = await archiveClient.GetArchiveFileLocationAsync(archive);
+        var fileName = await archiveService.GetArchiveFileLocationAsync(archive);
         
         if (!File.Exists(fileName))
             return TypedResults.NotFound();

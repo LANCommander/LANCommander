@@ -1,6 +1,7 @@
 using LANCommander.SDK;
 using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Interceptors;
@@ -18,6 +19,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<AuthenticationService>();
         services.AddScoped<ArchiveService>();
+        services.AddScoped<IArchiveClient, ArchiveService>();
         services.AddScoped<StorageLocationService>();
         services.AddScoped<ActionService>();
         services.AddScoped<CategoryService>();

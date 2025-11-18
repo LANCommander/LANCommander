@@ -137,7 +137,7 @@
 
     async Task DefaultRoleChanged(Role defaultRole)
     {
-        if (!Loading && defaultRole.Id != Settings.Value.Server.Roles.DefaultRoleId)
+        if (defaultRole != null && !Loading && defaultRole.Id != Settings.Value.Server.Roles.DefaultRoleId)
         {
             SettingsProvider.Update(s =>
             {

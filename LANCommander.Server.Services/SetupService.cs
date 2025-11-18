@@ -21,8 +21,21 @@ namespace LANCommander.Server.Services
     {
         public async Task<bool> IsSetupInitialized()
         {
-            var admins = await userManager.GetUsersInRoleAsync(RoleService.AdministratorRoleName);
-            return admins.Any();
+            try
+            {
+                if (DatabaseContext.Provider == DatabaseProvider.Unknown)
+                    return false;
+                
+                var admins = await userManager.GetUsersInRoleAsync(RoleService.AdministratorRoleName);
+
+                return admins.Any();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, ex.Message);
+                
+                return false;
+            }
         }
 
         public async Task ChangeProviderAsync(DatabaseProvider provider, string connectionString)

@@ -5,8 +5,10 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
+using LANCommander.Server.Settings.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Octokit;
 using Serilog;
 
@@ -16,12 +18,16 @@ public static class Database
 {
     public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder, string[] args)
     {
-        var settings = new Settings.Settings();
-        builder.Configuration.Bind(settings);
-        
         builder.Services.AddDbContextFactory<DatabaseContext>();
         builder.Services.AddDbContext<DatabaseContext>();
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+        return builder;
+    }
+
+    public static WebApplication UseDatabase(this WebApplication app, string[] args)
+    {
+        var settings = app.Services.GetRequiredService<IOptions<Settings.Settings>>();
         
         var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
         var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
@@ -29,14 +35,14 @@ public static class Database
         if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
             DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
         else
-            DatabaseContext.Provider = settings.Server.Database.Provider;
+            DatabaseContext.Provider = settings.Value.Server.Database.Provider;
 
         if (!String.IsNullOrWhiteSpace(connectionStringParameter))
             DatabaseContext.ConnectionString = connectionStringParameter;
         else
-            DatabaseContext.ConnectionString = settings.Server.Database.ConnectionString;
+            DatabaseContext.ConnectionString = settings.Value.Server.Database.ConnectionString;
 
-        return builder;
+        return app;
     }
 
     public static async Task MigrateDatabaseAsync(this WebApplication app)

@@ -28,6 +28,7 @@ builder.Services.AddHealthChecks();
 Log.Debug("Building Application");
 var app = builder.Build();
 
+app.UseDatabase(args);
 app.ValidateSettings();
 
 app.UseCors("CorsPolicy");

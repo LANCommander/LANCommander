@@ -38,7 +38,7 @@ namespace LANCommander.Server.Services
 
                 if (scripts.Any())
                 {
-                    tokenProvider.SetToken(token.AccessToken);
+                    tokenProvider.SetToken(token);
 
                     foreach (var script in scripts)
                     {
@@ -190,7 +190,7 @@ namespace LANCommander.Server.Services
 
                         if (scripts.Any())
                         {
-                            tokenProvider.SetToken(token.AccessToken);
+                            tokenProvider.SetToken(token);
 
                             foreach (var script in scripts)
                             {

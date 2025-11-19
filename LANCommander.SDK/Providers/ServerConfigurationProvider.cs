@@ -58,7 +58,7 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
             
             var request = new HttpRequestMessage(HttpMethod.Get, settings.Authentication.ServerAddress.Join("/api/Settings"));
             
-            request.Headers.Add("Authorization", $"Bearer {settings.Authentication.AccessToken}");
+            request.Headers.Add("Authorization", $"Bearer {settings.Authentication.Token.AccessToken}");
             
             var response = await _httpClient.SendAsync(request, cancellationToken);
 

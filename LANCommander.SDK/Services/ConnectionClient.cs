@@ -27,7 +27,7 @@ public class ConnectionClient(
 
     public bool IsConfigured()
     {
-        return HasServerAddress() && !String.IsNullOrEmpty(tokenProvider.GetToken());
+        return HasServerAddress() && !String.IsNullOrEmpty(tokenProvider.GetToken()?.AccessToken);
     }
 
     public bool IsOfflineMode()

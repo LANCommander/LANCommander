@@ -64,12 +64,8 @@ internal static class WindowService
         
         if (appHook != null)
             appHook(app);
-
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
-        var tokenProvider = app.Services.GetService<ITokenProvider>();
-        var connectionClient = app.Services.GetService<IConnectionClient>();
         
-        tokenProvider?.SetToken(settingsProvider.CurrentValue.Authentication.AccessToken);
+        var connectionClient = app.Services.GetService<IConnectionClient>();
 
         connectionClient.ConnectAsync().Wait();
 

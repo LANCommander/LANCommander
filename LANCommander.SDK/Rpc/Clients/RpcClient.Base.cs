@@ -20,7 +20,7 @@ internal partial class RpcSubscriber(ITokenProvider tokenProvider) : IRpcSubscri
             _connection = new HubConnectionBuilder()
                 .WithUrl(serverAddress.Join("rpc"), options =>
                 {
-                    options.AccessTokenProvider = () => Task.FromResult(tokenProvider.GetToken());
+                    options.AccessTokenProvider = () => Task.FromResult(tokenProvider.GetToken().AccessToken);
                 })
                 .Build();
 

@@ -60,7 +60,7 @@ public class AuthenticationClient(
                         Expiration = result.Data.Expiration
                     };
 
-                    tokenProvider.SetToken(token.AccessToken);
+                    tokenProvider.SetToken(token);
 
                     await configRefresher.RefreshAsync();
 
@@ -103,12 +103,6 @@ public class AuthenticationClient(
         }
         
         tokenProvider.SetToken(null);
-        settingsProvider.Update(s =>
-        {
-            s.Authentication.AccessToken = null;
-            s.Authentication.RefreshToken = null;
-            s.Authentication.OfflineModeEnabled = false;
-        });
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)
@@ -138,7 +132,7 @@ public class AuthenticationClient(
             switch (result.Response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    tokenProvider.SetToken(result.Data.AccessToken);
+                    tokenProvider.SetToken(result.Data);
                     return;
 
                 case HttpStatusCode.BadRequest:
@@ -163,7 +157,7 @@ public class AuthenticationClient(
     {
         logger?.LogTrace("Validating token");
 
-        if (String.IsNullOrWhiteSpace(tokenProvider.GetToken()))
+        if (String.IsNullOrWhiteSpace(tokenProvider.GetToken()?.AccessToken))
         {
             logger?.LogError("Token is empty");
             return false;

@@ -256,11 +256,10 @@ namespace LANCommander.Launcher.Services
                 await client.Connection.UpdateServerAddressAsync(options.ServerAddress);
 
                 var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password, client.Connection.GetServerAddress());
-
+                
                 client.Settings.Update(s =>
                 {
-                    s.Authentication.AccessToken = token.AccessToken;
-                    s.Authentication.RefreshToken = token.RefreshToken;
+                    s.Authentication.Token = token;
                     s.Authentication.ServerAddress = client.Connection.GetServerAddress();
                 });
 
@@ -278,8 +277,7 @@ namespace LANCommander.Launcher.Services
             
             client.Settings.Update(s =>
             {
-                s.Authentication.AccessToken = String.Empty;
-                s.Authentication.RefreshToken = String.Empty;
+                s.Authentication.Token = null;
                 s.Authentication.OfflineModeEnabled = false;
             });
         }

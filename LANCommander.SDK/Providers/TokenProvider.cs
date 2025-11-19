@@ -1,18 +1,18 @@
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.SDK.Providers;
 
-public class TokenProvider : ITokenProvider
+public class TokenProvider(ISettingsProvider settingsProvider) : ITokenProvider
 {
-    private string _token { get; set; }
-    
-    public void SetToken(string token)
+    public void SetToken(AuthToken token)
     {
-        _token = token;
+        settingsProvider.Update(s =>
+        {
+            s.Authentication.Token = token;
+            s.Authentication.OfflineModeEnabled = false;
+        });
     }
 
-    public string GetToken()
-    {
-        return _token;
-    }
+    AuthToken ITokenProvider.GetToken() => settingsProvider.CurrentValue.Authentication.Token;
 }

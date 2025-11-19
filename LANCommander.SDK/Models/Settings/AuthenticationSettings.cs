@@ -8,9 +8,6 @@ public class AuthenticationSettings
 {
     [YamlMember(typeof(string))]
     public Uri ServerAddress { get; set; }
-    [YamlMember(ScalarStyle = ScalarStyle.Plain)]
-    public string AccessToken { get; set; }
-    [YamlMember(ScalarStyle = ScalarStyle.Plain)]
-    public string RefreshToken { get; set; }
+    public AuthToken Token { get; set; }
     public bool OfflineModeEnabled { get; set; }
 }

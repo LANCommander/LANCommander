@@ -45,11 +45,7 @@ public class AuthenticationService(
     {
         using (var op = logger.BeginDebugOperation("Logging in using stored credentials"))
         {
-            await Login(settingsProvider.CurrentValue.Authentication.ServerAddress, new SDK.Models.AuthToken
-            {
-                AccessToken = settingsProvider.CurrentValue.Authentication.AccessToken,
-                RefreshToken = settingsProvider.CurrentValue.Authentication.RefreshToken,
-            });
+            await Login(settingsProvider.CurrentValue.Authentication.ServerAddress, settingsProvider.CurrentValue.Authentication.Token);
             
             op.Complete();
         }
@@ -77,7 +73,7 @@ public class AuthenticationService(
             {
                 await connectionClient.UpdateServerAddressAsync(serverAddress.ToString());
 
-                tokenProvider.SetToken(token.AccessToken);
+                tokenProvider.SetToken(token);
 
                 if (await authenticationClient.ValidateTokenAsync())
                 {
@@ -87,8 +83,6 @@ public class AuthenticationService(
                     settingsProvider.Update(s =>
                     {
                         s.Authentication.ServerAddress = serverAddress;
-                        s.Authentication.AccessToken = token.AccessToken;
-                        s.Authentication.RefreshToken = token.RefreshToken;
                     });
 
                     await using var scope = scopeFactory.CreateAsyncScope();
@@ -124,7 +118,6 @@ public class AuthenticationService(
             settingsProvider.Update(s =>
             {
                 s.Authentication.ServerAddress = connectionClient.GetServerAddress();
-                s.Authentication.AccessToken = tokenProvider.GetToken();
             });
         
             await using var scope = scopeFactory.CreateAsyncScope();
@@ -191,14 +184,14 @@ public class AuthenticationService(
     {
         var token = tokenProvider.GetToken();
         
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrEmpty(token.AccessToken))
             return null;
 
         try
         {
             var handler = new JwtSecurityTokenHandler();
             
-            return handler.ReadToken(token) as JwtSecurityToken;
+            return handler.ReadToken(token.AccessToken) as JwtSecurityToken;
         }
         catch
         {
@@ -208,7 +201,7 @@ public class AuthenticationService(
 
     public bool HasStoredCredentials()
     {
-        if (string.IsNullOrEmpty(tokenProvider.GetToken()))
+        if (string.IsNullOrEmpty(tokenProvider.GetToken().AccessToken))
             return false;
 
         var decodedToken = DecodeToken();

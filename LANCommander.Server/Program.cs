@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 if (args.Contains("--debugger"))
     builder.WaitForDebugger();
 
+builder.AddSettings();
 builder.AddAsService();
 builder.AddLogger();
 

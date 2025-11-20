@@ -13,12 +13,10 @@ namespace LANCommander.SDK.Extensions;
 
 public static class IConfigurationBuilderExtensions
 {
-    public static IConfigurationBuilder AddLANCommanderConfiguration<TSettings>(
-        this IConfigurationBuilder configurationBuilder,
-        out IServerConfigurationRefresher refresher) where TSettings : Settings
+    public static IConfiguration ReadFromFile<TSettings>(this IConfigurationBuilder configurationBuilder) where TSettings : Settings, new()
     {
         var filePath = Path.Join(AppPaths.GetConfigDirectory(), Settings.SETTINGS_FILE_NAME);
-
+        
         if (!File.Exists(filePath))
         {
             var settings = Activator.CreateInstance<TSettings>();
@@ -29,31 +27,29 @@ public static class IConfigurationBuilderExtensions
 
             File.WriteAllText(filePath, serializer.Serialize(settings));
         }
-        
+
         var bootstrap = new ConfigurationBuilder()
             .AddYamlFile(filePath, false, true)
             .Build();
+        
+        configurationBuilder.AddConfiguration(bootstrap);
 
-        return configurationBuilder
-            .AddConfiguration(bootstrap)
-            .AddServerConfiguration(bootstrap, out refresher);
+        return bootstrap;
     }
-    
-    public static IConfigurationBuilder AddServerConfiguration(
-        this IConfigurationBuilder configurationBuilder,
-        IConfiguration configuration,
-        out IServerConfigurationRefresher refresher)
+
+    public static IServerConfigurationRefresher ReadFromServer<TSettings>(this IConfigurationBuilder configurationBuilder, IConfiguration source)
+        where TSettings : Settings, new()
     {
         var src = new ServerConfigurationSource
         {
-            Configuration = configuration,
+            Configuration = source,
         };
         
         configurationBuilder.Add(src);
 
-        refresher = new LazyRefresher(() => src.Provider);
+        var refresher = new LazyRefresher(() => src.Provider);
 
-        return configurationBuilder;
+        return refresher;
     }
 
     private sealed class LazyRefresher(Func<ServerConfigurationProvider?> getProvider) : IServerConfigurationRefresher

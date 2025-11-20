@@ -1,4 +1,5 @@
 using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Options;
 using Serilog;
 using YamlDotNet.Serialization;
@@ -8,6 +9,16 @@ namespace LANCommander.Server.Startup;
 
 public static class ApplicationSettings
 {
+    public static WebApplicationBuilder AddSettings(this WebApplicationBuilder builder)
+    {
+        var configuration = builder.Configuration.ReadFromFile<Settings.Settings>();
+        var refresher = builder.Configuration.ReadFromServer<Settings.Settings>(configuration);
+        
+        builder.Services.AddSingleton(refresher);
+
+        return builder;
+    }
+    
     public static WebApplication ValidateSettings(this WebApplication app)
     {
         var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();

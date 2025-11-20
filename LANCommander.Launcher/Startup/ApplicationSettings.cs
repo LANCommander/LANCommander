@@ -13,12 +13,13 @@ public static class ApplicationSettings
     public static PhotinoBlazorAppBuilder AddSettings(this PhotinoBlazorAppBuilder builder)
     {
         Log.Debug("Loading settings file");
-
-        IServerConfigurationRefresher refresher;
         
-        var configuration = new ConfigurationBuilder()
-            .AddLANCommanderConfiguration<Settings>(out refresher)
-            .Build();
+        var configurationBuilder = new ConfigurationBuilder();
+
+        var configuration = configurationBuilder.ReadFromFile<Settings>();
+        var refresher = configurationBuilder.ReadFromServer<Settings>(configuration);
+
+        configuration = configurationBuilder.Build();
         
         builder.Services.Configure<Settings>(configuration);
         builder.Services.AddSingleton(refresher);

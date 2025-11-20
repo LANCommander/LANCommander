@@ -14,9 +14,9 @@ public static class Services
     {
         Log.Debug("Registering services");
         
+        builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderServer();
         builder.Services.AddLANCommanderImportExport();
-        builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderUI();
 
         builder.Services.AddSingleton<IVersionProvider, VersionProvider>();

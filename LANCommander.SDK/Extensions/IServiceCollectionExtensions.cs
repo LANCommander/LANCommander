@@ -16,18 +16,6 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddLANCommanderClient<TSettings>(this IServiceCollection services) where TSettings : Settings, new()
     {
-        IServerConfigurationRefresher configRefresher;
-
-        var configuration = new ConfigurationBuilder()
-            .AddLANCommanderConfiguration<TSettings>(out configRefresher)
-            .Build();
-
-        services
-            .AddOptions<TSettings>()
-            .Bind(configuration);
-
-        services.AddSingleton(configRefresher);
-        
         services.AddSingleton<SettingsProvider<TSettings>>();
         services.AddSingleton<ISettingsProvider>(sp =>
             sp.GetRequiredService<SettingsProvider<TSettings>>());

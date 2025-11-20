@@ -1,22 +1,12 @@
 ﻿using LANCommander.Launcher.Services;
-using LANCommander.Launcher.Services.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Photino.Blazor;
-using Photino.Blazor.CustomWindow.Extensions;
-using Photino.NET;
 using Serilog;
 using Serilog.Events;
-using Serilog.Extensions.Logging;
 using System.Runtime.InteropServices;
-using System.Web;
 using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
-using LANCommander.Launcher.Startup;
-using LANCommander.SDK.Abstractions;
-using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 

@@ -37,6 +37,7 @@ internal static class WindowService
         if (builderHook != null)
             builderHook(builder);
 
+        builder.AddSettings();
         builder.AddLogging();
         
         builder.Services.AddCustomWindow();

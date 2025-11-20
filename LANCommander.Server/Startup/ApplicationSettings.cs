@@ -15,6 +15,8 @@ public static class ApplicationSettings
         var refresher = builder.Configuration.ReadFromServer<Settings.Settings>(configuration);
         
         builder.Services.AddSingleton(refresher);
+        
+        builder.Services.Configure<Settings.Settings>(builder.Configuration);
 
         return builder;
     }

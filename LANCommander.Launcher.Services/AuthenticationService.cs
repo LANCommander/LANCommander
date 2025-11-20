@@ -184,7 +184,7 @@ public class AuthenticationService(
     {
         var token = tokenProvider.GetToken();
         
-        if (string.IsNullOrEmpty(token.AccessToken))
+        if (String.IsNullOrEmpty(token?.AccessToken))
             return null;
 
         try
@@ -201,7 +201,7 @@ public class AuthenticationService(
 
     public bool HasStoredCredentials()
     {
-        if (string.IsNullOrEmpty(tokenProvider.GetToken().AccessToken))
+        if (String.IsNullOrEmpty(tokenProvider.GetToken()?.AccessToken))
             return false;
 
         var decodedToken = DecodeToken();

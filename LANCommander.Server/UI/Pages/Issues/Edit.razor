@@ -1,10 +1,13 @@
 ﻿@page "/Issues/{id:guid}"
 @page "/Issues/Add"
+@using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
 @inject IssueService IssueService
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILogger<Edit> Logger
 
 <Layout Class="panel-layout">
@@ -140,7 +143,10 @@
     {
         try
         {
-            await IssueService.ResolveAsync(Issue.Id);
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserService.GetAsync(authState.User.Identity.Name);
+            
+            await IssueService.ResolveAsync(Issue.Id, user.Id);
 
             Issue = await IssueService.GetAsync(Issue.Id);
                 

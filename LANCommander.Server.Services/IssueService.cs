@@ -10,6 +10,7 @@ using ZiggyCreatures.Caching.Fusion;
 namespace LANCommander.Server.Services
 {
     public sealed class IssueService(
+        UserService userService,
         ILogger<IssueService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
@@ -35,12 +36,13 @@ namespace LANCommander.Server.Services
             });
         }
         
-        public async Task ResolveAsync(Guid issueId)
+        public async Task ResolveAsync(Guid issueId, Guid userId)
         {
             var issue = await GetAsync(issueId);
+            var user = await userService.GetAsync(userId);
 
             issue.ResolvedOn = DateTime.UtcNow;
-            // issue.ResolvedBy = await GetCurrentUserAsync();
+            issue.ResolvedBy = user;
 
             await UpdateAsync(issue);
         }

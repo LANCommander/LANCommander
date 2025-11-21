@@ -4,11 +4,13 @@ using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class MediaImporter(
     IMapper mapper,
+    ILogger<MediaImporter> logger,
     StorageLocationService storageLocationService,
     MediaService mediaService) : BaseImporter<Media, Data.Models.Media>
 {
@@ -56,6 +58,8 @@ public class MediaImporter(
         {
             if (media?.Id != Guid.Empty)
                 await mediaService.DeleteAsync(media);
+            
+            logger.LogError(ex, "An unknown error occured while trying to import media file");
 
             throw new ImportSkippedException<Media>(record, "An unknown error occured while trying to import media file",
                 ex);

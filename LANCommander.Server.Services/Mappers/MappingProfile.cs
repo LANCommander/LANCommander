@@ -41,6 +41,11 @@ namespace LANCommander.Server
                 .ForMember(dest =>
                     dest.IsPrimaryAction,
                     opt => opt.MapFrom(src => src.PrimaryAction));
+            
+            CreateMap<SDK.Models.Action, Data.Models.Action>()
+                .ForMember(dest =>
+                    dest.PrimaryAction,
+                    opt => opt.MapFrom(src => src.IsPrimaryAction));
 
             CreateMap<Data.Models.Game, SDK.Models.Game>()
                 .MaxDepth(5)
@@ -64,7 +69,12 @@ namespace LANCommander.Server
 
         private void CreateManifestMappings()
         {
-            CreateMap<Data.Models.Action, SDK.Models.Manifest.Action>().ReverseMap();
+            CreateMap<Data.Models.Action, SDK.Models.Manifest.Action>()
+                .ForMember(dest =>
+                        dest.IsPrimaryAction,
+                    opt => opt.MapFrom(src => src.PrimaryAction))
+                .ReverseMap();
+            
             CreateMap<Data.Models.Archive, SDK.Models.Manifest.Archive>().ReverseMap();
             CreateMap<Data.Models.Collection, SDK.Models.Manifest.Collection>().ReverseMap();
             CreateMap<Data.Models.Company, SDK.Models.Manifest.Company>().ReverseMap();

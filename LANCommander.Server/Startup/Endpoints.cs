@@ -24,6 +24,7 @@ public static class Endpoints
             endpoints.MapAuthenticationEndpoints();
             endpoints.MapChatEndpoints();
             endpoints.MapDownloadEndpoints();
+            endpoints.MapGameEndpoints();
             endpoints.MapSaveEndpoints();
             endpoints.MapServerEndpoints();
             endpoints.MapSettingsEndpoints();

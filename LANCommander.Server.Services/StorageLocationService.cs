@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +35,24 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(sl => sl.GameSaves);
                 await context.UpdateRelationshipAsync(sl => sl.Media);
             });
+        }
+
+        public async Task<StorageLocation> DefaultAsync(StorageLocationType type)
+        {
+            return await FirstOrDefaultAsync(sl => sl.Default && sl.Type == type);
+        }
+
+        public async Task<StorageLocation> GetOrDefaultAsync(Guid? id, StorageLocationType type)
+        {
+            if (!id.HasValue)
+                return await DefaultAsync(type);
+            
+            var storageLocation = await FirstOrDefaultAsync(sl => sl.Id == id && sl.Type == type);
+
+            if (storageLocation != null)
+                return storageLocation;
+            
+            return await DefaultAsync(type); 
         }
     }
 }

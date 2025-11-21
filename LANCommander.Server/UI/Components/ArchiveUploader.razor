@@ -137,9 +137,9 @@
             if (Settings.Value.Server.Archives.EnablePatching)
             {
                 if (Archive.GameId != Guid.Empty)
-                    lastArchive = await ArchiveService.GetLatestArchive(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
+                    lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
                 else if (Archive.RedistributableId != Guid.Empty)
-                    lastArchive = await ArchiveService.GetLatestArchive(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
+                    lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
 
                 if (lastArchive != null && Settings.Value.Server.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));

@@ -94,6 +94,37 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task AutostartAsync(Guid gameId, ServerAutostartMethod method)
+        {
+            try
+            {
+                var serverEngines = serviceProvider.GetServices<IServerEngine>();
+                var servers = await GetAsync(s =>
+                    s.GameId == gameId && s.Autostart && s.AutostartMethod == method);
+
+                foreach (var serverEngine in serverEngines)
+                {
+                    foreach (var server in servers)
+                    {
+                        try
+                        {
+                            var serverStatus = await serverEngine.GetStatusAsync(server.Id);
+                            if (serverEngine.IsManaging(server.Id) && serverStatus == ServerProcessStatus.Stopped)
+                                await serverEngine.StartAsync(server.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to start server {ServerName} ({ServerId})", server.Name, server.Id);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Servers could not be autostarted");
+            }
+        }
+
         public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
         {
             var serverEngines = serviceProvider.GetServices<IServerEngine>();

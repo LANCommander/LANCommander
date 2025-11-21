@@ -28,7 +28,7 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> dbContextFactory,
         StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveClient
     {
-        public async Task<Archive> GetLatestArchive(Expression<Func<Archive, bool>> predicate)
+        public async Task<Archive> GetLatestArchiveAsync(Expression<Func<Archive, bool>> predicate)
         {
             return await Query(q =>
             {

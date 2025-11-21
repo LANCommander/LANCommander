@@ -312,6 +312,25 @@ namespace LANCommander.Server.Services
             return await GetCustomFieldAsync(id, name);
         }
 
+        public async Task<Archive> GetLatestArchiveAsync(Guid id)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .GetAsync(id);
+            
+            var latestArchive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+            
+            return latestArchive;
+        }
+
+        public async Task<string> GetVersionAsync(Guid id)
+        {
+            var latestArchive = await GetLatestArchiveAsync(id);
+
+            return latestArchive?.Version ?? String.Empty;
+        }
+
         public async Task PackageAsync(Guid id)
         {
             var game = await AsNoTracking()

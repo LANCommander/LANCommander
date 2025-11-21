@@ -1,5 +1,6 @@
 using System.Text;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -57,9 +58,9 @@ public static class Identity
             .AddIdentityCookies();
 
         builder.Services.AddAuthorizationBuilder()
-            .AddPolicy("Administrator", policy =>
+            .AddPolicy(RoleService.AdministratorRoleName, policy =>
                 policy
-                    .RequireRole("Administrator"));
+                    .RequireRole(RoleService.AdministratorRoleName));
         
         builder.Services.Configure<CookiePolicyOptions>(options =>
         {

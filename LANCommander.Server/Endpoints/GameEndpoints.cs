@@ -40,7 +40,7 @@ public static class GameEndpoints
         [FromServices] IOptions<Settings.Settings> settings,
         [FromServices] IFusionCache cache,
         [FromServices] IMapper mapper,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal)
     {
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? "");
@@ -143,7 +143,7 @@ public static class GameEndpoints
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] IFusionCache cache,
         [FromServices] IMapper mapper,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -200,7 +200,7 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] ServerService serverService,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -251,7 +251,7 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] ServerService serverService,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -285,7 +285,7 @@ public static class GameEndpoints
 
     internal static async Task<IResult> CheckForUpdateAsync(
         [FromServices] GameService gameService,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         Guid id,
         string version)
     {
@@ -307,7 +307,7 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] ArchiveService archiveService,
         [FromServices] IOptions<Settings.Settings> settings,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -357,7 +357,7 @@ public static class GameEndpoints
     internal static async Task<IResult> ImportAsync(
         [FromServices] ArchiveService archiveService,
         [FromServices] ImportContext importContext,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         Guid objectKey)
     {
         try
@@ -379,7 +379,7 @@ public static class GameEndpoints
     internal static async Task<IResult> UploadArchiveAsync(
         [FromServices] ArchiveService archiveService,
         [FromServices] StorageLocationService storageLocationService,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Game> logger,
         SDK.Models.UploadArchiveRequest request)
     {
         try

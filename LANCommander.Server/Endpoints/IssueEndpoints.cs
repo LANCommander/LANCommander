@@ -23,7 +23,7 @@ public static class IssueEndpoints
     internal static async Task<IResult> OpenAsync(
         [FromServices] IssueService issueService,
         [FromServices] GameService gameService,
-        [FromServices] ILogger logger,
+        [FromServices] ILogger<Issue> logger,
         SDK.Models.Issue issueRequest)
     {
         try

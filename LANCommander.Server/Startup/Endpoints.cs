@@ -22,9 +22,20 @@ public static class Endpoints
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapAuthenticationEndpoints();
+            endpoints.MapAuthApiEndpoints();
             endpoints.MapChatEndpoints();
             endpoints.MapDownloadEndpoints();
             endpoints.MapGameEndpoints();
+            endpoints.MapDepotEndpoints();
+            endpoints.MapArchivesEndpoints();
+            endpoints.MapUploadEndpoints();
+            endpoints.MapProfileEndpoints();
+            endpoints.MapPlaySessionsEndpoints();
+            endpoints.MapMediaEndpoints();
+            endpoints.MapKeysEndpoints();
+            endpoints.MapLauncherEndpoints();
+            endpoints.MapLibraryEndpoints();
+            endpoints.MapRedistributablesEndpoints();
             endpoints.MapIssueEndpoints();
             endpoints.MapSaveEndpoints();
             endpoints.MapServerEndpoints();

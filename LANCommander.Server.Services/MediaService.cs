@@ -140,7 +140,7 @@ namespace LANCommander.Server.Services
                 media.StorageLocation = await storageLocationService.GetAsync(media.StorageLocationId);
             
             if (media.StorageLocation == null)
-                media.StorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+                media.StorageLocation = await storageLocationService.DefaultAsync(StorageLocationType.Media);
             
             if (media.FileId == Guid.Empty)
                 media.FileId = Guid.NewGuid();

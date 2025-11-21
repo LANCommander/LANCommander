@@ -29,7 +29,7 @@ public class MediaImporter(
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
         
         var defaultMediaLocation =
-            await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+            await storageLocationService.DefaultAsync(StorageLocationType.Media);
 
         Data.Models.Media media = null;
         

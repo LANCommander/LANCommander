@@ -195,6 +195,16 @@ public class ApiRequestBuilder(
         return await DeserializeResultAsync<TResult>(response);
     }
 
+    public async Task HeadAsync()
+    {
+        _request.Method = HttpMethod.Head;
+        
+        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+
+        response
+            .EnsureSuccessStatusCode();
+    }
+
     public async Task<TResult> HeadAsync<TResult>()
     {
         _request.Method = HttpMethod.Head;

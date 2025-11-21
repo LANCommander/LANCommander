@@ -244,7 +244,27 @@ namespace LANCommander.SDK.Services
                 .GetAsync<bool>();
         }
 
-        private async Task<TrackableStream> StreamAsync(Guid id)
+
+        private async Task<bool> CanStreamLatestArchiveAsync(Guid id)
+        {
+            try
+            {
+                await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Games/{id}/Download")
+                    .HeadAsync();
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<TrackableStream> StreamLatestArchiveAsync(Guid id)
         {
             return await apiRequestFactory
                 .Create()
@@ -955,6 +975,14 @@ namespace LANCommander.SDK.Services
                 Canceled = false,
             };
 
+            if (!await CanStreamLatestArchiveAsync(game.Id))
+            {
+                extractionResult.Success = false;
+                extractionResult.Canceled = true;
+
+                return extractionResult;
+            }
+
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
 
@@ -962,7 +990,7 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                var stream = await StreamAsync(game.Id);
+                var stream = await StreamLatestArchiveAsync(game.Id);
 
                 _reader = ReaderFactory.Open(stream);
 
@@ -1615,7 +1643,7 @@ namespace LANCommander.SDK.Services
             {
                 try
                 {
-                    var stream = await StreamAsync(gameId);
+                    var stream = await StreamLatestArchiveAsync(gameId);
                     _reader = ReaderFactory.Open(stream);
 
                     while (_reader.MoveToNextEntry())

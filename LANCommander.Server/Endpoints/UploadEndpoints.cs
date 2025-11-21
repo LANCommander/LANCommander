@@ -13,7 +13,7 @@ public static class UploadEndpoints
         var group = routes.MapGroup("/api/Upload");
 
         group.MapPost("/Init", InitAsync);
-        group.MapPost("/Chunk", ChunkAsync);
+        group.MapPost("/Chunk", ChunkAsync).DisableAntiforgery();
     }
 
     internal static async Task<IResult> InitAsync(

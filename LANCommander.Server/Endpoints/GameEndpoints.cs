@@ -18,7 +18,7 @@ public static class GameEndpoints
 {
     public static void MapGameEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/Games").RequireAuthorization();
+        var group = routes.MapGroup("/api/Games").RequireAuthorization();
 
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);

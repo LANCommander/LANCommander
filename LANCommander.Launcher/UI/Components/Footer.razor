@@ -8,7 +8,7 @@
     <div style="flex: 1;">
         @if (NavigationManager.Uri.Contains("/Depot"))
         {
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">@LocalizationService.GetString("Library")</Button>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/Library"))">@LocalizationService.GetString("Library")</Button>
         }
         else
         {

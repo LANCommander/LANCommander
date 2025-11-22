@@ -13,22 +13,14 @@
 @inject LocalizationService LocalizationService
 
 <Spin Spinning="Disabled">
-    <Layout>
-        <Content Class="depot">
-            <DepotFilter />
+    <Content Class="depot">
+        <DepotFilter />
 
-            <DepotList OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
-        </Content>
-    </Layout>
+        <DepotList OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
+    </Content>
 
     <DepotGameDetails @ref="DepotGameDetails" ItemId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Depot"))" />
 </Spin>
-
-<div class="logo">
-    <img src="assets/logo-cut.svg" />
-</div>
-
-<LANCommander.Launcher.UI.Components.Footer />
 
 @code {
     [Parameter] public Guid Id { get; set; }

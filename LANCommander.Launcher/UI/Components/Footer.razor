@@ -70,12 +70,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        InstallService.OnQueueChanged += async () =>
-        {
-            await InvokeAsync(StateHasChanged);
-        };
+        InstallService.OnQueueChanged += async () => { await InvokeAsync(StateHasChanged); };
+
+        NavigationManager.LocationChanged += LocationChanged;
     }
-    
+
+    async void LocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
     async Task Cancel()
     {
         await InstallService.CancelInstallAsync(_currentQueueItem.Id);

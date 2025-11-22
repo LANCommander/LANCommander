@@ -68,7 +68,15 @@
         <WindowContent>
             <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
                 <Body>
-                    @Body
+                    <Layout>
+                        @Body
+                    </Layout>
+                    
+                    <div class="logo">
+                        <img src="assets/logo-cut.svg" />
+                    </div>
+                    
+                    <LANCommander.Launcher.UI.Components.Footer />
 
                     <ImportHandler @ref="ImportHandler" Progress="OnImportProcess"/>
                     <UpdateChecker/>
@@ -156,9 +164,9 @@
             ConnectionClient.OnOfflineModeEnabled -= OnOfflineModeChanged;
     }
 
-    void OnOfflineModeChanged(object? sender, EventArgs eventArgs)
+    async void OnOfflineModeChanged(object? sender, EventArgs eventArgs)
     {
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     async void OnImportProcess(ImportHandler.ImportProgressEventArgs importProgress)

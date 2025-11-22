@@ -8,21 +8,13 @@
 @inject InstallService InstallService
 @inject GameService GameService
 
-<Layout>
-    <Content Class="library">
-        <CascadingValue Value="CurrentItem">
-            <LibraryList OnItemSelected="@((key) => SelectLibraryItem(key))"/>
+<Content Class="library">
+    <CascadingValue Value="CurrentItem">
+        <LibraryList OnItemSelected="@((key) => SelectLibraryItem(key))"/>
 
-            <LibraryItemDetails />
-        </CascadingValue>
-    </Content>
-</Layout>
-
-<div class="logo">
-    <img src="assets/logo-cut.svg" />
-</div>
-
-<LANCommander.Launcher.UI.Components.Footer />
+        <LibraryItemDetails />
+    </CascadingValue>
+</Content>
 
 @code {
     [Parameter] public Guid Id { get; set; }

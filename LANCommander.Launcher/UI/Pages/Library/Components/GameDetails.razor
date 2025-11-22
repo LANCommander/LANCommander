@@ -2,6 +2,7 @@
 @using LANCommander.SDK.Services
 @namespace LANCommander.Launcher.UI.Components
 @inject GameClient GameClient
+@inject ILogger<GameDetails> Logger
 
 <CascadingValue Value="CurrentGame">
     <CascadingValue Value="RemoteGame">
@@ -57,7 +58,14 @@
             _currentId = CurrentItem.Key;
             CurrentGame = CurrentItem.DataItem as Game;
 
-            RemoteGame = await GameClient.GetAsync(_currentId);
+            try
+            {
+                RemoteGame = await GameClient.GetAsync(_currentId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not load game {GameId} from server", _currentId);
+            }
 
             await InvokeAsync(StateHasChanged);
         }

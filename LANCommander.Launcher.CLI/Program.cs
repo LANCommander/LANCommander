@@ -3,12 +3,16 @@ using Microsoft.Extensions.DependencyInjection;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services;
 using System.Runtime.InteropServices;
+using LANCommander.Launcher.Data;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
 using Serilog.Events;
+using YamlDotNet.Serialization;
 
 // Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
 
@@ -32,16 +36,48 @@ builder.Services.AddLogging(loggingBuilder =>
 });
 
 builder.Services.AddLANCommanderClient<LANCommander.SDK.Models.Settings>();
+builder.Services.AddLANCommanderLauncher(options =>
+{
+
+});
 
 using IHost host = builder.Build();
 
 host.Services.InitializeLANCommander();
 
-using var scope = host.Services.CreateScope();
+using (var scope = host.Services.CreateScope())
+{
+    var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+    var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<LANCommander.Launcher.Settings.Settings>>();
+    var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+    var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
 
-var commandLineService = scope.ServiceProvider.GetService<CommandLineService>();
+    if (!await connectionClient.PingAsync())
+        await connectionClient.EnableOfflineModeAsync();
 
-await commandLineService.ParseCommandLineAsync(args);
+    if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            settingsProvider.Update(s =>
+            {
+                s.Games.InstallDirectories = [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")];
+            });
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            settingsProvider.Update(s =>
+            {
+                s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+            });
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            settingsProvider.Update(s =>
+            {
+                s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
+            });
+    }
+
+    await databaseContext.Database.MigrateAsync();
+    
+    await commandLineService.ParseCommandLineAsync(args);
+}
 
 
 /// <summary>

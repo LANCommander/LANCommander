@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
 
 namespace LANCommander.Launcher.Services.Extensions
@@ -34,17 +35,13 @@ namespace LANCommander.Launcher.Services.Extensions
             var options = new LANCommanderOptions();
 
             configure(options);
-
-            /*var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
-
-            client.Scripts.Debug = settings.Debug.EnableScriptDebugging;
-            client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;*/
-
-            // services.AddSingleton(client);
+            
             services.AddSingleton<MessageBusService>();
             services.AddSingleton<AuthenticationService>();
             services.AddSingleton<KeepAliveService>();
             #endregion
+
+            services.AddSingleton<IExternalScriptRunner, ExternalScriptRunner>();
             
             services.AddSingleton<ImportManagerService>();
             services.AddScoped<CollectionService>();
@@ -69,62 +66,6 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<UpdateService>();
 
             return services;
-        }
-
-        private static async Task<bool> Scripts_ExternalScriptRunner(SDK.PowerShell.PowerShellScript script)
-        {
-            try
-            {
-                var identity = WindowsIdentity.GetCurrent();
-                var principal = new WindowsPrincipal(identity);
-
-                var isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
-
-                if (script.RunAsAdmin && !isElevated)
-                {
-                    var manifest = script.Variables.GetValue<GameManifest>("GameManifest");
-
-                    var options = new RunScriptCommandLineOptions
-                    {
-                        InstallDirectory = script.Variables.GetValue<string>("InstallDirectory"),
-                        GameId = manifest.Id,
-                        Type = script.Type
-                    };
-
-                    if (script.Type == ScriptType.KeyChange)
-                        options.AllocatedKey = script.Variables.GetValue<string>("AllocatedKey");
-
-                    if (script.Type == ScriptType.NameChange)
-                    {
-                        options.OldPlayerAlias = script.Variables.GetValue<string>("OldPlayerAlias");
-                        options.NewPlayerAlias = script.Variables.GetValue<string>("NewPlayerAlias");
-                    }
-
-                    var arguments = Parser.Default.FormatCommandLine(options);
-
-                    var path = Process.GetCurrentProcess().MainModule.FileName;
-
-                    var process = new Process();
-
-                    process.StartInfo.FileName = path;
-                    process.StartInfo.Verb = "runas";
-                    process.StartInfo.UseShellExecute = true;
-                    process.StartInfo.WorkingDirectory = script.WorkingDirectory;
-                    process.StartInfo.Arguments = arguments;
-
-                    process.Start();
-
-                    await process.WaitForExitAsync();
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                // Not running as admin
-            }
-
-            return false;
         }
     }
 }

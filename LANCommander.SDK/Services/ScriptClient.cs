@@ -9,17 +9,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.SDK.Services
 {
     public class ScriptClient(
         ILogger<ScriptClient> logger,
+        IServiceProvider serviceProvider,
         ISettingsProvider settingsProvider,
         IConnectionClient connectionClient)
     {
-        public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
-        public event ExternalScriptRunnerHandler ExternalScriptRunner;
-
         public bool Debug { get; set; } = false;
 
         public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
@@ -164,10 +163,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                         {
@@ -267,10 +263,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -360,10 +353,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -456,10 +446,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -564,10 +551,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -651,10 +635,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -735,10 +716,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -822,10 +800,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -907,10 +882,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -1008,10 +980,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -1098,10 +1067,7 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not debug script");
                         }
 
-                        bool handled = false;
-
-                        if (ExternalScriptRunner != null)
-                            handled = await ExternalScriptRunner.Invoke(script);
+                        var handled = await RunScriptExternallyAsync(script);
 
                         if (!handled)
                             result = await script.ExecuteAsync<int>();
@@ -1158,5 +1124,18 @@ namespace LANCommander.SDK.Services
             return null;
         }
         #endregion
+
+        private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)
+        {
+            var scriptRunners = serviceProvider.GetServices<IExternalScriptRunner>();
+
+            foreach (var scriptRunner in scriptRunners)
+            {
+                if (await scriptRunner.ExecuteAsync(script))
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

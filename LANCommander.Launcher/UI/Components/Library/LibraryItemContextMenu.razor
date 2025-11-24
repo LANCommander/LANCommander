@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
+@using LANCommander.Launcher.Settings
 @using LANCommander.SDK
 @using LANCommander.SDK.Helpers
 @using LANCommander.SDK.Services
@@ -304,7 +305,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Models.Settings.DEFAULT_GAME_USERNAME);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Settings.DEFAULT_GAME_USERNAME);
         }
     }
 

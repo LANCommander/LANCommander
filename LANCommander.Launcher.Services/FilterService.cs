@@ -1,7 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services
@@ -9,7 +8,7 @@ namespace LANCommander.Launcher.Services
     public class FilterService(
         ILogger<FilterService> logger,
         LibraryService libraryService,
-        SettingsProvider<Settings> settingsProvider) : BaseService(logger)
+        SettingsProvider<Settings.Settings> settingsProvider) : BaseService(logger)
     {
         public LibraryFilterModel Filter { get; set; }
 

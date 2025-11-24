@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.Launcher.Settings.Enums;
 
 namespace LANCommander.Launcher.Models
 {
@@ -92,17 +93,17 @@ namespace LANCommander.Launcher.Models
 
             switch (SelectedOptions.SortBy)
             {
-                case Enums.SortBy.Title:
+                case SortBy.Title:
                     items = items.OrderByTitle(i => i.Name ?? i.SortName, SelectedOptions.SortDirection);
                     break;
 
-                case Enums.SortBy.DateAdded:
+                case SortBy.DateAdded:
                     items = items.OrderBy(i =>
                         (i.DataItem as DepotGame)?.CreatedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
 
-                case Enums.SortBy.DateReleased:
+                case SortBy.DateReleased:
                     items = items.OrderBy(i =>
                         (i.DataItem as DepotGame)?.ReleasedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
@@ -111,11 +112,11 @@ namespace LANCommander.Launcher.Models
 
             switch (SelectedOptions.GroupBy)
             {
-                case Enums.GroupBy.None:
+                case GroupBy.None:
                     GroupSelector = (g) => Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Collection:
+                case GroupBy.Collection:
                     GroupSelector = (g) =>
                         DataSource.Collections
                             .Where(c => (g.DataItem as DepotGame).Collections.Any(gc => gc.Id == c.Id))
@@ -123,7 +124,7 @@ namespace LANCommander.Launcher.Models
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Genre:
+                case GroupBy.Genre:
                     GroupSelector = (g) =>
                         DataSource.Genres
                             .Where(ge => (g.DataItem as DepotGame).Genres.Any(gge => gge.Id == ge.Id))
@@ -131,7 +132,7 @@ namespace LANCommander.Launcher.Models
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Platform:
+                case GroupBy.Platform:
                     GroupSelector = (g) =>
                         DataSource.Platforms
                             .Where(p => (g.DataItem as DepotGame).Platforms.Any(gp => gp.Id == p.Id))

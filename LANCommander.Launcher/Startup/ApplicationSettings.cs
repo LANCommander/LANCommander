@@ -16,12 +16,12 @@ public static class ApplicationSettings
         
         var configurationBuilder = new ConfigurationBuilder();
 
-        var configuration = configurationBuilder.ReadFromFile<Settings>();
-        var refresher = configurationBuilder.ReadFromServer<Settings>(configuration);
+        var configuration = configurationBuilder.ReadFromFile<Settings.Settings>();
+        var refresher = configurationBuilder.ReadFromServer<Settings.Settings>(configuration);
 
         configuration = configurationBuilder.Build();
         
-        builder.Services.Configure<Settings>(configuration);
+        builder.Services.Configure<Settings.Settings>(configuration);
         builder.Services.AddSingleton(refresher);
         
         Log.Debug("Validating settings");

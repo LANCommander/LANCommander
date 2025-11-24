@@ -9,7 +9,7 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 @inject LocalizationService LocalizationService
-@inject SettingsProvider<Models.Settings> SettingsProvider
+@inject SettingsProvider<Launcher.Settings.Settings> SettingsProvider
 
 <div style="flex-grow: 1">
     <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
@@ -72,7 +72,7 @@
 </Flex>
 
 @code {
-    Settings _settings;
+    Launcher.Settings.Settings _settings;
     List<InstallDirectory> _installDirectories = new();
 
     string[] _supportedCultures = new[]

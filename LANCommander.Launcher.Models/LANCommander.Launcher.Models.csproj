@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
+    <ProjectReference Include="..\LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" />
   </ItemGroup>
 
 </Project>

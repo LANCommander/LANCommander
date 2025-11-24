@@ -9,7 +9,7 @@ namespace LANCommander.Launcher.Services
     {
         private readonly ResourceManager _resourceManager;
 
-        public LocalizationService(IOptions<Settings> settings)
+        public LocalizationService(IOptions<Settings.Settings> settings)
         {
             _resourceManager = new ResourceManager("LANCommander.Launcher.Resources.SharedResources", typeof(LocalizationService).Assembly);
             

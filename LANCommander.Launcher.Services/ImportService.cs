@@ -17,7 +17,7 @@ using Media = LANCommander.Launcher.Data.Models.Media;
 using MultiplayerMode = LANCommander.Launcher.Data.Models.MultiplayerMode;
 using Platform = LANCommander.Launcher.Data.Models.Platform;
 using PlaySession = LANCommander.Launcher.Data.Models.PlaySession;
-using Settings = LANCommander.Launcher.Models.Settings;
+using Settings = LANCommander.Launcher.Settings.Settings;
 using Tag = LANCommander.Launcher.Data.Models.Tag;
 
 namespace LANCommander.Launcher.Services

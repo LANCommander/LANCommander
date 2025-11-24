@@ -1,4 +1,5 @@
-﻿@using Photino.Blazor.CustomWindow.Components
+﻿@using LANCommander.Launcher.Settings
+@using Photino.Blazor.CustomWindow.Components
 @inherits LayoutComponentBase
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
@@ -31,7 +32,7 @@
     </CustomWindow>
 
 @code {
-    Models.Settings Settings = null;
+    Settings Settings = null;
 
     string RandomQuip = "";
 

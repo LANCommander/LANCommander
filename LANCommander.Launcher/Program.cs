@@ -43,7 +43,7 @@ namespace LANCommander.Launcher
                 using (var scope = app.Services.CreateScope())
                 {
                     var connectionClient = scope.ServiceProvider.GetService<IConnectionClient>();
-                    var settingsProvider = scope.ServiceProvider.GetService<SettingsProvider<Settings>>();
+                    var settingsProvider = scope.ServiceProvider.GetService<SettingsProvider<Settings.Settings>>();
                     var databaseContext = scope.ServiceProvider.GetService<DatabaseContext>();
 
                     if (!(await connectionClient.PingAsync()))

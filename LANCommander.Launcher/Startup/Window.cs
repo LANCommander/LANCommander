@@ -32,7 +32,7 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RegisterMediaHandler(this PhotinoBlazorApp app)
     {
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+        var settingsProvider = app.Services.GetService<SettingsProvider<Settings.Settings>>();
         
         app.MainWindow.RegisterCustomSchemeHandler("media",
             (object sender, string scheme, string url, out string contentType) =>
@@ -116,7 +116,7 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RestoreWindowPosition(this PhotinoBlazorApp app)
     {
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+        var settingsProvider = app.Services.GetService<SettingsProvider<Settings.Settings>>();
 
         if (settingsProvider.CurrentValue.Window.Maximized)
             app.MainWindow.SetMaximized(true);

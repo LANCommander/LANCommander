@@ -9,6 +9,7 @@ using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
@@ -43,7 +44,7 @@ internal static class WindowService
         builder.Services.AddCustomWindow();
         builder.Services.AddAntDesign();
         builder.Services.AddSingleton<LocalizationService>();
-        builder.Services.AddLANCommanderClient<Settings>();
+        builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderLauncher(options =>
         {
             
@@ -90,7 +91,7 @@ internal static class WindowService
     
     static PhotinoBlazorApp RegisterMediaHandler(this PhotinoBlazorApp app)
     {
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings>>();
+        var settings = app.Services.GetService<IOptions<Settings.Settings>>();
         
         app.MainWindow.RegisterCustomSchemeHandler("media",
             (object sender, string scheme, string url, out string contentType) =>
@@ -108,7 +109,7 @@ internal static class WindowService
 
                     contentType = mime;
 
-                    var filePath = Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
+                    var filePath = Path.Combine(settings.Value.Media.StoragePath, $"{fileId}-{crc32}");
 
                     if (File.Exists(filePath))
                         return new FileStream(filePath, FileMode.Open, FileAccess.Read);

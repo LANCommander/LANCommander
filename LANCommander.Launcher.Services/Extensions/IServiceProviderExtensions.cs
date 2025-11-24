@@ -16,7 +16,7 @@ namespace LANCommander.Launcher.Services.Extensions
     {
         public static IServiceProvider InitializeLANCommander(this IServiceProvider serviceProvider)
         {
-            var settingsProvider = serviceProvider.GetService<SettingsProvider<Settings>>();
+            var settingsProvider = serviceProvider.GetService<SettingsProvider<Settings.Settings>>();
             
             var connectionStringBuilder = new DbConnectionStringBuilder();
                 

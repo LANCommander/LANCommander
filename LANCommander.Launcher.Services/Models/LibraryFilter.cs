@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.Launcher.Settings.Enums;
 
 namespace LANCommander.Launcher.Models
 {
@@ -117,23 +118,23 @@ namespace LANCommander.Launcher.Models
 
             switch (SelectedOptions.SortBy)
             {
-                case Enums.SortBy.Title:
+                case SortBy.Title:
                     items = items.OrderByTitle(i => i.Name ?? i.SortName, SelectedOptions.SortDirection);
                     break;
 
-                case Enums.SortBy.DateAdded:
+                case SortBy.DateAdded:
                     items = items.OrderBy(i =>
                         (i.DataItem as Game)?.CreatedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
 
-                case Enums.SortBy.DateReleased:
+                case SortBy.DateReleased:
                     items = items.OrderBy(i =>
                         (i.DataItem as Game)?.ReleasedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
 
-                case Enums.SortBy.RecentActivity:
+                case SortBy.RecentActivity:
                     items = items.OrderBy(i =>
                         (i.DataItem as Game)?.PlaySessions?
                             .Where(ps => ps?.End != null)
@@ -142,7 +143,7 @@ namespace LANCommander.Launcher.Models
                         SelectedOptions.SortDirection);
                     break;
                 
-                case Enums.SortBy.MostPlayed:
+                case SortBy.MostPlayed:
                     items = items.OrderBy(i =>
                         (i.DataItem as Game)?.PlaySessions?.Sum(
                             ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds), SelectedOptions.SortDirection);
@@ -151,11 +152,11 @@ namespace LANCommander.Launcher.Models
 
             switch (SelectedOptions.GroupBy)
             {
-                case Enums.GroupBy.None:
+                case GroupBy.None:
                     GroupSelector = (g) => Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Collection:
+                case GroupBy.Collection:
                     GroupSelector = (g) =>
                         (g.DataItem as Game)?.Collections?
                             .Where(c => c?.Name != null)
@@ -163,7 +164,7 @@ namespace LANCommander.Launcher.Models
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Genre:
+                case GroupBy.Genre:
                     GroupSelector = (g) =>
                         (g.DataItem as Game)?.Genres?
                             .Where(ge => ge?.Name != null)
@@ -171,7 +172,7 @@ namespace LANCommander.Launcher.Models
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
-                case Enums.GroupBy.Platform:
+                case GroupBy.Platform:
                     GroupSelector = (g) =>
                         (g.DataItem as Game)?.Platforms?
                             .Where(p => p?.Name != null)

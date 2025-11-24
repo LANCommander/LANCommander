@@ -7,6 +7,7 @@
     <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
     <Project Path="LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
+    <Project Path="LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" Type="Classic C#" />
     <Project Path="LANCommander.Launcher\LANCommander.Launcher.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Server/">

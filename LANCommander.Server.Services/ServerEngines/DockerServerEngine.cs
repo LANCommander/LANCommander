@@ -21,6 +21,7 @@ namespace LANCommander.Server.Services.ServerEngines;
 public class DockerServerEngine(
     ILogger<DockerServerEngine> logger,
     SettingsProvider<Settings.Settings> settingsProvider,
+    PowerShellScriptFactory powerShellScriptFactory,
     IServiceProvider serviceProvider,
     IMapper mapper,
     IOptions<SDK.Models.Settings> settings) : IServerEngine
@@ -109,7 +110,7 @@ public class DockerServerEngine(
         {
             try
             {
-                var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
+                var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
 
                 script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 
@@ -162,7 +163,7 @@ public class DockerServerEngine(
             {
                 try
                 {
-                    var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
+                    var script = powerShellScriptFactory.Create(ScriptType.AfterStop);
 
                     script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 

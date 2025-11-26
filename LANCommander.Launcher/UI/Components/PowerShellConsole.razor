@@ -1,6 +1,7 @@
-﻿@using XtermBlazor
+﻿@using LANCommander.Launcher.Services.PowerShell
+@using XtermBlazor
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
-@inject SDK.Client Client
+@inject ScriptDebugger Debugger
 
 <div class="terminal @(Visible ? "" : "hidden")">
     <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
@@ -25,7 +26,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Client.Scripts.OnDebugStart = async (ps) =>
+        Debugger.OnDebugStart = async (ps) =>
         {
             Terminal?.Clear();
             Visible = true;
@@ -34,7 +35,7 @@
             await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
         };
 
-        Client.Scripts.OnOutput = async (level, message) =>
+        Debugger.OnOutput = async (level, message) =>
         {
             switch (level)
             {
@@ -60,7 +61,7 @@
             }
         };
 
-        Client.Scripts.OnDebugBreak = async (ps) =>
+        Debugger.OnDebugBreak = async (ps) =>
         {
             while (true)
             {

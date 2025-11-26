@@ -13,8 +13,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Services.Description;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.PowerShell.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -35,8 +38,12 @@ namespace LANCommander.SDK.PowerShell
         private InitialSessionState InitialSessionState { get; set; }
 
         private TaskCompletionSource<string> Input { get; set; }
-
-        public PowerShellDebugHandler DebugHandler { get; private set; }
+        
+        private IntPtr _wow64 = IntPtr.Zero;
+        private ILogger<PowerShellScript> Logger { get; set; }
+        private IServiceScope ServiceScope { get; set; }
+        private IEnumerable<IScriptDebugger> Debuggers { get; set; }
+        private System.Management.Automation.PowerShell Context { get; set; }
 
         private const string Logo = @"
    __   ___   _  _______                              __       
@@ -46,15 +53,21 @@ namespace LANCommander.SDK.PowerShell
 
 ";
 
-        public PowerShellScript(ScriptType type)
+        public PowerShellScript(
+            IServiceProvider serviceProvider,
+            ScriptType type)
         {
+            
             Type = type;
             Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
-            DebugHandler = new PowerShellDebugHandler();
 
             InitialSessionState = InitialSessionState.CreateDefault();
             InitialSessionState.RegisterCustomCmdlets();
+            
+            // Instantiate a new scope
+            ServiceScope = serviceProvider.CreateScope();
+            Logger = ServiceScope.ServiceProvider.GetService<ILogger<PowerShellScript>>();
 
             IgnoreWow64Redirection();
         }
@@ -128,12 +141,9 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript EnableDebug(PowerShellDebugHandler debugHandler = null)
+        public PowerShellScript EnableDebug()
         {
             Debug = true;
-            
-            if (debugHandler != null)
-                DebugHandler = debugHandler;
 
             return this;
         }
@@ -148,10 +158,8 @@ namespace LANCommander.SDK.PowerShell
         public async Task<T> ExecuteAsync<T>()
         {
             T result = default;
-            var wow64Value = IntPtr.Zero;
 
-            if (IgnoreWow64)
-                Wow64DisableWow64FsRedirection(ref wow64Value);
+            DisableWow64Redirection();
 
             using (Runspace runspace = RunspaceFactory.CreateRunspace(InitialSessionState))
             {
@@ -167,103 +175,132 @@ namespace LANCommander.SDK.PowerShell
                 runspace.SessionStateProxy.SetVariable("Logo", Logo);
                 runspace.SessionStateProxy.SetVariable("ScriptType", Type);
                 runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
+                
+                Context = System.Management.Automation.PowerShell.Create();
 
-                using (var ps = System.Management.Automation.PowerShell.Create())
+                Context.Runspace = runspace;
+
+                await DebugAsync(async dbg =>
                 {
-                    ps.Runspace = runspace;
+                    await dbg.StartAsync(Context);
+                });
 
-                    if (Debug)
-                        await (DebugHandler.OnDebugStart?.Invoke(ps) ?? Task.CompletedTask);
+                Context.AddScript("Write-Host $Logo");
+                Context.AddScript(Contents);
 
-                    ps.AddScript("Write-Host $Logo");
+                if (Debug) {
+                    Context.AddScript("Write-Host '--------- DEBUG ---------'");
+                    Context.AddScript("Write-Host \"Script Type: $ScriptType\"");
+                    Context.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
+                    Context.AddScript("Write-Host 'Variables:'");
 
-                    ps.AddScript(Contents);
-
-                    if (Debug)
+                    foreach (var variable in Variables)
                     {
-                        ps.AddScript("Write-Host '--------- DEBUG ---------'");
-                        ps.AddScript("Write-Host \"Script Type: $ScriptType\"");
-                        ps.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
-                        ps.AddScript("Write-Host 'Variables:'");
-
-                        foreach (var variable in Variables)
-                        {
-                            ps.AddScript($"Write-Host '    ${variable.Name}'");
-                        }
-
-                        ps.AddScript("Write-Host ''");
-                        ps.AddScript("Write-Host 'Enter \"exit\" to continue'");
-
-                        if (DebugHandler.OnOutput != null)
-                        {
-                            ps.Streams.Information.DataAdded += Information_DataAdded;
-                            ps.Streams.Verbose.DataAdded += Verbose_DataAdded;
-                            ps.Streams.Debug.DataAdded += Debug_DataAdded;
-                            ps.Streams.Warning.DataAdded += Warning_DataAdded;
-                            ps.Streams.Error.DataAdded += Error_DataAdded;
-                        }
+                        Context.AddScript($"Write-Host '    ${variable.Name}'");
                     }
 
-                    var results = await ps.InvokeAsync();
+                    Context.AddScript("Write-Host ''");
+                    Context.AddScript("Write-Host 'Enter \"exit\" to continue'");
+                    
+                    Context.Streams.Information.DataAdded += Information_DataAdded;
+                    Context.Streams.Verbose.DataAdded += Verbose_DataAdded;
+                    Context.Streams.Debug.DataAdded += Debug_DataAdded;
+                    Context.Streams.Warning.DataAdded += Warning_DataAdded;
+                    Context.Streams.Error.DataAdded += Error_DataAdded;
+                }
 
-                    if (Debug)
-                        await (DebugHandler.OnDebugBreak?.Invoke(ps) ?? Task.CompletedTask);
+                try
+                {
+                    var results = await Context.InvokeAsync();
 
-                    try
+                    await DebugAsync(async dbg =>
                     {
-                        var returnValue = ps.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
+                        await dbg.BreakAsync(Context);
+                    });
+                    
+                    var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
 
-                        if (returnValue != null)
-                            result = (T)returnValue;
-                    }
-                    catch
-                    {
-                        // Couldn't case properly, fallback to default
-                    }
+                    if (returnValue != null)
+                        result = (T)returnValue;
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Could not execute script");
+                }
+                finally
+                {
+                    Context.Dispose();
                 }
             }
 
-            if (IgnoreWow64)
-                Wow64RevertWow64FsRedirection(ref wow64Value);
+            RevertWow64Redirection();
 
             return result;
         }
 
-        private void Error_DataAdded(object sender, DataAddedEventArgs e)
+        private async Task DebugAsync(Func<IScriptDebugger, Task> action)
+        {
+            if (!Debug)
+                return;
+            
+            if (Debuggers == null)
+                Debuggers = ServiceScope.ServiceProvider.GetServices<IScriptDebugger>();
+
+            foreach (var debugger in Debuggers)
+            {
+                await action.Invoke(debugger);
+            }
+        }
+
+        private async void Error_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<ErrorRecord>)sender)[e.Index];
 
-            DebugHandler.OnOutput?.Invoke(LogLevel.Error, $"{record.InvocationInfo.InvocationName} : {record.Exception.Message}");
-            DebugHandler.OnOutput?.Invoke(LogLevel.Error, record.InvocationInfo.PositionMessage);
+            await DebugAsync(async dbg =>
+            {
+                await dbg.OutputAsync(LogLevel.Error, "{InvocationName} : {ExceptionMessage}", record.InvocationInfo.InvocationName, record.Exception.Message);
+                await dbg.OutputAsync(LogLevel.Error, record.InvocationInfo.PositionMessage);
+            });
         }
 
-        private void Warning_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Warning_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<WarningRecord>)sender)[e.Index];
-
-            DebugHandler.OnOutput?.Invoke(LogLevel.Warning, record.Message);
+            
+            await DebugAsync(async dbg =>
+            {
+                await dbg.OutputAsync(LogLevel.Warning, record.Message);
+            });
         }
 
-        private void Debug_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Debug_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<DebugRecord>)sender)[e.Index];
 
-            DebugHandler.OnOutput?.Invoke(LogLevel.Debug, record.Message);
+            await DebugAsync(async dbg =>
+            {
+                await dbg.OutputAsync(LogLevel.Debug, record.Message);
+            });
         }
 
-        private void Verbose_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Verbose_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<VerboseRecord>)sender)[e.Index];
 
-            DebugHandler.OnOutput?.Invoke(LogLevel.Trace, record.Message);
+            await DebugAsync(async dbg =>
+            {
+                await dbg.OutputAsync(LogLevel.Trace, record.Message);
+            });
         }
 
-        private void Information_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Information_DataAdded(object sender, DataAddedEventArgs e)
         {
             var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
-
-            if (record.MessageData != null && record.MessageData is HostInformationMessage)
-                DebugHandler.OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
+            
+            await DebugAsync(async dbg =>
+            {
+                await dbg.OutputAsync(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
+            });
         }
 
         public static string Serialize<T>(T input)
@@ -272,6 +309,32 @@ namespace LANCommander.SDK.PowerShell
 
             // Use the YamlDotNet serializer to generate a string for our input. Then convert to base64 so we can put it on one line.
             return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializer.Serialize(input)));
+        }
+
+        private void DisableWow64Redirection()
+        {
+            try
+            {
+                if (IgnoreWow64)
+                    Wow64DisableWow64FsRedirection(ref _wow64);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not disable Wow64 Redirection");
+            }
+        }
+
+        private void RevertWow64Redirection()
+        {
+            try
+            {
+                if (IgnoreWow64 && _wow64 != IntPtr.Zero)
+                    Wow64RevertWow64FsRedirection(ref _wow64);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not revert Wow64 Redirection");
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

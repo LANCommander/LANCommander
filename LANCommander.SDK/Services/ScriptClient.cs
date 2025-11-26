@@ -17,13 +17,10 @@ namespace LANCommander.SDK.Services
         ILogger<ScriptClient> logger,
         IServiceProvider serviceProvider,
         ISettingsProvider settingsProvider,
+        PowerShellScriptFactory powerShellScriptFactory,
         IConnectionClient connectionClient)
     {
-        public bool Debug { get; set; } = false;
-
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
-        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
-        public Func<LogLevel, string, Task> OnOutput;
+        public bool Debug { get; set; }
         
         #region Authentication Scripts
         public async Task RunUserLoginScript(Script loginScript, User user)
@@ -32,7 +29,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = logger.BeginOperation("Executing user login script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.UserLogin);
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.UserLogin);
 
                     script.AddVariable("User", user);
 
@@ -66,7 +63,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = logger.BeginOperation("Executing user registration script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.UserRegistration);
 
                     script.AddVariable("User", user);
 
@@ -111,10 +108,7 @@ namespace LANCommander.SDK.Services
                 {
                     using (var op = logger.BeginOperation("Executing install detection script"))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.DetectInstall);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.DetectInstall);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -148,20 +142,9 @@ namespace LANCommander.SDK.Services
 
                         script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, redistributableId)));
                         script.UseFile(path);
-
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -170,16 +153,20 @@ namespace LANCommander.SDK.Services
                             using (var timeoutCancellationTokenSource = new CancellationTokenSource())
                             {
                                 var task = script.ExecuteAsync<bool>();
+                                
                                 var completedTask = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), timeoutCancellationTokenSource.Token));
-                                if (completedTask == task) {
-                                    timeoutCancellationTokenSource.Cancel();
+                                
+                                if (completedTask == task) 
+                                {
+                                    await timeoutCancellationTokenSource.CancelAsync();
                                     return await task;
                                 } else {
                                     throw new TimeoutException("The operation has timed out.");
                                 }
                             }
                         }
-                            result = await script.ExecuteAsync<bool>();
+                        
+                        result = await script.ExecuteAsync<bool>();
 
                         op.Complete();
                     }
@@ -208,10 +195,7 @@ namespace LANCommander.SDK.Services
                 {
                     using (var op = logger.BeginOperation("Executing install detection script"))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.Install);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -249,19 +233,8 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -295,11 +268,8 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.BeforeStart);
                         var playerAlias = await GameClient.GetPlayerAliasAsync(installDirectory, gameId);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -339,19 +309,8 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -389,17 +348,14 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.AfterStop);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
                         script.AddVariable("RedistributableManifest", redistributableManifest);
                         script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                         script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
-                        script.AddVariable("PlayerAlias", GameClient.GetPlayerAlias(installDirectory, gameId));
+                        script.AddVariable("PlayerAlias", await GameClient.GetPlayerAliasAsync(installDirectory, gameId));
 
                         try
                         {
@@ -432,19 +388,8 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -492,11 +437,8 @@ namespace LANCommander.SDK.Services
                             logger?.LogTrace("Old Name: {OldName}", oldName);
 
                         logger?.LogTrace("New Name: {NewName}", newName);
-
-                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.NameChange);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
@@ -537,19 +479,8 @@ namespace LANCommander.SDK.Services
                         script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -588,10 +519,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.Install);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -621,19 +549,8 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -669,10 +586,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.Uninstall);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.Uninstall);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -702,19 +616,8 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -750,11 +653,8 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
-                        var playerAlias = GameClient.GetPlayerAlias(installDirectory, gameId);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.BeforeStart);
+                        var playerAlias = await GameClient.GetPlayerAliasAsync(installDirectory, gameId);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -786,19 +686,8 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -834,10 +723,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.AfterStop);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -868,19 +754,8 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -927,10 +802,7 @@ namespace LANCommander.SDK.Services
 
                         logger?.LogTrace("New Name: {NewName}", newName);
 
-                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.NameChange);
 
                         script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", manifest);
@@ -966,19 +838,8 @@ namespace LANCommander.SDK.Services
 
                         GameClient.UpdatePlayerAlias(installDirectory, gameId, newName);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -1014,10 +875,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var script = new PowerShellScript(Enums.ScriptType.KeyChange);
-
-                        if (Debug)
-                            script.DebugHandler.OnDebugStart = OnDebugStart;
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.KeyChange);
 
                         logger?.LogTrace("New key is {Key}", key);
 
@@ -1051,21 +909,10 @@ namespace LANCommander.SDK.Services
                             logger?.LogError(ex, "Could not enrich logs");
                         }
 
-                        GameClient.UpdateCurrentKey(installDirectory, gameId, key);
+                        await GameClient.UpdateCurrentKeyAsync(installDirectory, gameId, key);
 
-                        try
-                        {
-                            if (Debug)
-                            {
-                                script.EnableDebug();
-                                script.DebugHandler.OnDebugBreak = OnDebugBreak;
-                                script.DebugHandler.OnOutput = OnOutput;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogError(ex, "Could not debug script");
-                        }
+                        if (Debug)
+                            script.EnableDebug();
 
                         var handled = await RunScriptExternallyAsync(script);
 
@@ -1094,7 +941,7 @@ namespace LANCommander.SDK.Services
             {
                 using (var op = logger.BeginOperation("Executing game package script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.Package);
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
 
                     script.AddVariable("Game", game);
 
@@ -1112,6 +959,9 @@ namespace LANCommander.SDK.Services
                     {
                         logger?.LogError(ex, "Could not enrich logs");
                     }
+                    
+                    if (Debug)
+                        script.EnableDebug();
 
                     return await script.ExecuteAsync<Package>();
                 }
@@ -1127,7 +977,7 @@ namespace LANCommander.SDK.Services
 
         private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)
         {
-            var scriptRunners = serviceProvider.GetServices<IExternalScriptRunner>();
+            var scriptRunners = serviceProvider.GetServices<IScriptInterceptor>();
 
             foreach (var scriptRunner in scriptRunners)
             {

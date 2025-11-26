@@ -29,6 +29,7 @@ namespace LANCommander.SDK.Services
     public class SaveClient(
         ApiRequestFactory apiRequestFactory,
         ISettingsProvider settingsProvider,
+        PowerShellScriptFactory powerShellScriptFactory,
         ILogger<SaveClient> logger)
     {
         public delegate void OnDownloadProgressHandler(DownloadProgressChangedEventArgs e);
@@ -204,7 +205,7 @@ namespace LANCommander.SDK.Services
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload);
+                        var script = powerShellScriptFactory.Create(Enums.ScriptType.SaveDownload);
 
                         string adminArgument = string.Empty;
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
@@ -218,9 +219,6 @@ namespace LANCommander.SDK.Services
                         if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
                         {
                             script.EnableDebug();
-                            /*script.DebugHandler.OnDebugStart = _client.Scripts.OnDebugStart;
-                            script.DebugHandler.OnDebugBreak = _client.Scripts.OnDebugBreak;
-                            script.DebugHandler.OnOutput = _client.Scripts.OnOutput;*/
                         }
 
                         await script.ExecuteAsync<int>();

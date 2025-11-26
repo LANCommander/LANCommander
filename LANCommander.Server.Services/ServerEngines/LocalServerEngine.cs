@@ -22,6 +22,7 @@ public class LocalServerEngine(
     ILogger<LocalServerEngine> logger,
     IMapper mapper,
     IServiceProvider serviceProvider,
+    PowerShellScriptFactory powerShellScriptFactory,
     ProcessExecutionContextFactory processExecutionContextFactory,
     IOptions<SDK.Models.Settings> settings) : IServerEngine
 {
@@ -86,7 +87,7 @@ public class LocalServerEngine(
             {
                 try
                 {
-                    var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
+                    var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
 
                     script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 
@@ -184,7 +185,7 @@ public class LocalServerEngine(
             {
                 try
                 {
-                    var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
+                    var script = powerShellScriptFactory.Create(ScriptType.AfterStop);
 
                     script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 

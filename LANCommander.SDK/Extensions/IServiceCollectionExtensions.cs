@@ -1,6 +1,7 @@
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
@@ -27,6 +28,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<RpcClient>();
         services.AddSingleton<ApiRequestFactory>();
         services.AddSingleton<ProcessExecutionContextFactory>();
+        services.AddSingleton<PowerShellScriptFactory>();
 
         services.AddSingleton<AuthenticationClient>();
         services.AddSingleton<BeaconClient>();

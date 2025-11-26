@@ -1,6 +1,5 @@
 ﻿using LANCommander.Server.Data;
 using AutoMapper;
-using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Services.Abstractions;
@@ -16,6 +15,7 @@ namespace LANCommander.Server.Services
 {
     public sealed class ServerService(
         ILogger<ServerService> logger,
+        PowerShellScriptFactory powerShellScriptFactory,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IMapper mapper,
@@ -150,7 +150,7 @@ namespace LANCommander.Server.Services
             {
                 try
                 {
-                    var scriptContext = new PowerShellScript(ScriptType.GameStarted);
+                    var scriptContext = powerShellScriptFactory.Create(ScriptType.GameStarted);
 
                     scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
                     scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));
@@ -183,7 +183,7 @@ namespace LANCommander.Server.Services
             {
                 try
                 {
-                    var scriptContext = new PowerShellScript(ScriptType.GameStopped);
+                    var scriptContext = powerShellScriptFactory.Create(ScriptType.GameStopped);
 
                     scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
                     scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));

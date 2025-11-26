@@ -1,21 +1,9 @@
-﻿using CommandLine;
-using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Models;
-using LANCommander.SDK;
-using LANCommander.SDK.Enums;
+﻿using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Services.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 using LANCommander.SDK.PowerShell;
-using LANCommander.SDK.Providers;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -41,7 +29,10 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<KeepAliveService>();
             #endregion
 
-            services.AddSingleton<IExternalScriptRunner, ExternalScriptRunner>();
+            services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
+            services.AddSingleton<ScriptDebugger>();
+            services.AddSingleton<IScriptDebugger>(sp =>
+                sp.GetRequiredService<ScriptDebugger>());
             
             services.AddSingleton<ImportManagerService>();
             services.AddScoped<CollectionService>();

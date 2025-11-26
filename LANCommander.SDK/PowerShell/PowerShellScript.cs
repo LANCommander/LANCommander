@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.PowerShell.Extensions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -53,22 +54,7 @@ namespace LANCommander.SDK.PowerShell
             DebugHandler = new PowerShellDebugHandler();
 
             InitialSessionState = InitialSessionState.CreateDefault();
-            
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Convert-AspectRatio", typeof(ConvertAspectRatioCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertFrom-SerializedBase64", typeof(ConvertFromSerializedBase64Cmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-SerializedBase64", typeof(ConvertToSerializedBase64Cmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-StringBytes", typeof(ConvertToStringBytesCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Edit-PatchBinary", typeof(EditPatchBinaryCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-GameManifest", typeof(GetGameManifestCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-PrimaryDisplay", typeof(GetPrimaryDisplayCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-IniValue", typeof(UpdateIniValueCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-UserCustomField", typeof(GetUserCustomFieldCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-UserCustomField", typeof(UpdateUserCustomFieldCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-HorizontalFov", typeof(GetHorizontalFovCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-VerticalFov", typeof(GetVerticalFovCmdlet), null));
-            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Out-PlayerAvatar", typeof(OutPlayerAvatarCmdlet), null));
+            InitialSessionState.RegisterCustomCmdlets();
 
             IgnoreWow64Redirection();
         }

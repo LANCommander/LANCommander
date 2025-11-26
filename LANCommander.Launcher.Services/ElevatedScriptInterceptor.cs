@@ -9,7 +9,7 @@ using LANCommander.SDK.PowerShell;
 
 namespace LANCommander.Launcher.Services;
 
-public class ExternalScriptRunner : IExternalScriptRunner
+public class ScriptInterceptor : IScriptInterceptor
 {
     public async Task<bool> ExecuteAsync(PowerShellScript script)
     {

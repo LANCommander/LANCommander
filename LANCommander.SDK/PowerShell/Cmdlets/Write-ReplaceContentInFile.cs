@@ -1,6 +1,5 @@
-﻿using System.IO;
-using System.Management.Automation;
-using System.Text.RegularExpressions;
+﻿using System.Management.Automation;
+using LANCommander.SDK.Helpers;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
@@ -20,17 +19,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            if (File.Exists(FilePath))
-            {
-                var contents = File.ReadAllText(FilePath);
-                var regex = new Regex(Pattern, RegexOptions.Multiline);
-
-                contents = regex.Replace(contents, Substitution);
-
-                File.WriteAllText(FilePath, contents);
-
-                WriteObject(contents);
-            }
+            TextFileHelper.ReplaceAll(FilePath, Pattern, Substitution);
         }
     }
 }

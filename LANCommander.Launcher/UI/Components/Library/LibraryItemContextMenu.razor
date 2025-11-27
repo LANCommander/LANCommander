@@ -1,10 +1,9 @@
 ﻿@using LANCommander.Launcher.Data.Models
-@using LANCommander.Launcher.Models
-@using System.Diagnostics
 @using LANCommander.Launcher.Settings
 @using LANCommander.SDK
 @using LANCommander.SDK.Helpers
 @using LANCommander.SDK.Services
+@using Microsoft.Extensions.Options
 @namespace LANCommander.Launcher.UI
 @inject GameService GameService
 @inject UserService UserService
@@ -13,9 +12,11 @@
 @inject ModalService ModalService
 @inject MessageService MessageService
 @inject ILogger<LibraryItemContextMenu> Logger
-@inject SDK.Client Client
 @inject IConnectionClient ConnectionClient
+@inject GameClient GameClient
+@inject ScriptClient ScriptClient
 @inject LocalizationService LocalizationService
+@inject IOptions<Settings> Settings
 
 @if (GameActions != null && GameActions.Count() > 0)
 {
@@ -47,7 +48,7 @@
         @LocalizationService.GetString("ManageSaves")
     </MenuItem>
 
-    if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+    if (Settings.Value.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
     {
         <MenuItem OnClick="() => Modify()" Disabled="@ConnectionClient.IsOfflineMode()">
             @LocalizationService.GetString("Modify")
@@ -77,7 +78,7 @@ else
     </MenuItem>
 }
 
-@if (Client.Settings.CurrentValue.Debug.EnableScriptDebugging)
+@if (Settings.Value.Debug.EnableScriptDebugging)
 {
     <MenuDivider />
 
@@ -161,7 +162,7 @@ else
 
     async Task Install()
     {
-        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+        if (Settings.Value.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
         {
             var modalOptions = new ModalOptions()
             {
@@ -280,44 +281,44 @@ else
 
     async Task RunInstallScripts()
     {
-        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await ScriptClient.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
     async Task RunUninstallScripts()
     {
-        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await ScriptClient.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
     async Task RunNameChangeScripts()
     {
         var user = await UserService.GetCurrentUser();
-        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Settings.DEFAULT_GAME_USERNAME);
+            await ScriptClient.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
         }
     }
 
     async Task RunKeyChangeScripts()
     {
-        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            var key = await Client.Games.GetAllocatedKeyAsync(manifest.Id);
+            var key = await GameClient.GetAllocatedKeyAsync(manifest.Id);
 
-            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
+            await ScriptClient.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }
     }
 

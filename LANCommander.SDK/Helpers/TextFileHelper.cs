@@ -5,7 +5,7 @@ namespace LANCommander.SDK.Helpers;
 
 internal static class TextFileHelper
 {
-    internal static bool ReplaceAll(string path, string regexPattern, string substitution, RegexOptions options = RegexOptions.Multiline | RegexOptions.IgnoreCase)
+    internal static string ReplaceAll(string path, string regexPattern, string substitution, RegexOptions options = RegexOptions.Multiline | RegexOptions.IgnoreCase)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException("File not found", path);
@@ -16,9 +16,10 @@ internal static class TextFileHelper
         if (text != update)
         {
             File.WriteAllText(path, update);
-            return true;
+
+            return update;
         }
 
-        return false;
+        return text;
     }
 }

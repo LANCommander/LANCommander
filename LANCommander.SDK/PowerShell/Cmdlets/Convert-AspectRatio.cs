@@ -11,7 +11,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
     [Cmdlet(VerbsData.Convert, "AspectRatio")]
     [OutputType(typeof(string))]
-    public class ConvertAspectRatioCmdlet : Cmdlet
+    public class ConvertAspectRatioCmdlet : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public int Width { get; set; }

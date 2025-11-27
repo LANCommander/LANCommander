@@ -6,7 +6,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
     [Cmdlet(VerbsCommunications.Write, "ReplaceContentInFile")]
     [OutputType(typeof(string))]
-    public class ReplaceContentInFileCmdlet : Cmdlet
+    public class ReplaceContentInFileCmdlet : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Pattern { get; set; }
@@ -19,7 +19,9 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            TextFileHelper.ReplaceAll(FilePath, Pattern, Substitution);
+            var result = TextFileHelper.ReplaceAll(FilePath, Pattern, Substitution);
+            
+            WriteObject(result);
         }
     }
 }

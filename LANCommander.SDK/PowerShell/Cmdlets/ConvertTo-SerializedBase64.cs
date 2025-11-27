@@ -12,7 +12,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.ConvertTo, "SerializedBase64")]
     [OutputType(typeof(object))]
-    public class ConvertToSerializedBase64Cmdlet : Cmdlet
+    public class ConvertToSerializedBase64Cmdlet : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public object Input { get; set; }

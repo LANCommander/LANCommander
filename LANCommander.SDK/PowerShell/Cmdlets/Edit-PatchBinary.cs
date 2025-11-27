@@ -5,8 +5,7 @@ using System.Management.Automation;
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Edit, "PatchBinary")]
-    [OutputType(typeof(string))]
-    public class EditPatchBinaryCmdlet : Cmdlet
+    public class EditPatchBinaryCmdlet : BaseCmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public long Offset { get; set; }

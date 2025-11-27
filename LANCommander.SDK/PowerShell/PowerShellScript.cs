@@ -14,12 +14,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Services.Description;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.PowerShell.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Serilog;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using Settings = LANCommander.SDK.Models.Settings;
 
 namespace LANCommander.SDK.PowerShell
 {
@@ -35,13 +38,11 @@ namespace LANCommander.SDK.PowerShell
         public PowerShellVariableList Variables { get; private set; }
         public Dictionary<string, string> Arguments { get; private set; }
 
-        private InitialSessionState InitialSessionState { get; set; }
-
         private TaskCompletionSource<string> Input { get; set; }
         
         private IntPtr _wow64 = IntPtr.Zero;
+        private IServiceProvider ServiceProvider { get; set; }
         private ILogger<PowerShellScript> Logger { get; set; }
-        private IServiceScope ServiceScope { get; set; }
         private IEnumerable<IScriptDebugger> Debuggers { get; set; }
         private System.Management.Automation.PowerShell Context { get; set; }
 
@@ -55,20 +56,22 @@ namespace LANCommander.SDK.PowerShell
 
         public PowerShellScript(
             IServiceProvider serviceProvider,
-            ScriptType type)
+            ScriptType type,
+            IOptions<Settings> settings)
         {
             
             Type = type;
             Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
-
-            InitialSessionState = InitialSessionState.CreateDefault();
-            InitialSessionState.RegisterCustomCmdlets();
             
             // Instantiate a new scope
-            ServiceScope = serviceProvider.CreateScope();
-            Logger = ServiceScope.ServiceProvider.GetService<ILogger<PowerShellScript>>();
+            ServiceProvider = serviceProvider;
+            Logger = ServiceProvider.GetService<ILogger<PowerShellScript>>();
 
+            var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
+            
+            Debug = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
+            
             IgnoreWow64Redirection();
         }
 
@@ -158,10 +161,14 @@ namespace LANCommander.SDK.PowerShell
         public async Task<T> ExecuteAsync<T>()
         {
             T result = default;
+            
+            var initialSessionState = InitialSessionState.CreateDefault();
+            
+            initialSessionState.AddCustomCmdlets();
 
             DisableWow64Redirection();
 
-            using (Runspace runspace = RunspaceFactory.CreateRunspace(InitialSessionState))
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(initialSessionState))
             {
                 runspace.Open();
 
@@ -244,7 +251,7 @@ namespace LANCommander.SDK.PowerShell
                 return;
             
             if (Debuggers == null)
-                Debuggers = ServiceScope.ServiceProvider.GetServices<IScriptDebugger>();
+                Debuggers = ServiceProvider.GetServices<IScriptDebugger>();
 
             foreach (var debugger in Debuggers)
             {

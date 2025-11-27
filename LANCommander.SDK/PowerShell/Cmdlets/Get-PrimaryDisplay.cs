@@ -8,7 +8,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "PrimaryDisplay")]
     [OutputType(typeof(string))]
-    public class GetPrimaryDisplayCmdlet : Cmdlet
+    public class GetPrimaryDisplayCmdlet : BaseCmdlet
     {
         protected override void ProcessRecord()
         {

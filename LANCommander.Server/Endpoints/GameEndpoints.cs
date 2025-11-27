@@ -347,7 +347,14 @@ public static class GameEndpoints
             return TypedResults.NotFound();
         }
         
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+        var fs = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            64 * 1024,
+            true);
+        
         var contentType = MediaTypeNames.Application.Octet;
         var fileName = $"{game.Title.SanitizeFilename()}.zip";
         

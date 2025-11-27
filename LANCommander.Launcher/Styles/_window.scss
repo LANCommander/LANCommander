@@ -22,6 +22,8 @@
         bottom: 0 !important;
         display: flex;
         flex-direction: column;
+        height: 100% !important;
+        width: 100% !important;
         
         &.overflow {
             top: 0 !important;

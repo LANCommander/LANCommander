@@ -114,7 +114,6 @@
   <ItemGroup Label="PowerShell">
     <PackageVersion Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
     <PackageVersion Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
-    <PackageVersion Include="System.Management.Automation" Version="7.4.7" />
   </ItemGroup>
   <ItemGroup Label="Microsoft Extensions">
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.8" />

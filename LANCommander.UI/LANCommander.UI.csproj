@@ -1,11 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-
   <Target Name="CompileFrontendResources" BeforeTargets="Compile">
     <Message Text="Compiling frontend" Importance="high" />
     <Exec Command="npm run package" />

@@ -1,5 +1,6 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
+@using LANCommander.SDK.Enums
 @using LANCommander.SDK.Extensions
 @inherits FeedbackComponent<Models.ListItem, string>
 @inject LibraryService LibraryService
@@ -27,7 +28,7 @@
         IconSelected="@IconType.Outline.Close"
         IconUnselected="@IconType.Fill.Pushpin"
         ButtonPropsSelected="@(new[] { ("Danger", (object)true) })"
-        DisableSelector="g => g.Type == Data.Enums.GameType.Mod || g.Type == Data.Enums.GameType.Expansion"
+        DisableSelector="g => g.Type == GameType.Mod || g.Type == GameType.Expansion"
         />
     }
 
@@ -51,7 +52,7 @@
         Game = (Game)Options.DataItem;
         DependentGames = Game?.DependentGames.OrderBy(g => g.SortTitle ?? g.Title).ToList() ?? [];
 
-        SelectedDependentGames = DependentGames?.Where(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod) ?? [];
+        SelectedDependentGames = DependentGames?.Where(g => g.Type == GameType.Expansion || g.Type == GameType.Mod) ?? [];
     }
 
     async Task Close()

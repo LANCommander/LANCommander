@@ -1,13 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LANCommander.Server.ImportExport.Factories;
+namespace LANCommander.Launcher.Services.Import.Factories;
 
 public class ImportContextFactory(IServiceProvider serviceProvider)
 {
     public ImportContext Create()
     {
         var scope = serviceProvider.CreateScope();
-
+        
         return scope.ServiceProvider.GetRequiredService<ImportContext>();
     }
 }

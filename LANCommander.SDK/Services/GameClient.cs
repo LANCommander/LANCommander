@@ -112,43 +112,43 @@ namespace LANCommander.SDK.Services
                 .GetAsync<Game>();
         }
 
-        public async Task<GameManifest> GetManifestAsync(Guid id)
+        public async Task<Models.Manifest.Game> GetManifestAsync(Guid id)
         {
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
                 .UseRoute($"/api/Games/{id}/Manifest")
-                .GetAsync<GameManifest>();
+                .GetAsync<Models.Manifest.Game>();
         }
 
-        public async Task<ICollection<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
+        public async Task<ICollection<Models.Manifest.Game>> GetManifestsAsync(string installDirectory, Guid id)
         {
-            var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, id);
+            var manifests = new List<Models.Manifest.Game>();
+            var mainManifest = await ManifestHelper.ReadAsync<Models.Manifest.Game>(installDirectory, id);
 
             if (mainManifest == null)
                 return manifests;
 
             manifests.Add(mainManifest);
 
-            if (mainManifest.DependentGames != null)
+            if (mainManifest.Addons != null)
             {
-                foreach (var dependentGameId in mainManifest.DependentGames)
+                foreach (var addon in mainManifest.Addons)
                 {
                     try
                     {
-                        if (ManifestHelper.Exists(installDirectory, dependentGameId))
+                        if (ManifestHelper.Exists(installDirectory, addon.Id))
                         {
-                            var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
+                            var addonManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, addon.Id);
 
-                            if (dependentGameManifest?.Type == GameType.Expansion || dependentGameManifest?.Type == GameType.Mod)
-                                manifests.Add(dependentGameManifest);
+                            if (addonManifest?.Type == GameType.Expansion || addonManifest?.Type == GameType.Mod)
+                                manifests.Add(addon);
                         }
                     }
                     catch (Exception ex)
                     {
-                        logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                        logger?.LogError(ex, $"Could not load manifest from dependent game {addon.Id}");
                     }
                 }
             }
@@ -156,9 +156,9 @@ namespace LANCommander.SDK.Services
             return manifests;
         }
 
-        public async Task<IEnumerable<Models.Action>> GetActionsAsync(string installDirectory, Guid id)
+        public async Task<IEnumerable<Models.Manifest.Action>> GetActionsAsync(string installDirectory, Guid id)
         {
-            var actions = new List<Models.Action>();
+            var actions = new List<Models.Manifest.Action>();
 
             try
             {
@@ -170,7 +170,7 @@ namespace LANCommander.SDK.Services
                             .UseRoute($"/api/Games/{id}/Actions")
                             .UseAuthenticationToken()
                             .UseVersioning()
-                            .GetAsync<IEnumerable<Models.Action>>()
+                            .GetAsync<IEnumerable<Models.Manifest.Action>>()
                         );
                 }
             }
@@ -190,7 +190,8 @@ namespace LANCommander.SDK.Services
                     .ThenBy(a => a.SortOrder)
                     .ToList();
             }
-
+            
+            /*
             if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
                 var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
@@ -220,6 +221,7 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not get lobbies");
                 }
             }
+            */
 
             return actions;
         }
@@ -387,7 +389,7 @@ namespace LANCommander.SDK.Services
         {
             var installResult = new InstallResult(installDirectory, gameId);
             var gameFileList = installResult.FileList;
-            GameManifest manifest = null;
+            SDK.Models.Manifest.Game manifest = null;
 
             if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
@@ -422,7 +424,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 if (ManifestHelper.Exists(destination, game.Id))
-                    manifest = await ManifestHelper.ReadAsync<GameManifest>(destination, game.Id);
+                    manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(destination, game.Id);
             }
             catch (Exception ex)
             {
@@ -638,7 +640,7 @@ namespace LANCommander.SDK.Services
             var installResult = new InstallResult(installDirectory, gameId);
             var gameFileList = installResult.FileList;
 
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             if (manifest == null)
             {
                 logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
@@ -649,16 +651,16 @@ namespace LANCommander.SDK.Services
             gameFileList.BaseGame.Manifest = manifest;
             var baseFileList = gameFileList.BaseGame;
 
-            #region Uninstall Dependent Games
-            if (manifest.DependentGames != null)
+            #region Uninstall Addons
+            if (manifest.Addons != null)
             {
-                foreach (var dependentGame in manifest.DependentGames)
+                foreach (var addon in manifest.Addons)
                 {
                     try
                     {
-                        if (ManifestHelper.Exists(installDirectory, dependentGame))
+                        if (ManifestHelper.Exists(installDirectory, addon.Id))
                         {
-                            var dependentResult = await UninstallAsync(installDirectory, dependentGame);
+                            var dependentResult = await UninstallAsync(installDirectory, addon.Id);
                             gameFileList.MergeDependentGames(dependentResult.FileList);
                         }
                     }
@@ -736,7 +738,7 @@ namespace LANCommander.SDK.Services
             var installResult = new InstallResult(installDirectory, baseGameId);
             var gameFileList = installResult.FileList;
 
-            var baseManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, baseGameId);
+            var baseManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, baseGameId);
             if (baseManifest == null)
             {
                 logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
@@ -748,19 +750,19 @@ namespace LANCommander.SDK.Services
             gameFileList.InstallDirectory = installDirectory;
 
             addonIds ??= [];
-            foreach (var dependentGame in baseManifest.DependentGames)
+            foreach (var addon in baseManifest.Addons)
             {
-                if (!addonIds.Contains(dependentGame))
+                if (!addonIds.Contains(addon.Id))
                     continue;
 
                 try
                 {
-                    var dependentResult = await UninstallAddonAsync(installDirectory, dependentGame);
-                    gameFileList.MergeBaseAsDependentGame(dependentGame, dependentResult.FileList);
+                    var dependentResult = await UninstallAddonAsync(installDirectory, addon.Id);
+                    gameFileList.MergeBaseAsDependentGame(addon.Id, dependentResult.FileList);
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
+                    logger?.LogWarning(ex, $"Could not uninstall dependent game {addon} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
                 }
             }
 
@@ -772,7 +774,7 @@ namespace LANCommander.SDK.Services
             var installResult = new InstallResult(installDirectory, addonGameId);
             var gameFileList = installResult.FileList;
 
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, addonGameId);
+            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, addonGameId);
 
             if (manifest != null)
             {
@@ -914,12 +916,16 @@ namespace LANCommander.SDK.Services
             await WriteScriptsAsync(installDirectory, game);
         }
 
-        private async Task<GameManifest> WriteManifestAsync(string installDirectory, Game game)
+        private async Task<Models.Manifest.Game> WriteManifestAsync(string installDirectory, Game game)
         {
             logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
-            GameManifest manifest = await GetManifestAsync(game.Id);
+            
+            var manifest = await GetManifestAsync(game.Id);
+            
             logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
+            
             await ManifestHelper.WriteAsync(manifest, installDirectory);
+            
             return manifest;
         }
 
@@ -1177,30 +1183,30 @@ namespace LANCommander.SDK.Services
             _reader?.Cancel();
         }
 
-        public async Task<ICollection<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
+        public async Task<ICollection<SDK.Models.Manifest.Game>> ReadManifestsAsync(string installDirectory, Guid gameId)
         {
-            var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var manifests = new List<SDK.Models.Manifest.Game>();
+            var mainManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
             if (mainManifest == null)
                 return manifests;
 
             manifests.Add(mainManifest);
 
-            if (mainManifest.DependentGames != null)
+            if (mainManifest.Addons != null)
             {
-                foreach (var dependentGameId in mainManifest.DependentGames)
+                foreach (var addon in mainManifest.Addons)
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, addon.Id);
 
                         if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
                     }
                     catch (Exception ex)
                     {
-                        logger?.LogError(ex, "Could not load manifest from dependent game {DependentGameId}", dependentGameId);
+                        logger?.LogError(ex, "Could not load manifest from dependent game {AddonId}", addon.Id);
                     }
                 }
             }
@@ -1220,7 +1226,7 @@ namespace LANCommander.SDK.Services
         /// <exception cref="Exception">
         /// Thrown if the request to retrieve archive entries encounters an error.
         /// </exception>
-        protected async Task<IEnumerable<ArchiveEntry>> GetGameInstallationArchiveEntries(Guid gameId, GameManifest manifest)
+        protected async Task<IEnumerable<ArchiveEntry>> GetGameInstallationArchiveEntries(Guid gameId, Models.Manifest.Game manifest)
         {
             var entries = await apiRequestFactory
                 .Create()
@@ -1266,10 +1272,10 @@ namespace LANCommander.SDK.Services
             {
                 var depEntries = await GetGameInstallationArchiveEntries(gameId, depManifest);
 
-                if (!gameArchives.DependentGames.TryGetValue(depManifest.Id, out var depArchiveInfo))
+                if (!gameArchives.Addons.TryGetValue(depManifest.Id, out var depArchiveInfo))
                 {
                     depArchiveInfo = new();
-                    gameArchives.DependentGames.Add(depManifest.Id, depArchiveInfo);
+                    gameArchives.Addons.Add(depManifest.Id, depArchiveInfo);
                 }
 
                 depArchiveInfo.Manifest = depManifest;
@@ -1282,7 +1288,7 @@ namespace LANCommander.SDK.Services
             return gameArchives;
         }
 
-        public async Task RunAsync(string installDirectory, Guid gameId, Models.Action action, DateTime? lastRun, string args = "")
+        public async Task RunAsync(string installDirectory, Guid gameId, Models.Manifest.Action action, DateTime? lastRun, string args = "")
         {
             var screen = DisplayHelper.GetScreen();
 
@@ -1420,7 +1426,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task UploadSavesAsync(ICollection<GameManifest> manifests, string installDirectory)
+        private async Task UploadSavesAsync(ICollection<SDK.Models.Manifest.Game> manifests, string installDirectory)
         {
             if (connectionClient.IsConnected())
             {
@@ -1526,7 +1532,7 @@ namespace LANCommander.SDK.Services
             var manifest = archives?.BaseGame?.Entries;
             var entries = archives?.BaseGame?.Entries?.ToList() ?? [];
 
-            foreach ((var dependentGameId, var dependentGameInfo) in archives?.DependentGames ?? [])
+            foreach ((var dependentGameId, var dependentGameInfo) in archives?.Addons ?? [])
             {
                 foreach (var depArchive in dependentGameInfo.Entries ?? [])
                 {
@@ -1545,14 +1551,14 @@ namespace LANCommander.SDK.Services
             }
 
             // lookup for dependent games
-            var lookupEntry = archives?.DependentGames?
+            var lookupEntry = archives?.Addons?
                 .SelectMany(dep => dep.Value?.Entries?.Select(entry => new { GameId = (Guid?)dep.Key, ArchiveEntry = entry }) ?? [])
                 .ToLookup(tentry => tentry.ArchiveEntry, tentry => tentry.GameId) ?? Enumerable.Empty<Guid?>().ToLookup(x => default(ArchiveEntry));
 
             var conflictedEntries = new List<ArchiveValidationConflict>();
 
             var savePathEntries = archives?.BaseGame?.SavePaths.ToList() ?? [];
-            var depSavePathEntries = archives?.DependentGames?.SelectMany(dep => dep.Value?.SavePaths ?? []).ToList() ?? [];
+            var depSavePathEntries = archives?.Addons?.SelectMany(dep => dep.Value?.SavePaths ?? []).ToList() ?? [];
             savePathEntries.AddRange(depSavePathEntries);
 
             foreach (var entry in entries)
@@ -1637,7 +1643,7 @@ namespace LANCommander.SDK.Services
         /// <param name="entries">A collection of file paths to download.</param>
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries)
         {
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
             await Task.Run(async () =>
             {

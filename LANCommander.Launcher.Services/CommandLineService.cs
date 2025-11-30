@@ -123,14 +123,14 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await gameService.GetAsync(options.GameId);
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(game.InstallDirectory, game.Id);
+                /*var game = await gameService.GetAsync(options.GameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
                 if (action == null)
                     action = manifest.Actions.OrderBy(a => a.SortOrder).FirstOrDefault(a => a.IsPrimaryAction);
 
-                await gameService.Run(game, action);
+                await gameService.Run(game, action);*/
             }
             catch (Exception ex)
             {
@@ -142,7 +142,7 @@ namespace LANCommander.Launcher.Services
         {
             Logger.LogInformation("Syncing games from server...");
 
-            importService.OnImportComplete += async () =>
+            /*importService.OnImportComplete += async () =>
             {
                 Logger.LogInformation("Sync complete!");
             };
@@ -150,7 +150,7 @@ namespace LANCommander.Launcher.Services
             importService.OnImportFailed += async (Exception ex) =>
             {
                 Logger.LogError(ex, "Sync failed!");
-            };
+            };*/
 
             await importService.ImportAsync();
         }

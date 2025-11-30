@@ -26,15 +26,18 @@ namespace LANCommander.Launcher.Services
             return await Context.Set<T>().FindAsync(id);
         }
 
+        public virtual async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await Context.Set<T>().FirstOrDefaultAsync(predicate);
+        }
+
         public virtual IQueryable<T> Query(Expression<Func<T, bool>> predicate)
         {
             return Context.Set<T>().Where(predicate);
         }
 
-        public virtual bool Exists(Guid id)
-        {
-            return GetAsync(id) != null;
-        }
+        public virtual async Task<bool> ExistsAsync(Guid id) => await Context.Set<T>().AnyAsync(x => x.Id == id);
+        public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate) => await Context.Set<T>().AnyAsync(predicate);
 
         public virtual async Task<T> AddAsync(T entity)
         {

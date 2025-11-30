@@ -1,6 +1,6 @@
-﻿using LANCommander.Launcher.Data.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Launcher.Data.Models
 {
@@ -23,8 +23,6 @@ namespace LANCommander.Launcher.Data.Models
 
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
-        
-        public DateTime? ImportedOn { get; set; }
 
         public GameType Type { get; set; }
         public Guid? BaseGameId { get; set; }

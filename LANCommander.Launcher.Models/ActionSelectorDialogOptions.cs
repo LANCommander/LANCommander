@@ -9,7 +9,7 @@ namespace LANCommander.Launcher.Models
 {
     public class ActionSelectorDialogOptions
     {
-        public IEnumerable<SDK.Models.Action> Actions { get; set; }
+        public IEnumerable<SDK.Models.Manifest.Action> Actions { get; set; }
         public string Title { get; set; }
         public Game Game { get; set; }
     }

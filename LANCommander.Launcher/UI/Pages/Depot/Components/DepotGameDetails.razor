@@ -1,5 +1,6 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
+@using LANCommander.SDK.Enums
 @using LANCommander.SDK.Extensions
 @namespace LANCommander.Launcher.UI.Components
 @inject LibraryService LibraryService
@@ -232,7 +233,7 @@
 
         await Hide();
 
-        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)) ?? false))
+        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(GameType.Expansion, GameType.Mod)) ?? false))
         {
             var modalOptions = new ModalOptions()
             {
@@ -272,7 +273,7 @@
 
         try
         {
-            await ImportService.ImportGameAsync(SelectedGame.Id);
+            // await ImportService.ImportGameAsync(SelectedGame.Id);
             await LibraryService.AddToLibraryAsync(SelectedGame.Id);
             await LibraryService.RefreshItemsAsync();
 

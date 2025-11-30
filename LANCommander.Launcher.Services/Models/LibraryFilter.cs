@@ -10,6 +10,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using LANCommander.Launcher.Settings.Enums;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Launcher.Models
 {
@@ -114,7 +115,7 @@ namespace LANCommander.Launcher.Models
             if (SelectedOptions.Installed)
                 items = items.Where(i => (i.DataItem as Game).Installed);
 
-            items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
+            items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
 
             switch (SelectedOptions.SortBy)
             {

@@ -1,5 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -116,7 +117,7 @@ namespace LANCommander.Launcher.Services
                 if (Filter.Installed)
                     items = items.Where(i => (i.DataItem as Game).Installed);
 
-                items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
+                items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
 
                 op.Complete();
             }

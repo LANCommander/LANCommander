@@ -1,4 +1,7 @@
 ﻿using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Services.Import;
+using LANCommander.Launcher.Services.Import.Factories;
+using LANCommander.Launcher.Services.Import.Importers;
 using LANCommander.Launcher.Services.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +20,10 @@ namespace LANCommander.Launcher.Services.Extensions
     {
         public static IServiceCollection AddLANCommanderLauncher(this IServiceCollection services, Action<LANCommanderOptions> configure)
         {
-            services.AddDbContext<DbContext, DatabaseContext>();
+            services.AddDbContext<DbContext, DatabaseContext>(options =>
+            {
+                options.EnableSensitiveDataLogging();
+            });
 
             #region Register Client
             var options = new LANCommanderOptions();
@@ -55,6 +61,21 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<SaveService>();
             services.AddScoped<TagService>();
             services.AddScoped<UpdateService>();
+            
+            #region Import
+
+            services.AddScoped<ImportContextFactory>();
+            
+            services.AddScoped<CollectionImporter>();
+            services.AddScoped<DeveloperImporter>();
+            services.AddScoped<EngineImporter>();
+            services.AddScoped<GameImporter>();
+            services.AddScoped<GenreImporter>();
+            services.AddScoped<MultiplayerModeImporter>();
+            services.AddScoped<PlatformImporter>();
+            services.AddScoped<PublisherImporter>();
+            services.AddScoped<TagImporter>();
+            #endregion
 
             return services;
         }

@@ -65,7 +65,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Run(Game game, SDK.Models.Action action)
+        public async Task Run(Game game, SDK.Models.Manifest.Action action)
         {
             Guid userId;
 

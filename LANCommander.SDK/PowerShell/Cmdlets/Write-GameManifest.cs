@@ -12,7 +12,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         public string Path { get; set; }
 
         [Parameter(Mandatory = true, Position = 1, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
-        public GameManifest Manifest { get; set; }
+        public SDK.Models.Manifest.Game Manifest { get; set; }
 
         protected override void ProcessRecord()
         {

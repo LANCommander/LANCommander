@@ -31,7 +31,7 @@ public class ElevatedScriptInterceptor : IScriptInterceptor
 
             if (script.RunAsAdmin && !isElevated)
             {
-                var manifest = script.Variables.GetValue<GameManifest>("GameManifest");
+                var manifest = script.Variables.GetValue<SDK.Models.Manifest.Game>("GameManifest");
 
                 var options = new RunScriptCommandLineOptions
                 {

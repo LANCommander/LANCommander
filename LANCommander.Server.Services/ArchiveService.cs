@@ -1,8 +1,6 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
-using LANCommander.Server.Models;
-using LANCommander.SDK;
 using System.IO.Compression;
 using System.Linq.Expressions;
 using AutoMapper;
@@ -14,7 +12,6 @@ using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using SharpCompress.Common;
 using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
 
 namespace LANCommander.Server.Services
@@ -118,7 +115,7 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(archive);
         }
 
-        public async Task<GameManifest> ReadManifestAsync(string objectKey)
+        public async Task<SDK.Models.Manifest.Game> ReadManifestAsync(string objectKey)
         {
             var upload = await GetArchiveFileLocationAsync(objectKey);
 
@@ -145,7 +142,7 @@ namespace LANCommander.Server.Services
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-            var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
+            var manifest = deserializer.Deserialize<SDK.Models.Manifest.Game>(manifestContents);
 
             return manifest;
         }
@@ -173,7 +170,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<bool> ExistsAsync(Guid archiveId)
+        public override async Task<bool> ExistsAsync(Guid archiveId)
         {
             var archive = await Include(a => a.StorageLocation).GetAsync(archiveId);
 

@@ -88,7 +88,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
         {
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
             string tempFile;
             string tempLocation = string.Empty;
@@ -144,7 +144,7 @@ namespace LANCommander.SDK.Services
                     if (!success)
                         throw new ExtractionException("Could not extract the save archive. Is the file locked?");
 
-                    manifest = await ManifestHelper.ReadAsync<GameManifest>(tempLocation);
+                    manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(tempLocation);
 
                     #region Move files
                     var tempLocationFilePath = "Files";
@@ -240,7 +240,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        public async Task<Stream> PackAsync(string installDirectory, GameManifest manifest)
+        public async Task<Stream> PackAsync(string installDirectory, SDK.Models.Manifest.Game manifest)
         {
             using (var savePacker = new SavePacker(installDirectory))
             {
@@ -253,7 +253,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        public async Task<GameSave> UploadAsync(Stream stream, GameManifest manifest)
+        public async Task<GameSave> UploadAsync(Stream stream, SDK.Models.Manifest.Game manifest)
         {
             return await apiRequestFactory
                 .Create()
@@ -267,7 +267,7 @@ namespace LANCommander.SDK.Services
         {
             using (var savePacker = new SavePacker(installDirectory))
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
                 if (manifest?.SavePaths?.Any() ?? false)
                     savePacker.AddPaths(manifest.SavePaths);
@@ -293,7 +293,7 @@ namespace LANCommander.SDK.Services
                 .DeleteAsync<bool>();
         }
 
-        public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)
+        public IEnumerable<SavePathEntry> GetFileSavePathEntries(SDK.Models.Manifest.SavePath savePath, string installDirectory)
         {
             IEnumerable<string> localPaths;
 

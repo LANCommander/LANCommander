@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Redistributable : BaseModel
+    public class Redistributable : BaseModel, IKeyedModel
     {
         public Guid Id { get; set; }
         public string Name { get; set; }

@@ -118,7 +118,7 @@ namespace LANCommander.Server.Services
             return await GetAsync(g => g.AddonTypes.Contains(g.Type));
         }
 
-        public async Task<GameManifest> GetManifestAsync(Guid id)
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
             var game = await Query(q =>
             {
@@ -148,138 +148,12 @@ namespace LANCommander.Server.Services
             return GetManifest(game);
         }
         
-        public GameManifest GetManifest(Game game)
+        public SDK.Models.Manifest.Game GetManifest(Game game)
         {
             if (game == null)
                 return null;
 
-            var manifest = new GameManifest()
-            {
-                Id = game.Id,
-                Title = game.Title,
-                SortTitle = game.SortTitle,
-                Description = game.Description,
-                Notes = game.Notes,
-                ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
-                Singleplayer = game.Singleplayer,
-                Type = (SDK.Enums.GameType)(int)game.Type,
-            };
-
-            if (game.Engine != null)
-                manifest.Engine = game.Engine.Name;
-
-            if (game.Genres != null && game.Genres.Count > 0)
-                manifest.Genre = game.Genres.Select(g => g.Name).ToArray();
-
-            if (game.Tags != null && game.Tags.Count > 0)
-                manifest.Tags = game.Tags.Select(g => g.Name).ToArray();
-
-            if (game.Publishers != null && game.Publishers.Count > 0)
-                manifest.Publishers = game.Publishers.Select(g => g.Name).ToArray();
-
-            if (game.Developers != null && game.Developers.Count > 0)
-                manifest.Developers = game.Developers.Select(g => g.Name).ToArray();
-
-            if (game.Collections != null && game.Collections.Count > 0)
-                manifest.Collections = game.Collections.Select(c => c.Name).ToArray();
-
-            if (game.Archives != null && game.Archives.Count > 0)
-                manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
-
-            if (game.Media != null && game.Media.Count > 0)
-                manifest.Media = mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
-
-            if (game.Actions != null && game.Actions.Count > 0)
-            {
-                manifest.Actions = game.Actions.Select(a => new SDK.Models.Action()
-                {
-                    Name = a.Name,
-                    Arguments = a.Arguments,
-                    Path = a.Path,
-                    WorkingDirectory = a.WorkingDirectory,
-                    IsPrimaryAction = a.PrimaryAction,
-                    SortOrder = a.SortOrder,
-                }).ToArray();
-            }
-
-            if (game.MultiplayerModes != null && game.MultiplayerModes.Count > 0)
-            {
-                var local = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Local);
-                var lan = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.LAN);
-                var online = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Online);
-
-                if (local != null)
-                    manifest.LocalMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = local.MinPlayers,
-                        MaxPlayers = local.MaxPlayers,
-                        Description = local.Description,
-                        NetworkProtocol = local.NetworkProtocol,
-                    };
-
-                if (lan != null)
-                    manifest.LanMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = lan.MinPlayers,
-                        MaxPlayers = lan.MaxPlayers,
-                        Description = lan.Description,
-                        NetworkProtocol = lan.NetworkProtocol,
-                    };
-
-                if (online != null)
-                    manifest.OnlineMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = online.MinPlayers,
-                        MaxPlayers = online.MaxPlayers,
-                        Description = online.Description,
-                        NetworkProtocol = online.NetworkProtocol,
-                    };
-            }
-
-            if (game.SavePaths != null && game.SavePaths.Count > 0)
-            {
-                manifest.SavePaths = game.SavePaths.Select(p => new SDK.Models.SavePath()
-                {
-                    Id = p.Id,
-                    Path = p.Path,
-                    IsRegex = p.IsRegex,
-                    WorkingDirectory = p.WorkingDirectory,
-                    Type = p.Type
-                });
-            }
-
-            if (game.Scripts != null && game.Scripts.Count > 0)
-            {
-                manifest.Scripts = game.Scripts.Select(p => new SDK.Models.Script()
-                {
-                    Id = p.Id,
-                    Type = p.Type,
-                    Name = p.Name,
-                    Description = p.Description,
-                    RequiresAdmin = p.RequiresAdmin
-                });
-            }
-
-            if (game.Redistributables != null && game.Redistributables.Count > 0)
-            {
-                manifest.Redistributables = game.Redistributables.Select(p => new SDK.Models.Redistributable()
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Description = p.Description,
-                    Notes = p.Notes
-                });
-            }
-
-            if (game.DependentGames != null && game.DependentGames.Count > 0)
-            {
-                manifest.DependentGames = game.DependentGames.Select(g => g.Id).ToArray();
-            }
-
-            if (game.CustomFields != null && game.CustomFields.Count > 0)
-            {
-                manifest.CustomFields = game.CustomFields.Select(cf => new SDK.Models.GameCustomField(cf.Name, cf.Value)).ToArray();
-            }
+            var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
 
             return manifest;
         }

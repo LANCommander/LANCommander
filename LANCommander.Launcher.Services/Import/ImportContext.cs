@@ -52,7 +52,7 @@ public class ImportContext
             if (!InQueue(developer, _developers) && await _developers.CanImportAsync(developer))
                 _queue.Add(await _developers.GetImportInfoAsync(developer));
         
-        if (!InQueue(game.Engine, _engines) && await _engines.CanImportAsync(game.Engine))
+        if (game.Engine != null && !InQueue(game.Engine, _engines) && await _engines.CanImportAsync(game.Engine))
             _queue.Add(await _engines.GetImportInfoAsync(game.Engine));
         
         foreach (var genre in game.Genres)

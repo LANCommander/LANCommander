@@ -8,6 +8,6 @@ public class ImportContextFactory(IServiceProvider serviceProvider)
     {
         var scope = serviceProvider.CreateScope();
         
-        return scope.ServiceProvider.GetRequiredService<ImportContext>();
+        return new ImportContext(scope.ServiceProvider);
     }
 }

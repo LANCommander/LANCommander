@@ -75,5 +75,15 @@ namespace LANCommander.Launcher.Services
 
             await importContext.ImportQueueAsync();
         }
+
+        public async Task ImportGameAsync(Guid gameId)
+        {
+            var importContext = importContextFactory.Create();
+            
+            var manifest = await gameClient.GetManifestAsync(gameId);
+            
+            await importContext.AddAsync(manifest);
+            await importContext.ImportQueueAsync();
+        }
     }
 }

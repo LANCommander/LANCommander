@@ -44,7 +44,7 @@
             StateHasChanged();
             await Task.Yield();
 
-            // await ImportService.ImportGameAsync(Item.Key);
+            await ImportService.ImportGameAsync(Item.Key);
             await LibraryService.AddToLibraryAsync(Item.Key);
             await LibraryService.RefreshItemsAsync();
 

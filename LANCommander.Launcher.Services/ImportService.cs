@@ -39,6 +39,8 @@ namespace LANCommander.Launcher.Services
         {
             try
             {
+                OnImportStarted?.Invoke(this, EventArgs.Empty);
+                
                 await ImportLibraryAsync();
 
                 OnImportComplete?.Invoke(this, EventArgs.Empty);
@@ -54,6 +56,8 @@ namespace LANCommander.Launcher.Services
             var remoteLibrary = await libraryClient.GetAsync();
             
             Logger?.LogInformation("Starting library import");
+            
+            OnImportStarted?.Invoke(this, EventArgs.Empty);
 
             var importContext = importContextFactory.Create();
             
@@ -70,10 +74,14 @@ namespace LANCommander.Launcher.Services
                 catch (Exception ex)
                 {
                     Logger?.LogError(ex, "Could not add game with ID {GameId} to import queue", game.Id);
+                    
+                    OnImportError?.Invoke(this, ex);
                 }
             }
 
             await importContext.ImportQueueAsync();
+            
+            OnImportComplete?.Invoke(this, EventArgs.Empty);
         }
 
         public async Task ImportGameAsync(Guid gameId)

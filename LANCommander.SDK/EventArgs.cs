@@ -15,8 +15,8 @@ namespace LANCommander.SDK
 
     public class ArchiveEntryExtractionProgressArgs : EventArgs
     {
-        public ReaderProgress Progress { get; set; }
-        public IEntry Entry { get; set; }
-        public Game Game { get; set; }
+        public required ReaderProgress? Progress { get; set; }
+        public required IEntry Entry { get; set; }
+        public Game? Game { get; set; }
     }
 }

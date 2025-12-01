@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -55,10 +56,18 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
             var settings = new Settings();
             
             _source.Configuration.Bind(settings);
+
+            if (settings.Authentication.ServerAddress is null)
+            {
+                return;
+            }
             
             var request = new HttpRequestMessage(HttpMethod.Get, settings.Authentication.ServerAddress.Join("/api/Settings"));
             
-            request.Headers.Add("Authorization", $"Bearer {settings.Authentication.Token.AccessToken}");
+            if (settings.Authentication.Token?.AccessToken is not null)
+            {
+                request.Headers.Add("Authorization", $"Bearer {settings.Authentication.Token.AccessToken}");
+            }
             
             var response = await _httpClient.SendAsync(request, cancellationToken);
 
@@ -68,7 +77,7 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
             var payload = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken) ?? new JsonObject();
 
             var prefix = "";
-            var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
             void Walk(JsonNode? node, string keyPrefix)
             {

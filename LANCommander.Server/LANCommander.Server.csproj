@@ -1,8 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-LANCommander-C1F79CFA-9767-4AD7-BD5A-2549F8328A2D</UserSecretsId>
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <TypeScriptModuleKind>none</TypeScriptModuleKind>
@@ -56,10 +53,11 @@
     <ItemGroup>
         <ComponentScssFiles Remove="node_modules\**" />
         <TypeScriptCompile Remove="node_modules\**" />
+        <TypeScriptCompile Remove="vite.config.ts" />
     </ItemGroup>
 
     <ItemGroup>
-        <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+        <Content Remove="package.json;package-lock.json;tsconfig.json;vite.config.ts" />
     </ItemGroup>
 
     <ItemGroup>
@@ -102,10 +100,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
-    <PackageReference Include="Microsoft.TypeScript.MSBuild">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" />

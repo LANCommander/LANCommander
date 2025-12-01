@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+    <Content Remove="package.json;package-lock.json;tsconfig.json;vite.config.ts" />
   </ItemGroup>
 
   <ItemGroup>

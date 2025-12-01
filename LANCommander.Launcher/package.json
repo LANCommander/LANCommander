@@ -3,18 +3,15 @@
   "version": "1.0.0",
   "description": "A launcher for the LANCommander digital game distribution platform",
   "scripts": {
-    "package": "webpack"
+    "package": "vite build",
+    "dev": "vite"
   },
   "keywords": [],
   "author": "Pat Hartl <pat@pathar.tl>",
   "license": "MIT",
   "devDependencies": {
-    "css-loader": "^7.1.2",
-    "mini-css-extract-plugin": "^2.9.2",
     "sass": "^1.85.1",
-    "sass-loader": "^16.0.5",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
+    "vite": "^5.4.8"
   },
   "dependencies": {
     "anymatch": "^3.1.3",

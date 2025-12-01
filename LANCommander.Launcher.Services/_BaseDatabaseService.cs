@@ -95,6 +95,45 @@ namespace LANCommander.Launcher.Services
             return entity;
         }
 
+        public virtual async Task SyncRelatedCollectionAsync<T, TChild, U>(
+            T entity, Expression<Func<T, ICollection<TChild>>> navigationProperty,
+            IEnumerable<U> records,
+            Func<TChild, U, bool> matchPredicate,
+            Action<TChild, U> updateAction,
+            Func<U, TChild> createAction)
+        {
+            var collection = navigationProperty.Compile().Invoke(entity);
+
+            var matchedChildren = new HashSet<TChild>();
+
+            foreach (var record in records)
+            {
+                var existingChild = collection.FirstOrDefault(child => matchPredicate(child, record));
+
+                if (existingChild != null)
+                {
+                    updateAction(existingChild, record);
+                    matchedChildren.Add(existingChild);
+                }
+                else
+                {
+                    var newChild = createAction(record);
+                    collection.Add(newChild);
+                    matchedChildren.Add(newChild);
+                }
+            }
+            
+            var toDelete = collection.Where(child => !matchedChildren.Contains(child));
+
+            foreach (var child in toDelete)
+            {
+                collection.Remove(child);
+                Context.Remove(child);
+            }
+
+            await Context.SaveChangesAsync();
+        }
+
         public virtual async Task DeleteAsync(T entity)
         {
             Context.Set<T>().Remove(entity);

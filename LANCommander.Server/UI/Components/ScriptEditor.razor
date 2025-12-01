@@ -49,7 +49,7 @@
     [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public Guid ServerId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
-    [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
+    [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; } = [];
 
     Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
 
@@ -59,11 +59,11 @@
 
     Expression<Func<Script, bool>> GetQueryExpression()
     {
-        if (!GameId.IsNullOrEmpty())
+        if (GameId != Guid.Empty)
             return s => s.GameId == GameId;
-        else if (!RedistributableId.IsNullOrEmpty())
+        else if (RedistributableId != Guid.Empty)
             return s => s.RedistributableId == RedistributableId;
-        else if (!ServerId.IsNullOrEmpty())
+        else if (ServerId != Guid.Empty)
             return s => s.ServerId == ServerId;
         else
             return s => 

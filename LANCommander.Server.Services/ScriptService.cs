@@ -23,9 +23,9 @@ namespace LANCommander.Server.Services
         {
             using var context = await contextFactory.CreateDbContextAsync();
             
-            await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.ExpireGameCacheAsync(script.GameId);
 
-            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            if (script.RedistributableId.IsNullOrEmpty())
             {
                 var games = await context
                     .Games
@@ -50,9 +50,9 @@ namespace LANCommander.Server.Services
         {
             using var context = await contextFactory.CreateDbContextAsync();
             
-            await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.ExpireGameCacheAsync(script.GameId);
 
-            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            if (script.RedistributableId.IsNullOrEmpty())
             {
                 var games = await context
                     .Games
@@ -77,9 +77,9 @@ namespace LANCommander.Server.Services
         {
             using var context = await contextFactory.CreateDbContextAsync();
             
-            await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.ExpireGameCacheAsync(script.GameId);
 
-            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            if (script.RedistributableId.IsNullOrEmpty())
             {
                 var games = await context
                     .Games

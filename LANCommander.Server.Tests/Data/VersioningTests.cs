@@ -14,7 +14,7 @@ public class VersioningTests(ApplicationFixture fixture) : BaseTest(fixture)
             
         var user = await EnsureAdminUserCreatedAsync();
         
-        await Client.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
+        //await Client.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
 
         var response = await Client.Tags.CreateAsync(new SDK.Models.Tag
         {

@@ -14,7 +14,7 @@ public class ApplicationFixture : ApplicationFactory<Program>
         if (Instance != null)
             return;
 
-        Client = new SDK.Client(factory.CreateClient(), "C:\\Games");
+        //Client = new SDK.Client(factory.CreateClient(), "C:\\Games");
         ServiceProvider = factory.Services;
 
         Instance = this;

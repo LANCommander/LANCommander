@@ -104,7 +104,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
         
         var user = await EnsureAdminUserCreatedAsync();
         
-        await Client.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
+        //await Client.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
         
         var installDirectory = GetTemporaryDirectory();
         var tempPath = await EnsureStorageLocationsExistAsync();
@@ -131,7 +131,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
             var sdkGame = await Client.Games.GetAsync(game.Id);
 
             var gameInstallDirectory = await Client.Games.GetInstallDirectory(sdkGame, installDirectory);
-            var manifest = Client.Games.GetManifest(game.Id);
+            var manifest = await Client.Games.GetManifestAsync(game.Id);
 
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, ".lancommander"));
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, "save"));

@@ -9,7 +9,7 @@ namespace LANCommander.SDK.Tests
         Client Client;
 
         public SaveClientTests() {
-            Client = new Client("http://localhost:1337", "C:\\Games");
+            //Client = new Client("http://localhost:1337", "C:\\Games");
         }
 
         [Theory]

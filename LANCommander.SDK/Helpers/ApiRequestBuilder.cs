@@ -1,12 +1,7 @@
-using System;
-using System.IO;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
@@ -20,24 +15,20 @@ public class ApiRequestBuilder(
     ISettingsProvider settingsProvider)
 {
     private AuthToken _token { get; set; } = tokenProvider.GetToken();
-    private bool _ignoreVersion { get; set; }
-    private object _body { get; set; }
-    private string _route { get; set; }
-    private HttpClient _httpClient { get; set; } = httpClient;
     private HttpRequestMessage _request { get; set; } = new();
-    private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
-    private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
-    private Action _completeHandler { get; set; }
+    private CancellationToken _cancellationToken { get; set; } = CancellationToken.None;
+    private Action<DownloadProgressChangedEventArgs>? _progressHandler { get; set; }
+    private Action? _completeHandler { get; set; }
     private Uri _baseAddress { get; set; } = settingsProvider.CurrentValue.Authentication.ServerAddress;
+    private static readonly JsonSerializerOptions _options = new() { PropertyNameCaseInsensitive = true };
 
-    private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
+    private async ValueTask<TResult?> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
         var body = await response.Content.ReadAsStringAsync(_cancellationToken);
 
         try
         {
-            return JsonSerializer.Deserialize<TResult>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<TResult>(body, _options);
         }
         catch
         {
@@ -69,7 +60,7 @@ public class ApiRequestBuilder(
     public ApiRequestBuilder UseVersioning()
     {
         _request.Headers.Add("X-API-Version", VersionHelper.GetCurrentVersion().ToString());
-        
+
         // _request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
         return this;
@@ -91,7 +82,7 @@ public class ApiRequestBuilder(
 
     public ApiRequestBuilder SetTimeout(TimeSpan timeout)
     {
-        _httpClient.Timeout = timeout;
+        httpClient.Timeout = timeout;
 
         return this;
     }
@@ -126,34 +117,34 @@ public class ApiRequestBuilder(
 
     public async Task<ApiResponseMessage<TResult>> SendAsync<TResult>() where TResult : class
     {
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         var result = new ApiResponseMessage<TResult>
         {
             Response = response,
-            Data = await DeserializeResultAsync<TResult>(response)
+            Data = await DeserializeResultAsync<TResult>(response) ?? throw new InvalidOperationException("Failed to deserialize response body"),
         };
-        
+
         return result;
     }
 
-    public async Task<TResult> GetAsync<TResult>()
+    public async Task<TResult?> GetAsync<TResult>()
     {
         _request.Method = HttpMethod.Get;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
-        
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
         response
             .EnsureSuccessStatusCode();
 
         return await DeserializeResultAsync<TResult>(response);
     }
 
-    public async Task<TResult> PostAsync<TResult>()
+    public async Task<TResult?> PostAsync<TResult>()
     {
         _request.Method = HttpMethod.Post;
 
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
@@ -164,64 +155,64 @@ public class ApiRequestBuilder(
     public async Task PostAsync()
     {
         _request.Method = HttpMethod.Post;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
-        
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
         response
             .EnsureSuccessStatusCode();
     }
 
-    public async Task<TResult> PutAsync<TResult>()
+    public async Task<TResult?> PutAsync<TResult>()
     {
         _request.Method = HttpMethod.Put;
-        
-        var response = await  _httpClient.SendAsync(_request, _cancellationToken);
-        
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
         response
             .EnsureSuccessStatusCode();
 
         return await DeserializeResultAsync<TResult>(response);
     }
 
-    public async Task<TResult> DeleteAsync<TResult>()
+    public async Task<TResult?> DeleteAsync<TResult>()
     {
         _request.Method = HttpMethod.Delete;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
-        
+
         return await DeserializeResultAsync<TResult>(response);
     }
 
     public async Task HeadAsync()
     {
         _request.Method = HttpMethod.Head;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
     }
 
-    public async Task<TResult> HeadAsync<TResult>()
+    public async Task<TResult?> HeadAsync<TResult>()
     {
         _request.Method = HttpMethod.Head;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
-        
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
         response
             .EnsureSuccessStatusCode();
-        
+
         return await DeserializeResultAsync<TResult>(response);
     }
 
     public async Task<FileInfo> DownloadAsync(string destination)
     {
         _request.Method = HttpMethod.Get;
-        
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         await using (var fs = new FileStream(destination, FileMode.Create))
         {
@@ -229,18 +220,16 @@ public class ApiRequestBuilder(
 
             responseStream.OnProgress += (position, length) =>
             {
-                if (_progressHandler != null)
-                    _progressHandler.Invoke(new DownloadProgressChangedEventArgs
-                    {
-                        BytesReceived = position,
-                        TotalBytes = length,
-                    });
+                _progressHandler?.Invoke(new DownloadProgressChangedEventArgs
+                {
+                    BytesReceived = position,
+                    TotalBytes = length,
+                });
             };
 
             await responseStream.CopyToAsync(fs, _cancellationToken);
 
-            if (_completeHandler != null)
-                _completeHandler();
+            _completeHandler?.Invoke();
         }
 
         return new FileInfo(destination);
@@ -249,35 +238,33 @@ public class ApiRequestBuilder(
     public async Task<TrackableStream> StreamAsync()
     {
         _request.Method = HttpMethod.Get;
-        
-        var response = await _httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
-        
+
+        var response = await httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
+
         return await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
     }
 
-    public async Task<TResult> UploadAsync<TResult>(string fileName, byte[] data)
+    public async Task<TResult?> UploadAsync<TResult>(string fileName, byte[] data)
     {
-        using (var form = new MultipartFormDataContent())
-        {
-            var dataContent = new ByteArrayContent(data);
-            
-            form.Add(dataContent, "file", fileName);
+        using var form = new MultipartFormDataContent();
+        var dataContent = new ByteArrayContent(data);
 
-            _request.Content = form;
-            _request.Method = HttpMethod.Post;
-            
-            var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        form.Add(dataContent, "file", fileName);
 
-            return await DeserializeResultAsync<TResult>(response);
-        }
+        _request.Content = form;
+        _request.Method = HttpMethod.Post;
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
+        return await DeserializeResultAsync<TResult>(response);
     }
 
-    public async Task<TResult> UploadAsync<TResult>(string fileName, Stream data)
+    public async Task<TResult?> UploadAsync<TResult>(string fileName, Stream data)
     {
         var buffer = new byte[data.Length];
 
         await data.ReadExactlyAsync(buffer, 0, buffer.Length, _cancellationToken);
-        
+
         return await UploadAsync<TResult>(fileName, buffer);
     }
 
@@ -290,7 +277,7 @@ public class ApiRequestBuilder(
                 .UseVersioning()
                 .UseAuthenticationToken()
                 .UseCancellationToken(_cancellationToken)
-                .PostAsync<UploadInitResponse>();
+                .PostAsync<UploadInitResponse>() ?? throw new InvalidOperationException("Failed to initialise the upload");
 
             var buffer = new byte[chunkSize];
 
@@ -326,9 +313,9 @@ public class ApiRequestBuilder(
 
             return initResponse.Key;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return default;
         }
-    } 
+    }
 }

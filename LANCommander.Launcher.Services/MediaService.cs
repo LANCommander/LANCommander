@@ -4,13 +4,15 @@ using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
     public class MediaService(
         ILogger<MediaService> logger,
         DatabaseContext dbContext,
-        SDK.Client client) : BaseDatabaseService<Media>(dbContext, logger)
+        MediaClient mediaClient,
+        SettingsProvider<Settings.Settings> settingsProvider) : BaseDatabaseService<Media>(dbContext, logger)
     {
         public override Task DeleteAsync(Media entity)
         {
@@ -42,7 +44,7 @@ namespace LANCommander.Launcher.Services
 
         public string GetStoragePath()
         {
-            return Path.Combine(AppPaths.GetConfigDirectory(), client.Settings.CurrentValue.Media.StoragePath);
+            return Path.Combine(AppPaths.GetConfigDirectory(), settingsProvider.CurrentValue.Media.StoragePath);
         }
 
         public string GetImagePath(Media entity)
@@ -73,6 +75,21 @@ namespace LANCommander.Launcher.Services
                     Logger?.LogError(ex, "An unknown error occurred while trying to delete a local file");
                 }
             }
+        }
+
+        public async Task<FileInfo> DownloadAsync(Media entity)
+        {
+            var path = GetImagePath(entity);
+
+            return await mediaClient.DownloadAsync(new SDK.Models.Media
+            {
+                Id = entity.Id,
+                FileId = entity.FileId,
+                Crc32 = entity.Crc32,
+                Name = entity.Name,
+                MimeType = entity.MimeType,
+                Type = entity.Type,
+            }, path);
         }
     }
 }

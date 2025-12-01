@@ -1,5 +1,6 @@
 using LANCommander.Launcher.Services.Exceptions;
 using LANCommander.SDK.Models.Manifest;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services.Import.Importers;
@@ -7,6 +8,8 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 public class GameImporter(
     GameService gameService,
     LibraryService libraryService,
+    MediaService mediaService,
+    MediaClient mediaClient,
     ILogger<GameImporter> logger) : BaseImporter<Game, Data.Models.Game>
 {
     public override async Task<ImportItemInfo<Game>> GetImportInfoAsync(Game record)
@@ -189,6 +192,26 @@ public class GameImporter(
                 t.CreatedOn = tr.CreatedOn;
                 t.UpdatedOn = tr.UpdatedOn;
                 t.ImportedOn = DateTime.UtcNow;
+            });
+
+        await gameService.SyncRelatedCollectionAsync(
+            game,
+            g => g.Media,
+            record.Media,
+            r => m => m.Id == r.Id, async (m, mr) =>
+            {
+                m.Name = mr.Name;
+                m.Type = m.Type;
+                m.FileId = mr.FileId;
+                m.Crc32 = mr.Crc32;
+                m.MimeType = mr.MimeType;
+                m.SourceUrl = mr.SourceUrl;
+                m.Id = mr.Id;
+
+                var path = mediaService.GetImagePath(m);
+
+                if (!File.Exists(path))
+                    await mediaService.DownloadAsync(m);
             });
     }
 

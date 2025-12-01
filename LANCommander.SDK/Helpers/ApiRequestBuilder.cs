@@ -223,6 +223,10 @@ public class ApiRequestBuilder(
         
         var response = await _httpClient.SendAsync(_request, _cancellationToken);
 
+        var folder = Path.GetDirectoryName(destination);
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
+
         await using (var fs = new FileStream(destination, FileMode.Create))
         {
             var responseStream = await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);

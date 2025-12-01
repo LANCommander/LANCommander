@@ -59,7 +59,7 @@
 
 @code {
     [Parameter] public bool ShowIcon { get; set; } 
-    [Parameter] public IInstallQueueItem CurrentQueueItem { get; set; }
+    [Parameter] public IInstallQueueItem? CurrentQueueItem { get; set; }
     [Parameter] public EventCallback<IInstallQueueItem> CurrentQueueItemChanged { get; set; }
 
     InstallProgress Progress = new();
@@ -87,6 +87,17 @@
         InstallService.OnQueueChanged += async () =>
         {
             var activeQueueItem = InstallService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+
+            if (activeQueueItem == null)
+            {
+                CurrentQueueItem = null;
+                if (CurrentQueueItemChanged.HasDelegate)
+                    await CurrentQueueItemChanged.InvokeAsync(CurrentQueueItem);
+                
+                await InvokeAsync(StateHasChanged);
+                await Task.Yield();
+                return;
+            }
 
             if (CurrentQueueItem == null || CurrentQueueItem.Id != activeQueueItem.Id)
             {

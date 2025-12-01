@@ -24,7 +24,7 @@ public static class AppPaths
             var (company, product) = GetCompanyAndProduct();
             var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         
-            var appDataPath = Path.Combine(userRoot, company, product);
+            var appDataPath = Path.Combine(userRoot, company ?? "", product ?? "");
         
             if (!Directory.Exists(appDataPath))
                 Directory.CreateDirectory(appDataPath);

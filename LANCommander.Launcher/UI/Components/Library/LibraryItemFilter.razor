@@ -78,14 +78,13 @@
 </Flex>
 
 @code {
-    Form<LibraryFilter> Form;
+    [CascadingParameter] public required Form<LibraryFilter> Form { get; set; }
 
-    Popover Popover;
+    [CascadingParameter] public required Popover Popover { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await LibraryService.Filter.UpdateFilter();
-
     }
 
     public async Task ResetFilter()

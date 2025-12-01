@@ -4,7 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
 
-<Flex Vertical Class="library-list">
+<Flex Direction="FlexDirection.Vertical" Class="library-list">
     @if (LibraryService.Items == null || !LibraryService.Items.Any())
     {
         <Empty Simple Description="false">
@@ -52,8 +52,8 @@
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
     List<string> Groups = new();
-    IEnumerable<Models.ListItem> LibraryItems;
-    LibraryItemFilter Filter;
+    IEnumerable<Models.ListItem> LibraryItems = [];
+    LibraryItemFilter? Filter;
     
     Guid _currentItemId { get; set; }
 

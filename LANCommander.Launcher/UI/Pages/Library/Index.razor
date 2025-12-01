@@ -21,7 +21,7 @@
     [CascadingParameter] public bool Connected { get; set; }
     [CascadingParameter] public bool OfflineMode { get; set; }
 
-    Models.ListItem CurrentItem { get; set; }
+    Models.ListItem? CurrentItem { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,7 +54,7 @@
         NavigationManager.NavigateTo($"/Library/{id}");
     }
 
-    async Task OnLibraryItemSelected(Models.ListItem item)
+    async Task OnLibraryItemSelected(Models.ListItem? item)
     {
         CurrentItem = item;
 
@@ -65,7 +65,7 @@
     {
         var queueItem = InstallService.Queue.FirstOrDefault(i => CurrentItem != null && i.Id == CurrentItem.Key);
 
-        if (queueItem != null)
+        if (queueItem != null && CurrentItem != null)
         {
             CurrentItem = await LibraryService.GetItemAsync(CurrentItem);
 
@@ -104,7 +104,7 @@
     {
         await LoadData();
 
-        if (CurrentItem.DataItem is Game selectedGame)
+        if (CurrentItem?.DataItem is Game selectedGame)
         {
             if (selectedGame.Id == game.Id)
                 await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
@@ -113,7 +113,7 @@
 
     async Task OnUninstall(Data.Models.Game game)
     {
-        if (CurrentItem.Key == game.Id)
+        if (CurrentItem?.Key == game.Id)
         {
             CurrentItem.State = ListItemState.Uninstalling;
 
@@ -126,7 +126,7 @@
     {
         await LoadData();
 
-        if (CurrentItem.Key == game.Id)
+        if (CurrentItem?.Key == game.Id)
         {
             CurrentItem.State = ListItemState.NotInstalled;
             await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == game.Id));

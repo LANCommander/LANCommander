@@ -18,7 +18,7 @@
 </Dropdown>
 
 @code {
-    [Parameter] public Models.ListItem Model { get; set; }
+    [Parameter] public required Models.ListItem Model { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid?> SelectedItemChanged { get; set; }

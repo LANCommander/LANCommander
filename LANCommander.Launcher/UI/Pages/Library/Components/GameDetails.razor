@@ -43,10 +43,10 @@
 </CascadingValue>
 
 @code {
-    [CascadingParameter] public Models.ListItem CurrentItem { get; set; }
-    
+    [CascadingParameter] public required Models.ListItem CurrentItem { get; set; }
+
     Guid _currentId { get; set; }
-    
+
     Game? CurrentGame { get; set; }
     SDK.Models.Game? RemoteGame { get; set; }
 

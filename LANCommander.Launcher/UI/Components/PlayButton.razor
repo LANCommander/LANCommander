@@ -50,11 +50,11 @@ else
 }
 
 @code {
-    [Parameter] public Guid LibraryItemId { get; set; }
-    [Parameter] public Models.ListItem LibraryItem { get; set; }
-    [Parameter] public RenderFragment MenuExtra { get; set; }
+    [Parameter] public required Guid LibraryItemId { get; set; }
+    [Parameter] public required Models.ListItem LibraryItem { get; set; }
+    [Parameter] public required RenderFragment MenuExtra { get; set; }
 
-    Timer StateTimer;
+    Timer? StateTimer;
     PlayButtonState State = PlayButtonState.Idle;
 
     public enum PlayButtonState
@@ -96,7 +96,7 @@ else
 
     async Task Run()
     {
-        var game = LibraryItem.DataItem as Game;
+        var game = (Game)LibraryItem.DataItem;
         
         var actions = await Client.Games.GetActionsAsync(game.InstallDirectory, game.Id);
 
@@ -108,7 +108,7 @@ else
 
             await ChangeState(PlayButtonState.Idle);
             return;
-        }        
+        }
 
         var primaryActions = actions.Where(a => a.IsPrimaryAction && (LibraryService.IsInstalled(a.GameId) || a.GameId == Guid.Empty));
 
@@ -169,6 +169,6 @@ else
 
     public void Dispose()
     {
-        StateTimer.Dispose();
+        StateTimer?.Dispose();
     }
 }

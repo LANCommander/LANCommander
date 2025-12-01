@@ -98,9 +98,8 @@ namespace LANCommander.Launcher.Services
         public virtual async Task SyncRelatedCollectionAsync<T, TChild, U>(
             T entity, Expression<Func<T, ICollection<TChild>>> navigationProperty,
             IEnumerable<U> records,
-            Func<TChild, U, bool> matchPredicate,
-            Action<TChild, U> updateAction,
-            Func<U, TChild> createAction)
+            Func<U, Expression<Func<TChild, bool>>> matchExpression,
+            Action<TChild, U> updateAction) where TChild : class
         {
             var collection = navigationProperty.Compile().Invoke(entity);
 
@@ -108,18 +107,30 @@ namespace LANCommander.Launcher.Services
 
             foreach (var record in records)
             {
-                var existingChild = collection.FirstOrDefault(child => matchPredicate(child, record));
+                var matchPredicate = matchExpression(record);
+                var existingChild = collection.FirstOrDefault(matchPredicate.Compile());
+
+                if (existingChild == null)
+                {
+                    existingChild = await Context.Set<TChild>()
+                        .FirstOrDefaultAsync(matchPredicate);
+                }
 
                 if (existingChild != null)
                 {
+                    if (!collection.Contains(existingChild))
+                        collection.Add(existingChild);
+                    
                     updateAction(existingChild, record);
                     matchedChildren.Add(existingChild);
                 }
                 else
                 {
-                    var newChild = createAction(record);
-                    collection.Add(newChild);
-                    matchedChildren.Add(newChild);
+                    var newChild = Activator.CreateInstance<TChild>();
+                    
+                    updateAction(newChild, record);
+                    collection.Add(existingChild);
+                    matchedChildren.Add(existingChild);
                 }
             }
             

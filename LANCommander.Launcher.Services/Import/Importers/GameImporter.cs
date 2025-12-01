@@ -101,65 +101,45 @@ public class GameImporter(
             game,
             g => g.Collections,
             record.Collections,
-            (c, rc) => c.Name == rc.Name,
+            r => c => c.Name == r.Name,
             (c, rc) =>
             {
                 c.Name = rc.Name;
                 c.CreatedOn = rc.CreatedOn;
                 c.UpdatedOn = rc.UpdatedOn;
                 c.ImportedOn = DateTime.UtcNow;
-            }, rc => new Data.Models.Collection
-            {
-                Name = rc.Name,
-                CreatedOn = rc.CreatedOn,
-                UpdatedOn = rc.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
 
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Developers,
             record.Developers,
-            (d, rd) => d.Name == rd.Name,
+            r => c => c.Name == r.Name,
             (d, rd) =>
             {
                 d.Name = rd.Name;
                 d.CreatedOn = rd.CreatedOn;
                 d.UpdatedOn = rd.UpdatedOn;
                 d.ImportedOn = DateTime.UtcNow;
-            },
-            rd => new Data.Models.Company
-            {
-                Name = rd.Name,
-                CreatedOn = rd.CreatedOn,
-                UpdatedOn = rd.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
 
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Genres,
             record.Genres,
-            (g, gr) => g.Name == g.Name,
+            r => g => g.Name == r.Name,
             (g, gr) =>
             {
                 g.Name = gr.Name;
                 g.CreatedOn = gr.CreatedOn;
                 g.UpdatedOn = gr.UpdatedOn;
                 g.ImportedOn = DateTime.UtcNow;
-            },
-            gr => new Data.Models.Genre
-            {
-                Name = gr.Name,
-                CreatedOn = gr.CreatedOn,
-                UpdatedOn = gr.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
 
         await gameService.SyncRelatedCollectionAsync(
             game, g => g.MultiplayerModes,
             record.MultiplayerModes,
-            (mm, rmm) => mm.NetworkProtocol == rmm.NetworkProtocol && mm.Type == rmm.Type,
+            r => mm => mm.NetworkProtocol == r.NetworkProtocol && mm.Type == r.Type,
             (mm, rmm) =>
             {
                 mm.Description = rmm.Description;
@@ -170,78 +150,45 @@ public class GameImporter(
                 mm.CreatedOn = rmm.CreatedOn;
                 mm.UpdatedOn = rmm.UpdatedOn;
                 mm.ImportedOn = DateTime.UtcNow;
-            },
-            rm => new Data.Models.MultiplayerMode
-            {
-                Type = rm.Type,
-                Description = rm.Description,
-                MinPlayers = rm.MinPlayers,
-                MaxPlayers = rm.MaxPlayers,
-                NetworkProtocol = rm.NetworkProtocol,
-                Spectators = rm.Spectators,
-                CreatedOn = rm.CreatedOn,
-                UpdatedOn = rm.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
 
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Platforms,
             record.Platforms,
-            (p, pr) => p.Name == pr.Name,
+            r => p => p.Name == r.Name,
             (p, pr) =>
             {
                 p.Name = pr.Name;
                 p.CreatedOn = pr.CreatedOn;
                 p.UpdatedOn = pr.UpdatedOn;
                 p.ImportedOn = DateTime.UtcNow;
-            },
-            pr => new Data.Models.Platform
-            {
-                Name = pr.Name,
-                CreatedOn = pr.CreatedOn,
-                UpdatedOn = pr.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Publishers,
             record.Publishers,
-            (p, pr) => p.Name == pr.Name,
+            r => p => p.Name == r.Name,
             (p, pr) =>
             {
                 p.Name = pr.Name;
                 p.CreatedOn = pr.CreatedOn;
                 p.UpdatedOn = pr.UpdatedOn;
                 p.ImportedOn = DateTime.UtcNow;
-            },
-            pr => new Data.Models.Company
-            {
-                Name = pr.Name,
-                CreatedOn = pr.CreatedOn,
-                UpdatedOn = pr.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Tags,
             record.Tags,
-            (t, tr) => t.Name == tr.Name,
+            r => t => t.Name == r.Name,
             (t, tr) =>
             {
                 t.Name = tr.Name;
                 t.CreatedOn = tr.CreatedOn;
                 t.UpdatedOn = tr.UpdatedOn;
                 t.ImportedOn = DateTime.UtcNow;
-            },
-            tr => new Data.Models.Tag
-            {
-                Name = tr.Name,
-                CreatedOn = tr.CreatedOn,
-                UpdatedOn = tr.UpdatedOn,
-                ImportedOn = DateTime.UtcNow,
             });
     }
 

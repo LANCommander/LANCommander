@@ -20,7 +20,7 @@ namespace LANCommander.SDK.Exceptions
         /// </summary>
         public AuthenticationErrorCode ErrorCode { get; }
 
-        public ErrorResponse ErrorData { get; }
+        public ErrorResponse? ErrorData { get; }
 
         public AuthFailedException(string message) : base(message) { }
 
@@ -29,14 +29,14 @@ namespace LANCommander.SDK.Exceptions
         {
         }
 
-        public AuthFailedException(AuthenticationErrorCode errorCode, ErrorResponse errorData = null)
+        public AuthFailedException(AuthenticationErrorCode errorCode, ErrorResponse? errorData = null)
             : base($"Authentication failed: {errorCode}")
         {
             ErrorCode = errorCode;
             ErrorData = errorData;
         }
 
-        public AuthFailedException(AuthenticationErrorCode errorCode, string message, ErrorResponse errorData = null, Exception innerException = null)
+        public AuthFailedException(AuthenticationErrorCode errorCode, string message, ErrorResponse? errorData = null, Exception? innerException = null)
             : base(message, innerException)
         {
             ErrorCode = errorCode;

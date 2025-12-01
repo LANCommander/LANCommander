@@ -5,7 +5,7 @@ namespace LANCommander.SDK.Exceptions
 {
     public class RegisterFailedException : Exception
     {
-        public ErrorResponse ErrorData  { get; }
+        public ErrorResponse? ErrorData  { get; }
 
         public RegisterFailedException(string message) : base(message) { }
 
@@ -20,7 +20,7 @@ namespace LANCommander.SDK.Exceptions
             ErrorData = errorData;
         }
 
-        public RegisterFailedException(string message, ErrorResponse errorData = null, Exception innerException = null)
+        public RegisterFailedException(string message, ErrorResponse? errorData = null, Exception? innerException = null)
             : base(message, innerException)
         {
             ErrorData = errorData;

@@ -33,8 +33,6 @@ namespace LANCommander.SDK.PowerShell
 
         private InitialSessionState InitialSessionState { get; set; }
 
-        private TaskCompletionSource<string> Input { get; set; }
-
         public PowerShellDebugHandler DebugHandler { get; private set; }
 
         private const string Logo = @"
@@ -108,6 +106,7 @@ namespace LANCommander.SDK.PowerShell
         }
 
         public PowerShellScript AddVariable<T>(string name, T value)
+            where T : notnull
         {
             Variables.Add(new PowerShellVariable(name, value, typeof(T)));
 
@@ -142,7 +141,7 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript EnableDebug(PowerShellDebugHandler debugHandler = null)
+        public PowerShellScript EnableDebug(PowerShellDebugHandler? debugHandler = null)
         {
             Debug = true;
             
@@ -159,9 +158,9 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public async Task<T> ExecuteAsync<T>()
+        public async Task<T?> ExecuteAsync<T>()
         {
-            T result = default;
+            T? result = default;
             var wow64Value = IntPtr.Zero;
 
             if (IgnoreWow64)
@@ -276,8 +275,8 @@ namespace LANCommander.SDK.PowerShell
         {
             var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
 
-            if (record.MessageData != null && record.MessageData is HostInformationMessage)
-                DebugHandler.OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
+            if (record.MessageData != null && record.MessageData is HostInformationMessage data)
+                DebugHandler.OnOutput?.Invoke(LogLevel.Information, data.Message);
         }
 
         public static string Serialize<T>(T input)

@@ -38,6 +38,7 @@ public static class LibraryEndpoints
         {
             if (!settingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
             {
+                logger.LogInformation("User libraries are disabled, returning all games");
                 var games = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>(
                     "Games",
                     async _ =>
@@ -59,7 +60,15 @@ public static class LibraryEndpoints
                 return TypedResults.Ok(ordered.Select(g => mapper.Map<SDK.Models.EntityReference>(g)));
             }
 
-            var user = await userService.GetAsync(userPrincipal.Identity!.Name);
+            if (userPrincipal.Identity?.Name is null)
+            {
+                logger.LogError("Failed to get user library: User is not authenticated");
+                return TypedResults.Ok(Enumerable.Empty<SDK.Models.EntityReference>());
+            }
+
+            logger.LogDebug("Getting library for user {User}", userPrincipal.Identity.Name);
+
+            var user = await userService.GetAsync(userPrincipal.Identity.Name);
 
             var result = await cache.GetOrSetAsync(
                 $"Library/{user.Id}",
@@ -83,8 +92,9 @@ public static class LibraryEndpoints
 
             return TypedResults.Ok(result);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to get user library for user {User}", userPrincipal.Identity?.Name ?? "Unknown User");
             return TypedResults.Ok(Enumerable.Empty<SDK.Models.EntityReference>());
         }
     }
@@ -94,20 +104,31 @@ public static class LibraryEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] LibraryService libraryService,
         [FromServices] UserService userService,
-        [FromServices] IFusionCache cache)
+        [FromServices] IFusionCache cache,
+        [FromServices] ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("LibraryApi");
+
         try
         {
-            var user = await userService.GetAsync(userPrincipal.Identity!.Name);
+            if (userPrincipal.Identity?.Name is null)
+            {
+                logger.LogError("Failed to add game {GameId} to library: User is not authenticated", id);
+                return TypedResults.Ok(false);
+            }
 
+            var user = await userService.GetAsync(userPrincipal.Identity.Name);
+
+            logger.LogDebug("Adding game {GameId} to library for user {User}", id, userPrincipal.Identity.Name);
             await libraryService.AddToLibraryAsync(user.Id, id);
 
             await cache.ExpireAsync($"Library/{user.Id}");
 
             return TypedResults.Ok(true);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to add game {GameId} to library for user {User}", id, userPrincipal.Identity?.Name ?? "Unknown User");
             return TypedResults.Ok(false);
         }
     }
@@ -117,7 +138,8 @@ public static class LibraryEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] LibraryService libraryService,
         [FromServices] UserService userService,
-        [FromServices] IFusionCache cache)
+        [FromServices] IFusionCache cache,
+        [FromServices] ILoggerFactory loggerFactory)
     {
         return RemoveFromLibraryWithAddonsAsync(
             id,
@@ -125,7 +147,8 @@ public static class LibraryEndpoints
             userPrincipal,
             libraryService,
             userService,
-            cache);
+            cache,
+            loggerFactory);
     }
 
     internal static async Task<IResult> RemoveFromLibraryWithAddonsAsync(
@@ -134,11 +157,22 @@ public static class LibraryEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] LibraryService libraryService,
         [FromServices] UserService userService,
-        [FromServices] IFusionCache cache)
+        [FromServices] IFusionCache cache,
+        [FromServices] ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("LibraryApi");
+
         try
         {
-            var user = await userService.GetAsync(userPrincipal.Identity!.Name);
+            if (userPrincipal.Identity?.Name is null)
+            {
+                logger.LogError("Failed to remove game {GameId} from library: User is not authenticated", id);
+                return TypedResults.Ok(false);
+            }
+
+            var user = await userService.GetAsync(userPrincipal.Identity.Name);
+
+            logger.LogDebug("Removing game {GameId} from library for user {User}", id, userPrincipal.Identity.Name);
 
             await libraryService.RemoveFromLibraryAsync(user.Id, id, addonGuids?.Guids ?? []);
 
@@ -146,8 +180,9 @@ public static class LibraryEndpoints
 
             return TypedResults.Ok(true);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to remove game {GameId} from library for user {User}", id, userPrincipal.Identity?.Name ?? "Unknown User");
             return TypedResults.Ok(false);
         }
     }

@@ -5,7 +5,7 @@ namespace LANCommander.SDK.Factories;
 
 public static class YamlSerializerFactory
 {
-    private static ISerializer _serializer;
+    private static ISerializer? _serializer;
     
     public static ISerializer Create()
     {

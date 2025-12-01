@@ -1,18 +1,9 @@
-using System.Configuration;
 using System.Web;
-using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
-using LANCommander.Launcher.Services.Extensions;
-using LANCommander.SDK.Providers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Photino.Blazor;
-using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using Serilog;
-using Serilog.Extensions.Logging;
-using Services_LocalizationService = LANCommander.Launcher.Services.LocalizationService;
 
 namespace LANCommander.Launcher.Startup;
 
@@ -32,10 +23,10 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RegisterMediaHandler(this PhotinoBlazorApp app)
     {
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings.Settings>>();
+        var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
         
         app.MainWindow.RegisterCustomSchemeHandler("media",
-            (object sender, string scheme, string url, out string contentType) =>
+            (object sender, string scheme, string url, out string? contentType) =>
             {
                 try
                 {
@@ -72,7 +63,7 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RegisterNotificationHandler(this PhotinoBlazorApp app)
     {
-        app.MainWindow.RegisterWebMessageReceivedHandler(async (object sender, string message) =>
+        app.MainWindow.RegisterWebMessageReceivedHandler((sender, message) =>
         {
             if (message == "notification")
                 app.MainWindow.SendNotification("Test", "test");
@@ -83,26 +74,29 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RegisterImportHandler(this PhotinoBlazorApp app)
     {
-        app.MainWindow.RegisterWebMessageReceivedHandler(async (object sender, string message) =>
+        app.MainWindow.RegisterWebMessageReceivedHandler(async (sender, message) =>
         {
-            if (message == "import")
-                using (var scope = app.Services.CreateScope())
-                {
-                    var importService = scope.ServiceProvider.GetService<ImportService>();
+            if (message != "import" || sender is null)
+                return;
 
-                    var window = (PhotinoWindow)sender;
+            using var scope = app.Services.CreateScope();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
 
-                    await importService.ImportAsync();
+            var window = (PhotinoWindow)sender;
 
-                    window.SendWebMessage("importComplete");
-                }
+            await importService.ImportAsync();
+
+            window.SendWebMessage("importComplete");
         });
 
         return app;
     }
 
-    static void ChatWindowMessageDelegate(object sender, string message)
+    static void ChatWindowMessageDelegate(object? sender, string message)
     {
+        if (sender == null)
+            return;
+
         var parent = (PhotinoWindow)sender;
 
         if (message == "openChat")
@@ -116,7 +110,7 @@ public static class MainWindow
 
     public static PhotinoBlazorApp RestoreWindowPosition(this PhotinoBlazorApp app)
     {
-        var settingsProvider = app.Services.GetService<SettingsProvider<Settings.Settings>>();
+        var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
 
         if (settingsProvider.CurrentValue.Window.Maximized)
             app.MainWindow.SetMaximized(true);

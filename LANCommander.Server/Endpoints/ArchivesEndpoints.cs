@@ -72,29 +72,31 @@ public static class ArchivesEndpoints
     internal static async Task<IResult> ByVersionAsync(
         Guid gameId,
         string version,
-        [FromServices] ArchiveService archiveService)
+        [FromServices] ArchiveService archiveService,
+        [FromServices] IFusionCache cache,
+        [FromServices] ILoggerFactory loggerFactory)
     {
         var archive = await archiveService.FirstOrDefaultAsync(a => a.GameId == gameId && a.Version == version);
 
         if (archive == null)
             return TypedResults.NotFound();
 
-        return await ContentsAsync(archive.Id, archiveService, null, null);
+        return await ContentsAsync(archive.Id, archiveService, cache, loggerFactory);
     }
 
     internal static async Task<IResult> ContentsAsync(
         Guid id,
         [FromServices] ArchiveService archiveService,
         [FromServices] IFusionCache cache,
-        [FromServices] ILoggerFactory? loggerFactory)
+        [FromServices] ILoggerFactory loggerFactory)
     {
-        var logger = loggerFactory?.CreateLogger("ArchivesApi");
+        var logger = loggerFactory.CreateLogger("ArchivesApi");
 
         var archive = await archiveService.GetAsync(id);
 
         if (archive == null)
         {
-            logger?.LogError("No archive found with ID {ArchiveId}", id);
+            logger.LogError("No archive found with ID {ArchiveId}", id);
             return TypedResults.NotFound();
         }
 
@@ -106,8 +108,8 @@ public static class ArchivesEndpoints
 
                 if (!File.Exists(filename))
                 {
-                    logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
-                    return new List<ArchiveEntry>();
+                    logger.LogError("Archive ({ArchiveId}) file not found at {FileName}", id, filename);
+                    return [];
                 }
 
                 var items = new List<ArchiveEntry>();

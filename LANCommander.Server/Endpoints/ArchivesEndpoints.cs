@@ -1,6 +1,6 @@
-using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.IO.Compression;
 using ZiggyCreatures.Caching.Fusion;
@@ -20,27 +20,22 @@ public static class ArchivesEndpoints
         group.MapGet("/Contents/{id:guid}", ContentsAsync);
     }
 
-    internal static async Task<IResult> GetAsync(
+    internal static async Task<Results<Ok<ICollection<SDK.Models.Archive>>, UnauthorizedHttpResult>> GetAsync(
         [FromServices] ArchiveService archiveService)
-    {
-        var archives = await archiveService.GetAsync<SDK.Models.Archive>();
+            => TypedResults.Ok(await archiveService.GetAsync<SDK.Models.Archive>());
 
-        return TypedResults.Ok(archives);
-    }
-
-    internal static async Task<IResult> GetByIdAsync(
+    internal static async Task<Results<Ok<SDK.Models.Archive>, NotFound, UnauthorizedHttpResult>> GetByIdAsync(
         Guid id,
         [FromServices] ArchiveService archiveService)
     {
         var archive = await archiveService.GetAsync<SDK.Models.Archive>(id);
 
-        if (archive != null)
-            return TypedResults.Ok(archive);
-
-        return TypedResults.NotFound();
+        return archive is not null ?
+            TypedResults.Ok(archive) :
+            TypedResults.NotFound();
     }
 
-    internal static async Task<IResult> DownloadAsync(
+    internal static async Task<Results<FileStreamHttpResult, NotFound, UnauthorizedHttpResult>> DownloadAsync(
         Guid id,
         [FromServices] ArchiveService archiveService,
         [FromServices] ILoggerFactory loggerFactory)
@@ -49,7 +44,7 @@ public static class ArchivesEndpoints
 
         var archive = await archiveService.GetAsync(id);
 
-        if (archive == null)
+        if (archive is null)
         {
             logger.LogError("No archive found with ID {ArchiveId}", id);
             return TypedResults.NotFound();
@@ -59,7 +54,13 @@ public static class ArchivesEndpoints
 
         if (!File.Exists(filename))
         {
-            logger.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
+            logger.LogError("Archive ({ArchiveId}) file not found at {FileName}", id, filename);
+            return TypedResults.NotFound();
+        }
+
+        if (archive.Game is null)
+        {
+            logger.LogError("Archive ({ArchiveId}) is missing associated game data", id);
             return TypedResults.NotFound();
         }
 
@@ -69,32 +70,38 @@ public static class ArchivesEndpoints
             $"{archive.Game.Title.SanitizeFilename()}.zip");
     }
 
-    internal static async Task<IResult> ByVersionAsync(
+    internal static async Task<Results<Ok<IEnumerable<ArchiveEntry>>, NotFound, UnauthorizedHttpResult>> ByVersionAsync(
         Guid gameId,
         string version,
-        [FromServices] ArchiveService archiveService)
+        [FromServices] ArchiveService archiveService,
+        [FromServices] IFusionCache cache,
+        [FromServices] ILoggerFactory loggerFactory)
     {
         var archive = await archiveService.FirstOrDefaultAsync(a => a.GameId == gameId && a.Version == version);
+        var logger = loggerFactory.CreateLogger("ArchivesApi");
 
-        if (archive == null)
+        if (archive is null)
+        {
+            logger.LogInformation("No archive found for game ID {GameId} with version {Version}", gameId, version);
             return TypedResults.NotFound();
+        }
 
-        return await ContentsAsync(archive.Id, archiveService, null, null);
+        return await ContentsAsync(archive.Id, archiveService, cache, loggerFactory);
     }
 
-    internal static async Task<IResult> ContentsAsync(
+    internal static async Task<Results<Ok<IEnumerable<ArchiveEntry>>, NotFound, UnauthorizedHttpResult>> ContentsAsync(
         Guid id,
         [FromServices] ArchiveService archiveService,
         [FromServices] IFusionCache cache,
-        [FromServices] ILoggerFactory? loggerFactory)
+        [FromServices] ILoggerFactory loggerFactory)
     {
-        var logger = loggerFactory?.CreateLogger("ArchivesApi");
+        var logger = loggerFactory.CreateLogger("ArchivesApi");
 
         var archive = await archiveService.GetAsync(id);
 
-        if (archive == null)
+        if (archive is null)
         {
-            logger?.LogError("No archive found with ID {ArchiveId}", id);
+            logger.LogError("No archive found with ID {ArchiveId}", id);
             return TypedResults.NotFound();
         }
 
@@ -106,8 +113,8 @@ public static class ArchivesEndpoints
 
                 if (!File.Exists(filename))
                 {
-                    logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
-                    return new List<ArchiveEntry>();
+                    logger.LogError("Archive ({ArchiveId}) file not found at {FileName}", id, filename);
+                    return [];
                 }
 
                 var items = new List<ArchiveEntry>();
@@ -132,8 +139,12 @@ public static class ArchivesEndpoints
             tags: ["Archives", $"Archives/{id}", $"Games/{archive.GameId}/Archives"]);
 
         if (!entries.Any())
+        {
+            logger.LogInformation("No contents found for archive ID {ArchiveId}", id);
             return TypedResults.NotFound();
+        }
 
+        logger.LogInformation("Returning {EntryCount} entries for archive ID {ArchiveId}", entries.Count(), id);
         return TypedResults.Ok(entries);
     }
 }

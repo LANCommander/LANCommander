@@ -142,103 +142,20 @@ public class SavePacker : IDisposable
     {
         var absoluteLocalWorkingDirectory = workingDirectory.ExpandEnvironmentVariables(_installDirectory);
         
-        if (String.IsNullOrWhiteSpace(workingDirectory))
+        if (string.IsNullOrWhiteSpace(workingDirectory))
             absoluteLocalWorkingDirectory = _installDirectory;
-
-        if (Path.DirectorySeparatorChar == '\\')
-        {
-            pathPattern = pathPattern.Replace("\\", "\\\\");
-            pathPattern = pathPattern.Replace("/", "\\\\");
-        }
 
         var regex = new Regex(pathPattern);
         
         var matchedFiles = Directory
             .GetFiles(absoluteLocalWorkingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
-            .Where(f => regex.IsMatch(f.Substring(absoluteLocalWorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar)))
+            .Where(f => regex.IsMatch(f[absoluteLocalWorkingDirectory.Length..].TrimStart(Path.DirectorySeparatorChar)))
             .ToList();
 
         foreach (var file in matchedFiles)
         {
             AddEntriesFromFilePath(savePathId, file, workingDirectory);
         }
-    }
-
-    private IEnumerable<SavePathEntry> GetEntriesFromPath(SavePath path)
-    {
-        if (path.IsRegex)
-            return GetEntriesFromFilePattern(path);
-        else
-            return GetEntriesFromFilePath(path);
-    }
-
-    private IEnumerable<SavePathEntry> GetEntriesFromFilePath(SavePath path)
-    {
-        var absoluteLocalWorkingDirectory = path.WorkingDirectory.ExpandEnvironmentVariables(_installDirectory);
-        var absoluteLocalPath = path.Path.ExpandEnvironmentVariables(_installDirectory);
-        var absoluteFullLocalPath = Path.Combine(absoluteLocalWorkingDirectory, absoluteLocalPath);
-        
-        var workingDirectorySanitized = SanitizeLocalPathNameForPacking(absoluteLocalWorkingDirectory);
-        var pathSanitized = SanitizeLocalPathNameForPacking(absoluteLocalPath);
-        var entries = new List<SavePathEntry>();
-
-        // If target is a directory
-        if (Directory.Exists(absoluteFullLocalPath))
-        {
-            foreach (var file in Directory.GetFiles(absoluteFullLocalPath, "*", SearchOption.AllDirectories))
-            {
-                entries.Add(new SavePathEntry
-                {
-                    ArchivePath = GetArchiveEntryName(file, absoluteLocalWorkingDirectory),
-                    ActualPath = SanitizeLocalPathNameForPacking(file),
-                });
-            }
-        }
-        // Target is a file
-        else
-        {
-            entries.Add(new SavePathEntry
-            {
-                ArchivePath = GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory),
-                ActualPath = SanitizeLocalPathNameForPacking(absoluteFullLocalPath),
-            });
-        }
-
-        return entries;
-    }
-
-    private IEnumerable<SavePathEntry> GetEntriesFromFilePattern(SavePath path)
-    {
-        if (!path.IsRegex)
-            throw new ArgumentException("Path is not a regular expression");
-        
-        var workingDirectory = SanitizeLocalPathNameForPacking(path.WorkingDirectory);
-        var pattern = path.Path;
-        
-        if (String.IsNullOrWhiteSpace(workingDirectory))
-            workingDirectory = _installDirectory;
-
-        if (Path.DirectorySeparatorChar == '\\')
-        {
-            pattern = pattern.Replace("\\", "\\\\");
-            pattern = pattern.Replace("/", "\\\\");
-        }
-
-        var regex = new Regex(pattern);
-        
-        var matchedFiles = Directory
-            .GetFiles(workingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
-            .Where(f => regex.IsMatch(f.Substring(workingDirectory.Length).TrimStart(Path.DirectorySeparatorChar)))
-            .ToList();
-        
-        return matchedFiles.Select(f =>
-        {
-            return new SavePathEntry
-            {
-                ArchivePath = GetArchiveEntryName(f, workingDirectory),
-                ActualPath = SanitizeLocalPathNameForPacking(f)
-            };
-        });
     }
 
     private string SanitizeLocalPathNameForPacking(string filePath)

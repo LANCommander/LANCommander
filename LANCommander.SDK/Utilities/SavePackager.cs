@@ -18,9 +18,9 @@ namespace LANCommander.SDK.Utilities;
 
 public class SavePacker : IDisposable
 {
-    private string _installDirectory;
-    private MemoryStream _stream;
-    private ZipArchive _archive;
+    private readonly string _installDirectory;
+    private readonly MemoryStream _stream;
+    private readonly ZipArchive _archive;
 
     /// <summary>
     /// Initialize the save packer, relying on the manifest for paths
@@ -87,7 +87,7 @@ public class SavePacker : IDisposable
 
     public bool HasEntries()
     {
-        return _archive.Entries.Any();
+        return _archive.Entries.Count != 0;
     }
 
     public bool HasManifest()

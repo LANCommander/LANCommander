@@ -1,75 +1,95 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ServerHttpPathImporter(
-    IMapper mapper,
+    ILogger<ServerHttpPathImporter> logger,
     ServerHttpPathService serverHttpPathService,
-    ServerService serverService) : BaseImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+    ServerService serverService,
+    ServerImporter serverImporter) : BaseImporter<ServerHttpPath>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(ServerHttpPath record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(ServerHttpPath record)
+        => $"{nameof(ServerHttpPath)}/{record.LocalPath}";
+
+    public override async Task<ImportItemInfo<ServerHttpPath>> GetImportInfoAsync(ServerHttpPath record) 
+        => new()
         {
             Type = ImportExportRecordType.ServerHttpPath,
             Name = record.Path,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(ServerHttpPath record) => ImportContext.DataRecord is Data.Models.Server;
+    public override async Task<bool> CanImportAsync(ServerHttpPath record) => ImportContext.Manifest is SDK.Models.Manifest.Server;
 
-    public override async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
+    public override async Task<bool> AddAsync(ServerHttpPath record)
     {
         try
         {
+            var server = ImportContext.Manifest as SDK.Models.Manifest.Server;
+
+            if (server == null)
+                return false;
+
+            if (ImportContext.InQueue(server, serverImporter))
+                return false;
+            
             var serverHttpPath = new Data.Models.ServerHttpPath
             {
                 LocalPath = record.LocalPath,
                 Path = record.Path,
-                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (ImportContext.DataRecord as Data.Models.Server).Name),
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
+                Server = await serverService.GetAsync(server.Id),
             };
 
-            serverHttpPath = await serverHttpPathService.AddAsync(serverHttpPath);
+            await serverHttpPathService.AddAsync(serverHttpPath);
 
-            return serverHttpPath;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<ServerHttpPath>(record, "An unknown error occured while importing server console", ex);
+            logger.LogError(ex, "Could not add server HTTP path | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.ServerHttpPath> UpdateAsync(ServerHttpPath record)
+    public override async Task<bool> UpdateAsync(ServerHttpPath record)
     {
         var existing = await serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path);
 
         try
         {
+            var server = ImportContext.Manifest as SDK.Models.Manifest.Server;
+
+            if (server == null)
+                return false;
+            
             existing.LocalPath = record.LocalPath;
             existing.Path = record.Path;
-            existing.Server =
-                await serverService.FirstOrDefaultAsync(
-                    s => s.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
+            existing.Server = await serverService.GetAsync(server.Id);
             
-            existing = await serverHttpPathService.UpdateAsync(existing);
+            await serverHttpPathService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<ServerHttpPath>(record, "An unknown error occured while importing server console", ex);
+            logger.LogError(ex, "Could not update server HTTP path | {Key}", GetKey(record));
+            return false;
         }
     }
 
     public override async Task<bool> ExistsAsync(ServerHttpPath record)
     {
-        return await serverHttpPathService
-            .Include(p => p.Server)
-            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
+        if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+            return await serverHttpPathService
+                .Include(p => p.Server)
+                .ExistsAsync(p => p.Path == record.Path && p.ServerId == server.Id);
+
+        return false;
     }
 }

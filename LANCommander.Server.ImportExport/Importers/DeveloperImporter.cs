@@ -4,84 +4,53 @@ using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class DeveloperImporter(
-    IMapper mapper,
+    ILogger<DeveloperImporter> logger,
     CompanyService companyService,
-    GameService gameService) : BaseImporter<Company, Data.Models.Company>
+    GameService gameService) : BaseImporter<Company>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Company record)
+        => $"Developer/{record.Name}";
+
+    public override async Task<ImportItemInfo<Company>> GetImportInfoAsync(Company record) 
+        => new()
         {
             Type = ImportExportRecordType.Developer,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Company record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(Company record) 
+        => await companyService.ExistsAsync(c => c.Name == record.Name);
 
-    public override async Task<Data.Models.Company> AddAsync(Company record)
+    public override async Task<bool> AddAsync(Company record)
     {
-        if (ImportContext.DataRecord is not Data.Models.Game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
-
         try
         {
-            var game = ImportContext.DataRecord as Data.Models.Game;
-            
             var company = new Data.Models.Company
             {
-                DevelopedGames = [await gameService.GetAsync(game.Id)],
                 Name = record.Name,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
             };
 
-            company = await companyService.AddAsync(company);
+            await companyService.AddAsync(company);
 
-            return company;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Company>(record, "An unknown error occured while importing developer", ex);
+            logger.LogError(ex, "Could not import developer | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Company> UpdateAsync(Company record)
-    {
-        if (ImportContext.DataRecord is not Data.Models.Game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
-
-        var existing = await companyService.Include(g => g.DevelopedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            var game = ImportContext.DataRecord as Data.Models.Game;
-            
-            if (existing.DevelopedGames == null)
-                existing.DevelopedGames = new List<Data.Models.Game>();
-
-            if (!existing.DevelopedGames.Any(g => g.Id == game.Id))
-            {
-                existing.DevelopedGames.Add(await gameService.GetAsync(game.Id));
-            
-                existing = await companyService.UpdateAsync(existing);
-            }
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Company>(record, "An unknown error occured while importing developer", ex);
-        }
-    }
+    public override async Task<bool> UpdateAsync(Company record) => true;
 
     public override async Task<bool> ExistsAsync(Company record)
-    {
-        if (ImportContext.DataRecord is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
-        
-        return await companyService.ExistsAsync(c => c.Name == record.Name);
-    }
+        => await companyService.ExistsAsync(c => c.Name == record.Name);
 }

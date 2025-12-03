@@ -1,48 +1,57 @@
 using AutoMapper;
-using LANCommander.Server.ImportExport.Exceptions;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ServerImporter(
+    ILogger<ServerImporter> logger,
     IMapper mapper,
     ServerService serverService,
     GameService gameService,
-    UserService userService) : BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    UserService userService) : BaseImporter<SDK.Models.Manifest.Server>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(SDK.Models.Manifest.Server record)
+    public override string GetKey(SDK.Models.Manifest.Server record)
+        => $"{nameof(SDK.Models.Manifest.Server)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<SDK.Models.Manifest.Server>> GetImportInfoAsync(SDK.Models.Manifest.Server record)
     {
         var fileEntries = ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
         
-        return new ImportItemInfo
+        return new ImportItemInfo<SDK.Models.Manifest.Server>
         {
+            Type = ImportExportRecordType.Server,
             Name = record.Name,
             Size = fileEntries.Sum(f => f.Size),
+            Record = record,
         };
     }
 
-    public override bool CanImport(SDK.Models.Manifest.Server record) => true;
+    public override async Task<bool> CanImportAsync(SDK.Models.Manifest.Server record) => true;
 
-    public override async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
+    public override async Task<bool> AddAsync(SDK.Models.Manifest.Server record)
     {
         var server = mapper.Map<Data.Models.Server>(record);
 
         try
         {
             await ExtractFiles(server);
-            
-            return await serverService.AddAsync(server);
+            await serverService.AddAsync(server);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occured while trying to add server", ex);
+            logger.LogError(ex, "Could not add server");
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
+    public override async Task<bool> UpdateAsync(SDK.Models.Manifest.Server record)
     {
         var existing = await serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
 
@@ -71,11 +80,12 @@ public class ServerImporter(
 
             await ExtractFiles(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occurred while trying to update server", ex);
+            logger.LogError(ex, "Could not update server");
+            return false;
         }
     }
 

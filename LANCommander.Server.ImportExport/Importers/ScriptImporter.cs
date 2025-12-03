@@ -1,34 +1,42 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ScriptImporter(
-    IMapper mapper,
-    ScriptService scriptService) : BaseImporter<Script, Data.Models.Script>
+    ILogger<ScriptImporter> logger,
+    ScriptService scriptService,
+    GameService gameService,
+    RedistributableService redistributableService,
+    ServerService serverService,
+    GameImporter gameImporter,
+    RedistributableImporter redistributableImporter,
+    ServerImporter serverImporter) : BaseImporter<Script>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Script record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Script record)
+        => $"{nameof(Script)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<Script>> GetImportInfoAsync(Script record)
+        => new()
         {
             Type = ImportExportRecordType.Script,
             Name = record.Name,
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Script record) =>
-        ImportContext.DataRecord is Data.Models.Game
+    public override async Task<bool> CanImportAsync(Script record) =>
+        ImportContext.Manifest is Game
         ||
-        ImportContext.DataRecord is Data.Models.Redistributable
+        ImportContext.Manifest is Redistributable
         ||
-        ImportContext.DataRecord is Data.Models.Server;
+        ImportContext.Manifest is SDK.Models.Manifest.Server;
 
-    public override async Task<Data.Models.Script> AddAsync(Script record)
+    public override async Task<bool> AddAsync(Script record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
         
@@ -43,49 +51,56 @@ public class ScriptImporter(
             var newScript = new Data.Models.Script
             {
                 CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
                 Name = record.Name,
                 Description = record.Description,
                 RequiresAdmin = record.RequiresAdmin,
                 Type = record.Type,
             };
 
-            if (ImportContext.DataRecord is Data.Models.Game game)
-                newScript.Game = game;
-            else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
-                newScript.Redistributable = redistributable;
-            else if (ImportContext.DataRecord is Data.Models.Server server)
-                newScript.Server = server;
+            if (ImportContext.Manifest is Game game)
+                newScript.Game = await gameService.GetAsync(game.Id);
+            else if (ImportContext.Manifest is Redistributable redistributable)
+                newScript.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+                newScript.Server = await serverService.GetAsync(server.Id);
+            else
+                return false;
 
             using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
             {
                 newScript.Contents = await streamReader.ReadToEndAsync();
             }
 
-            script = await scriptService.AddAsync(newScript);
+            await scriptService.AddAsync(newScript);
 
-            return script;
+            return true;
         }
         catch (Exception ex)
         {
             if (script != null)
                 await scriptService.DeleteAsync(script);
             
-            throw new ImportSkippedException<Script>(record, "An unknown error occured while importing script", ex);
+            logger.LogError(ex, "Failed to add script | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Script> UpdateAsync(Script record)
+    public override async Task<bool> UpdateAsync(Script record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
 
         Data.Models.Script existing = null;
         
-        if (ImportContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.Manifest is Game game)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
-        else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
+        else if (ImportContext.Manifest is Redistributable redistributable)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
-        else if (ImportContext.DataRecord is Data.Models.Server server)
+        else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
+
+        if (existing == null)
+            return false;
 
         try
         {
@@ -100,25 +115,26 @@ public class ScriptImporter(
                 existing.Contents = await streamReader.ReadToEndAsync();
             }
 
-            existing = await scriptService.UpdateAsync(existing);
+            await scriptService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Script>(record, "An unknown error occured while importing script", ex);
+            logger.LogError(ex, "Failed to update script | {Key}", GetKey(record));
+            return false;
         }
     }
 
     public override async Task<bool> ExistsAsync(Script record)
     {
-        if (ImportContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.Manifest is Game game)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
         
-        if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
+        if (ImportContext.Manifest is Redistributable redistributable)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
         
-        if (ImportContext.DataRecord is Data.Models.Server server)
+        if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         return false;

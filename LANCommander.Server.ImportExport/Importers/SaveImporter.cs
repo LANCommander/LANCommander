@@ -1,9 +1,9 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 
@@ -15,23 +15,27 @@ namespace LANCommander.Server.ImportExport.Importers;
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="ImportContext">The context (archive, parent record> of the import</param>
 public class SaveImporter(
-    IMapper mapper,
+    ILogger<SaveImporter> logger,
     UserService userService,
-    GameSaveService gameSaveService) : BaseImporter<Save, Data.Models.GameSave>
+    GameSaveService gameSaveService,
+    GameService gameService,
+    GameImporter gameImporter) : BaseImporter<Save>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Save record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Save record)
+        => $"{nameof(Save)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<Save>> GetImportInfoAsync(Save record) 
+        => new()
         {
             Type = ImportExportRecordType.Save,
             Name = $"{record.User} - {record.CreatedOn}",
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}")?.Size ?? 0,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Save record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(Save record) => ImportContext.Manifest is Game;
 
-    public override async Task<Data.Models.GameSave> AddAsync(Save record)
+    public override async Task<bool> AddAsync(Save record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
 
@@ -48,12 +52,21 @@ public class SaveImporter(
 
         try
         {
-            save = await gameSaveService.AddAsync(new Data.Models.GameSave()
+            var game = ImportContext.Manifest as Game;
+
+            if (game == null)
+                return false;
+
+            if (ImportContext.InQueue(game, gameImporter))
+                return false;
+            
+            save = await gameSaveService.AddAsync(new Data.Models.GameSave
             {
                 CreatedBy = user,
                 User = user,
                 CreatedOn = record.CreatedOn,
-                Game = ImportContext.DataRecord as Data.Models.Game,
+                UpdatedOn = record.UpdatedOn,
+                Game = await gameService.GetAsync(game.Id),
                 StorageLocation = await gameSaveService.GetDefaultStorageLocationAsync(),
             });
 
@@ -66,18 +79,19 @@ public class SaveImporter(
                 PreserveFileTime = true,
             });
 
-            return save;
+            return true;
         }
         catch (Exception ex)
         {
             if (save != null)
                 await gameSaveService.DeleteAsync(save);
             
-            throw new ImportSkippedException<Save>(record, "An unknown error occured while importing save file", ex);
+            logger.LogError(ex, "An error occured while adding save | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.GameSave> UpdateAsync(Save record)
+    public override async Task<bool> UpdateAsync(Save record)
     {
         var existing = await gameSaveService.FirstOrDefaultAsync(s => s.User.UserName == record.User && s.CreatedOn == record.CreatedOn);
         
@@ -98,18 +112,24 @@ public class SaveImporter(
                 PreserveFileTime = true,
             });
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Save>(record, "An unknown error occured while importing save file", ex);
+            logger.LogError(ex, "Could not update save file {Key}", GetKey(record));
+            return false;
         }
     }
 
     public override async Task<bool> ExistsAsync(Save archive)
     {
-        return await gameSaveService
-            .Include(s => s.User)
-            .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == ImportContext.DataRecord.Id);
+        if (ImportContext.Manifest is Game game)
+        {
+            return await gameSaveService
+                .Include(s => s.User)
+                .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == game.Id);
+        }
+
+        return false;
     }
 }

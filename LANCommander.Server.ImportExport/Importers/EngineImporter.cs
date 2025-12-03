@@ -1,76 +1,53 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class EngineImporter(
-    IMapper mapper,
-    EngineService engineService,
-    GameService gameService) : BaseImporter<Engine, Data.Models.Engine>
+    ILogger<EngineImporter> logger,
+    EngineService engineService) : BaseImporter<Engine>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Engine record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Engine record)
+        => $"{nameof(Engine)}/{record.Name}";
+
+    public override async Task<ImportItemInfo<Engine>> GetImportInfoAsync(Engine record)
+        => new()
         {
             Type = ImportExportRecordType.Engine,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Engine record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(Engine record) 
+        => await engineService.ExistsAsync(e => e.Name == record.Name);
 
-    public override async Task<Data.Models.Engine> AddAsync(Engine record)
+    public override async Task<bool> AddAsync(Engine record)
     {
         try
         {
             var engine = new Data.Models.Engine
             {
-                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
             };
 
-            engine = await engineService.AddAsync(engine);
+            await engineService.AddAsync(engine);
 
-            return engine;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Engine>(record, "An unknown error occured while importing engine", ex);
+            logger.LogError(ex, "Could not add engine | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Engine> UpdateAsync(Engine record)
-    {
-        var existing = await engineService.Include(g => g.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-        var game = ImportContext.DataRecord as Data.Models.Game;
-        
-        try
-        {
-            
-            if (existing.Games == null)
-                existing.Games = new List<Data.Models.Game>();
+    public override async Task<bool> UpdateAsync(Engine record) => true;
 
-            if (!existing.Games.Any(g => g.Id == game.Id))
-            {
-                existing.Games.Add(await gameService.GetAsync(game.Id));
-                
-                existing = await engineService.UpdateAsync(existing);
-            }
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Engine>(record, "An unknown error occured while importing engine", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Engine record)
-    {
-        return await engineService.ExistsAsync(c => c.Name == record.Name);
-    }
+    public override async Task<bool> ExistsAsync(Engine record) 
+        => await engineService.ExistsAsync(c => c.Name == record.Name);
 }

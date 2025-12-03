@@ -1,49 +1,78 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
-using LANCommander.Server.ImportExport.Exceptions;
+using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ActionImporter(
-    IMapper mapper,
-    ActionService actionService) : BaseImporter<Action, Data.Models.Action>
+    ILogger<ActionImporter> logger,
+    ActionService actionService,
+    GameService gameService,
+    ServerService serverService,
+    GameImporter gameImporter,
+    ServerImporter serverImporter) : BaseImporter<Action>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
-        await Task.Run(() => new ImportItemInfo { Name = record.Name, Type = ImportExportRecordType.Action });
+    public override string GetKey(Action record)
+        => $"{nameof(Action)}/{record.Name}";
 
-    public override bool CanImport(Action record) => ImportContext.DataRecord is Data.Models.Game;
-    
+    public override async Task<ImportItemInfo<Action>> GetImportInfoAsync(Action record)
+        => new()
+        {
+            Name = record.Name,
+            Type = ImportExportRecordType.Action,
+            Record = record,
+        };
 
-    public override async Task<Data.Models.Action> AddAsync(Action record)
+    public override async Task<bool> CanImportAsync(Action record) => ImportContext.Manifest is Game;
+
+    public override async Task<bool> AddAsync(Action record)
     {
         try
         {
             var action = new Data.Models.Action
             {
                 Name = record.Name,
-                Game = ImportContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 PrimaryAction = record.IsPrimaryAction,
                 SortOrder = record.SortOrder,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
             };
 
-            action = await actionService.AddAsync(action);
+            if (ImportContext.Manifest is Game game && !ImportContext.InQueue(game, gameImporter))
+                action.Game = await gameService.GetAsync(game.Id);
+            else if (ImportContext.Manifest is SDK.Models.Manifest.Server server &&
+                     !ImportContext.InQueue(server, serverImporter))
+                action.Server = await serverService.GetAsync(server.Id);
+            else
+                return false;
 
-            return action;
+            await actionService.AddAsync(action);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Action>(record, "An unknown error occured while importing action", ex);
+            logger.LogError(ex, "Could not add action | {Key}", GetKey(record));
+            
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Action> UpdateAsync(Action record)
+    public override async Task<bool> UpdateAsync(Action record)
     {
-        var existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name);
+        Data.Models.Action existing;
+        
+        if (ImportContext.Manifest is Game game)
+            existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name && a.GameId == game.Id);
+        else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+            existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name && a.ServerId == server.Id);
+        else
+            return false;
 
         try
         {
@@ -51,20 +80,25 @@ public class ActionImporter(
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.PrimaryAction = record.IsPrimaryAction;
             existing.SortOrder = record.SortOrder;
-            existing.Game = ImportContext.DataRecord as Data.Models.Game;
+            existing.CreatedOn = record.CreatedOn;
+            existing.UpdatedOn = record.UpdatedOn;
             
-            existing = await actionService.UpdateAsync(existing);
+            await actionService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Action>(record, "An unknown error occured while importing action", ex);
+            logger.LogError(ex, "Could not update action | {Key}", GetKey(record));
+            return false;
         }
     }
 
     public override async Task<bool> ExistsAsync(Action record)
     {
-        return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == ImportContext.DataRecord.Id);
+        if (ImportContext.Manifest is Game game)
+            return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == game.Id);
+
+        return false;
     }
 }

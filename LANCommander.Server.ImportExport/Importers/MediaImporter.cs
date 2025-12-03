@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
@@ -9,24 +8,29 @@ using Microsoft.Extensions.Logging;
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class MediaImporter(
-    IMapper mapper,
     ILogger<MediaImporter> logger,
     StorageLocationService storageLocationService,
-    MediaService mediaService) : BaseImporter<Media, Data.Models.Media>
+    MediaService mediaService,
+    GameService gameService,
+    GameImporter gameImporter) : BaseImporter<Media>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Media record)
+    public override string GetKey(Media record)
+        => $"{nameof(Media)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<Media>> GetImportInfoAsync(Media record)
     {
-        return new ImportItemInfo
+        return new ImportItemInfo<Media>
         {
             Type = ImportExportRecordType.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}")?.Size ?? 0,
+            Record = record,
         };
     }
 
-    public override bool CanImport(Media record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(Media record) => ImportContext.Manifest is Game;
 
-    public override async Task<Data.Models.Media> AddAsync(Media record)
+    public override async Task<bool> AddAsync(Media record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
         
@@ -37,9 +41,19 @@ public class MediaImporter(
         
         try
         {
+            var game = ImportContext.Manifest as Game;
+
+            if (game == null)
+                return false;
+
+            if (ImportContext.InQueue(game, gameImporter))
+                return false;
+            
             media = new Data.Models.Media
             {
-                Game = ImportContext.DataRecord as Data.Models.Game,
+                Id = record.Id,
+                FileId = record.FileId,
+                Game = await gameService.GetAsync(record.Id),
                 CreatedOn = record.CreatedOn,
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
@@ -50,23 +64,23 @@ public class MediaImporter(
             };
 
             media = await mediaService.AddAsync(media);
-            media = await mediaService.WriteToFileAsync(media, archiveEntry.OpenEntryStream());
+            
+            await mediaService.WriteToFileAsync(media, archiveEntry.OpenEntryStream());
 
-            return media;
+            return true;
         }
         catch (Exception ex)
         {
             if (media?.Id != Guid.Empty)
                 await mediaService.DeleteAsync(media);
             
-            logger.LogError(ex, "An unknown error occured while trying to import media file");
+            logger.LogError(ex, "An unknown error occured while trying to import media file | {Key}", GetKey(record));
 
-            throw new ImportSkippedException<Media>(record, "An unknown error occured while trying to import media file",
-                ex);
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Media> UpdateAsync(Media record)
+    public override async Task<bool> UpdateAsync(Media record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
         var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Game.Id == record.Id);
@@ -77,7 +91,16 @@ public class MediaImporter(
 
         try
         {
-            existing.Game = ImportContext.DataRecord as Data.Models.Game;
+            var game = ImportContext.Manifest as Game;
+
+            if (game == null)
+                return false;
+
+            if (ImportContext.InQueue(game, gameImporter))
+                return false;
+
+            existing.FileId = record.FileId;
+            existing.Game = await gameService.GetAsync(game.Id);
             existing.Name = record.Name;
             existing.MimeType = record.MimeType;
             existing.CreatedOn = record.CreatedOn;
@@ -86,21 +109,21 @@ public class MediaImporter(
             existing.SourceUrl = record.SourceUrl;
 
             existing = await mediaService.UpdateAsync(existing);
-            existing = await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
+            
+            await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
 
             if (File.Exists(existingPath))
                 File.Delete(existingPath);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Media>(record, "An unknown error occured while importing media file", ex);
+            logger.LogError(ex, "Could not update media | {Key}", GetKey(record));
+            return false;
         }
     }
 
     public override Task<bool> ExistsAsync(Media media)
-    {
-        return mediaService.ExistsAsync(m => m.Type == media.Type && m.Id == media.Id);
-    }
+        => mediaService.ExistsAsync(m => m.Type == media.Type && m.Id == media.Id);
 }

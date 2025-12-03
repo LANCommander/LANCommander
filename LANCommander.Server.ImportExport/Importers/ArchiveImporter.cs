@@ -4,6 +4,7 @@ using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
@@ -13,22 +14,26 @@ namespace LANCommander.Server.ImportExport.Importers;
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="ImportContext">The context (archive, parent record> of the import</param>
 public class ArchiveImporter(
-    IMapper mapper,
-    ArchiveService archiveService) : BaseImporter<Archive, Data.Models.Archive>
+    ILogger<ArchiveImporter> logger,
+    ArchiveService archiveService,
+    GameService gameService,
+    RedistributableService redistributableService) : BaseImporter<Archive>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Archive record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Archive record)
+        => $"{nameof(Archive)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<Archive>> GetImportInfoAsync(Archive record) 
+        => new()
         {
             Type = ImportExportRecordType.Archive,
             Name = record.Version,
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Archive record) => ImportContext.DataRecord is Data.Models.Game || ImportContext.DataRecord is Data.Models.Redistributable;
+    public override async Task<bool> CanImportAsync(Archive record) => ImportContext.Manifest is Game || ImportContext.Manifest is Redistributable;
 
-    public override async Task<Data.Models.Archive> AddAsync(Archive record)
+    public override async Task<bool> AddAsync(Archive record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
 
@@ -43,6 +48,7 @@ public class ArchiveImporter(
             var newArchive = new Data.Models.Archive()
             {
                 CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
                 StorageLocation = ImportContext.ArchiveStorageLocation,
                 Version = record.Version,
                 Changelog = record.Changelog,
@@ -51,10 +57,10 @@ public class ArchiveImporter(
                 UncompressedSize = record.UncompressedSize,
             };
 
-            if (ImportContext.DataRecord is Data.Models.Game game)
-                newArchive.Game = game;
-            else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
-                newArchive.Redistributable = redistributable;
+            if (ImportContext.Manifest is Game game)
+                newArchive.Game = await gameService.GetAsync(game.Id);
+            else if (ImportContext.Manifest is Redistributable redistributable)
+                newArchive.Redistributable = await redistributableService.GetAsync(redistributable.Id);
             else
                 throw new ImportSkippedException<Archive>(record,
                     $"Cannot import an archive for a {record.GetType().Name}");
@@ -62,18 +68,19 @@ public class ArchiveImporter(
             archive = await archiveService.AddAsync(newArchive);
             archive = await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
 
-            return archive;
+            return true;
         }
         catch (Exception ex)
         {
             if (archive != null)
                 await archiveService.DeleteAsync(archive);
             
-            throw new ImportSkippedException<Archive>(record, "An unknown error occured while importing archive file", ex);
+            logger.LogError(ex, "Could not add archive | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Archive> UpdateAsync(Archive archive)
+    public override async Task<bool> UpdateAsync(Archive archive)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
         var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
@@ -87,29 +94,33 @@ public class ArchiveImporter(
             existing.Version = archive.Version;
             existing.Changelog = archive.Changelog;
             existing.StorageLocation = ImportContext.ArchiveStorageLocation;
+            existing.CreatedOn = archive.CreatedOn;
+            existing.UpdatedOn = archive.UpdatedOn;
             
             existing = await archiveService.UpdateAsync(existing);
-            existing = await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
+            
+            await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
             
             if (File.Exists(existingPath))
                 File.Delete(existingPath);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Archive>(archive, "An unknown error occured while importing archive file", ex);
+            logger.LogError(ex, "Could not update archive | {Key}", GetKey(archive));
+            return false;
         }
     }
 
     public override async Task<bool> ExistsAsync(Archive archive)
     {
-        if (ImportContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.Manifest is Game game)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
         
-        if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
+        if (ImportContext.Manifest is Redistributable redistributable)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
         
-        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {ImportContext.DataRecord.GetType().Name}");
+        throw new ImportSkippedException<Archive>(archive, $"Cannot import archive, incompatible manifest");
     }
 }

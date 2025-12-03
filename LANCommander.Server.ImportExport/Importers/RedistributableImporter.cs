@@ -1,42 +1,49 @@
 using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class RedistributableImporter(
+    ILogger<RedistributableImporter> logger,
     IMapper mapper,
     RedistributableService redistributableService,
-    UserService userService) : BaseImporter<Redistributable, Data.Models.Redistributable>
+    UserService userService) : BaseImporter<Redistributable>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Redistributable record)
-    {
-        return new ImportItemInfo()
+    public override string GetKey(Redistributable record)
+        => $"{nameof(Redistributable)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<Redistributable>> GetImportInfoAsync(Redistributable record) 
+        => new()
         {
+            Type = ImportExportRecordType.Redistributable,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Redistributable record) => true;
+    public override async Task<bool> CanImportAsync(Redistributable record) => true;
 
-    public override async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
+    public override async Task<bool> AddAsync(Redistributable record)
     {
         var redistributable = mapper.Map<Data.Models.Redistributable>(record);
 
         try
         {
-            return await redistributableService.AddAsync(redistributable);
+            await redistributableService.AddAsync(redistributable);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Redistributable>(record,
-                "An unknown error occurred while trying to add redistributable", ex);
+            logger.LogError(ex, "Could not add redistributable | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Redistributable> UpdateAsync(Redistributable record)
+    public override async Task<bool> UpdateAsync(Redistributable record)
     {
         var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == record.Id || r.Name == record.Name);
 
@@ -50,19 +57,17 @@ public class RedistributableImporter(
             existing.UpdatedOn = record.UpdatedOn;
             existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
-            existing = await redistributableService.UpdateAsync(existing);
+            await redistributableService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Redistributable>(record,
-                "An unknown error occurred while trying to add redistributable", ex);
+            logger.LogError(ex, "Could not update redistributable | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<bool> ExistsAsync(Redistributable record)
-    {
-        return await redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
-    }
+    public override async Task<bool> ExistsAsync(Redistributable record) 
+        => await redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
 } 

@@ -260,7 +260,7 @@ namespace LANCommander.SDK.Services
                 .UseAuthenticationToken()
                 .UseVersioning()
                 .UseRoute($"/api/Saves/{manifest.Id}/Upload")
-                .UploadAsync<GameSave>("", stream);
+                .UploadAsync<GameSave>($"game-{manifest.Id}-save", stream);
         }
 
         public async Task UploadAsync(string installDirectory, Guid gameId)

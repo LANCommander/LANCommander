@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using Microsoft.Extensions.Logging;
 using Action = System.Action;
 
 namespace LANCommander.SDK.Helpers;
@@ -17,18 +18,18 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    ISettingsProvider settingsProvider)
+    ISettingsProvider settingsProvider,
+    ILoggerFactory loggerFactory)
 {
     private AuthToken _token { get; set; } = tokenProvider.GetToken();
-    private bool _ignoreVersion { get; set; }
-    private object _body { get; set; }
-    private string _route { get; set; }
-    private HttpClient _httpClient { get; set; } = httpClient;
     private HttpRequestMessage _request { get; set; } = new();
     private CancellationToken  _cancellationToken { get; set; } = CancellationToken.None;
     private Action<DownloadProgressChangedEventArgs> _progressHandler { get; set; }
     private Action _completeHandler { get; set; }
     private Uri _baseAddress { get; set; } = settingsProvider.CurrentValue.Authentication.ServerAddress;
+
+    private ILogger logger = loggerFactory.CreateLogger(nameof(ApiRequestBuilder));
+    private static readonly JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
 
     private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
@@ -36,11 +37,11 @@ public class ApiRequestBuilder(
 
         try
         {
-            return JsonSerializer.Deserialize<TResult>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<TResult>(body, options);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to deserialize response body: {Body}", body);
             return default;
         }
     }
@@ -91,7 +92,7 @@ public class ApiRequestBuilder(
 
     public ApiRequestBuilder SetTimeout(TimeSpan timeout)
     {
-        _httpClient.Timeout = timeout;
+        httpClient.Timeout = timeout;
 
         return this;
     }
@@ -126,7 +127,7 @@ public class ApiRequestBuilder(
 
     public async Task<ApiResponseMessage<TResult>> SendAsync<TResult>() where TResult : class
     {
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         var result = new ApiResponseMessage<TResult>
         {
@@ -141,7 +142,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
         
         response
             .EnsureSuccessStatusCode();
@@ -153,7 +154,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Post;
 
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
@@ -165,7 +166,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Post;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
         
         response
             .EnsureSuccessStatusCode();
@@ -175,7 +176,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Put;
         
-        var response = await  _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await  httpClient.SendAsync(_request, _cancellationToken);
         
         response
             .EnsureSuccessStatusCode();
@@ -187,7 +188,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Delete;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
@@ -199,7 +200,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Head;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         response
             .EnsureSuccessStatusCode();
@@ -209,7 +210,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Head;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
         
         response
             .EnsureSuccessStatusCode();
@@ -221,7 +222,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
 
         var folder = Path.GetDirectoryName(destination);
         if (!Directory.Exists(folder))
@@ -233,8 +234,7 @@ public class ApiRequestBuilder(
 
             responseStream.OnProgress += (position, length) =>
             {
-                if (_progressHandler != null)
-                    _progressHandler.Invoke(new DownloadProgressChangedEventArgs
+                _progressHandler?.Invoke(new DownloadProgressChangedEventArgs
                     {
                         BytesReceived = position,
                         TotalBytes = length,
@@ -243,8 +243,7 @@ public class ApiRequestBuilder(
 
             await responseStream.CopyToAsync(fs, _cancellationToken);
 
-            if (_completeHandler != null)
-                _completeHandler();
+            _completeHandler?.Invoke();
         }
 
         return new FileInfo(destination);
@@ -254,26 +253,26 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
+        var response = await httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
         
         return await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
     }
 
     public async Task<TResult> UploadAsync<TResult>(string fileName, byte[] data)
     {
-        using (var form = new MultipartFormDataContent())
-        {
-            var dataContent = new ByteArrayContent(data);
-            
-            form.Add(dataContent, "file", fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
-            _request.Content = form;
-            _request.Method = HttpMethod.Post;
-            
-            var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        using var form = new MultipartFormDataContent();
+        var dataContent = new ByteArrayContent(data);
 
-            return await DeserializeResultAsync<TResult>(response);
-        }
+        form.Add(dataContent, "file", fileName);
+
+        _request.Content = form;
+        _request.Method = HttpMethod.Post;
+
+        var response = await httpClient.SendAsync(_request, _cancellationToken);
+
+        return await DeserializeResultAsync<TResult>(response);
     }
 
     public async Task<TResult> UploadAsync<TResult>(string fileName, Stream data)
@@ -289,7 +288,7 @@ public class ApiRequestBuilder(
     {
         try
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
+            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, loggerFactory)
                 .UseRoute("/Upload/Init")
                 .UseVersioning()
                 .UseAuthenticationToken()
@@ -319,7 +318,7 @@ public class ApiRequestBuilder(
                     Key = initResponse.Key,
                 };
 
-                await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
+                await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, loggerFactory)
                     .AddBody(chunkRequest)
                     .UseRoute("/Upload/Chunk")
                     .UseVersioning()
@@ -332,6 +331,7 @@ public class ApiRequestBuilder(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to upload in chunks. Current chunk size: {ChunkSize}", chunkSize);
             return default;
         }
     } 

@@ -94,8 +94,6 @@ public class MediaImporter(
             
             var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
             var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Id == record.Id);
-
-            var existingPath = existing.StorageLocation != null ? MediaService.GetMediaPath(existing) : String.Empty;
         
             if (archiveEntry == null)
                 throw new ImportSkippedException<Media>(record, "Matching media file does not exist in import archive");

@@ -114,10 +114,7 @@ public class MediaImporter(
 
             existing = await mediaService.UpdateAsync(existing);
             
-            await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
-
-            if (!String.IsNullOrWhiteSpace(existingPath) && File.Exists(existingPath))
-                File.Delete(existingPath);
+            await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream(), true);
 
             return true;
         }

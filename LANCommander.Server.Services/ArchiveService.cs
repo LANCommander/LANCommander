@@ -170,7 +170,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public override async Task<bool> ExistsAsync(Guid archiveId)
+        public async Task<bool> FileExistsAsync(Guid archiveId)
         {
             var archive = await Include(a => a.StorageLocation).GetAsync(archiveId);
 

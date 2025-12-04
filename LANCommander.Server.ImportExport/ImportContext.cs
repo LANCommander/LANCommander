@@ -21,8 +21,8 @@ public class ImportContext : IDisposable
     public ZipArchive Archive { get; private set; }
 
     public IImportItemInfo CurrentItem { get; set; }
-    public int Processed => Queue.Count(qi => qi.Processed);
-    public int Total => Queue.Count;
+    public int Processed;
+    public int Total;
 
     private Queue<IImportItemInfo> Queue { get; } = new();
     private IEnumerable<Guid> SelectedRecordIds { get; set; } = [];
@@ -280,10 +280,13 @@ public class ImportContext : IDisposable
 
     public async Task ImportQueueAsync()
     {
+        Processed = 0;
+        Total = Queue.Count;
+        
         await OnImportStarted?.InvokeAsync(new ImportStatusUpdate
         {
-            Index = -1,
-            Total = Queue.Count,
+            Index = Processed,
+            Total = Total,
         })!;
 
         int deferred = 0;
@@ -303,6 +306,7 @@ public class ImportContext : IDisposable
 
             if (success)
             {
+                Processed++;
                 deferred = 0;
                 continue;
             }
@@ -316,7 +320,7 @@ public class ImportContext : IDisposable
 
         await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
         {
-            Index = Total - 1,
+            Index = Total,
             Total = Total,
         })!;
 

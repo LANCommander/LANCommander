@@ -33,13 +33,13 @@ jobs:
                   PR_NUMBER: ${{ github.event.pull_request.number }}
                   RUN_NUMBER: ${{ github.run_number }}
               run: |
-                  SHORT_SHA=$(git rev-parse --short HEAD)
+                  TIMESTAMP=$(date -u +"%Y%m%d%H%M")
                   if [ -n "$PR_NUMBER" ]; then
                     VERSION_SEMVER="0.0.0-pr${PR_NUMBER}"
-                    VERSION_TAG="pr${PR_NUMBER}-${SHORT_SHA}"
+                    VERSION_TAG="pr${PR_NUMBER}-${TIMESTAMP}"
                   else
                     VERSION_SEMVER="0.0.0-ci${RUN_NUMBER}"
-                    VERSION_TAG="ci${RUN_NUMBER}-${SHORT_SHA}"
+                    VERSION_TAG="ci${RUN_NUMBER}-${TIMESTAMP}"
                   fi
 
                   echo "version_semver=$VERSION_SEMVER" >> $GITHUB_OUTPUT

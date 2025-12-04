@@ -1,3 +1,4 @@
+using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
@@ -26,10 +27,10 @@ public class ImportContext : IDisposable
     private Queue<IImportItemInfo> Queue { get; } = new();
     private IEnumerable<Guid> SelectedRecordIds { get; set; } = [];
 
-    public EventHandler<ImportStatusUpdate> OnImportStarted { get; set; }
-    public EventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; set; }
-    public EventHandler<ImportStatusUpdate> OnImportComplete { get; set; }
-    public EventHandler<ImportStatusUpdate> OnImportError;
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStarted { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportComplete { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportError = new();
     
     private readonly ImportService _importService;
     private readonly StorageLocationService _storageLocationService;
@@ -272,11 +273,11 @@ public class ImportContext : IDisposable
 
     public async Task ImportQueueAsync()
     {
-        OnImportStarted?.Invoke(this, new ImportStatusUpdate
+        await OnImportStarted?.InvokeAsync(new ImportStatusUpdate
         {
             Index = -1,
             Total = Queue.Count,
-        });
+        })!;
 
         int deferred = 0;
 
@@ -284,12 +285,12 @@ public class ImportContext : IDisposable
         {
             var queueItem = Queue.Dequeue();
             
-            OnImportStatusUpdate?.Invoke(this, new ImportStatusUpdate
+            await OnImportStatusUpdate?.InvokeAsync(new ImportStatusUpdate
             {
                 CurrentItem = queueItem,
                 Index = Processed,
                 Total = Total,
-            });
+            })!;
             
             var success = await TryImportAsync(queueItem);
 
@@ -306,11 +307,11 @@ public class ImportContext : IDisposable
                 throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
         }
 
-        OnImportComplete?.Invoke(this, new ImportStatusUpdate
+        await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
         {
             Index = Total - 1,
             Total = Total,
-        });
+        })!;
 
         _importService.RemoveContext(Id.Value);
     }
@@ -392,13 +393,13 @@ public class ImportContext : IDisposable
         {
             _logger.LogError(ex, "Error importing record {RecordName}", queueItem.Name);
             
-            OnImportError?.Invoke(this, new ImportStatusUpdate
+            await OnImportError?.InvokeAsync(new ImportStatusUpdate
             {
                 CurrentItem = CurrentItem,
                 Index = Processed,
                 Total = Total,
                 Error = ex.Message,
-            });
+            })!;
         }
 
         return false;

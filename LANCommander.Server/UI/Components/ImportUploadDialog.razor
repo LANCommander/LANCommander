@@ -2,9 +2,7 @@
 @using LANCommander.Server.ImportExport
 @using LANCommander.Server.ImportExport.Factories
 @using LANCommander.Server.ImportExport.Models
-@using LANCommander.Server.ImportExport.Services
 @inherits FeedbackComponent<ImportDialogOptions>
-@inject GameService GameService
 @inject ArchiveService ArchiveService
 @inject StorageLocationService StorageLocationService
 @inject ImportContextFactory ImportContextFactory
@@ -76,7 +74,7 @@ else if (_stage == ImportStage.RecordSelection)
                 <ChildContent>
                     @foreach (var item in group)
                     {
-                        <TreeNode Key="@item.Id.ToString()">
+                        <TreeNode Key="@item.Key">
                             <TitleTemplate>
                                 <GridRow>
                                     <GridCol Flex=@("auto")>
@@ -105,7 +103,24 @@ else if (_stage == ImportStage.RecordSelection)
 }
 else if (_stage == ImportStage.Importing)
 {
-    <Progress Type="ProgressType.Circle" Percent="_progress" />
+    <Flex Align="FlexAlign.Center" Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
+        <Progress Type="ProgressType.Circle" Percent="_importProgress" />
+        
+        <Flex Gap="FlexGap.Small" Direction="FlexDirection.Vertical">
+            @foreach (var error in _errors)
+            {
+                <Alert Type="AlertType.Error" Message="@error" />
+            }
+        </Flex>
+    </Flex>
+}
+else if (_stage == ImportStage.Complete)
+{
+    <Result Status="ResultStatus.Success" Title="Import Complete!">
+        <Extra>
+            <Button Type="ButtonType.Primary" OnClick="CloseFeedbackAsync">Close</Button>
+        </Extra>
+    </Result>
 }
 
 @code {
@@ -113,7 +128,8 @@ else if (_stage == ImportStage.Importing)
     {
         Upload,
         RecordSelection,
-        Importing
+        Importing,
+        Complete,
     };
 
     IBrowserFile File;
@@ -121,7 +137,7 @@ else if (_stage == ImportStage.Importing)
     StorageLocation StorageLocation = new();
     ImportContext ImportContext;
 
-    IEnumerable<ImportItemInfo> ImportItems = new List<ImportItemInfo>();
+    IEnumerable<IImportItemInfo> ImportItems = new List<IImportItemInfo>();
     
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -131,37 +147,64 @@ else if (_stage == ImportStage.Importing)
 
     ImportStage _stage = ImportStage.Upload;
     string[] _selectedKeys;
-    int _progress {
-        get
-        {
-            return ImportContext.Processed / ImportContext.Total;
-        }
-    }
+
+    List<string> _errors = new();
+
+    int _importProgress = -1;
 
     protected override async Task OnInitializedAsync()
     {
         ImportContext = ImportContextFactory.Create();
-
-        ImportContext.OnRecordError += RecordError;
-        ImportContext.OnRecordAdded += RecordAdded;
-        ImportContext.OnRecordProcessed += RecordProcessed;
+        
+        ImportContext.OnImportStarted.EventRaised += ImportStarted;
+        ImportContext.OnImportComplete.EventRaised += ImportComplete;
+        ImportContext.OnImportStatusUpdate.EventRaised += ImportStatusUpdate;
+        ImportContext.OnImportError.EventRaised += ImportError;
 
         StorageLocation = await StorageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
     }
 
-    private void RecordProcessed(object? sender, object e)
+    private async Task ImportStarted(ImportStatusUpdate status)
     {
+        _stage = ImportStage.Importing;
+        _importProgress = -1;
         
+        await Task.Yield();
+        await InvokeStateHasChangedAsync();
     }
-
-    private void RecordAdded(object? sender, object e)
+    
+    private async Task ImportComplete(ImportStatusUpdate status)
     {
+        _stage = ImportStage.Complete;
+        _importProgress = 100;
         
+        await Clear();
+        ImportContext.Dispose();
+        
+        await Task.Yield();
+        await InvokeStateHasChangedAsync();
     }
+    
+    private async Task ImportStatusUpdate(ImportStatusUpdate status) => await UpdateProgress(status);
 
-    private void RecordError(object? sender, object e)
+    private async Task ImportError(ImportStatusUpdate status)
     {
-        
+        if (status.Error != null)
+            _errors.Add(status.Error);
+
+        await Task.Yield();
+        await InvokeStateHasChangedAsync();
+    }
+    
+    private async Task UpdateProgress(ImportStatusUpdate? status)
+    {
+        if (status != null)
+        {
+            _importProgress = status.Total != 0 ? (int)Math.Floor((status.Index + 1) / (decimal)status.Total) : 100;
+            
+            await Task.Yield();
+            await InvokeStateHasChangedAsync();
+        }
     }
 
     async Task Upload()
@@ -183,17 +226,13 @@ else if (_stage == ImportStage.Importing)
             await ImportContext.PrepareImportQueueAsync(selectedGuids, StorageLocation.Id);
             await ImportContext.ImportQueueAsync();
             
-            MessageService.Success("Game successfully imported!");
+            MessageService.Success("Import started!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Game could not be imported!");
+            MessageService.Error("Import failed!");
             Logger?.LogError(ex, "An unknown error occurred while trying to import");
         }
-        
-        await Clear();
-        ImportContext.Dispose();
-        await CloseFeedbackAsync();
     }
 
     async Task Clear()
@@ -235,7 +274,7 @@ else if (_stage == ImportStage.Importing)
 
                 ImportItems = await ImportContext.InitializeImportAsync(archivePath);
 
-                _selectedKeys = ImportItems.Select(i => i.Id.ToString()).ToArray();
+                _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
                 
                 _stage = ImportStage.RecordSelection;
 
@@ -277,7 +316,7 @@ else if (_stage == ImportStage.Importing)
         {
             ImportItems = await ImportContext.InitializeImportAsync(path);
             
-            _selectedKeys = ImportItems.Select(i => i.Id.ToString()).ToArray();
+            _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
             
             _stage = ImportStage.RecordSelection;
 

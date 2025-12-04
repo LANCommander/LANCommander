@@ -1,14 +1,14 @@
-using LANCommander.Server.ImportExport.Importers;
+using LANCommander.SDK;
 using LANCommander.Server.ImportExport.Models;
 
 namespace LANCommander.Server.ImportExport.Services;
 
 public class ImportService : IDisposable
 {
-    public EventHandler<ImportStatusUpdate> OnImportStarted;
-    public EventHandler<ImportStatusUpdate> OnImportComplete;
-    public EventHandler<ImportStatusUpdate> OnImportStatusUpdate;
-    public EventHandler<ImportStatusUpdate> OnImportError;
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStarted = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportComplete = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportError = new();
     
     private Dictionary<Guid, ImportContext> _importContexts = new();
 
@@ -20,10 +20,10 @@ public class ImportService : IDisposable
         
         _importContexts.Add(id, context);
         
-        context.OnImportStarted += OnImportStarted;
-        context.OnImportComplete += OnImportComplete;
-        context.OnImportStatusUpdate += OnImportStatusUpdate;
-        context.OnImportError += OnImportError;
+        context.OnImportStarted = OnImportStarted;
+        context.OnImportComplete = OnImportComplete;
+        context.OnImportStatusUpdate = OnImportStatusUpdate;
+        context.OnImportError = OnImportError;
 
         return id;
     }

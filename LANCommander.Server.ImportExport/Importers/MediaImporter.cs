@@ -53,7 +53,7 @@ public class MediaImporter(
             {
                 Id = record.Id,
                 FileId = record.FileId,
-                Game = await gameService.GetAsync(record.Id),
+                Game = await gameService.GetAsync(game.Id),
                 CreatedOn = record.CreatedOn,
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
@@ -82,13 +82,6 @@ public class MediaImporter(
 
     public override async Task<bool> UpdateAsync(Media record)
     {
-        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
-        var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Game.Id == record.Id);
-        var existingPath = MediaService.GetMediaPath(existing);
-        
-        if (archiveEntry == null)
-            throw new ImportSkippedException<Media>(record, "Matching media file does not exist in import archive");
-
         try
         {
             var game = ImportContext.Manifest as Game;
@@ -98,6 +91,14 @@ public class MediaImporter(
 
             if (ImportContext.InQueue(game, gameImporter))
                 return false;
+            
+            var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
+            var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Id == record.Id);
+
+            var existingPath = existing.StorageLocation != null ? MediaService.GetMediaPath(existing) : String.Empty;
+        
+            if (archiveEntry == null)
+                throw new ImportSkippedException<Media>(record, "Matching media file does not exist in import archive");
 
             existing.FileId = record.FileId;
             existing.Game = await gameService.GetAsync(game.Id);
@@ -107,12 +108,15 @@ public class MediaImporter(
             existing.UpdatedOn = record.UpdatedOn;
             existing.Crc32 = record.Crc32;
             existing.SourceUrl = record.SourceUrl;
+            
+            if (existing.StorageLocation == null)
+                existing.StorageLocation = await storageLocationService.DefaultAsync(StorageLocationType.Media);
 
             existing = await mediaService.UpdateAsync(existing);
             
             await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
 
-            if (File.Exists(existingPath))
+            if (!String.IsNullOrWhiteSpace(existingPath) && File.Exists(existingPath))
                 File.Delete(existingPath);
 
             return true;

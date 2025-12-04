@@ -147,6 +147,9 @@ namespace LANCommander.Server.Services
             
             var path = GetMediaPath(media);
             
+            if (!String.IsNullOrWhiteSpace(path))
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            
             if (overwrite && File.Exists(path))
                 File.Delete(path);
 

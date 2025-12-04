@@ -93,7 +93,7 @@ public class SaveImporter(
 
     public override async Task<bool> UpdateAsync(Save record)
     {
-        var existing = await gameSaveService.FirstOrDefaultAsync(s => s.User.UserName == record.User && s.CreatedOn == record.CreatedOn);
+        var existing = await gameSaveService.FirstOrDefaultAsync(s => s.Id == record.Id);
         
         // We only need to extract the save file
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
@@ -121,15 +121,6 @@ public class SaveImporter(
         }
     }
 
-    public override async Task<bool> ExistsAsync(Save archive)
-    {
-        if (ImportContext.Manifest is Game game)
-        {
-            return await gameSaveService
-                .Include(s => s.User)
-                .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == game.Id);
-        }
-
-        return false;
-    }
+    public override async Task<bool> ExistsAsync(Save save)
+        => await gameSaveService.ExistsAsync(save.Id);
 }

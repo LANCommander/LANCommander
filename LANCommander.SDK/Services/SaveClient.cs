@@ -259,7 +259,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Saves/{manifest.Id}/Upload")
+                .UseRoute($"/api/Saves/Game/{manifest.Id}/Upload")
                 .UploadAsync<GameSave>($"game-{manifest.Id}-save", stream);
         }
 

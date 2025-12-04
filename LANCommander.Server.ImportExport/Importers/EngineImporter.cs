@@ -22,7 +22,7 @@ public class EngineImporter(
         };
 
     public override async Task<bool> CanImportAsync(Engine record) 
-        => await engineService.ExistsAsync(e => e.Name == record.Name);
+        => !await engineService.ExistsAsync(e => e.Name == record.Name);
 
     public override async Task<bool> AddAsync(Engine record)
     {

@@ -22,7 +22,7 @@ public class CollectionImporter(
         };
 
     public override async Task<bool> CanImportAsync(Collection record)
-        => await collectionService.ExistsAsync(c => c.Name == record.Name);
+        => !await collectionService.ExistsAsync(c => c.Name == record.Name);
 
     public override async Task<bool> AddAsync(Collection record)
     {

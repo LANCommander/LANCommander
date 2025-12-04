@@ -22,7 +22,7 @@ public class PlatformImporter(
         };
 
     public override async Task<bool> CanImportAsync(Platform record) 
-        => await platformService.ExistsAsync(p => p.Name == record.Name);
+        => !await platformService.ExistsAsync(p => p.Name == record.Name);
 
     public override async Task<bool> AddAsync(Platform record)
     {

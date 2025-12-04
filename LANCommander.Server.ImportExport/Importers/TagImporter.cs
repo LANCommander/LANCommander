@@ -22,7 +22,7 @@ public class TagImporter(
         };
 
     public override async Task<bool> CanImportAsync(Tag record)
-        => await tagService.ExistsAsync(t => t.Name == record.Name);
+        => !await tagService.ExistsAsync(t => t.Name == record.Name);
 
     public override async Task<bool> AddAsync(Tag record)
     {

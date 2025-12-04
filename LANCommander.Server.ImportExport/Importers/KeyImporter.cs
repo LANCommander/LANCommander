@@ -25,8 +25,7 @@ public class KeyImporter(
         };
     }
 
-    public override async Task<bool> CanImportAsync(Key record)
-        => await keyService.ExistsAsync(k => k.Value == record.Value);
+    public override async Task<bool> CanImportAsync(Key record) => ImportContext.Manifest is Game;
 
     public override async Task<bool> AddAsync(Key record)
     {

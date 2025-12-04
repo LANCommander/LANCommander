@@ -24,7 +24,7 @@ public class GenreImporter(
     }
 
     public override async Task<bool> CanImportAsync(Genre record)
-        => await genreService.ExistsAsync(g => g.Name == record.Name);
+        => !await genreService.ExistsAsync(g => g.Name == record.Name);
 
     public override async Task<bool> AddAsync(Genre record)
     {

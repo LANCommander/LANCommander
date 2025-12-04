@@ -25,7 +25,7 @@ public class DeveloperImporter(
         };
 
     public override async Task<bool> CanImportAsync(Company record) 
-        => await companyService.ExistsAsync(c => c.Name == record.Name);
+        => !await companyService.ExistsAsync(c => c.Name == record.Name);
 
     public override async Task<bool> AddAsync(Company record)
     {

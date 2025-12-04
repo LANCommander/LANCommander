@@ -174,6 +174,9 @@ namespace LANCommander.Server.Services
         {
             var archive = await Include(a => a.StorageLocation).GetAsync(archiveId);
 
+            if (archive == null)
+                return false;
+
             var path = await GetArchiveFileLocationAsync(archive);
 
             return File.Exists(path);

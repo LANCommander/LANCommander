@@ -59,11 +59,26 @@ public class ScriptImporter(
             };
 
             if (ImportContext.Manifest is Game game)
+            {
+                if (ImportContext.InQueue(game, gameImporter))
+                    return false;
+                
                 newScript.Game = await gameService.GetAsync(game.Id);
+            }
             else if (ImportContext.Manifest is Redistributable redistributable)
+            {
+                if (ImportContext.InQueue(redistributable, redistributableImporter))
+                    return false;
+                
                 newScript.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
             else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+            {
+                if (ImportContext.InQueue(server, serverImporter))
+                    return false;
+                
                 newScript.Server = await serverService.GetAsync(server.Id);
+            }
             else
                 return false;
 
@@ -90,20 +105,37 @@ public class ScriptImporter(
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
 
-        Data.Models.Script existing = null;
-        
-        if (ImportContext.Manifest is Game game)
-            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
-        else if (ImportContext.Manifest is Redistributable redistributable)
-            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
-        else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
-            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
+        Data.Models.Script existing = await scriptService.FirstOrDefaultAsync(s => s.Id == record.Id);
 
         if (existing == null)
             return false;
 
         try
         {
+            if (ImportContext.Manifest is Game game)
+            {
+                if (ImportContext.InQueue(game, gameImporter))
+                    return false;
+            
+                existing.Game = await gameService.GetAsync(game.Id);
+            }
+            else if (ImportContext.Manifest is Redistributable redistributable)
+            {
+                if (ImportContext.InQueue(redistributable, redistributableImporter))
+                    return false;
+                
+                existing.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
+            else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+            {
+                if (ImportContext.InQueue(server, serverImporter))
+                    return false;
+                
+                existing.Server = await serverService.GetAsync(server.Id);
+            }
+            else
+                return false;
+            
             existing.CreatedOn = record.CreatedOn;
             existing.Name = record.Name;
             existing.Description = record.Description;
@@ -127,16 +159,5 @@ public class ScriptImporter(
     }
 
     public override async Task<bool> ExistsAsync(Script record)
-    {
-        if (ImportContext.Manifest is Game game)
-            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
-        
-        if (ImportContext.Manifest is Redistributable redistributable)
-            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
-        
-        if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
-            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
-
-        return false;
-    }
+        => await scriptService.ExistsAsync(record.Id);
 }

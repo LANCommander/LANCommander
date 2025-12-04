@@ -387,6 +387,8 @@ namespace LANCommander.Server.Services
             Func<U, Expression<Func<TChild, bool>>> matchExpression) where TChild : class where T : class
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
+
+            context.Attach(entity);
             
             var entry = context.Entry(entity);
             
@@ -433,13 +435,14 @@ namespace LANCommander.Server.Services
                     matchedChildren.Add(existingChild);
                 }
             }
-            
-            var toDelete = collection.Where(child => !matchedChildren.Contains(child));
+
+            var toDelete = collection
+                .Where(child => !matchedChildren.Contains(child))
+                .ToList();
 
             foreach (var child in toDelete)
             {
                 collection.Remove(child);
-                context.Remove(child);
             }
 
             try

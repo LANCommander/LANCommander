@@ -261,6 +261,7 @@ public class ApiRequestBuilder(
 
     public async Task<TResult> UploadAsync<TResult>(string fileName, byte[] data)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         using (var form = new MultipartFormDataContent())
         {
             var dataContent = new ByteArrayContent(data);

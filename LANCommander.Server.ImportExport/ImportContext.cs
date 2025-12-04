@@ -268,7 +268,13 @@ public class ImportContext : IDisposable
         where TRecord : class
     {
         if (record != null && !InQueue(record, importer) && await importer.CanImportAsync(record))
-            Queue.Enqueue(await importer.GetImportInfoAsync(record));
+        {
+            var importInfo = await importer.GetImportInfoAsync(record);
+            
+            importInfo.Key = importer.GetKey(record);
+            
+            Queue.Enqueue(importInfo);
+        }
     }
 
     public async Task ImportQueueAsync()
@@ -412,7 +418,13 @@ public class ImportContext : IDisposable
             foreach (var record in records)
             {
                 if (record != null && record.GetType() == typeof(TRecord))
-                    yield return await importer.GetImportInfoAsync(record);
+                {
+                    var importInfo = await importer.GetImportInfoAsync(record);
+                    
+                    importInfo.Key = importer.GetKey(record);
+                    
+                    yield return importInfo;
+                }
             }
     }
 

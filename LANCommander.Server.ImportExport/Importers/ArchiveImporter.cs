@@ -17,7 +17,9 @@ public class ArchiveImporter(
     ILogger<ArchiveImporter> logger,
     ArchiveService archiveService,
     GameService gameService,
-    RedistributableService redistributableService) : BaseImporter<Archive>
+    RedistributableService redistributableService,
+    GameImporter gameImporter,
+    RedistributableImporter redistributableImporter) : BaseImporter<Archive>
 {
     public override string GetKey(Archive record)
         => $"{nameof(Archive)}/{record.Id}";
@@ -47,6 +49,7 @@ public class ArchiveImporter(
         {
             var newArchive = new Data.Models.Archive()
             {
+                Id = record.Id,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
                 StorageLocation = ImportContext.ArchiveStorageLocation,
@@ -58,9 +61,20 @@ public class ArchiveImporter(
             };
 
             if (ImportContext.Manifest is Game game)
+            {
+                if (ImportContext.InQueue(game, gameImporter))
+                    return false;
+                
                 newArchive.Game = await gameService.GetAsync(game.Id);
+            }
             else if (ImportContext.Manifest is Redistributable redistributable)
+            {
+                if (ImportContext.InQueue(redistributable, redistributableImporter))
+                    return false;
+                
                 newArchive.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
+                
             else
                 throw new ImportSkippedException<Archive>(record,
                     $"Cannot import an archive for a {record.GetType().Name}");
@@ -97,6 +111,21 @@ public class ArchiveImporter(
             existing.CreatedOn = archive.CreatedOn;
             existing.UpdatedOn = archive.UpdatedOn;
             
+            if (ImportContext.Manifest is Game game)
+            {
+                if (ImportContext.InQueue(game, gameImporter))
+                    return false;
+                
+                existing.Game = await gameService.GetAsync(game.Id);
+            }
+            else if (ImportContext.Manifest is Redistributable redistributable)
+            {
+                if (ImportContext.InQueue(redistributable, redistributableImporter))
+                    return false;
+                
+                existing.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
+            
             existing = await archiveService.UpdateAsync(existing);
             
             await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
@@ -114,13 +143,5 @@ public class ArchiveImporter(
     }
 
     public override async Task<bool> ExistsAsync(Archive archive)
-    {
-        if (ImportContext.Manifest is Game game)
-            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
-        
-        if (ImportContext.Manifest is Redistributable redistributable)
-            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
-        
-        throw new ImportSkippedException<Archive>(archive, $"Cannot import archive, incompatible manifest");
-    }
+        => await archiveService.ExistsAsync(archive.Id);
 }

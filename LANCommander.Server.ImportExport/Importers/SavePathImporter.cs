@@ -66,10 +66,13 @@ public class SavePathImporter(
 
         try
         {
+            var game = ImportContext.Manifest as Game;
+            
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;
             existing.Type = record.Type;
+            existing.Game = await gameService.GetAsync(game.Id);
             
             await savePathService.UpdateAsync(existing);
 

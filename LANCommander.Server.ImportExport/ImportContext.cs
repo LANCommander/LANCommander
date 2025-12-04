@@ -236,6 +236,7 @@ public class ImportContext : IDisposable
         await AddAsync(game.PlaySessions, _playSessions);
         await AddAsync(game.Publishers, _publishers);
         await AddAsync(game.Saves, _saves);
+        await AddAsync(game.SavePaths, _savePaths);
         await AddAsync(game.Scripts, _scripts);
         await AddAsync(game.Tags, _tags);
         await AddAsync(game, _games);

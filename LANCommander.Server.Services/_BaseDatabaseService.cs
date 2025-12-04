@@ -384,8 +384,7 @@ namespace LANCommander.Server.Services
             T entity,
             Expression<Func<T, ICollection<TChild>>> navigationProperty,
             IEnumerable<U> records,
-            Func<U, Expression<Func<TChild, bool>>> matchExpression,
-            Action<TChild, U> updateAction) where TChild : class where T : class
+            Func<U, Expression<Func<TChild, bool>>> matchExpression) where TChild : class where T : class
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
             
@@ -431,16 +430,7 @@ namespace LANCommander.Server.Services
                     if (!collection.Contains(existingChild))
                         collection.Add(existingChild);
                     
-                    updateAction(existingChild, record);
                     matchedChildren.Add(existingChild);
-                }
-                else
-                {
-                    var newChild = Activator.CreateInstance<TChild>();
-                    
-                    updateAction(newChild, record);
-                    collection.Add(newChild);
-                    matchedChildren.Add(newChild);
                 }
             }
             

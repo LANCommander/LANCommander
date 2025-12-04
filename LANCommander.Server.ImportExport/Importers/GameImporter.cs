@@ -53,6 +53,7 @@ public class GameImporter(
         try
         {
             await gameService.AddAsync(game);
+            await UpdateRelationshipsAsync();
 
             return true;
         }
@@ -87,6 +88,7 @@ public class GameImporter(
                 existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
             await gameService.UpdateAsync(existing);
+            await UpdateRelationshipsAsync();
 
             return true;
         }
@@ -102,7 +104,7 @@ public class GameImporter(
         return await gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);
     }
 
-    public async Task FinalizeAsync()
+    public async Task UpdateRelationshipsAsync()
     {
         if (ImportContext.Manifest is not Game)
             return;
@@ -113,84 +115,42 @@ public class GameImporter(
             return;
 
         var game = await gameService
-            .Include(g => g.Collections)
-            .Include(g => g.Developers)
-            .Include(g => g.Genres)
-            .Include(g => g.Platforms)
-            .Include(g => g.Publishers)
-            .Include(g => g.Tags)
             .GetAsync(manifest.Id);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Collections,
             manifest.Collections,
-            r => c => c.Name == r.Name,
-            (c, rc) =>
-            {
-                c.Name = rc.Name;
-                c.CreatedOn = rc.CreatedOn;
-                c.UpdatedOn = rc.UpdatedOn;
-            });
+            r => c => c.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Developers,
             manifest.Developers,
-            r => c => c.Name == r.Name,
-            (d, rd) =>
-            {
-                d.Name = rd.Name;
-                d.CreatedOn = rd.CreatedOn;
-                d.UpdatedOn = rd.UpdatedOn;
-            });
+            r => c => c.Name == r.Name);
 
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Genres,
             manifest.Genres,
-            r => g => g.Name == r.Name,
-            (g, gr) =>
-            {
-                g.Name = gr.Name;
-                g.CreatedOn = gr.CreatedOn;
-                g.UpdatedOn = gr.UpdatedOn;
-            });
+            r => g => g.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Platforms,
             manifest.Platforms,
-            r => p => p.Name == r.Name,
-            (p, pr) =>
-            {
-                p.Name = pr.Name;
-                p.CreatedOn = pr.CreatedOn;
-                p.UpdatedOn = pr.UpdatedOn;
-            });
+            r => p => p.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Publishers,
             manifest.Publishers,
-            r => p => p.Name == r.Name,
-            (p, pr) =>
-            {
-                p.Name = pr.Name;
-                p.CreatedOn = pr.CreatedOn;
-                p.UpdatedOn = pr.UpdatedOn;
-            });
+            r => p => p.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Tags,
             manifest.Tags,
-            r => t => t.Name == r.Name,
-            (t, tr) =>
-            {
-                t.Name = tr.Name;
-                t.CreatedOn = tr.CreatedOn;
-                t.UpdatedOn = tr.UpdatedOn;
-            });
+            r => t => t.Name == r.Name);
     }
 }

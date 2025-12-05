@@ -21,17 +21,6 @@ namespace LANCommander.Server.UI.Components
         [CascadingParameter]
         public List<string> Includes { get; set; } = default!;
 
-        protected override void OnInitialized()
-        {
-            ClassMapper.Add("ant-flex");
-            ClassMapper.Add("ant-flex-align-normal");
-            ClassMapper.Add("ant-flex-justify-end");
-            ClassMapper.Add("ant-flex-gap-small");
-            ClassMapper.Add("ant-flex-wrap-nowrap");
-
-            base.OnInitialized();
-        }
-
         protected override void OnParametersSet()
         {
             if (!ColumnVisibility.ContainsKey(ColIndex))

@@ -2,7 +2,7 @@
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Archive : BaseModel
+    public class Archive : BaseModel, IKeyedModel
     {
         public Guid Id { get; set; }
         public string Changelog { get; set; }

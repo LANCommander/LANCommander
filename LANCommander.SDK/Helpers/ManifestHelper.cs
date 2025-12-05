@@ -88,7 +88,7 @@ namespace LANCommander.SDK.Helpers
         }
         
         public static string Write<T>(T manifest, string installDirectory)
-            where T : IKeyedModel
+            where T : SDK.Models.Manifest.IKeyedModel
         {
             var destination = GetPath(installDirectory, manifest.Id);
 
@@ -107,7 +107,7 @@ namespace LANCommander.SDK.Helpers
         }
 
         public static async Task<string> WriteAsync<T>(T manifest, string installDirectory)
-            where T : IKeyedModel
+            where T : SDK.Models.Manifest.IKeyedModel
         {
             var destination = GetPath(installDirectory, manifest.Id);
 

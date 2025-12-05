@@ -170,6 +170,28 @@ public class ImportContext : IDisposable
                     Contents = script.Contents,
                 });
             }
+        
+        if (gameManifest.Media != null)
+            foreach (var media in gameManifest.Media)
+            {
+                _media.AddAsset(new ImportAssetArchiveEntry
+                {
+                    RecordId = media.Id,
+                    Name = media.Type.ToString(),
+                    Path = $"Media/{media.FileId}",
+                });
+            }
+        
+        if (gameManifest.Archives != null)
+            foreach (var archive in gameManifest.Archives)
+            {
+                _archives.AddAsset(new ImportAssetArchiveEntry
+                {
+                    RecordId = archive.Id,
+                    Name = archive.Version,
+                    Path = $"Archives/{archive.ObjectKey}",
+                });
+            }
                     
         return await InitializeGameImportAsync(manifest);
     }

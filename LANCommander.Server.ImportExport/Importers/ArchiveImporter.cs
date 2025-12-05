@@ -38,9 +38,14 @@ public class ArchiveImporter(
     public override async Task<bool> AddAsync(Archive record)
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
-
-        if (archiveEntry == null)
-            throw new ImportSkippedException<Archive>(record, "Matching archive file does not exist in import archive");
+        
+        if (archiveEntry != null)
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = $"{record.Version}",
+                Path = archiveEntry.Key!,
+            });
 
         Data.Models.Archive archive = null;
         string path = "";
@@ -80,13 +85,6 @@ public class ArchiveImporter(
                     $"Cannot import an archive for a {record.GetType().Name}");
             
             archive = await archiveService.AddAsync(newArchive);
-            
-            AddAsset(new ImportAssetArchiveEntry
-            {
-                RecordId = record.Id,
-                Name = $"{record.Version}",
-                Path = archiveEntry.Key!,
-            });
 
             return true;
         }
@@ -104,16 +102,14 @@ public class ArchiveImporter(
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
         var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
-        
-        if (archiveEntry == null)
-            throw new ImportSkippedException<Archive>(archive, "Matching archive file does not exist in import archive");
 
-        AddAsset(new ImportAssetArchiveEntry
-        {
-            RecordId = archive.Id,
-            Name = $"{archive.Version}",
-            Path = archiveEntry.Key!,
-        });
+        if (archiveEntry != null)
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = archive.Id,
+                Name = $"{archive.Version}",
+                Path = archiveEntry.Key!,
+            });
         
         try
         {

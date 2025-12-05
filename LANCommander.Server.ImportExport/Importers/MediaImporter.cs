@@ -38,26 +38,14 @@ public class MediaImporter(
             await storageLocationService.DefaultAsync(StorageLocationType.Media);
 
         Data.Models.Media media = null;
-        IImportAsset asset;
         
-        if (archiveEntry == null && !String.IsNullOrWhiteSpace(record.SourceUrl))
-        {
-            asset = new ImportAssetExternalDownload
-            {
-                RecordId = record.Id,
-                Name = record.Type.ToString(),
-                SourceUrl = record.SourceUrl,
-            };
-        }
-        else if (archiveEntry == null)
-            throw new ImportSkippedException<Media>(record, "Matching media file does not exist");
-        else
-            asset = new ImportAssetArchiveEntry
+        if (archiveEntry != null)
+            AddAsset(new ImportAssetArchiveEntry
             {
                 RecordId = record.Id,
                 Name = record.Type.ToString(),
                 Path = archiveEntry.Key!,
-            };
+            });
         
         try
         {
@@ -84,8 +72,6 @@ public class MediaImporter(
             };
 
             media = await mediaService.AddAsync(media);
-            
-            AddAsset(asset);
 
             return true;
         }
@@ -114,19 +100,8 @@ public class MediaImporter(
             
             var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
             var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Id == record.Id);
-
-            if (archiveEntry == null && !String.IsNullOrWhiteSpace(record.SourceUrl))
-            {
-                AddAsset(new ImportAssetExternalDownload
-                {
-                    RecordId = record.Id,
-                    Name = record.Type.ToString(),
-                    SourceUrl = record.SourceUrl,
-                });
-            }
-            else if (archiveEntry == null)
-                throw new ImportSkippedException<Media>(record, "Matching media file does not exist");
-            else
+            
+            if (archiveEntry != null)
                 AddAsset(new ImportAssetArchiveEntry
                 {
                     RecordId = record.Id,

@@ -89,7 +89,7 @@
             Logger.LogError(ex, $"Could not update {GenreContext.Name}!");
         }
 
-        Table.Reload();
+        await Table.ReloadAsync();
 
         await CloseEdit();
     }
@@ -120,7 +120,7 @@
 
             MessageService.Success("Genre deleted!");
 
-            Table.Reload();
+            await Table.ReloadAsync();
         }
         catch (Exception ex)
         {

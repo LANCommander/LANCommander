@@ -79,7 +79,7 @@
 
             MessageService.Success($"{CollectionContext.Name} was added!");
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             await CloseAdd();
         }
@@ -96,7 +96,7 @@
         {
             await CollectionService.DeleteAsync(collection);
             
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success("Collection deleted!");
         }

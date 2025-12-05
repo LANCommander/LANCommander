@@ -215,11 +215,11 @@
         };
 
         var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
-        modalRef.OnOk = modalRef.OnCancel = Reload;
+        modalRef.OnOk = modalRef.OnCancel = modalRef.OnClose = Reload;
     }
 
     async Task Reload()
     {
-        Table.ReloadData();
+        await Table.ReloadAsync();
     }
 }

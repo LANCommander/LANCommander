@@ -18,10 +18,10 @@
 
 <CascadingValue Value="this">
     <Flex Justify="FlexJustify.SpaceBetween" Class="table-toolbar">
-        <Flex Gap="FlexGap.Small">
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.Start">
             @if (Searchable)
             {
-                <Search Placeholder="Search" OnChange="SearchChanged" @bind-Value="Search" />                
+                <Search Placeholder="Search" OnChange="SearchChanged" @bind-Value="Search" Style="width: auto;" />                
             }
 
             @if (ColumnPicker)
@@ -326,7 +326,7 @@
 
         // NavigationManager.NavigateTo(QueryHelpers.AddQueryString(uri.AbsolutePath, parameters));
 
-        Reload();
+        await ReloadAsync();
     }
 
     public IEnumerable<string> GetIncludes()
@@ -376,11 +376,11 @@
         StateHasChanged();
     }
 
-    public void Reload()
+    public async Task ReloadAsync()
     {
         Loading = true;
-        StateHasChanged();
-        Task.Yield();
+        await InvokeStateHasChangedAsync();
+        await Task.Yield();
         
         ReloadData(PageIndex, PageSize);
     }

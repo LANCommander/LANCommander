@@ -99,18 +99,18 @@
 
         modalRef.OnOk = async (script) =>
         {
-            Table.Reload();
+            await Table.ReloadAsync();
         };
     }
 
-    async void Delete(Script script = null)
+    async Task Delete(Script script = null)
     {
         try
         {
             if (script != null)
                 await ScriptService.DeleteAsync(script);
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success("Script deleted!");
         }

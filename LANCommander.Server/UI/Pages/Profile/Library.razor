@@ -55,7 +55,7 @@
 
             MessageService.Success($"Removed {game.Title} from your library!");
 
-            Table.Reload();
+            await Table.ReloadAsync();
         }
         catch (Exception ex)
         {

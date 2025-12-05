@@ -4,7 +4,7 @@ using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Game : BaseModel, IKeyedModel
+    public class Game : BaseManifest, IKeyedModel
     {
         public Guid Id { get; set; }
         public long? IGDBId { get; set; }

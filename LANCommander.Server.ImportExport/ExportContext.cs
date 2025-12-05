@@ -341,6 +341,8 @@ public class ExportContext(
     public async Task<SDK.Models.Manifest.Game> ExportGameQueueAsync(Data.Models.Game game)
     {
         var manifest = await Games.ExportAsync(game.Id);
+
+        manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
         
         foreach (var queueItem in _queue)
         {
@@ -387,6 +389,8 @@ public class ExportContext(
     {
         var manifest = await Redistributables.ExportAsync(redistributable.Id);
         
+        manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        
         foreach (var queueItem in _queue)
         {
             if (queueItem.Type == ImportExportRecordType.Archive)
@@ -401,6 +405,8 @@ public class ExportContext(
     public async Task<SDK.Models.Manifest.Server> ExportServerQueueAsync(Data.Models.Server server)
     {
         var manifest = await Servers.ExportAsync(server.Id);
+        
+        manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
 
         foreach (var queueItem in _queue)
         {

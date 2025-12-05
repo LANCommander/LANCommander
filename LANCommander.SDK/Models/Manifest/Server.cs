@@ -4,7 +4,7 @@ using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Server : BaseModel, IKeyedModel
+    public class Server : BaseManifest, IKeyedModel
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = "";

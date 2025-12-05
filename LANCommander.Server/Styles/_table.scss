@@ -16,6 +16,10 @@
 
 .table-toolbar {
     padding: 12px;
+    
+    .ant-input-search {
+        width: auto;
+    }
 }
 
 .ant-table-row-indent + .ant-table-row-expand-icon {
@@ -23,4 +27,8 @@
     display: inline;
     float: none;
     margin-top: 0;
+}
+
+.table-data-actions {
+    text-align: right;
 }

@@ -1,9 +1,4 @@
-﻿using AntDesign.TableModels;
-using Microsoft.AspNetCore.Components;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Linq.Expressions;
-using System.Reflection;
+﻿using Microsoft.AspNetCore.Components;
 
 namespace LANCommander.Server.UI.Components
 {
@@ -27,6 +22,7 @@ namespace LANCommander.Server.UI.Components
                 ColumnVisibility.Add(ColIndex, !Hide);
 
             ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
+            ClassMapper.Add("table-data-actions");
             
             StateHasChanged();
 

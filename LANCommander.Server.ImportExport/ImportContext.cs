@@ -160,15 +160,16 @@ public class ImportContext : IDisposable
     {
         var manifest = gameManifest.UpdateManifest();
 
-        foreach (var script in gameManifest.Scripts)
-        {
-            _scripts.AddAsset(new ImportAssetText
+        if (gameManifest.Scripts != null)
+            foreach (var script in gameManifest.Scripts)
             {
-                Name = script.Name,
-                RecordId = script.Id,
-                Contents = script.Contents,
-            });
-        }
+                _scripts.AddAsset(new ImportAssetText
+                {
+                    Name = script.Name,
+                    RecordId = script.Id,
+                    Contents = script.Contents,
+                });
+            }
                     
         return await InitializeGameImportAsync(manifest);
     }

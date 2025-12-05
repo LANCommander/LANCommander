@@ -70,13 +70,11 @@ public class SaveImporter(
                 StorageLocation = await gameSaveService.GetDefaultStorageLocationAsync(),
             });
 
-            path = gameSaveService.GetSavePath(save);
-            
-            archiveEntry.WriteToFile(path, new ExtractionOptions()
+            AddAsset(new ImportAssetArchiveEntry
             {
-                Overwrite = true,
-                PreserveAttributes = true,
-                PreserveFileTime = true,
+                RecordId = record.Id,
+                Name = $"{record.User} - {record.CreatedOn}",
+                Path = archiveEntry.Key,
             });
 
             return true;
@@ -93,8 +91,6 @@ public class SaveImporter(
 
     public override async Task<bool> UpdateAsync(Save record)
     {
-        var existing = await gameSaveService.FirstOrDefaultAsync(s => s.Id == record.Id);
-        
         // We only need to extract the save file
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
 
@@ -103,7 +99,30 @@ public class SaveImporter(
         
         try
         {
-            var path = gameSaveService.GetSavePath(existing);
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = $"{record.User} - {record.CreatedOn}",
+                Path = archiveEntry.Key,
+            });
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not update save file {Key}", GetKey(record));
+            return false;
+        }
+    }
+
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        if (asset is ImportAssetArchiveEntry assetArchiveEntry)
+        {
+            var save = await gameSaveService.GetAsync(asset.RecordId);
+            var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == assetArchiveEntry.Path);
+            
+            var path = gameSaveService.GetSavePath(save);
             
             archiveEntry.WriteToFile(path, new ExtractionOptions()
             {
@@ -114,11 +133,8 @@ public class SaveImporter(
 
             return true;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not update save file {Key}", GetKey(record));
-            return false;
-        }
+
+        return false;
     }
 
     public override async Task<bool> ExistsAsync(Save save)

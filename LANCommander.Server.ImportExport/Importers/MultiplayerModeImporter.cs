@@ -93,6 +93,11 @@ public class MultiplayerModeImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(MultiplayerMode record)
     {
         if (ImportContext.Manifest is Game game)

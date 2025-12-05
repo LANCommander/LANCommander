@@ -85,6 +85,11 @@ public class SavePathImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(SavePath record) 
         => await savePathService.ExistsAsync(p => p.Id == record.Id);
 }

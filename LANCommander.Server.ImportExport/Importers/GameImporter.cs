@@ -99,6 +99,11 @@ public class GameImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(Game record)
     {
         return await gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);

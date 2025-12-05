@@ -50,6 +50,10 @@ public class DeveloperImporter(
     }
 
     public override async Task<bool> UpdateAsync(Company record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Company record)
         => await companyService.ExistsAsync(c => c.Name == record.Name);

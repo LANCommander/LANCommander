@@ -49,6 +49,10 @@ public class GenreImporter(
     }
 
     public override async Task<bool> UpdateAsync(Genre record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Genre record) 
         => await genreService.ExistsAsync(c => c.Name == record.Name);

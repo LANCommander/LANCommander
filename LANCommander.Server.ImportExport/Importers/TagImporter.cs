@@ -47,6 +47,10 @@ public class TagImporter(
     }
 
     public override async Task<bool> UpdateAsync(Tag record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Tag record) 
         => await tagService.ExistsAsync(c => c.Name == record.Name);

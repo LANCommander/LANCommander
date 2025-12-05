@@ -68,6 +68,11 @@ public class RedistributableImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(Redistributable record) 
         => await redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
 } 

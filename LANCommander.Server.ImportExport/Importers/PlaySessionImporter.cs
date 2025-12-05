@@ -85,6 +85,11 @@ public class PlaySessionImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(PlaySession record)
     {
         if (ImportContext.Manifest is Game game)

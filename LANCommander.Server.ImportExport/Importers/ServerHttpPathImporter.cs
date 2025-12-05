@@ -83,6 +83,11 @@ public class ServerHttpPathImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(ServerHttpPath record)
     {
         if (ImportContext.Manifest is SDK.Models.Manifest.Server server)

@@ -133,6 +133,14 @@ public class ImportContext : IDisposable
         using (var reader = new StreamReader(manifestEntry.OpenEntryStream()))
         {
             var manifestContents = await reader.ReadToEndAsync();
+            var manifestMeta = ManifestHelper.Deserialize<SDK.Models.Manifest.BaseManifest>(manifestContents);
+
+            // Check for legacy manifest
+            if (String.IsNullOrWhiteSpace(manifestMeta.ManifestVersion))
+            {
+                if (ManifestHelper.TryDeserialize<Legacy.Models.GameManifest>(manifestContents, out var legacyGameManifest))
+                    return await InitializeLegacyGameImportAsync(legacyGameManifest);
+            }
 
             if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Game>(manifestContents, out var gameManifest))
                 return await InitializeGameImportAsync(gameManifest);
@@ -145,6 +153,24 @@ public class ImportContext : IDisposable
                 
             throw new InvalidOperationException("Unknown manifest file");
         }
+    }
+
+    private async Task<IEnumerable<IImportItemInfo>> InitializeLegacyGameImportAsync(
+        Legacy.Models.GameManifest gameManifest)
+    {
+        var manifest = gameManifest.UpdateManifest();
+
+        foreach (var script in gameManifest.Scripts)
+        {
+            _scripts.AddAsset(new ImportAssetText
+            {
+                Name = script.Name,
+                RecordId = script.Id,
+                Contents = script.Contents,
+            });
+        }
+                    
+        return await InitializeGameImportAsync(manifest);
     }
 
     private async Task<IEnumerable<IImportItemInfo>> InitializeGameImportAsync(SDK.Models.Manifest.Game gameManifest)

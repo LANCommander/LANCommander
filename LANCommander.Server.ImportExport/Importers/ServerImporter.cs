@@ -39,8 +39,14 @@ public class ServerImporter(
 
         try
         {
-            await ExtractFiles(server);
             await serverService.AddAsync(server);
+            
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = "Files",
+                Path = "Files/",
+            });
 
             return true;
         }
@@ -76,9 +82,14 @@ public class ServerImporter(
             existing.UpdatedOn = DateTime.Now;
             existing.ProcessTerminationMethod = record.ProcessTerminationMethod;
             
-            existing = await serverService.UpdateAsync(existing);
+            await serverService.UpdateAsync(existing);
 
-            await ExtractFiles(existing);
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = "Files",
+                Path = "Files/",
+            });
 
             return true;
         }
@@ -89,35 +100,52 @@ public class ServerImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        if (asset is ImportAssetArchiveEntry assetArchiveEntry &&
+            assetArchiveEntry.Path.EndsWith("/"))
+        {
+            var server = await serverService.GetAsync(assetArchiveEntry.RecordId);
+            
+            foreach (var entry in ImportContext.Archive.Entries.Where(e =>
+                         e.Key.StartsWith(assetArchiveEntry.Path)))
+            {
+                try
+                {
+                    var destination = entry.Key
+                        .Substring(6, entry.Key.Length - 6)
+                        .TrimEnd('/')
+                        .Replace('/', Path.DirectorySeparatorChar);
+
+                    destination = Path.Combine(server.WorkingDirectory, destination);
+            
+                    var directory = Path.GetDirectoryName(destination);
+            
+                    if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+
+                    if (!entry.Key.EndsWith('/'))
+                        entry.WriteToFile(destination, new ExtractionOptions
+                        {
+                            Overwrite = true,
+                            PreserveAttributes = true,
+                            PreserveFileTime = true,
+                        });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Could not import server file {ArchivePath}", entry.Key);
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     public override async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
     {
         return await serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
-    }
-    
-    private async Task ExtractFiles(Data.Models.Server server)
-    {
-        
-        foreach (var entry in ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/")))
-        {
-            var destination = entry.Key
-                .Substring(6, entry.Key.Length - 6)
-                .TrimEnd('/')
-                .Replace('/', Path.DirectorySeparatorChar);
-
-            destination = Path.Combine(server.WorkingDirectory, destination);
-            
-            var directory = Path.GetDirectoryName(destination);
-            
-            if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-
-            if (!entry.Key.EndsWith('/'))
-                entry.WriteToFile(destination, new ExtractionOptions
-                {
-                    Overwrite = true,
-                    PreserveAttributes = true,
-                    PreserveFileTime = true,
-                });
-        }
     }
 } 

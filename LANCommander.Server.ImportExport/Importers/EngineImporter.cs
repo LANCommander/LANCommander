@@ -47,6 +47,10 @@ public class EngineImporter(
     }
 
     public override async Task<bool> UpdateAsync(Engine record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Engine record) 
         => await engineService.ExistsAsync(c => c.Name == record.Name);

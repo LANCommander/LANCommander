@@ -16,5 +16,6 @@ public interface IImporter<TRecord> where TRecord : class
     Task<bool> ImportAsync(IImportItemInfo importItem);
     Task<bool> AddAsync(TRecord record);
     Task<bool> UpdateAsync(TRecord record);
+    Task<bool> IngestAsync(IImportAsset asset);
     Task<bool> ExistsAsync(TRecord record);
 }

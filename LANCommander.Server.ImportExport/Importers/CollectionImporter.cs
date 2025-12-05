@@ -47,6 +47,10 @@ public class CollectionImporter(
     }
 
     public override async Task<bool> UpdateAsync(Collection record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Collection record)
         => await collectionService.ExistsAsync(c => c.Name == record.Name);

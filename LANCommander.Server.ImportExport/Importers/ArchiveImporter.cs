@@ -80,7 +80,13 @@ public class ArchiveImporter(
                     $"Cannot import an archive for a {record.GetType().Name}");
             
             archive = await archiveService.AddAsync(newArchive);
-            archive = await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+            
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = $"{record.Version}",
+                Path = archiveEntry.Key!,
+            });
 
             return true;
         }
@@ -98,10 +104,16 @@ public class ArchiveImporter(
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
         var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
-        var existingPath = await archiveService.GetArchiveFileLocationAsync(existing);
         
         if (archiveEntry == null)
             throw new ImportSkippedException<Archive>(archive, "Matching archive file does not exist in import archive");
+
+        AddAsset(new ImportAssetArchiveEntry
+        {
+            RecordId = archive.Id,
+            Name = $"{archive.Version}",
+            Path = archiveEntry.Key!,
+        });
         
         try
         {
@@ -126,12 +138,7 @@ public class ArchiveImporter(
                 existing.Redistributable = await redistributableService.GetAsync(redistributable.Id);
             }
             
-            existing = await archiveService.UpdateAsync(existing);
-            
-            await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
-            
-            if (File.Exists(existingPath))
-                File.Delete(existingPath);
+            await archiveService.UpdateAsync(existing);
 
             return true;
         }
@@ -140,6 +147,29 @@ public class ArchiveImporter(
             logger.LogError(ex, "Could not update archive | {Key}", GetKey(archive));
             return false;
         }
+    }
+
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        try
+        {
+            if (asset is ImportAssetArchiveEntry archiveEntryAsset)
+            {
+                var archive = await archiveService.GetAsync(archiveEntryAsset.RecordId);
+                var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
+
+                if (archiveEntry == null)
+                    return false;
+                
+                await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not injest archive entry");
+        }
+
+        return false;
     }
 
     public override async Task<bool> ExistsAsync(Archive archive)

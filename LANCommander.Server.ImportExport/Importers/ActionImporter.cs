@@ -94,6 +94,11 @@ public class ActionImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(Action record)
     {
         if (ImportContext.Manifest is Game game)

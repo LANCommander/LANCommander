@@ -40,8 +40,13 @@ public class ScriptImporter(
     {
         var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
         
-        if (archiveEntry == null)
-            throw new ImportSkippedException<Script>(record, "Matching script file does not exist in import archive");
+        if (archiveEntry != null)
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = record.Name,
+                Path = archiveEntry.Key!,
+            });
 
         Data.Models.Script script = null;
         string path = "";
@@ -82,11 +87,6 @@ public class ScriptImporter(
             else
                 return false;
 
-            using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
-            {
-                newScript.Contents = await streamReader.ReadToEndAsync();
-            }
-
             await scriptService.AddAsync(newScript);
 
             return true;
@@ -109,6 +109,14 @@ public class ScriptImporter(
 
         if (existing == null)
             return false;
+
+        if (archiveEntry != null)
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = record.Name,
+                Path = archiveEntry.Key!,
+            });
 
         try
         {
@@ -142,11 +150,6 @@ public class ScriptImporter(
             existing.RequiresAdmin = record.RequiresAdmin;
             existing.Type = record.Type;
 
-            using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
-            {
-                existing.Contents = await streamReader.ReadToEndAsync();
-            }
-
             await scriptService.UpdateAsync(existing);
 
             return true;
@@ -156,6 +159,36 @@ public class ScriptImporter(
             logger.LogError(ex, "Failed to update script | {Key}", GetKey(record));
             return false;
         }
+    }
+
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        var script = await scriptService.GetAsync(asset.RecordId);
+        
+        if (asset is ImportAssetArchiveEntry assetArchiveEntry)
+        {
+            var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == assetArchiveEntry.Path);
+            
+            using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
+            {
+                script.Contents = await streamReader.ReadToEndAsync();
+            }
+
+            await scriptService.UpdateAsync(script);
+
+            return true;
+        }
+        
+        if (asset is ImportAssetText assetText)
+        {
+            script.Contents = assetText.Contents;
+            
+            await scriptService.UpdateAsync(script);
+
+            return true;
+        }
+
+        return false;
     }
 
     public override async Task<bool> ExistsAsync(Script record)

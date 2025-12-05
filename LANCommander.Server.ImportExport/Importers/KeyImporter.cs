@@ -83,6 +83,11 @@ public class KeyImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(Key record)
     {
         if (ImportContext.Manifest is Game game)

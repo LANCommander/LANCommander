@@ -88,6 +88,11 @@ public class ServerConsoleImporter(
         }
     }
 
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
+
     public override async Task<bool> ExistsAsync(ServerConsole record)
     {
         if (ImportContext.Manifest is SDK.Models.Manifest.Server server)

@@ -47,6 +47,10 @@ public class PlatformImporter(
     }
 
     public override async Task<bool> UpdateAsync(Platform record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
+    }
 
     public override async Task<bool> ExistsAsync(Platform record)
         => await platformService.ExistsAsync(c => c.Name == record.Name);

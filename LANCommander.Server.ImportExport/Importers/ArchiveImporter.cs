@@ -156,12 +156,14 @@ public class ArchiveImporter(
             if (asset is ImportAssetArchiveEntry archiveEntryAsset)
             {
                 var archive = await archiveService.GetAsync(archiveEntryAsset.RecordId);
-                var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
+                var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == archiveEntryAsset.Path);
 
                 if (archiveEntry == null)
                     return false;
                 
                 await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+
+                return true;
             }
         }
         catch (Exception ex)

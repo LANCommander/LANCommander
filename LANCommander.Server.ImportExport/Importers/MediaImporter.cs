@@ -68,7 +68,7 @@ public class MediaImporter(
                 StorageLocation = defaultMediaLocation,
                 SourceUrl = record.SourceUrl,
                 MimeType = record.MimeType,
-                Crc32 = record.Crc32,
+                Crc32 = record.Crc32 ?? String.Empty,
             };
 
             media = await mediaService.AddAsync(media);
@@ -115,7 +115,7 @@ public class MediaImporter(
             existing.MimeType = record.MimeType;
             existing.CreatedOn = record.CreatedOn;
             existing.UpdatedOn = record.UpdatedOn;
-            existing.Crc32 = record.Crc32;
+            existing.Crc32 = record.Crc32 ?? String.Empty;
             existing.SourceUrl = record.SourceUrl;
             
             if (existing.StorageLocation == null)

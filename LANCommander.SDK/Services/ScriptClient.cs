@@ -97,8 +97,8 @@ namespace LANCommander.SDK.Services
         {
             bool result = default;
             
-            var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
-            var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+            var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+            var redistributableManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(installDirectory, redistributableId);
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.DetectInstall);
 
@@ -184,7 +184,7 @@ namespace LANCommander.SDK.Services
         {
             int result = default;
 
-            var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Install);
@@ -259,7 +259,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
@@ -339,7 +339,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.AfterStop);
@@ -419,7 +419,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
                 
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
@@ -512,7 +512,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install);
 
                 using (var op = logger.BeginOperation("Executing install script"))
@@ -579,7 +579,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
                 using (var op = logger.BeginOperation("Executing uninstall script"))
@@ -646,7 +646,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.BeforeStart);
 
                 using (var op = logger.BeginOperation("Executing before start script"))
@@ -716,7 +716,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.AfterStop);
 
                 using (var op = logger.BeginOperation("Executing after stop script"))
@@ -786,7 +786,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
                 using (var op = logger.BeginOperation("Executing name change script"))
                 {
@@ -869,7 +869,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange);
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
                 using (var op = logger.BeginOperation("Executing key change script"))
                 {

@@ -1,75 +1,57 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class PlatformImporter(
-    IMapper mapper,
-    PlatformService platformService,
-    GameService gameService) : BaseImporter<Platform, Data.Models.Platform>
+    ILogger<PlatformImporter> logger,
+    PlatformService platformService) : BaseImporter<Platform>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Platform record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Platform record)
+        => $"{nameof(Platform)}/{record.Name}";
+
+    public override async Task<ImportItemInfo<Platform>> GetImportInfoAsync(Platform record) 
+        => new()
         {
             Type = ImportExportRecordType.Platform,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Platform record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(Platform record) 
+        => !await platformService.ExistsAsync(p => p.Name == record.Name);
 
-    public override async Task<Data.Models.Platform> AddAsync(Platform record)
+    public override async Task<bool> AddAsync(Platform record)
     {
         try
         {
             var platform = new Data.Models.Platform
             {
-                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
             };
 
-            platform = await platformService.AddAsync(platform);
+            await platformService.AddAsync(platform);
 
-            return platform;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Platform>(record, "An unknown error occured while importing platform", ex);
+            logger.LogError(ex, "Failed to add platform | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Platform> UpdateAsync(Platform record)
+    public override async Task<bool> UpdateAsync(Platform record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
     {
-        var existing = await platformService.Include(p => p.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-        var game = ImportContext.DataRecord as Data.Models.Game;
-        
-        try
-        {
-            if (existing.Games == null)
-                existing.Games = new List<Data.Models.Game>();
-
-            if (!existing.Games.Any(g => g.Id == game.Id))
-            {
-                existing.Games.Add(await gameService.GetAsync(game.Id));
-
-                existing = await platformService.UpdateAsync(existing);
-            }
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Platform>(record, "An unknown error occured while importing platform", ex);
-        }
+        throw new NotImplementedException();
     }
 
     public override async Task<bool> ExistsAsync(Platform record)
-    {
-        return await platformService.ExistsAsync(c => c.Name == record.Name);
-    }
+        => await platformService.ExistsAsync(c => c.Name == record.Name);
 }

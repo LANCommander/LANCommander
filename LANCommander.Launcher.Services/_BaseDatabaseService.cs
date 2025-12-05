@@ -26,15 +26,18 @@ namespace LANCommander.Launcher.Services
             return await Context.Set<T>().FindAsync(id);
         }
 
+        public virtual async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await Context.Set<T>().FirstOrDefaultAsync(predicate);
+        }
+
         public virtual IQueryable<T> Query(Expression<Func<T, bool>> predicate)
         {
             return Context.Set<T>().Where(predicate);
         }
 
-        public virtual bool Exists(Guid id)
-        {
-            return GetAsync(id) != null;
-        }
+        public virtual async Task<bool> ExistsAsync(Guid id) => await Context.Set<T>().AnyAsync(x => x.Id == id);
+        public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate) => await Context.Set<T>().AnyAsync(predicate);
 
         public virtual async Task<T> AddAsync(T entity)
         {
@@ -90,6 +93,56 @@ namespace LANCommander.Launcher.Services
                 await Context.SaveChangesAsync();
 
             return entity;
+        }
+
+        public virtual async Task SyncRelatedCollectionAsync<T, TChild, U>(
+            T entity, Expression<Func<T, ICollection<TChild>>> navigationProperty,
+            IEnumerable<U> records,
+            Func<U, Expression<Func<TChild, bool>>> matchExpression,
+            Action<TChild, U> updateAction) where TChild : class
+        {
+            var collection = navigationProperty.Compile().Invoke(entity);
+
+            var matchedChildren = new HashSet<TChild>();
+
+            foreach (var record in records)
+            {
+                var matchPredicate = matchExpression(record);
+                var existingChild = collection.FirstOrDefault(matchPredicate.Compile());
+
+                if (existingChild == null)
+                {
+                    existingChild = await Context.Set<TChild>()
+                        .FirstOrDefaultAsync(matchPredicate);
+                }
+
+                if (existingChild != null)
+                {
+                    if (!collection.Contains(existingChild))
+                        collection.Add(existingChild);
+                    
+                    updateAction(existingChild, record);
+                    matchedChildren.Add(existingChild);
+                }
+                else
+                {
+                    var newChild = Activator.CreateInstance<TChild>();
+                    
+                    updateAction(newChild, record);
+                    collection.Add(existingChild);
+                    matchedChildren.Add(existingChild);
+                }
+            }
+            
+            var toDelete = collection.Where(child => !matchedChildren.Contains(child));
+
+            foreach (var child in toDelete)
+            {
+                collection.Remove(child);
+                Context.Remove(child);
+            }
+
+            await Context.SaveChangesAsync();
         }
 
         public virtual async Task DeleteAsync(T entity)

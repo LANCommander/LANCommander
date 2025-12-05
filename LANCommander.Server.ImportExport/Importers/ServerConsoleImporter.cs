@@ -1,31 +1,42 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ServerConsoleImporter(
-    IMapper mapper,
-    ServerConsoleService serverConsoleService) : BaseImporter<ServerConsole, Data.Models.ServerConsole>
+    ILogger<ServerConsoleImporter> logger,
+    ServerConsoleService serverConsoleService,
+    ServerService serverService,
+    ServerImporter serverImporter) : BaseImporter<ServerConsole>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(ServerConsole record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(ServerConsole record)
+        => $"{nameof(ServerConsole)}/{record.Name}";
+
+    public override async Task<ImportItemInfo<ServerConsole>> GetImportInfoAsync(ServerConsole record)
+        => new()
         {
             Type = ImportExportRecordType.ServerConsole,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(ServerConsole record) => ImportContext.DataRecord is Data.Models.ServerConsole;
+    public override async Task<bool> CanImportAsync(ServerConsole record) => ImportContext.Manifest is SDK.Models.Manifest.Server;
 
-    public override async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
+    public override async Task<bool> AddAsync(ServerConsole record)
     {
         try
         {
+            var server = ImportContext.Manifest as SDK.Models.Manifest.Server;
+
+            if (server == null)
+                return false;
+
+            if (ImportContext.InQueue(server, serverImporter))
+                return false;
+            
             var serverConsole = new Data.Models.ServerConsole
             {
                 Name = record.Name,
@@ -33,47 +44,62 @@ public class ServerConsoleImporter(
                 Path = record.Path,
                 Host = record.Host,
                 Port = record.Port,
-                Server = ImportContext.DataRecord as Data.Models.Server,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
+                Server = await serverService.GetAsync(server.Id),
             };
 
-            serverConsole = await serverConsoleService.AddAsync(serverConsole);
+            await serverConsoleService.AddAsync(serverConsole);
 
-            return serverConsole;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<ServerConsole>(record, "An unknown error occured while importing server console", ex);
+            logger.LogError(ex, "Could not add server console | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.ServerConsole> UpdateAsync(ServerConsole record)
+    public override async Task<bool> UpdateAsync(ServerConsole record)
     {
-        var existing = await serverConsoleService
-            .Include(c => c.Server)
-            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
-
         try
         {
+            var server = ImportContext.Manifest as SDK.Models.Manifest.Server;
+
+            if (server == null)
+                return false;
+            
+            var existing = await serverConsoleService.FirstOrDefaultAsync(c => c.Name == record.Name && c.ServerId == server.Id);
+            
             existing.Name = record.Name;
             existing.Type = record.Type;
             existing.Path = record.Path;
             existing.Host = record.Host;
             existing.Port = record.Port;
             
-            existing = await serverConsoleService.UpdateAsync(existing);
+            await serverConsoleService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<ServerConsole>(record, "An unknown error occured while importing server console", ex);
+            logger.LogError(ex, "Could not update server console | {Key}", GetKey(record));
+            return false;
         }
+    }
+
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        throw new NotImplementedException();
     }
 
     public override async Task<bool> ExistsAsync(ServerConsole record)
     {
-        return await serverConsoleService
-            .Include(c => c.Server)
-            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
+        if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
+            return await serverConsoleService
+                .Include(c => c.Server)
+                .ExistsAsync(c => c.Name == record.Name && c.ServerId == server.Id);
+
+        return false;
     }
 }

@@ -8,12 +8,14 @@ namespace LANCommander.Server.ImportExport.Importers;
 /// this needs to exist for each type.
 /// </summary>
 /// <typeparam name="TRecord"></typeparam>
-public interface IImporter<TRecord, TEntity>
+public interface IImporter<TRecord> where TRecord : class
 {
     void UseContext(ImportContext context);
-    Task<ImportItemInfo> GetImportInfoAsync(TRecord record);
-    bool CanImport(TRecord record);
-    Task<TEntity> AddAsync(TRecord record);
-    Task<TEntity> UpdateAsync(TRecord record);
+    Task<ImportItemInfo<TRecord>> GetImportInfoAsync(TRecord record);
+    Task<bool> CanImportAsync(TRecord record);
+    Task<bool> ImportAsync(IImportItemInfo importItem);
+    Task<bool> AddAsync(TRecord record);
+    Task<bool> UpdateAsync(TRecord record);
+    Task<bool> IngestAsync(IImportAsset asset);
     Task<bool> ExistsAsync(TRecord record);
 }

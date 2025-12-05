@@ -8,6 +8,9 @@ namespace LANCommander.Launcher.Data.Models
     {
         [Key]
         public Guid Id { get; set; }
+        
+        [Display(Name = "Imported On")]
+        public DateTime ImportedOn { get; set; }
 
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }

@@ -33,7 +33,7 @@ public class SavePacker : IDisposable
         _archive = ZipArchive.Create();
     }
 
-    public SavePacker AddPath(SavePath path)
+    public SavePacker AddPath(SDK.Models.Manifest.SavePath path)
     {
         switch (path.Type)
         {
@@ -52,7 +52,7 @@ public class SavePacker : IDisposable
         return this;
     }
 
-    public SavePacker AddPaths(IEnumerable<SavePath> paths)
+    public SavePacker AddPaths(IEnumerable<SDK.Models.Manifest.SavePath> paths)
     {
         foreach (var path in paths)
         {
@@ -62,7 +62,7 @@ public class SavePacker : IDisposable
         return this;
     }
 
-    public SavePacker AddRegistryPath(SavePath registryPath)
+    public SavePacker AddRegistryPath(SDK.Models.Manifest.SavePath registryPath)
     {
         if (registryPath.Type != SavePathType.Registry)
             return this;
@@ -80,7 +80,7 @@ public class SavePacker : IDisposable
         return this;
     }
 
-    public async Task AddManifestAsync(GameManifest manifest)
+    public async Task AddManifestAsync(Models.Manifest.Game manifest)
     {
         _archive.AddEntry(ManifestHelper.ManifestFilename, new MemoryStream(Encoding.UTF8.GetBytes(ManifestHelper.Serialize(manifest))));
     }
@@ -108,7 +108,7 @@ public class SavePacker : IDisposable
         return _stream;
     }
 
-    private void AddEntriesFromPath(SavePath savePath)
+    private void AddEntriesFromPath(SDK.Models.Manifest.SavePath savePath)
     {
         if (savePath.IsRegex)
             AddEntriesFromFilePathPattern(savePath.Id, savePath.Path, savePath.WorkingDirectory);

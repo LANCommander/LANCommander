@@ -4,12 +4,13 @@ using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Game : BaseModel
+    public class Game : BaseManifest, IKeyedModel
     {
         public Guid Id { get; set; }
         public long? IGDBId { get; set; }
         public string Title { get; set; }
         public string SortTitle { get; set; }
+        public string Version { get; set; }
         public string DirectoryName { get; set; }
         public string Notes { get; set; }
         public string Description { get; set; }

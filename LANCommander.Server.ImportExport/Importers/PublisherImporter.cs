@@ -1,77 +1,57 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class PublisherImporter(
-    IMapper mapper,
-    CompanyService companyService,
-    GameService gameService) : BaseImporter<Company, Data.Models.Company>
+    ILogger<PublisherImporter> logger,
+    CompanyService companyService) : BaseImporter<Company>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(Company record)
+        => $"Publisher/{record.Name}";
+
+    public override async Task<ImportItemInfo<Company>> GetImportInfoAsync(Company record) 
+        => new()
         {
             Type = ImportExportRecordType.Publisher,
             Name = record.Name,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(Company record) => ImportContext.DataRecord is Data.Models.Company;
+    public override async Task<bool> CanImportAsync(Company record)
+        => !await companyService.ExistsAsync(c => c.Name == record.Name);
 
-    public override async Task<Data.Models.Company> AddAsync(Company record)
+    public override async Task<bool> AddAsync(Company record)
     {
         try
         {
-            var game = ImportContext.DataRecord as Data.Models.Game;
-            
             var company = new Data.Models.Company
             {
-                PublishedGames = [await gameService.GetAsync(game.Id)],
                 Name = record.Name,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
             };
 
-            company = await companyService.AddAsync(company);
+            await companyService.AddAsync(company);
 
-            return company;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Company>(record, "An unknown error occured while importing publisher", ex);
+            logger.LogError(ex, "Could not add company | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Company> UpdateAsync(Company record)
+    public override async Task<bool> UpdateAsync(Company record) => true;
+    public override async Task<bool> IngestAsync(IImportAsset asset)
     {
-        var existing = await companyService.Include(g => g.PublishedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
-        var game = ImportContext.DataRecord as Data.Models.Game;
-
-        try
-        {
-            if (existing.PublishedGames == null)
-                existing.PublishedGames = new List<Data.Models.Game>();
-            
-            if (!existing.PublishedGames.Any(g => g.Id == game.Id))
-            {
-                existing.PublishedGames.Add(await gameService.GetAsync(game.Id));
-            
-                existing = await companyService.UpdateAsync(existing);
-            }
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Company>(record, "An unknown error occured while importing publisher", ex);
-        }
+        throw new NotImplementedException();
     }
 
-    public override async Task<bool> ExistsAsync(Company record)
-    {
-        return await companyService.ExistsAsync(c => c.Name == record.Name);
-    }
+    public override async Task<bool> ExistsAsync(Company record) 
+        => await companyService.ExistsAsync(c => c.Name == record.Name);
 }

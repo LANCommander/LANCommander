@@ -30,8 +30,8 @@
         try {
             var media = await MediaService.GetAsync(Id);
 
-            if (media == null && (Connected || OfflineMode))
-                media = await ImportService.ImportMediaAsync(Id);
+            //if (media == null && (Connected || OfflineMode))
+            //    media = await ImportService.ImportMediaAsync(Id);
 
             UpdateMediaUrl(media);
         }

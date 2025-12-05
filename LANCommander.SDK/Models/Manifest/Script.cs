@@ -3,7 +3,7 @@ using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Script : BaseModel
+    public class Script : BaseModel, IKeyedModel
     {
         public Guid Id { get; set; }
         public ScriptType Type { get; set; }

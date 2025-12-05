@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Settings
 @using LANCommander.SDK
+@using LANCommander.SDK.Enums
 @using LANCommander.SDK.Helpers
 @using LANCommander.SDK.Services
 @using Microsoft.Extensions.Options
@@ -48,7 +49,7 @@
         @LocalizationService.GetString("ManageSaves")
     </MenuItem>
 
-    if (Settings.Value.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+    if (Settings.Value.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == GameType.Expansion || g.Type == GameType.Mod))
     {
         <MenuItem OnClick="() => Modify()" Disabled="@ConnectionClient.IsOfflineMode()">
             @LocalizationService.GetString("Modify")
@@ -113,18 +114,18 @@ else
     [Parameter] public bool ShowPrimaryActions { get; set; }
 
     Data.Models.Game Game { get; set; }
-    IEnumerable<SDK.Models.Action> GameActions { get; set; } = [];
+    IEnumerable<SDK.Models.Manifest.Action> GameActions { get; set; } = [];
 
     protected override async Task OnParametersSetAsync()
     {
         if (Model.DataItem is Game game)
         {
             Game = game;
-            List<SDK.Models.Action> actions = [];
+            List<SDK.Models.Manifest.Action> actions = [];
 
             if (Game.Installed)
             {
-                var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(Game.InstallDirectory, Game.Id);
 
                 if (manifest != null)
                 {
@@ -137,7 +138,7 @@ else
         }
     }
 
-    async Task Run(Game game, SDK.Models.Action action)
+    async Task Run(Game game, SDK.Models.Manifest.Action action)
     {
         var task = GameService.Run(game, action);
 
@@ -162,7 +163,7 @@ else
 
     async Task Install()
     {
-        if (Settings.Value.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+        if (Settings.Value.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == GameType.Expansion || g.Type == GameType.Mod))
         {
             var modalOptions = new ModalOptions()
             {
@@ -221,7 +222,7 @@ else
 
     async Task Uninstall()
     {
-        var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
+        var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(Game.InstallDirectory, Game.Id);
 
         string message;
         if (manifest.SavePaths != null && manifest.SavePaths.Any())
@@ -254,7 +255,7 @@ else
     async Task RemoveFromLibrary()
     {
         var hasStandaloneDependent = Game.DependentGames?
-            .Where(g => g.Type != Data.Enums.GameType.Expansion && g.Type != Data.Enums.GameType.Mod)
+            .Where(g => g.Type != GameType.Expansion && g.Type != GameType.Mod)
             .Any(g => LibraryService.IsInLibrary(g.Id)) ?? false;
 
         if (!hasStandaloneDependent)

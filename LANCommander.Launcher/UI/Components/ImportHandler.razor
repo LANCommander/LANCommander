@@ -1,4 +1,4 @@
-@using LANCommander.Launcher.Models
+@using LANCommander.Launcher.Services.Import
 @implements IDisposable
 @inject ImportManagerService ImportManagerService
 @inject ImportService ImportService
@@ -29,9 +29,10 @@
         if (ImportService != null)
         {
             // Clear any existing handlers
-            ImportService.OnImportComplete -= OnImportCompleteHandler;
-            ImportService.OnImportFailed -= OnImportFailedHandler;
-            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
+            ImportService.OnImportStarted -= ImportStarted;
+            ImportService.OnImportComplete -= OnImportComplete;
+            ImportService.OnImportError -= OnImportFailed;
+            ImportService.OnImportStatusUpdate -= OnImportStatusUpdate;
         }
     }
 
@@ -42,14 +43,17 @@
             Logger?.LogInformation("Starting import process");
 
             // Clear any existing handlers
-            ImportService.OnImportComplete -= OnImportCompleteHandler;
-            ImportService.OnImportFailed -= OnImportFailedHandler;
-            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
+            ImportService.OnImportStarted -= ImportStarted;
+            ImportService.OnImportComplete -= OnImportComplete;
+            ImportService.OnImportError -= OnImportFailed;
+            ImportService.OnImportStatusUpdate -= OnImportStatusUpdate;
 
             // Add our handlers
-            ImportService.OnImportComplete += OnImportCompleteHandler;
-            ImportService.OnImportFailed += OnImportFailedHandler;
-            ImportService.OnImportUpdated += OnImportUpdatedHandler;
+            ImportService.OnImportStarted += ImportStarted;
+            ImportService.OnImportComplete += OnImportComplete;
+            ImportService.OnImportError += OnImportFailed;
+            ImportService.OnImportStatusUpdate += OnImportStatusUpdate;
+            
 
             // Now start the import process
             Importing = true;
@@ -79,8 +83,13 @@
             Total = ImportStatusTotal,
         });
     }
+    
+    private void ImportStarted(object? sender, EventArgs e)
+    {
+        NotifyProgress(ImportProgressState.Importing);
+    }
 
-    private async Task OnImportCompleteHandler()
+    private async void OnImportComplete(object? sender, EventArgs e)
     {
         Logger?.LogInformation("Import Complete handler called");
         Importing = false;
@@ -91,7 +100,7 @@
         MessageService.Success(LocalizationService.GetString("ImportComplete"), 3);
     }
 
-    private async Task OnImportFailedHandler(Exception ex)
+    private async void OnImportFailed(object? sender, Exception? ex)
     {
         Importing = false;
         ImportStatusIndex = 0;
@@ -101,7 +110,7 @@
         MessageService.Error(LocalizationService.GetString("ImportFailed"), 3);
     }
 
-    private async Task OnImportUpdatedHandler(ImportStatusUpdate status)
+    private async void OnImportStatusUpdate(object? sender, ImportStatusUpdate? status)
     {
         Logger?.LogInformation("Import Update handler called: {Index}/{Total}", status.Index, status.Total);
         ImportStatusIndex = status.Index;

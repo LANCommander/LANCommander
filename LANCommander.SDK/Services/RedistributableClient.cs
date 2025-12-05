@@ -32,6 +32,16 @@ namespace LANCommander.SDK.Services
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
         
         private InstallProgress _installProgress;
+
+        public async Task<SDK.Models.Manifest.Redistributable> GetManifestAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributable/{id}")
+                .GetAsync<SDK.Models.Manifest.Redistributable>();
+        }
         
         public async Task<Stream> Stream(Guid id)
         {
@@ -69,8 +79,10 @@ namespace LANCommander.SDK.Services
             try
             {
                 _logger?.LogTrace("Saving manifest");
+                
+                var manifest = await GetManifestAsync(redistributable.Id);
 
-                await ManifestHelper.WriteAsync(redistributable, game.InstallDirectory);
+                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
                 
                 _logger?.LogTrace("Saving scripts");
                     

@@ -15,7 +15,7 @@ namespace LANCommander.Launcher.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.1");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
 
             modelBuilder.Entity("CategoryGame", b =>
                 {
@@ -146,6 +146,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -172,6 +175,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -193,6 +199,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -212,6 +221,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -247,7 +259,7 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<long?>("IGDBId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("ImportedOn")
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("InstallDirectory")
@@ -305,6 +317,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -324,6 +339,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")
@@ -358,6 +376,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MimeType")
@@ -406,6 +427,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("MaxPlayers")
                         .HasColumnType("INTEGER");
 
@@ -440,6 +464,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -465,6 +492,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("Start")
@@ -495,6 +525,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -519,6 +552,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -541,6 +577,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")

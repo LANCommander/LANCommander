@@ -3,7 +3,7 @@ using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models.Manifest
 {
-    public class Media : BaseModel
+    public class Media : BaseModel, IKeyedModel
     {
         public Guid Id { get; set; }
         public Guid FileId { get; set; }

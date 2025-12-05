@@ -89,7 +89,7 @@ public static class GameEndpoints
         [FromServices] IMapper mapper,
         Guid id)
     {
-        var game = await cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
+        var game = await cache.GetOrSetAsync<SDK.Models.Manifest.Game>($"Games/{id}", async _ =>
         {
             var result = await gameService
                 .Include(g => g.Actions)
@@ -112,7 +112,7 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
                 
-            return mapper.Map<SDK.Models.Game>(result);
+            return mapper.Map<SDK.Models.Manifest.Game>(result);
         }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
         if (game != null)
@@ -127,7 +127,7 @@ public static class GameEndpoints
         Guid id)
     {
         var manifest = await cache
-            .GetOrSetAsync<SDK.GameManifest>(
+            .GetOrSetAsync<SDK.Models.Manifest.Game>(
                 $"Game/{id}/Manifest", 
                 async _ => await gameService.GetManifestAsync(id),
                 TimeSpan.MaxValue,

@@ -1,75 +1,95 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class SavePathImporter(
-    IMapper mapper,
-    SavePathService savePathService) : BaseImporter<SavePath, Data.Models.SavePath>
+    ILogger<SavePathImporter> logger,
+    SavePathService savePathService,
+    GameService gameService,
+    GameImporter gameImporter) : BaseImporter<SavePath>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(SavePath record)
-    {
-        return new ImportItemInfo
+    public override string GetKey(SavePath record)
+        => $"{nameof(SavePath)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<SavePath>> GetImportInfoAsync(SavePath record) 
+        => new()
         {
             Type = ImportExportRecordType.SavePath,
             Name = record.Path,
+            Record = record,
         };
-    }
 
-    public override bool CanImport(SavePath record) => ImportContext.DataRecord is Data.Models.Game;
+    public override async Task<bool> CanImportAsync(SavePath record) => ImportContext.Manifest is Game;
 
-    public override async Task<Data.Models.SavePath> AddAsync(SavePath record)
+    public override async Task<bool> AddAsync(SavePath record)
     {
         try
         {
+            var game = ImportContext.Manifest as Game;
+
+            if (game == null)
+                return false;
+
+            if (ImportContext.InQueue(game, gameImporter))
+                return false;
+            
             var savePath = new Data.Models.SavePath
             {
                 Id = record.Id,
-                Game = ImportContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 IsRegex = record.IsRegex,
                 Type = record.Type,
+                CreatedOn = record.CreatedOn,
+                UpdatedOn = record.UpdatedOn,
+                Game = await gameService.GetAsync(game.Id),
             };
 
-            savePath = await savePathService.AddAsync(savePath);
+            await savePathService.AddAsync(savePath);
 
-            return savePath;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SavePath>(record, "An unknown error occured while importing save path", ex);
+            logger.LogError(ex, "Could not add save path | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.SavePath> UpdateAsync(SavePath record)
+    public override async Task<bool> UpdateAsync(SavePath record)
     {
         var existing = await savePathService.FirstOrDefaultAsync(p => p.Id == record.Id);
 
         try
         {
-            existing.Game = ImportContext.DataRecord as Data.Models.Game;
+            var game = ImportContext.Manifest as Game;
+            
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;
             existing.Type = record.Type;
+            existing.Game = await gameService.GetAsync(game.Id);
             
-            existing = await savePathService.UpdateAsync(existing);
+            await savePathService.UpdateAsync(existing);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SavePath>(record, "An unknown error occured while importing save path", ex);
+            logger.LogError(ex, "Could not update save path | {Key}", GetKey(record));
+            return false;
         }
     }
 
-    public override async Task<bool> ExistsAsync(SavePath record)
+    public override async Task<bool> IngestAsync(IImportAsset asset)
     {
-        return await savePathService.ExistsAsync(p => p.Id == record.Id);
+        throw new NotImplementedException();
     }
+
+    public override async Task<bool> ExistsAsync(SavePath record) 
+        => await savePathService.ExistsAsync(p => p.Id == record.Id);
 }

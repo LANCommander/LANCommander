@@ -14,7 +14,7 @@ public class GameInstallationFileListEntry
 
     public Guid GameId { get; internal set; }
 
-    public GameManifest Manifest { get; internal set; }
+    public Models.Manifest.Game Manifest { get; internal set; }
     public List<FileEntry> Files { get; private set; } = [];
 
     public void Merge(GameInstallationFileListEntry otherInfo)

@@ -5,6 +5,7 @@ using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using System.Reflection;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using LANCommander.Server.Services.Abstractions;
@@ -371,6 +372,81 @@ namespace LANCommander.Server.Services
 
                 context.Set<T>().RemoveRange(entities);
 
+                await context.SaveChangesAsync();
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+        
+        public virtual async Task SyncRelatedCollectionAsync<T, TChild, U>(
+            T entity,
+            Expression<Func<T, ICollection<TChild>>> navigationProperty,
+            IEnumerable<U> records,
+            Func<U, Expression<Func<TChild, bool>>> matchExpression) where TChild : class where T : class
+        {
+            using var context = await dbContextFactory.CreateDbContextAsync();
+
+            context.Attach(entity);
+            
+            var entry = context.Entry(entity);
+            
+            var enumerableExpr = Expression.Lambda<Func<T, IEnumerable<TChild>>>(
+                navigationProperty.Body,
+                navigationProperty.Parameters);
+            
+            var collectionEntry = entry.Collection(enumerableExpr);
+            
+            if (!collectionEntry.IsLoaded)
+                await collectionEntry.LoadAsync();
+            
+            var collection = navigationProperty.Compile().Invoke(entity);
+
+            if (collection == null)
+            {
+                collection = new List<TChild>();
+
+                if (navigationProperty.Body is not MemberExpression memberExpression ||
+                    memberExpression.Member is not PropertyInfo propertyInfo)
+                    throw new InvalidOperationException($"Navigation expression '{navigationProperty}' must point to a property.");
+                
+                propertyInfo.SetValue(entity, collection);
+            }
+
+            var matchedChildren = new HashSet<TChild>();
+
+            foreach (var record in records)
+            {
+                var matchPredicate = matchExpression(record);
+                var existingChild = collection.FirstOrDefault(matchPredicate.Compile());
+
+                if (existingChild == null)
+                {
+                    existingChild = await context.Set<TChild>()
+                        .FirstOrDefaultAsync(matchPredicate);
+                }
+
+                if (existingChild != null)
+                {
+                    if (!collection.Contains(existingChild))
+                        collection.Add(existingChild);
+                    
+                    matchedChildren.Add(existingChild);
+                }
+            }
+
+            var toDelete = collection
+                .Where(child => !matchedChildren.Contains(child))
+                .ToList();
+
+            foreach (var child in toDelete)
+            {
+                collection.Remove(child);
+            }
+
+            try
+            {
                 await context.SaveChangesAsync();
             }
             finally

@@ -2,14 +2,14 @@
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
-@using LANCommander.SDK.Helpers
-@inject SDK.Client Client
+@using LANCommander.SDK
+@using LANCommander.SDK.Services
 @inject GameService GameService
 @inject LibraryService LibraryService
-@inject InstallService InstallService
+@inject GameClient GameClient
+@inject LobbyClient LobbyClient
 @inject ModalService ModalService
 @inject MessageService MessageService
-@inject MessageBusService MessageBusService
 @inject LocalizationService LocalizationService
 
 @if (State == PlayButtonState.Running)
@@ -78,11 +78,11 @@ else
 
     async Task UpdateState()
     {
-        if (Client.Games.IsRunning(LibraryItem.Key))
+        if (GameClient.IsRunning(LibraryItem.Key))
         {
             await ChangeState(PlayButtonState.Running);
         }
-        else if (State == PlayButtonState.Running && !Client.Games.IsRunning(LibraryItem.Key))
+        else if (State == PlayButtonState.Running && !GameClient.IsRunning(LibraryItem.Key))
         {
             await ChangeState(PlayButtonState.Idle);
         }
@@ -98,7 +98,7 @@ else
     {
         var game = (Game)LibraryItem.DataItem;
         
-        var actions = await Client.Games.GetActionsAsync(game.InstallDirectory, game.Id);
+        var actions = await GameClient.GetActionsAsync(game.InstallDirectory, game.Id);
 
         await ChangeState(PlayButtonState.Starting);
 
@@ -110,7 +110,7 @@ else
             return;
         }
 
-        var primaryActions = actions.Where(a => a.IsPrimaryAction && (LibraryService.IsInstalled(a.GameId) || a.GameId == Guid.Empty));
+        var primaryActions = actions.Where(a => a.IsPrimaryAction && LibraryService.IsInstalled(game.Id));
 
         if (primaryActions.Count() == 0)
         {
@@ -142,7 +142,7 @@ else
                 WrapClassName = "game-actions-dialog",
                 AfterClose = async () =>
                 {
-                    Client.Lobbies.ReleaseSteam();
+                    LobbyClient.ReleaseSteam();
 
                     await ChangeState(PlayButtonState.Idle);
                 }
@@ -162,7 +162,7 @@ else
     {
         await ChangeState(PlayButtonState.Stopping);
         
-        await Client.Games.Stop(LibraryItem.Key);
+        await GameClient.Stop(LibraryItem.Key);
 
         await ChangeState(PlayButtonState.Idle);
     }

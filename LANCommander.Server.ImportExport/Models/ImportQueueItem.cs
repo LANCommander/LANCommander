@@ -4,7 +4,7 @@ namespace LANCommander.Server.ImportExport.Models;
 
 public class ImportQueueItem
 {
-    public Guid Id { get; set; }
+    public string Key { get; set; }
     public ImportExportRecordType Type { get; set; }
     public object Record { get; set; }
     public bool Processed { get; set; }

@@ -1,48 +1,63 @@
 using AutoMapper;
-using LANCommander.Server.ImportExport.Exceptions;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 
 namespace LANCommander.Server.ImportExport.Importers;
 
 public class ServerImporter(
+    ILogger<ServerImporter> logger,
     IMapper mapper,
     ServerService serverService,
     GameService gameService,
-    UserService userService) : BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    UserService userService) : BaseImporter<SDK.Models.Manifest.Server>
 {
-    public override async Task<ImportItemInfo> GetImportInfoAsync(SDK.Models.Manifest.Server record)
+    public override string GetKey(SDK.Models.Manifest.Server record)
+        => $"{nameof(SDK.Models.Manifest.Server)}/{record.Id}";
+
+    public override async Task<ImportItemInfo<SDK.Models.Manifest.Server>> GetImportInfoAsync(SDK.Models.Manifest.Server record)
     {
         var fileEntries = ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
         
-        return new ImportItemInfo
+        return new ImportItemInfo<SDK.Models.Manifest.Server>
         {
+            Type = ImportExportRecordType.Server,
             Name = record.Name,
             Size = fileEntries.Sum(f => f.Size),
+            Record = record,
         };
     }
 
-    public override bool CanImport(SDK.Models.Manifest.Server record) => true;
+    public override async Task<bool> CanImportAsync(SDK.Models.Manifest.Server record) => true;
 
-    public override async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
+    public override async Task<bool> AddAsync(SDK.Models.Manifest.Server record)
     {
         var server = mapper.Map<Data.Models.Server>(record);
 
         try
         {
-            await ExtractFiles(server);
+            await serverService.AddAsync(server);
             
-            return await serverService.AddAsync(server);
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = "Files",
+                Path = "Files/",
+            });
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occured while trying to add server", ex);
+            logger.LogError(ex, "Could not add server");
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
+    public override async Task<bool> UpdateAsync(SDK.Models.Manifest.Server record)
     {
         var existing = await serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
 
@@ -67,47 +82,70 @@ public class ServerImporter(
             existing.UpdatedOn = DateTime.Now;
             existing.ProcessTerminationMethod = record.ProcessTerminationMethod;
             
-            existing = await serverService.UpdateAsync(existing);
+            await serverService.UpdateAsync(existing);
 
-            await ExtractFiles(existing);
+            AddAsset(new ImportAssetArchiveEntry
+            {
+                RecordId = record.Id,
+                Name = "Files",
+                Path = "Files/",
+            });
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occurred while trying to update server", ex);
+            logger.LogError(ex, "Could not update server");
+            return false;
         }
+    }
+
+    public override async Task<bool> IngestAsync(IImportAsset asset)
+    {
+        if (asset is ImportAssetArchiveEntry assetArchiveEntry &&
+            assetArchiveEntry.Path.EndsWith("/"))
+        {
+            var server = await serverService.GetAsync(assetArchiveEntry.RecordId);
+            
+            foreach (var entry in ImportContext.Archive.Entries.Where(e =>
+                         e.Key.StartsWith(assetArchiveEntry.Path)))
+            {
+                try
+                {
+                    var destination = entry.Key
+                        .Substring(6, entry.Key.Length - 6)
+                        .TrimEnd('/')
+                        .Replace('/', Path.DirectorySeparatorChar);
+
+                    destination = Path.Combine(server.WorkingDirectory, destination);
+            
+                    var directory = Path.GetDirectoryName(destination);
+            
+                    if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+
+                    if (!entry.Key.EndsWith('/'))
+                        entry.WriteToFile(destination, new ExtractionOptions
+                        {
+                            Overwrite = true,
+                            PreserveAttributes = true,
+                            PreserveFileTime = true,
+                        });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Could not import server file {ArchivePath}", entry.Key);
+                }
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     public override async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
     {
         return await serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
-    }
-    
-    private async Task ExtractFiles(Data.Models.Server server)
-    {
-        
-        foreach (var entry in ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/")))
-        {
-            var destination = entry.Key
-                .Substring(6, entry.Key.Length - 6)
-                .TrimEnd('/')
-                .Replace('/', Path.DirectorySeparatorChar);
-
-            destination = Path.Combine(server.WorkingDirectory, destination);
-            
-            var directory = Path.GetDirectoryName(destination);
-            
-            if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-
-            if (!entry.Key.EndsWith('/'))
-                entry.WriteToFile(destination, new ExtractionOptions
-                {
-                    Overwrite = true,
-                    PreserveAttributes = true,
-                    PreserveFileTime = true,
-                });
-        }
     }
 } 

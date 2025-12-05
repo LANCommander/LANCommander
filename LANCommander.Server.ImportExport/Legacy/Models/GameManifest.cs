@@ -1,5 +1,6 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.ImportExport.Legacy.Enums;
+using GameType = LANCommander.Server.ImportExport.Legacy.Enums.GameType;
 
 namespace LANCommander.Server.ImportExport.Legacy.Models;
 
@@ -143,6 +144,7 @@ internal class GameManifest : IKeyedModel
         if (LanMultiplayer != null)
             manifest.MultiplayerModes.Add(new MultiplayerMode
             {
+                Type = MultiplayerType.LAN,
                 Description = LanMultiplayer.Description,
                 MaxPlayers = LanMultiplayer.MaxPlayers,
                 MinPlayers = LanMultiplayer.MinPlayers,
@@ -152,6 +154,7 @@ internal class GameManifest : IKeyedModel
         if (LocalMultiplayer != null)
             manifest.MultiplayerModes.Add(new MultiplayerMode
             {
+                Type = MultiplayerType.Local,
                 Description = LocalMultiplayer.Description,
                 MaxPlayers = LocalMultiplayer.MaxPlayers,
                 MinPlayers = LocalMultiplayer.MinPlayers,
@@ -161,6 +164,7 @@ internal class GameManifest : IKeyedModel
         if (OnlineMultiplayer != null)
             manifest.MultiplayerModes.Add(new MultiplayerMode
             {
+                Type = MultiplayerType.Online,
                 Description = OnlineMultiplayer.Description,
                 MaxPlayers = OnlineMultiplayer.MaxPlayers,
                 MinPlayers = OnlineMultiplayer.MinPlayers,

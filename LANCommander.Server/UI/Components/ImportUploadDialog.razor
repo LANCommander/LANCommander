@@ -127,6 +127,21 @@ else if (_stage == ImportStage.Complete)
         </Extra>
     </Result>
 }
+else if (_stage == ImportStage.Failed)
+{
+    <Result Status="ResultStatus.Error" Title="Import Failed!">
+        <Extra>
+            <Flex Gap="FlexGap.Small" Direction="FlexDirection.Vertical">
+                @foreach (var error in _errors)
+                {
+                    <Alert Type="AlertType.Error" Message="@error" />
+                }
+                
+                <Button Type="ButtonType.Primary" OnClick="CloseFeedbackAsync">Close</Button>
+            </Flex>
+        </Extra>
+    </Result>
+}
 
 @code {
     enum ImportStage
@@ -135,6 +150,7 @@ else if (_stage == ImportStage.Complete)
         RecordSelection,
         Importing,
         Complete,
+        Failed,
     };
 
     IBrowserFile File;
@@ -236,7 +252,7 @@ else if (_stage == ImportStage.Complete)
         }
         catch (Exception ex)
         {
-            MessageService.Error("Import failed!");
+            _stage = ImportStage.Failed;
             Logger?.LogError(ex, "An unknown error occurred while trying to import");
         }
     }

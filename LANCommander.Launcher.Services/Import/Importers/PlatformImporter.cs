@@ -6,19 +6,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class PlatformImporter(
     PlatformService platformService,
-    ILogger<PlatformImporter> logger) : BaseImporter<Platform, Data.Models.Platform>
+    ILogger<PlatformImporter> logger) : BaseImporter<Platform>
 {
-    public override async Task<ImportItemInfo<Platform>> GetImportInfoAsync(Platform record)
-    {
-        return new ImportItemInfo<Platform>
+    public override async Task<ImportItemInfo<Platform>> GetImportInfoAsync(Platform record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Name,
             Type = nameof(Platform),
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Platform record) => $"{nameof(Platform)}/{record.Name}";
 
     public override async Task<bool> CanImportAsync(Platform record)
@@ -31,44 +29,30 @@ public class PlatformImporter(
         return record.UpdatedOn > existing.ImportedOn;
     }
 
-    public override async Task<Data.Models.Platform> AddAsync(Platform record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Platform> importItemInfo)
     {
         var platform = new Data.Models.Platform
         {
-            Name = record.Name,
-            CreatedOn = record.CreatedOn,
-            UpdatedOn = record.UpdatedOn,
+            Name = importItemInfo.Record.Name,
+            CreatedOn = importItemInfo.Record.CreatedOn,
+            UpdatedOn = importItemInfo.Record.UpdatedOn,
             ImportedOn = DateTime.UtcNow,
         };
 
         try
         {
-            return await platformService.AddAsync(platform);
+            await platformService.AddAsync(platform);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Platform>(record, "An unknown error occurred while trying to add platform", ex);
+            logger.LogError(ex, "Could not add platform | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Platform> UpdateAsync(Platform record)
-    {
-        var existing = await platformService.FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            existing.Name = record.Name;
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedOn = record.UpdatedOn;
-            existing.ImportedOn = DateTime.UtcNow;
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Platform>(record, "An unknown error occurred while trying to update platform", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Platform record) => await platformService.ExistsAsync(c => c.Name == record.Name);
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Platform> importItemInfo) => true;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Platform> importItemInfo)
+        => await platformService.ExistsAsync(c => c.Name == importItemInfo.Record.Name);
 }

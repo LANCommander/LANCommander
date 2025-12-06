@@ -6,19 +6,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class TagImporter(
     TagService tagService,
-    ILogger<TagImporter> logger) : BaseImporter<Tag, Data.Models.Tag>
+    ILogger<TagImporter> logger) : BaseImporter<Tag>
 {
-    public override async Task<ImportItemInfo<Tag>> GetImportInfoAsync(Tag record)
-    {
-        return new ImportItemInfo<Tag>
+    public override async Task<ImportItemInfo<Tag>> GetImportInfoAsync(Tag record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Name,
             Type = nameof(Tag),
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Tag record) => $"{nameof(Tag)}/{record.Name}";
 
     public override async Task<bool> CanImportAsync(Tag record)
@@ -31,44 +29,30 @@ public class TagImporter(
         return record.UpdatedOn > existing.ImportedOn;
     }
 
-    public override async Task<Data.Models.Tag> AddAsync(Tag record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Tag> importItemInfo)
     {
         var tag = new Data.Models.Tag
         {
-            Name = record.Name,
-            CreatedOn = record.CreatedOn,
-            UpdatedOn = record.UpdatedOn,
+            Name = importItemInfo.Record.Name,
+            CreatedOn = importItemInfo.Record.CreatedOn,
+            UpdatedOn = importItemInfo.Record.UpdatedOn,
             ImportedOn = DateTime.UtcNow
         };
 
         try
         {
-            return await tagService.AddAsync(tag);
+            await tagService.AddAsync(tag);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Tag>(record, "An unknown error occurred while trying to add tag", ex);
+            logger.LogError(ex, "Could not add tag | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Tag> UpdateAsync(Tag record)
-    {
-        var existing = await tagService.FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            existing.Name = record.Name;
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedOn = record.UpdatedOn;
-            existing.ImportedOn = DateTime.UtcNow;
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Tag>(record, "An unknown error occurred while trying to update tag", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Tag record) => await tagService.ExistsAsync(c => c.Name == record.Name);
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Tag> importItemInfo) => true;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Tag> importItemInfo)
+        => await tagService.ExistsAsync(c => c.Name == importItemInfo.Record.Name);
 }

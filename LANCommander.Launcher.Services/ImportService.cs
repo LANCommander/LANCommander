@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Import.Factories;
+using LANCommander.SDK;
 using LANCommander.SDK.Services;
 using Collection = LANCommander.Launcher.Data.Models.Collection;
 using Company = LANCommander.Launcher.Data.Models.Company;
@@ -22,10 +23,10 @@ namespace LANCommander.Launcher.Services
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
 
-        public EventHandler OnImportStarted;
-        public EventHandler<ImportStatusUpdate> OnImportStatusUpdate;
-        public EventHandler OnImportComplete;
-        public EventHandler<Exception> OnImportError;
+        public AsyncEventHandler<ImportStatusUpdate> OnImportStarted;
+        public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate;
+        public AsyncEventHandler<ImportStatusUpdate> OnImportComplete;
+        public AsyncEventHandler<ImportStatusUpdate> OnImportError;
 
         private IEnumerable<Collection> Collections;
         private IEnumerable<Company> Companies;
@@ -37,18 +38,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task ImportAsync()
         {
-            try
-            {
-                OnImportStarted?.Invoke(this, EventArgs.Empty);
-                
-                await ImportLibraryAsync();
-
-                OnImportComplete?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex)
-            {
-                OnImportError?.Invoke(this, ex);
-            }
+            await ImportLibraryAsync();
         }
 
         public async Task ImportLibraryAsync()
@@ -56,12 +46,13 @@ namespace LANCommander.Launcher.Services
             var remoteLibrary = await libraryClient.GetAsync();
             
             Logger?.LogInformation("Starting library import");
-            
-            OnImportStarted?.Invoke(this, EventArgs.Empty);
 
             var importContext = importContextFactory.Create();
-            
-            importContext.OnImportProgress += OnImportStatusUpdate;
+
+            importContext.OnImportStarted = OnImportStarted;
+            importContext.OnImportComplete = OnImportComplete;
+            importContext.OnImportError = OnImportError;
+            importContext.OnImportStatusUpdate = OnImportStatusUpdate;
 
             foreach (var game in remoteLibrary)
             {
@@ -74,14 +65,10 @@ namespace LANCommander.Launcher.Services
                 catch (Exception ex)
                 {
                     Logger?.LogError(ex, "Could not add game with ID {GameId} to import queue", game.Id);
-                    
-                    OnImportError?.Invoke(this, ex);
                 }
             }
 
             await importContext.ImportQueueAsync();
-            
-            OnImportComplete?.Invoke(this, EventArgs.Empty);
         }
 
         public async Task ImportGameAsync(Guid gameId)

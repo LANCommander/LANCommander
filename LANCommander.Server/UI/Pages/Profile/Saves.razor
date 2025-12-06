@@ -26,7 +26,7 @@
                 Placeholder="Select a Game"
                 DefaultActiveFirstOption="false"
                 EnableSearch
-                OnSelectedItemChanged="() => Table.Reload()"
+                OnSelectedItemChanged="Table.ReloadAsync"
                 Style="min-width: 250px;">
             <ItemTemplate Context="game">
                 <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>

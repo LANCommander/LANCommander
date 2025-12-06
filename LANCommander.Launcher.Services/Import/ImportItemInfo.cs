@@ -1,3 +1,5 @@
+using LANCommander.SDK.Models.Manifest;
+
 namespace LANCommander.Launcher.Services.Import;
 
 public class ImportItemInfo<T> : IImportItemInfo where T : class
@@ -6,5 +8,6 @@ public class ImportItemInfo<T> : IImportItemInfo where T : class
     public string Type { get; set; }
     public string Name { get; set; }
     public bool Processed { get; set; }
+    public BaseManifest Manifest { get; set; }
     public T Record { get; set; }
 }

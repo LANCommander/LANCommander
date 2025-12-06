@@ -1,4 +1,5 @@
 using LANCommander.Launcher.Services.Exceptions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
@@ -8,21 +9,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 public class GameImporter(
     GameService gameService,
     LibraryService libraryService,
-    MediaService mediaService,
-    MediaClient mediaClient,
-    ILogger<GameImporter> logger) : BaseImporter<Game, Data.Models.Game>
+    ILogger<GameImporter> logger) : BaseImporter<Game>
 {
-    public override async Task<ImportItemInfo<Game>> GetImportInfoAsync(Game record)
-    {
-        return new ImportItemInfo<Game>
+    public override async Task<ImportItemInfo<Game>> GetImportInfoAsync(Game record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Title,
             Type = nameof(Game),
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Game record) => $"{nameof(Game)}/{record.Id}";
 
     public override async Task<bool> CanImportAsync(Game record)
@@ -32,188 +29,119 @@ public class GameImporter(
         if (existing == null)
             return true;
         
-        return record.UpdatedOn > existing.ImportedOn;
+        return
+            record.UpdatedOn > existing.ImportedOn
+            ||
+            record.Actions.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn)
+            ||
+            record.SavePaths.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn);
     }
 
-    public override async Task<Data.Models.Game> AddAsync(Game record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)
     {
         try
         {
             var game = new Data.Models.Game
             {
-                Id = record.Id,
-                Title = record.Title,
-                SortTitle = record.SortTitle,
-                Description = record.Description,
-                Notes = record.Notes,
-                ReleasedOn = record.ReleasedOn,
-                Singleplayer = record.Singleplayer,
-                Type = record.Type,
-                IGDBId = record.IGDBId,
-                CreatedOn = record.CreatedOn,
-                UpdatedOn = record.UpdatedOn,
+                Id = importItemInfo.Record.Id,
+                Title = importItemInfo.Record.Title,
+                SortTitle = importItemInfo.Record.SortTitle,
+                Description = importItemInfo.Record.Description,
+                Notes = importItemInfo.Record.Notes,
+                ReleasedOn = importItemInfo.Record.ReleasedOn,
+                Singleplayer = importItemInfo.Record.Singleplayer,
+                Type = importItemInfo.Record.Type,
+                IGDBId = importItemInfo.Record.IGDBId,
+                CreatedOn = importItemInfo.Record.CreatedOn,
+                UpdatedOn = importItemInfo.Record.UpdatedOn,
                 ImportedOn = DateTime.UtcNow,
             };
             
-            game = await gameService.AddAsync(game);
-
-            await UpdateRelationships(game, record);
-            
+            await gameService.AddAsync(game);
+            await UpdateRelationships(importItemInfo.Record);
             await libraryService.AddToLibraryAsync(game);
 
-            return game;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Game>(record, "An unknown error occurred while trying to add game", ex);
+            logger.LogError(ex, "Could not add game | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Game> UpdateAsync(Game record)
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Game> importItemInfo)
     {
-        var existing = await gameService.GetAsync(record.Id);
+        var existing = await gameService.GetAsync(importItemInfo.Record.Id);
 
         try
         {
-            existing.Title = record.Title;
-            existing.SortTitle = record.SortTitle;
-            existing.Description = record.Description;
-            existing.Notes = record.Notes;
-            existing.ReleasedOn = record.ReleasedOn;
-            existing.Singleplayer = record.Singleplayer;
-            existing.Type = record.Type;
-            existing.IGDBId = record.IGDBId;
-            existing.CreatedOn = record.CreatedOn;
+            existing.Title = importItemInfo.Record.Title;
+            existing.SortTitle = importItemInfo.Record.SortTitle;
+            existing.Description = importItemInfo.Record.Description;
+            existing.Notes = importItemInfo.Record.Notes;
+            existing.ReleasedOn = importItemInfo.Record.ReleasedOn;
+            existing.Singleplayer = importItemInfo.Record.Singleplayer;
+            existing.Type = importItemInfo.Record.Type;
+            existing.IGDBId = importItemInfo.Record.IGDBId;
+            existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
+            existing.LatestVersion = importItemInfo.Record.Version;
             
             await gameService.UpdateAsync(existing);
+            await UpdateRelationships(importItemInfo.Record);
             
-            await UpdateRelationships(existing, record);
+            if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
+                await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
-            return existing;
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Game>(record, "An unknown error occurred while trying to update game", ex);
+            throw new ImportSkippedException<Game>(importItemInfo.Record, "An unknown error occurred while trying to update game", ex);
         }
     }
 
-    private async Task UpdateRelationships(Data.Models.Game game, Game record)
+    private async Task UpdateRelationships(Game manifest)
     {
+        var game = await gameService.GetAsync(manifest.Id);
+
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Collections,
-            record.Collections,
-            r => c => c.Name == r.Name,
-            (c, rc) =>
-            {
-                c.Name = rc.Name;
-                c.CreatedOn = rc.CreatedOn;
-                c.UpdatedOn = rc.UpdatedOn;
-                c.ImportedOn = DateTime.UtcNow;
-            });
-
+            manifest.Collections,
+            r => c => c.Name == r.Name);
+        
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Developers,
-            record.Developers,
-            r => c => c.Name == r.Name,
-            (d, rd) =>
-            {
-                d.Name = rd.Name;
-                d.CreatedOn = rd.CreatedOn;
-                d.UpdatedOn = rd.UpdatedOn;
-                d.ImportedOn = DateTime.UtcNow;
-            });
-
+            manifest.Developers,
+            r => d => d.Name == r.Name);
+        
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Genres,
-            record.Genres,
-            r => g => g.Name == r.Name,
-            (g, gr) =>
-            {
-                g.Name = gr.Name;
-                g.CreatedOn = gr.CreatedOn;
-                g.UpdatedOn = gr.UpdatedOn;
-                g.ImportedOn = DateTime.UtcNow;
-            });
-
-        await gameService.SyncRelatedCollectionAsync(
-            game, g => g.MultiplayerModes,
-            record.MultiplayerModes,
-            r => mm => mm.NetworkProtocol == r.NetworkProtocol && mm.Type == r.Type,
-            (mm, rmm) =>
-            {
-                mm.Description = rmm.Description;
-                mm.MinPlayers = rmm.MinPlayers;
-                mm.MaxPlayers = rmm.MaxPlayers;
-                mm.NetworkProtocol = rmm.NetworkProtocol;
-                mm.Spectators = rmm.Spectators;
-                mm.CreatedOn = rmm.CreatedOn;
-                mm.UpdatedOn = rmm.UpdatedOn;
-                mm.ImportedOn = DateTime.UtcNow;
-            });
-
+            manifest.Genres,
+            r => g => g.Name == r.Name);
+        
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Platforms,
-            record.Platforms,
-            r => p => p.Name == r.Name,
-            (p, pr) =>
-            {
-                p.Name = pr.Name;
-                p.CreatedOn = pr.CreatedOn;
-                p.UpdatedOn = pr.UpdatedOn;
-                p.ImportedOn = DateTime.UtcNow;
-            });
+            manifest.Platforms,
+            r => p => p.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Publishers,
-            record.Publishers,
-            r => p => p.Name == r.Name,
-            (p, pr) =>
-            {
-                p.Name = pr.Name;
-                p.CreatedOn = pr.CreatedOn;
-                p.UpdatedOn = pr.UpdatedOn;
-                p.ImportedOn = DateTime.UtcNow;
-            });
+            manifest.Publishers,
+            r => p => p.Name == r.Name);
         
         await gameService.SyncRelatedCollectionAsync(
             game,
             g => g.Tags,
-            record.Tags,
-            r => t => t.Name == r.Name,
-            (t, tr) =>
-            {
-                t.Name = tr.Name;
-                t.CreatedOn = tr.CreatedOn;
-                t.UpdatedOn = tr.UpdatedOn;
-                t.ImportedOn = DateTime.UtcNow;
-            });
-
-        await gameService.SyncRelatedCollectionAsync(
-            game,
-            g => g.Media,
-            record.Media,
-            r => m => m.Id == r.Id, async (m, mr) =>
-            {
-                m.Name = mr.Name;
-                m.Type = m.Type;
-                m.FileId = mr.FileId;
-                m.Crc32 = mr.Crc32;
-                m.MimeType = mr.MimeType;
-                m.SourceUrl = mr.SourceUrl;
-                m.Id = mr.Id;
-
-                var path = mediaService.GetImagePath(m);
-
-                if (!File.Exists(path))
-                    await mediaService.DownloadAsync(m);
-            });
+            manifest.Tags,
+            r => t => t.Name == r.Name);
     }
 
-    public override async Task<bool> ExistsAsync(Game record) => await gameService.ExistsAsync(record.Id);
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo) => await gameService.ExistsAsync(importItemInfo.Record.Id);
 }

@@ -90,7 +90,7 @@
 
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
-        Table.Reload();
+        await Table.ReloadAsync();
     }
 
     private async Task RecalculateFileSize(Archive archive)
@@ -116,7 +116,7 @@
 
     private async Task ArchiveUploaded(Guid archiveId)
     {
-        Table.Reload();
+        await Table.ReloadAsync();
     }
 
     private async Task UploadArchive()
@@ -144,7 +144,7 @@
         {
             await ArchiveService.UpdateAsync(archive);
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success("Archive updated!");
         }
@@ -161,7 +161,7 @@
         {
             await ArchiveService.DeleteAsync(archive);
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success("Archive deleted!");
         }

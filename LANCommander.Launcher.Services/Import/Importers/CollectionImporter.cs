@@ -6,19 +6,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class CollectionImporter(
     CollectionService collectionService,
-    ILogger<CollectionImporter> logger) : BaseImporter<Collection, Data.Models.Collection>
+    ILogger<CollectionImporter> logger) : BaseImporter<Collection>
 {
-    public override async Task<ImportItemInfo<Collection>> GetImportInfoAsync(Collection record)
-    {
-        return new ImportItemInfo<Collection>
+    public override async Task<ImportItemInfo<Collection>> GetImportInfoAsync(Collection record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Name,
             Type = nameof(Collection),
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Collection record) => $"{nameof(Collection)}/{record.Name}";
 
     public override async Task<bool> CanImportAsync(Collection record)
@@ -31,44 +29,30 @@ public class CollectionImporter(
         return record.UpdatedOn > existing.ImportedOn;
     }
 
-    public override async Task<Data.Models.Collection> AddAsync(Collection record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Collection> importItemInfo)
     {
         var collection = new Data.Models.Collection
         {
-            Name = record.Name,
-            CreatedOn = record.CreatedOn,
-            UpdatedOn = record.UpdatedOn,
+            Name = importItemInfo.Record.Name,
+            CreatedOn = importItemInfo.Record.CreatedOn,
+            UpdatedOn = importItemInfo.Record.UpdatedOn,
             ImportedOn = DateTime.UtcNow,
         };
 
         try
         {
-            return await collectionService.AddAsync(collection);
+            await collectionService.AddAsync(collection);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Collection>(record, "An unknown error occurred while trying to add collection", ex);
+            logger.LogError(ex, "Could not add collection | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Collection> UpdateAsync(Collection record)
-    {
-        var existing = await collectionService.FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            existing.Name = record.Name;
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedOn = record.UpdatedOn;
-            existing.ImportedOn = DateTime.UtcNow;
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Collection>(record, "An unknown error occurred while trying to update collection", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Collection record) => await collectionService.ExistsAsync(c => c.Name == record.Name);
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Collection> importItemInfo) => true;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Collection> importItemInfo)
+        => await collectionService.ExistsAsync(c => c.Name == importItemInfo.Record.Name);
 }

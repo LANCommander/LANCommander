@@ -128,7 +128,7 @@
 
         await MessageService.SuccessAsync($"Promoted {user.UserName}!");
 
-        Table.Reload();
+        await Table.ReloadAsync();
     }
 
     private async Task DemoteUser(User user)
@@ -143,7 +143,7 @@
         {
             await UserService.RemoveFromRole(dbUser.UserName, RoleService.AdministratorRoleName);
 
-            Table.Reload();
+            await Table.ReloadAsync();
         }
     }
 
@@ -159,7 +159,7 @@
         {
             await UserService.DeleteAsync(dbUser);
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success($"Deleted {user.UserName}!");
         }
@@ -186,7 +186,7 @@
 
         modalRef.OnOk = async (Guid) =>
         {
-            Table.Reload();
+            await Table.ReloadAsync();
         };
     }
 }

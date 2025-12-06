@@ -1,33 +1,37 @@
 using LANCommander.Launcher.Services.Import.Importers;
+using LANCommander.SDK;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services.Import;
 
 public class ImportContext
 {
-    public IImportItemInfo CurrentItem { get; set; }
-    public int Processed => _queue.Count(qi => qi.Processed);
-    public int Total => _queue.Count;
+    public int Processed;
+    public int Total;
+
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStarted { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportComplete { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportError { get; set; } = new();
+    public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; set; } = new();
     
-    public EventHandler OnImportStarted { get; set; }
-    public EventHandler<ImportStatusUpdate> OnImportProgress { get; set; }
-    public EventHandler OnImportCompleted { get; set; }
-    
-    private List<IImportItemInfo> _queue { get; set; } = new();
+    private Queue<IImportItemInfo> Queue { get; } = new();
     
     #region Importers
-
-    private CollectionImporter _collections;
-    private DeveloperImporter _developers;
-    private EngineImporter _engines;
-    private GameImporter _games;
-    private GenreImporter _genres;
-    private MultiplayerModeImporter _multiplayerModes;
-    private PlatformImporter _platforms;
-    private PublisherImporter _publishers;
-    private TagImporter _tags;
+    private readonly CollectionImporter _collections;
+    private readonly DeveloperImporter _developers;
+    private readonly EngineImporter _engines;
+    private readonly GameImporter _games;
+    private readonly GenreImporter _genres;
+    private readonly MediaImporter _media;
+    private readonly MultiplayerModeImporter _multiplayerModes;
+    private readonly PlatformImporter _platforms;
+    private readonly PublisherImporter _publishers;
+    private readonly TagImporter _tags;
     #endregion
+    
+    private readonly ILogger<ImportContext> _logger;
 
     public ImportContext(IServiceProvider serviceProvider)
     {
@@ -36,115 +40,150 @@ public class ImportContext
         _engines = serviceProvider.GetRequiredService<EngineImporter>();
         _games = serviceProvider.GetRequiredService<GameImporter>();
         _genres = serviceProvider.GetRequiredService<GenreImporter>();
+        _media = serviceProvider.GetRequiredService<MediaImporter>();
         _multiplayerModes = serviceProvider.GetRequiredService<MultiplayerModeImporter>();
         _platforms = serviceProvider.GetRequiredService<PlatformImporter>();
         _publishers = serviceProvider.GetRequiredService<PublisherImporter>();
         _tags = serviceProvider.GetRequiredService<TagImporter>();
+        
+        _logger = serviceProvider.GetRequiredService<ILogger<ImportContext>>();
     }
 
     public async Task AddAsync(Game game)
     {
-        foreach (var collection in game.Collections)
-            if (!InQueue(collection, _collections) && await _collections.CanImportAsync(collection))
-                _queue.Add(await _collections.GetImportInfoAsync(collection));
-        
-        foreach (var developer in game.Developers)
-            if (!InQueue(developer, _developers) && await _developers.CanImportAsync(developer))
-                _queue.Add(await _developers.GetImportInfoAsync(developer));
-        
-        if (game.Engine != null && !InQueue(game.Engine, _engines) && await _engines.CanImportAsync(game.Engine))
-            _queue.Add(await _engines.GetImportInfoAsync(game.Engine));
-        
-        foreach (var genre in game.Genres)
-            if (!InQueue(genre, _genres) && await _genres.CanImportAsync(genre))
-                _queue.Add(await _genres.GetImportInfoAsync(genre));
-        
-        foreach (var multiplayerMode in game.MultiplayerModes)
-            if (!InQueue(multiplayerMode, _multiplayerModes) && await _multiplayerModes.CanImportAsync(multiplayerMode))
-                _queue.Add(await _multiplayerModes.GetImportInfoAsync(multiplayerMode));
-        
-        foreach (var platform in game.Platforms)
-            if (!InQueue(platform, _platforms) && await _platforms.CanImportAsync(platform))
-                _queue.Add(await _platforms.GetImportInfoAsync(platform));
-        
-        foreach (var publisher in game.Publishers)
-            if (!InQueue(publisher, _publishers) && await _publishers.CanImportAsync(publisher))
-                _queue.Add(await _publishers.GetImportInfoAsync(publisher));
-        
-        foreach (var tag in game.Tags)
-            if (!InQueue(tag, _tags) && await _tags.CanImportAsync(tag))
-                _queue.Add(await _tags.GetImportInfoAsync(tag));
-        
-        if (!InQueue(game, _games) && await _games.CanImportAsync(game))
-            _queue.Add(await _games.GetImportInfoAsync(game));
+        await AddAsync(game, game.Collections, _collections);
+        await AddAsync(game, game.Developers, _developers);
+        await AddAsync(game, game.Engine, _engines);
+        await AddAsync(game, game.Genres, _genres);
+        await AddAsync(game, game.Media, _media);
+        await AddAsync(game, game.MultiplayerModes, _multiplayerModes);
+        await AddAsync(game, game.Platforms, _platforms);
+        await AddAsync(game, game.Publishers, _publishers);
+        await AddAsync(game, game.Tags, _tags);
+        await AddAsync(game, game, _games);
     }
 
-    private bool InQueue<TRecord, TEntity>(TRecord record, BaseImporter<TRecord, TEntity> importer)
+    private async Task AddAsync<TRecord>(BaseManifest manifest, IEnumerable<TRecord> records, BaseImporter<TRecord> importer)
+        where TRecord : class
+    {
+        foreach (var record in records)
+            await AddAsync(manifest, record, importer);
+    }
+
+    private async Task AddAsync<TRecord>(BaseManifest manifest, TRecord? record, BaseImporter<TRecord> importer)
+        where TRecord : class
+    {
+        if (record != null && !InQueue(record, importer) && await importer.CanImportAsync(record))
+        {
+            var importInfo = await importer.GetImportInfoAsync(record, manifest);
+
+            importInfo.Key = importer.GetKey(record);
+
+            Queue.Enqueue(importInfo);
+        }
+    }
+
+    internal bool InQueue<TRecord>(TRecord record, BaseImporter<TRecord> importer)
         where TRecord : class =>
-        _queue.Any(qi => qi.Key == importer.GetKey(record));
+        Queue.Any(qi => qi.Key == importer.GetKey(record));
 
     public async Task ImportQueueAsync()
     {
-        OnImportStarted?.Invoke(this, EventArgs.Empty);
-        
-        // Import metadata before games
-        _queue = _queue
-            .OrderBy(qi => qi.Type == nameof(Game))
-            .ThenBy(qi => qi.Type)
-            .ThenBy(qi => qi.Name)
-            .ToList();
-        
-        foreach (var queueItem in _queue)
+        Processed = 0;
+        Total = Queue.Count;
+
+        await OnImportStarted?.InvokeAsync(new ImportStatusUpdate
         {
-            CurrentItem = queueItem;
-            
-            OnImportProgress?.Invoke(this, new ImportStatusUpdate
+            Index = Processed,
+            Total = Total,
+        })!;
+
+        int deferred = 0;
+
+        while (Queue.Count > 0)
+        {
+            var queueItem = Queue.Dequeue();
+
+            await OnImportStatusUpdate?.InvokeAsync(new ImportStatusUpdate
             {
-                CurrentItem = CurrentItem,
+                CurrentItem = queueItem,
                 Index = Processed,
                 Total = Total,
-            });
+            })!;
+
+            var success = await TryImportAsync(queueItem);
+
+            if (success)
+            {
+                Processed++;
+                deferred = 0;
+                continue;
+            }
             
+            Queue.Enqueue(queueItem);
+            deferred++;
+
+            if (deferred >= Queue.Count)
+                throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
+        }
+
+        await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
+        {
+            Index = Total,
+            Total = Total,
+        })!;
+    }
+
+    private async Task<bool> TryImportAsync(IImportItemInfo queueItem)
+    {
+        try
+        {
             switch (queueItem.Type)
             {
                 case nameof(Collection):
-                    await _collections.ImportAsync(queueItem);
-                    break;
-                
+                    return await _collections.ImportAsync(queueItem);
+
                 case "Developer":
-                    await _developers.ImportAsync(queueItem);
-                    break;
-                
+                    return await _developers.ImportAsync(queueItem);
+
                 case nameof(Engine):
-                    await _engines.ImportAsync(queueItem);
-                    break;
-                
+                    return await _engines.ImportAsync(queueItem);
+
                 case nameof(Game):
-                    await _games.ImportAsync(queueItem);
-                    break;
-                
+                    return await _games.ImportAsync(queueItem);
+
                 case nameof(Genre):
-                    await _genres.ImportAsync(queueItem);
-                    break;
-                
+                    return await _genres.ImportAsync(queueItem);
+
+                case nameof(Media):
+                    return await _media.ImportAsync(queueItem);
+
                 case nameof(MultiplayerMode):
-                    await _multiplayerModes.ImportAsync(queueItem);
-                    break;
-                
+                    return await _multiplayerModes.ImportAsync(queueItem);
+
                 case nameof(Platform):
-                    await _platforms.ImportAsync(queueItem);
-                    break;
-                
+                    return await _platforms.ImportAsync(queueItem);
+
                 case "Publisher":
-                    await _publishers.ImportAsync(queueItem);
-                    break;
-                
+                    return await _publishers.ImportAsync(queueItem);
+
                 case nameof(Tag):
-                    await _tags.ImportAsync(queueItem);
-                    break;
+                    return await _tags.ImportAsync(queueItem);
             }
         }
-        
-        OnImportCompleted?.Invoke(this, EventArgs.Empty);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing record {RecordName}", queueItem.Name);
+
+            await OnImportError?.InvokeAsync(new ImportStatusUpdate
+            {
+                CurrentItem = queueItem,
+                Index = Processed,
+                Total = Total,
+                Error = ex.Message,
+            })!;
+        }
+
+        return false;
     }
 }

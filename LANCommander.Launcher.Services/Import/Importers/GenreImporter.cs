@@ -6,19 +6,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class GenreImporter(
     GenreService genreService,
-    ILogger<GenreImporter> logger) : BaseImporter<Genre, Data.Models.Genre>
+    ILogger<GenreImporter> logger) : BaseImporter<Genre>
 {
-    public override async Task<ImportItemInfo<Genre>> GetImportInfoAsync(Genre record)
-    {
-        return new ImportItemInfo<Genre>
+    public override async Task<ImportItemInfo<Genre>> GetImportInfoAsync(Genre record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Name,
             Type = nameof(Genre),
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Genre record) => $"{nameof(Genre)}/{record.Name}";
 
     public override async Task<bool> CanImportAsync(Genre record)
@@ -31,44 +29,30 @@ public class GenreImporter(
         return record.UpdatedOn > existing.ImportedOn;
     }
 
-    public override async Task<Data.Models.Genre> AddAsync(Genre record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Genre> importItemInfo)
     {
         var genre = new Data.Models.Genre
         {
-            Name = record.Name,
-            CreatedOn = record.CreatedOn,
-            UpdatedOn = record.UpdatedOn,
+            Name = importItemInfo.Record.Name,
+            CreatedOn = importItemInfo.Record.CreatedOn,
+            UpdatedOn = importItemInfo.Record.UpdatedOn,
             ImportedOn = DateTime.UtcNow,
         };
 
         try
         {
-            return await genreService.AddAsync(genre);
+            await genreService.AddAsync(genre);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Genre>(record, "An unknown error occurred while trying to add genre", ex);
+            logger.LogError(ex, "Could not add genre | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Genre> UpdateAsync(Genre record)
-    {
-        var existing = await genreService.FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            existing.Name = record.Name;
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedOn = record.UpdatedOn;
-            existing.ImportedOn = DateTime.UtcNow;
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Genre>(record, "An unknown error occurred while trying to update genre", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Genre record) => await genreService.ExistsAsync(c => c.Name == record.Name);
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Genre> importItemInfo) => true;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Genre> importItemInfo) 
+        => await genreService.ExistsAsync(c => c.Name == importItemInfo.Record.Name);
 }

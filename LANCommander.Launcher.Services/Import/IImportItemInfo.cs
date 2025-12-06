@@ -1,3 +1,5 @@
+using LANCommander.SDK.Models.Manifest;
+
 namespace LANCommander.Launcher.Services.Import;
 
 public interface IImportItemInfo
@@ -6,4 +8,5 @@ public interface IImportItemInfo
     string Type { get; set; }
     string Name { get; set; }
     bool Processed { get; set; }
+    BaseManifest Manifest { get; set; }
 }

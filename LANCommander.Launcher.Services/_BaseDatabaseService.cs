@@ -1,9 +1,10 @@
-﻿using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Data.Models;
-using LANCommander.Launcher.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using System.Reflection;
+using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Data.Models;
+using LANCommander.Launcher.Models;
 
 namespace LANCommander.Launcher.Services
 {
@@ -96,12 +97,36 @@ namespace LANCommander.Launcher.Services
         }
 
         public virtual async Task SyncRelatedCollectionAsync<T, TChild, U>(
-            T entity, Expression<Func<T, ICollection<TChild>>> navigationProperty,
+            T entity,
+            Expression<Func<T, ICollection<TChild>>> navigationProperty,
             IEnumerable<U> records,
-            Func<U, Expression<Func<TChild, bool>>> matchExpression,
-            Action<TChild, U> updateAction) where TChild : class
+            Func<U, Expression<Func<TChild, bool>>> matchExpression) where TChild : class where T : class
         {
+            Context.Attach(entity);
+
+            var entry = Context.Entry(entity);
+            
+            var enumerableExpr = Expression.Lambda<Func<T, IEnumerable<TChild>>>(
+                navigationProperty.Body,
+                navigationProperty.Parameters);
+            
+            var collectionEntry = entry.Collection(enumerableExpr);
+
+            if (!collectionEntry.IsLoaded)
+                await collectionEntry.LoadAsync();
+            
             var collection = navigationProperty.Compile().Invoke(entity);
+
+            if (collection == null)
+            {
+                collection = new List<TChild>();
+                
+                if (navigationProperty.Body is not MemberExpression memberExpression ||
+                    memberExpression.Member is not PropertyInfo propertyInfo)
+                    throw new InvalidOperationException($"Navigation expression '{navigationProperty}' must point to a property.");
+                
+                propertyInfo.SetValue(entity, collection);
+            }
 
             var matchedChildren = new HashSet<TChild>();
 
@@ -121,25 +146,17 @@ namespace LANCommander.Launcher.Services
                     if (!collection.Contains(existingChild))
                         collection.Add(existingChild);
                     
-                    updateAction(existingChild, record);
-                    matchedChildren.Add(existingChild);
-                }
-                else
-                {
-                    var newChild = Activator.CreateInstance<TChild>();
-                    
-                    updateAction(newChild, record);
-                    collection.Add(existingChild);
                     matchedChildren.Add(existingChild);
                 }
             }
             
-            var toDelete = collection.Where(child => !matchedChildren.Contains(child));
+            var toDelete = collection
+                .Where(child => !matchedChildren.Contains(child))
+                .ToList();
 
             foreach (var child in toDelete)
             {
                 collection.Remove(child);
-                Context.Remove(child);
             }
 
             await Context.SaveChangesAsync();

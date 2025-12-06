@@ -29,10 +29,10 @@
         if (ImportService != null)
         {
             // Clear any existing handlers
-            ImportService.OnImportStarted -= ImportStarted;
-            ImportService.OnImportComplete -= OnImportComplete;
-            ImportService.OnImportError -= OnImportFailed;
-            ImportService.OnImportStatusUpdate -= OnImportStatusUpdate;
+            ImportService.OnImportStarted.EventRaised -= OnImportStarted;
+            ImportService.OnImportComplete.EventRaised -= OnImportComplete;
+            ImportService.OnImportError.EventRaised -= OnImportError;
+            ImportService.OnImportStatusUpdate.EventRaised -= OnImportStatusUpdate;
         }
     }
 
@@ -43,16 +43,16 @@
             Logger?.LogInformation("Starting import process");
 
             // Clear any existing handlers
-            ImportService.OnImportStarted -= ImportStarted;
-            ImportService.OnImportComplete -= OnImportComplete;
-            ImportService.OnImportError -= OnImportFailed;
-            ImportService.OnImportStatusUpdate -= OnImportStatusUpdate;
+            ImportService.OnImportStarted.EventRaised -= OnImportStarted;
+            ImportService.OnImportComplete.EventRaised -= OnImportComplete;
+            ImportService.OnImportError.EventRaised -= OnImportError;
+            ImportService.OnImportStatusUpdate.EventRaised -= OnImportStatusUpdate;
 
             // Add our handlers
-            ImportService.OnImportStarted += ImportStarted;
-            ImportService.OnImportComplete += OnImportComplete;
-            ImportService.OnImportError += OnImportFailed;
-            ImportService.OnImportStatusUpdate += OnImportStatusUpdate;
+            ImportService.OnImportStarted.EventRaised += OnImportStarted;
+            ImportService.OnImportComplete.EventRaised += OnImportComplete;
+            ImportService.OnImportError.EventRaised += OnImportError;
+            ImportService.OnImportStatusUpdate.EventRaised += OnImportStatusUpdate;
             
 
             // Now start the import process
@@ -84,39 +84,39 @@
         });
     }
     
-    private void ImportStarted(object? sender, EventArgs e)
+    private async Task OnImportStarted(ImportStatusUpdate status)
     {
-        NotifyProgress(ImportProgressState.Importing);
+        await NotifyProgress(ImportProgressState.Importing);
     }
 
-    private async void OnImportComplete(object? sender, EventArgs e)
+    private async Task OnImportComplete(ImportStatusUpdate status)
     {
         Logger?.LogInformation("Import Complete handler called");
         Importing = false;
         ImportStatusIndex = 0;
         ImportStatusTotal = 0;
 
-        NotifyProgress(ImportProgressState.Imported);
+        await NotifyProgress(ImportProgressState.Imported);
         MessageService.Success(LocalizationService.GetString("ImportComplete"), 3);
     }
 
-    private async void OnImportFailed(object? sender, Exception? ex)
+    private async Task OnImportError(ImportStatusUpdate status)
     {
         Importing = false;
         ImportStatusIndex = 0;
         ImportStatusTotal = 0;
 
-        NotifyProgress(ImportProgressState.Failed);
+        await NotifyProgress(ImportProgressState.Failed);
         MessageService.Error(LocalizationService.GetString("ImportFailed"), 3);
     }
 
-    private async void OnImportStatusUpdate(object? sender, ImportStatusUpdate? status)
+    private async Task OnImportStatusUpdate(ImportStatusUpdate? status)
     {
         Logger?.LogInformation("Import Update handler called: {Index}/{Total}", status.Index, status.Total);
         ImportStatusIndex = status.Index;
         ImportStatusTotal = status.Total;
 
-        NotifyProgress(ImportProgressState.Updated);
+        await NotifyProgress(ImportProgressState.Updated);
     }
 
     public enum ImportProgressState

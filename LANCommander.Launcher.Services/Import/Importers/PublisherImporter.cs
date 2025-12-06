@@ -6,19 +6,17 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class PublisherImporter(
     CompanyService companyService,
-    ILogger<PublisherImporter> logger) : BaseImporter<Company, Data.Models.Company>
+    ILogger<PublisherImporter> logger) : BaseImporter<Company>
 {
-    public override async Task<ImportItemInfo<Company>> GetImportInfoAsync(Company record)
-    {
-        return new ImportItemInfo<Company>
+    public override async Task<ImportItemInfo<Company>> GetImportInfoAsync(Company record, BaseManifest manifest) =>
+        new()
         {
             Key = GetKey(record),
             Name = record.Name,
             Type = "Publisher",
             Record = record,
         };
-    }
-    
+
     public override string GetKey(Company record) => $"{nameof(Company)}/{record.Name}";
 
     public override async Task<bool> CanImportAsync(Company record)
@@ -31,44 +29,30 @@ public class PublisherImporter(
         return record.UpdatedOn > existing.ImportedOn;
     }
 
-    public override async Task<Data.Models.Company> AddAsync(Company record)
+    public override async Task<bool> AddAsync(ImportItemInfo<Company> importItemInfo)
     {
         var company = new Data.Models.Company
         {
-            Name = record.Name,
-            CreatedOn = record.CreatedOn,
-            UpdatedOn = record.UpdatedOn,
+            Name = importItemInfo.Record.Name,
+            CreatedOn = importItemInfo.Record.CreatedOn,
+            UpdatedOn = importItemInfo.Record.UpdatedOn,
             ImportedOn = DateTime.UtcNow,
         };
 
         try
         {
-            return await companyService.AddAsync(company);
+            await companyService.AddAsync(company);
+
+            return true;
         }
         catch (Exception ex)
         {
-            throw new ImportSkippedException<Company>(record, "An unknown error occurred while trying to add company", ex);
+            logger.LogError(ex, "Could not add publisher | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
     }
 
-    public override async Task<Data.Models.Company> UpdateAsync(Company record)
-    {
-        var existing = await companyService.FirstOrDefaultAsync(c => c.Name == record.Name);
-
-        try
-        {
-            existing.Name = record.Name;
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedOn = record.UpdatedOn;
-            existing.ImportedOn = DateTime.UtcNow;
-
-            return existing;
-        }
-        catch (Exception ex)
-        {
-            throw new ImportSkippedException<Company>(record, "An unknown error occurred while trying to update company", ex);
-        }
-    }
-
-    public override async Task<bool> ExistsAsync(Company record) => await companyService.ExistsAsync(c => c.Name == record.Name);
+    public override async Task<bool> UpdateAsync(ImportItemInfo<Company> importItemInfo) => true;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Company> importItemInfo)
+        => await companyService.ExistsAsync(c => c.Name == importItemInfo.Record.Name);
 }

@@ -83,7 +83,7 @@
             Logger.LogError(ex, $"Could not update/add {CompanyContext.Name}!");
         }
 
-        Table.Reload();
+        await Table.ReloadAsync();
 
         await CloseEdit();
     }
@@ -114,7 +114,7 @@
 
             MessageService.Success("Company deleted!");
 
-            Table.Reload();
+            await Table.ReloadAsync();
         }
         catch (Exception ex)
         {

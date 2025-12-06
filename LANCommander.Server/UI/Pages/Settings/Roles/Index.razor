@@ -95,7 +95,7 @@
         {
             await RoleService.DeleteAsync(role);
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success($"Deleted {role.Name}!");
         }
@@ -124,7 +124,7 @@
                 Name = NewRole.Name
             });
 
-            Table.Reload();
+            await Table.ReloadAsync();
 
             MessageService.Success("Role added!");
         }

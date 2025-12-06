@@ -136,7 +136,7 @@ public class ImportContext : IDisposable
             var manifestMeta = ManifestHelper.Deserialize<SDK.Models.Manifest.BaseManifest>(manifestContents);
 
             // Check for legacy manifest
-            if (String.IsNullOrWhiteSpace(manifestMeta.ManifestVersion))
+            if (manifestMeta.IsLegacyManifest())
             {
                 if (ManifestHelper.TryDeserialize<Legacy.Models.GameManifest>(manifestContents, out var legacyGameManifest))
                     return await InitializeLegacyGameImportAsync(legacyGameManifest);

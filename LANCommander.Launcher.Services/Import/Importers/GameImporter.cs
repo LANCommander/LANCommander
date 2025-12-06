@@ -1,4 +1,5 @@
 using LANCommander.Launcher.Services.Exceptions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,12 @@ public class GameImporter(
         if (existing == null)
             return true;
         
-        return record.UpdatedOn > existing.ImportedOn;
+        return
+            record.UpdatedOn > existing.ImportedOn
+            ||
+            record.Actions.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn)
+            ||
+            record.SavePaths.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn);
     }
 
     public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)
@@ -80,9 +86,13 @@ public class GameImporter(
             existing.IGDBId = importItemInfo.Record.IGDBId;
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
+            existing.LatestVersion = importItemInfo.Record.Version;
             
             await gameService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record);
+            
+            if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
+                await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
             return true;
         }

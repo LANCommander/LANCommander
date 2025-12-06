@@ -92,28 +92,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
         }
-        
-        public override async Task DeleteAsync(Archive archive)
-        {
-            FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
-
-            await cache.ExpireGameCacheAsync(archive.GameId);
-            await cache.ExpireArchiveCacheAsync(archive.Id);
-
-            await base.DeleteAsync(archive);
-        }
-
-        public async Task DeleteAsync(Archive archive, StorageLocation storageLocation = null)
-        {
-            if (storageLocation == null)
-                FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
-            else
-                FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive, storageLocation));
-
-            await cache.ExpireGameCacheAsync(archive.GameId);
-
-            await base.DeleteAsync(archive);
-        }
 
         public async Task<SDK.Models.Manifest.Game> ReadManifestAsync(string objectKey)
         {

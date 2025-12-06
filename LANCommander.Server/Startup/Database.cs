@@ -3,6 +3,7 @@ using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
@@ -18,7 +19,11 @@ public static class Database
 {
     public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder, string[] args)
     {
-        builder.Services.AddDbContextFactory<DatabaseContext>();
+        builder.Services.AddScoped<DeleteArchiveInterceptor>();
+        builder.Services.AddDbContextFactory<DatabaseContext>((sp, options) =>
+        {
+            options.AddInterceptors(sp.GetRequiredService<DeleteArchiveInterceptor>());
+        });
         builder.Services.AddDbContext<DatabaseContext>();
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

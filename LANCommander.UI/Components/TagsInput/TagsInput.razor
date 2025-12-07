@@ -2,50 +2,102 @@
 @typeparam TItem where TItem : IKeyedModel
 @namespace LANCommander.UI.Components
 
-<Select 
-    @ref="@Select"
-    Mode="SelectMode.Tags"
-    DataSource="Entities"
-    ItemValue="e => e.Id"
-    ItemLabel="OptionLabelSelector"
-    OnCreateCustomTag="async (tag) => await OnCreateCustomTag(tag)"
-    @bind-Values="@SelectedValues"
-    EnableSearch
-    EnableVirtualization>
+<Select Mode="SelectMode.Tags"
+        DataSource="_items.Keys"
+        Placeholder="Please select"
+        Values="_selectedItems"
+        ValuesChanged="OnValuesChanged"
+        TItemValue="string"
+        TItem="string"
+        OnSelectedItemsChanged="OnSelectedItemsChangedHandler"
+        Loading="_loading"
+        EnableSearch>
 </Select>
 
 @code {
+    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
     [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
-    [Parameter] public IEnumerable<TItem> Entities { get; set; }
     
-    [Parameter] public EventCallback<string> OnCreateTag { get; set; }
+    [Parameter] public Func<string, Task<TItem>>? OnCreateTag { get; set; }
 
     [Parameter] public ICollection<TItem> Values { get; set; }
     [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
 
-    Select<Guid, TItem> Select;
+    Dictionary<string, TItem> _items = new();
+    IEnumerable<string> _selectedItems = [];
 
-    private IEnumerable<Guid> SelectedValues
+    bool _loading;
+    bool _locked;
+
+    protected override void OnInitialized()
     {
-        get
-        {
-            return Values?.Select(e => e.Id);
-        }
-        set
-        {
-            if (value != null)
-            {
-                Values = Entities.Where(e => value.Contains(e.Id)).ToList();
+        GenerateOptions();
+    }
 
-                if (ValuesChanged.HasDelegate)
-                    ValuesChanged.InvokeAsync(Values);
+    void GenerateOptions()
+    {
+        _items = [];
+
+        foreach (var item in DataSource.DistinctBy(OptionLabelSelector))
+            _items[OptionLabelSelector.Invoke(item)] = item;
+
+        _selectedItems = Values.Select(v => OptionLabelSelector.Invoke(v));
+    }
+
+    async Task OnValuesChanged(IEnumerable<string> values)
+    {
+        _selectedItems = values.Distinct().ToList();
+        
+        if (_locked)
+            return;
+        
+        _locked = true;
+
+        try
+        {
+            var newTags = _selectedItems.Where(v => !_items.ContainsKey(v)).ToList();
+            
+            foreach (var newTag in newTags)
+            {
+                if (OnCreateTag != null)
+                {
+                    _loading = true;
+                    await Task.Yield();
+                    await InvokeAsync(StateHasChanged);
+
+                    var newItem = await OnCreateTag.Invoke(newTag);
+
+                    _items[newTag] = newItem;
+
+                    _loading = false;
+                    await Task.Yield();
+                    await InvokeAsync(StateHasChanged);
+                }
             }
+
+            Values = _items
+                .Where(i => _selectedItems.Contains(i.Key))
+                .Select(i => i.Value)
+                .DistinctBy(i => OptionLabelSelector.Invoke(i))
+                .ToList();
+
+            if (ValuesChanged.HasDelegate)
+                await ValuesChanged.InvokeAsync(Values);
+            
+            GenerateOptions();
+        }
+        catch (Exception ex)
+        {
+            
+        }
+        finally
+        {
+            _locked = false;
         }
     }
 
-    private async Task OnCreateCustomTag(string tag)
+    async Task OnSelectedItemsChangedHandler(IEnumerable<string> values)
     {
-        if (OnCreateTag.HasDelegate)
-            await OnCreateTag.InvokeAsync(tag);
+
     }
 }

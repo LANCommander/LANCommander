@@ -1,7 +1,7 @@
 @typeparam TTaxonomy where TTaxonomy : BaseTaxonomyModel
 
 <TagsInput
-    Entities="_entities"
+    DataSource="_entities"
     OnCreateTag="Add"
     Values="Values"
     ValuesChanged="ValuesChanged"
@@ -19,18 +19,14 @@
         _entities = await DataService.AsNoTracking().GetAsync();
     }
 
-    async Task Add(string name)
+    async Task<TTaxonomy> Add(string name)
     {
         var taxonomy = Activator.CreateInstance(typeof(TTaxonomy)) as TTaxonomy;
 
         taxonomy.Name = name;
 
         taxonomy = await DataService.AddAsync(taxonomy);
-        
-        _entities.Add(taxonomy);
-        Values.Add(taxonomy);
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
+        return taxonomy;
     }
 }

@@ -1,14 +1,16 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LANCommander.Server.Data.Models
 {
-    public class Company : BaseModel
+    public class Company : BaseTaxonomyModel
     {
-        public string Name { get; set; }
-
         [JsonIgnore]
         public ICollection<Game> PublishedGames { get; set; }
         [JsonIgnore]
         public ICollection<Game> DevelopedGames { get; set; }
+        [JsonIgnore]
+        [NotMapped]
+        public override ICollection<Game> Games { get; set; }
     }
 }

@@ -125,10 +125,10 @@
                 <Checkbox @bind-Checked="@context.Singleplayer" />
             </FormItem>
             <FormItem Label="Developers">
-                
+                <TaxonomyInput DataService="CompanyService" @bind-Values="context.Developers" />
             </FormItem>
             <FormItem Label="Publishers">
-                
+                <TaxonomyInput DataService="CompanyService" @bind-Values="context.Publishers" />
             </FormItem>
             <FormItem Label="Platforms">
                 <TaxonomyInput DataService="PlatformService" @bind-Values="context.Platforms" />

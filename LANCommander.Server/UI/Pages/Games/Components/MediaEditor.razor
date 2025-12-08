@@ -1,7 +1,9 @@
 ﻿@using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
+@using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
 @inject MediaService MediaService
+@inject GameService GameService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -9,7 +11,7 @@
 @inject ILogger<MediaEditor> Logger
 
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
-    <Table @ref="ResultsTable" TItem="Media" DataSource="@Values" RowKey="c => c.Id" @bind-SelectedRows="Selected" HidePagination="true" Responsive>
+    <Table @ref="ResultsTable" TItem="Media" DataSource="@_media" RowKey="c => c.Id" @bind-SelectedRows="Selected" HidePagination="true" Responsive>
         <TitleTemplate>
             <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="@("10")">
                 @if (Selected.Any())
@@ -87,43 +89,46 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<Media> Values { get; set; } = new List<Media>();
-    [Parameter] public EventCallback<ICollection<Media>> ValuesChanged { get; set; }
-
-    [Parameter] public Guid GameId { get; set; }
-    [Parameter] public string GameTitle { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
     IEnumerable<Media> Selected = new List<Media>();
     ITable? ResultsTable;
 
-    MediaType[] AllowedMediaTypes = new MediaType[]
-    {
+    MediaType[] AllowedMediaTypes =
+    [
         MediaType.Icon,
         MediaType.Cover,
         MediaType.Background,
         MediaType.Logo,
         MediaType.Manual
-    };
+    ];
 
-    MediaType[] SearchableMediaTypes = new MediaType[]
-    {
-        MediaType.Icon,
-        MediaType.Cover,
-        MediaType.Background,
-        MediaType.Logo,
-        MediaType.Manual
-    };
-
-    string[] ValidMimeTypes = new string[]
-    {
+    string[] ValidMimeTypes =
+    [
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
         MediaTypeNames.Application.Pdf,
         MediaTypeNames.Image.Icon
-    };
+    ];
 
-    private async Task Update(Media media)
+    List<Media> _media = new();
+    Game _game;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _game = await GameService.Query(q =>
+            {
+                return q
+                    .Include(g => g.Media)
+                    .ThenInclude(m => m.StorageLocation);
+            })
+            .GetAsync(GameId);
+
+        _media = _game.Media.ToList();
+    }
+
+    async Task Update(Media media)
     {
         try
         {
@@ -141,29 +146,24 @@
         }
     }
 
-    private async Task AddMedia()
+    async Task AddMedia()
     {
-        if (Values == null)
-            Values = new List<Media>();
-
         try
         {
             var types = Enum.GetValues<MediaType>();
-            var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
-            
-            var defaultStorageLocation = await MediaService.GetDefaultStorageLocationAsync();
+            var nextType = types.FirstOrDefault(t => !_media.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
             
             var media = new Media
             {
                 GameId = GameId,
-                Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
-                StorageLocationId = defaultStorageLocation.Id,
+                Type = nextType == MediaType.Icon && _media.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
+                StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
                 Crc32 = String.Empty
             };
 
             media = await MediaService.AddAsync(media);
 
-            Values.Add(await MediaService.GetAsync(media.Id));
+            _media.Add(media);
         }
         catch (Exception ex)
         {
@@ -172,9 +172,9 @@
         }
     }
 
-    private async Task SearchMedia(Media media)
+    async Task SearchMedia(Media media)
     {
-        var modalOptions = new ModalOptions()
+        var modalOptions = new ModalOptions
         {
             Title = $"Download {media.Type}",
             Maximizable = false,
@@ -186,7 +186,7 @@
         var grabberOptions = new MediaGrabberOptions()
         {
             Type = media.Type,
-            Search = GameTitle
+            Search = _game.Title
         };
 
         var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
@@ -211,14 +211,11 @@
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
             }
 
-            Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
-
-            if (ValuesChanged.HasDelegate)
-                await ValuesChanged.InvokeAsync(Values);
+            _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
         };
     }
 
-    private async Task UploadMedia(InputFileChangeEventArgs e, Media media)
+    async Task UploadMedia(InputFileChangeEventArgs e, Media media)
     {
         if (!ValidMimeTypes.Contains(e.File.ContentType))
         {
@@ -253,33 +250,30 @@
             await MediaService.UpdateAsync(media);
         }
 
-        Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
-
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
+        _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
     }
 
-    private async Task DeleteAll()
+    async Task DeleteAll()
     {
         if (!Selected.Any())
             return;
 
-        Values = Values.Except(Selected).ToList();
+        _media = _media.Except(Selected).ToList();
         await MediaService.DeleteRangeAsync(Selected);
 
         Selected = [];
         ResultsTable.ReloadData();
     }
 
-    private async Task RemoveMedia(Media media)
+    async Task RemoveMedia(Media media)
     {
-        Values.Remove(media);
+        _media.Remove(media);
         
         if (media.Id != Guid.Empty)
             await MediaService.DeleteAsync(media);
     }
 
-    private async Task OpenManual(Media media)
+    async Task OpenManual(Media media)
     {
         var modalOptions = new ModalOptions()
         {
@@ -296,7 +290,7 @@
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
     }
 
-    private void NavigateToSettings()
+    void NavigateToSettings()
     {
         NavigationManager.NavigateTo("/Settings/Media", true);
     }

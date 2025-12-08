@@ -1,7 +1,9 @@
-﻿@inject GameService GameService
+﻿@inject MultiplayerModeService MultiplayerModeService
+@inject IMessageService MessageService
+@inject ILogger<MultiplayerModeEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="MultiplayerMode" DataSource="@MultiplayerModes" HidePagination="true" Responsive>
+ <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <Table TItem="MultiplayerMode" DataSource="@_multiplayerModes" HidePagination="true" Responsive>
         <PropertyColumn Property="m => m.Type">
             <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -36,35 +38,56 @@
 </Flex>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    ICollection<MultiplayerMode> MultiplayerModes = new List<MultiplayerMode>();
+    ICollection<MultiplayerMode> _multiplayerModes = new List<MultiplayerMode>();
 
     protected override async Task OnInitializedAsync()
     {
-        var game = await GameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
+        await LoadMultiplayerModes();
+    }
 
-        MultiplayerModes = game.MultiplayerModes;
+    async Task LoadMultiplayerModes()
+    {
+        _multiplayerModes = await MultiplayerModeService.GetAsync(mm => mm.GameId == GameId);
     }
     
     async Task AddMode()
     {
-        MultiplayerModes.Add(new MultiplayerMode());
+        _multiplayerModes.Add(new MultiplayerMode
+        {
+            GameId = GameId,
+        });
     }
 
     async Task RemoveMode(MultiplayerMode mode)
     {
-        MultiplayerModes.Remove(mode);
+        if (mode.Id != Guid.Empty)
+            await MultiplayerModeService.DeleteAsync(mode);
+        
+        _multiplayerModes.Remove(mode);
     }
 
     public async Task Save()
     {
-        var game = await GameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
+        try
+        {
+            foreach (var mode in _multiplayerModes)
+            {
+                if (mode.Id == Guid.Empty)
+                    await MultiplayerModeService.AddAsync(mode);
+                else
+                    await MultiplayerModeService.UpdateAsync(mode);
+            }
 
-        game.MultiplayerModes = MultiplayerModes;
-
-        await GameService.UpdateAsync(game);
+            MessageService.SuccessAsync("Multiplayer modes updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.ErrorAsync("Could not save multiplayer modes!");
+            Logger.LogError(ex, "Could not update multiplayer modes!");
+        }
         
-        game = await GameService.GetAsync(GameId);
+        await LoadMultiplayerModes();
     }
 }

@@ -2,17 +2,9 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Scripts">
-    <ScriptEditor GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)" AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
+    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-
-    private Guid GetLatestArchiveId(Game game)
-    {
-        if (game != null && game.Archives != null && game.Archives.Count > 0)
-            return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
-        else
-            return Guid.Empty;
-    }
 }

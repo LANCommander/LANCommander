@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

@@ -1,9 +1,4 @@
-﻿@using System.Net;
-@using System.Diagnostics;
-@using Hangfire;
-@using LANCommander.Server.Jobs.Background;
-@using Microsoft.EntityFrameworkCore;
-@inject ArchiveService ArchiveService
+﻿@inject ArchiveService ArchiveService
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -12,7 +7,7 @@
 @inject ILogger<ArchiveEditor> Logger
 
 <DataTable
-    @ref="Table"
+    @ref="_table"
     TItem="Archive"
     HidePagination
     Responsive
@@ -53,14 +48,14 @@
     </Columns>
 </DataTable>
 
-<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="ArchiveUploaded" />
+<ArchiveUploader @ref="_uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="ArchiveUploaded" />
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
-    [Parameter] public Guid RedistributableId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "RedistributableId")] public Guid RedistributableId { get; set; }
 
-    DataTable<Archive> Table;
-    ArchiveUploader Uploader;
+    DataTable<Archive> _table;
+    ArchiveUploader _uploader;
 
     protected override void OnInitialized()
     {
@@ -74,7 +69,7 @@
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
-        var archives = Table.DataSource;
+        var archives = _table.DataSource;
 
         var results = new List<bool>();
         foreach (var archive in archives)
@@ -90,7 +85,7 @@
 
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
-        await Table.ReloadAsync();
+        await _table.ReloadAsync();
     }
 
     private async Task RecalculateFileSize(Archive archive)
@@ -101,27 +96,20 @@
         var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
         await ArchiveUploaded(archive.Id);
 
-        if(result)
+        if (result)
             MessageService.Success("File sizes recalculated!");
         else
             MessageService.Error("Recalculating file sizes failed!");
     }
 
-    private async Task Download(Archive archive)
-    {
-        string url = $"/Download/Game/{archive.Id}";
-
-        await JS.InvokeAsync<object>("open", url, "_blank");
-    }
-
     private async Task ArchiveUploaded(Guid archiveId)
     {
-        await Table.ReloadAsync();
+        await _table.ReloadAsync();
     }
 
     private async Task UploadArchive()
     {
-        await Uploader.Open();
+        await _uploader.Open();
     }
 
     private async Task BrowseArchive(Archive archive)
@@ -144,7 +132,7 @@
         {
             await ArchiveService.UpdateAsync(archive);
 
-            await Table.ReloadAsync();
+            await _table.ReloadAsync();
 
             MessageService.Success("Archive updated!");
         }
@@ -161,7 +149,7 @@
         {
             await ArchiveService.DeleteAsync(archive);
 
-            await Table.ReloadAsync();
+            await _table.ReloadAsync();
 
             MessageService.Success("Archive deleted!");
         }

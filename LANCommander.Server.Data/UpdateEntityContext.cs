@@ -77,10 +77,9 @@ public class UpdateEntityContext<TEntity>
 
         // Explicitly load the existing collection
         var navigation = _context.Entry(_entity).Collection(navigationPropertyPath);
+        
         if (!navigation.IsLoaded)
-        {
             await navigation.LoadAsync();
-        }
 
         // Get the updated collection from the new entity
         var updatedCollection = compiledExpression.Invoke(_updatedEntity);

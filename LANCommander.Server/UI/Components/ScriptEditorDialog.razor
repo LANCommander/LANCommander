@@ -1,6 +1,8 @@
 ﻿@using LANCommander.SDK.Enums
 @inherits FeedbackComponent<ScriptEditorOptions, Script>
 @inject ScriptService ScriptService
+@inject ArchiveService ArchiveService
+@inject ServerService ServerService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
@@ -27,7 +29,7 @@
             </Dropdown>
         }
 
-        @if (Options.ArchiveId != Guid.Empty)
+        @if (_archive != null)
         {
             <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
         }
@@ -68,6 +70,8 @@
     MonacoCodeEditor? Editor;
     RegToPowerShell RegToPowerShell;
     IEnumerable<Snippet> Snippets { get; set; }
+
+    Archive? _archive;
     
     StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
     {
@@ -87,20 +91,34 @@
         if (Options.ScriptId != Guid.Empty)
             Script = await ScriptService.GetAsync(Options.ScriptId);
         else if (Options.GameId != Guid.Empty)
-            Script = new Script()
+        {
+            Script = new Script
             {
                 GameId = Options.GameId
             };
+
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == Options.GameId);
+        }
         else if (Options.RedistributableId != Guid.Empty)
+        {
             Script = new Script()
             {
                 RedistributableId = Options.RedistributableId
             };
+
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == Options.RedistributableId);
+        }
         else if (Options.ServerId != Guid.Empty)
+        {
             Script = new Script()
             {
                 ServerId = Options.ServerId
             };
+
+            var server = await ServerService.GetAsync(Options.ServerId.Value);
+
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
+        }
         
         Snippets = ScriptService.GetSnippets();
     }
@@ -155,7 +173,7 @@
 
         var browserOptions = new FilePickerOptions()
         {
-            ArchiveId = Options.ArchiveId,
+            ArchiveId = _archive?.Id ?? Guid.Empty,
             Select = true,
             Multiple = false
         };

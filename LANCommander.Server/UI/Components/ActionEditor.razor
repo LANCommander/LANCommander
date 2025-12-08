@@ -1,17 +1,17 @@
 ﻿@using System.Collections.ObjectModel
-@inject GameService GameService
-@inject ServerService ServerService
-@inject ModalService ModalService
+@using Action = LANCommander.Server.Data.Models.Action
+@inject ActionService ActionService
+@inject ArchiveService ArchiveService
 @inject MessageService MessageService
 @inject ILogger<ActionEditor> Logger
 
 <Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="Data.Models.Action" DataSource="@Actions.OrderBy(a => a.SortOrder)" HidePagination Style="border: 1px solid #f0f0f0" Responsive>
+    <Table TItem="Action" DataSource="@_sortedActions.OrderBy(a => a.SortOrder)" HidePagination Style="border: 1px solid #f0f0f0" Responsive>
         <PropertyColumn Property="a => a.Name">
             <Input Type="InputType.Text" @bind-Value="context.Name"/>
         </PropertyColumn>
         <PropertyColumn Property="a => a.Path">
-            <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories Title="Select Action Executable" OnSelected="(path) => OnPathSelected(path, context)"/>
+            <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories Title="Select Action Executable" OnSelected="(path) => OnPathSelected(path, context)"/>
         </PropertyColumn>
         <PropertyColumn Property="a => a.Arguments">
             <Input Type="InputType.Text" @bind-Value="context.Arguments"/>
@@ -42,120 +42,102 @@
 </Flex>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
-    [Parameter] public Guid ServerId { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+
+    Archive? _archive;
+    Game? _game;
+    Server? _server;
     
-    public ICollection<Data.Models.Action> Actions { get; set; }
+    ObservableCollection<Action> _sortedActions  = new();
 
-    Game Game;
-    Server Server;
+    protected override async Task OnInitializedAsync() => await LoadActions();
 
-    ObservableCollection<Data.Models.Action> SortedActions = new();
-
-    protected override async Task OnInitializedAsync()
+    async Task LoadActions()
     {
-        if (GameId != Guid.Empty)
+        if (GameId.HasValue)
         {
-            Game = await GameService
-                .Include(g => g.Actions)
-                .GetAsync(GameId);
-
-            Actions = Game.Actions;
+            _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameId == GameId.Value));
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
         }
         
-        if (ServerId != Guid.Empty)
-        {
-            Server = await ServerService
-                .Include(s => s.Actions)
-                .GetAsync(ServerId);
-
-            Actions = Server.Actions;
-        }
-
-        if (SortedActions.Count != Actions.Count)
-        {
-            SortedActions.Clear();
-
-            foreach (var action in Actions.OrderBy(a => a.SortOrder))
-                SortedActions.Add(action);
-        }
+        if (ServerId.HasValue)
+            _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ServerId == ServerId.Value));
     }
 
-    async Task AddAction()
+    void AddAction()
     {
-        var newAction = new Data.Models.Action()
+        var newAction = new Action
         {
-            PrimaryAction = Actions.Count == 0,
-            SortOrder = Actions.Count
+            PrimaryAction = _sortedActions.Count == 0,
+            SortOrder = _sortedActions.Count
         };
 
-        if (GameId != Guid.Empty)
+        if (GameId.HasValue)
             newAction.GameId = GameId;
-        if (ServerId != Guid.Empty)
+        
+        if (ServerId.HasValue)
             newAction.ServerId = ServerId;
 
-        SortedActions.Add(newAction);
+        _sortedActions.Add(newAction);
 
-        await UpdateOrder();
+        UpdateOrder();
     }
 
-    async Task RemoveAction(Data.Models.Action action)
+    async Task RemoveAction(Action action)
     {
-        SortedActions.Remove(action);
+        await ActionService.DeleteAsync(action);
+        
+        _sortedActions.Remove(action);
 
-        await UpdateOrder();
+        UpdateOrder();
     }
 
-    async Task MoveUp(Data.Models.Action action)
+    async Task MoveUp(Action action)
     {
-        var index = SortedActions.IndexOf(action);
+        var index = _sortedActions.IndexOf(action);
 
         if (index > 0)
-            SortedActions.Move(index, index - 1);
+            _sortedActions.Move(index, index - 1);
 
-        await UpdateOrder();
+        UpdateOrder();
     }
 
-    async Task MoveDown(Data.Models.Action action)
+    async Task MoveDown(Action action)
     {
-        var index = SortedActions.IndexOf(action);
+        var index = _sortedActions.IndexOf(action);
 
-        if (index < SortedActions.Count - 1)
-            SortedActions.Move(index, index + 1);
+        if (index < _sortedActions.Count - 1)
+            _sortedActions.Move(index, index + 1);
 
-        await UpdateOrder();
+        UpdateOrder();
     }
 
-    async Task UpdateOrder()
+    void UpdateOrder()
     {
-        foreach (var action in SortedActions)
-        {
-            action.SortOrder = SortedActions.IndexOf(action);
-        }
+        foreach (var action in _sortedActions)
+            action.SortOrder = _sortedActions.IndexOf(action);
 
-        Actions = SortedActions;
+        if (GameId.HasValue && _game != null)
+            _game.Actions = _sortedActions;
 
-        if (Game != null)
-            Game.Actions = Actions;
-
-        if (Server != null)
-            Server.Actions = Actions;
+        if (ServerId.HasValue && _server != null)
+            _server.Actions = _sortedActions;
     }
 
     public async Task Save()
     {
         try
         {
-            if (GameId != Guid.Empty)
+            foreach (var action in _sortedActions)
             {
-                await GameService.UpdateAsync(Game);
+                if (action.Id == Guid.Empty)
+                    await ActionService.AddAsync(action);
+                else
+                    await ActionService.UpdateAsync(action);
             }
 
-            if (ServerId != Guid.Empty)
-            {
-                await ServerService.UpdateAsync(Server);
-            }
+            await LoadActions();
 
             MessageService.Success("Actions updated!");
         }
@@ -166,8 +148,9 @@
         }
     }
 
-    void OnPathSelected(string path, Data.Models.Action action)
+    void OnPathSelected(string path, Action action)
     {
+        action.Path = path;
         action.WorkingDirectory = "{InstallDir}";
     }
 }

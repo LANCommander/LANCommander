@@ -1,7 +1,10 @@
-﻿@inject GameService GameService
+﻿@inject SavePathService SavePathService
+@inject ArchiveService ArchiveService
+@inject IMessageService MessageService
+@inject ILogger<SavePathEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="SavePath" DataSource="@SavePaths" HidePagination="true" Responsive>
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <Table TItem="SavePath" DataSource="@_savePaths" HidePagination="true" Responsive>
         <PropertyColumn Property="p => p.Type">
             <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -15,11 +18,11 @@
             }
             else
             {
-                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@_archive.Id" AllowDirectories="true" />
             }
         </PropertyColumn>
         <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@ArchiveId" AllowDirectories Title="Select Working Directory" />
+            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@_archive.Id" AllowDirectories Title="Select Working Directory" />
         </PropertyColumn>
         <PropertyColumn Property="p => p.IsRegex" Title="Regex">
             <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
@@ -37,22 +40,24 @@
 </Flex>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    ICollection<SavePath> SavePaths = new List<SavePath>();
+    Archive _archive;
+    ICollection<SavePath> _savePaths = new List<SavePath>();
 
     protected override async Task OnInitializedAsync()
     {
-        var game = await GameService.Include(g => g.SavePaths).GetAsync(GameId);
+        _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
-        if (game.SavePaths != null)
-            SavePaths = game.SavePaths;
+        await LoadPaths();
     }
 
-    async Task AddPath()
+    async Task LoadPaths()
+        => _savePaths = await SavePathService.GetAsync(p => p.GameId == GameId);
+
+    void AddPath()
     {
-        SavePaths.Add(new SavePath()
+        _savePaths.Add(new SavePath
         {
             GameId = GameId,
             WorkingDirectory = "{InstallDir}"
@@ -61,15 +66,31 @@
 
     async Task RemovePath(SavePath path)
     {
-        SavePaths.Remove(path);
+        await SavePathService.DeleteAsync(path);
+
+        await LoadPaths();
     }
 
     public async Task Save()
     {
-        var game = await GameService.Include(g => g.SavePaths).GetAsync(GameId);
+        try
+        {
+            foreach (var savePath in _savePaths)
+            {
+                if (savePath.Id == Guid.Empty)
+                    await SavePathService.AddAsync(savePath);
+                else
+                    await SavePathService.UpdateAsync(savePath);
+            }
 
-        game.SavePaths = SavePaths;
-
-        await GameService.UpdateAsync(game);
+            MessageService.SuccessAsync("Save paths updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.ErrorAsync("Could not update save paths!");
+            Logger.LogError(ex, "Could not update save paths!");
+        }
+        
+        await LoadPaths();
     }
 }

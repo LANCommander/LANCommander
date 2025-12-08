@@ -1,33 +1,22 @@
 ﻿@page "/Games/{id:guid}/Actions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ArchiveService ArchiveService
 
 <GameEditView Id="Id" Title="Actions">
     <TitleExtraTemplate>
         <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
-                <Button Type="ButtonType.Primary" OnClick="ActionEditor.Save">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="_actionEditor.Save">Save</Button>
             </SpaceItem>
         </Space>
     </TitleExtraTemplate>
 
     <ChildContent>
-        <ActionEditor @ref="ActionEditor" GameId="Id" ArchiveId="ArchiveId" />
+        <ActionEditor @ref="_actionEditor" />
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Guid ArchiveId = Guid.Empty;
-
-    ActionEditor ActionEditor;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var latestArchive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == Id);
-
-        if (latestArchive != null)
-            ArchiveId = latestArchive.Id;
-    }
+    ActionEditor _actionEditor;
 }

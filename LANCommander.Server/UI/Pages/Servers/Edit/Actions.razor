@@ -7,35 +7,21 @@
         {
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
-
-                <Dropdown Trigger="@(new [] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
             </Flex>
         }
     </TitleExtraTemplate>
     
     <ChildContent>
-        <ActionEditor
-            @ref="ActionEditor"
-            ServerId="context.Id"
-            ArchiveId="context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
-        
-        <Button Type="@ButtonType.Primary" OnClick="() => ActionEditor.Save()" Icon="@IconType.Fill.Save">Save</Button>
+        <CascadingValue Name="ServerId" Value="context.Id">
+            <ActionEditor @ref="_actionEditor" />
+        </CascadingValue>
+
+        <Button Type="@ButtonType.Primary" OnClick="_actionEditor.Save" Icon="@IconType.Fill.Save">Save</Button>
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    ActionEditor ActionEditor;
+    ActionEditor _actionEditor;
 }

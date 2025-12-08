@@ -4,18 +4,17 @@
 <GameEditView Id="Id" Title="Custom Fields">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="CustomFieldEditor.Save">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="_customFieldEditor.Save">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     
     <ChildContent>
-        <CustomFieldEditor @ref="CustomFieldEditor" GameId="@Id" />
+        <CustomFieldEditor @ref="_customFieldEditor" />
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    CustomFieldEditor CustomFieldEditor;
-   
+    CustomFieldEditor _customFieldEditor;
 }

@@ -1,23 +1,23 @@
 ﻿@inject KeyService KeyService
 @inject IMessageService MessageService
+@inject ILogger<KeysEditor> Logger
 
-@if (Keys != null)
+@if (_keys != null)
 {
-    <Flex Vertical Gap="FlexGap.Small">
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
         <GridRow>
             <GridCol Span="8">
-                <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
+                <Statistic Title="Available" Value="_keys.Count - _allocatedKeys" Style="text-align: center;" />
             </GridCol>
             <GridCol Span="8">
-                <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
+                <Statistic Title="Allocated" Value="_allocatedKeys" Style="text-align: center;" />
             </GridCol>
             <GridCol Span="8">
-                <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
+                <Statistic Title="Total" Value="_keys.Count" Style="text-align: center;" />
             </GridCol>
         </GridRow>
         
         <DataTable
-            @ref="Table"
             TItem="Key"
             Responsive
             Query="k => k.GameId == GameId">
@@ -55,8 +55,8 @@
         </DataTable>
     </Flex>
 
-    <Modal Title="Edit Keys" Visible="EditModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => EditModalVisible = false" OnOk="Save">
-        <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
+    <Modal Title="Edit Keys" Visible="_editModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => _editModalVisible = false" OnOk="Save">
+        <StandaloneCodeEditor @ref="_editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
     </Modal>
 }
 
@@ -67,15 +67,14 @@
 </style>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    ICollection<Key> Keys = new List<Key>();
-    int AllocatedKeys;
-
-    bool EditModalVisible = false;
-
-    DataTable<Key> Table;
-    StandaloneCodeEditor? Editor;
+    ICollection<Key> _keys = new List<Key>();
+    
+    int _allocatedKeys;
+    bool _editModalVisible = false;
+    
+    StandaloneCodeEditor? _editor;
 
     StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
     {
@@ -83,24 +82,24 @@
         {
             AutomaticLayout = true,
             Language = "text",
-            Value = String.Join('\n', Keys.Select(k => k.Value)),
+            Value = String.Join('\n', _keys.Select(k => k.Value)),
             Theme = "vs-dark",
         };
     }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Keys == null)
-            Keys = new List<Key>();
+        if (_keys == null)
+            _keys = new List<Key>();
         
-        Keys = await KeyService.GetAsync(k => k.GameId == GameId);
+        _keys = await KeyService.GetAsync(k => k.GameId == GameId);
 
-        AllocatedKeys = Keys.Count(k => k.IsAllocated());
+        _allocatedKeys = _keys.Count(k => k.IsAllocated());
     }
 
     void Edit()
     {
-        EditModalVisible = true;
+        _editModalVisible = true;
     }
 
     async Task Release(Key key)
@@ -112,24 +111,32 @@
 
     async Task Save()
     {
-        var value = await Editor.GetValue();
-        var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k)).ToList();
+        try
+        {
+            var value = await _editor.GetValue();
+            var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k)).ToList();
 
-        var keysDeleted = Keys.Where(k => !keys.Contains(k.Value)).ToList();
-        var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
-        
-        foreach (var key in keysDeleted)
-            KeyService.DeleteAsync(key);
+            var keysDeleted = _keys.Where(k => !keys.Contains(k.Value)).ToList();
+            var keysAdded = keys.Where(k => !_keys.Any(gk => gk.Value == k)).ToList();
 
-        foreach (var key in keysAdded)
-            await KeyService.AddAsync(new Key()
-            {
-                GameId = GameId,
-                Value = key
-            });
+            foreach (var key in keysDeleted)
+                await KeyService.DeleteAsync(key);
 
-        EditModalVisible = false;
+            foreach (var key in keysAdded)
+                await KeyService.AddAsync(new Key()
+                {
+                    GameId = GameId,
+                    Value = key
+                });
 
-        MessageService.Success("Keys updated!");
+            _editModalVisible = false;
+            
+            MessageService.Success("Keys updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.ErrorAsync("Could not update keys!");
+            Logger.LogError(ex, "Could not update keys!");
+        }
     }
 }

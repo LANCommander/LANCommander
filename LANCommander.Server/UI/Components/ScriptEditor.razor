@@ -6,7 +6,7 @@
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
     <DataTable
         @ref="Table"
         TItem="Script"
@@ -45,33 +45,35 @@
 </style>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
-    [Parameter] public Guid RedistributableId { get; set; }
-    [Parameter] public Guid ServerId { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "RedistributableId")] public Guid? RedistributableId { get; set; }
+    [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+    
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
     Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
 
     DataTable<Script> Table;
-    
-    ICollection<Script> Scripts { get; set; } = new List<Script>();
+
+    Archive _archive;
 
     Expression<Func<Script, bool>> GetQueryExpression()
     {
-        if (!GameId.IsNullOrEmpty())
+        if (GameId.HasValue)
             return s => s.GameId == GameId;
-        else if (!RedistributableId.IsNullOrEmpty())
+        
+        if (RedistributableId.HasValue)
             return s => s.RedistributableId == RedistributableId;
-        else if (!ServerId.IsNullOrEmpty())
+        
+        if (ServerId.HasValue)
             return s => s.ServerId == ServerId;
-        else
-            return s => 
-                (s.GameId == null || s.GameId == Guid.Empty)
-                &&
-                (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
-                &&
-                (s.ServerId == null || s.ServerId == Guid.Empty);
+        
+        return s => 
+            (s.GameId == null || s.GameId == Guid.Empty)
+            &&
+            (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
+            &&
+            (s.ServerId == null || s.ServerId == Guid.Empty);
     }
 
     async void Edit(Guid? scriptId = null)
@@ -89,7 +91,6 @@
         {
             ScriptId = scriptId ?? default,
             AllowedTypes = AllowedTypes,
-            ArchiveId = ArchiveId,
             GameId = GameId,
             RedistributableId = RedistributableId,
             ServerId = ServerId,

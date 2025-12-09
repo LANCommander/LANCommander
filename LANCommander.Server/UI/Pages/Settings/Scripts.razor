@@ -8,7 +8,11 @@
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Scripts" />
+<PageHeader Title="Scripts">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
@@ -16,16 +20,14 @@
             <Switch @bind-Checked="context.Server.Scripts.EnableAutomaticRepackaging" />
         </FormItem>
         <FormItem Label="Repackage Every">
-            <Flex Direction="FlexDirection.Horizontal">
-                <AntDesign.InputNumber @bind-Value="context.Server.Scripts.RepackageEvery" Min="1" DefaultValue="25" />
+            <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Small" Align="FlexAlign.Center">
+                <AntDesign.InputNumber @bind-Value="context.Server.Scripts.RepackageEvery" Min="1" DefaultValue="24" />
                 <Text>Hours</Text>
             </Flex>
         </FormItem>
-
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
     </Form>
+    
+    <Divider Text="System Scripts" />
     
     <ScriptEditor AllowedTypes="new[] { ScriptType.UserLogin, ScriptType.UserRegistration }"/>
 </PageContent>

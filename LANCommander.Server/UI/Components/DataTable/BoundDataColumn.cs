@@ -10,7 +10,7 @@ namespace LANCommander.Server.UI.Components
     public class BoundDataColumn<TItem, TProp> : AntDesign.Column<TProp>
     {
         [Parameter]
-        public Expression<Func<TItem, TProp>> Property { get; set; } = default!;
+        public Expression<Func<TItem, TProp>>? Property { get; set; } = default!;
         
         [Parameter]
         public string Include { get; set; } = default!;
@@ -21,7 +21,7 @@ namespace LANCommander.Server.UI.Components
         [CascadingParameter]
         public Dictionary<int, bool> ColumnVisibility { get; set; } = default!;
 
-        [CascadingParameter]
+        [CascadingParameter(Name = "Includes")]
         public List<string> Includes { get; set; } = default!;
 
         protected override void OnInitialized()

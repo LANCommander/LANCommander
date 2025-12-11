@@ -15,7 +15,7 @@ public static class IConfigurationBuilderExtensions
 {
     public static IConfiguration ReadFromFile<TSettings>(this IConfigurationBuilder configurationBuilder) where TSettings : Settings, new()
     {
-        var filePath = Path.Join(AppPaths.GetConfigDirectory(), Settings.SETTINGS_FILE_NAME);
+        var filePath = AppPaths.GetConfigPath(Settings.SETTINGS_FILE_NAME);
         
         if (!File.Exists(filePath))
         {

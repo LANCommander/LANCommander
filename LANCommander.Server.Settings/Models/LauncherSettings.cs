@@ -1,10 +1,11 @@
+using LANCommander.SDK;
 using LANCommander.Server.Settings.Enums;
 
 namespace LANCommander.Server.Settings.Models;
 
 public class LauncherSettings
 {
-    public string StoragePath { get; set; } = "Launcher";
+    public string StoragePath { get; set; } = AppPaths.GetConfigPath("Launcher");
     /// <summary>
     /// Whether to include locally downloaded launcher files and provide these for download
     /// </summary>

@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
@@ -54,7 +55,8 @@ namespace LANCommander.Server.Services
                     {
                         var dataSource = new SqliteConnectionStringBuilder(connectionString).DataSource;
 
-                        var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+                        var backupName = AppPaths.GetConfigPath("Backups",
+                            $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
 
                         if (File.Exists(dataSource))
                         {

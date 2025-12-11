@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK;
+using LANCommander.SDK.Enums;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -28,7 +29,7 @@ namespace LANCommander.Migrations
 
             foreach (var snippet in snippetsToRemove)
             {
-                var path = Path.Combine("Snippets", snippet);
+                var path = AppPaths.GetConfigPath("Snippets", snippet);
 
                 if (File.Exists(path))
                     File.Delete(path);

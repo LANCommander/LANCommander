@@ -8,6 +8,9 @@ public static class AppPaths
 {
     private static string _configDirectory = String.Empty;
 
+    public static string GetConfigPath(params string[] paths)
+        => Path.Combine(GetConfigDirectory(), Path.Combine(paths));
+
     public static string GetConfigDirectory()
     {
         if (!String.IsNullOrWhiteSpace(_configDirectory))
@@ -32,7 +35,7 @@ public static class AppPaths
             _configDirectory = appDataPath;
         }
         
-        _configDirectory = Path.Combine(_configDirectory, "config");
+        _configDirectory = Path.Combine(_configDirectory, "Data");
         
         if (!Directory.Exists(_configDirectory))
             Directory.CreateDirectory(_configDirectory);

@@ -1,3 +1,4 @@
+using LANCommander.SDK;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,7 @@ public class LogSettings
             Name = "File",
             MinimumLevel = LogLevel.Information,
             Type = LoggingProviderType.File,
-            ConnectionString = "Logs"
+            ConnectionString = AppPaths.GetConfigPath("Logs")
         },
         new()
         {

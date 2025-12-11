@@ -20,7 +20,7 @@ namespace LANCommander.Launcher.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var dbPath = Path.Combine(AppPaths.GetConfigDirectory(), "LANCommander.db");
+            var dbPath = AppPaths.GetConfigPath("LANCommander.db");
 
             optionsBuilder.AddInterceptors(new AuditingInterceptor());
             optionsBuilder.UseLoggerFactory(LoggerFactory);

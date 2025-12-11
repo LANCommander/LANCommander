@@ -4,7 +4,6 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
 using System.DirectoryServices.AccountManagement;
 using System.Security.Claims;
 using File = System.IO.File;
@@ -30,6 +29,7 @@ public static class SaveEndpoints
 
     public static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -37,7 +37,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
 
             return TypedResults.Unauthorized();
         }
@@ -50,6 +50,7 @@ public static class SaveEndpoints
     public static async Task<IResult> GetByIdAsync(
         Guid id,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -57,7 +58,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
 
             return TypedResults.Unauthorized();
         }
@@ -73,6 +74,7 @@ public static class SaveEndpoints
     public static async Task<IResult> DeleteByIdAsync(
         Guid id,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -80,7 +82,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }
@@ -98,6 +100,7 @@ public static class SaveEndpoints
     public static async Task<IResult> GetSavesByGameAsync(
         Guid gameId,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -105,7 +108,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }
@@ -118,6 +121,7 @@ public static class SaveEndpoints
     public static async Task<IResult> GetLatestSaveByGameAsync(
         Guid gameId,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] IMapper mapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
@@ -126,7 +130,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }
@@ -144,6 +148,7 @@ public static class SaveEndpoints
     public static async Task<IResult> DownloadLatestSaveByGameAsync(
         Guid gameId,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -151,7 +156,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }
@@ -178,6 +183,7 @@ public static class SaveEndpoints
     public static async Task<IResult> DownloadSaveByIdAsync(
         Guid id,
         ClaimsPrincipal userPrincipal,
+        [FromServices] ILogger<Program> logger,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -185,7 +191,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }
@@ -209,6 +215,7 @@ public static class SaveEndpoints
         Guid gameId,
         ClaimsPrincipal userPrincipal,
         HttpContext httpContext,
+        [FromServices] ILogger<Program> logger,
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] IMapper mapper,
         [FromServices] UserService userService,
@@ -220,7 +227,7 @@ public static class SaveEndpoints
 
         if (user == null)
         {
-            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
             
             return TypedResults.Unauthorized();
         }

@@ -1,6 +1,5 @@
 ﻿@using LANCommander.Server.Logging
 @using Microsoft.AspNetCore.SignalR.Client
-@using Serilog.Events
 @using XtermBlazor
 @inject ILogger<LogViewer> Logger
 @inject MessageService MessageService
@@ -52,7 +51,7 @@
             .WithUrl(NavigationManager.ToAbsoluteUri("/logging"))
             .Build();
 
-        HubConnection.On<string, LogEventLevel, DateTime>("Log", (message, level, timestamp) =>
+        HubConnection.On<string, Microsoft.Extensions.Logging.LogLevel, DateTime>("Log", (message, level, timestamp) =>
         {
             var parts = new string[]
             {
@@ -74,16 +73,16 @@
         await HubConnection.StartAsync();
     }
 
-    string GetColorCode(LogEventLevel level)
+    string GetColorCode(Microsoft.Extensions.Logging.LogLevel level)
     {
         return level switch
         {
-            LogEventLevel.Verbose => TerminalColor.BrightBlack,
-            LogEventLevel.Debug => TerminalColor.BrightCyan,
-            LogEventLevel.Information => TerminalColor.BrightGreen,
-            LogEventLevel.Warning => TerminalColor.BrightYellow,
-            LogEventLevel.Error => TerminalColor.BrightRed,
-            LogEventLevel.Fatal => TerminalColor.BrightMagenta,
+            Microsoft.Extensions.Logging.LogLevel.Trace => TerminalColor.BrightBlack,
+            Microsoft.Extensions.Logging.LogLevel.Debug => TerminalColor.BrightCyan,
+            Microsoft.Extensions.Logging.LogLevel.Information => TerminalColor.BrightGreen,
+            Microsoft.Extensions.Logging.LogLevel.Warning => TerminalColor.BrightYellow,
+            Microsoft.Extensions.Logging.LogLevel.Error => TerminalColor.BrightRed,
+            Microsoft.Extensions.Logging.LogLevel.Critical => TerminalColor.BrightMagenta,
             _ => TerminalColor.Default,
         };
     }

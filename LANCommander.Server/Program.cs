@@ -1,4 +1,3 @@
-using Serilog;
 using LANCommander.Server.UI;
 using LANCommander.Server.Startup;
 
@@ -26,8 +25,10 @@ builder.AddDatabase(args);
 
 builder.Services.AddHealthChecks();
 
-Log.Debug("Building Application");
 var app = builder.Build();
+
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogDebug("Building Application");
 
 app.UseDatabase(args);
 app.ValidateSettings();
@@ -42,9 +43,8 @@ app.UseMiddlewares();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    Log.Debug("App has been run in a development environment");
+    logger.LogDebug("App has been run in a development environment");
     app.UseMigrationsEndPoint();
-
 }
 else
 {

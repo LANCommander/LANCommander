@@ -10,7 +10,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Octokit;
-using Serilog;
 
 namespace LANCommander.Server.Startup;
 
@@ -65,7 +64,7 @@ public static class Database
 
                     if (File.Exists(dataSource))
                     {
-                        Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
+                        logger.LogInformation("Migrations pending, database will be backed up to {BackupName}", backupName);
                         File.Copy(dataSource, backupName);
                     }
                 }

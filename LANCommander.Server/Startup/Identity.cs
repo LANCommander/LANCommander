@@ -4,7 +4,6 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
 
 namespace LANCommander.Server.Startup;
 
@@ -15,7 +14,6 @@ public static class Identity
         var settings = new Settings.Settings();
         builder.Configuration.Bind(settings);
         
-        Log.Debug("Initializing Identity");
         builder.Services.AddIdentityCore<User>((options) =>
         {
             options.SignIn.RequireConfirmedAccount = false;

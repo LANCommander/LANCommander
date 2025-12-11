@@ -4,7 +4,6 @@ using LANCommander.Server.Providers;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.UI.Extensions;
-using Serilog;
 
 namespace LANCommander.Server.Startup;
 
@@ -12,8 +11,6 @@ public static class Services
 {
     public static WebApplicationBuilder AddLANCommanderServices(this WebApplicationBuilder builder)
     {
-        Log.Debug("Registering services");
-        
         builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderServer();
         builder.Services.AddLANCommanderImportExport();

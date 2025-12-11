@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
 
 namespace LANCommander.Server.Startup;
 
@@ -47,8 +46,7 @@ public static class Authentication
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Authentication Provider {Name} could not be registered",
-                    authenticationProvider.Name);
+                Console.WriteLine($"Error: Authentication Provider {authenticationProvider.Name} could not be registered: {ex.Message}");
             }
         }
 
@@ -114,7 +112,7 @@ public static class Authentication
             {
                 context.Response.Redirect("/Login");
                 
-                Log.Error(context.Failure, "OIDC authentication failed");
+                Console.WriteLine($"Error: OIDC authentication failed: {context.Failure?.Message}");
 
                 await context.Response.CompleteAsync();
             };
@@ -163,7 +161,7 @@ public static class Authentication
             {
                 context.Response.Redirect("/Login");
                 
-                Log.Error(context.Failure, "OAuth authentication failed");
+                Console.WriteLine($"Error: OAuth authentication failed: {context.Failure?.Message}");
                 
                 await context.Response.CompleteAsync();
             };

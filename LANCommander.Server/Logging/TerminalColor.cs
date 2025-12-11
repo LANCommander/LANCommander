@@ -1,7 +1,4 @@
-﻿using Serilog.Events;
-using System.Drawing.Text;
-
-namespace LANCommander.Server.Logging
+﻿namespace LANCommander.Server.Logging
 {
     public static class TerminalColor
     {

@@ -1,14 +1,6 @@
-using Elastic.Serilog.Sinks;
-using LANCommander.Server.Configuration;
-using LANCommander.Server.Hubs;
-using LANCommander.Server.Parsers;
-using LANCommander.Server.Services.Models;
+using LANCommander.Server.Logging;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.Options;
-using Serilog;
-using Serilog.Events;
-using Serilog.Filters;
-using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 
 namespace LANCommander.Server.Startup;
 
@@ -16,78 +8,105 @@ public static class Logger
 {
     public static WebApplicationBuilder AddLogger(this WebApplicationBuilder builder)
     {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
-            .WriteTo.Console()
-            .CreateBootstrapLogger();
-
-        builder.Services.AddSerilogHub<LoggingHub>();
-
-        builder.Services.AddSerilog((serviceProvider, config) =>
+        builder.Services.AddLogging((loggingBuilder) =>
         {
-            config.MinimumLevel.Verbose();
-            config.Enrich.FromLogContext();
-            
+            var serviceProvider = builder.Services.BuildServiceProvider();
             var settings = serviceProvider.GetRequiredService<IOptions<Settings.Settings>>();
-            
+
+            // Configure filters
             if (settings.Value.Server.Logs.IgnorePings)
-                config.Filter.ByExcluding(Matching.WithProperty<string>("RequestPath", v => v.StartsWith("/api/Ping", StringComparison.OrdinalIgnoreCase)));
+            {
+                loggingBuilder.AddFilter((category, level) =>
+                {
+                    // Filter out ping-related logs if IgnorePings is enabled
+                    if (category != null && category.Contains("Ping", StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    return true;
+                });
+            }
 
             foreach (var provider in settings.Value.Server.Logs.Providers)
             {
-                LogEventLevel minimumLevel = provider.MinimumLevel switch
-                {
-                    LogLevel.Trace => LogEventLevel.Verbose,
-                    LogLevel.Debug => LogEventLevel.Debug,
-                    LogLevel.Warning => LogEventLevel.Warning,
-                    LogLevel.Information => LogEventLevel.Information,
-                    LogLevel.Error => LogEventLevel.Error,
-                    LogLevel.Critical => LogEventLevel.Fatal,
-                    _ => LogEventLevel.Information
-                };
-                
+                var minimumLevel = provider.MinimumLevel;
+
                 switch (provider.Type)
                 {
                     case LoggingProviderType.Console:
-                        config.WriteTo.Console(restrictedToMinimumLevel: minimumLevel);
+                        loggingBuilder.AddConsole();
+                        loggingBuilder.SetMinimumLevel(minimumLevel);
                         break;
-                    
-                    case LoggingProviderType.SignalR:
-                        config.WriteTo.SignalR<LoggingHub>(
-                            serviceProvider,
-                            (context, message, logEvent) => LoggingHub.Log(context, message, logEvent));
-                        break;
-                    
-                    case LoggingProviderType.File:
-                        config.WriteTo.File(
-                            Path.Combine(provider.ConnectionString,"log-.txt"),
-                            rollingInterval: (RollingInterval)(int)(provider.ArchiveEvery ?? LogInterval.Day),
-                            restrictedToMinimumLevel: minimumLevel);
-                        break;
-                    
-                    case LoggingProviderType.Seq:
-                        try
-                        {
-                            var options = ConnectionStringBinder.Bind<SeqOptions>(provider.ConnectionString);
 
-                            config.WriteTo.Seq(
-                                restrictedToMinimumLevel: minimumLevel,
-                                serverUrl: options.ServerUrl,
-                                apiKey: options.ApiKey);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error(ex, "Could not bind Seq connection string");
-                        }
+                    case LoggingProviderType.SignalR:
+                        loggingBuilder.Services.AddSingleton<ILoggerProvider>(sp =>
+                            new SignalRLoggerProvider(sp, minimumLevel));
                         break;
-                    
+
+                    case LoggingProviderType.File:
+                        loggingBuilder.AddFile(provider.ConnectionString, minimumLevel);
+                        break;
+
+                    case LoggingProviderType.Seq:
                     case LoggingProviderType.ElasticSearch:
-                        config.WriteTo.Elasticsearch([new Uri(provider.ConnectionString)], restrictedToMinimumLevel: minimumLevel);
+                        // Note: Standard .NET logging doesn't have built-in support for Seq or Elasticsearch
+                        // Users will need to add these providers manually if needed
+                        builder.Logging.AddDebug();
+                        Console.WriteLine($"Warning: {provider.Type} logging provider is not supported in standard .NET logging. Consider using a third-party logging library.");
                         break;
                 }
             }
         });
 
         return builder;
+    }
+
+    private static ILoggingBuilder AddFile(this ILoggingBuilder builder, string logDirectory, LogLevel minimumLevel)
+        => builder.AddProvider(new FileLoggerProvider(logDirectory, minimumLevel));
+
+    private class FileLogger(string logDirectory, string categoryName, LogLevel minimumLevel) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= minimumLevel;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel))
+                return;
+
+            var logFilePath = Path.Combine(
+                logDirectory,
+                $"log-{DateTime.Now:yyyy-MM-dd}.txt");
+
+            var message = formatter(state, exception);
+            var logMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{logLevel}] [{categoryName}] {message}";
+
+            if (exception != null)
+                logMessage += Environment.NewLine + exception;
+
+            try
+            {
+                lock (logDirectory)
+                {
+                    Directory.CreateDirectory(logDirectory);
+                    File.AppendAllText(logFilePath, logMessage + Environment.NewLine);
+                }
+            }
+            catch
+            {
+                // Silently fail if logging to file fails
+            }
+        }
+    }
+
+    private class FileLoggerProvider(string logDirectory, LogLevel minimumLevel) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new FileLogger(logDirectory, categoryName, minimumLevel);
+
+        public void Dispose() { }
     }
 }

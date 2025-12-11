@@ -39,13 +39,15 @@
         @if (Options.GameId.HasValue && Options.GameId != Guid.Empty && IsDebuggable)
         {
             <Tooltip Title="Debug">
-                <Button Icon="@IconType.Outline.CaretRight" Type="@ButtonType.Text" OnClick="() => _console.DebugPackagingScript(Options.GameId.Value)" />
+                <Button Icon="@IconType.Outline.CaretRight" Type="@ButtonType.Text" OnClick="Debug" Disabled="@_debugging" />
             </Tooltip>
         }
     </FormItem>
 
     <FormItem>
         <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="Save" />
+        
+        <PowerShellConsole @ref="_console" Id="Id" @bind-Active="_debugging" />
     </FormItem>
 
     <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
@@ -67,7 +69,6 @@
         <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
     </FormItem>
     
-    <PowerShellConsole @ref="_console" />
 </Form>
 
 <RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
@@ -80,6 +81,8 @@
     RegToPowerShell RegToPowerShell;
     PowerShellConsole _console;
     IEnumerable<Snippet> Snippets { get; set; }
+
+    bool _debugging;
 
     Archive? _archive;
     
@@ -171,6 +174,20 @@
 
             return false;
         }
+    }
+
+    async Task Debug()
+    {
+        if (!IsDebuggable)
+            return;
+        
+        var saved = await Save();
+
+        if (!saved)
+            return;
+
+        if (Options.GameId.HasValue)
+            await _console.DebugPackagingScript(Options.GameId.Value);
     }
     
     async void BrowseForPath()

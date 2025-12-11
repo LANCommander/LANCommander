@@ -239,6 +239,11 @@ namespace LANCommander.SDK.PowerShell
                 }
                 finally
                 {
+                    await DebugAsync(async dbg =>
+                    {
+                        await dbg.EndAsync(DebugContext);
+                    });
+                    
                     Context.Dispose();
                 }
             }

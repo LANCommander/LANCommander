@@ -1,17 +1,21 @@
 ﻿@using LANCommander.SDK.PowerShell
-@using LANCommander.SDK.PowerShell.Rpc
+@using LANCommander.SDK.Services
 @using LANCommander.Server.Services.PowerShell
 @using XtermBlazor
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
-@inherits RpcComponentBase<IScriptDebuggerClient, IScriptDebuggerHub>
-@inject ScriptDebugger
+@inject ScriptDebugger ScriptDebugger
+@inject ScriptClient ScriptClient
+@inject GameService GameService
 
-<div class="terminal @(Visible ? "" : "hidden")">
-    <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+<div class="terminal @(Active ? "" : "hidden")">
+    <Xterm @ref="Terminal" Id="@Id.ToString()" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
 </div>
 
 @code {
-    private bool Visible { get; set; } = false;
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
+    
     private Xterm Terminal;
     private TaskCompletionSource<string> InputTaskCompletionSource;
 
@@ -27,8 +31,6 @@
         "addon-fit"
     };
 
-    protected override string HubUrl => "/RPC/ScriptDebugger";
-
     private async Task OnFirstRender()
     {
         await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
@@ -39,24 +41,39 @@
         return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
     }
 
+    async Task SetActive(bool active)
+    {
+        Active = active;
+
+        if (ActiveChanged.HasDelegate)
+            await ActiveChanged.InvokeAsync(Active);
+    } 
+
     public async Task DebugPackagingScript(Guid gameId)
     {
-        await Hub.DebugPackageScript(gameId);
+        ScriptDebugger.OnBreak = Break;
+        ScriptDebugger.OnStart = Start;
+        ScriptDebugger.OnEnd = End;
+        ScriptDebugger.OnOutput = Output;
+
+        ScriptClient.Debug = true;
+
+        await GameService.PackageAsync(gameId);
     }
 
     public async Task Start(IScriptDebugContext context)
     {
         Terminal?.Clear();
-        Visible = true;
+        await SetActive(true);
         await InvokeAsync(StateHasChanged);
 
+        await Terminal.Focus();
         await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
     }
 
     public async Task End(IScriptDebugContext context)
     {
-        Visible = false;
-
+        await SetActive(false);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -78,27 +95,34 @@
 
     public async Task Output(IScriptDebugContext context, LogLevel level, string message)
     {
-        switch (level)
+        try
         {
-            case LogLevel.Error:
-                await Terminal.WriteLine($"\x1b[0;31m{message}");
-                break;
+            switch (level)
+            {
+                case LogLevel.Error:
+                    await Terminal.WriteLine($"\x1b[0;31m{message}");
+                    break;
 
-            case LogLevel.Warning:
-                await Terminal.WriteLine($"\x1b[0;33m{message}");
-                break;
+                case LogLevel.Warning:
+                    await Terminal.WriteLine($"\x1b[0;33m{message}");
+                    break;
 
-            case LogLevel.Debug:
-                await Terminal.WriteLine($"\x1b[0;37m{message}");
-                break;
+                case LogLevel.Debug:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
 
-            case LogLevel.Trace:
-                await Terminal.WriteLine($"\x1b[0;36m{message}");
-                break;
+                case LogLevel.Trace:
+                    await Terminal.WriteLine($"\x1b[0;36m{message}");
+                    break;
 
-            case LogLevel.Information:
-                await Terminal.WriteLine($"\x1b[0;37m{message}");
-                break;
+                case LogLevel.Information:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            
         }
     }
 }

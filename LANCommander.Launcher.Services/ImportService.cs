@@ -4,13 +4,6 @@ using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Import.Factories;
 using LANCommander.SDK;
 using LANCommander.SDK.Services;
-using Collection = LANCommander.Launcher.Data.Models.Collection;
-using Company = LANCommander.Launcher.Data.Models.Company;
-using Engine = LANCommander.Launcher.Data.Models.Engine;
-using Genre = LANCommander.Launcher.Data.Models.Genre;
-using MultiplayerMode = LANCommander.Launcher.Data.Models.MultiplayerMode;
-using Platform = LANCommander.Launcher.Data.Models.Platform;
-using Tag = LANCommander.Launcher.Data.Models.Tag;
 
 namespace LANCommander.Launcher.Services
 {
@@ -23,18 +16,10 @@ namespace LANCommander.Launcher.Services
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
 
-        public AsyncEventHandler<ImportStatusUpdate> OnImportStarted;
-        public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate;
-        public AsyncEventHandler<ImportStatusUpdate> OnImportComplete;
-        public AsyncEventHandler<ImportStatusUpdate> OnImportError;
-
-        private IEnumerable<Collection> Collections;
-        private IEnumerable<Company> Companies;
-        private IEnumerable<Engine> Engines;
-        private IEnumerable<Genre> Genres;
-        private IEnumerable<Platform> Platforms;
-        private IEnumerable<Tag> Tags;
-        private IEnumerable<MultiplayerMode> MultiplayerModes;
+        public AsyncEventHandler<ImportStatusUpdate> OnImportStarted { get; } = new();
+        public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; } = new();
+        public AsyncEventHandler<ImportStatusUpdate> OnImportComplete { get; } = new();
+        public AsyncEventHandler<ImportStatusUpdate> OnImportError { get; } = new();
 
         public async Task ImportAsync()
         {

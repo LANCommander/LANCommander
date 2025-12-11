@@ -49,14 +49,14 @@ public static class Extensions
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
-        builder.Logging.AddLogging();
+        builder.Logging.AddStandardLogging();
 
         builder.Services.AddOpenTelemetryDefaults(builder.Environment.ApplicationName, !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]));
 
         return builder;
     }
 
-    public static void AddLogging(this ILoggingBuilder builder)
+    public static void AddStandardLogging(this ILoggingBuilder builder)
     {
         // Add console logging
         builder.AddConsole();

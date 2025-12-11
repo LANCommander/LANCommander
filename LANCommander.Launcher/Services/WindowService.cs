@@ -36,7 +36,7 @@ internal static class WindowService
 
         builder.AddSettings();
 
-        builder.Services.AddLogging();
+        builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddStandardLogging());
         builder.Services.AddOpenTelemetryDefaults("Launcher", false);
 
         builder.Services.AddCustomWindow();

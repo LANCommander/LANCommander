@@ -6,5 +6,5 @@ public class ScriptSettings
 {
     public bool EnableAutomaticRepackaging { get; set; } = false;
     public int RepackageEvery { get; set; } = 24;
-    public string SnippetsStoragePath { get; set; } = AppPaths.GetConfigPath("Snippets");
+    public SnippetSettings Snippets { get; set; } = new();
 }

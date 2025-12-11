@@ -8,31 +8,24 @@ using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Core;
-using Serilog.Extensions.Logging;
-using Serilog.Events;
 using YamlDotNet.Serialization;
 
-// Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
-
-using var logger = new LoggerConfiguration()
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Components", LogEventLevel.Warning)
-    .MinimumLevel.Override("AntDesign", LogEventLevel.Warning)
-    .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
-    .WriteTo.Console()
-#if DEBUG
-    .WriteTo.Seq("http://localhost:5341")
-#endif
-    .CreateLogger();
-
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+var logsDirectory = Path.Combine(AppContext.BaseDirectory, "Logs");
+if (!Directory.Exists(logsDirectory))
+    Directory.CreateDirectory(logsDirectory);
 
 builder.Services.AddLogging(loggingBuilder =>
 {
     loggingBuilder.ClearProviders();
-    loggingBuilder.AddSerilog(logger);
+    loggingBuilder.AddConsole();
+    loggingBuilder.AddDebug();
+    loggingBuilder.AddFile(logsDirectory);
+    loggingBuilder.SetMinimumLevel(LogLevel.Information);
+    loggingBuilder.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+    loggingBuilder.AddFilter("Microsoft.AspNetCore.Components", LogLevel.Warning);
+    loggingBuilder.AddFilter("AntDesign", LogLevel.Warning);
 });
 
 builder.Services.AddLANCommanderClient<LANCommander.SDK.Models.Settings>();
@@ -79,24 +72,79 @@ using (var scope = host.Services.CreateScope())
     await commandLineService.ParseCommandLineAsync(args);
 }
 
-
 /// <summary>
-/// Maps Microsoft.Extensions.Logging.LogLevel to Serilog.Events.LogEventLevel.
+/// Extension method to add file logging provider to ILoggingBuilder
 /// </summary>
-static LogEventLevel MapLogLevel(LogLevel level)
+static class LoggingExtensions
 {
-    return level switch
+    public static ILoggingBuilder AddFile(this ILoggingBuilder builder, string logDirectory)
     {
-        LogLevel.Trace => LogEventLevel.Verbose,
-        LogLevel.Debug => LogEventLevel.Debug,
-        LogLevel.Information => LogEventLevel.Information,
-        LogLevel.Warning => LogEventLevel.Warning,
-        LogLevel.Error => LogEventLevel.Error,
-        LogLevel.Critical => LogEventLevel.Fatal,
-        // LogLevel.None indicates logging should be disabled.
-        // Serilog does not have a direct "Off" level so you might choose to
-        // either bypass logging configuration or set it high enough to ignore messages.
-        LogLevel.None => LogEventLevel.Fatal,
-        _ => LogEventLevel.Information
-    };
+        return builder.AddProvider(new FileLoggerProvider(logDirectory));
+    }
+
+    private class FileLogger : ILogger
+    {
+        private readonly string _logDirectory;
+        private readonly string _categoryName;
+
+        public FileLogger(string logDirectory, string categoryName)
+        {
+            _logDirectory = logDirectory;
+            _categoryName = categoryName;
+        }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel))
+                return;
+
+            var logFilePath = Path.Combine(
+                _logDirectory,
+                $"log-{DateTime.Now:yyyy-MM-dd}.txt");
+
+            var message = formatter(state, exception);
+            var logMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{logLevel}] [{_categoryName}] {message}";
+
+            if (exception != null)
+                logMessage += Environment.NewLine + exception;
+
+            try
+            {
+                lock (_logDirectory)
+                {
+                    File.AppendAllText(logFilePath, logMessage + Environment.NewLine);
+                }
+            }
+            catch
+            {
+                // Silently fail if logging to file fails
+            }
+        }
+    }
+
+    private class FileLoggerProvider : ILoggerProvider
+    {
+        private readonly string _logDirectory;
+
+        public FileLoggerProvider(string logDirectory)
+        {
+            _logDirectory = logDirectory;
+        }
+
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new FileLogger(_logDirectory, categoryName);
+        }
+
+        public void Dispose() { }
+    }
 }

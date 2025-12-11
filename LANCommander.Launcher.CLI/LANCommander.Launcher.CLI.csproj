@@ -49,10 +49,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="nulastudio.NetBeauty" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Serilog.Sinks.Console" />
-    <PackageReference Include="Serilog.Sinks.Seq" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,7 @@
+using LANCommander.ServiceDefaults.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -47,13 +49,50 @@ public static class Extensions
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
-        builder.Logging.AddOpenTelemetry(logging =>
+        builder.Logging.AddLogging();
+
+        builder.Services.AddOpenTelemetryDefaults(builder.Environment.ApplicationName, !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]));
+
+        return builder;
+    }
+
+    public static void AddLogging(this ILoggingBuilder builder)
+    {
+        // Add console logging
+        builder.AddConsole();
+        builder.AddDebug();
+
+        // Add file logging to default Logs directory
+        var logsDirectory = Path.Combine(AppContext.BaseDirectory, "Logs");
+        builder.AddFileLogging(logsDirectory);
+
+        // Set default minimum level
+        builder.SetMinimumLevel(LogLevel.Information);
+
+        // Add common filters to reduce noise
+        builder.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+        builder.AddFilter("Microsoft.AspNetCore.Components", LogLevel.Warning);
+        builder.AddFilter("AntDesign", LogLevel.Warning);
+
+        // Add OpenTelemetry logging
+        builder.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
         });
+    }
 
-        builder.Services.AddOpenTelemetry()
+    public static ILoggingBuilder AddFileLogging(this ILoggingBuilder builder, string logDirectory, LogLevel minimumLevel = LogLevel.Information)
+    {
+        if (!Directory.Exists(logDirectory))
+            Directory.CreateDirectory(logDirectory);
+
+        return builder.AddProvider(new FileLoggerProvider(logDirectory, minimumLevel));
+    }
+
+    public static void AddOpenTelemetryDefaults(this IServiceCollection services, string applicationName, bool useOtlpExporter)
+    {
+        services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
                 metrics.AddAspNetCoreInstrumentation()
@@ -62,10 +101,10 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
-                tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation(tracing =>
+                tracing.AddSource(applicationName)
+                    .AddAspNetCoreInstrumentation(options =>
                         // Exclude health check requests from tracing
-                        tracing.Filter = context =>
+                        options.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath)
                             && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
                     )
@@ -74,29 +113,10 @@ public static class Extensions
                     .AddHttpClientInstrumentation();
             });
 
-        builder.AddOpenTelemetryExporters();
-
-        return builder;
-    }
-
-    private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder)
-        where TBuilder : IHostApplicationBuilder
-    {
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-
         if (useOtlpExporter)
         {
-            builder.Services.AddOpenTelemetry().UseOtlpExporter();
+            services.AddOpenTelemetry().UseOtlpExporter();
         }
-
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
-        //if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
-        //{
-        //    builder.Services.AddOpenTelemetry()
-        //       .UseAzureMonitor();
-        //}
-
-        return builder;
     }
 
     public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder)

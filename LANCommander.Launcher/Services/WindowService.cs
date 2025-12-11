@@ -1,19 +1,16 @@
-using System.Web;
 using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Startup;
-using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
-using Photino.NET;
-using Serilog;
+using System.Web;
 
 namespace LANCommander.Launcher.Services;
 
@@ -35,12 +32,13 @@ internal static class WindowService
         
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
-        if (builderHook != null)
-            builderHook(builder);
+        builderHook?.Invoke(builder);
 
         builder.AddSettings();
-        builder.AddLogging();
-        
+
+        builder.Services.AddLogging();
+        builder.Services.AddOpenTelemetryDefaults("Launcher", false);
+
         builder.Services.AddCustomWindow();
         builder.Services.AddAntDesign();
         builder.Services.AddSingleton<LocalizationService>();
@@ -67,7 +65,7 @@ internal static class WindowService
         if (appHook != null)
             appHook(app);
         
-        var connectionClient = app.Services.GetService<IConnectionClient>();
+        var connectionClient = app.Services.GetRequiredService<IConnectionClient>();
 
         connectionClient.ConnectAsync().Wait();
 
@@ -118,7 +116,7 @@ internal static class WindowService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Unable to load media file from local disk {FileUrl}", url);
+                    Console.WriteLine($"Warning: Unable to load media file from local disk {url}: {ex.Message}");
 
                     contentType = "";
                 }

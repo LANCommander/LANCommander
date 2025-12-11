@@ -53,5 +53,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
+    <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

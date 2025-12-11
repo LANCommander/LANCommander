@@ -35,6 +35,13 @@
         }
 
         <Button Icon="@IconType.Outline.Build" OnClick="() => RegToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
+        
+        @if (Options.GameId.HasValue && Options.GameId != Guid.Empty && IsDebuggable)
+        {
+            <Tooltip Title="Debug">
+                <Button Icon="@IconType.Outline.CaretRight" Type="@ButtonType.Text" OnClick="() => _console.DebugPackagingScript(Options.GameId.Value)" />
+            </Tooltip>
+        }
     </FormItem>
 
     <FormItem>
@@ -59,6 +66,8 @@
     <FormItem Label="Description">
         <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
     </FormItem>
+    
+    <PowerShellConsole @ref="_console" />
 </Form>
 
 <RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
@@ -69,6 +78,7 @@
     Form<Script> Form;
     MonacoCodeEditor? Editor;
     RegToPowerShell RegToPowerShell;
+    PowerShellConsole _console;
     IEnumerable<Snippet> Snippets { get; set; }
 
     Archive? _archive;
@@ -85,6 +95,9 @@
     }
 
     Script Script = new();
+
+    bool IsDebuggable =>
+        Script.Type == ScriptType.Package;
 
     protected override async Task OnInitializedAsync()
     {

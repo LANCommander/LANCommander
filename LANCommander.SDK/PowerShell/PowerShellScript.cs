@@ -45,6 +45,7 @@ namespace LANCommander.SDK.PowerShell
         private ILogger<PowerShellScript> Logger { get; set; }
         private IEnumerable<IScriptDebugger> Debuggers { get; set; }
         private System.Management.Automation.PowerShell Context { get; set; }
+        private IScriptDebugContext DebugContext { get; set; }
 
         private const string Logo = @"
    __   ___   _  _______                              __       
@@ -187,9 +188,11 @@ namespace LANCommander.SDK.PowerShell
 
                 Context.Runspace = runspace;
 
+                DebugContext = new PowerShellDebugContext(Context);
+
                 await DebugAsync(async dbg =>
                 {
-                    await dbg.StartAsync(Context);
+                    await dbg.StartAsync(DebugContext);
                 });
 
                 Context.AddScript("Write-Host $Logo");
@@ -222,7 +225,7 @@ namespace LANCommander.SDK.PowerShell
 
                     await DebugAsync(async dbg =>
                     {
-                        await dbg.BreakAsync(Context);
+                        await dbg.BreakAsync(DebugContext);
                     });
                     
                     var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
@@ -265,8 +268,8 @@ namespace LANCommander.SDK.PowerShell
 
             await DebugAsync(async dbg =>
             {
-                await dbg.OutputAsync(LogLevel.Error, "{InvocationName} : {ExceptionMessage}", record.InvocationInfo.InvocationName, record.Exception.Message);
-                await dbg.OutputAsync(LogLevel.Error, record.InvocationInfo.PositionMessage);
+                await dbg.OutputAsync(DebugContext, LogLevel.Error, "{InvocationName} : {ExceptionMessage}", record.InvocationInfo.InvocationName, record.Exception.Message);
+                await dbg.OutputAsync(DebugContext, LogLevel.Error, record.InvocationInfo.PositionMessage);
             });
         }
 
@@ -276,7 +279,7 @@ namespace LANCommander.SDK.PowerShell
             
             await DebugAsync(async dbg =>
             {
-                await dbg.OutputAsync(LogLevel.Warning, record.Message);
+                await dbg.OutputAsync(DebugContext, LogLevel.Warning, record.Message);
             });
         }
 
@@ -286,7 +289,7 @@ namespace LANCommander.SDK.PowerShell
 
             await DebugAsync(async dbg =>
             {
-                await dbg.OutputAsync(LogLevel.Debug, record.Message);
+                await dbg.OutputAsync(DebugContext, LogLevel.Debug, record.Message);
             });
         }
 
@@ -296,7 +299,7 @@ namespace LANCommander.SDK.PowerShell
 
             await DebugAsync(async dbg =>
             {
-                await dbg.OutputAsync(LogLevel.Trace, record.Message);
+                await dbg.OutputAsync(DebugContext, LogLevel.Trace, record.Message);
             });
         }
 
@@ -306,7 +309,7 @@ namespace LANCommander.SDK.PowerShell
             
             await DebugAsync(async dbg =>
             {
-                await dbg.OutputAsync(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
+                await dbg.OutputAsync(DebugContext, LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
             });
         }
 

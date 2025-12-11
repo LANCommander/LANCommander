@@ -5,8 +5,8 @@ namespace LANCommander.SDK.PowerShell;
 
 public interface IScriptDebugger
 {
-    Task StartAsync(System.Management.Automation.PowerShell ps);
-    Task EndAsync(System.Management.Automation.PowerShell ps);
-    Task BreakAsync(System.Management.Automation.PowerShell ps);
-    Task OutputAsync(LogLevel level, string message, params object[] args);
+    Task StartAsync(IScriptDebugContext context);
+    Task EndAsync(IScriptDebugContext context);
+    Task BreakAsync(IScriptDebugContext context);
+    Task OutputAsync(IScriptDebugContext context, LogLevel level, string message, params object[] args);
 }

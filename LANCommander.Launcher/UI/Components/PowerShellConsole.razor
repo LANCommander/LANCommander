@@ -61,7 +61,7 @@
             }
         };
 
-        Debugger.OnDebugBreak = async (ps) =>
+        Debugger.OnDebugBreak = async (context) =>
         {
             while (true)
             {
@@ -73,10 +73,7 @@
                 if (input.StartsWith('$'))
                     input = "Write-Host " + input;
 
-                ps.Commands.Clear();
-                ps.AddScript(input);
-
-                await ps.InvokeAsync();
+                await context.ExecuteAsync(input);
             }
 
             Visible = false;

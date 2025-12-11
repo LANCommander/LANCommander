@@ -6,31 +6,40 @@ namespace LANCommander.Launcher.Services.PowerShell;
 
 public class ScriptDebugger : IScriptDebugger
 {
-    public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
-    public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
-    public Func<System.Management.Automation.PowerShell, Task> OnDebugEnd;
-    public Func<LogLevel, string, Task> OnOutput;
+    public Func<IScriptDebugContext, Task>? OnDebugStart;
+    public Func<IScriptDebugContext, Task>? OnDebugBreak;
+    public Func<IScriptDebugContext, Task>? OnDebugEnd;
+    public Func<LogLevel, string, Task>? OnOutput;
     
     private static readonly Regex TokenRegex = new(@"\{[^}]+\}", RegexOptions.Compiled);
     
-    public async Task StartAsync(System.Management.Automation.PowerShell ps)
+    public Task StartAsync(IScriptDebugContext context)
     {
-        await OnDebugStart?.Invoke(ps)!;
+        return OnDebugStart is null 
+            ? Task.CompletedTask 
+            : OnDebugStart(context);
     }
 
-    public async Task EndAsync(System.Management.Automation.PowerShell ps)
+    public Task EndAsync(IScriptDebugContext context)
     {
-        await OnDebugEnd?.Invoke(ps)!;
+        return OnDebugEnd is null 
+            ? Task.CompletedTask 
+            : OnDebugEnd(context);
     }
 
-    public async Task BreakAsync(System.Management.Automation.PowerShell ps)
+    public Task BreakAsync(IScriptDebugContext context)
     {
-        await OnDebugBreak?.Invoke(ps)!;
+        return OnDebugBreak is null 
+            ? Task.CompletedTask 
+            : OnDebugBreak(context);
     }
 
-    public async Task OutputAsync(LogLevel level, string message, params object[] args)
+    public Task OutputAsync(IScriptDebugContext context, LogLevel level, string message, params object[] args)
     {
-        await OnOutput?.Invoke(level, Format(message, args))!;
+        if (OnOutput is null)
+            return Task.CompletedTask;
+
+        return OnOutput(level, Format(message, args));
     }
 
     private string Format(string template, object?[] args)

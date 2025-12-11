@@ -1,11 +1,13 @@
 using LANCommander.SDK;
 using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
+using LANCommander.Server.Services.PowerShell;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -63,6 +65,10 @@ public static class IServiceCollectionExtensions
         
         services.AddSingleton<DockerServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
+        
+        services.AddSingleton<ScriptDebugger>();
+        services.AddSingleton<IScriptDebugger>(sp =>
+            sp.GetRequiredService<ScriptDebugger>());
         
         services.AddSingleton<IPXRelayService>();
         services.AddSingleton<IBeaconMessageInterceptor, BeaconMessageInterceptor>();

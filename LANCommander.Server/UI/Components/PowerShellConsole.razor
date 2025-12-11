@@ -1,0 +1,104 @@
+﻿@using LANCommander.SDK.PowerShell
+@using LANCommander.SDK.PowerShell.Rpc
+@using LANCommander.Server.Services.PowerShell
+@using XtermBlazor
+@using LogLevel = Microsoft.Extensions.Logging.LogLevel
+@inherits RpcComponentBase<IScriptDebuggerClient, IScriptDebuggerHub>
+@inject ScriptDebugger
+
+<div class="terminal @(Visible ? "" : "hidden")">
+    <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+</div>
+
+@code {
+    private bool Visible { get; set; } = false;
+    private Xterm Terminal;
+    private TaskCompletionSource<string> InputTaskCompletionSource;
+
+    private TerminalOptions _options = new()
+    {
+        CursorBlink = true,
+        CursorStyle = CursorStyle.Bar,
+    };
+
+    private HashSet<string> Addons = new()
+    {
+        "readline",
+        "addon-fit"
+    };
+
+    protected override string HubUrl => "/RPC/ScriptDebugger";
+
+    private async Task OnFirstRender()
+    {
+        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+    }
+
+    private async Task<string> ReadLine()
+    {
+        return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
+    }
+
+    public async Task DebugPackagingScript(Guid gameId)
+    {
+        await Hub.DebugPackageScript(gameId);
+    }
+
+    public async Task Start(IScriptDebugContext context)
+    {
+        Terminal?.Clear();
+        Visible = true;
+        await InvokeAsync(StateHasChanged);
+
+        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+    }
+
+    public async Task End(IScriptDebugContext context)
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Break(IScriptDebugContext context)
+    {
+        while (true)
+        {
+            var input = await ReadLine();
+
+            if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                break;
+
+            if (input.StartsWith('$'))
+                input = "Write-Host " + input;
+
+            await context.ExecuteAsync(input);
+        }
+    }
+
+    public async Task Output(IScriptDebugContext context, LogLevel level, string message)
+    {
+        switch (level)
+        {
+            case LogLevel.Error:
+                await Terminal.WriteLine($"\x1b[0;31m{message}");
+                break;
+
+            case LogLevel.Warning:
+                await Terminal.WriteLine($"\x1b[0;33m{message}");
+                break;
+
+            case LogLevel.Debug:
+                await Terminal.WriteLine($"\x1b[0;37m{message}");
+                break;
+
+            case LogLevel.Trace:
+                await Terminal.WriteLine($"\x1b[0;36m{message}");
+                break;
+
+            case LogLevel.Information:
+                await Terminal.WriteLine($"\x1b[0;37m{message}");
+                break;
+        }
+    }
+}

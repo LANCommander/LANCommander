@@ -1,7 +1,9 @@
 using AutoMapper;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Rpc.Server;
+using LANCommander.SDK.Services;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.PowerShell;
 using Microsoft.AspNetCore.SignalR;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -12,7 +14,10 @@ public partial class RpcHub(
     IMapper mapper,
     ILogger<RpcHub> logger,
     ChatService chatService,
-    ServerService serverService) : Hub<IRpcSubscriber>, IRpcHub
+    ServerService serverService,
+    GameService gameService,
+    ScriptDebugger scriptDebugger,
+    ScriptClient scriptClient) : Hub<IRpcSubscriber>, IRpcHub
 {
     private string GetConnectionsCacheKey(string userIdentifier) => $"RPC/Connections/{userIdentifier}";
     

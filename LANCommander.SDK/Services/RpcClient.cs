@@ -15,7 +15,6 @@ public class RpcClient(IRpcSubscriber subscriber)
     IRpcSubscriber _subscriber = subscriber;
     
     public RpcChatClient Chat => new(_subscriber);
-    public RpcServerClient Servers => new(_subscriber);
 
     public bool IsConnected => _subscriber.IsConnectedAsync().Result;
 
@@ -60,22 +59,4 @@ public class RpcChatClient(IRpcSubscriber subscriber)
     
     public async Task<IEnumerable<User>> GetUsersAsync()
         => await RpcClient.Hub.Chat_GetUsersAsync();
-}
-
-public class RpcServerClient(IRpcSubscriber subscriber)
-{
-    public async Task GetStatusAsync(Guid serverId)
-        => await RpcClient.Hub.Server_GetStatusAsync(serverId);
-    
-    public async Task UpdateStatusAsync(Guid serverId)
-        => await RpcClient.Hub.Server_UpdateStatusAsync(serverId);
-    
-    public async Task StartAsync(Guid serverId)
-        => await RpcClient.Hub.Server_StartAsync(serverId);
-    
-    public async Task StopAsync(Guid serverId)
-        => await RpcClient.Hub.Server_StopAsync(serverId);
-    
-    public async Task LogAsync(Guid serverId, string message)
-        => await RpcClient.Hub.Server_LogAsync(serverId, message);
 }

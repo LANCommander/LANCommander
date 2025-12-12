@@ -18,7 +18,7 @@ namespace LANCommander.Launcher.Services.Extensions
 
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddLANCommanderLauncher(this IServiceCollection services, Action<LANCommanderOptions> configure)
+        public static IServiceCollection AddLANCommanderLauncher(this IServiceCollection services, Action<LANCommanderOptions>? configure = null)
         {
             services.AddDbContext<DbContext, DatabaseContext>(options =>
             {
@@ -28,8 +28,8 @@ namespace LANCommander.Launcher.Services.Extensions
             #region Register Client
             var options = new LANCommanderOptions();
 
-            configure(options);
-            
+            configure?.Invoke(options);
+
             services.AddSingleton<MessageBusService>();
             services.AddSingleton<AuthenticationService>();
             services.AddSingleton<KeepAliveService>();

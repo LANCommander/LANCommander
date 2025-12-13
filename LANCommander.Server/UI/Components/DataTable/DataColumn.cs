@@ -18,8 +18,8 @@ namespace LANCommander.Server.UI.Components
         [CascadingParameter]
         public Dictionary<int, bool> ColumnVisibility { get; set; } = default!;
 
-        [CascadingParameter]
-        public List<string> Includes { get; set; } = new();
+        [CascadingParameter(Name = "Includes")]
+        public List<string> Includes { get; set; } = default!;
 
         protected override void OnParametersSet()
         {

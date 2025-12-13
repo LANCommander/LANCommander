@@ -87,16 +87,6 @@
     <PackageVersion Include="SharpCompress" Version="0.40.0" />
     <PackageVersion Include="SteamWebAPI2" Version="4.4.1" />
   </ItemGroup>
-  <ItemGroup Label="Logging">
-    <PackageVersion Include="Elastic.Serilog.Sinks" Version="8.12.3" />
-    <PackageVersion Include="Serilog" Version="4.3.0" />
-    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
-    <PackageVersion Include="Serilog.Sinks.AspNetCore.App.SignalR" Version="1.2.2" />
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
-  </ItemGroup>
   <ItemGroup Label="Entity Framework Core">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.9" />

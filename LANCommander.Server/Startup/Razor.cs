@@ -1,13 +1,9 @@
-using Serilog;
-
 namespace LANCommander.Server.Startup;
 
 public static class Razor
 {
     public static WebApplicationBuilder AddRazor(this WebApplicationBuilder builder)
     {
-        Log.Debug("Configuring MVC and Blazor");
-        
         builder.Services
             .AddMvc(static options => options.EnableEndpointRouting = false)
             .AddRazorOptions(static options =>

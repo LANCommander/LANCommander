@@ -45,7 +45,7 @@ public static class Database
         return app;
     }
 
-    public static async Task MigrateDatabaseAsync(this WebApplication app)
+    public static async Task RunDatabaseMigrationsAsync(this WebApplication app)
     {
         if (DatabaseContext.Provider != DatabaseProvider.Unknown)
         {

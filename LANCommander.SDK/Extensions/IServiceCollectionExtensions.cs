@@ -50,6 +50,8 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<TagClient>();
 
         services.AddSingleton<Client>();
+
+        services.AddSingleton<MigrationService>();
         
         return services;
     }

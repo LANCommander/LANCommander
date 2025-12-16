@@ -1,5 +1,6 @@
 using System.Reflection;
 using LANCommander.SDK;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Migrations;
 using Semver;
 
@@ -16,22 +17,10 @@ public class EncapsulateUserData(
     {
         var baseDirectory = Directory.GetCurrentDirectory();
 
-        if (IsDirectoryWritable(baseDirectory))
-        {
+        if (DirectoryHelper.IsDirectoryWritable(baseDirectory))
             _oldConfigDirectory = baseDirectory;
-        }
         else
-        {
-            var (company, product) = GetCompanyAndProduct();
-            var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        
-            var appDataPath = Path.Combine(userRoot, company, product);
-        
-            if (!Directory.Exists(appDataPath))
-                Directory.CreateDirectory(appDataPath);
-
-            _oldConfigDirectory = appDataPath;
-        }
+            _oldConfigDirectory = AppPaths.GetAppDataPath();
         
         MoveOldPath("Backups");
         MoveOldPath("Media");
@@ -50,49 +39,19 @@ public class EncapsulateUserData(
     {
         try
         {
-            logger.LogInformation($"Moving old config directory/file \"{path}\"");
+            var source = Path.Combine(_oldConfigDirectory, path);
+            var destination = AppPaths.GetConfigPath(path);
 
-            if (Directory.Exists(Path.Combine(_oldConfigDirectory, path)))
-                Directory.Move(Path.Combine(_oldConfigDirectory, path), AppPaths.GetConfigPath(path));
-            else if (File.Exists(Path.Combine(_oldConfigDirectory, path)))
-                File.Move(Path.Combine(_oldConfigDirectory, path), AppPaths.GetConfigPath(path));
+            if (source == destination)
+                return;
+            
+            logger.LogInformation($"Moving old config directory/file \"{path}\"");
+            
+            DirectoryHelper.MoveContents(source, destination);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error while moving old config directory/file");
         }
-    }
-    
-    private bool IsDirectoryWritable(string path)
-    {
-        try
-        {
-            Directory.CreateDirectory(path);
-
-            var probeFile = Path.Combine(path, $".writetest.{Guid.NewGuid():N}.tmp");
-
-            using (var fs = new FileStream(probeFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                fs.WriteByte(0);
-            }
-
-            File.Delete(probeFile);
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private(string? Company, string? Product) GetCompanyAndProduct()
-    {
-        var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-        
-        var company = assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company;
-        var product = assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
-        
-        return (company, product);
     }
 }

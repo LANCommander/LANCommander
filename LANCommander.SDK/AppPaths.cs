@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using LANCommander.SDK.Helpers;
 
 namespace LANCommander.SDK;
 
@@ -18,22 +19,10 @@ public static class AppPaths
 
         var baseDirectory = Directory.GetCurrentDirectory();
 
-        if (IsDirectoryWritable(baseDirectory))
-        {
+        if (DirectoryHelper.IsDirectoryWritable(baseDirectory))
             _configDirectory = baseDirectory;
-        }
         else
-        {
-            var (company, product) = GetCompanyAndProduct();
-            var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        
-            var appDataPath = Path.Combine(userRoot, company, product);
-        
-            if (!Directory.Exists(appDataPath))
-                Directory.CreateDirectory(appDataPath);
-
-            _configDirectory = appDataPath;
-        }
+            _configDirectory = GetAppDataPath();
         
         _configDirectory = Path.Combine(_configDirectory, "Data");
         
@@ -43,29 +32,19 @@ public static class AppPaths
         return _configDirectory;
     }
 
-    private static bool IsDirectoryWritable(string path)
+    public static string GetAppDataPath()
     {
-        try
-        {
-            Directory.CreateDirectory(path);
-
-            var probeFile = Path.Combine(path, $".writetest.{Guid.NewGuid():N}.tmp");
-
-            using (var fs = new FileStream(probeFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                fs.WriteByte(0);
-            }
-
-            File.Delete(probeFile);
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        var (company, product) = GetCompanyAndProduct();
+        var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        
+        var appDataPath = Path.Combine(userRoot, company, product);
+        
+        if (!Directory.Exists(appDataPath))
+            Directory.CreateDirectory(appDataPath);
+        
+        return appDataPath;
     }
-
+    
     private static (string? Company, string? Product) GetCompanyAndProduct()
     {
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();

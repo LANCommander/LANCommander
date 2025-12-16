@@ -1,9 +1,5 @@
-using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Options;
-using Serilog;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Server.Startup;
 
@@ -25,10 +21,11 @@ public static class ApplicationSettings
     {
         var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
         var settings = app.Services.GetRequiredService<IOptions<Settings.Settings>>();
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
         
         if (settings.Value.Server.Authentication.TokenSecret.Length < 16)
         {
-            Log.Debug("JWT token secret is too short. Regenerating...");
+            logger.LogDebug("JWT token secret is too short. Regenerating...");
             settingsProvider.Update(s =>
             {
                 s.Server.Authentication.TokenSecret = Guid.NewGuid().ToString(); 

@@ -1,7 +1,4 @@
-﻿using LANCommander.SDK;
-using LANCommander.Server.Services;
-using Microsoft.AspNetCore.SignalR;
-using Serilog.Events;
+﻿using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Hubs
 {
@@ -9,14 +6,13 @@ namespace LANCommander.Server.Hubs
     {
         public override async Task OnConnectedAsync()
         {
-            Clients.Caller.SendAsync("Log", "Connected to server logging provider!", LogEventLevel.Information, DateTime.Now);
+            await Clients.Caller.SendAsync("Log", "Connected to server logging provider!", LogLevel.Information, DateTime.Now);
             await base.OnConnectedAsync();
         }
 
-        public static async Task Log(IHubContext<LoggingHub> context, string message, LogEvent logEvent)
+        public static async Task Log(IHubContext<LoggingHub> context, string message, LogLevel logLevel, DateTime timestamp)
         {
-
-            await context.Clients.All.SendAsync("Log", message, logEvent.Level, logEvent.Timestamp.DateTime);
+            await context.Clients.All.SendAsync("Log", message, logLevel, timestamp);
         }
     }
 }

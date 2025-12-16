@@ -72,10 +72,6 @@
         <PackageReference Include="Photino.Blazor" />
         <PackageReference Include="Photino.Blazor.CustomWindow" />
         <PackageReference Include="Photino.NET" />
-        <PackageReference Include="Serilog" />
-        <PackageReference Include="Serilog.Extensions.Logging" />
-        <PackageReference Include="Serilog.Sinks.File" />
-        <PackageReference Include="Serilog.Sinks.Seq" />
     </ItemGroup>
   
     <ItemGroup>

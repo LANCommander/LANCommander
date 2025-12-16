@@ -4,7 +4,6 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Reflection;
 using LANCommander.SDK.PowerShell.Cmdlets;
-using Serilog;
 
 namespace LANCommander.SDK.PowerShell.Extensions;
 

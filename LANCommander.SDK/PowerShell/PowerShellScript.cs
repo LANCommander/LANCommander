@@ -1,27 +1,18 @@
 ﻿using LANCommander.SDK.Enums;
-using LANCommander.SDK.Helpers;
-using LANCommander.SDK.PowerShell.Cmdlets;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Services.Description;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.PowerShell.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Serilog;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 using Settings = LANCommander.SDK.Models.Settings;
 
 namespace LANCommander.SDK.PowerShell
@@ -41,8 +32,8 @@ namespace LANCommander.SDK.PowerShell
         private TaskCompletionSource<string> Input { get; set; }
         
         private IntPtr _wow64 = IntPtr.Zero;
-        private IServiceProvider ServiceProvider { get; set; }
-        private ILogger<PowerShellScript> Logger { get; set; }
+        private readonly IServiceProvider ServiceProvider;
+        private readonly ILogger<PowerShellScript> Logger;
         private IEnumerable<IScriptDebugger> Debuggers { get; set; }
         private System.Management.Automation.PowerShell Context { get; set; }
         private IScriptDebugContext DebugContext { get; set; }
@@ -67,7 +58,7 @@ namespace LANCommander.SDK.PowerShell
             
             // Instantiate a new scope
             ServiceProvider = serviceProvider;
-            Logger = ServiceProvider.GetService<ILogger<PowerShellScript>>();
+            Logger = ServiceProvider.GetRequiredService<ILogger<PowerShellScript>>();
 
             var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
             
@@ -235,7 +226,7 @@ namespace LANCommander.SDK.PowerShell
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Could not execute script");
+                    Logger.LogError(ex, "Could not execute script");
                 }
                 finally
                 {

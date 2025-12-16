@@ -1,9 +1,9 @@
 using System.Web;
 using LANCommander.Launcher.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Photino.Blazor;
 using Photino.NET;
-using Serilog;
 
 namespace LANCommander.Launcher.Startup;
 
@@ -24,6 +24,7 @@ public static class MainWindow
     public static PhotinoBlazorApp RegisterMediaHandler(this PhotinoBlazorApp app)
     {
         var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
+        var logger = app.Services.GetRequiredService<ILogger<PhotinoBlazorApp>>();
         
         app.MainWindow.RegisterCustomSchemeHandler("media",
             (object sender, string scheme, string url, out string? contentType) =>
@@ -50,7 +51,7 @@ public static class MainWindow
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Unable to load media file from local disk {FileUrl}", url);
+                    logger.LogWarning(ex, "Unable to load media file from local disk {FileUrl}", url);
 
                     contentType = "";
                 }

@@ -12,8 +12,8 @@ namespace LANCommander.Launcher.Services.Extensions
 {
     public class LANCommanderOptions
     {
-        public ILogger Logger { get; set; }
-        public string ServerAddress { get; set; }
+        public ILogger? Logger { get; set; }
+        public string? ServerAddress { get; set; }
     }
 
     public static class ServiceCollectionExtensions

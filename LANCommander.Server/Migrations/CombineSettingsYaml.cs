@@ -35,7 +35,10 @@ public class CombineSettingsYaml(SettingsProvider<Settings.Settings> settingsPro
             .Build();
         
         var oldConfigPath = Path.Combine(oldConfigDirectory, SDK.Models.Settings.SETTINGS_FILE_NAME);
-
+        
+        if (!File.Exists(oldConfigPath))
+            oldConfigPath = Path.Combine(oldConfigDirectory, "Settings.Server.yml");
+        
         if (File.Exists(oldConfigPath))
         {
             var convertedSettings = deserializer.Deserialize<ServerSettings>(await File.ReadAllTextAsync(oldConfigPath));

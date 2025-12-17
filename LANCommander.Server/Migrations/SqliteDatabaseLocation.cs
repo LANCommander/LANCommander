@@ -49,14 +49,14 @@ public class SqliteDatabaseLocation(ILogger<SqliteDatabaseLocation> logger, Sett
         }
 
         // Ensure the new config path exists
-        if (!Path.Exists(AppPaths.GetConfigPath()))
+        if (!Path.Exists(AppPaths.GetConfigDirectory()))
         {
-            logger.LogWarning("Config path does not exist: {ConfigPath}", AppPaths.GetConfigPath());
+            logger.LogWarning("Config path does not exist: {ConfigPath}", AppPaths.GetConfigDirectory());
             return;
         }
 
         // Copy the database file to the new location and update the connection string
-        var newDatabasePath = Path.Combine(AppPaths.GetConfigPath(), Settings.Settings.SQLITE_DEFAULT_DB_NAME);
+        var newDatabasePath = AppPaths.GetConfigPath(Settings.Settings.SQLITE_DEFAULT_DB_NAME);
         File.Copy(location, newDatabasePath);
         csb.DataSource = newDatabasePath;
         settingsProvider.Update(s =>

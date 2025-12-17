@@ -1,3 +1,4 @@
+using LANCommander.SDK;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Options;
 
@@ -16,7 +17,7 @@ public static class Filesystem
             settings.Value.Server.Update.StoragePath,
             settings.Value.Server.Launcher.StoragePath,
             settings.Value.Server.Backups.StoragePath,
-            "Snippets",
+            settings.Value.Server.Scripts.Snippets.StoragePath,
         ];
 
         foreach (var directory in directories)

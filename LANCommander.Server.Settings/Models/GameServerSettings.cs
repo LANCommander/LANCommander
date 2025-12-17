@@ -1,10 +1,11 @@
+using LANCommander.SDK;
 using LANCommander.Server.Settings.Enums;
 
 namespace LANCommander.Server.Settings.Models;
 
 public class GameServerSettings
 {
-    public string StoragePath { get; set; } = "Servers";
+    public string StoragePath { get; set; } = AppPaths.GetConfigPath("Servers");
     public IEnumerable<ServerEngineConfiguration> ServerEngines { get; set; } = 
     [
         new()

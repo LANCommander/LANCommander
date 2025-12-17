@@ -11,7 +11,7 @@ services:
       # Uncomment the line below to install WINE
       # - WINE=1
     volumes:
-      - /path/to/appdata/config:/app/config
+      - /path/to/app/data:/app/Data
     ports:
       - 1337:1337/tcp   # Webinterface
       - 35891:35891/udp # Beacon Broadcast

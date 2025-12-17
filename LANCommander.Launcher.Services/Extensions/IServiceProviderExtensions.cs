@@ -43,7 +43,7 @@ namespace LANCommander.Launcher.Services.Extensions
 
                     foreach (var directory in requiredDirectories)
                     {
-                        var path = Path.Combine(AppPaths.GetConfigDirectory(), directory);
+                        var path = AppPaths.GetConfigPath(directory);
 
                         if (!Directory.Exists(path))
                         {
@@ -71,10 +71,10 @@ namespace LANCommander.Launcher.Services.Extensions
                         if (Directory.Exists(settingsProvider.CurrentValue.Database.BackupsPath))
                             backupPath = settingsProvider.CurrentValue.Database.BackupsPath;
                         else
-                            backupPath = Path.Combine(AppPaths.GetConfigDirectory(), settingsProvider.CurrentValue.Database.BackupsPath);
+                            backupPath = AppPaths.GetConfigPath(settingsProvider.CurrentValue.Database.BackupsPath);
 
                         if (!File.Exists(dataSource))
-                            dataSource = Path.Combine(AppPaths.GetConfigDirectory(), dataSource);
+                            dataSource = AppPaths.GetConfigPath(dataSource);
 
                         var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss")}.bak");
 

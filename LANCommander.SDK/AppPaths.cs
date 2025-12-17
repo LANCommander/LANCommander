@@ -1,12 +1,16 @@
 using System;
 using System.IO;
 using System.Reflection;
+using LANCommander.SDK.Helpers;
 
 namespace LANCommander.SDK;
 
 public static class AppPaths
 {
     private static string _configDirectory = String.Empty;
+
+    public static string GetConfigPath(params string[] paths)
+        => Path.Combine(GetConfigDirectory(), Path.Combine(paths));
 
     public static string GetConfigDirectory()
     {
@@ -15,24 +19,12 @@ public static class AppPaths
 
         var baseDirectory = Directory.GetCurrentDirectory();
 
-        if (IsDirectoryWritable(baseDirectory))
-        {
+        if (DirectoryHelper.IsDirectoryWritable(baseDirectory))
             _configDirectory = baseDirectory;
-        }
         else
-        {
-            var (company, product) = GetCompanyAndProduct();
-            var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            _configDirectory = GetAppDataPath();
         
-            var appDataPath = Path.Combine(userRoot, company, product);
-        
-            if (!Directory.Exists(appDataPath))
-                Directory.CreateDirectory(appDataPath);
-
-            _configDirectory = appDataPath;
-        }
-        
-        _configDirectory = Path.Combine(_configDirectory, "config");
+        _configDirectory = Path.Combine(_configDirectory, "Data");
         
         if (!Directory.Exists(_configDirectory))
             Directory.CreateDirectory(_configDirectory);
@@ -40,29 +32,42 @@ public static class AppPaths
         return _configDirectory;
     }
 
-    private static bool IsDirectoryWritable(string path)
+    public static string GetAppDataPath()
     {
-        try
-        {
-            Directory.CreateDirectory(path);
-
-            var probeFile = Path.Combine(path, $".writetest.{Guid.NewGuid():N}.tmp");
-
-            using (var fs = new FileStream(probeFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                fs.WriteByte(0);
-            }
-
-            File.Delete(probeFile);
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        var (company, product) = GetCompanyAndProduct();
+        var userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        
+        var appDataPath = Path.Combine(userRoot, company, product);
+        
+        if (!Directory.Exists(appDataPath))
+            Directory.CreateDirectory(appDataPath);
+        
+        return appDataPath;
     }
+    
+    /// <summary>
+    /// Checks if the config directory is currently mounted. This should be used in Docker containers only.
+    /// </summary>
+    public static bool ConfigDirectoryIsMounted()
+    {
+        var path = GetConfigDirectory();
+        var fullPath = Path.GetFullPath(path);
 
+        foreach (var line in File.ReadLines("/proc/self/mountinfo"))
+        {
+            // mountinfo format: see `man proc`
+            var parts = line.Split(' ');
+            if (parts.Length > 4)
+            {
+                var mountPoint = parts[4];
+                if (string.Equals(mountPoint, fullPath, StringComparison.Ordinal))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    
     private static (string? Company, string? Product) GetCompanyAndProduct()
     {
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();

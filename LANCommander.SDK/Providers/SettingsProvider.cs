@@ -33,7 +33,7 @@ public class SettingsProvider<TSettings> : ISettingsProvider
 
     public SettingsProvider(IOptionsMonitor<TSettings> optionsMonitor)
     {
-        _filePath = Path.Join(AppPaths.GetConfigDirectory(), Settings.SETTINGS_FILE_NAME);
+        _filePath = AppPaths.GetConfigPath(Settings.SETTINGS_FILE_NAME);
 
         _optionsMonitor = optionsMonitor;
     }

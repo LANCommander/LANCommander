@@ -1,3 +1,4 @@
+using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
@@ -44,7 +45,7 @@ public static class Database
         return app;
     }
 
-    public static async Task MigrateDatabaseAsync(this WebApplication app)
+    public static async Task RunDatabaseMigrationsAsync(this WebApplication app)
     {
         if (DatabaseContext.Provider != DatabaseProvider.Unknown)
         {
@@ -60,7 +61,7 @@ public static class Database
                 {
                     var dataSource = new SqliteConnectionStringBuilder(settingsProvider.CurrentValue.Server.Database.ConnectionString).DataSource;
 
-                    var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+                    var backupName = AppPaths.GetConfigPath("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
 
                     if (File.Exists(dataSource))
                     {
@@ -75,7 +76,7 @@ public static class Database
 
                 var archiveLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Archive && l.Default, new StorageLocation
                 {
-                    Path = "Uploads",
+                    Path = AppPaths.GetConfigPath("Uploads"),
                     Type = StorageLocationType.Archive,
                     Default = true,
                 });
@@ -85,7 +86,7 @@ public static class Database
                 
                 var mediaLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Media && l.Default, new StorageLocation
                 {
-                    Path = "Media",
+                    Path = AppPaths.GetConfigPath("Media"),
                     Type = StorageLocationType.Media,
                     Default = true,
                 });
@@ -95,7 +96,7 @@ public static class Database
                 
                 var saveLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Save && l.Default, new StorageLocation
                 {
-                    Path = "Saves",
+                    Path = AppPaths.GetConfigPath("Saves"),
                     Type = StorageLocationType.Save,
                     Default = true,
                 });

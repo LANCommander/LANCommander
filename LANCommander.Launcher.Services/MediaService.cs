@@ -43,9 +43,7 @@ namespace LANCommander.Launcher.Services
         }
 
         public string GetStoragePath()
-        {
-            return Path.Combine(AppPaths.GetConfigDirectory(), settingsProvider.CurrentValue.Media.StoragePath);
-        }
+            => AppPaths.GetConfigPath(settingsProvider.CurrentValue.Media.StoragePath);
 
         public string GetImagePath(Media entity)
         {

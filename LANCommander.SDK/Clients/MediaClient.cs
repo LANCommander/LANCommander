@@ -38,39 +38,25 @@ namespace LANCommander.SDK.Services
         }
 
         public string GetAbsoluteUrl(Media media)
-        {
-            return connectionClient.GetServerAddress().Join(GetDownloadPath(media)).ToString();
-        }
+            => connectionClient.GetServerAddress().Join(GetDownloadPath(media)).ToString();
 
         public string GetLocalPath(Media media)
-        {
-            return GetLocalPath(media.FileId, media.Crc32);
-        }
+            => GetLocalPath(media.FileId, media.Crc32);
 
         public string GetLocalPath(Guid fileId, string crc32)
-        {
-            return Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
-        }
+            => Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
 
         public IEnumerable<string> GetStaleLocalPaths(Media media)
-        {
-            return Directory.EnumerateFiles(settingsProvider.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
-        }
+            => Directory.EnumerateFiles(settingsProvider.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
 
         public string GetDownloadPath(Media media)
-        {
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        }
+            => $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
 
         public string GetAbsoluteThumbnailUrl(Media media)
-        {
-            return connectionClient.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
-        }
+            => connectionClient.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
 
         public string GetThumbnailPath(Media media)
-        {
-            return $"/api/Media/{media.Id}/Thumbnail";
-        }
+            => $"/api/Media/{media.Id}/Thumbnail";
 
         public static async Task<string> CalculateChecksumAsync(string path)
         {

@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Services;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -35,7 +36,7 @@ namespace LANCommander.Migrations
                         migrationBuilder.Sql(sql);
                     }
 
-                    File.Move(file, Path.Combine("Media", fileId.ToString()));
+                    File.Move(file, AppPaths.GetConfigPath("Media", fileId.ToString()));
                 }
 
             migrationBuilder.DropColumn(

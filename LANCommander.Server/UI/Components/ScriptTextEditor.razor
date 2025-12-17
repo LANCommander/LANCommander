@@ -2,7 +2,7 @@
 @using LANCommander.Server.Extensions;
 @using LANCommander.Server.Models;
 @inject ModalService ModalService
-@inject ILogger<ScriptEditorDialog> Logger
+@inject ScriptService ScriptService
 
 <Form @ref="@Form" Model="@Script" Layout="@FormLayout.Vertical">
     <FormItem>

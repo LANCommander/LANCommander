@@ -21,6 +21,7 @@ builder.AddHangfire();
 builder.AddOpenApi();
 builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices();
+builder.AddMigrations();
 builder.AddDatabase(args);
 
 builder.Services.AddHealthChecks();
@@ -77,7 +78,8 @@ app.MapRazorComponents<App>()
 
 app.PrepareDirectories();
 
-await app.MigrateDatabaseAsync();
+await app.RunApplicationMigrationsAsync();
+await app.RunDatabaseMigrationsAsync();
 await app.StartServersAsync();
 await app.StartBeaconAsync();
 

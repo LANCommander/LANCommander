@@ -15,6 +15,10 @@ public class EncapsulateUserData(
     
     public async Task ExecuteAsync()
     {
+        if (EnvironmentHelper.IsRunningInContainer() && !AppPaths.ConfigDirectoryIsMounted())
+            throw new PlatformNotSupportedException(
+                "Aborting migration to avoid data loss. Application is running in a container but config directory is not mounted.");
+        
         var baseDirectory = Directory.GetCurrentDirectory();
 
         if (DirectoryHelper.IsDirectoryWritable(baseDirectory))

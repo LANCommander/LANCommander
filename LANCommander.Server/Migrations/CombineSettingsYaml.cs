@@ -1,5 +1,7 @@
 using System.Reflection;
+using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Migrations;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
@@ -15,6 +17,10 @@ public class CombineSettingsYaml(SettingsProvider<Settings.Settings> settingsPro
     
     public async Task ExecuteAsync()
     {
+        if (EnvironmentHelper.IsRunningInContainer() && !AppPaths.ConfigDirectoryIsMounted())
+            throw new PlatformNotSupportedException(
+                "Aborting migration to avoid data loss. Application is running in a container but config directory is not mounted.");
+        
         var oldConfigDirectory = Directory.GetCurrentDirectory();
 
         if (!IsDirectoryWritable(oldConfigDirectory))

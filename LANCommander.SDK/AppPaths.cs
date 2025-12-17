@@ -45,6 +45,29 @@ public static class AppPaths
         return appDataPath;
     }
     
+    /// <summary>
+    /// Checks if the config directory is currently mounted. This should be used in Docker containers only.
+    /// </summary>
+    public static bool ConfigDirectoryIsMounted()
+    {
+        var path = GetConfigDirectory();
+        var fullPath = Path.GetFullPath(path);
+
+        foreach (var line in File.ReadLines("/proc/self/mountinfo"))
+        {
+            // mountinfo format: see `man proc`
+            var parts = line.Split(' ');
+            if (parts.Length > 4)
+            {
+                var mountPoint = parts[4];
+                if (string.Equals(mountPoint, fullPath, StringComparison.Ordinal))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    
     private static (string? Company, string? Product) GetCompanyAndProduct()
     {
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();

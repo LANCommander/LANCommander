@@ -1,5 +1,6 @@
 using AutoMapper;
 using LANCommander.Server.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Server.Endpoints;
@@ -16,7 +17,7 @@ public static class MediaEndpoints
         group.MapGet("/{id:guid}/Download", DownloadAsync).AllowAnonymous();
     }
 
-    internal static async Task<IResult> GetAsync(
+    internal static async Task<Ok<IEnumerable<SDK.Models.Media>>> GetAsync(
         [FromServices] IMapper mapper,
         [FromServices] MediaService mediaService)
     {
@@ -24,7 +25,7 @@ public static class MediaEndpoints
         return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.Media>>(media));
     }
 
-    internal static async Task<IResult> GetByIdAsync(
+    internal static async Task<Results<NotFound, Ok<SDK.Models.Media>>> GetByIdAsync(
         Guid id,
         [FromServices] IMapper mapper,
         [FromServices] MediaService mediaService)
@@ -37,10 +38,12 @@ public static class MediaEndpoints
         return TypedResults.Ok(mapper.Map<SDK.Models.Media>(media));
     }
 
-    internal static async Task<IResult> ThumbnailAsync(
+    internal static async Task<Results<FileStreamHttpResult, NotFound, InternalServerError>> ThumbnailAsync(
         Guid id,
-        [FromServices] MediaService mediaService)
+        [FromServices] MediaService mediaService,
+        [FromServices] ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger(nameof(MediaEndpoints));
         try
         {
             var media = await mediaService.GetAsync(id);
@@ -49,16 +52,29 @@ public static class MediaEndpoints
 
             return TypedResults.File(fs, media.MimeType);
         }
-        catch (Exception)
+        catch (FileNotFoundException)
         {
+            logger.LogWarning("Media thumbnail {Id} does not exist", id);
             return TypedResults.NotFound();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            logger.LogWarning("Media thumbnail {Id} does not exist.", id);
+            return TypedResults.NotFound();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unhandled exception raised reading media thumbnail {Id}.", id);
+            return TypedResults.InternalServerError();
         }
     }
 
-    internal static async Task<IResult> DownloadAsync(
+    internal static async Task<Results<FileStreamHttpResult, NotFound, InternalServerError>> DownloadAsync(
         Guid id,
-        [FromServices] MediaService mediaService)
+        [FromServices] MediaService mediaService,
+        [FromServices] ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger(nameof(MediaEndpoints));
         try
         {
             var media = await mediaService.GetAsync(id);
@@ -67,9 +83,20 @@ public static class MediaEndpoints
 
             return TypedResults.File(fs, media.MimeType);
         }
-        catch (Exception)
+        catch (FileNotFoundException)
         {
+            logger.LogWarning("Media file {Id} does not exist", id);
             return TypedResults.NotFound();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            logger.LogWarning("Media file {Id} does not exist.", id);
+            return TypedResults.NotFound();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unhandled exception raised reading media item {Id}.", id);
+            return TypedResults.InternalServerError();
         }
     }
 }

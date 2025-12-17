@@ -3,6 +3,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Migrations;
+using LANCommander.Server.Services;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
 using Semver;
@@ -11,7 +12,9 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Server.Migrations;
 
-public class CombineSettingsYaml(SettingsProvider<Settings.Settings> settingsProvider) : IMigration
+public class CombineSettingsYaml(
+    SettingsProvider<Settings.Settings> settingsProvider,
+    StorageLocationService storageLocationService) : IMigration
 {
     public SemVersion Version => new(2, 0, 0);
     
@@ -60,12 +63,57 @@ public class CombineSettingsYaml(SettingsProvider<Settings.Settings> settingsPro
             convertedSettings.IGDB.ClientId = oldSettings.IGDBClientId;
             convertedSettings.IGDB.ClientSecret = oldSettings.IGDBClientSecret;
             convertedSettings.GameServers = oldSettings.Servers;
+
+            if (convertedSettings.Database.Provider == DatabaseProvider.SQLite)
+            {
+                if (convertedSettings.Database.ConnectionString.StartsWith("Data Source=LANCommander.db")
+                    || convertedSettings.Database.ConnectionString.StartsWith(
+                        "Data Source=/app/config/LANCommander.db"))
+                {
+                    convertedSettings.Database.ConnectionString =
+                        $"Data Source={AppPaths.GetConfigPath("LANCommander.db")};Cache=Shared";
+                }
+            }
+
+            var storageLocations = await storageLocationService.GetAsync();
+
+            foreach (var storageLocation in storageLocations)
+            {
+                var oldPath = storageLocation.Path;
+                
+                storageLocation.Path = UpdatePath(storageLocation.Path);
+                
+                if (storageLocation.Path != oldPath)
+                    await storageLocationService.UpdateAsync(storageLocation);
+            }
+            
+            convertedSettings.GameServers.StoragePath = UpdatePath(convertedSettings.GameServers.StoragePath);
+            convertedSettings.Launcher.StoragePath = UpdatePath(convertedSettings.Launcher.StoragePath);
+            convertedSettings.Update.StoragePath = UpdatePath(convertedSettings.Update.StoragePath);
+
+            foreach (var provider in convertedSettings.Logs.Providers)
+            {
+                if (provider.Type == LoggingProviderType.File)
+                    provider.ConnectionString = UpdatePath(provider.ConnectionString);
+            }
             
             settingsProvider.Update(s =>
             {
                 s.Server = convertedSettings;
             });
         }
+    }
+
+    private string UpdatePath(string path)
+    {
+        if (path.StartsWith("/app/config"))
+            path = path.Replace("/app/config/", AppPaths.GetConfigDirectory());
+        else if (path.StartsWith("/config/"))
+            path = path.Replace("/config/", AppPaths.GetConfigDirectory());
+        else if (!path.Contains("\\") && !path.Contains("/"))
+            path = AppPaths.GetConfigPath(path);
+
+        return path;
     }
     
     private bool IsDirectoryWritable(string path)

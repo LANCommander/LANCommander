@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
 using Semver;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Migrations;
 

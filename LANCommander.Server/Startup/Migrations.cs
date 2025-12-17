@@ -9,6 +9,7 @@ public static class Migrations
     public static WebApplicationBuilder AddMigrations(this WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<IMigration, CombineSettingsYaml>();
+        builder.Services.AddScoped<IMigration, SqliteDatabaseLocation>();
         builder.Services.AddScoped<IMigration, EncapsulateUserData>();
 
         return builder;

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -51,7 +52,7 @@ namespace LANCommander.Server.Services
                 storageLocationPath = storageLocation.Path;
             }
             
-            return Path.Combine(storageLocationPath, archive.ObjectKey);
+            return Path.Combine(AppPaths.GetConfigDirectory(), storageLocationPath, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)

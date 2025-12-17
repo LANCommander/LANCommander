@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -46,7 +47,7 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(entity);
         }
         
-        public async Task<string> GetSavePathAsync(Guid gameId, Guid userId)
+        public async Task<string?> GetSavePathAsync(Guid gameId, Guid userId)
         {
             var save = await SortBy(gs => gs.CreatedOn, Data.Enums.SortDirection.Descending).FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == userId);
 
@@ -56,7 +57,7 @@ namespace LANCommander.Server.Services
             return GetSavePath(save);
         }
 
-        public async Task<string> GetSavePathAsync(Guid id)
+        public async Task<string?> GetSavePathAsync(Guid id)
         {
             // Use get with predicate to avoid async
             var save = await FirstOrDefaultAsync(gs => gs.Id == id);
@@ -69,7 +70,8 @@ namespace LANCommander.Server.Services
 
         public string GetSavePath(GameSave save)
         {
-            return Path.Combine(save.StorageLocation.Path, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
+            var gameId = save.GameId ?? throw new InvalidOperationException($"No game ID is available for save {save.Id}");
+            return Path.Combine(AppPaths.GetConfigDirectory(), save.StorageLocation.Path, save.UserId.ToString(), gameId.ToString(), $"{save.Id}");
         }
 
         public async Task<StorageLocation> GetDefaultStorageLocationAsync()

@@ -1,5 +1,4 @@
-﻿using System.Configuration;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
@@ -16,6 +15,7 @@ using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -51,7 +51,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
         }
-        
 
         public override async Task DeleteAsync(Media entity)
         {
@@ -76,13 +75,6 @@ namespace LANCommander.Server.Services
         public static bool FileExists(Media entity)
         {
             var path = GetMediaPath(entity);
-
-            return File.Exists(path);
-        }
-
-        public async Task<bool> FileExistsAsync(Guid id)
-        {
-            var path = await GetMediaPathAsync(id);
 
             return File.Exists(path);
         }
@@ -174,7 +166,7 @@ namespace LANCommander.Server.Services
 
             var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
 
-            Stream stream = null;
+            Stream? stream = null;
 
             try
             {

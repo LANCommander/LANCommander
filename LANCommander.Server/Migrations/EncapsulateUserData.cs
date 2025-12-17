@@ -37,6 +37,8 @@ public class EncapsulateUserData(
         MoveOldPath("Updates");
         MoveOldPath("Launcher");
         MoveOldPath("Logs");
+        MoveOldPath("Settings.yml");
+        MoveOldPath("Settings.Server.yml");
     }
 
     private void MoveOldPath(string path)

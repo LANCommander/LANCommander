@@ -47,7 +47,17 @@ public class EncapsulateUserData(
             
             logger.LogInformation($"Moving old config directory/file \"{path}\"");
             
-            DirectoryHelper.MoveContents(source, destination);
+            if (Directory.Exists(source))
+                DirectoryHelper.MoveContents(source, destination);
+            else if (File.Exists(source))
+            {
+                if (!Directory.Exists(Path.GetDirectoryName(destination)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                
+                File.Move(source, destination);
+            }
+            else
+                logger.LogInformation($"Skipping old directory/file \"{path}\" because it doesn't exist.");
         }
         catch (Exception ex)
         {

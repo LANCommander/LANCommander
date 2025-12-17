@@ -19,6 +19,19 @@ public class MigrationService(
             var migrations = serviceProvider.GetServices<IMigration>();
 
             foreach (var migration in migrations.OrderBy(m => m.Version, SemVersion.SortOrderComparer))
+            {
+                if (!await migration.ShouldExecuteAsync())
+                {
+                    logger.LogInformation("Skipping migration {MigrationType} because ShouldExecuteAsync returned false", migration.GetType().Name);
+                    continue;
+                }
+
+                if (!await migration.PerformPreChecksAsync())
+                {
+                    logger.LogWarning("Skipping migration {MigrationType} because PerformPreChecksAsync returned false", migration.GetType().Name);
+                    continue;
+                }
+
                 try
                 {
                     await migration.ExecuteAsync();
@@ -27,6 +40,7 @@ public class MigrationService(
                 {
                     logger.LogError(ex, "Could not execute migration {MigrationType}", migration.GetType().Name);
                 }
+            }
         }
         catch (Exception ex)
         {

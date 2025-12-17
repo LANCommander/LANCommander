@@ -94,22 +94,14 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<string> GetMediaPathAsync(Guid id)
-        {
-            var entity = await GetAsync(id);
+        public async Task<string> GetMediaPathAsync(Guid id) =>
+            GetMediaPath(await GetAsync(id));
 
-            return GetMediaPath(entity);
-        }
+        public static string GetMediaPath(Media entity) =>
+            GetMediaPath(entity.FileId, entity.StorageLocation);
 
-        public static string GetMediaPath(Media entity)
-        {
-            return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
-        }
-
-        public static string GetMediaPath(Media entity, StorageLocation storageLocation)
-        {
-            return Path.Combine(storageLocation.Path, entity.FileId.ToString());
-        }
+        public static string GetMediaPath(Guid id, StorageLocation storageLocation) =>
+            Path.Combine(AppPaths.GetConfigDirectory(), storageLocation.Path, id.ToString());
 
         public async Task<string> GetThumbnailPathAsync(Guid id)
         {

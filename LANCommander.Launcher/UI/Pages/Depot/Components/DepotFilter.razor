@@ -36,25 +36,25 @@
             </Flex>
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Engine")">
-            <TagsInput Entities="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
+            <TagsInput DataSource="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Collection")">
-            <TagsInput Entities="context.DataSource.Collections" @bind-Values="@context.SelectedOptions.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+            <TagsInput DataSource="context.DataSource.Collections" @bind-Values="@context.SelectedOptions.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Genre")">
-            <TagsInput Entities="context.DataSource.Genres" @bind-Values="@context.SelectedOptions.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
+            <TagsInput DataSource="context.DataSource.Genres" @bind-Values="@context.SelectedOptions.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Tag")">
-            <TagsInput Entities="context.DataSource.Tags" @bind-Values="@context.SelectedOptions.Tags" OptionLabelSelector="t => t.Name" TItem="SDK.Models.Tag" />
+            <TagsInput DataSource="context.DataSource.Tags" @bind-Values="@context.SelectedOptions.Tags" OptionLabelSelector="t => t.Name" TItem="SDK.Models.Tag" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Platform")">
-            <TagsInput Entities="context.DataSource.Platforms" @bind-Values="@context.SelectedOptions.Platforms" OptionLabelSelector="p => p.Name" TItem="Platform" />
+            <TagsInput DataSource="context.DataSource.Platforms" @bind-Values="@context.SelectedOptions.Platforms" OptionLabelSelector="p => p.Name" TItem="Platform" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Developers")">
-            <TagsInput Entities="context.DataSource.Developers" @bind-Values="@context.SelectedOptions.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            <TagsInput DataSource="context.DataSource.Developers" @bind-Values="@context.SelectedOptions.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Publishers")">
-            <TagsInput Entities="context.DataSource.Publishers" @bind-Values="@context.SelectedOptions.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            <TagsInput DataSource="context.DataSource.Publishers" @bind-Values="@context.SelectedOptions.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
         </FormItem>
         <FormItem Label="@LocalizationService.GetString("Players")">
             <InputGroup Compact>

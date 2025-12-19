@@ -16,7 +16,7 @@ public class MediaImporter(
         new()
         {
             Type = nameof(Media),
-            Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
+            Name = string.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
             Record = record,
             Manifest = manifest,
         };
@@ -35,10 +35,13 @@ public class MediaImporter(
     {
         try
         {
-            var game = importItemInfo.Manifest as Game;
-
-            if (game == null)
+            if (importItemInfo.Manifest is not Game game)
                 return false;
+
+            if (ImportContext is null)
+            {
+                throw new InvalidOperationException("The ImportContext has not been set. Ensure that the UseContext method is called before importing.");
+            }
 
             if (ImportContext.InQueue(game, gameImporter))
                 return false;
@@ -53,7 +56,7 @@ public class MediaImporter(
                 UpdatedOn = importItemInfo.Record.UpdatedOn,
                 SourceUrl = importItemInfo.Record.SourceUrl,
                 MimeType = importItemInfo.Record.MimeType,
-                Crc32 = importItemInfo.Record.Crc32 ?? String.Empty,
+                Crc32 = importItemInfo.Record.Crc32 ?? string.Empty,
             };
 
             media = await mediaService.AddAsync(media);
@@ -61,6 +64,11 @@ public class MediaImporter(
             await mediaService.DownloadAsync(media);
 
             return true;
+        }
+        catch(InvalidOperationException ex)
+        {
+            logger.LogError(ex, "Failed to add media due to invalid operation | {Key}", GetKey(importItemInfo.Record));
+            return false;
         }
         catch (Exception ex)
         {
@@ -88,7 +96,7 @@ public class MediaImporter(
         existing.UpdatedOn = importItemInfo.Record.UpdatedOn;
         existing.SourceUrl = importItemInfo.Record.SourceUrl;
         existing.MimeType = importItemInfo.Record.MimeType;
-        existing.Crc32 = importItemInfo.Record.Crc32 ?? String.Empty;
+        existing.Crc32 = importItemInfo.Record.Crc32 ?? string.Empty;
 
         await mediaService.UpdateAsync(existing);
         await mediaService.DownloadAsync(existing);
@@ -96,8 +104,6 @@ public class MediaImporter(
         return true;
     }
 
-    public override async Task<bool> ExistsAsync(ImportItemInfo<Media> importItemInfo)
-    {
-        throw new NotImplementedException();
-    }
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Media> importItemInfo) =>
+        await mediaService.FileExists(importItemInfo.Record.Id);
 }

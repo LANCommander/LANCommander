@@ -93,6 +93,11 @@ public class MigrationHistoryEntry
     public string? ApplicationVersion { get; set; }
 
     /// <summary>
+    /// The name of the application that ran this migration.
+    /// </summary>
+    public string? Application { get; set; }
+
+    /// <summary>
     /// The machine name where the migration was executed.
     /// </summary>
     public string? MachineName { get; set; }

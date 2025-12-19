@@ -124,6 +124,7 @@ public class MigrationHistoryService(ILogger<MigrationHistoryService> logger)
             ErrorMessage = exception?.Message,
             StackTrace = exception?.StackTrace,
             ApplicationVersion = GetApplicationVersion(),
+            Application = GetApplicationName(),
             MachineName = Environment.MachineName
         };
 
@@ -166,6 +167,19 @@ public class MigrationHistoryService(ILogger<MigrationHistoryService> logger)
             var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
             return version?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? GetApplicationName()
+    {
+        try
+        {
+            var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+            return assembly.GetName().Name;
         }
         catch
         {

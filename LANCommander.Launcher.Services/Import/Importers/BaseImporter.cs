@@ -5,7 +5,7 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public abstract class BaseImporter<TRecord> : IImporter<TRecord> where TRecord : class
 {
-    protected ImportContext ImportContext { get; private set; }
+    protected ImportContext? ImportContext { get; private set; }
     
     public void UseContext(ImportContext importContext)
     {

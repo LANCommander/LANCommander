@@ -71,7 +71,9 @@ namespace LANCommander.Server.Services
         public string GetSavePath(GameSave save)
         {
             var gameId = save.GameId ?? throw new InvalidOperationException($"No game ID is available for save {save.Id}");
-            return Path.Combine(AppPaths.GetConfigDirectory(), save.StorageLocation.Path, save.UserId.ToString(), gameId.ToString(), $"{save.Id}");
+            return Path.IsPathRooted(save.StorageLocation.Path) ?
+                Path.Combine(save.StorageLocation.Path, save.UserId.ToString(), gameId.ToString(), $"{save.Id}") :
+                Path.Combine(AppPaths.GetConfigDirectory(), save.StorageLocation.Path, save.UserId.ToString(), gameId.ToString(), $"{save.Id}");
         }
 
         public async Task<StorageLocation> GetDefaultStorageLocationAsync()

@@ -52,7 +52,9 @@ namespace LANCommander.Server.Services
                 storageLocationPath = storageLocation.Path;
             }
             
-            return Path.Combine(AppPaths.GetConfigDirectory(), storageLocationPath, archive.ObjectKey);
+            return Path.IsPathRooted(storageLocationPath) ?
+                Path.Combine(storageLocationPath, archive.ObjectKey) :
+                Path.Combine(AppPaths.GetConfigDirectory(), storageLocationPath, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)

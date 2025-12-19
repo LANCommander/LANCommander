@@ -269,7 +269,9 @@ namespace LANCommander.Server.Services
             GetLauncherFileLocation(artifact.Name);
 
         public string GetLauncherFileLocation(string objectKey) =>
-            Path.Combine(AppPaths.GetConfigDirectory(), _settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
+            Path.IsPathRooted(_settingsProvider.CurrentValue.Server.Launcher.StoragePath) ?
+                Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey) :
+                Path.Combine(AppPaths.GetConfigDirectory(), _settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
 
         public LauncherArtifact GetLauncherArtifact(string objectKey)
         {

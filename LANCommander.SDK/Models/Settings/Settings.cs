@@ -4,6 +4,7 @@ public class Settings
 {
     public const string DEFAULT_GAME_USERNAME = "Player";
     public const string SETTINGS_FILE_NAME = "Settings.yml";
+    public const string SQLITE_DEFAULT_DB_NAME = "LANCommander.db";
 
     public ArchiveSettings Archives { get; set; } = new();
     public AuthenticationSettings Authentication { get; set; } = new();

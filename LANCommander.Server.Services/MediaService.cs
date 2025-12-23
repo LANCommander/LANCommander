@@ -1,5 +1,4 @@
-﻿using System.Configuration;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
@@ -16,6 +15,7 @@ using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -51,7 +51,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
         }
-        
 
         public override async Task DeleteAsync(Media entity)
         {
@@ -80,13 +79,6 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<bool> FileExistsAsync(Guid id)
-        {
-            var path = await GetMediaPathAsync(id);
-
-            return File.Exists(path);
-        }
-
         public bool ThumbnailExists(Media entity)
         {
             var path = GetThumbnailPath(entity);
@@ -94,22 +86,16 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<string> GetMediaPathAsync(Guid id)
-        {
-            var entity = await GetAsync(id);
+        public async Task<string> GetMediaPathAsync(Guid id) =>
+            GetMediaPath(await GetAsync(id));
 
-            return GetMediaPath(entity);
-        }
+        public static string GetMediaPath(Media entity) =>
+            GetMediaPath(entity.FileId, entity.StorageLocation);
 
-        public static string GetMediaPath(Media entity)
-        {
-            return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
-        }
-
-        public static string GetMediaPath(Media entity, StorageLocation storageLocation)
-        {
-            return Path.Combine(storageLocation.Path, entity.FileId.ToString());
-        }
+        public static string GetMediaPath(Guid id, StorageLocation storageLocation) =>
+            Path.IsPathRooted(storageLocation.Path)
+                ? Path.Combine(storageLocation.Path, id.ToString())
+                : Path.Combine(AppPaths.GetConfigDirectory(), storageLocation.Path, id.ToString());
 
         public async Task<string> GetThumbnailPathAsync(Guid id)
         {
@@ -182,7 +168,7 @@ namespace LANCommander.Server.Services
 
             var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
 
-            Stream stream = null;
+            Stream? stream = null;
 
             try
             {

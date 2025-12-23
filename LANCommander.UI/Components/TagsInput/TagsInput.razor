@@ -3,45 +3,41 @@
 @namespace LANCommander.UI.Components
 
 <Select Mode="SelectMode.Tags"
-        DataSource="_items.Keys"
-        Placeholder="Please select"
-        Values="_selectedItems"
-        ValuesChanged="OnValuesChanged"
-        TItemValue="string"
-        TItem="string"
-        OnSelectedItemsChanged="OnSelectedItemsChangedHandler"
-        Loading="_loading"
-        EnableSearch>
+    DataSource="_items.Keys"
+    Placeholder="Please select"
+    Values="_selectedItems"
+    ValuesChanged="OnValuesChanged"
+    TItemValue="string"
+    TItem="string"
+    Loading="_loading"
+    EnableSearch>
 </Select>
 
 @code {
-    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
-    [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
+    [Parameter] public required IEnumerable<TItem> DataSource { get; set; }
+    [Parameter] public required Func<TItem, string> OptionLabelSelector { get; set; }
     
     [Parameter] public Func<string, Task<TItem>>? OnCreateTag { get; set; }
 
-    [Parameter] public ICollection<TItem> Values { get; set; }
+    [Parameter] public required ICollection<TItem>? Values { get; set; }
     [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
 
-    Dictionary<string, TItem> _items = new();
+    Dictionary<string, TItem> _items = [];
     IEnumerable<string> _selectedItems = [];
 
     bool _loading;
     bool _locked;
 
-    protected override void OnInitialized()
-    {
-        GenerateOptions();
-    }
+    protected override void OnInitialized() => GenerateOptions();
 
     void GenerateOptions()
     {
-        _items = [];
+        _items.Clear();
 
         foreach (var item in DataSource.DistinctBy(OptionLabelSelector))
             _items[OptionLabelSelector.Invoke(item)] = item;
 
-        _selectedItems = Values.Select(v => OptionLabelSelector.Invoke(v));
+        _selectedItems = Values?.Select(v => OptionLabelSelector.Invoke(v)) ?? [];
     }
 
     async Task OnValuesChanged(IEnumerable<string> values)
@@ -78,7 +74,7 @@
             Values = _items
                 .Where(i => _selectedItems.Contains(i.Key))
                 .Select(i => i.Value)
-                .DistinctBy(i => OptionLabelSelector.Invoke(i))
+                .DistinctBy(i => OptionLabelSelector?.Invoke(i))
                 .ToList();
 
             if (ValuesChanged.HasDelegate)
@@ -86,18 +82,9 @@
             
             GenerateOptions();
         }
-        catch (Exception ex)
-        {
-            
-        }
         finally
         {
             _locked = false;
         }
-    }
-
-    async Task OnSelectedItemsChangedHandler(IEnumerable<string> values)
-    {
-
     }
 }

@@ -5,16 +5,12 @@ using Semver;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using AutoMapper;
 using LANCommander.Server.Services.Abstractions;
-using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Exceptions;
-using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.DependencyInjection;
-using ZiggyCreatures.Caching.Fusion;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -269,15 +265,13 @@ namespace LANCommander.Server.Services
             applicationLifetime.StopApplication();
         }
 
-        public string GetLauncherFileLocation(LauncherArtifact artifact)
-        {
-            return GetLauncherFileLocation(artifact.Name);
-        }
+        public string GetLauncherFileLocation(LauncherArtifact artifact) =>
+            GetLauncherFileLocation(artifact.Name);
 
-        public string GetLauncherFileLocation(string objectKey)
-        {
-            return Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
-        }
+        public string GetLauncherFileLocation(string objectKey) =>
+            Path.IsPathRooted(_settingsProvider.CurrentValue.Server.Launcher.StoragePath) ?
+                Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey) :
+                Path.Combine(AppPaths.GetConfigDirectory(), _settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
 
         public LauncherArtifact GetLauncherArtifact(string objectKey)
         {

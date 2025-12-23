@@ -8,8 +8,26 @@ public static class Migrations
 {
     public static WebApplicationBuilder AddMigrations(this WebApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IMigration, CombineSettingsYaml>();
-        builder.Services.AddScoped<IMigration, EncapsulateUserData>();
+        // Individual settings file migrations
+        builder.Services.AddScoped<IMigration, CombineSettingsYamlFromRoot>();
+        builder.Services.AddScoped<IMigration, CombineSettingsServerYamlFromRoot>();
+        builder.Services.AddScoped<IMigration, CombineSettingsYamlFromConfig>();
+        builder.Services.AddScoped<IMigration, CombineSettingsServerYamlFromConfig>();
+
+        // Database location migrations
+        builder.Services.AddScoped<IMigration, SqliteDatabaseLocationMigration>();
+        
+        // Individual path migrations
+        builder.Services.AddScoped<IMigration, MoveBackupsMigration>();
+        builder.Services.AddScoped<IMigration, MoveMediaMigration>();
+        builder.Services.AddScoped<IMigration, MoveSavesMigration>();
+        builder.Services.AddScoped<IMigration, MoveSnippetsMigration>();
+        builder.Services.AddScoped<IMigration, MoveUploadMigration>();
+        builder.Services.AddScoped<IMigration, MoveUploadsMigration>();
+        builder.Services.AddScoped<IMigration, MoveServersMigration>();
+        builder.Services.AddScoped<IMigration, MoveUpdatesMigration>();
+        builder.Services.AddScoped<IMigration, MoveLauncherMigration>();
+        builder.Services.AddScoped<IMigration, MoveLogsMigration>();
 
         return builder;
     }

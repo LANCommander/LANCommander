@@ -75,6 +75,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<PlatformImporter>();
             services.AddScoped<PublisherImporter>();
             services.AddScoped<TagImporter>();
+            services.AddScoped<MediaImporter>();
             #endregion
 
             return services;

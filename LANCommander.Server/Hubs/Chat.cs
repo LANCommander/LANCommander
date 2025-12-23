@@ -61,17 +61,34 @@ public partial class RpcHub
         {
             var threads = await chatService.GetThreadsAsync(userId);
 
-            // Populate participant cache
+            // Ensure participants are loaded for all threads
+            var threadsWithParticipants = new List<Data.Models.ChatThread>();
             foreach (var thread in threads)
             {
+                Data.Models.ChatThread threadToMap;
+                
+                // If participants are missing, reload the thread with participants included
+                if (thread.Participants == null || thread.Participants.Count == 0)
+                {
+                    var threadWithParticipants = await chatService.GetThreadAsync(thread.Id);
+                    threadToMap = threadWithParticipants ?? thread;
+                }
+                else
+                {
+                    threadToMap = thread;
+                }
+
+                threadsWithParticipants.Add(threadToMap);
+
+                // Populate participant cache
                 var cacheKey = GetThreadParticipantCacheKey(thread.Id);
                 var participants = await cache.TryGetAsync<List<string>>(cacheKey);
 
-                if (!participants.HasValue && thread.Participants != null)
-                    await cache.SetAsync(cacheKey, thread.Participants.Select(p => p.Id).ToList());
+                if (!participants.HasValue && threadToMap.Participants != null)
+                    await cache.SetAsync(cacheKey, threadToMap.Participants.Select(p => p.Id.ToString()).ToList());
             } 
             
-            return mapper.Map<IEnumerable<ChatThread>>(threads);
+            return mapper.Map<IEnumerable<ChatThread>>(threadsWithParticipants);
         }
         
         return [];

@@ -1,0 +1,32 @@
+@namespace LANCommander.UI.Components
+
+<div
+    class="mouse-area"
+    style="@CssStyle"
+    @onclick="OnClick"
+    @oncontextmenu="OnContextMenu"
+    @ondblclick="OnDoubleClick"
+    @onmousedown="OnMouseDown"
+    @onmouseenter="OnMouseEnter"
+    @onmouseleave="OnMouseLeave"
+    @onmousemove="OnMouseMove"
+    @onmouseout="OnMouseOut"
+    @onmouseup="OnMouseUp">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public required RenderFragment ChildContent { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnDoubleClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseDown { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseEnter { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseLeave { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseMove { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseOut { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseUp { get; set; }
+    [Parameter] public Cursor Cursor { get; set; } = Cursors.Auto;
+
+    string CssStyle => $"cursor: {Cursor};";
+}

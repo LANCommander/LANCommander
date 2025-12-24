@@ -4,28 +4,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
-using HubChatClient = LANCommander.SDK.Hubs.IChatClient;
 using LANCommander.SDK.Hubs;
 using LANCommander.SDK.Models;
-using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
 
-public class ChatClient : IChatClient, HubChatClient
+public class ChatHubClient : IChatClient, IChatHubClient
 {
     private HubConnection? _connection;
     private IChatHub? _hub;
     private readonly ITokenProvider _tokenProvider;
     private readonly IConnectionClient _connectionClient;
-    private readonly ILogger<ChatClient> _logger;
+    private readonly ILogger<ChatHubClient> _logger;
     private readonly Dictionary<Guid, ChatThread> _threads = new();
 
-    public ChatClient(
+    public ChatHubClient(
         ITokenProvider tokenProvider,
         IConnectionClient connectionClient,
-        ILogger<ChatClient> logger)
+        ILogger<ChatHubClient> logger)
     {
         _tokenProvider = tokenProvider;
         _connectionClient = connectionClient;
@@ -56,7 +54,7 @@ public class ChatClient : IChatClient, HubChatClient
                 .Build();
 
             _hub = _connection.ServerProxy<IChatHub>();
-            _ = _connection.ClientRegistration<HubChatClient>(this);
+            _ = _connection.ClientRegistration<IChatHubClient>(this);
 
             await _connection.StartAsync();
         }
@@ -87,14 +85,9 @@ public class ChatClient : IChatClient, HubChatClient
         }
     }
 
-    public ChatThread GetThread(Guid threadId)
-    {
-        return _threads[threadId];
-    }
-
     public async Task<ChatThread> GetThreadAsync(Guid threadId)
     {
-        throw new NotImplementedException();
+        return _threads[threadId];
     }
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
@@ -117,11 +110,6 @@ public class ChatClient : IChatClient, HubChatClient
     public async Task AddedToThreadAsync(ChatThread thread)
     {
         _threads[thread.Id] = thread;
-    }
-
-    public async Task ReceiveMessagesAsync(Guid threadId, ChatMessage[] messages)
-    {
-        throw new NotImplementedException();
     }
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
@@ -169,6 +157,12 @@ public class ChatClient : IChatClient, HubChatClient
     {
         if (_threads.TryGetValue(threadId, out var thread))
             await thread.MessageReceivedAsync(message);
+    }
+    
+    public async Task ReceiveMessagesAsync(Guid threadId, ChatMessage[] messages)
+    {
+        foreach (var message in messages)
+            await ReceiveMessageAsync(threadId, message);
     }
 
     public async Task StartTypingAsync(Guid threadId, string userId)

@@ -13,8 +13,6 @@ public class RpcClient(IRpcSubscriber subscriber)
     internal static IRpcHub Hub { get; set; }
     
     IRpcSubscriber _subscriber = subscriber;
-    
-    public RpcChatClient Chat => new(_subscriber);
 
     public bool IsConnected => _subscriber.IsConnectedAsync().Result;
 
@@ -23,40 +21,4 @@ public class RpcClient(IRpcSubscriber subscriber)
     
     public async Task<bool> DisconnectAsync()
         => await _subscriber.DisconnectAsync();
-}
-
-public class RpcChatClient(IRpcSubscriber subscriber)
-{
-    public async Task<Guid> StartThreadAsync(params string[] userIdentifiers)
-        => await RpcClient.Hub.Chat_StartThreadAsync(userIdentifiers);
-    
-    public async Task AddParticipantAsync(Guid threadId, string participantId)
-        => await RpcClient.Hub.Chat_AddParticipantAsync(threadId, participantId);
-    
-    public async Task<ChatThread> GetThreadAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_GetThreadAsync(threadId);
-    
-    public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
-        => await RpcClient.Hub.Chat_GetThreadsAsync();
-    
-    public async Task SendMessageAsync(Guid threadId, string message)
-        => await RpcClient.Hub.Chat_SendMessageAsync(threadId, message);
-    
-    public async Task GetMessagesAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_GetMessagesAsync(threadId);
-
-    public async Task StartTypingAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_StartTyping(threadId);
-    
-    public async Task StopTypingAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_StopTyping(threadId);
-    
-    public async Task UpdateReadStatusAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_UpdateReadStatus(threadId);
-    
-    public async Task<int> GetUnreadMessageCountAsync(Guid threadId)
-        => await RpcClient.Hub.Chat_GetUnreadMessageCountAsync(threadId);
-    
-    public async Task<IEnumerable<User>> GetUsersAsync()
-        => await RpcClient.Hub.Chat_GetUsersAsync();
 }

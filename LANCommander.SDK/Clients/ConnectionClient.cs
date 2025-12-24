@@ -1,12 +1,10 @@
 using System;
-using System.Buffers.Text;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Rpc.Client;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
@@ -14,6 +12,7 @@ namespace LANCommander.SDK.Services;
 public class ConnectionClient(
     ILogger<ConnectionClient> logger,
     ISettingsProvider settingsProvider,
+    IServerAddressProvider serverAddressProvider,
     RpcClient rpc,
     ITokenProvider tokenProvider) : IConnectionClient
 {
@@ -40,7 +39,7 @@ public class ConnectionClient(
         return GetServerAddress() != null;
     }
 
-    public Uri GetServerAddress() => settingsProvider.CurrentValue.Authentication.ServerAddress;
+    public Uri GetServerAddress() => serverAddressProvider.GetServerAddress();
 
     public async Task UpdateServerAddressAsync(Uri address) => await UpdateServerAddressAsync(address?.ToString() ?? String.Empty);
 
@@ -67,7 +66,7 @@ public class ConnectionClient(
             {
                 if (await PingAsync(uri))
                 {
-                    settingsProvider.Update(s => s.Authentication.ServerAddress = uri);
+                    serverAddressProvider.SetServerAddress(uri);
 
                     logger?.LogInformation("Successfully discovered server at {ServerAddress}", uri.ToString());
 

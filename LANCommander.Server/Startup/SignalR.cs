@@ -18,6 +18,7 @@ public static class SignalR
         app.MapHub<GameServerHub>("/hubs/gameserver");
         app.MapHub<LoggingHub>("/logging");
         app.MapHub<ScriptDebuggerHub>("/RPC/ScriptDebugger");
+        app.MapHub<ChatHub>("/hubs/chat");
         
         return app;
     }

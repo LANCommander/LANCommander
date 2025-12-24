@@ -1,4 +1,5 @@
 using LANCommander.SDK;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
@@ -8,6 +9,7 @@ using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
+using LANCommander.Server.Services.Providers;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -13,7 +13,6 @@ public partial class RpcHub(
     IFusionCache cache,
     IMapper mapper,
     ILogger<RpcHub> logger,
-    ChatService chatService,
     ServerService serverService,
     GameService gameService,
     ScriptDebugger scriptDebugger,

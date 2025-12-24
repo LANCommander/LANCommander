@@ -1,6 +1,6 @@
 @using LANCommander.SDK.Services
 @namespace LANCommander.UI.Components
-@inject RpcClient RpcClient
+@inject IChatClient ChatClient
 
 <MouseArea Cursor="Cursors.Pointer" OnClick="OnClick">
     <Flex Class="@_cssClass">
@@ -41,7 +41,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        _unreadCount = await RpcClient.Chat.GetUnreadMessageCountAsync(Thread.Id);
+        _unreadCount = await ChatClient.GetUnreadMessageCountAsync(Thread.Id);
         
         _cssClass = new ClassBuilder()
             .Add("chat-list-thread")

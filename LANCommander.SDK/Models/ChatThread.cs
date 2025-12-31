@@ -71,6 +71,7 @@ public class ChatThread
 
                 current = new ChatMessageGroup
                 {
+                    Id = Guid.NewGuid(),
                     UserId = message.UserId,
                     UserName = message.UserName,
                     Messages = [message],

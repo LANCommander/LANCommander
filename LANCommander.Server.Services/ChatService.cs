@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using AutoMapper;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -10,6 +12,7 @@ namespace LANCommander.Server.Services
         ILogger<ChatService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
+        IMapper mapper,
         ChatMessageService chatMessageService,
         ChatThreadService chatThreadService,
         ChatThreadReadStatusService chatThreadReadStatusService,
@@ -62,18 +65,10 @@ namespace LANCommander.Server.Services
 
             try
             {
-                var current = await cache.TryGetAsync<List<ChatMessage>>(cacheKey);
-                var messages = current.HasValue
-                    ? new List<ChatMessage>(current.Value)
-                    : new List<ChatMessage>(capacity: _maxCachedMessages);
+                var current = await cache.GetChatThreadAsync(threadId);
 
-                messages.RemoveAll(m => m.Id == message.Id);
-                messages.Add(message);
-
-                if (messages.Count > _maxCachedMessages)
-                    messages.RemoveRange(0, messages.Count - _maxCachedMessages);
-
-                await cache.SetAsync(cacheKey, messages);
+                if (current != null)
+                    await current.MessageReceivedAsync(mapper.Map<SDK.Models.ChatMessage>(message));
             }
             finally
             {
@@ -83,27 +78,29 @@ namespace LANCommander.Server.Services
             return message;
         }
 
-        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId)
+        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId, int count, DateTime? createdBefore = null)
         {
-            var cacheKey = ThreadCacheKey(threadId);
-
-            var messages = await cache.GetOrSetAsync(cacheKey, async _ =>
+            if (createdBefore == null)
+                createdBefore = DateTime.UtcNow;
+            
+            var messages = await chatMessageService.Query(q =>
             {
-                var dbMessages = await chatMessageService.Query(q =>
-                {
-                    return q
-                        .OrderByDescending(m => m.CreatedOn)
-                        .Take(_maxCachedMessages);
-                }).GetAsync();
-
-                return dbMessages.Reverse().ToList();
-            });
-
-            return messages;
+                return q
+                    .Include(m => m.CreatedBy)
+                    .OrderByDescending(m => m.CreatedOn)
+                    .Where(m => m.CreatedOn < createdBefore)
+                    .Where(m => m.ThreadId == threadId)
+                    .Take(count);
+            }).GetAsync();
+            
+            return mapper.Map<List<ChatMessage>>(messages);
         }
 
         public async Task<ChatThread> GetThreadAsync(Guid threadId)
-            => await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
+            => await chatThreadService
+                .Include(t => t.Messages)
+                .Include(t => t.Participants)
+                .GetAsync(threadId);
 
         public async Task<List<ChatThread>> GetThreadsAsync(Guid userId)
         {

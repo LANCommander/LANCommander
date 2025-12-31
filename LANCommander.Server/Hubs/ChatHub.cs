@@ -125,7 +125,7 @@ public class ChatHub(
 
     public async Task GetMessagesAsync(Guid threadId)
     {
-        var messages = await chatService.GetMessagesAsync(threadId);
+        var messages = await chatService.GetMessagesAsync(threadId, 10);
         
         await Clients.Caller.ReceiveMessagesAsync(threadId, mapper.Map<ChatMessage[]>(messages));
     }

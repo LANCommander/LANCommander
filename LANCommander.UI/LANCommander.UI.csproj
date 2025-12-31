@@ -20,6 +20,7 @@
     <PackageReference Include="BlazorMonaco" />
     <PackageReference Include="BootstrapBlazor.PdfReader" />
     <PackageReference Include="ByteSize" />
+    <PackageReference Include="EasyMDE.Blazor" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" />
     <PackageReference Include="XtermBlazor" />

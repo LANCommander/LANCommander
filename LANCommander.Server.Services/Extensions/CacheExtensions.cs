@@ -1,3 +1,4 @@
+using LANCommander.SDK.Models;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services.Extensions;
@@ -5,6 +6,7 @@ namespace LANCommander.Server.Services.Extensions;
 public static class CacheExtensions
 {
     private static string GetThreadParticipantCacheKey(Guid threadId) => $"Chat/Thread/{threadId}/Participants";
+    private static string GetThreadCacheKey(Guid threadId) => $"Chat/Thread/{threadId}";
     
     public static async Task ExpireGameCacheAsync(this IFusionCache cache)
     {
@@ -35,6 +37,16 @@ public static class CacheExtensions
         else
             await cache.RemoveByTagAsync(["Archives"]);
     }
+
+    public static async Task<ChatThread?> GetChatThreadAsync(this IFusionCache cache, Guid threadId)
+    {
+        var thread = await cache.TryGetAsync<ChatThread>(GetThreadCacheKey(threadId));
+
+        return thread.GetValueOrDefault();
+    }
+
+    public static async Task SetChatThreadAsync(this IFusionCache cache, Guid threadId, ChatThread thread)
+        => await cache.SetAsync(GetThreadCacheKey(threadId), thread);
 
     public static async Task<List<string>> GetChatThreadParticipants(this IFusionCache cache, Guid threadId)
     {

@@ -6,47 +6,43 @@
 
 <Flex Direction="FlexDirection.Vertical">
     <div style="flex-grow: 1;">
-        <Virtualize Items="_messageGroups" Context="messageGroup">
-            <CascadingValue Name="Messages" Value="@messageGroup.Messages">
+        @if (_thread != null)
+        {
+            <Virtualize Items="_thread.MessageGroups" Context="messageGroup">
                 <ChatMessageGroup
                     @key="messageGroup.Id"
                     UserId="@messageGroup.UserId"
                     UserName="@messageGroup.UserName"
-                    StartedOn="@messageGroup.StartedOn.LocalDateTime" />
-            </CascadingValue>
-        </Virtualize>
+                    StartedOn="@messageGroup.StartedOn.LocalDateTime">
+                    @foreach (var message in messageGroup.Messages)
+                    {
+                        <ChatMessage Id="@message.Id" Content="@message.Content" SentOn="@message.SentOn"/>   
+                    }
+                </ChatMessageGroup>
+            </Virtualize>
+        }
     </div>
-    
-    <ChatMessageInput OnSendMessage="SendMessage" />
+
+    <ChatMessageInput ThreadId="@Id" />
 </Flex>
 
 @code {
     [Parameter] public Guid Id { get; set; }
     
-    ICollection<SDK.Models.ChatMessageGroup> _messageGroups = new List<SDK.Models.ChatMessageGroup>();
-    ICollection<SDK.Models.ChatMessage> _messages = new List<SDK.Models.ChatMessage>();
-    SDK.Models.ChatThread _thread;
-
-    bool _sendingMessage = false;
-    string _inputContents = String.Empty;
-
+    SDK.Models.ChatThread? _thread;
+    
     protected override async Task OnParametersSetAsync()
     {
-        if (Id != Guid.Empty)
+        if (_thread == null || _thread.Id != Id)
         {
             _thread = await ChatClient.GetThreadAsync(Id);
             
-            _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged; 
+            _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged;
+            
+            await ChatClient.GetMessagesAsync(Id);
         }
     }
 
     void MessageGroupsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        StateHasChanged();
-    }
-
-    async Task SendMessage(string contents)
-    {
-        await ChatClient.SendMessageAsync(Id, contents);
-    }
+        => InvokeAsync(StateHasChanged);
 }

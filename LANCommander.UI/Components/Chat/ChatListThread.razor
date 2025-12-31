@@ -2,31 +2,31 @@
 @namespace LANCommander.UI.Components
 @inject IChatClient ChatClient
 
-<MouseArea Cursor="Cursors.Pointer" OnClick="OnClick">
-    <Flex Class="@_cssClass">
+<MouseArea Cursor="Cursors.Pointer" OnClick="OnClick" Class="@_cssClass">
+    <Flex Align="FlexAlign.Center" Gap="FlexGap.Small">
         <div class="chat-list-thread-avatar">
             @if (Thread.Participants.Count == 2)
             {
-                <Badge Count="_unreadCount" OverflowCount="99">
-                    <SafeAvatar
-                        Shape="AvatarShape.Square"
-                        Size="AvatarSize.Large"
-                        Username="@Thread.Participants.First().Name" />
-                </Badge>
+                <SafeAvatar
+                    Shape="AvatarShape.Square"
+                    Size="AvatarSize.Large"
+                    Username="@Thread.Participants.First().Name" />
             }
             else
             {
-                <Badge Count="_unreadCount" OverflowCount="99">
-                    <SafeAvatarGroup
-                        Shape="AvatarShape.Square"
-                        Size="AvatarSize.Large"
-                        Usernames="@Thread.Participants.Select(p => p.Name)" />
-                </Badge>
+                <SafeAvatarGroup
+                    Shape="AvatarShape.Square"
+                    Size="AvatarSize.Large"
+                    Usernames="@Thread.Participants.Select(p => p.Name)" />
             }
         </div>
         
         <div class="chat-list-thread-title">
             @Thread.Title
+        </div>
+        
+        <div class="chat-list-thread-unread">
+            <Badge Count="_unreadCount" OverflowCount="99" />
         </div>
     </Flex>
 </MouseArea>
@@ -37,7 +37,7 @@
     [Parameter] public bool Active { get; set; }
 
     int _unreadCount = 0;
-    string _cssClass = String.Empty;
+    string _cssClass = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {

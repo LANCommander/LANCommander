@@ -16,20 +16,21 @@ public class ServerChatClient(
     IFusionCache cache,
     ILogger<ServerChatClient> logger) : IChatClient
 {
-    private readonly Dictionary<Guid, ChatThread> _threads = new();
 
     public async Task<ChatThread> GetThreadAsync(Guid threadId)
     {
-        if (_threads.TryGetValue(threadId, out var cachedThread))
-            return cachedThread;
+        var thread = await cache.GetChatThreadAsync(threadId);
 
-        var thread = await chatService.GetThreadAsync(threadId);
-        var mappedThread = mapper.Map<ChatThread>(thread);
+        if (thread == null)
+        {
+            var dbThread = await chatService.GetThreadAsync(threadId);
+            
+            thread = mapper.Map<ChatThread>(dbThread);
+            
+            await cache.SetChatThreadAsync(threadId, thread);
+        }
         
-        if (mappedThread != null)
-            _threads[threadId] = mappedThread;
-        
-        return mappedThread;
+        return thread;
     }
 
     private async Task AddParticipantAsync(Guid threadId, string userIdentifier)
@@ -56,12 +57,8 @@ public class ServerChatClient(
         foreach (var userIdentifier in userIdentifiers)
             await AddParticipantAsync(thread.Id, userIdentifier);
         
-        // Get the full thread with participants and cache it
-        var fullThread = await chatService.GetThreadAsync(thread.Id);
-        var mappedThread = mapper.Map<ChatThread>(fullThread);
-        
-        if (mappedThread != null)
-            _threads[thread.Id] = mappedThread;
+        // Pull thread into cache
+        await GetThreadAsync(thread.Id);
         
         logger.LogDebug("Created new thread with ID {ThreadId}", thread.Id);
 
@@ -81,10 +78,7 @@ public class ServerChatClient(
         var mappedThreads = mapper.Map<IEnumerable<ChatThread>>(threads);
         
         foreach (var thread in mappedThreads)
-        {
-            if (thread != null)
-                _threads[thread.Id] = thread;
-        }
+            await cache.SetChatThreadAsync(thread.Id, thread);
 
         return mappedThreads;
     }
@@ -98,39 +92,42 @@ public class ServerChatClient(
 
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
     {
-        if (_threads.TryGetValue(threadId, out var thread))
+        var thread = await cache.GetChatThreadAsync(threadId);
+
+        if (thread != null)
             await thread.MessagesReceivedAsync(messages);
     }
 
     public async Task ReceiveMessageAsync(Guid threadId, ChatMessage message)
     {
-        if (_threads.TryGetValue(threadId, out var thread))
+        var thread = await cache.GetChatThreadAsync(threadId);
+        
+        if (thread != null)
             await thread.MessageReceivedAsync(message);
     }
 
     public async Task StartTypingAsync(Guid threadId, string userId)
     {
-        if (_threads.TryGetValue(threadId, out var thread))
+        var thread = await cache.GetChatThreadAsync(threadId);
+        
+        if (thread != null)
             await thread.StartTypingAsync(userId);
     }
 
     public async Task StopTypingAsync(Guid threadId, string userId)
     {
-        if (_threads.TryGetValue(threadId, out var thread))
+        var thread = await cache.GetChatThreadAsync(threadId);
+        
+        if (thread != null)
             await thread.StopTypingAsync(userId);
     }
 
     public async Task SendMessageAsync(Guid threadId, string message)
     {
         // Ensure thread is loaded in cache
-        if (!_threads.ContainsKey(threadId))
-            await GetThreadAsync(threadId);
+        await GetThreadAsync(threadId);
         
         var serverMessage = await chatService.SendMessageAsync(threadId, message);
-        var mappedMessage = mapper.Map<ChatMessage>(serverMessage);
-        
-        // Update local thread cache with the new message
-        await ReceiveMessageAsync(threadId, mappedMessage);
     }
 
     public async Task UpdatedReadStatus(Guid threadId)
@@ -149,10 +146,9 @@ public class ServerChatClient(
     public async Task GetMessagesAsync(Guid threadId)
     {
         // Ensure thread is loaded in cache
-        if (!_threads.ContainsKey(threadId))
-            await GetThreadAsync(threadId);
+        await GetThreadAsync(threadId);
         
-        var messages = await chatService.GetMessagesAsync(threadId);
+        var messages = await chatService.GetMessagesAsync(threadId, 10);
         var mappedMessages = mapper.Map<ChatMessage[]>(messages);
         
         // Populate thread with messages

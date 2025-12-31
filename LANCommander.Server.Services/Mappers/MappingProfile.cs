@@ -34,6 +34,18 @@ namespace LANCommander.Server
             CreateMap<Data.Models.User, SDK.Models.User>();
             CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
             CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>().ReverseMap();
+
+            CreateMap<Data.Models.ChatMessage, SDK.Models.ChatMessage>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.CreatedBy.Id))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.CreatedBy.UserName))
+                .ForMember(dest => dest.SentOn, opt => opt.MapFrom(src => src.CreatedOn));
+
+            CreateMap<SDK.Models.ChatMessage, Data.Models.ChatMessage>()
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => new User
+                {
+                    Id = src.UserId,
+                    UserName = src.UserName
+                }));
             
             CreateEntityReferenceMap<SDK.Models.Game>(g => g.Title);
 

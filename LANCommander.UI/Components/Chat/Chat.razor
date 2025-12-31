@@ -8,17 +8,19 @@
 
 <SplitPane>
     <Pane>
-        <ChatList Threads="_threads" />
+        <ChatList Threads="_threads" @bind-SelectedThread="_thread" />
     </Pane>
     <Pane>
-        <ChatThread Id="_currentThreadId" />
+        @if (_thread != null)
+        {
+            <ChatThread Id="_thread.Id"/>
+        }
     </Pane>
 </SplitPane>
 
 @code {
     IEnumerable<SDK.Models.ChatThread> _threads = [];
-
-    Guid _currentThreadId;
+    SDK.Models.ChatThread? _thread;
     
     protected override async Task OnInitializedAsync()
     {
@@ -40,16 +42,12 @@
 
         modalRef.OnOk = async (users) =>
         {
-            _currentThreadId = await ChatClient.StartThreadAsync(users.Select(u => u.Id.ToString()));
-
+            var threadId = await ChatClient.StartThreadAsync(users.Select(u => u.Id.ToString()));
+            
+            _thread = await ChatClient.GetThreadAsync(threadId);
             _threads = await ChatClient.GetThreadsAsync();
 
             await InvokeAsync(StateHasChanged);
         };
-    }
-    
-    async Task OpenThread(Guid threadId)
-    {
-        _currentThreadId = threadId;
     }
 }

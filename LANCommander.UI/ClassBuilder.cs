@@ -2,11 +2,14 @@ namespace LANCommander.UI;
 
 internal class ClassBuilder
 {
-    private List<string> Classes = new();
+    private readonly List<string> _classes = new();
 
-    public ClassBuilder Add(string className)
+    public ClassBuilder Add(string? className)
     {
-        Classes.Add(className);
+        if (string.IsNullOrWhiteSpace(className))
+            return this;
+        
+        _classes.Add(className);
 
         return this;
     }
@@ -14,13 +17,13 @@ internal class ClassBuilder
     public ClassBuilder If(Func<bool> condition, string className)
     {
         if (condition())
-            Classes.Add(className);
+            _classes.Add(className);
 
         return this;
     }
 
     public string Build()
     {
-        return String.Join(' ', Classes);
+        return String.Join(' ', _classes);
     }
 }

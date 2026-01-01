@@ -1,11 +1,13 @@
+@use 'Variables';
+
 .depot-list {
     width: 100%;
     overflow-y: scroll;
     overflow-x: hidden;
-    padding-top: $window-drag-area-height * 2;
-    padding-left: $cover-horizontal-padding + $cover-gap;
-    padding-right: $cover-horizontal-padding + $cover-gap;
-    padding-bottom: $cover-vertical-padding + ($cover-gap * 2);
+    padding-top: Variables.$window-drag-area-height * 2;
+    padding-left: Variables.$cover-horizontal-padding + Variables.$cover-gap;
+    padding-right: Variables.$cover-horizontal-padding + Variables.$cover-gap;
+    padding-bottom: Variables.$cover-vertical-padding + (Variables.$cover-gap * 2);
     background: linear-gradient(0deg, #111 0%, #000 25%, #000 75%, #111 100%);
 
     &-spinner > div > .ant-spin-container {
@@ -17,6 +19,6 @@
 .depot-list-items,
 .depot-list-group-items {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax($cover-max-width, 1fr));
-    gap: $cover-gap;
+    grid-template-columns: repeat(auto-fill, minmax(Variables.$cover-max-width, 1fr));
+    gap: Variables.$cover-gap;
 }

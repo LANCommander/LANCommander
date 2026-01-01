@@ -1,3 +1,5 @@
+@use 'Variables';
+
 .depot-game-details {
     z-index: 600 !important;
 
@@ -17,7 +19,7 @@
 
     .ant-drawer-content-wrapper {
         height: calc(100% - 128px) !important;
-        width: $hero-aspect-ratio * $hero-max-height;
+        width: Variables.$cover-aspect-ratio * Variables.$hero-max-height;
         left: calc(50vw - 53.33vh);
         right: auto;
         box-shadow: none;
@@ -37,8 +39,8 @@
 
     .game-hero {
         position: relative;
-        aspect-ratio: $hero-aspect-ratio;
-        height: $hero-max-height;
+        aspect-ratio: Variables.$hero-aspect-ratio;
+        height: Variables.$hero-max-height;
     }
 
     &-background {

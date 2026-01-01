@@ -1,0 +1,150 @@
+﻿@page "/Library"
+@page "/Library/{id:guid}"
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@namespace LANCommander.Launcher.UI
+@layout AuthenticatedLayout
+@inject NavigationManager NavigationManager
+@inject LibraryService LibraryService
+@inject InstallService InstallService
+@inject GameService GameService
+
+<Content Class="library">
+    <CascadingValue Value="CurrentItem">
+        <LibraryList OnItemSelected="@((key) => SelectLibraryItem(key))"/>
+
+        <LibraryItemDetails />
+    </CascadingValue>
+</Content>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] public bool Connected { get; set; }
+    [CascadingParameter] public bool OfflineMode { get; set; }
+
+    Models.ListItem? CurrentItem { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InstallService.OnQueueChanged += OnQueueChanged;
+        InstallService.OnInstallComplete += OnInstallComplete;
+
+        GameService.OnUninstall += OnUninstall;
+        GameService.OnUninstallComplete += OnUninstallComplete;
+
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != Guid.Empty)
+            await OnLibraryItemSelected(await LibraryService.GetItemAsync(Id));
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task LoadData()
+    {
+        await LibraryService.RefreshItemsAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task SelectLibraryItem(Guid id)
+    {
+        NavigationManager.NavigateTo($"/Library/{id}");
+    }
+
+    async Task OnLibraryItemSelected(Models.ListItem? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        CurrentItem = item;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnQueueChanged()
+    {
+        var queueItem = InstallService.Queue.FirstOrDefault(i => CurrentItem != null && i.Id == CurrentItem.Key);
+
+        if (queueItem != null && CurrentItem != null)
+        {
+            CurrentItem = await LibraryService.GetItemAsync(CurrentItem);
+
+            switch (queueItem.Status)
+            {
+                case SDK.Enums.InstallStatus.Downloading:
+                case SDK.Enums.InstallStatus.InstallingRedistributables:
+                case SDK.Enums.InstallStatus.InstallingMods:
+                case SDK.Enums.InstallStatus.InstallingExpansions:
+                case SDK.Enums.InstallStatus.RunningScripts:
+                case SDK.Enums.InstallStatus.DownloadingSaves:
+                    CurrentItem.State = ListItemState.Installing;
+                    break;
+
+                case SDK.Enums.InstallStatus.Queued:
+                    CurrentItem.State = ListItemState.Queued;
+                    break;
+
+                case SDK.Enums.InstallStatus.Failed:
+                case SDK.Enums.InstallStatus.Canceled:
+                    CurrentItem.State = ListItemState.NotInstalled;
+                    break;
+
+                case SDK.Enums.InstallStatus.Complete:
+                    CurrentItem.State = ListItemState.Installed;
+                    break;
+            }
+
+            await OnLibraryItemSelected(CurrentItem);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task OnInstallComplete(Data.Models.Game game)
+    {
+        await LoadData();
+
+        if (CurrentItem?.DataItem is Game selectedGame)
+        {
+            if (selectedGame.Id == game.Id)
+                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
+        }
+    }
+
+    async Task OnUninstall(Data.Models.Game game)
+    {
+        if (CurrentItem?.Key == game.Id)
+        {
+            CurrentItem.State = ListItemState.Uninstalling;
+
+            await Task.Yield();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task OnUninstallComplete(Data.Models.Game game)
+    {
+        await LoadData();
+
+        if (CurrentItem?.Key == game.Id)
+        {
+            CurrentItem.State = ListItemState.NotInstalled;
+            await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == game.Id));
+        }
+    }
+
+    public void Dispose()
+    {
+        InstallService.OnQueueChanged -= OnQueueChanged;
+        InstallService.OnInstallComplete -= OnInstallComplete;
+
+        GameService.OnUninstall -= OnUninstall;
+        GameService.OnUninstallComplete -= OnUninstallComplete;
+    }
+}

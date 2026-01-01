@@ -1,0 +1,55 @@
+.depot-game-details {
+    z-index: 600 !important;
+
+    .ant-drawer-mask {
+        background: linear-gradient(45deg, #00000096, #3a3a3a8a);
+        backdrop-filter: blur(3px);
+        z-index: auto;
+    }
+
+    .ant-drawer-content {
+        background: #000;
+    }
+
+    .ant-drawer-header-no-title {
+        display: none;
+    }
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        width: $hero-aspect-ratio * $hero-max-height;
+        left: calc(50vw - 53.33vh);
+        right: auto;
+        box-shadow: none;
+    }
+
+    .ant-drawer-open .ant-drawer-content-wrapper {
+        box-shadow: 0 0 64px black;
+    }
+
+    .ant-drawer-body {
+        padding: 0;
+
+        &::-webkit-scrollbar {
+            width: 0;
+        }
+    }
+
+    .game-hero {
+        position: relative;
+        aspect-ratio: $hero-aspect-ratio;
+        height: $hero-max-height;
+    }
+
+    &-background {
+        object-fit: cover;
+        max-height: 20vw;
+    }
+
+    .game-details-close-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 100;
+    }
+}

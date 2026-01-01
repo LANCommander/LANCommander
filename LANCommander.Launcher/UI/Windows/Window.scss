@@ -1,0 +1,183 @@
+*:hover::-webkit-scrollbar {
+    opacity: 1;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    opacity: 0;
+    transition: opacity .1s;
+}
+
+*::-webkit-scrollbar-track {
+    background-color: #141414;
+    border: none;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0);
+    transition: background-color linear .1s;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 1);
+}
+
+* {
+    user-select: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    width: 0;
+}
+
+body {
+    background: #000;
+}
+
+app {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+:root {
+    --pb-custom-window-main-color: #000;
+    --pb-custom-window-main-unfocused-color: #000;
+    --pb-custom-window-background-color: #000;
+    --pb-custom-window-title-color: #fff;
+    --pb-custom-window-controls-color: #fff;
+    --pb-custom-window-close-control-background: firebrick;
+    --pb-custom-window-controls-background: rgba(0,0,0,.25); /* rgba(255,255,255,.25); */
+    --pb-custom-window-controls-background-hover: rgba(0,0,0,.5); /* rgba(255,255,255,.5); */
+}
+
+.pb-custom-window {
+    & > * {
+        position: absolute;
+        z-index: 500;
+    }
+
+    &-content {
+        &.overflow {
+            top: 0 !important;
+        }
+
+        &::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 37px;
+            backdrop-filter: blur(3px);
+            z-index: 700;
+            background: rgba(0, 0, 0, .5);
+        }
+        
+        & > .ant-spin-nested-loading {
+            height: 100%;
+            overflow: hidden;
+
+            & > div,
+            & > div > .ant-spin-container,
+            & .ant-layout {
+                height: 100%;
+            }
+        }
+    }
+
+    &-drag-area {
+        background: none !important;
+    }
+
+    &-controls {
+        background: none !important;
+
+        .ant-btn-icon-only > * {
+            font-size: 22px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .ant-btn.ant-btn-loading::before {
+            display: none;
+        }
+    }
+
+    &-control-button {
+        border-radius: 0;
+    }
+
+    &-title {
+        display: none;
+    }
+
+    &-header {
+        display: none;
+    }
+
+    &-resize-thumb {
+        z-index: 9999;
+    }
+}
+
+.ant-layout {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+@keyframes a {
+    to {
+        background-position: -200% 0
+    }
+}
+
+.appbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    background: rgba(0, 0, 0, .5);
+    backdrop-filter: blur(3px);
+}
+
+.appbar-profile-button {
+    position: relative;
+    overflow: hidden;
+
+    &:focus span,
+    &:active span {
+        position: static
+    }
+
+    img + span {
+        padding-left: 32px;
+    }
+
+    img {
+        width: 32px;
+        height: 32px;
+        position: absolute;
+        top: -1px;
+        left: -1px;
+    }
+}
+
+.appbar-draggable-titlebar {
+    flex-grow: 1;
+    height: 32px;
+    display: block;
+
+    & > div {
+        cursor: move;
+        height: 32px;
+        width: 100%;
+    }
+}

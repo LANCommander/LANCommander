@@ -1,0 +1,22 @@
+.depot-list {
+    width: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-top: $window-drag-area-height * 2;
+    padding-left: $cover-horizontal-padding + $cover-gap;
+    padding-right: $cover-horizontal-padding + $cover-gap;
+    padding-bottom: $cover-vertical-padding + ($cover-gap * 2);
+    background: linear-gradient(0deg, #111 0%, #000 25%, #000 75%, #111 100%);
+
+    &-spinner > div > .ant-spin-container {
+        overflow-y: scroll;
+        height: 100%;
+    }
+}
+
+.depot-list-items,
+.depot-list-group-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax($cover-max-width, 1fr));
+    gap: $cover-gap;
+}

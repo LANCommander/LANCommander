@@ -2,7 +2,8 @@
 @using Newtonsoft.Json
 @using Photino.NET
 @namespace LANCommander.Launcher.UI
-@inject SDK.Client Client
+@inject IConnectionClient ConnectionClient
+@inject AuthenticationClient AuthenticationClient
 @inject IMessageService MessageService
 @inject ILogger<AuthenticationProviderDialog> Logger
 @inject LocalizationService LocalizationService
@@ -16,9 +17,9 @@
     
     public async Task Open(Uri baseUrl, AuthenticationProvider authenticationProvider)
     {
-        await Client.Connection.UpdateServerAddressAsync(baseUrl);
+        await ConnectionClient.UpdateServerAddressAsync(baseUrl);
         
-        AuthenticationProviderLoginUrl = Client.Authentication.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
+        AuthenticationProviderLoginUrl = AuthenticationClient.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
 
         Window = new PhotinoWindow()
             .SetTitle(LocalizationService.GetString("SignInUsingProvider", authenticationProvider.Name))

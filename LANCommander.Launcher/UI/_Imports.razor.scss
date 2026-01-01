@@ -1,0 +1,33 @@
+@forward 'Windows/Window';
+@forward 'Windows/MainWindow.razor';
+@forward 'Windows/ChatWindow.razor';
+
+@forward 'Components/ActionSelectorDialog/ActionSelectorDialog.razor';
+@forward 'Components/Authentication/AuthenticationForm.razor';
+@forward 'Components/Button/Button.razor';
+@forward 'Components/CheckboxButtonGroup/CheckboxButtonGroup.razor';
+@forward 'Components/Collapse/Collapse.razor';
+@forward 'Components/CrashError/CrashError.razor';
+@forward 'Components/DownloadQueue/CurrentDownloadItem.razor';
+@forward 'Components/DownloadQueue/DownloadQueue.razor';
+@forward 'Components/Footer/Footer.razor';
+@forward 'Components/Import/ImportProgressDisplay.razor';
+@forward 'Components/InstallDialog/InstallDialog.razor';
+@forward 'Components/List/List.razor';
+@forward 'Components/Modal/Modal.razor';
+@forward 'Components/Radio/RadioGroup.razor';
+@forward 'Components/RemoveFromLibraryDialog/RemoveFromLibraryDialog.razor';
+@forward 'Components/Select/Select.razor';
+
+@forward 'Pages/Depot/Depot.razor';
+@forward 'Pages/Depot/Components/DepotFilter.razor';
+@forward 'Pages/Depot/Components/DepotGameDetails.razor';
+@forward 'Pages/Depot/Components/DepotGameItem.razor';
+@forward 'Pages/Depot/Components/DepotList.razor';
+
+@forward 'Pages/Library/Components/GameActionBar.razor';
+@forward 'Pages/Library/Components/GameDetails.razor';
+@forward 'Pages/Library/Components/GameMetadata.razor';
+@forward 'Pages/Library/Components/LibraryItemContextMenu.razor';
+@forward 'Pages/Library/Components/LibraryItemFilter.razor';
+@forward 'Pages/Library/Components/LibraryList.razor';

@@ -1,0 +1,160 @@
+﻿@page "/Settings"
+@using System.Globalization
+@namespace LANCommander.Launcher.UI
+@layout AuthenticatedLayout
+@inject NavigationManager NavigationManager
+@inject UpdateService UpdateService
+
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+@inject LocalizationService LocalizationService
+@inject SettingsProvider<Launcher.Settings.Settings> SettingsProvider
+
+<div style="flex-grow: 1">
+    <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
+        <PageHeaderExtra>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                            <Button OnClick="CheckForUpdates">@LocalizationService.GetString("CheckForUpdates")</Button>
+            <Button OnClick="Save" Type="ButtonType.Primary">@LocalizationService.GetString("Save")</Button>
+            </Flex>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <Form Model="_settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Games")</Divider>
+        <FormItem Label="@LocalizationService.GetString("StoragePaths")">
+            <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
+                @foreach (var installDirectory in _installDirectories)
+                {
+                    <Flex Gap="FlexGap.Small">
+                        <Input @bind-Value="installDirectory.Path"/>
+                        <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="_installDirectories.Count == 1"/>
+                    </Flex>
+                }
+                <Flex Justify="FlexJustify.End">
+                    <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">@LocalizationService.GetString("AddPath")</Button>
+                </Flex>
+            </Flex>
+        </FormItem>
+
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Media")</Divider>
+        <FormItem Label="@LocalizationService.GetString("StoragePath")">
+            <Input @bind-Value="@context.Media.StoragePath" />
+        </FormItem>
+        
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("UI")</Divider>
+        <FormItem Label="@LocalizationService.GetString("Language")">
+            <Select @bind-Value="@context.Culture" TItem="string" TItemValue="string" DataSource="_supportedCultures">
+                <LabelTemplate Context="Value">@(CultureInfo.GetCultureInfo(Value).NativeName)</LabelTemplate>
+                <ItemTemplate Context="Value">@(CultureInfo.GetCultureInfo(Value).NativeName)</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Debug")</Divider>
+        <FormItem Label="@LocalizationService.GetString("EnableScriptDebugging")">
+            <Switch @bind-Checked="@context.Debug.EnableScriptDebugging" />
+        </FormItem>
+        <FormItem Label="@LocalizationService.GetString("LoggingPath")">
+            <Input @bind-Value="@context.Debug.LoggingPath" />
+        </FormItem>
+        <FormItem Label="@LocalizationService.GetString("LoggingLevel")">
+            <Select @bind-Value="@context.Debug.LogLevel" TItem="LogLevel" TItemValue="LogLevel" DataSource="Enum.GetValues<LogLevel>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+    </Form>
+</div>
+
+<Flex Justify="FlexJustify.Center" Style="padding: 12px;">
+    LANCommander Launcher v@(UpdateService.GetCurrentVersion().ToString())
+</Flex>
+
+@code {
+    Launcher.Settings.Settings _settings;
+    List<InstallDirectory> _installDirectories = new();
+
+    string[] _supportedCultures = new[]
+    {
+        "en-US",
+        "de",
+        "es",
+        "fr",
+        "it",
+        "pt-BR",
+        "nl",
+        "ja",
+        "zh",
+        "ko",
+        "uk"
+    };
+
+    internal class InstallDirectory
+    {
+        internal Guid Id { get; set; }
+        internal string Path { get; set; }
+
+        public InstallDirectory(string path)
+        {
+            Id = Guid.NewGuid();
+            Path = path;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = SettingsProvider.CurrentValue;
+        
+        foreach (var installDirectory in SettingsProvider.CurrentValue.Games.InstallDirectories)
+        {
+            _installDirectories.Add(new InstallDirectory(installDirectory));
+        }
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            SettingsProvider.CurrentValue.Games.InstallDirectories = _installDirectories.Where(d => !String.IsNullOrWhiteSpace(d.Path)).Select(d => d.Path).ToArray();
+
+            SettingsProvider.Update(s =>
+            {
+                s.Games.InstallDirectories = _installDirectories.Select(d => d.Path).ToArray();
+                s.Media.StoragePath = _settings.Media.StoragePath;
+                s.Culture = _settings.Culture;
+                s.Debug.EnableScriptDebugging = _settings.Debug.EnableScriptDebugging;
+                s.Debug.LoggingPath = _settings.Debug.LoggingPath;
+                s.Debug.LogLevel = _settings.Debug.LogLevel;
+            });
+
+            MessageService.Success(LocalizationService.GetString("SettingsSaved"));
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(LocalizationService.GetString("AnUnknownErrorOccurred"));
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+
+    async Task CheckForUpdates()
+    {
+        var updateVersion = await UpdateService.CheckForUpdateAsync();
+
+        Logger.LogDebug("Checked for update: {UpdateVersion}", updateVersion.Version);
+
+        if (updateVersion.Version == null)
+            MessageService.Success(LocalizationService.GetString("YouAreOnLatestVersion"));
+    }
+
+    async Task AddInstallDirectory()
+    {
+        _installDirectories.Add(new InstallDirectory(""));
+
+        StateHasChanged();
+    }
+
+    async Task RemoveInstallDirectory(InstallDirectory installDirectory)
+    {
+        _installDirectories.Remove(installDirectory);
+    }
+}

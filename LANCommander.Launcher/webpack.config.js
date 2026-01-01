@@ -2,7 +2,7 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
-    entry: ['./Imports.razor.scss'], // Adjust the path if your index.js is located elsewhere
+    entry: ['./_Imports.razor.scss'], // Adjust the path if your index.js is located elsewhere
     module: {
         rules: [
             {

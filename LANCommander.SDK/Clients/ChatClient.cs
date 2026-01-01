@@ -87,14 +87,9 @@ public class ChatClient : IChatClient, HubChatClient
         }
     }
 
-    public ChatThread GetThread(Guid threadId)
-    {
-        return _threads[threadId];
-    }
-
     public async Task<ChatThread> GetThreadAsync(Guid threadId)
     {
-        throw new NotImplementedException();
+        return _threads[threadId];
     }
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
@@ -118,12 +113,7 @@ public class ChatClient : IChatClient, HubChatClient
     {
         _threads[thread.Id] = thread;
     }
-
-    public async Task ReceiveMessagesAsync(Guid threadId, ChatMessage[] messages)
-    {
-        throw new NotImplementedException();
-    }
-
+    
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
     {
         if (_threads.Count == 0)
@@ -158,7 +148,7 @@ public class ChatClient : IChatClient, HubChatClient
 
         return await _hub.GetUsersAsync();
     }
-
+    
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
     {
         if (_threads.TryGetValue(threadId, out var thread))

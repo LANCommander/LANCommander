@@ -53,6 +53,8 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<MigrationHistoryService>();
         services.AddSingleton<MigrationService>();
         
+        services.TryAddSingleton<IChatClient, ChatClient>();
+        
         return services;
     }
 }

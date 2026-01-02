@@ -5,8 +5,12 @@
 @forward 'Styles/_pdf-reader';
 @forward 'Styles/_markdown-editor';
 @forward 'Styles/_authentication-provider';
+@forward 'Components/Chat/Chat.razor';
+@forward 'Components/Chat/ChatList.razor';
 @forward 'Components/Chat/ChatListThread.razor';
 @forward 'Components/Chat/ChatMessage.razor';
+@forward 'Components/Chat/ChatMessageInput.razor';
+@forward 'Components/Chat/ChatThread.razor';
 @forward 'Components/ChunkUploader/ChunkUploader.razor';
 @forward 'Components/DataList/DataList.razor';
 @forward 'Components/DataTable/DataTable.razor';

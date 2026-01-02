@@ -4,8 +4,8 @@
 @inject IChatClient ChatClient
 @namespace LANCommander.UI.Components
 
-<Flex Direction="FlexDirection.Vertical">
-    <div style="flex-grow: 1;">
+<Flex Direction="FlexDirection.Vertical" Class="chat-thread">
+    <Flex Direction="FlexDirection.Vertical" Class="chat-thread-messages">
         @if (_thread != null)
         {
             <Virtualize Items="_thread.MessageGroups" Context="messageGroup">
@@ -16,30 +16,30 @@
                     StartedOn="@messageGroup.StartedOn.LocalDateTime">
                     @foreach (var message in messageGroup.Messages)
                     {
-                        <ChatMessage Id="@message.Id" Content="@message.Content" SentOn="@message.SentOn"/>   
+                        <ChatMessage Id="@message.Id" Content="@message.Content" SentOn="@message.SentOn"/>
                     }
                 </ChatMessageGroup>
             </Virtualize>
         }
-    </div>
+    </Flex>
 
-    <ChatMessageInput ThreadId="@Id" />
+    <ChatMessageInput ThreadId="@Id" Placeholder="@($"Message {_thread?.Title}")" />
 </Flex>
 
 @code {
-    [Parameter] public Guid Id { get; set; }
+    [Parameter] public Guid? Id { get; set; }
     
     SDK.Models.ChatThread? _thread;
     
     protected override async Task OnParametersSetAsync()
     {
-        if (_thread == null || _thread.Id != Id)
+        if ((_thread == null || _thread.Id != Id) && Id.HasValue)
         {
-            _thread = await ChatClient.GetThreadAsync(Id);
+            _thread = await ChatClient.GetThreadAsync(Id.Value);
             
             _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged;
             
-            await ChatClient.GetMessagesAsync(Id);
+            await ChatClient.GetMessagesAsync(Id.Value);
         }
     }
 

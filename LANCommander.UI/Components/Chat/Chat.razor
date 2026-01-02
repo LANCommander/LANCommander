@@ -4,19 +4,17 @@
 @inject ModalService ModalService
 @namespace LANCommander.UI.Components
 
-<Button OnClick="StartThread">New Thread</Button>
-
-<SplitPane>
-    <Pane>
-        <ChatList Threads="_threads" @bind-SelectedThread="_thread" />
-    </Pane>
-    <Pane>
-        @if (_thread != null)
-        {
-            <ChatThread Id="_thread.Id"/>
-        }
-    </Pane>
-</SplitPane>
+<Flex Class="chat">
+    <Flex Direction="FlexDirection.Vertical" Class="chat-list">
+        <Button OnClick="StartThread">New Thread</Button>
+            
+        <Divider />
+            
+        <ChatList Threads="_threads" @bind-SelectedThread="_thread"/>
+    </Flex>
+    
+    <ChatThread Id="_thread?.Id" />
+</Flex>
 
 @code {
     IEnumerable<SDK.Models.ChatThread> _threads = [];

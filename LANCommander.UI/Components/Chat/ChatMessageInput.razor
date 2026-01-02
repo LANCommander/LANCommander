@@ -7,13 +7,16 @@
 
 <EasyMdeEditor 
     @bind-Value="_message"
+    Class="chat-message-input"
     InterceptKeys="_keys"
     OnKey="HandleKey"
-    ReadOnly="_readonly"
+    ReadOnly="_sendingMessage"
+    Placeholder="@Placeholder"
     Options="_options" />
 
 @code {
     [Parameter] public Guid? ThreadId { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
     
     string _message = string.Empty;
     bool _sendingMessage;
@@ -21,8 +24,6 @@
     string _errorMessage = string.Empty;
     FormValidateStatus _validateStatus => _hasError ? FormValidateStatus.Error : FormValidateStatus.Default;
     bool _hasError => !string.IsNullOrWhiteSpace(_errorMessage);
-
-    EasyMdeReadOnly _readonly => _sendingMessage ? EasyMdeReadOnly.Disabled : EasyMdeReadOnly.Default;
     
     readonly EasyMdeOptions _options = new()
     {

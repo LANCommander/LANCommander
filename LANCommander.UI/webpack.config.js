@@ -43,6 +43,13 @@ module.exports = {
     output: {
         filename: 'bundle.js', // The output file
         path: path.resolve(__dirname, 'wwwroot'), // The output directory
+        module: true,
+        library: {
+            type: 'module',
+        }
+    },
+    experiments: {
+        outputModule: true,
     },
     plugins: [
         new MiniCssExtractPlugin({

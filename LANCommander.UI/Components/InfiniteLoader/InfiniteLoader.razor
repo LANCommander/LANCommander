@@ -1,0 +1,12 @@
+@typeparam T
+
+<div class="infinite-scroll" @ref="_scrollHost">
+    <div class="sentinel" @ref="_sentinel"></div>
+    
+    @foreach (var i in _items)
+    {
+        <div @key="@_keySelector?.Invoke(i)" data-index="@_keySelector?.Invoke(i)">
+            @ChildContent?.Invoke(i)
+        </div>
+    }
+</div>

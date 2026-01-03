@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
-    <PackageVersion Include="EasyMDE.Blazor" Version="1.0.3" />
+    <PackageVersion Include="EasyMDE.Blazor" Version="1.0.4" />
     <PackageVersion Include="Markdig" Version="0.44.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
   </ItemGroup>

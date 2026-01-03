@@ -1,5 +1,5 @@
 import { SplitPane } from "./SplitPane";
 
-export function CreateSplitPane(): SplitPane {
-    return new SplitPane();
+export function CreateSplitPane(panelId: string): SplitPane {
+    return new SplitPane(panelId);
 }

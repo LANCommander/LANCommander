@@ -2,6 +2,10 @@ import Split from 'split.js'
 
 export class SplitPane {
     SplitPanes: HTMLElement[] = [];
+    
+    constructor(paneId: string) {
+        this.Init(paneId);
+    }
 
     Init(paneId: string) {
         let splitPane = document.querySelector<HTMLElement>(`#split-pane-${paneId}`);

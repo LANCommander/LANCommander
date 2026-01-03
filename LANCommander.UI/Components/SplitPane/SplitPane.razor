@@ -1,9 +1,10 @@
-﻿@using Microsoft.JSInterop
+﻿@using LANCommander.UI.Extensions
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
 @namespace LANCommander.UI.Components
 
 <CascadingValue Value="this" IsFixed="@true">
-    <div id="split-pane-@(PaneId.ToString())" class="split-pane @Class" style="@Style">
+    <div id="split-pane-@(_paneId.ToString())" class="split-pane @Class" style="@Style">
         @ChildContent
     </div>
 </CascadingValue>
@@ -13,13 +14,12 @@
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public string Style { get; set; } = "";
 
-    private IList<Pane> Panes = new List<Pane>();
-
-    private Guid PaneId = Guid.NewGuid();
+    private readonly Guid _paneId = Guid.NewGuid();
+    private IJSObjectReference? _splitPane;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await JS.InvokeVoidAsync("SplitPane.Init", PaneId);
+            _splitPane = await JS.CreateAsync("SplitPane", _paneId);
     }
 }

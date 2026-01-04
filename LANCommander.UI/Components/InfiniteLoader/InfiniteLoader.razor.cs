@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
-namespace LANCommander.UI.Components.InfiniteLoader;
+namespace LANCommander.UI.Components;
 
 public partial class InfiniteLoader<T> : ComponentBase
 {

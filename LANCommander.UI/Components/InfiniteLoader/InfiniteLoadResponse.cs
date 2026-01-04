@@ -1,4 +1,4 @@
-namespace LANCommander.UI.Components.InfiniteLoader;
+namespace LANCommander.UI.Components;
 
 public class InfiniteLoadResponse<T>
 {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
-namespace LANCommander.UI.Components.InfiniteLoader;
+namespace LANCommander.UI.Components;
 
 public sealed class InfiniteScrollInterop(IJSRuntime js) : IAsyncDisposable
 {

@@ -155,6 +155,11 @@ public class ServerChatClient(
         await ReceiveMessagesAsync(threadId, mappedMessages);
     }
 
+    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage cursor, int count)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task<int> GetUnreadMessageCountAsync(Guid threadId)
     {
         var principal = httpContextAccessor.HttpContext?.User;

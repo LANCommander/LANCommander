@@ -8,17 +8,14 @@
 @code {
     IJSObjectReference? _timeProvider;
 
-    protected override async Task OnInitializedAsync()
-    {
-        _timeProvider = await JS.CreateAsync("TimeProvider");
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _timeProvider is not null && TimeProvider is LocalTimeProvider localTimeProvider && !localTimeProvider.IsLocalTimeZoneSet)
+        if (firstRender && TimeProvider is LocalTimeProvider localTimeProvider && !localTimeProvider.IsLocalTimeZoneSet)
         {
             try
             {
+                _timeProvider ??= await JS.CreateAsync("TimeProvider");
+                
                 var timeZone = await _timeProvider.InvokeAsync<string>("GetLocalTimeZone");
 
                 localTimeProvider.SetLocalTimeZone(timeZone);

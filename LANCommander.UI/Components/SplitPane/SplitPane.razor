@@ -20,6 +20,6 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            _splitPane = await JS.CreateAsync("SplitPane", _paneId);
+            _splitPane ??= await JS.CreateAsync("SplitPane", _paneId);
     }
 }

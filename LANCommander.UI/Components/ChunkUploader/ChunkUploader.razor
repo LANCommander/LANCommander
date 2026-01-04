@@ -5,6 +5,7 @@
 @inject NavigationManager Navigator
 @inject IJSRuntime JS
 @inject IMessageService MessageService
+@implements IAsyncDisposable
 @namespace LANCommander.UI.Components
 
 <div class="ant-upload ant-upload-select-text ant-upload-drag ant-upload-select chunk-uploader" data-status="@CurrentProgressStatus">
@@ -95,11 +96,15 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
 
-        _uploaderInterop = await JS.CreateAsync("Uploader");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            _uploaderInterop ??= await JS.CreateAsync("Uploader");
     }
 
     public async Task Start()
@@ -206,4 +211,27 @@
         if (OnUploadError.HasDelegate)
             await OnUploadError.InvokeAsync(message);
     }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_fileInput is not null)
+            await CastAndDispose(_fileInput);
+        
+        if (_uploaderInterop is not null)
+            await _uploaderInterop.DisposeAsync();
+        
+        if (HttpClient is not null)
+            await CastAndDispose(HttpClient);
+
+        return;
+
+        static async ValueTask CastAndDispose(IDisposable resource)
+        {
+            if (resource is IAsyncDisposable resourceAsyncDisposable)
+                await resourceAsyncDisposable.DisposeAsync();
+            else
+                resource.Dispose();
+        }
+    }
+
 }

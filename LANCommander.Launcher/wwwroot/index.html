@@ -38,11 +38,6 @@
     <script src="_framework/blazor.webview.js"></script>
 
     <script>
-        XtermBlazor.registerAddons({
-            "readline": new XtermAddons.Readline(),
-            "addon-fit": new XtermAddons.Fit()
-        });
-
         window.sendMessage = function (message) {
             window.external.sendMessage(message);
         }

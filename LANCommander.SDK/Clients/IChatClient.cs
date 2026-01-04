@@ -17,6 +17,6 @@ public interface IChatClient
     Task StopTypingAsync(Guid threadId, string userId);
     Task SendMessageAsync(Guid threadId, string message);
     Task UpdatedReadStatus(Guid threadId);
-    Task GetMessagesAsync(Guid threadId);
+    Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage cursor, int count);
     Task<int> GetUnreadMessageCountAsync(Guid threadId);
 }

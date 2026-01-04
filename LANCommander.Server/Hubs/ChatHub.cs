@@ -76,7 +76,7 @@ public class ChatHub(
         return mapper.Map<ChatThread>(thread);
     }
 
-    public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
+    public async Task<IEnumerable<SDK.Models.ChatThread>> GetThreadsAsync()
     {
         if (Guid.TryParse(Context.UserIdentifier, out var userId))
         {
@@ -123,11 +123,11 @@ public class ChatHub(
         await Clients.Users(participants).ReceiveMessageAsync(threadId, mapper.Map<ChatMessage>(message));
     }
 
-    public async Task GetMessagesAsync(Guid threadId)
+    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage? cursor, int? count)
     {
-        var messages = await chatService.GetMessagesAsync(threadId, 10);
-        
-        await Clients.Caller.ReceiveMessagesAsync(threadId, mapper.Map<ChatMessage[]>(messages));
+        var messages = await chatService.GetMessagesAsync(threadId, count, cursor?.SentOn.UtcDateTime ?? DateTime.UtcNow);
+
+        return mapper.Map<IEnumerable<ChatMessage>>(messages);
     }
 
     public async Task StartTypingAsync(Guid threadId)

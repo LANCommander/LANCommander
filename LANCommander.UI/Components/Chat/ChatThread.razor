@@ -8,18 +8,13 @@
     <Flex Direction="FlexDirection.Vertical" Class="chat-thread-messages">
         @if (_thread != null)
         {
-            <Virtualize Items="_thread.MessageGroups" Context="messageGroup">
-                <ChatMessageGroup
-                    @key="messageGroup.Id"
-                    UserId="@messageGroup.UserId"
-                    UserName="@messageGroup.UserName"
-                    StartedOn="@messageGroup.StartedOn.LocalDateTime">
-                    @foreach (var message in messageGroup.Messages)
-                    {
-                        <ChatMessage Id="@message.Id" Content="@message.Content" SentOn="@message.SentOn"/>
-                    }
-                </ChatMessageGroup>
-            </Virtualize>
+            <InfiniteLoader 
+                T="SDK.Models.ChatMessage" 
+                KeySelector="g => g.Id.ToString()" 
+                Loader="LoadMessages"
+                PageSize="10">
+                <ChatMessage Id="context.Id" Content="@context.Content" SentOn="context.SentOn" />
+            </InfiniteLoader>
         }
     </Flex>
 
@@ -39,10 +34,22 @@
             
             _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged;
             
-            await ChatClient.GetMessagesAsync(Id.Value);
+            await ChatClient.GetMessagesAsync(Id.Value, null, 10);
         }
     }
 
     void MessageGroupsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         => InvokeAsync(StateHasChanged);
+
+    async Task<InfiniteLoadResponse<SDK.Models.ChatMessage>> LoadMessages(SDK.Models.ChatMessage cursor, int pageSize)
+    {
+        var messages = await ChatClient.GetMessagesAsync(Id.Value, cursor, pageSize);
+
+        return new InfiniteLoadResponse<SDK.Models.ChatMessage>()
+        {
+            Items = messages,
+            HasMore = true,
+        };
+    }
+
 }

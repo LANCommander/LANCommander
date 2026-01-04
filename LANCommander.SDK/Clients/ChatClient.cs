@@ -195,14 +195,14 @@ public class ChatClient : IChatClient, HubChatClient
             await _hub.UpdateReadStatusAsync(thread.Id);
     }
 
-    public async Task GetMessagesAsync(Guid threadId)
+    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage cursor, int count)
     {
         await EnsureConnectedAsync();
-
+        
         if (_hub == null)
             throw new InvalidOperationException("Chat hub is not connected");
-
-        await _hub.GetMessagesAsync(threadId);
+        
+        return await _hub.GetMessagesAsync(threadId, cursor, count);
     }
 
     public async Task<int> GetUnreadMessageCountAsync(Guid threadId)

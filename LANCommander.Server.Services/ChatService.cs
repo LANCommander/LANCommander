@@ -78,7 +78,7 @@ namespace LANCommander.Server.Services
             return message;
         }
 
-        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId, int count, DateTime? createdBefore = null)
+        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId, int? count = 10, DateTime? createdBefore = null)
         {
             if (createdBefore == null)
                 createdBefore = DateTime.UtcNow;
@@ -90,7 +90,7 @@ namespace LANCommander.Server.Services
                     .OrderByDescending(m => m.CreatedOn)
                     .Where(m => m.CreatedOn < createdBefore)
                     .Where(m => m.ThreadId == threadId)
-                    .Take(count);
+                    .Take(count.GetValueOrDefault());
             }).GetAsync();
             
             return mapper.Map<List<ChatMessage>>(messages);

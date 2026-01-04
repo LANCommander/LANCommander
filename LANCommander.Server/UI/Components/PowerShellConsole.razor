@@ -8,7 +8,7 @@
 @inject GameService GameService
 
 <div class="terminal @(Active ? "" : "hidden")">
-    <Xterm @ref="Terminal" Id="@Id.ToString()" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+    <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" Addons="@_addons" />
 </div>
 
 @code {
@@ -16,30 +16,19 @@
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
     
-    private Xterm Terminal;
-    private TaskCompletionSource<string> InputTaskCompletionSource;
+    private Terminal? _terminal;
 
-    private TerminalOptions _options = new()
+    private readonly TerminalOptions _options = new()
     {
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
     };
 
-    private HashSet<string> Addons = new()
-    {
+    private readonly HashSet<string> _addons =
+    [
         "readline",
         "addon-fit"
-    };
-
-    private async Task OnFirstRender()
-    {
-        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
-    }
-
-    private async Task<string> ReadLine()
-    {
-        return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
-    }
+    ];
 
     async Task SetActive(bool active)
     {
@@ -63,12 +52,15 @@
 
     public async Task Start(IScriptDebugContext context)
     {
-        Terminal?.Clear();
+        if (_terminal is null)
+            return;
+        
+        await _terminal.Clear();
         await SetActive(true);
         await InvokeAsync(StateHasChanged);
 
-        await Terminal.Focus();
-        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+        await _terminal.Focus();
+        await _terminal.FitAsync();
     }
 
     public async Task End(IScriptDebugContext context)
@@ -79,9 +71,12 @@
 
     public async Task Break(IScriptDebugContext context)
     {
+        if (_terminal is null)
+            return;
+        
         while (true)
         {
-            var input = await ReadLine();
+            var input = await _terminal.ReadLineAsync();
 
             if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
                 break;
@@ -95,30 +90,12 @@
 
     public async Task Output(IScriptDebugContext context, LogLevel level, string message)
     {
+        if (_terminal is null)
+            return;
+        
         try
         {
-            switch (level)
-            {
-                case LogLevel.Error:
-                    await Terminal.WriteLine($"\x1b[0;31m{message}");
-                    break;
-
-                case LogLevel.Warning:
-                    await Terminal.WriteLine($"\x1b[0;33m{message}");
-                    break;
-
-                case LogLevel.Debug:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
-
-                case LogLevel.Trace:
-                    await Terminal.WriteLine($"\x1b[0;36m{message}");
-                    break;
-
-                case LogLevel.Information:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
-            }
+            await _terminal.WriteLine(message, level);
         }
         catch (Exception ex)
         {

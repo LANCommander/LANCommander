@@ -8,7 +8,7 @@
 @inject GameService GameService
 
 <div class="terminal @(Active ? "" : "hidden")">
-    <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" Addons="@_addons" />
+    <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" />
 </div>
 
 @code {
@@ -23,12 +23,6 @@
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
     };
-
-    private readonly HashSet<string> _addons =
-    [
-        "readline",
-        "addon-fit"
-    ];
 
     async Task SetActive(bool active)
     {

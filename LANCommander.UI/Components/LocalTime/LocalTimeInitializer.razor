@@ -14,7 +14,7 @@
         {
             try
             {
-                _timeProvider ??= await JS.CreateAsync("TimeProvider");
+                _timeProvider ??= await JS.ImportModuleAsync("TimeProvider");
                 
                 var timeZone = await _timeProvider.InvokeAsync<string>("GetLocalTimeZone");
 

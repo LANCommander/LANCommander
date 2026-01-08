@@ -5,7 +5,7 @@
 @inject ScriptDebugger Debugger
 
 <div class="terminal @(Visible ? "" : "hidden")">
-    <Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@_addons" />
+    <Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" />
 </div>
 
 @code {
@@ -17,12 +17,6 @@
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
     };
-
-    private HashSet<string> _addons =
-    [
-        "readline",
-        "addon-fit"
-    ];
 
     protected override void OnInitialized()
     {

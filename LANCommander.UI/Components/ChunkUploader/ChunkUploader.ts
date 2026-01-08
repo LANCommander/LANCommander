@@ -3,7 +3,7 @@ import { UploadInitResponse } from './UploadInitResponse';
 import { UploadInitRequest } from './UploadInitRequest';
 import axios, { AxiosProgressEvent } from 'axios';
 
-export class Uploader {
+export class ChunkUploader {
     FileInput: HTMLInputElement | undefined;
     UploadButton: HTMLButtonElement | undefined;
     ObjectKeyInput: HTMLInputElement | undefined;
@@ -24,6 +24,10 @@ export class Uploader {
     Key: string = "";
     StorageLocationId: string = "";
     Id: string = "";
+    
+    public static Create(): ChunkUploader {
+        return new ChunkUploader();
+    }
 
     async Init(fileInputId: string, storageLocationId: string, objectKey: string)
     {

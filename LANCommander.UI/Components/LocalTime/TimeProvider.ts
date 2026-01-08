@@ -1,6 +1,6 @@
 ﻿export class TimeProvider
 {
-    GetLocalTimeZone(): string
+    public static GetLocalTimeZone(): string
     {
         const options = Intl.DateTimeFormat().resolvedOptions();
         

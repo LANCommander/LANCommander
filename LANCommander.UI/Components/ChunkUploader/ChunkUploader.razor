@@ -104,7 +104,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            _uploaderInterop ??= await JS.CreateAsync("Uploader");
+            _uploaderInterop ??= await JS.ImportModuleAsync<ChunkUploader>();
     }
 
     public async Task Start()

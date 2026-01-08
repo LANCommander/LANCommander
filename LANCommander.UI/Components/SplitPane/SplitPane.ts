@@ -1,10 +1,12 @@
 import Split from 'split.js'
 
-export class SplitPane {
-    SplitPanes: HTMLElement[] = [];
-    
+export class SplitPane {    
     constructor(paneId: string) {
         this.Init(paneId);
+    }
+    
+    public static Create(paneId: string): SplitPane {
+        return new SplitPane(paneId);
     }
 
     Init(paneId: string) {

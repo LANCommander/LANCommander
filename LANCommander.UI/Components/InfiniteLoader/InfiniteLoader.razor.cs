@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using LANCommander.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -31,7 +32,7 @@ public partial class InfiniteLoader<T> : ComponentBase
     private ElementReference _scrollHost;
     private ElementReference _sentinel;
 
-    private InfiniteScrollInterop? _scrollInterop;
+    private IJSObjectReference? _scrollInterop;
 
     protected override async Task OnInitializedAsync()
     {
@@ -42,12 +43,8 @@ public partial class InfiniteLoader<T> : ComponentBase
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-            return;
-
-        _scrollInterop = new InfiniteScrollInterop(JS);
-
-        await _scrollInterop.InitializeAsync(_scrollHost, _sentinel);
+        if (firstRender)
+            _scrollInterop ??= await JS.ImportModuleAsync("InfiniteScroll", _scrollHost, _sentinel);
     }
 
     protected override void OnParametersSet()
@@ -63,9 +60,6 @@ public partial class InfiniteLoader<T> : ComponentBase
         if (Loader == null)
             throw new ArgumentNullException($"{nameof(Loader)} is null");
 
-        if (_next is null)
-            return;
-
         var response = await Loader(_next, PageSize);
 
         _items.Clear();
@@ -79,7 +73,7 @@ public partial class InfiniteLoader<T> : ComponentBase
 
     private async Task LoadMoreAsync(object? anchor)
     {
-        if (_isLoadingMore || !_hasMore || Loader is null || _next is null)
+        if (_isLoadingMore || !_hasMore || Loader is null || _next is null || _scrollInterop is null)
             return;
         
         _isLoadingMore = true;
@@ -95,7 +89,8 @@ public partial class InfiniteLoader<T> : ComponentBase
             _next = page.Next;
 
             await InvokeAsync(StateHasChanged);
-            await _scrollInterop!.RestoreAfterPrependAsync(_scrollHost, anchor);
+            
+            await _scrollInterop.InvokeVoidAsync("RestoreAfterPrepend", anchor);
         }
         finally
         {
@@ -109,7 +104,7 @@ public partial class InfiniteLoader<T> : ComponentBase
         if (_scrollInterop is null)
             return;
 
-        var anchor = await _scrollInterop.CaptureAnchorAsync(_scrollHost);
+        var anchor = await _scrollInterop.InvokeAsync<object?>("CaptureAnchor");
 
         await LoadMoreAsync(anchor);
     }

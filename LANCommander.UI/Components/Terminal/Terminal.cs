@@ -10,20 +10,24 @@ public partial class Terminal : Xterm
 {
     [Inject]
     IJSRuntime JS { get; set; }
-    
-    protected override async Task OnInitializedAsync()
-    {
-        await JS.ExecuteVoidAsync("RegisterXtermAddons");
-        
-        await base.OnInitializedAsync();
-    }
+
+    IJSObjectReference? _interop;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.ExecuteVoidAsync("RegisterXtermAddons");
+        if (firstRender)
+        {
+            _interop ??= await JS.ImportModuleAsync<Terminal>();
+
+            if (Addons == null)
+                Addons = new HashSet<string>();
+
+            Addons.Add("readline");
+            Addons.Add("addon-fit");
+        }
         
         await base.OnAfterRenderAsync(firstRender);
-
+        
         if (firstRender)
             await FitAsync();
     }

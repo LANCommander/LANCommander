@@ -459,15 +459,26 @@ namespace LANCommander.Server.Data
             #region Chat Relationships
 
             builder.Entity<ChatThreadReadStatus>()
-                .HasNoKey();
+                .HasKey(rs => new { rs.ThreadId, rs.UserId });
             
             builder.Entity<ChatThreadReadStatus>()
                 .HasOne(rs => rs.Thread)
-                .WithMany();
+                .WithMany()
+                .HasForeignKey(rs => rs.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ChatThreadReadStatus>()
                 .HasOne(rs => rs.User)
-                .WithMany();
+                .WithMany()
+                .HasForeignKey(rs => rs.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ChatThreadReadStatus>()
+                .HasOne(rs => rs.LastReadMessage)
+                .WithMany()
+                .HasForeignKey(rs => rs.LastReadMessageId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
             #endregion
         }
 

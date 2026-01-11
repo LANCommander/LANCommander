@@ -1,10 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using AutoMapper;
-using LANCommander.Server.Data.Models;
+using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using ChatMessage = LANCommander.Server.Data.Models.ChatMessage;
+using ChatThread = LANCommander.Server.Data.Models.ChatThread;
+using User = LANCommander.Server.Data.Models.User;
 
 namespace LANCommander.Server.Services
 {
@@ -78,22 +81,82 @@ namespace LANCommander.Server.Services
             return message;
         }
 
-        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId, int? count = 10, DateTime? createdBefore = null)
+        public async Task<InfiniteResponse<SDK.Models.ChatMessage>> GetMessagesAsync(Guid threadId, int? count = 10, Guid? cursor = null)
         {
-            if (createdBefore == null)
-                createdBefore = DateTime.UtcNow;
+            var pageSize = Math.Max(1, count.GetValueOrDefault(10));
+            DateTime? createdBefore = null;
             
+            // If cursor is provided, use it to find the boundary for loading older messages
+            if (cursor.HasValue && cursor.Value != Guid.Empty)
+            {
+                var cursorMessage = await chatMessageService.GetAsync(cursor.Value);
+                
+                // Validate cursor message exists and belongs to this thread
+                if (cursorMessage != null && cursorMessage.ThreadId == threadId)
+                {
+                    createdBefore = cursorMessage.CreatedOn;
+                }
+                else
+                {
+                    // Invalid cursor - return empty result
+                    logger.LogWarning("Invalid cursor message {CursorId} for thread {ThreadId}", cursor.Value, threadId);
+                    return new InfiniteResponse<SDK.Models.ChatMessage>
+                    {
+                        Items = [],
+                        HasMore = false,
+                    };
+                }
+            }
+            
+            // Load messages older than the cursor (or newest messages if no cursor)
             var messages = await chatMessageService.Query(q =>
             {
-                return q
+                var query = q
                     .Include(m => m.CreatedBy)
+                    .Where(m => m.ThreadId == threadId);
+                
+                // Apply cursor filter if provided
+                if (createdBefore.HasValue)
+                {
+                    query = query.Where(m => m.CreatedOn < createdBefore.Value);
+                }
+                
+                return query
                     .OrderByDescending(m => m.CreatedOn)
-                    .Where(m => m.CreatedOn < createdBefore)
-                    .Where(m => m.ThreadId == threadId)
-                    .Take(count.GetValueOrDefault());
+                    .Take(pageSize);
             }).GetAsync();
-            
-            return mapper.Map<List<ChatMessage>>(messages);
+
+            var messageList = messages.ToList();
+            bool hasMore = false;
+
+            // Check if there are more older messages beyond what we just loaded
+            if (messageList.Count > 0)
+            {
+                // Use the oldest message in the batch as the boundary for checking if more exist
+                var oldestMessage = messageList[messageList.Count - 1];
+                
+                hasMore = await chatMessageService.Query(q =>
+                {
+                    return q
+                        .Where(m => m.ThreadId == threadId)
+                        .Where(m => m.CreatedOn < oldestMessage.CreatedOn);
+                }).AnyAsync();
+            }
+            else if (!createdBefore.HasValue)
+            {
+                // No cursor and no messages returned - check if any messages exist at all
+                hasMore = await chatMessageService.Query(q =>
+                {
+                    return q.Where(m => m.ThreadId == threadId);
+                }).AnyAsync();
+            }
+            // If we had a cursor but got no results, there are no more older messages
+
+            return new InfiniteResponse<SDK.Models.ChatMessage>
+            {
+                Items = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(messageList),
+                HasMore = hasMore,
+            };
         }
 
         public async Task<ChatThread> GetThreadAsync(Guid threadId)
@@ -151,12 +214,9 @@ namespace LANCommander.Server.Services
 
         public async Task<int> GetUnreadMessageCountAsync(Guid threadId, Guid userId)
         {
-            var lastRead = await chatThreadReadStatusService.GetLastReadAsync(threadId, userId);
+            var lastReadMessageId = await chatThreadReadStatusService.GetLastReadMessageIdAsync(threadId, userId);
 
-            if (lastRead == null)
-                return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastRead.GetValueOrDefault());
-
-            return 0;
+            return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastReadMessageId);
         }
     }
 }

@@ -1,15 +1,16 @@
 import { InfiniteScrollAnchor } from "./InfiniteScrollAnchor";
-declare const DotNet: typeof import("@microsoft/dotnet-js-interop").DotNet;
 
 export class InfiniteScroll {
     public scrollHost: Element;
     public sentinel: Element;
+    public dotnet: any;
     
-    public static Create(scrollHostSelector: string, sentinelSelector: string): InfiniteScroll {
-        return new InfiniteScroll(document.querySelector(scrollHostSelector), document.querySelector(sentinelSelector));
+    public static Create(dotnet: any, scrollHost: Element, sentinel: Element): InfiniteScroll {
+        return new InfiniteScroll(dotnet, scrollHost, sentinel);
     }
     
-    constructor(scrollHost: Element, sentinel: Element) {
+    constructor(dotnet: any, scrollHost: Element, sentinel: Element) {
+        this.dotnet = dotnet;
         this.scrollHost = scrollHost;
         this.sentinel = sentinel;
     }
@@ -18,7 +19,7 @@ export class InfiniteScroll {
         const observer = new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (entry.isIntersecting) {
-                    DotNet.invokeMethodAsync("LANCommander.UI", "OnSentinelVisible");
+                    this.dotnet.invokeMethodAsync("OnSentinelVisible");
                 }
             }
         }, {
@@ -60,5 +61,17 @@ export class InfiniteScroll {
         const newOffset = rect.top - hostRect.top;
 
         this.scrollHost.scrollTop += (newOffset - anchor.OffsetTop);
+    }
+    
+    IsSentinelVisible(): boolean {
+        const rect = this.sentinel.getBoundingClientRect();
+        const hostRect = this.scrollHost.getBoundingClientRect();
+        
+        // Check if sentinel is within the visible area of the scroll host
+        return rect.top >= hostRect.top && rect.top <= hostRect.bottom;
+    }
+    
+    ScrollToBottom() {
+        this.scrollHost.scrollTop = this.scrollHost.scrollHeight;
     }
 }

@@ -11,32 +11,40 @@ namespace LANCommander.Server.Services
         {
             using (var context = await contextFactory.CreateDbContextAsync())
             {
-                if (context.ChatThreadReadStatuses != null)
+                if (context.ChatThreadReadStatuses != null && context.ChatMessages != null)
                 {
+                    // Get the latest message in the thread
+                    var latestMessage = await context.ChatMessages
+                        .Where(m => m.ThreadId == threadId)
+                        .OrderByDescending(m => m.CreatedOn)
+                        .FirstOrDefaultAsync();
+
+                    if (latestMessage == null)
+                        return; // No messages in thread, nothing to mark as read
+
                     var status = await context.ChatThreadReadStatuses.FirstOrDefaultAsync(rs => rs.ThreadId == threadId && rs.UserId == userId);
 
                     if (status == null)
                     {
-                        var result = await context.ChatThreadReadStatuses.AddAsync(new ChatThreadReadStatus
+                        await context.ChatThreadReadStatuses.AddAsync(new ChatThreadReadStatus
                         {
                             ThreadId = threadId,
                             UserId = userId,
-                            LastReadOn = DateTime.Now,
+                            LastReadMessageId = latestMessage.Id,
                         });
                     }
                     else
                     {
-                        status.LastReadOn = DateTime.Now;
-
+                        status.LastReadMessageId = latestMessage.Id;
                         context.ChatThreadReadStatuses.Update(status);
                     }
-                }
 
-                await context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
+                }
             }
         }
 
-        public async Task<DateTime?> GetLastReadAsync(Guid threadId, Guid userId)
+        public async Task<Guid?> GetLastReadMessageIdAsync(Guid threadId, Guid userId)
         {
             using (var context = await contextFactory.CreateDbContextAsync())
             {
@@ -45,21 +53,42 @@ namespace LANCommander.Server.Services
                     var result = await context.ChatThreadReadStatuses.FirstOrDefaultAsync(rs => rs.ThreadId == threadId && rs.UserId == userId);
 
                     if (result != null)
-                        return result.LastReadOn;
+                        return result.LastReadMessageId;
                 }
             }
 
             return null;
         }
 
-        public async Task<int> GetUnreadCountAsync(Guid threadId, DateTime? lastReadOn)
+        public async Task<int> GetUnreadCountAsync(Guid threadId, Guid? lastReadMessageId)
         {
             using (var context = await contextFactory.CreateDbContextAsync())
             {
                 if (context.ChatMessages != null)
                 {
+                    if (lastReadMessageId == null)
+                    {
+                        // No read status, count all messages in thread
+                        return await context.ChatMessages
+                            .Where(m => m.ThreadId == threadId)
+                            .CountAsync();
+                    }
+
+                    // Get the last read message to find its CreatedOn timestamp
+                    var lastReadMessage = await context.ChatMessages
+                        .FirstOrDefaultAsync(m => m.Id == lastReadMessageId.Value);
+
+                    if (lastReadMessage == null)
+                    {
+                        // Last read message doesn't exist, count all messages
+                        return await context.ChatMessages
+                            .Where(m => m.ThreadId == threadId)
+                            .CountAsync();
+                    }
+
+                    // Count messages created after the last read message
                     return await context.ChatMessages
-                        .Where(m => m.ThreadId == threadId && m.CreatedOn > lastReadOn)
+                        .Where(m => m.ThreadId == threadId && m.CreatedOn > lastReadMessage.CreatedOn)
                         .CountAsync();
                 }
             }

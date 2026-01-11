@@ -143,6 +143,11 @@ public class ServerChatClient(
             await chatService.UpdateReadStatus(threadId, user.Id);
     }
 
+    public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int count)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task GetMessagesAsync(Guid threadId)
     {
         // Ensure thread is loaded in cache

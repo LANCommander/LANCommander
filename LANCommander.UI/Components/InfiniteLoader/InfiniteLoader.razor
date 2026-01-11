@@ -1,4 +1,5 @@
 @namespace LANCommander.UI.Components
+@inherits BaseComponent
 @typeparam T
 
 <div class="infinite-scroll" @ref="_scrollHost">
@@ -6,7 +7,7 @@
     
     @foreach (var i in _items)
     {
-        <div @key="@_keySelector?.Invoke(i)" data-index="@_keySelector?.Invoke(i)">
+        <div @key="@_keySelector?.Invoke(i)" data-id="@_keySelector?.Invoke(i)">
             @ChildContent?.Invoke(i)
         </div>
     }

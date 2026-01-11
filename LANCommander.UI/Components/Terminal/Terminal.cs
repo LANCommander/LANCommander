@@ -1,4 +1,5 @@
 using LANCommander.UI.Extensions;
+using LANCommander.UI.Providers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using XtermBlazor;
@@ -9,7 +10,7 @@ namespace LANCommander.UI.Components;
 public partial class Terminal : Xterm
 {
     [Inject]
-    IJSRuntime JS { get; set; }
+    ScriptProvider ScriptProvider { get; set; }
 
     IJSObjectReference? _interop;
 
@@ -17,7 +18,7 @@ public partial class Terminal : Xterm
     {
         if (firstRender)
         {
-            _interop ??= await JS.ImportModuleAsync<Terminal>();
+            _interop ??= await ScriptProvider.ImportModuleAsync<Terminal>();
 
             if (Addons == null)
                 Addons = new HashSet<string>();

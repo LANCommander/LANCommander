@@ -123,12 +123,8 @@ public class ChatHub(
         await Clients.Users(participants).ReceiveMessageAsync(threadId, mapper.Map<ChatMessage>(message));
     }
 
-    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage? cursor, int? count)
-    {
-        var messages = await chatService.GetMessagesAsync(threadId, count, cursor?.SentOn.UtcDateTime ?? DateTime.UtcNow);
-
-        return mapper.Map<IEnumerable<ChatMessage>>(messages);
-    }
+    public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int? count)
+        => await chatService.GetMessagesAsync(threadId, count, cursor);
 
     public async Task StartTypingAsync(Guid threadId)
     {

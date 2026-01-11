@@ -2,6 +2,7 @@
 @using LANCommander.UI.Providers
 @using Microsoft.JSInterop
 @inject TimeProvider TimeProvider
+@inject ScriptProvider ScriptProvider
 @inject IJSRuntime JS
 @namespace LANCommander.UI.Components
 
@@ -14,7 +15,7 @@
         {
             try
             {
-                _timeProvider ??= await JS.ImportModuleAsync("TimeProvider");
+                _timeProvider ??= await ScriptProvider.ImportModuleAsync("TimeProvider");
                 
                 var timeZone = await _timeProvider.InvokeAsync<string>("GetLocalTimeZone");
 

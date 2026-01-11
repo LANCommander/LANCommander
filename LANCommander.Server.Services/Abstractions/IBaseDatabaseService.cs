@@ -12,6 +12,7 @@ namespace LANCommander.Server.Services.Abstractions
         IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending);
         IBaseDatabaseService<T> AsNoTracking();
         IBaseDatabaseService<T> AsSplitQuery();
+        Task<bool> AnyAsync();
 
         Task<ICollection<T>> GetAsync();
 

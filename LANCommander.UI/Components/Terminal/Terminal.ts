@@ -7,7 +7,6 @@ export class Terminal {
     }
     
     constructor() {
-        console.log("Terminal Constructor");
         (<any>window).XtermBlazor.registerAddons({
             "readline": new Readline(),
             "addon-fit": new FitAddon(),

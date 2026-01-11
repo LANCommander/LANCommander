@@ -1,6 +1,7 @@
 ﻿@using LANCommander.UI.Extensions
+@using LANCommander.UI.Providers
 @using Microsoft.JSInterop
-@inject IJSRuntime JS
+@inject ScriptProvider ScriptProvider
 @namespace LANCommander.UI.Components
 
 <CascadingValue Value="this" IsFixed="@true">
@@ -20,6 +21,6 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            _splitPane ??= await JS.ImportModuleAsync<SplitPane>(_paneId);
+            _splitPane ??= await ScriptProvider.ImportModuleAsync<SplitPane>(_paneId);
     }
 }

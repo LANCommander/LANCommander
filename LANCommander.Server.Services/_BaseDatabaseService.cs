@@ -96,6 +96,29 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public virtual async Task<bool> AnyAsync()
+        {
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+
+                var queryable = context.Set<T>().AsQueryable();
+
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+
+                return await queryable.AnyAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+
         public virtual async Task<ICollection<T>> GetAsync()
         {
             return await GetAsync(x => true);

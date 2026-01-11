@@ -1,6 +1,8 @@
 @using LANCommander.SDK.Services
+@using LANCommander.SDK.Models
 @namespace LANCommander.UI.Components
 @inject IChatClient ChatClient
+@implements IAsyncDisposable
 
 <MouseArea Cursor="Cursors.Pointer" OnClick="OnClick" Class="@_cssClass">
     <Flex Align="FlexAlign.Center" Gap="FlexGap.Small">
@@ -38,20 +40,85 @@
 
     int _unreadCount = 0;
     string _cssClass = string.Empty;
+    bool _isSubscribed = false;
+
+    bool _previousActive = false;
 
     protected override async Task OnParametersSetAsync()
     {
-        _unreadCount = await ChatClient.GetUnreadMessageCountAsync(Thread.Id);
+        await RefreshUnreadCountAsync();
+        
+        // Refresh unread count when thread becomes active (read status may have been updated)
+        if (Active && !_previousActive)
+        {
+            await RefreshUnreadCountAsync();
+        }
+        _previousActive = Active;
         
         _cssClass = new ClassBuilder()
             .Add("chat-list-thread")
             .If(() => Active, "chat-list-thread-active")
             .Build();
+        
+        // Subscribe to message events if not already subscribed
+        if (!_isSubscribed)
+        {
+            Thread.OnMessageReceivedAsync = OnMessageReceivedAsync;
+            Thread.OnMessagesReceivedAsync = OnMessagesReceivedAsync;
+            _isSubscribed = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Refresh unread count when component becomes active (read status may have changed)
+        if (Active && firstRender)
+        {
+            await RefreshUnreadCountAsync();
+        }
+    }
+
+    async Task OnMessageReceivedAsync(SDK.Models.ChatMessage message)
+    {
+        // Update unread count when a new message is received
+        await RefreshUnreadCountAsync();
+    }
+
+    async Task OnMessagesReceivedAsync(IEnumerable<SDK.Models.ChatMessage> messages)
+    {
+        // Update unread count when messages are received
+        await RefreshUnreadCountAsync();
+    }
+
+    async Task RefreshUnreadCountAsync()
+    {
+        var newCount = await ChatClient.GetUnreadMessageCountAsync(Thread.Id);
+        
+        if (newCount != _unreadCount)
+        {
+            _unreadCount = newCount;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     async Task OnClick(MouseEventArgs args)
     {
         if (OnSelected.HasDelegate)
             await OnSelected.InvokeAsync(Thread);
+        
+        // Refresh unread count when thread is selected (read status may have been updated)
+        await RefreshUnreadCountAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isSubscribed)
+        {
+            Thread.OnMessageReceivedAsync -= OnMessageReceivedAsync;
+            Thread.OnMessagesReceivedAsync -= OnMessagesReceivedAsync;
+            _isSubscribed = false;
+        }
+        
+        await Task.CompletedTask;
     }
 }

@@ -1,9 +1,9 @@
-﻿@using LANCommander.UI.Extensions
+﻿@using LANCommander.UI.Providers
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject IJSRuntime JS
+@inject ScriptProvider ScriptProvider
 @inject IMessageService MessageService
 @implements IAsyncDisposable
 @namespace LANCommander.UI.Components
@@ -104,7 +104,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            _uploaderInterop ??= await JS.ImportModuleAsync<ChunkUploader>();
+            _uploaderInterop ??= await ScriptProvider.ImportModuleAsync<ChunkUploader>();
     }
 
     public async Task Start()

@@ -199,7 +199,7 @@ public class ChatHubClient : IChatClient, IChatHubClient
             await _hub.UpdateReadStatusAsync(thread.Id);
     }
 
-    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage cursor, int count)
+    public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int count)
     {
         await EnsureConnectedAsync();
         

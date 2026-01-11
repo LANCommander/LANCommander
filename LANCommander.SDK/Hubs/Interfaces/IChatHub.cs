@@ -12,7 +12,7 @@ public interface IChatHub
     Task<ChatThread> GetThreadAsync(Guid threadId);
     Task<IEnumerable<ChatThread>> GetThreadsAsync();
     Task SendMessageAsync(Guid threadId, string message);
-    Task<IEnumerable<ChatMessage>> GetMessagesAsync(Guid threadId, ChatMessage? cursor, int? count);
+    Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int? count);
     Task StartTypingAsync(Guid threadId);
     Task StopTypingAsync(Guid threadId);
     Task UpdateReadStatusAsync(Guid threadId);

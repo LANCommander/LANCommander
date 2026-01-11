@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using System.Web;
+using LANCommander.UI.Extensions;
 
 namespace LANCommander.Launcher.Services;
 
@@ -42,6 +43,7 @@ internal static class WindowService
         builder.Services.AddCustomWindow();
         builder.Services.AddAntDesign();
         builder.Services.AddSingleton<LocalizationService>();
+        builder.Services.AddLANCommanderUI();
         builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderLauncher(options =>
         {

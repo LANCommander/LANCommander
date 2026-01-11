@@ -8,6 +8,7 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddLANCommanderUI(this IServiceCollection services)
     {
         services.AddSingleton<TimeProvider, LocalTimeProvider>();
+        services.AddScoped<ScriptProvider>();
 
         return services;
     }

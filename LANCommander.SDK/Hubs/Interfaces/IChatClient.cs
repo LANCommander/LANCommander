@@ -14,3 +14,5 @@ public interface IChatClient
     Task StopTypingAsync(Guid threadId, string userIdentifier);
 }
 
+
+

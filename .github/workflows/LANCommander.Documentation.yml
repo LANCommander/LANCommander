@@ -18,6 +18,9 @@ jobs:
   build:
     name: Build Docusaurus
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./LANCommander.Documentation
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,9 +31,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --prefix ./LANCommander.Documentation
+        run: npm ci
       - name: Build website
-        run: npm run build --prefix ./LANCommander.Documentation
+        run: npm run build
 
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@v3

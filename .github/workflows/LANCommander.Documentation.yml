@@ -29,6 +29,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: ./LANCommander.Documentation
 
       - name: Install dependencies
         run: npm ci

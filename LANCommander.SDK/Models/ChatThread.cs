@@ -32,7 +32,8 @@ public class ChatThread
 
     public async Task MessageReceivedAsync(ChatMessage message)
     {
-        AddToMessageGroups([message]);
+        // Use 5 minute time gap for grouping messages
+        AddToMessageGroups([message], TimeSpan.FromMinutes(5));
         
         if (OnMessageReceivedAsync != null)
             await OnMessageReceivedAsync.Invoke(message);
@@ -53,37 +54,71 @@ public class ChatThread
     private void AddToMessageGroups(IEnumerable<ChatMessage> source,
         TimeSpan? maxGap = null)
     {
+        var sourceMessages = source.OrderBy(x => x.SentOn).ToList();
+        
+        if (sourceMessages.Count == 0)
+            return;
+            
         ChatMessageGroup? current = MessageGroups.LastOrDefault();
         ChatMessage? last = null;
 
-        if (current is not null)
-            MessageGroups.Remove(current);
+        // Check if we should merge with the last group
+        bool shouldMergeWithLast = current is not null && 
+            sourceMessages.Count > 0 && 
+            sourceMessages[0].UserId == current.UserId &&
+            (maxGap == null || (current.Messages.Count > 0 && 
+                (sourceMessages[0].SentOn - current.Messages.Last().SentOn) <= maxGap.Value));
 
-        foreach (var message in source.OrderBy(x => x.SentOn))
+        if (shouldMergeWithLast)
         {
-            var mustBreak = current is null || message.UserId != current.UserId || (maxGap is not null &&
-                last is not null && (message.SentOn - last.SentOn) > maxGap.Value);
-
-            if (mustBreak)
+            // Merge new messages into existing last group
+            // Filter out messages that already exist in the group
+            var existingMessageIds = new HashSet<Guid>(current.Messages.Select(m => m.Id));
+            var newMessages = sourceMessages.Where(m => !existingMessageIds.Contains(m.Id)).ToList();
+            
+            foreach (var message in newMessages)
             {
-                if (current is not null)
-                    MessageGroups.Add(current);
-
-                current = new ChatMessageGroup
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = message.UserId,
-                    UserName = message.UserName,
-                    Messages = [message],
-                };
+                current.Messages.Add(message);
             }
-            else
-                current!.Messages.Add(message);
-
-            last = message;
+            
+            last = current.Messages.LastOrDefault();
         }
-        
-        if (current is not null)
-            MessageGroups.Add(current);
+        else
+        {
+            // Remove last group if it exists (we'll re-add it if needed)
+            if (current is not null)
+                MessageGroups.Remove(current);
+
+            foreach (var message in sourceMessages)
+            {
+                var mustBreak = current is null || message.UserId != current.UserId || (maxGap is not null &&
+                    last is not null && (message.SentOn - last.SentOn) > maxGap.Value);
+
+                if (mustBreak)
+                {
+                    if (current is not null)
+                        MessageGroups.Add(current);
+
+                    current = new ChatMessageGroup
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = message.UserId,
+                        UserName = message.UserName,
+                        Messages = [message],
+                    };
+                }
+                else
+                {
+                    // Check if message already exists in current group to avoid duplicates
+                    if (!current.Messages.Any(m => m.Id == message.Id))
+                        current.Messages.Add(message);
+                }
+
+                last = message;
+            }
+            
+            if (current is not null)
+                MessageGroups.Add(current);
+        }
     }
 }

@@ -216,6 +216,67 @@ public partial class InfiniteLoader<T> : BaseComponent
         await LoadMoreAsync(anchor);
     }
 
+    /// <summary>
+    /// Adds new items to the end of the list (for real-time updates like new messages)
+    /// </summary>
+    public async Task AddItemsAsync(IEnumerable<T> newItems)
+    {
+        if (newItems == null || !newItems.Any())
+            return;
+
+        var itemsList = newItems.ToList();
+
+        if (_keySelector is not null)
+        {
+            // Filter out duplicates using the key selector
+            var existingKeys = new HashSet<string>(_items.Select(_keySelector));
+            var uniqueItems = itemsList.Where(item => !existingKeys.Contains(_keySelector(item))).ToList();
+
+            if (uniqueItems.Count > 0)
+            {
+                _items.AddRange(uniqueItems);
+                await InvokeAsync(StateHasChanged);
+                
+                // Scroll to bottom to show new messages
+                await Task.Delay(50);
+                await ScrollToBottomAsync();
+            }
+        }
+        else
+        {
+            _items.AddRange(itemsList);
+            await InvokeAsync(StateHasChanged);
+            
+            // Scroll to bottom to show new messages
+            await Task.Delay(50);
+            await ScrollToBottomAsync();
+        }
+    }
+
+    /// <summary>
+    /// Gets the last item in the list (newest item)
+    /// </summary>
+    public T? GetLastItem()
+    {
+        return _items.Count > 0 ? _items[_items.Count - 1] : default;
+    }
+
+    /// <summary>
+    /// Updates the last item in the list (for merging messages into the last group)
+    /// </summary>
+    public async Task UpdateLastItemAsync(T updatedItem)
+    {
+        if (_items.Count > 0)
+        {
+            _items[_items.Count - 1] = updatedItem;
+            await InvokeAsync(StateHasChanged);
+            
+            // Scroll to bottom to show the updated message
+            await Task.Delay(50);
+            await ScrollToBottomAsync();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_scrollInterop is not null)

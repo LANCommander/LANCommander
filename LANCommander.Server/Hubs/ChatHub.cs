@@ -120,6 +120,12 @@ public class ChatHub(
         var message = await chatService.SendMessageAsync(threadId, content);
         var participants = await GetThreadParticipants(threadId);
         
+        // Update read status for the sender (they've read their own message)
+        if (Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            await chatService.UpdateReadStatus(threadId, userId);
+        }
+        
         await Clients.Users(participants).ReceiveMessageAsync(threadId, mapper.Map<ChatMessage>(message));
     }
 

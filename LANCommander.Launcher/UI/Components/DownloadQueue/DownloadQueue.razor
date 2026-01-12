@@ -1,15 +1,13 @@
 ﻿@using LANCommander.Launcher.Models
-@using LANCommander.Launcher.Settings
-@using LANCommander.SDK.Services
+@namespace LANCommander.Launcher.UI
 @inject InstallService InstallService
 @inject LibraryService LibraryService
 @inject GameClient GameClient
-@inject SettingsProvider<Settings> SettingsProvider
 @inject NavigationManager NavigationManager
 @inject LocalizationService LocalizationService
 @inject ConfirmService ConfirmService
 @inject ModalService ModalService
-@namespace LANCommander.Launcher.UI
+@inject ISettingsProvider SettingsProvider
 
 <Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 

@@ -2,46 +2,108 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Extensions;
+using HubChatClient = LANCommander.SDK.Hubs.IChatClient;
+using LANCommander.SDK.Hubs;
 using LANCommander.SDK.Models;
-using LANCommander.SDK.Rpc.Client;
+using LANCommander.SDK.Services;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
 
-public class ChatClient
+public class ChatClient : IChatClient, HubChatClient
 {
-    public static Func<ChatThread, Task> OnAddedToThreadAsync { get; set; }
-    public static Func<Guid, ChatMessage[], Task> OnReceivedMessagesAsync { get; set; }
-    public static Func<Guid, ChatMessage, Task> OnReceivedMessageAsync { get; set; }
-    public static Func<Guid, string, Task> OnStartTypingAsync { get; set; }
-    public static Func<Guid, string, Task> OnStopTypingAsync { get; set; }
-
-    private RpcClient _rpc;
-
-    public ChatClient(RpcClient rpc)
-    {
-        OnAddedToThreadAsync = AddedToThreadAsync;
-        OnReceivedMessageAsync = ReceiveMessageAsync;
-        OnReceivedMessagesAsync = ReceiveMessagesAsync;
-        OnStartTypingAsync = StartTypingAsync;
-        OnStopTypingAsync = StopTypingAsync;
-
-        _rpc = rpc;
-    }
-
+    private HubConnection? _connection;
+    private IChatHub? _hub;
+    private readonly ITokenProvider _tokenProvider;
+    private readonly IConnectionClient _connectionClient;
+    private readonly ILogger<ChatClient> _logger;
     private readonly Dictionary<Guid, ChatThread> _threads = new();
 
-    public ChatThread GetThread(Guid threadId)
+    public ChatClient(
+        ITokenProvider tokenProvider,
+        IConnectionClient connectionClient,
+        ILogger<ChatClient> logger)
+    {
+        _tokenProvider = tokenProvider;
+        _connectionClient = connectionClient;
+        _logger = logger;
+
+        // Subscribe to connection events to manage chat hub connection
+        _connectionClient.OnConnect += async (sender, e) => await EnsureConnectedAsync();
+        _connectionClient.OnDisconnect += async (sender, e) => await DisconnectAsync();
+    }
+
+    private async Task EnsureConnectedAsync()
+    {
+        if (_connection?.State == HubConnectionState.Connected)
+            return;
+
+        var serverAddress = _connectionClient.GetServerAddress();
+        if (serverAddress == null)
+            return;
+
+        try
+        {
+            _connection = new HubConnectionBuilder()
+                .WithUrl(serverAddress.Join("hubs/chat"), options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(_tokenProvider.GetToken().AccessToken);
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hub = _connection.ServerProxy<IChatHub>();
+            _ = _connection.ClientRegistration<HubChatClient>(this);
+
+            await _connection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to connect to chat hub at {ServerAddress}", serverAddress);
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        if (_connection != null)
+        {
+            try
+            {
+                await _connection.StopAsync();
+                await _connection.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to disconnect from chat hub");
+            }
+            finally
+            {
+                _connection = null;
+                _hub = null;
+            }
+        }
+    }
+
+    public async Task<ChatThread> GetThreadAsync(Guid threadId)
     {
         return _threads[threadId];
     }
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
-        var threadId = await _rpc.Chat.StartThreadAsync(userIdentifiers.ToArray());
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
+        var threadId = await _hub.StartThreadAsync(userIdentifiers.ToArray());
 
         if (threadId != Guid.Empty)
         {
-            _threads[threadId] = await _rpc.Chat.GetThreadAsync(threadId);
+            _threads[threadId] = await _hub.GetThreadAsync(threadId);
         }
 
         return threadId;
@@ -51,7 +113,7 @@ public class ChatClient
     {
         _threads[thread.Id] = thread;
     }
-
+    
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
     {
         if (_threads.Count == 0)
@@ -62,7 +124,12 @@ public class ChatClient
 
     public async Task<IEnumerable<ChatThread>> LoadThreadsAsync()
     {
-        var threads = await _rpc.Chat.GetThreadsAsync();
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
+        var threads = await _hub.GetThreadsAsync();
 
         _threads.Clear();
 
@@ -74,9 +141,14 @@ public class ChatClient
 
     public async Task<IEnumerable<User>> GetUsersAsync()
     {
-        return await _rpc.Chat.GetUsersAsync();
-    }
+        await EnsureConnectedAsync();
 
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
+        return await _hub.GetUsersAsync();
+    }
+    
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
     {
         if (_threads.TryGetValue(threadId, out var thread))
@@ -103,13 +175,43 @@ public class ChatClient
 
     public async Task SendMessageAsync(Guid threadId, string message)
     {
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
         if (_threads.TryGetValue(threadId, out var thread))
-            await _rpc.Chat.SendMessageAsync(thread.Id, message);
+            await _hub.SendMessageAsync(thread.Id, message);
     }
 
     public async Task UpdatedReadStatus(Guid threadId)
     {
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
         if (_threads.TryGetValue(threadId, out var thread))
-            await _rpc.Chat.UpdateReadStatusAsync(thread.Id);
+            await _hub.UpdateReadStatusAsync(thread.Id);
+    }
+
+    public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int count)
+    {
+        await EnsureConnectedAsync();
+        
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+        
+        return await _hub.GetMessagesAsync(threadId, cursor, count);
+    }
+
+    public async Task<int> GetUnreadMessageCountAsync(Guid threadId)
+    {
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
+        return await _hub.GetUnreadMessageCountAsync(threadId);
     }
 }

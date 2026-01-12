@@ -1,0 +1,12 @@
+$window-drag-area-height: 37px;
+$cover-hover-scale: 1.2;
+$cover-aspect-ratio: 2 / 3;
+$cover-max-width: 150px;
+$cover-max-height: $cover-aspect-ratio * $cover-max-width;
+$cover-hover-width: $cover-max-width * $cover-hover-scale;
+$cover-hover-height: $cover-max-height * $cover-hover-scale;
+$cover-vertical-padding: ($cover-hover-height - $cover-max-height) / 2;
+$cover-horizontal-padding: ($cover-hover-width - $cover-max-width) / 2;
+$cover-gap: 16px;
+$hero-aspect-ratio: 8 / 3;
+$hero-max-height: 40vh;

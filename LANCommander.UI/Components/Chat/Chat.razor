@@ -1,24 +1,24 @@
 @using LANCommander.SDK.Models
 @using LANCommander.SDK.Services
-@inject ChatClient ChatClient
+@inject IChatClient ChatClient
 @inject ModalService ModalService
 @namespace LANCommander.UI.Components
 
-<Button OnClick="StartThread">New Thread</Button>
-
-<SplitPane>
-    <Pane>
-        <ChatList Threads="_threads" />
-    </Pane>
-    <Pane>
-        <ChatThread Id="_currentThreadId" />
-    </Pane>
-</SplitPane>
+<Flex Class="chat">
+    <Flex Direction="FlexDirection.Vertical" Class="chat-list">
+        <Button OnClick="StartThread">New Thread</Button>
+            
+        <Divider />
+            
+        <ChatList Threads="_threads" @bind-SelectedThread="_thread"/>
+    </Flex>
+    
+    <ChatThread Id="_thread?.Id" />
+</Flex>
 
 @code {
     IEnumerable<SDK.Models.ChatThread> _threads = [];
-
-    Guid _currentThreadId;
+    SDK.Models.ChatThread? _thread;
     
     protected override async Task OnInitializedAsync()
     {
@@ -40,16 +40,12 @@
 
         modalRef.OnOk = async (users) =>
         {
-            _currentThreadId = await ChatClient.StartThreadAsync(users.Select(u => u.Id.ToString()));
-
+            var threadId = await ChatClient.StartThreadAsync(users.Select(u => u.Id.ToString()));
+            
+            _thread = await ChatClient.GetThreadAsync(threadId);
             _threads = await ChatClient.GetThreadsAsync();
 
             await InvokeAsync(StateHasChanged);
         };
-    }
-    
-    async Task OpenThread(Guid threadId)
-    {
-        _currentThreadId = threadId;
     }
 }

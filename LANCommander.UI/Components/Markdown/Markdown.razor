@@ -1,0 +1,10 @@
+@namespace LANCommander.UI.Components
+
+@if (!String.IsNullOrWhiteSpace(Content))
+{
+    @((MarkupString)@Markdig.Markdown.ToHtml(Content))
+}
+
+@code {
+    [Parameter] public string? Content { get; set; }
+}

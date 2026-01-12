@@ -1,0 +1,15 @@
+.checkbox-button-group {
+    width: 100%;
+
+    .ant-btn {
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
+
+        span:not(.anticon) {
+            flex-grow: 1;
+            text-align: left;
+            margin-left: 0;
+        }
+    }
+}

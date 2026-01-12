@@ -1,32 +1,37 @@
 @using LANCommander.SDK.Services
+@using LANCommander.SDK.Models
 @namespace LANCommander.UI.Components
-@inject RpcClient RpcClient
+@inject IChatClient ChatClient
+@implements IAsyncDisposable
 
-<div class="chat-list-thread @_class" @onclick="OnClick">
-    <div class="chat-list-thread-avatar">
-        @if (Thread.Participants.Count == 2)
-        {
-            <Badge Count="_unreadCount" OverflowCount="99">
+<MouseArea Cursor="Cursors.Pointer" OnClick="OnClick" Class="@_cssClass">
+    <Flex Align="FlexAlign.Center" Gap="FlexGap.Small">
+        <div class="chat-list-thread-avatar">
+            @if (Thread.Participants.Count == 2)
+            {
                 <SafeAvatar
                     Shape="AvatarShape.Square"
                     Size="AvatarSize.Large"
                     Username="@Thread.Participants.First().Name" />
-            </Badge>
-        }
-        else
-        {
-            <Badge Count="_unreadCount" OverflowCount="99">
+            }
+            else
+            {
                 <SafeAvatarGroup
                     Shape="AvatarShape.Square"
                     Size="AvatarSize.Large"
                     Usernames="@Thread.Participants.Select(p => p.Name)" />
-            </Badge>
-        }
-    </div>
-    <div class="chat-list-thread-title">
-        @Thread.Title
-    </div>
-</div>
+            }
+        </div>
+        
+        <div class="chat-list-thread-title">
+            @Thread.Title
+        </div>
+        
+        <div class="chat-list-thread-unread">
+            <Badge Count="_unreadCount" OverflowCount="99" />
+        </div>
+    </Flex>
+</MouseArea>
 
 @code {
     [Parameter] public required SDK.Models.ChatThread Thread { get; set; }
@@ -34,20 +39,86 @@
     [Parameter] public bool Active { get; set; }
 
     int _unreadCount = 0;
-    string _class = String.Empty;
+    string _cssClass = string.Empty;
+    bool _isSubscribed = false;
+
+    bool _previousActive = false;
 
     protected override async Task OnParametersSetAsync()
     {
-        _unreadCount = await RpcClient.Chat.GetUnreadMessageCountAsync(Thread.Id);
+        await RefreshUnreadCountAsync();
         
-        _class = new ClassBuilder()
+        // Refresh unread count when thread becomes active (read status may have been updated)
+        if (Active && !_previousActive)
+        {
+            await RefreshUnreadCountAsync();
+        }
+        _previousActive = Active;
+        
+        _cssClass = new ClassBuilder()
+            .Add("chat-list-thread")
             .If(() => Active, "chat-list-thread-active")
             .Build();
+        
+        // Subscribe to message events if not already subscribed
+        if (!_isSubscribed)
+        {
+            Thread.OnMessageReceivedAsync = OnMessageReceivedAsync;
+            Thread.OnMessagesReceivedAsync = OnMessagesReceivedAsync;
+            _isSubscribed = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Refresh unread count when component becomes active (read status may have changed)
+        if (Active && firstRender)
+        {
+            await RefreshUnreadCountAsync();
+        }
+    }
+
+    async Task OnMessageReceivedAsync(SDK.Models.ChatMessage message)
+    {
+        // Update unread count when a new message is received
+        await RefreshUnreadCountAsync();
+    }
+
+    async Task OnMessagesReceivedAsync(IEnumerable<SDK.Models.ChatMessage> messages)
+    {
+        // Update unread count when messages are received
+        await RefreshUnreadCountAsync();
+    }
+
+    async Task RefreshUnreadCountAsync()
+    {
+        var newCount = await ChatClient.GetUnreadMessageCountAsync(Thread.Id);
+        
+        if (newCount != _unreadCount)
+        {
+            _unreadCount = newCount;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     async Task OnClick(MouseEventArgs args)
     {
         if (OnSelected.HasDelegate)
             await OnSelected.InvokeAsync(Thread);
+        
+        // Refresh unread count when thread is selected (read status may have been updated)
+        await RefreshUnreadCountAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isSubscribed)
+        {
+            Thread.OnMessageReceivedAsync -= OnMessageReceivedAsync;
+            Thread.OnMessagesReceivedAsync -= OnMessagesReceivedAsync;
+            _isSubscribed = false;
+        }
+        
+        await Task.CompletedTask;
     }
 }

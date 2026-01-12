@@ -1,0 +1,54 @@
+.game-details {
+    width: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.game-hero {
+    position: relative;
+    aspect-ratio: 8/3;
+
+    h1 {
+        position: absolute;
+        left: 32px;
+        bottom: 32px;
+        margin-bottom: 0;
+        z-index: 200;
+        font-size: 2rem;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 128px;
+        background: linear-gradient(0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+        z-index: 100;
+    }
+}
+
+.game-details-background {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.game-details-logo {
+    position: absolute;
+    left: 48px;
+    bottom: 64px;
+    width: 512px;
+    height: 512px;
+    object-fit: contain;
+    object-position: bottom left;
+    max-width: 33%;
+    max-height: 50%;
+    z-index: 200;
+}
+
+.game-info {
+    padding-left: 16px;
+    padding-right: 16px;
+}

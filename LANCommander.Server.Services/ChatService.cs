@@ -1,8 +1,13 @@
 ﻿using System.Collections.Concurrent;
-using LANCommander.Server.Data.Models;
+using AutoMapper;
+using LANCommander.SDK.Models;
+using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using ChatMessage = LANCommander.Server.Data.Models.ChatMessage;
+using ChatThread = LANCommander.Server.Data.Models.ChatThread;
+using User = LANCommander.Server.Data.Models.User;
 
 namespace LANCommander.Server.Services
 {
@@ -10,6 +15,7 @@ namespace LANCommander.Server.Services
         ILogger<ChatService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
+        IMapper mapper,
         ChatMessageService chatMessageService,
         ChatThreadService chatThreadService,
         ChatThreadReadStatusService chatThreadReadStatusService,
@@ -62,18 +68,10 @@ namespace LANCommander.Server.Services
 
             try
             {
-                var current = await cache.TryGetAsync<List<ChatMessage>>(cacheKey);
-                var messages = current.HasValue
-                    ? new List<ChatMessage>(current.Value)
-                    : new List<ChatMessage>(capacity: _maxCachedMessages);
+                var current = await cache.GetChatThreadAsync(threadId);
 
-                messages.RemoveAll(m => m.Id == message.Id);
-                messages.Add(message);
-
-                if (messages.Count > _maxCachedMessages)
-                    messages.RemoveRange(0, messages.Count - _maxCachedMessages);
-
-                await cache.SetAsync(cacheKey, messages);
+                if (current != null)
+                    await current.MessageReceivedAsync(mapper.Map<SDK.Models.ChatMessage>(message));
             }
             finally
             {
@@ -83,27 +81,89 @@ namespace LANCommander.Server.Services
             return message;
         }
 
-        public async Task<List<ChatMessage>> GetMessagesAsync(Guid threadId)
+        public async Task<InfiniteResponse<SDK.Models.ChatMessage>> GetMessagesAsync(Guid threadId, int? count = 10, Guid? cursor = null)
         {
-            var cacheKey = ThreadCacheKey(threadId);
-
-            var messages = await cache.GetOrSetAsync(cacheKey, async _ =>
+            var pageSize = Math.Max(1, count.GetValueOrDefault(10));
+            DateTime? createdBefore = null;
+            
+            // If cursor is provided, use it to find the boundary for loading older messages
+            if (cursor.HasValue && cursor.Value != Guid.Empty)
             {
-                var dbMessages = await chatMessageService.Query(q =>
+                var cursorMessage = await chatMessageService.GetAsync(cursor.Value);
+                
+                // Validate cursor message exists and belongs to this thread
+                if (cursorMessage != null && cursorMessage.ThreadId == threadId)
+                {
+                    createdBefore = cursorMessage.CreatedOn;
+                }
+                else
+                {
+                    // Invalid cursor - return empty result
+                    logger.LogWarning("Invalid cursor message {CursorId} for thread {ThreadId}", cursor.Value, threadId);
+                    return new InfiniteResponse<SDK.Models.ChatMessage>
+                    {
+                        Items = [],
+                        HasMore = false,
+                    };
+                }
+            }
+            
+            // Load messages older than the cursor (or newest messages if no cursor)
+            var messages = await chatMessageService.Query(q =>
+            {
+                var query = q
+                    .Include(m => m.CreatedBy)
+                    .Where(m => m.ThreadId == threadId);
+                
+                // Apply cursor filter if provided
+                if (createdBefore.HasValue)
+                {
+                    query = query.Where(m => m.CreatedOn < createdBefore.Value);
+                }
+                
+                return query
+                    .OrderByDescending(m => m.CreatedOn)
+                    .Take(pageSize);
+            }).GetAsync();
+
+            var messageList = messages.ToList();
+            bool hasMore = false;
+
+            // Check if there are more older messages beyond what we just loaded
+            if (messageList.Count > 0)
+            {
+                // Use the oldest message in the batch as the boundary for checking if more exist
+                var oldestMessage = messageList[messageList.Count - 1];
+                
+                hasMore = await chatMessageService.Query(q =>
                 {
                     return q
-                        .OrderByDescending(m => m.CreatedOn)
-                        .Take(_maxCachedMessages);
-                }).GetAsync();
+                        .Where(m => m.ThreadId == threadId)
+                        .Where(m => m.CreatedOn < oldestMessage.CreatedOn);
+                }).AnyAsync();
+            }
+            else if (!createdBefore.HasValue)
+            {
+                // No cursor and no messages returned - check if any messages exist at all
+                hasMore = await chatMessageService.Query(q =>
+                {
+                    return q.Where(m => m.ThreadId == threadId);
+                }).AnyAsync();
+            }
+            // If we had a cursor but got no results, there are no more older messages
 
-                return dbMessages.Reverse().ToList();
-            });
-
-            return messages;
+            return new InfiniteResponse<SDK.Models.ChatMessage>
+            {
+                Items = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(messageList),
+                HasMore = hasMore,
+            };
         }
 
         public async Task<ChatThread> GetThreadAsync(Guid threadId)
-            => await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
+            => await chatThreadService
+                .Include(t => t.Messages)
+                .Include(t => t.Participants)
+                .GetAsync(threadId);
 
         public async Task<List<ChatThread>> GetThreadsAsync(Guid userId)
         {
@@ -154,12 +214,9 @@ namespace LANCommander.Server.Services
 
         public async Task<int> GetUnreadMessageCountAsync(Guid threadId, Guid userId)
         {
-            var lastRead = await chatThreadReadStatusService.GetLastReadAsync(threadId, userId);
+            var lastReadMessageId = await chatThreadReadStatusService.GetLastReadMessageIdAsync(threadId, userId);
 
-            if (lastRead == null)
-                return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastRead.GetValueOrDefault());
-
-            return 0;
+            return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastReadMessageId);
         }
     }
 }

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace LANCommander.Launcher.UI.Components;
+namespace LANCommander.Launcher.UI;
 
 public partial class RedirectToRoute : ComponentBase
 {

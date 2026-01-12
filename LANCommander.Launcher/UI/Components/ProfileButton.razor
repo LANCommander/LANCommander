@@ -1,14 +1,12 @@
 ﻿@using LANCommander.Launcher.Data.Models
-@using LANCommander.Launcher.Models
-@using LANCommander.Launcher.Settings
-@using LANCommander.SDK.Services
+@namespace LANCommander.Launcher.UI
 @inject UserService UserService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject LocalizationService LocalizationService
-@inject SDK.Client Client
+@inject ISettingsProvider SettingsProvider
 @inject IConnectionClient ConnectionClient
 @inject ILogger<ProfileButton> Logger
 
@@ -22,7 +20,7 @@
                 @LocalizationService.GetString("Settings")
             </MenuItem>
 
-            @if (!Client.Settings.CurrentValue.Authentication.OfflineModeEnabled)
+            @if (!SettingsProvider.CurrentValue.Authentication.OfflineModeEnabled)
             {
                 <MenuItem OnClick="SwitchToOfflineMode">
                     @LocalizationService.GetString("SwitchToOfflineMode")
@@ -50,7 +48,7 @@
 @code {
     User User;
     Guid AvatarId = Guid.Empty;
-    string Alias = Settings.DEFAULT_GAME_USERNAME;
+    string Alias = SDK.Models.Settings.DEFAULT_GAME_USERNAME;
 
     protected override async Task OnInitializedAsync()
     {
@@ -62,7 +60,7 @@
             User = await UserService.GetCurrentUser();
 
             AvatarId = User?.Avatar?.Id ?? Guid.Empty;
-            Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? Settings.DEFAULT_GAME_USERNAME : User.Alias;
+            Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME : User.Alias;
         };
 
         if (ConnectionClient.IsOfflineMode())

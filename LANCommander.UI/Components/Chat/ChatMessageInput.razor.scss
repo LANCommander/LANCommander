@@ -1,0 +1,10 @@
+.chat-message-input {
+    flex: 0 0 auto;
+    
+    .EasyMDEContainer .CodeMirror {
+        margin: .5em;
+        border: none;
+        border-radius: 0;
+        background: #1f1f1f;
+    }
+}

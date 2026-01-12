@@ -1,71 +1,51 @@
 ﻿@using LANCommander.Launcher.Services.PowerShell
 @using XtermBlazor
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
+@namespace LANCommander.Launcher.UI
 @inject ScriptDebugger Debugger
 
 <div class="terminal @(Visible ? "" : "hidden")">
-    <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+    <Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" />
 </div>
 
 @code {
-    private bool Visible { get; set; } = false;
-    private Xterm Terminal;
-    private TaskCompletionSource<string> InputTaskCompletionSource;
+    private bool Visible { get; set; }
+    private Terminal? _terminal;
 
-    private TerminalOptions _options = new TerminalOptions
+    private TerminalOptions _options = new()
     {
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
     };
 
-    private HashSet<string> Addons = new HashSet<string>()
+    protected override void OnInitialized()
     {
-        "readline",
-        "addon-fit"
-    };
-
-    protected override async Task OnInitializedAsync()
-    {
-        Debugger.OnDebugStart = async (ps) =>
+        Debugger.OnDebugStart = async _ =>
         {
-            Terminal?.Clear();
+            if (_terminal is null)
+                return;
+            
+            await _terminal.Clear();
             Visible = true;
             await InvokeAsync(StateHasChanged);
 
-            await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+            await _terminal.FitAsync();
         };
 
         Debugger.OnOutput = async (level, message) =>
         {
-            switch (level)
-            {
-                case LogLevel.Error:
-                    await Terminal.WriteLine($"\x1b[0;31m{message}");
-                    break;
-
-                case LogLevel.Warning:
-                    await Terminal.WriteLine($"\x1b[0;33m{message}");
-                    break;
-
-                case LogLevel.Debug:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
-
-                case LogLevel.Trace:
-                    await Terminal.WriteLine($"\x1b[0;36m{message}");
-                    break;
-
-                case LogLevel.Information:
-                    await Terminal.WriteLine($"\x1b[0;37m{message}");
-                    break;
-            }
+            if (_terminal is not null)
+                await _terminal.WriteLine(message, level);
         };
 
-        Debugger.OnDebugBreak = async (context) =>
+        Debugger.OnDebugBreak = async context =>
         {
+            if (_terminal is null)
+                return;
+            
             while (true)
             {
-                var input = await ReadLine();
+                var input = await _terminal.ReadLineAsync();
 
                 if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
                     break;
@@ -83,11 +63,7 @@
 
     private async Task OnFirstRender()
     {
-        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
-    }
-
-    private async Task<string> ReadLine()
-    {
-        return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
+        if (_terminal is not null)
+            await _terminal.FitAsync();
     }
 }

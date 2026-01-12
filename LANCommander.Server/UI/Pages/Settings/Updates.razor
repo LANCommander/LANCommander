@@ -62,7 +62,7 @@
                         <a href="@release.HtmlUrl" target="_blank">View Release</a>
                     </Extra>
                     <Body>
-                    @((MarkupString)Markdown.ToHtml(release.Body))
+                        <Markdown Content="@release.Body" />
                     </Body>
                 </Card>
             }

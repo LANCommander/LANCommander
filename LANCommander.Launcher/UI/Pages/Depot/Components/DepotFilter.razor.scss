@@ -1,0 +1,14 @@
+.depot-filter {
+    position: relative;
+    z-index: 500;
+    width: 320px;
+    margin-top: 74px;
+    flex-shrink: 0;
+    padding: 16px;
+    overflow-y: scroll;
+    background-color: #141414;
+
+    .ant-form-item {
+        margin-bottom: 16px;
+    }
+}

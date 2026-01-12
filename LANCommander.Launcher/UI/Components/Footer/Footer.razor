@@ -1,0 +1,98 @@
+﻿@using LANCommander.Launcher.Models
+@namespace LANCommander.Launcher.UI
+@inject InstallService InstallService
+@inject NavigationManager NavigationManager
+@inject LocalizationService LocalizationService
+@inject IJSRuntime JS
+
+<Flex Justify="FlexJustify.Center" Align="FlexAlign.Center" Gap="FlexGap.Small" Class="footer">
+    <div style="flex: 1;">
+        @if (NavigationManager.Uri.Contains("/Depot"))
+        {
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/Library"))">@LocalizationService.GetString("Library")</Button>
+        }
+        else
+        {
+            if (true)
+            {
+                <ConnectionStateView>
+                    <Online>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">@LocalizationService.GetString("Depot")</Button>
+                    </Online>
+                    <Offline>
+                        <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")" Placement="Placement.TopLeft">
+                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>@LocalizationService.GetString("Depot")</Button>
+                        </Tooltip>
+                    </Offline>
+                </ConnectionStateView>
+            }
+        }
+    </div>
+
+    <ConnectionStateView>
+        <Online>
+            @if (InstallService.Queue.Any(qi => qi.State))
+            {
+                <Flex Align="FlexAlign.Center" Style="flex-shrink: 0" Class="downloader">
+                    <div class="downloader" @onclick="ShowDownloadQueue">
+                        <CurrentDownloadItem ShowIcon="true" @bind-CurrentQueueItem="_currentQueueItem"/>
+                    </div>
+                    
+                    <Button OnClick="Cancel" Type="ButtonType.Text" Size="ButtonSize.Small" Danger Icon="@IconType.Outline.Close"/>
+                </Flex>
+            }
+            else
+            {
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">@LocalizationService.GetString("Downloads")</Button>
+            }
+        </Online>
+        <Offline>
+            <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")" Placement="Placement.TopLeft">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Downloads")</Button>
+            </Tooltip>
+        </Offline>
+    </ConnectionStateView>
+
+    <div style="flex: 1; text-align:  right;">
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Message" OnClick="OpenChatWindow">@LocalizationService.GetString("Chat")</Button>
+    </div>
+</Flex>
+
+<DownloadQueue @ref="DownloadQueue" />
+
+@code {
+    [CascadingParameter] public bool Connected { get; set; }
+
+    bool DownloadQueueVisible = false;
+    
+    IInstallQueueItem _currentQueueItem { get; set; }
+
+    DownloadQueue DownloadQueue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        InstallService.OnQueueChanged += async () => { await InvokeAsync(StateHasChanged); };
+
+        NavigationManager.LocationChanged += LocationChanged;
+    }
+
+    async void LocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Cancel()
+    {
+        await InstallService.CancelInstallAsync(_currentQueueItem.Id);
+    }
+
+    async Task ShowDownloadQueue()
+    {
+        await DownloadQueue.Show();
+    }
+
+    async Task OpenChatWindow()
+    {
+        await JS.InvokeVoidAsync("window.external.sendMessage", "openChat");
+    }
+}

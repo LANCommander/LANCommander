@@ -1,10 +1,11 @@
 @namespace LANCommander.UI.Components
 
-<p>
-    @Content
-</p>
+<div class="chat-message" id="@Id">
+    <Markdown Content="@Content" />
+</div>
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Content { get; set; }
+    [Parameter] public DateTimeOffset SentOn { get; set; }
 }

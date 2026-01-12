@@ -1,11 +1,9 @@
 ﻿@page "/Settings"
 @using System.Globalization
-@using LANCommander.Launcher.Models
-@using LANCommander.SDK.Providers
 @layout AuthenticatedLayout
 @inject NavigationManager NavigationManager
 @inject UpdateService UpdateService
-@inject SDK.Client Client
+
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 @inject LocalizationService LocalizationService
@@ -117,9 +115,6 @@
         try
         {
             SettingsProvider.CurrentValue.Games.InstallDirectories = _installDirectories.Where(d => !String.IsNullOrWhiteSpace(d.Path)).Select(d => d.Path).ToArray();
-
-            // Client.DefaultInstallDirectory = _settings.Games.InstallDirectories.First();
-            Client.Scripts.Debug = SettingsProvider.CurrentValue.Debug.EnableScriptDebugging;
 
             SettingsProvider.Update(s =>
             {

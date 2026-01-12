@@ -1,15 +1,12 @@
 @using LANCommander.Launcher.Models
-@using LANCommander.Launcher.Settings
-@using LANCommander.SDK
-@using LANCommander.SDK.Services
 @using Button = AntDesign.Button
 @using ButtonType = AntDesign.ButtonType
 @using Tooltip = AntDesign.Tooltip
-@namespace LANCommander.Launcher.UI.Components
+@namespace LANCommander.Launcher.UI
 @inject LocalizationService LocalizationService
 @inject InstallService InstallService
 @inject GameClient GameClient
-@inject SettingsProvider<Settings> SettingsProvider
+@inject ISettingsProvider SettingsProvider
 @inject ModalService ModalService
 
 <div class="game-action-bar">

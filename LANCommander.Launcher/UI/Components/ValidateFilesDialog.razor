@@ -1,8 +1,7 @@
 ﻿@using LANCommander.SDK.Models
+@namespace LANCommander.Launcher.UI
 @inherits FeedbackComponent<Data.Models.Game>
-@inject SaveService SaveService
-@inject SDK.Client Client
-@inject IMessageService MessageService
+@inject GameClient GameClient
 @inject LocalizationService LocalizationService
 
 <Table DataSource="Conflicts" Resizable Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected" Loading="Loading">
@@ -57,7 +56,7 @@
         var localAddons = Options.DependentGames?.Where(g => g.Installed).ToArray() ?? [];
         GameTitleMap = localAddons.ToDictionary(x => x.Id, x => x.Title);
 
-        Conflicts = await Client.Games.ValidateFilesAsync(Options.InstallDirectory, Options.Id);
+        Conflicts = await GameClient.ValidateFilesAsync(Options.InstallDirectory, Options.Id);
 
         Loading = false;
     }
@@ -68,7 +67,7 @@
         StateHasChanged();
         await Task.Yield();
 
-        await Client.Games.DownloadFilesAsync(Options.InstallDirectory, Selected.Select(e => (e.GameId ?? Options.Id, e.FullName)).ToArray());
+        await GameClient.DownloadFilesAsync(Options.InstallDirectory, Selected.Select(e => (e.GameId ?? Options.Id, e.FullName)).ToArray());
 
         Loading = false;
         StateHasChanged();

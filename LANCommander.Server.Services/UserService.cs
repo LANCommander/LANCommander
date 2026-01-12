@@ -258,6 +258,29 @@ namespace LANCommander.Server.Services
 
         }
 
+        public virtual async Task<bool> AnyAsync()
+        {
+            try
+            {
+                using var context = await ContextFactory.CreateDbContextAsync();
+
+                var queryable = context.Set<User>().AsQueryable();
+
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+
+                return await queryable.AnyAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+
         public async Task<ICollection<User>> GetAsync()
         {
             try

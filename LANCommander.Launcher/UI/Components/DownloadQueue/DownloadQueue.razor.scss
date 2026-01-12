@@ -1,0 +1,57 @@
+.download-queue {
+    top: 100%;
+    transition: .3s all;
+    z-index: 9999 !important;
+
+    &.ant-drawer-open {
+        top: 0;
+    }
+
+    .ant-drawer-mask {
+        position: fixed;
+    }
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        transform: none !important;
+    }
+
+    .queue-item {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+
+        + .queue-item {
+            margin-top: 16px;
+        }
+
+        &-info {
+            flex-grow: 1;
+
+            h3 {
+                font-size: 1.4rem;
+            }
+        }
+
+        &-cover {
+            max-height: 128px;
+        }
+
+        &-current-download {
+            flex-grow: 1;
+            min-width: 300px;
+        }
+
+        + h2 {
+            margin-top: 32px;
+        }
+    }
+
+    .ant-drawer-close {
+        position: absolute;
+        top: 4px;
+        right: 0;
+        padding: 4px;
+        font-size: 24px;
+    }
+}

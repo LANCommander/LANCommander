@@ -3,13 +3,13 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-    entry: ['./Main.ts', './_Imports.razor.scss'], // Adjust the path if your index.js is located elsewhere
+    entry: ['./_Imports.razor.ts'], // Adjust the path if your index.js is located elsewhere
     module: {
         rules: [
             {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
-                exclude: /nodemodules/,
+                exclude: /node_modules/,
             },
             {
                 test: /\.(css)$/,
@@ -43,6 +43,14 @@ module.exports = {
     output: {
         filename: 'bundle.js', // The output file
         path: path.resolve(__dirname, 'wwwroot'), // The output directory
+        module: true,
+        library: {
+            type: 'module',
+        },
+        chunkFormat: 'module',
+    },
+    experiments: {
+        outputModule: true,
     },
     plugins: [
         new MiniCssExtractPlugin({

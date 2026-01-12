@@ -1,9 +1,10 @@
 @using LANCommander.Launcher.Models
 @using LANCommander.SDK.Models
 @using ListItem = AntDesign.ListItem
-@namespace LANCommander.Launcher.UI.Components
+@namespace LANCommander.Launcher.UI
+@inject IConnectionClient ConnectionClient
+@inject BeaconClient BeaconClient
 @inject NavigationManager NavigationManager
-@inject SDK.Client Client
 @inject AuthenticationService AuthenticationService
 @inject LocalizationService LocalizationService
 
@@ -83,12 +84,12 @@
     {
         IsInitializing = true;
 
-        ServerAddress = Client.Connection.GetServerAddress();
+        ServerAddress = ConnectionClient.GetServerAddress();
 
         Connecting = true;
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
 
-        Client.Beacon.OnBeaconResponse += OnBeaconResponse;
+        BeaconClient.OnBeaconResponse += OnBeaconResponse;
 
         if (!OfflineModeAvailable)
         {
@@ -109,7 +110,7 @@
 
     async Task SelectServer(Uri serverAddress)
     {
-        await Client.Beacon.StopProbeAsync();
+        await BeaconClient.StopProbeAsync();
 
         BeaconActive = false;
 
@@ -143,9 +144,9 @@
                 DiscoveryToken = new();
             }
 
-            await Client.Beacon.StartProbeAsync(cancellationToken: DiscoveryToken.Token);
+            await BeaconClient.StartProbeAsync(cancellationToken: DiscoveryToken.Token);
             await Task.Delay(10000, DiscoveryToken.Token);
-            await Client.Beacon.StopProbeAsync();
+            await BeaconClient.StopProbeAsync();
         }
         catch (OperationCanceledException)
         {
@@ -153,7 +154,7 @@
         }
         finally
         {
-            Client.Beacon.CleanupProbe();
+            BeaconClient.CleanupProbe();
             BeaconActive = false;
             await InvokeAsync(StateHasChanged);
         }

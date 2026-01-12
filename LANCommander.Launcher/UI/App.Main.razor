@@ -1,8 +1,10 @@
-﻿<Router AppAssembly="@typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Windows.MainWindow)" />
-    </Found>
-    <NotFound>
-        <RedirectToRoute Route="/Library" />
-    </NotFound>
-</Router>
+﻿<div class="main-window">
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainWindow)" />
+        </Found>
+        <NotFound>
+            <RedirectToRoute Route="/Library" />
+        </NotFound>
+    </Router>
+</div>

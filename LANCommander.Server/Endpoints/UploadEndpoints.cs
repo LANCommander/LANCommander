@@ -40,6 +40,11 @@ public static class UploadEndpoints
 
         await cache.SetAsync($"ChunkArchivePath/{archive.ObjectKey}", archivePath, TimeSpan.FromHours(6));
 
+        var archiveDirectory = Path.GetDirectoryName(archivePath);
+        
+        if (!string.IsNullOrEmpty(archiveDirectory) && !Directory.Exists(archiveDirectory))
+            Directory.CreateDirectory(archiveDirectory);
+
         if (!File.Exists(archivePath))
             File.Create(archivePath).Close();
         else

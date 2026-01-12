@@ -1,13 +1,13 @@
 ﻿@using LANCommander.Launcher.Data.Models
-@using LANCommander.Launcher.Models
 @using LANCommander.SDK.Enums
 @using LANCommander.SDK.Extensions
-@namespace LANCommander.Launcher.UI.Components
+@namespace LANCommander.Launcher.UI
 @inject LibraryService LibraryService
 @inject GameService GameService
 @inject InstallService InstallService
-@inject ImportService ImportService
-@inject SDK.Client Client
+@inject IConnectionClient ConnectionClient
+@inject GameClient GameClient
+@inject ISettingsProvider SettingsProvider
 @inject ILogger<DepotGameDetails> Logger
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -67,7 +67,7 @@
                                     }
                                 </SpaceItem>
 
-                                @if (!IsInstalled && Client.Connection.IsConnected())
+                                @if (!IsInstalled && ConnectionClient.IsConnected())
                                 {
                                     <SpaceItem>
                                         <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
@@ -173,7 +173,7 @@
         {
             if (ItemId != Guid.Empty)
             {
-                SelectedGame = await Client.Games.GetAsync(ItemId);
+                SelectedGame = await GameClient.GetAsync(ItemId);
 
                 var game = await GameService.GetAsync(ItemId);
 
@@ -233,7 +233,7 @@
 
         await Hide();
 
-        if (Client.Settings.CurrentValue.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(GameType.Expansion, GameType.Mod)) ?? false))
+        if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(GameType.Expansion, GameType.Mod)) ?? false))
         {
             var modalOptions = new ModalOptions()
             {

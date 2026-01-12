@@ -4,7 +4,6 @@ using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
-using Serilog;
 
 namespace LANCommander.Launcher.Startup;
 
@@ -12,8 +11,6 @@ public static class ApplicationSettings
 {
     public static PhotinoBlazorAppBuilder AddSettings(this PhotinoBlazorAppBuilder builder)
     {
-        Log.Debug("Loading settings file");
-        
         var configurationBuilder = new ConfigurationBuilder();
 
         var configuration = configurationBuilder.ReadFromFile<Settings.Settings>();
@@ -23,8 +20,6 @@ public static class ApplicationSettings
         
         builder.Services.Configure<Settings.Settings>(configuration);
         builder.Services.AddSingleton(refresher);
-        
-        Log.Debug("Validating settings");
 
         return builder;
     }

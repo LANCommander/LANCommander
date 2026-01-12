@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Data.Models;
 
+[PrimaryKey(nameof(ThreadId), nameof(UserId))]
 public class ChatThreadReadStatus
 {
     public Guid ThreadId { get; set; }
@@ -10,5 +12,7 @@ public class ChatThreadReadStatus
     public Guid UserId { get; set; }
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
-    public DateTime? LastReadOn { get; set; }
+    public Guid? LastReadMessageId { get; set; }
+    [ForeignKey(nameof(LastReadMessageId))]
+    public ChatMessage? LastReadMessage { get; set; }
 }

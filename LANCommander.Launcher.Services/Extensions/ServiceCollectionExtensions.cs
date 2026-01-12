@@ -12,8 +12,8 @@ namespace LANCommander.Launcher.Services.Extensions
 {
     public class LANCommanderOptions
     {
-        public ILogger Logger { get; set; }
-        public string ServerAddress { get; set; }
+        public ILogger? Logger { get; set; }
+        public string? ServerAddress { get; set; }
     }
 
     public static class ServiceCollectionExtensions
@@ -75,6 +75,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<PlatformImporter>();
             services.AddScoped<PublisherImporter>();
             services.AddScoped<TagImporter>();
+            services.AddScoped<MediaImporter>();
             #endregion
 
             return services;

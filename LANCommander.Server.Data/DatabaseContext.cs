@@ -15,24 +15,41 @@ namespace LANCommander.Server.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+            // Check if provider is already configured (e.g., by design-time factory)
+            // We check for the presence of database provider extensions
+            var hasSqliteExtension = optionsBuilder.Options.Extensions.Any(e => e.GetType().Name.Contains("Sqlite"));
+            var hasMySqlExtension = optionsBuilder.Options.Extensions.Any(e => e.GetType().Name.Contains("MySql"));
+            var hasNpgsqlExtension = optionsBuilder.Options.Extensions.Any(e => e.GetType().Name.Contains("Npgsql"));
+            var isProviderConfigured = hasSqliteExtension || hasMySqlExtension || hasNpgsqlExtension;
 
-            optionsBuilder.EnableDetailedErrors();
-            optionsBuilder.EnableSensitiveDataLogging();
-
-            switch (Provider)
+            if (!isProviderConfigured && Provider != DatabaseProvider.Unknown && !string.IsNullOrEmpty(ConnectionString))
             {
-                case DatabaseProvider.SQLite:
-                    optionsBuilder.UseSqlite(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
-                    break;
+                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
 
-                case DatabaseProvider.MySQL:
-                    optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
-                    break;
+                optionsBuilder.EnableDetailedErrors();
+                optionsBuilder.EnableSensitiveDataLogging();
 
-                case DatabaseProvider.PostgreSQL:
-                    optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
-                    break;
+                switch (Provider)
+                {
+                    case DatabaseProvider.SQLite:
+                        optionsBuilder.UseSqlite(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                        break;
+
+                    case DatabaseProvider.MySQL:
+                        optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        break;
+
+                    case DatabaseProvider.PostgreSQL:
+                        optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        break;
+                }
+            }
+            else
+            {
+                // Provider is already configured, but we still want to add interceptors and settings if not already added
+                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+                optionsBuilder.EnableDetailedErrors();
+                optionsBuilder.EnableSensitiveDataLogging();
             }
 
             base.OnConfiguring(optionsBuilder);
@@ -442,15 +459,26 @@ namespace LANCommander.Server.Data
             #region Chat Relationships
 
             builder.Entity<ChatThreadReadStatus>()
-                .HasNoKey();
+                .HasKey(rs => new { rs.ThreadId, rs.UserId });
             
             builder.Entity<ChatThreadReadStatus>()
                 .HasOne(rs => rs.Thread)
-                .WithMany();
+                .WithMany()
+                .HasForeignKey(rs => rs.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ChatThreadReadStatus>()
                 .HasOne(rs => rs.User)
-                .WithMany();
+                .WithMany()
+                .HasForeignKey(rs => rs.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ChatThreadReadStatus>()
+                .HasOne(rs => rs.LastReadMessage)
+                .WithMany()
+                .HasForeignKey(rs => rs.LastReadMessageId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
             #endregion
         }
 

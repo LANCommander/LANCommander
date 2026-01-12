@@ -8,8 +8,8 @@
     OptionLabelSelector="t => t.Name" />
 
 @code {
-    [Parameter] public BaseDatabaseService<TTaxonomy> DataService { get; set; }
-    [Parameter] public ICollection<TTaxonomy> Values { get; set; }
+    [Parameter] public required BaseDatabaseService<TTaxonomy> DataService { get; set; }
+    [Parameter] public required ICollection<TTaxonomy>? Values { get; set; }
     [Parameter] public EventCallback<ICollection<TTaxonomy>> ValuesChanged { get; set; }
 
     ICollection<TTaxonomy> _entities = new List<TTaxonomy>();
@@ -21,7 +21,10 @@
 
     async Task<TTaxonomy> Add(string name)
     {
-        var taxonomy = Activator.CreateInstance(typeof(TTaxonomy)) as TTaxonomy;
+        var taxonomy = (TTaxonomy?)Activator.CreateInstance(typeof(TTaxonomy));
+
+        if (taxonomy == null)
+            throw new InvalidOperationException($"Could not create instance of type {nameof(TTaxonomy)}");
 
         taxonomy.Name = name;
 

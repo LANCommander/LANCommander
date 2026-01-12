@@ -1,0 +1,123 @@
+﻿@namespace LANCommander.Launcher.UI
+@typeparam TItem
+
+<Flex Vertical Class="checkbox-button-group" Gap="FlexGap.Small">
+    @foreach (var item in Items)
+    {
+        if (SelectedKeys.Contains(item.Key))
+        {
+            if (ButtonSelectedTemplate != null)
+            {
+                @ButtonSelectedTemplate?.Invoke(item.DataItem)
+            }
+            else
+            {
+                <Button OnClick="() => Deselect(item)" Block @attributes="GetButtonAttributes(item.DataItem, true)">@item.Label</Button>
+            }
+        }
+        else
+        {
+            if (ButtonUnselectedTemplate != null)
+            {
+                @ButtonUnselectedTemplate?.Invoke(item.DataItem)
+            }
+            else
+            {
+                <Button OnClick="() => Select(item)" Block @attributes="GetButtonAttributes(item.DataItem, false)">@item.Label</Button>
+            }
+        }
+    }
+</Flex>
+
+@code {
+    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
+    [Parameter] public Func<TItem, object> KeySelector { get; set; }
+    [Parameter] public Func<TItem, string> LabelSelector { get; set; }
+    [Parameter] public Func<TItem, bool> DisableSelector { get; set; }
+    [Parameter] public IEnumerable<TItem> Selected { get; set; }
+    [Parameter] public EventCallback<IEnumerable<TItem>> SelectedChanged { get; set; }
+
+    [Parameter] public SpaceDirection Direction { get; set; } = SpaceDirection.Horizontal;
+
+    [Parameter] public string? IconSelected { get; set; } = IconType.Fill.CheckCircle;
+    [Parameter] public string? IconUnselected { get; set; } = null;
+
+    [Parameter] public (string key, object value)[] ButtonProps { get; set; } = [];
+    [Parameter] public (string key, object value)[] ButtonPropsSelected { get; set; } = [];
+    [Parameter] public (string key, object value)[] ButtonPropsUnselected { get; set; } = [];
+
+    [Parameter] public RenderFragment<TItem>? ButtonSelectedTemplate { get; set; }
+    [Parameter] public RenderFragment<TItem>? ButtonUnselectedTemplate { get; set; }
+
+    List<TItem> SelectedItems = new List<TItem>();
+    List<string> SelectedKeys = new List<string>();
+
+    IEnumerable<CheckboxButtonGroupItem<TItem>> Items { get; set; } = new List<CheckboxButtonGroupItem<TItem>>();
+
+    class CheckboxButtonGroupItem<T>
+    {
+        public string Key { get; set; }
+        public string Label { get; set; }
+        public bool Selected { get; set; }
+        public T DataItem { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Items = DataSource.Select(i => new CheckboxButtonGroupItem<TItem>
+        {
+            Key = KeySelector.Invoke(i).ToString(),
+            Label = LabelSelector.Invoke(i),
+            Selected = false,
+            DataItem = i
+        });
+
+        // Sync the incoming Selected parameter with internal state.
+        if (Selected != null)
+        {
+            SelectedKeys = Selected.Select(item => KeySelector.Invoke(item).ToString()).ToList();
+        }
+    }
+
+    private Dictionary<string, object> GetButtonAttributes(TItem item, bool selected)
+    {
+        var attributes = new Dictionary<string, object>();
+
+        string? icon = selected ? IconSelected : IconUnselected;
+        if (icon != null) attributes["Icon"] = icon;
+
+        foreach (var buttonprop in ButtonProps ?? []) 
+            attributes.TryAdd(buttonprop.key, buttonprop.value);
+
+        var props = selected ? ButtonPropsSelected : ButtonPropsUnselected;
+        foreach (var buttonprop in props ?? []) 
+            attributes.TryAdd(buttonprop.key, buttonprop.value);
+
+        if (DisableSelector?.Invoke(item) ?? false)
+            attributes.TryAdd("Disabled", true);
+
+        return attributes;
+    }
+
+    async Task Select(CheckboxButtonGroupItem<TItem> item)
+    {
+        SelectedKeys.Add(item.Key);
+
+        await UpdateSelected();
+    }
+
+    async Task Deselect(CheckboxButtonGroupItem<TItem> item)
+    {
+        SelectedKeys.Remove(item.Key);
+
+        await UpdateSelected();
+    }
+
+    async Task UpdateSelected()
+    {
+        Selected = Items.Where(i => SelectedKeys.Contains(i.Key)).Select(i => i.DataItem);
+
+        if (SelectedChanged.HasDelegate)
+            await SelectedChanged.InvokeAsync(Selected);
+    }
+}

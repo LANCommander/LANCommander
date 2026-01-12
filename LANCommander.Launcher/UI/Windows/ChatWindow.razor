@@ -1,11 +1,10 @@
-﻿@using LANCommander.Launcher.Settings
-@using Photino.Blazor.CustomWindow.Components
+﻿@using Photino.Blazor.CustomWindow.Components
 @inherits LayoutComponentBase
-@inject ProfileService ProfileService
+@namespace LANCommander.Launcher.UI
 @inject AuthenticationService AuthenticationService
+@inject AuthenticationClient AuthenticationClient
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
-@inject LANCommander.SDK.Client Client
 @inject IJSRuntime JS
 @inject LocalizationService LocalizationService
 
@@ -32,15 +31,13 @@
     </CustomWindow>
 
 @code {
-    Settings Settings = null;
-
     string RandomQuip = "";
 
     string[] _crashQuips;
 
     protected override async Task OnInitializedAsync()
     {
-        if (!await Client.Authentication.ValidateTokenAsync())
+        if (!await AuthenticationClient.ValidateTokenAsync())
         {
             await AuthenticationService.Login();
             

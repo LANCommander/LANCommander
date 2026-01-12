@@ -31,8 +31,6 @@
         <PackageReference Include="NetEscapades.Configuration.Yaml" />
         <PackageReference Include="PeanutButter.INI" />
         <PackageReference Include="Semver" />
-        <PackageReference Include="Serilog" />
-        <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="System.Management.Automation" />
         <PackageReference Include="YamlDotNet" />

@@ -1,60 +1,75 @@
 @using Microsoft.Extensions.Logging
+@using EasyMDE.Blazor
+@using LANCommander.SDK.Services
 @namespace LANCommander.UI.Components
 @inject ILogger<ChatMessageInput> Logger
+@inject IChatClient ChatClient
 
-<Form Model="_message">
-    <FormItem 
-        HasFeedback="_hasError" 
-        ValidateStatus="_validateStatus"
-        Help="@_errorMessage">
-        <TextArea 
-            @ref="_textArea"
-            Disabled="_sendingMessage"
-            MinRows="1"
-            AutoSize="true"
-            BindOnInput
-            OnPressEnter="SendMessage"
-            @bind-Value="context.Content">
-        </TextArea>
-    </FormItem>
-</Form>
+<EasyMdeEditor 
+    @bind-Value="_message"
+    Class="chat-message-input"
+    InterceptKeys="_keys"
+    OnKey="HandleKey"
+    ReadOnly="_sendingMessage"
+    Placeholder="@Placeholder"
+    Options="_options" />
 
 @code {
-    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
-    TextArea _textArea;
-
-    ChatMessage _message = new();
+    [Parameter] public Guid? ThreadId { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    
+    string _message = string.Empty;
     bool _sendingMessage;
 
-    string _errorMessage = String.Empty;
+    string _errorMessage = string.Empty;
     FormValidateStatus _validateStatus => _hasError ? FormValidateStatus.Error : FormValidateStatus.Default;
-    bool _hasError => !String.IsNullOrWhiteSpace(_errorMessage);
+    bool _hasError => !string.IsNullOrWhiteSpace(_errorMessage);
     
-    async Task SendMessage(PressEnterEventArgs args)
+    readonly EasyMdeOptions _options = new()
     {
-        if (!args.ShiftKey)
+        MinHeight = "0px",
+        Toolbar = EasyMdeToolbar.Disabled,
+        Status = EasyMdeStatus.Disabled,
+    };
+
+    readonly EasyMdeKeyRegistration[] _keys =
+    [
+        new() { Key = "Enter", NotifyDotNet = true },
+        new() { Key = "Enter", Ctrl = true, NotifyDotNet = true }
+    ];
+
+    async ValueTask<bool> HandleKey(EasyMdeKeyEvent e)
+    {
+        if (e.Ctrl && e.Key is "Enter")
+            return true; // allow newline
+
+        if (e.Key is "Enter")
+            await SendMessage();
+
+        return true;
+    }
+
+    async Task SendMessage()
+    {
+        if (_sendingMessage)
+            return;
+
+        _sendingMessage = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
         {
-            args.PreventLineBreak();
-            
-            _sendingMessage = true;
+            await ChatClient.SendMessageAsync(ThreadId.GetValueOrDefault(), _message);
 
-            try
-            {
-                if (OnSendMessage.HasDelegate)
-                    await OnSendMessage.InvokeAsync(_message.Content);
-                
-                _message.Content = String.Empty;
-            }
-            catch (Exception ex)
-            {
-                _errorMessage = "Could not send message";
-                
-                Logger.LogError(ex, "Failure sending message");
-            }
-
+            _message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failure sending message");
+        }
+        finally
+        {
             _sendingMessage = false;
-            
-            await Task.Yield();
             await InvokeAsync(StateHasChanged);
         }
     }

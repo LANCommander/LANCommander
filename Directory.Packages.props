@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageVersion Include="EasyMDE.Blazor" Version="1.0.4" />
+    <PackageVersion Include="Markdig" Version="0.44.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
   </ItemGroup>
   <ItemGroup Label="AutoMapper">
@@ -86,16 +88,6 @@
     <PackageVersion Include="Semver" Version="3.0.0" />
     <PackageVersion Include="SharpCompress" Version="0.40.0" />
     <PackageVersion Include="SteamWebAPI2" Version="4.4.1" />
-  </ItemGroup>
-  <ItemGroup Label="Logging">
-    <PackageVersion Include="Elastic.Serilog.Sinks" Version="8.12.3" />
-    <PackageVersion Include="Serilog" Version="4.3.0" />
-    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
-    <PackageVersion Include="Serilog.Sinks.AspNetCore.App.SignalR" Version="1.2.2" />
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup Label="Entity Framework Core">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />

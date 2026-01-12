@@ -1,9 +1,4 @@
-﻿using AntDesign.TableModels;
-using Microsoft.AspNetCore.Components;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Linq.Expressions;
-using System.Reflection;
+﻿using Microsoft.AspNetCore.Components;
 
 namespace LANCommander.Server.UI.Components
 {
@@ -18,8 +13,8 @@ namespace LANCommander.Server.UI.Components
         [CascadingParameter]
         public Dictionary<int, bool> ColumnVisibility { get; set; } = default!;
 
-        [CascadingParameter]
-        public List<string> Includes { get; set; } = new();
+        [CascadingParameter(Name = "Includes")]
+        public required List<string> Includes { get; set; }
 
         protected override void OnParametersSet()
         {

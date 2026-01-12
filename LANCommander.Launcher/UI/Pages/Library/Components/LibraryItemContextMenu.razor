@@ -1,0 +1,370 @@
+﻿@using LANCommander.Launcher.Data.Models
+@using LANCommander.SDK.Enums
+@using LANCommander.SDK.Helpers
+@namespace LANCommander.Launcher.UI
+@inject GameService GameService
+@inject UserService UserService
+@inject LibraryService LibraryService
+@inject InstallService InstallService
+@inject ModalService ModalService
+@inject MessageService MessageService
+@inject ILogger<LibraryItemContextMenu> Logger
+@inject IConnectionClient ConnectionClient
+@inject GameClient GameClient
+@inject ScriptClient ScriptClient
+@inject ISettingsProvider SettingsProvider
+@inject LocalizationService LocalizationService
+
+@if (GameActions != null && GameActions.Count() > 0)
+{
+    @foreach (var action in GameActions.OrderBy(a => a.SortOrder))
+    {
+        <MenuItem OnClick="() => Run(Game, action)" Class="@(action.IsPrimaryAction ? "primary-action" : "")">
+            @action.Name
+        </MenuItem>
+    }
+
+    <MenuDivider />
+}
+
+@if (Game.Installed)
+{
+    if (Game.Media != null && Game.Media.Any(m => m.Type == SDK.Enums.MediaType.Manual))
+    {
+        foreach (var manual in Game.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+        {
+            <MenuItem OnClick="() => OpenManual(manual)">
+                @(String.IsNullOrWhiteSpace(manual.Name) ? LocalizationService.GetString("Manual") : manual.Name)
+            </MenuItem>
+        }
+
+        <MenuDivider />
+    }
+
+    <MenuItem OnClick="() => OpenSaveManager()" Disabled="@ConnectionClient.IsOfflineMode()">
+        @LocalizationService.GetString("ManageSaves")
+    </MenuItem>
+
+    if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == GameType.Expansion || g.Type == GameType.Mod))
+    {
+        <MenuItem OnClick="() => Modify()" Disabled="@ConnectionClient.IsOfflineMode()">
+            @LocalizationService.GetString("Modify")
+        </MenuItem>
+    }
+
+    <MenuItem OnClick="() => BrowseFiles()">
+        @LocalizationService.GetString("BrowseFiles")
+    </MenuItem>
+    <MenuItem OnClick="() => ValidateFiles()" Disabled="@ConnectionClient.IsOfflineMode()">
+        @LocalizationService.GetString("ValidateFiles")
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="@ConnectionClient.IsOfflineMode()">
+        @LocalizationService.GetString("Remove")
+    </MenuItem>
+    <MenuItem OnClick="() => Uninstall()">
+        @LocalizationService.GetString("Uninstall")
+    </MenuItem>
+}
+else
+{
+    <MenuItem OnClick="() => Install()" Disabled="@ConnectionClient.IsOfflineMode()">
+        @LocalizationService.GetString("Install")
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="@ConnectionClient.IsOfflineMode()">
+        @LocalizationService.GetString("Remove")
+    </MenuItem>
+}
+
+@if (SettingsProvider.CurrentValue.Debug.EnableScriptDebugging)
+{
+    <MenuDivider />
+
+    <MenuItem OnClick="() => RunInstallScripts()">
+        @LocalizationService.GetString("RunInstallScripts")
+    </MenuItem>
+
+    <MenuItem OnClick="() => RunUninstallScripts()">
+        @LocalizationService.GetString("RunUninstallScripts")
+    </MenuItem>
+
+    <MenuItem OnClick="() => RunNameChangeScripts()">
+        @LocalizationService.GetString("RunNameChangeScripts")
+    </MenuItem>
+
+    <MenuItem OnClick="() => RunKeyChangeScripts()">
+        @LocalizationService.GetString("RunKeyChangeScripts")
+    </MenuItem>
+}
+
+<MenuDivider />
+
+<MenuItem OnClick="() => ReportIssue()" Disabled="@ConnectionClient.IsOfflineMode()">
+    @LocalizationService.GetString("ReportIssue")
+</MenuItem>
+
+@MenuExtra
+
+@code {
+    [Parameter] public Models.ListItem Model { get; set; }
+    [Parameter] public RenderFragment MenuExtra { get; set; }
+    [Parameter] public bool ShowPrimaryActions { get; set; }
+
+    Data.Models.Game Game { get; set; }
+    IEnumerable<SDK.Models.Manifest.Action> GameActions { get; set; } = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Model.DataItem is Game game)
+        {
+            Game = game;
+            List<SDK.Models.Manifest.Action> actions = [];
+
+            if (Game.Installed)
+            {
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(Game.InstallDirectory, Game.Id);
+
+                if (manifest != null)
+                {
+                    actions = manifest.Actions.Where(a => ShowPrimaryActions || !a.IsPrimaryAction).ToList();
+                }
+            }
+
+            GameActions = actions;
+            StateHasChanged();
+        }
+    }
+
+    async Task Run(Game game, SDK.Models.Manifest.Action action)
+    {
+        var task = GameService.Run(game, action);
+
+        await InvokeAsync(StateHasChanged);
+
+        await task;
+    }
+
+    void BrowseFiles()
+    {
+        try
+        {
+            if (!SystemService.TryBrowseFiles(Game.InstallDirectory))
+                MessageService.Error("Could not open file manager!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening file manager to {Path}", Game.InstallDirectory);
+            MessageService.Error("Could not open file manager!");
+        }
+    }
+
+    async Task Install()
+    {
+        if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == GameType.Expansion || g.Type == GameType.Mod))
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = LocalizationService.GetString("InstallGame", Model.Name),
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Draggable = true,
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
+        }
+        else
+        {
+            var game = Model.DataItem as Game;
+
+            await InstallService.Add(game);
+        }
+    }
+
+    async Task Modify()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = LocalizationService.GetString("ModifyGame", Model.Name),
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
+    }
+
+    async Task ValidateFiles()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = LocalizationService.GetString("FileConflicts"),
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            OkText = LocalizationService.GetString("ReplaceSelected"),
+        };
+
+        var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);
+    }
+
+    async Task Uninstall()
+    {
+        var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(Game.InstallDirectory, Game.Id);
+
+        string message;
+        if (manifest.SavePaths != null && manifest.SavePaths.Any())
+            message = LocalizationService.GetString("UninstallGameMessageWithSaves", Game.Title);
+        else
+            message = LocalizationService.GetString("UninstallGameMessageWithoutSaves", Game.Title);
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            OkText = LocalizationService.GetString("UninstallGame"),
+            CancelText = LocalizationService.GetString("Cancel"),
+            Title = LocalizationService.GetString("UninstallGame"),
+            Content = message,
+            OkButtonProps = new ButtonProps()
+            {
+                Danger = true
+            },
+            Centered = true,
+            Icon = @<Icon Type="@IconType.Outline.Delete" />
+        });
+
+        if (confirmed)
+            await GameService.UninstallAsync(Game);
+
+        InstallService.Remove(Game.Id);
+
+        await LibraryService.LibraryChanged();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        var hasStandaloneDependent = Game.DependentGames?
+            .Where(g => g.Type != GameType.Expansion && g.Type != GameType.Mod)
+            .Any(g => LibraryService.IsInLibrary(g.Id)) ?? false;
+
+        if (!hasStandaloneDependent)
+        {
+            await LibraryService.RemoveFromLibraryAsync(Game.Id);
+            await LibraryService.RefreshItemsAsync(true);
+            return;
+        }
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = LocalizationService.GetString("RemoveGameFromLibrary"),
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<RemoveFromLibraryDialog, Models.ListItem, string>(modalOptions, Model);
+    }
+
+    async Task RunInstallScripts()
+    {
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+
+        foreach (var manifest in manifests)
+        {
+            await ScriptClient.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
+        }
+    }
+
+    async Task RunUninstallScripts()
+    {
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+
+        foreach (var manifest in manifests)
+        {
+            await ScriptClient.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
+        }
+    }
+
+    async Task RunNameChangeScripts()
+    {
+        var user = await UserService.GetCurrentUser();
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+
+        foreach (var manifest in manifests)
+        {
+            await ScriptClient.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
+        }
+    }
+
+    async Task RunKeyChangeScripts()
+    {
+        var manifests = await GameClient.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+
+        foreach (var manifest in manifests)
+        {
+            var key = await GameClient.GetAllocatedKeyAsync(manifest.Id);
+
+            await ScriptClient.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
+        }
+    }
+
+    async Task OpenManual(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = media.Name,
+            Maximizable = true,
+            DefaultMaximized = true,
+            Closable = true,
+            Footer = null,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "pdf-reader-dialog",
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    async Task OpenSaveManager()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = LocalizationService.GetString("ManageSaves"),
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<SavesDialog, Game>(modalOptions, Game);
+    }
+
+    async Task ReportIssue()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = LocalizationService.GetString("ReportIssue"),
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = LocalizationService.GetString("Submit"),
+            Draggable = true
+        };
+
+        var modalRef = ModalService.CreateModal<ReportIssueDialog, Game, SDK.Models.Issue>(modalOptions, Game);
+    }
+}

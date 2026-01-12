@@ -8,7 +8,7 @@ namespace LANCommander.SDK;
 public class Client(
     AuthenticationClient authenticationClient,
     BeaconClient beaconClient,
-    ChatClient chatClient,
+    ChatHubClient chatHubClient,
     IConnectionClient connectionClient,
     DepotClient depotClient,
     GameClient gameClient,
@@ -28,7 +28,7 @@ public class Client(
 {
     public AuthenticationClient Authentication = authenticationClient;
     public BeaconClient Beacon = beaconClient;
-    public ChatClient Chat = chatClient;
+    public ChatHubClient ChatHub = chatHubClient;
     public IConnectionClient Connection = connectionClient;
     public DepotClient Depot = depotClient;
     public GameClient Games = gameClient;

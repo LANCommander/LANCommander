@@ -1,6 +1,5 @@
-﻿@using BootstrapBlazor.Components
-@inherits FeedbackComponent<Data.Models.Game, SDK.Models.Issue>
-@inject SDK.Client Client
+﻿@inherits FeedbackComponent<Data.Models.Game, SDK.Models.Issue>
+@inject IssueClient IssueClient
 @inject IMessageService MessageService
 @inject LocalizationService LocalizationService
 
@@ -11,14 +10,14 @@
 </Form>
 
 @code {
-    SDK.Models.Issue Issue { get; set; } = new SDK.Models.Issue();
+    SDK.Models.Issue Issue { get; set; } = new();
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         try {
             Issue.GameId = Options.Id;
 
-            var success = await Client.Issues.Open(Issue.Description, Issue.GameId);
+            var success = await IssueClient.Open(Issue.Description, Issue.GameId);
 
             if (success)
             {

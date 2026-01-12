@@ -1,12 +1,13 @@
-﻿@inject NavigationManager NavigationManager
-@inject SDK.Client Client
+﻿@namespace LANCommander.Launcher.UI
+@inject NavigationManager NavigationManager
+@inject ISettingsProvider SettingsProvider
 
 @code {
     protected override void OnInitialized()
     {
         var currentUri = new Uri(NavigationManager.Uri);
 
-        if (String.IsNullOrEmpty(Client.Settings.CurrentValue.Authentication.Token?.AccessToken) && currentUri.LocalPath != "/Authenticate")
+        if (String.IsNullOrEmpty(SettingsProvider.CurrentValue.Authentication.Token?.AccessToken) && currentUri.LocalPath != "/Authenticate")
             NavigationManager.NavigateTo("/Authenticate", true);
     }
 }

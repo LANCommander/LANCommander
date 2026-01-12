@@ -3,12 +3,10 @@ using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
-using LANCommander.SDK.Rpc;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using RpcSubscriber = LANCommander.SDK.Rpc.Clients.RpcSubscriber;
 
 namespace LANCommander.SDK.Extensions;
@@ -21,8 +19,9 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ISettingsProvider>(sp =>
             sp.GetRequiredService<SettingsProvider<TSettings>>());
         
-        services.AddSingleton<ITokenProvider, TokenProvider>();
-        services.AddSingleton<INetworkInformationProvider, NetworkInformationProvider>();
+        services.TryAddSingleton<ITokenProvider, TokenProvider>();
+        services.TryAddSingleton<INetworkInformationProvider, NetworkInformationProvider>();
+        services.TryAddSingleton<IServerAddressProvider, ServerAddressProvider>();
         
         services.AddSingleton<IRpcSubscriber, RpcSubscriber>();
         services.AddSingleton<RpcClient>();
@@ -32,7 +31,7 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<AuthenticationClient>();
         services.AddSingleton<BeaconClient>();
-        services.AddSingleton<ChatClient>();
+        services.AddSingleton<ChatHubClient>();
         services.AddSingleton<IConnectionClient, ConnectionClient>();
         services.AddSingleton<DepotClient>();
         services.AddSingleton<GameClient>();
@@ -50,6 +49,11 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<TagClient>();
 
         services.AddSingleton<Client>();
+
+        services.AddSingleton<MigrationHistoryService>();
+        services.AddSingleton<MigrationService>();
+        
+        services.TryAddSingleton<IChatClient, ChatClient>();
         
         return services;
     }

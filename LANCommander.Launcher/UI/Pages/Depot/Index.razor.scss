@@ -1,0 +1,26 @@
+.depot {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    position: relative;
+    flex-direction: row;
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        transform: none !important;
+    }
+
+    .ant-result {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-nested-loading > div {
+        width: 100%;
+        height: 100%;
+    }
+}

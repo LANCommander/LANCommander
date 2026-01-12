@@ -1,9 +1,8 @@
 @using LANCommander.SDK.Exceptions
 @using LANCommander.SDK.Models
-@using LANCommander.SDK.Services
-@namespace LANCommander.Launcher.UI.Components
+@namespace LANCommander.Launcher.UI
 @inject AuthenticationService AuthenticationService
-@inject SDK.Client Client
+@inject AuthenticationClient AuthenticationClient
 @inject IConnectionClient ConnectionClient
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -102,7 +101,7 @@
 
         try
         {
-            var authenticationProviders = await Client.Authentication.GetAuthenticationProvidersAsync();
+            var authenticationProviders = await AuthenticationClient.GetAuthenticationProvidersAsync();
 
             if (authenticationProviders != null && authenticationProviders.Any())
                 AuthenticationProviders = authenticationProviders.ToList();
@@ -127,7 +126,7 @@
         {
             try
             {
-                await Client.Connection.UpdateServerAddressAsync(ServerAddress);
+                await ConnectionClient.UpdateServerAddressAsync(ServerAddress);
             }
             catch (InvalidAddressException)
             {
@@ -147,7 +146,7 @@
         {
             ClearErrors();
 
-            await AuthenticationService.Login(Client.Connection.GetServerAddress(), Model.UserName, Model.Password);
+            await AuthenticationService.Login(ConnectionClient.GetServerAddress(), Model.UserName, Model.Password);
 
             await ImportManagerService.RequestImport();
 

@@ -1,0 +1,49 @@
+@use 'Variables';
+
+.depot-game {
+    display: flex;
+    align-items: center;
+    aspect-ratio: 2 / 3;
+
+    &-cover {
+        transition: all .25s;
+        box-shadow: 0 0 0 0 #000;
+        position: relative;
+        cursor: pointer;
+        flex-grow: 1;
+
+        &:hover {
+            transform: scale(Variables.$cover-hover-scale);
+            box-shadow: 0 0 64px 32px #000;
+            z-index: 100;
+        }
+    }
+
+    &-add-btn,
+    &-add-btn.ant-btn.ant-btn-loading {
+        position: absolute;
+        top: 0;
+        right: 0;
+        opacity: 0;
+        transition: opacity .25s;
+    }
+
+    &-cover:hover &-add-btn {
+        opacity: 1;
+    }
+
+    &-default-cover {
+        aspect-ratio: Variables.$cover-aspect-ratio;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #555 0%, #333 100%);
+        font-size: 20px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    img {
+        width: 100%;
+    }
+}

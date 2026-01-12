@@ -20,7 +20,7 @@
                     <PageHeader Title="@Page.Title" />
 
                     <div style="padding: 0 24px;">
-                        @((MarkupString)Markdown.ToHtml(Page.Contents))
+                        <Markdown Content="@Page.Contents" />
                     </div>
                 </Pane>
             </SplitPane>

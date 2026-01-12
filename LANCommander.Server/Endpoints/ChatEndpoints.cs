@@ -29,7 +29,7 @@ public static class ChatEndpoints
         [FromServices] ChatService chatService,
         [FromServices] IMapper mapper)
     {
-        var messages = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(await chatService.GetMessagesAsync(threadId));
+        var messages = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(await chatService.GetMessagesAsync(threadId, 10));
         
         return TypedResults.Ok(messages);
     }

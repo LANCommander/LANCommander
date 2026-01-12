@@ -1,14 +1,14 @@
 ﻿@using LANCommander.Launcher.Models
-@using LANCommander.SDK.Services
 @using Photino.Blazor.CustomWindow.Components
+@namespace LANCommander.Launcher.UI
 @inherits LayoutComponentBase
 @inject ImportService ImportService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
+@inject AuthenticationClient AuthenticationClient
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
-@inject LANCommander.SDK.Client Client
 @inject IJSRuntime JS
 @inject ImportManagerService ImportManagerService
 @inject LocalizationService LocalizationService
@@ -76,7 +76,7 @@
                         <img src="assets/logo-cut.svg" />
                     </div>
                     
-                    <LANCommander.Launcher.UI.Components.Footer />
+                    <LANCommander.Launcher.UI.Footer />
 
                     <PowerShellConsole />
                     
@@ -112,7 +112,7 @@
         ConnectionClient.OnOfflineModeEnabled += OnOfflineModeChanged;
         ConnectionClient.OnConnect += OnConnect;
 
-        if (await Client.Authentication.ValidateTokenAsync())
+        if (await AuthenticationClient.ValidateTokenAsync())
         {
             await AuthenticationService.Login();
 

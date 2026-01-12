@@ -8,35 +8,19 @@ using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
-using Serilog;
-using Serilog.Events;
 using System.Runtime.InteropServices;
 
-// Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
-var serilogLogLevel = MapLogLevel(LogLevel.Debug);
-
-using var Logger = new LoggerConfiguration()
-    .MinimumLevel.Is(serilogLogLevel)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Components", LogEventLevel.Warning)
-    .MinimumLevel.Override("AntDesign", LogEventLevel.Warning)
-    .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
-    //.WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
-#if DEBUG
-    .WriteTo.Seq("http://localhost:5341")
-#endif
-    .CreateLogger();
-
-Logger.Information("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
-
 var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
+// Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
+builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddStandardLogging());
+builder.Services.AddOpenTelemetryDefaults("Launcher", false);
 
 // Configure services
 builder.AddSettings();
-builder.AddLogging();
 builder.Services.AddCustomWindow();
 builder.Services.AddAntDesign();
 builder.Services.AddSingleton<LocalizationService>();
@@ -47,6 +31,10 @@ builder.Services.AddLANCommanderLauncher();
 builder.RootComponents.Add<App_Main>("app");
 
 var app = builder.Build();
+
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+logger.LogInformation("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
 
 // Configure main window
 app.RegisterMainWindow()
@@ -81,27 +69,6 @@ if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
 await databaseContext.Database.MigrateAsync();
 
 app.Run();
-
-/// <summary>
-/// Maps Microsoft.Extensions.Logging.LogLevel to Serilog.Events.LogEventLevel.
-/// </summary>
-static LogEventLevel MapLogLevel(LogLevel level)
-{
-    return level switch
-    {
-        LogLevel.Trace => LogEventLevel.Verbose,
-        LogLevel.Debug => LogEventLevel.Debug,
-        LogLevel.Information => LogEventLevel.Information,
-        LogLevel.Warning => LogEventLevel.Warning,
-        LogLevel.Error => LogEventLevel.Error,
-        LogLevel.Critical => LogEventLevel.Fatal,
-        // LogLevel.None indicates logging should be disabled.
-        // Serilog does not have a direct "Off" level so you might choose to
-        // either bypass logging configuration or set it high enough to ignore messages.
-        LogLevel.None => LogEventLevel.Fatal,
-        _ => LogEventLevel.Information
-    };
-}
 
 static OSPlatform GetOSPlatform()
 {

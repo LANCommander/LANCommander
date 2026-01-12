@@ -378,16 +378,18 @@ namespace LANCommander.Migrations
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThreadReadStatus", b =>
                 {
-                    b.Property<DateTime?>("LastReadOn")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("ThreadId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("ThreadId");
+                    b.Property<Guid?>("LastReadMessageId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ThreadId", "UserId");
+
+                    b.HasIndex("LastReadMessageId");
 
                     b.HasIndex("UserId");
 
@@ -2093,6 +2095,11 @@ namespace LANCommander.Migrations
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThreadReadStatus", b =>
                 {
+                    b.HasOne("LANCommander.Server.Data.Models.ChatMessage", "LastReadMessage")
+                        .WithMany()
+                        .HasForeignKey("LastReadMessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("LANCommander.Server.Data.Models.ChatThread", "Thread")
                         .WithMany()
                         .HasForeignKey("ThreadId")
@@ -2104,6 +2111,8 @@ namespace LANCommander.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("LastReadMessage");
 
                     b.Navigation("Thread");
 

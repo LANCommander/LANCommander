@@ -1,8 +1,10 @@
-﻿<Router AppAssembly="@typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Windows.ChatWindow)" />
-    </Found>
-    <NotFound>
-        <RedirectToRoute Route="/Chat" />
-    </NotFound>
-</Router>
+﻿<div class="chat-window">
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(ChatWindow)" />
+        </Found>
+        <NotFound>
+            <RedirectToRoute Route="/Chat" />
+        </NotFound>
+    </Router>
+</div>

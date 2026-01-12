@@ -1,8 +1,8 @@
 @using LANCommander.SDK.Exceptions
 @using LANCommander.SDK.Models
-@namespace LANCommander.Launcher.UI.Components
+@namespace LANCommander.Launcher.UI
 @inject AuthenticationService AuthenticationService
-@inject SDK.Client Client
+@inject IConnectionClient ConnectionClient
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<RegistrationForm> Logger
@@ -52,7 +52,7 @@
     protected override async Task OnParametersSetAsync()
     {
         if (ServerAddress != PreviousServerAddress)
-            await Client.Connection.UpdateServerAddressAsync(ServerAddress.ToString());
+            await ConnectionClient.UpdateServerAddressAsync(ServerAddress.ToString());
 
         PreviousServerAddress = ServerAddress;
 

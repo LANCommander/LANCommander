@@ -1,17 +1,22 @@
 @using System.Globalization
+
 @namespace LANCommander.UI.Components
 
-<Comment Author="@UserName" Datetime="@StartedOn.ToString(CultureInfo.CurrentCulture)">
-    <ContentTemplate>
-        @foreach (var message in Messages)
-        {
-            <ChatMessage Id="@message.Id" Content="@message.Content" />
-        }
-    </ContentTemplate>
-</Comment>
+<Flex Class="chat-message-group" Gap="FlexGap.Small">
+    <SafeAvatar Username="@UserName" />
+    
+    <Flex Direction="FlexDirection.Vertical">
+        <Flex Gap="FlexGap.Small">
+            <span class="chat-message-author">@UserName</span>
+            <span class="chat-message-timestamp">@StartedOn.ToString(CultureInfo.CurrentCulture)</span>
+        </Flex>
+        
+        @ChildContent
+    </Flex>
+</Flex>
 
 @code {
-    [CascadingParameter] public ICollection<SDK.Models.ChatMessage> Messages { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string UserName { get; set; }
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public DateTime StartedOn { get; set; }

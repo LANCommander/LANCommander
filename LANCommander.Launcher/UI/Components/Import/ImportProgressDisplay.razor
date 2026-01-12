@@ -1,0 +1,38 @@
+@using LANCommander.Launcher.Models
+@namespace LANCommander.Launcher.UI
+@inject LocalizationService LocalizationService
+
+<div class="import-progress">
+    <div class="import-progress-container">
+        <Flex Vertical>
+            <div class="import-progress-info">
+                <div class="import-progress-status">
+                    @if (Total > 0)
+                    {
+                        <Text>@LocalizationService.GetString("Importing", CurrentItem?.Name ?? "")</Text>
+                    }
+                    else
+                    {
+                        <Text>@LocalizationService.GetString("StartingImport")</Text>
+                    }
+                </div>
+                <div class="import-progress-progress-bar">
+                    <Progress 
+                        Percent="@((double)(Index * 100) / Total)" 
+                        Status="ProgressStatus.Active"
+                        ShowInfo="false"
+                    />
+                </div>
+                <div class="import-progress-footer">
+                    @Index / @Total
+                </div>
+            </div>
+        </Flex>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Index { get; set; }
+    [Parameter] public int Total { get; set; }
+    [Parameter] public ImportItem CurrentItem { get; set; }
+} 

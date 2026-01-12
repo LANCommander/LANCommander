@@ -1,0 +1,54 @@
+@namespace LANCommander.UI.Components
+
+<div
+    class="@_cssClass"
+    style="@_cssStyle"
+    @onclick="OnClick"
+    @oncontextmenu="OnContextMenu"
+    @ondblclick="OnDoubleClick"
+    @onmousedown="OnMouseDown"
+    @onmouseenter="OnMouseEnter"
+    @onmouseleave="OnMouseLeave"
+    @onmousemove="OnMouseMove"
+    @onmouseout="OnMouseOut"
+    @onmouseup="OnMouseUp">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public required RenderFragment ChildContent { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnDoubleClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseDown { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseEnter { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseLeave { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseMove { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseOut { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnMouseUp { get; set; }
+    [Parameter] public Cursor Cursor { get; set; } = Cursors.Auto;
+    [Parameter] public bool Disabled { get; set; }
+    
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    string _cssClass = string.Empty;
+    string _cssStyle = string.Empty;
+
+    protected override Task OnParametersSetAsync()
+    {
+        _cssClass = new ClassBuilder()
+            .Add("mouse-area")
+            .Add(Class)
+            .If(() => Disabled, "disabled")
+            .Build();
+
+        _cssStyle = new StyleBuilder()
+            .Add("cursor", Cursor.Value)
+            .Add(Style)
+            .Build();
+        
+        return base.OnParametersSetAsync();
+    }
+
+}

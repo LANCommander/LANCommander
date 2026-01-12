@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://your-docusaurus-site.example.com',
+  url: 'https://docs.lancommander.app',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -25,7 +25,7 @@ const config: Config = {
   organizationName: 'LANCommander', // Usually your GitHub org/user name.
   projectName: 'LANCommander.Documentation', // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -40,29 +40,23 @@ const config: Config = {
       'classic',
       {
         docs: {
+          lastVersion: 'current',
+          includeCurrentVersion: true,
+          versions: {
+            current: {
+              label: '2.0.0-rc1',
+              path: '2.0.0-rc1',
+            },
+          },
           sidebarPath: './sidebars.ts',
           path: 'Documentation',
-          routeBasePath: 'Documentation',
+          routeBasePath: '/',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/LANCommander/LANCommander/tree/main/LANCommander.Documentation',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -77,19 +71,22 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'LANCommander',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'LANCommander Logo',
         src: 'img/logo.svg',
       },
       items: [
+        {
+          type: 'docsVersionDropdown',
+          versions: ['current'],
+        },
         {
           type: 'docSidebar',
           sidebarId: 'documentationSidebar',
           position: 'left',
           label: 'Documentation',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {to: '/releases', label: 'Releases', position: 'left'},
         {
           href: 'https://github.com/LANCommander/LANCommander',
           label: 'GitHub',
@@ -105,7 +102,7 @@ const config: Config = {
           items: [
             {
               label: 'Documentation',
-              to: '/Documentation/Overview',
+              to: '/Overview',
             },
           ],
         },
@@ -126,8 +123,8 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
+              label: 'Releases',
+              to: '/releases',
             },
             {
               label: 'GitHub',

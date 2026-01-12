@@ -16,12 +16,19 @@ function HomepageHeader() {
         <Heading as="h1" className="hero__title">
           {siteConfig.title}
         </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <p className="hero__subtitle">
+          An open-source digital game distribution platform for self-hosting your own game library
+        </p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/intro">
-            Docusaurus Tutorial - 5min ⏱️
+            to="/Overview">
+            Get Started →
+          </Link>
+          <Link
+            className="button button--outline button--secondary button--lg margin-left--sm"
+            href="https://github.com/LANCommander/LANCommander">
+            View on GitHub
           </Link>
         </div>
       </div>
@@ -33,8 +40,8 @@ export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title={siteConfig.title}
+      description="Documentation for LANCommander, the self-hosted game library. Learn how to set up and manage your own digital game distribution platform.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

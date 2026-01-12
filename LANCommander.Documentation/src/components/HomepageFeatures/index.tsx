@@ -1,53 +1,76 @@
 import type {ReactNode} from 'react';
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
+import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
   description: ReactNode;
+  link?: string;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    title: 'Self-Hosted',
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Run your own game distribution platform on your local network. No internet required for game installations.
+        Perfect for LAN parties and closed networks. Built with ASP.NET Blazor and available for Windows, Linux, and macOS.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    title: 'Game Management',
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Upload and manage game archives, manage scripts for installation and configuration, handle game keys,
+        and organize your library with collections. Support for redistributables, dedicated servers, and save management.
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    title: 'Custom Launcher',
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Official launcher application for easy client setup. Browse your game library, install games with a single click,
+        and manage your installed games. Features offline mode and automatic updates.
+      </>
+    ),
+  },
+  {
+    title: 'Docker Support',
+    description: (
+      <>
+        Pre-configured Docker container for easy deployment. Optional SteamCMD and WINE support.
+        Multi-architecture support including Linux/ARM64.
+      </>
+    ),
+  },
+  {
+    title: 'Scripting & SDK',
+    description: (
+      <>
+        Powerful PowerShell scripting engine for game installation and configuration. Full SDK available for
+        building custom client applications. Extensive documentation and examples.
+      </>
+    ),
+  },
+  {
+    title: 'Open Source',
+    description: (
+      <>
+        Completely open source and community-driven. View the code on{' '}
+        <Link href="https://github.com/LANCommander/LANCommander">GitHub</Link>, contribute improvements,
+        or join the community on <Link href="https://discord.gg/vDEEWVt8EM">Discord</Link>.
       </>
     ),
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, description}: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>
         <p>{description}</p>

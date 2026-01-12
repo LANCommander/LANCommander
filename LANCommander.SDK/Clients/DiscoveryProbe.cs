@@ -19,9 +19,8 @@ public class DiscoveryProbe : IDisposable
 
     private bool _disposed = false;
     private int _port = 35891;
-    private readonly UdpClient _udpClient;
     private readonly Socket _socket;
-    private readonly IEnumerable<IPEndPoint> _broadcastEndpoints;
+    private IEnumerable<IPEndPoint> _broadcastEndpoints = Enumerable.Empty<IPEndPoint>();
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly byte[] _probeId;
     private readonly NetworkInterface _networkInterface;
@@ -34,12 +33,10 @@ public class DiscoveryProbe : IDisposable
     public DiscoveryProbe(NetworkInterface networkInterface)
     {
         _networkInterface = networkInterface;
-        _udpClient = new UdpClient(0);
-        _udpClient.EnableBroadcast = true;
         
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        _socket.EnableBroadcast = true;
 
-        _broadcastEndpoints = networkInterface.GetBroadcastAddresses().Select(ba => new IPEndPoint(ba, _port));
         _probeId = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
         _cancellationTokenSource = new CancellationTokenSource();
     }
@@ -50,13 +47,15 @@ public class DiscoveryProbe : IDisposable
     public async Task SendAsync()
     {
         foreach (var endpoint in _broadcastEndpoints)
-            await _udpClient.SendAsync(_probeId, _probeId.Length, endpoint);
+        {
+            await Task.Run(() => _socket.SendTo(_probeId, SocketFlags.None, endpoint));
+        }
     }
 
     /// <summary>
     /// Listen for responses from beacons
     /// </summary>
-    /// <param name="port">Port to listen on/param>
+    /// <param name="port">Port to listen on</param>
     /// <exception cref="NetworkInformationException">Failed to bind to network interface</exception>
     public async Task BindSocketAsync(int port)
     {
@@ -69,6 +68,8 @@ public class DiscoveryProbe : IDisposable
 
         if (addressInformation == null)
             throw new NetworkInformationException();
+
+        _broadcastEndpoints = _networkInterface.GetBroadcastAddresses().Select(ba => new IPEndPoint(ba, _port));
 
         EndPoint fromEndpoint = new IPEndPoint(IPAddress.Any, 0);
 
@@ -121,8 +122,6 @@ public class DiscoveryProbe : IDisposable
     {
         OnBeaconResponse = null;
 
-        _udpClient?.Close();
-        _udpClient?.Dispose();
         _socket?.Close();
         _socket?.Dispose();
         _cancellationTokenSource?.Dispose();

@@ -57,6 +57,12 @@ public class BeaconClient(
 
                 await probeClient.BindSocketAsync(port);
 
+                // Subscribe to probe responses and forward them to our event
+                probeClient.OnBeaconResponse += (sender, e) =>
+                {
+                    OnBeaconResponse?.Invoke(sender, e);
+                };
+
                 _probeClients.Add(probeClient);
             }
             catch

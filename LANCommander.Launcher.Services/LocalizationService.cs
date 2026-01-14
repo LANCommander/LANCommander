@@ -4,7 +4,8 @@ using LANCommander.Launcher.Models;
 
 namespace LANCommander.Launcher.Services
 {
-    public class LocalizationService
+    [Obsolete]
+    internal class LocalizationService
     {
         private readonly ResourceManager _resourceManager;
 

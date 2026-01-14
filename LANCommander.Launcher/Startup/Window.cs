@@ -25,7 +25,7 @@ public static class MainWindow
     {
         var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
         var logger = app.Services.GetRequiredService<ILogger<PhotinoBlazorApp>>();
-        
+
         app.MainWindow.RegisterCustomSchemeHandler("media",
             (object sender, string scheme, string url, out string? contentType) =>
             {
@@ -131,11 +131,11 @@ public static class MainWindow
 
         return app;
     }
-    
+
     private static bool SaveWindowPosition(object sender, EventArgs e)
     {
         var window = sender as PhotinoWindow;
-        
+
         /*var settings = SettingService.GetSettings();
 
         settings.Window.Maximized = window.Maximized;

@@ -1,57 +1,82 @@
-﻿using LANCommander.Launcher.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
-using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Enums;
-using LANCommander.Launcher.Models;
+﻿using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
+using LANCommander.Launcher.Settings;
+using LANCommander.Launcher.Startup;
+using LANCommander.Launcher.UI;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Photino.Blazor;
+using Photino.Blazor.CustomWindow.Extensions;
+using System.Runtime.InteropServices;
 
-namespace LANCommander.Launcher;
+var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
+// Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
+builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddStandardLogging());
+builder.Services.AddOpenTelemetryDefaults("Launcher", false);
 
-class Program
+// Configure services
+builder.AddSettings();
+builder.Services.AddCustomWindow();
+builder.Services.AddAntDesign();
+builder.Services.AddSingleton<LocalizationService>();
+builder.Services.AddLANCommanderClient<Settings>();
+builder.Services.AddLANCommanderLauncher();
+
+// Configure root component
+builder.RootComponents.Add<App_Main>("app");
+
+var app = builder.Build();
+
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+logger.LogInformation("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
+
+// Configure main window
+app.RegisterMainWindow()
+   .RegisterMediaHandler()
+   .RegisterNotificationHandler()
+   .RegisterImportHandler()
+   .RestoreWindowPosition();
+
+// Initialize application
+using var scope = app.Services.CreateScope();
+
+var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings>>();
+var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+await connectionClient.ConnectAsync();
+
+if (!await connectionClient.PingAsync())
+    await connectionClient.EnableOfflineModeAsync();
+
+if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
 {
-    [STAThread]
-    static void Main(string[] args)
+    settingsProvider.Update(static s => s.Games.InstallDirectories = GetOSPlatform() switch
     {
-        WindowService.CreateWindow<UI.App_Main>(new WindowOptions
-        {
-            Title = "LANCommander",
-            Type = WindowType.Main
-        }, null, async (app) =>
-        {
-            var logger = app.Services.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
+        var platform when platform == OSPlatform.Windows => [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")],
+        var platform when platform == OSPlatform.Linux => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+        var platform when platform == OSPlatform.OSX => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+        _ => throw new NotSupportedException("Unsupported OS platform")
+    });
+}
 
-            using var scope = app.Services.CreateScope();
-            var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
-            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+await databaseContext.Database.MigrateAsync();
 
-            if (!(await connectionClient.PingAsync()))
-                await connectionClient.EnableOfflineModeAsync();
+app.Run();
 
-            if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    settingsProvider.Update(s =>
-                    {
-                        s.Games.InstallDirectories = [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")];
-                    });
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    settingsProvider.Update(s =>
-                    {
-                        s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
-                    });
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    settingsProvider.Update(s =>
-                    {
-                        s.Games.InstallDirectories = [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")];
-                    });
-            }
-
-            await databaseContext.Database.MigrateAsync();
-        }, args);
-    }
+static OSPlatform GetOSPlatform()
+{
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        return OSPlatform.Windows;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        return OSPlatform.Linux;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        return OSPlatform.OSX;
+    throw new NotSupportedException("Unsupported OS platform");
 }

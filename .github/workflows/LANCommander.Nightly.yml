@@ -310,8 +310,8 @@ jobs:
 
       - name: Extract Server Artifacts x64
         run: |
-          mkdir -p ./LANCommander.Server/published-x64
-          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-x64
+          mkdir -p ./LANCommander.Server/published-amd64
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-amd64
 
       - name: Extract Server Artifacts arm64
         run: |

@@ -302,23 +302,29 @@ jobs:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: ./
 
-      - name: Extract Server Artifacts
+      - name: Download Server arm64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./
+
+      - name: Extract Server Artifacts x64
         run: |
-          mkdir -p ./LANCommander.Server/published
-          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published
+          mkdir -p ./LANCommander.Server/published-x64
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-x64
 
-      # - name: Download Server arm64 Artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-      #     path: ./published
+      - name: Extract Server Artifacts arm64
+        run: |
+          mkdir -p ./LANCommander.Server/published-arm64
+          unzip ./LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-arm64
 
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
       - name: Setup buildx
         uses: docker/setup-buildx-action@v3
         with:
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
 
       - name: Build and push Docker image
         id: push
@@ -327,7 +333,7 @@ jobs:
           context: ./LANCommander.Server
           file: ./LANCommander.Server/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}

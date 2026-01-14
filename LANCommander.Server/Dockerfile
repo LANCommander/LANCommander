@@ -5,7 +5,8 @@ EXPOSE 1337
 EXPOSE 213/udp
 EXPOSE 35891/udp
 
-COPY ./published /app
+ARG TARGETARCH
+COPY ./published-${TARGETARCH} /app
 COPY entrypoint.sh /app/entrypoint.sh
 COPY steamcmd.sh /usr/local/bin/steamcmd
 

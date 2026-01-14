@@ -1,0 +1,109 @@
+# LANCommander 2.0.0-rc1 Release Notes
+LANCommander 2.0.0 is up there as one of the largest updates in the project's history. This release represents over nine months of development, with more individual contributors than previous versions. The jump from 1.x to 2.x reflects substantial architectural changes, new features, and significant improvements in the server, launcher, and SDK.
+
+Additionally, documentation has now been moved to Docusaurus and is being hosted on GitHub Pages. Documentation can now live in the same repository as the rest of the application, ensuring that documentation is versioned and up to date.
+
+## Breaking Changes
+
+### Settings
+Settings have previously been implemented with custom code parsing the `Settings.yml` file. They are now implemented using standard .NET configuration practices.
+
+A migration has been put in place to adapt to the new format, but as with any migration some settings may not carry over from previous installs.
+
+### Import/Export
+Importing and exporting has been rebuilt from the ground up. An effort to allow the import of legacy LCX files has been made, but this may vary based on the age of the export file.
+
+### User Data Paths
+In previous versions of LANCommander, user data files/directories such as the database, settings, media, and uploads were thrown into the same directory as the main executable (for both server and launcher). In 2.0.0 a new directory called "Data" will be created and used for all user data. This change should make it easier to create backups and map Docker volumes.
+
+A migration has been written to assist with this change, but as always make sure you backup your data before upgrading. **For Docker users**: Before updating to 2.0.0, make sure you map `/app/Data` _with_ your volumes from previous versions. The migration will do its best attempt at discovering if this directory is mapped before moving any data. 
+
+### Logging
+Previous versions have relied on Serilog to provide logging for both the server and launcher. An effort is being made to update this to more modern practices by integrating OpenTelemetry. As of right now, logging support for Seq and ElasticSearch is non-functional.
+
+### SDK Changes
+The SDK has been refactored to utilize dependency injection instead of relying on a monolithic singleton client. I'm not aware of any other projects using the SDK, but it's worth noting at this time.
+
+## Major Changes / features
+
+### Import/Export
+As mentioned, importing and exporting has been rebuilt from the ground up, and as such the manifest format for LCX files has gone through some significant changes. Ultimately, this change reflects a closer parity between export files and the database schema, which should allow for extensibility in the future.
+
+The core concept that drove this rewrite is **selective importing/exporting**. Now when you go to export or import a game, server, or redistributable you may choose which data you want to import or export. This includes metadata, archives, media, and user data such as save games or play sessions. This should make it easier to share only the data you want or to selectively migrate from one system to another.
+
+### Launcher Authentication/Stability
+A large effort was put into 2.0.0 to make the launcher more stable. A core issue has always been the authentication flow. While this still can be improved upon, the core changes put in should reduce the amount of soft-locking that could previously happen within the launcher.
+
+### Chat
+A bare-bones chat system has been added to the platform. As of right now this probably isn't entirely useful, but there's a good base for improvements in future versions.
+
+### Packaging Scripts
+Games now support a new script type called **Package**. These scripts are designed to run on the server to package up a game automatically. Package scripts are run on a recurring schedule, so they can be used to keep games up to date. Refer to the scripting documentation for more details.
+
+### SteamCMD
+The server now supports a basic integration with SteamCMD. Currently, you can authenticate to multiple Steam profiles. This pairs great with packaging scripts to keep your games up to date!
+
+### Docker
+The Docker image has been updated to support the new user data pathing. In addition, scripts have been added to allow the installation of both SteamCMD and WINE. These may be useful for writing packaging scripts or hosting dedicated servers in Docker-hosted environments.
+
+For Docker Compose users, refer to the [sample docker-compose.yml](https://github.com/LANCommander/LANCommander/blob/v2.0.0-rc1/LANCommander.Server/docker-compose.yml) file in the repository.
+
+## Bug Fixes / Misc Improvements
+As if there weren't already enough changes in this release, here's a list of notable bug fixes that have been made in 2.0.0:
+- Game process tracking is now more reliable and less prone to memory leaks
+- Downloads now buffer correctly and file writes should happen asynchronously
+- Metadata and libraries are now caching more effectively, resulting in faster response times
+- API requests are now being prioritized over downloads. Users should see an increase in responsiveness while other users are downloading from the server.
+- Game saves should now be more reliable on both upload and download
+- Launcher authentication state should now be more reliable
+- An unresponsive server should no longer cause fatal errors when trying to launch games
+- The discovery beacon has been rebuilt from the ground up and should no longer cause hard crashes
+- Thumbnail sizes can now be customized in settings
+- IGDB metadata importing should now be more consistent
+- Taxonomy metadata such as genre or tags is no longer being lost when updating other game information
+
+## Contributors
+As mentioned previously, this update had the most outside contributions over any other version. A big thanks to the following contributors and their pull requests:
+
+[aaronpowell](https://github.com/aaronpowell)
+- [#390](https://github.com/LANCommander/LANCommander/pull/390) Skipping nightly CI if it's not the lancommander main repo
+- [#387](https://github.com/LANCommander/LANCommander/pull/387) Launcher import fixes
+- [#386](https://github.com/LANCommander/LANCommander/pull/386) Evolving Migrations
+- [#385](https://github.com/LANCommander/LANCommander/pull/385) Download endpoints get correct paths
+- [#384](https://github.com/LANCommander/LANCommander/pull/384) Ensuring media path is correct
+- [#383](https://github.com/LANCommander/LANCommander/pull/383) Adding SQLite database migration step
+- [#382](https://github.com/LANCommander/LANCommander/pull/382) tags input fixes
+
+[Mavyre](https://github.com/Mavyre)
+- [#337](https://github.com/LANCommander/LANCommander/pull/337) Corrected Auto-updater
+- [#336](https://github.com/LANCommander/LANCommander/pull/336) Added redistributables to Games API and Games manifest
+- [#335](https://github.com/LANCommander/LANCommander/pull/335) Fixing scripts not saved anymore in Launcher
+- [#334](https://github.com/LANCommander/LANCommander/pull/334) Save Games no longer shared between user
+- [#327](https://github.com/LANCommander/LANCommander/pull/327) Corrected routes for Play Sessions tracking
+
+[RattleSN4K3](https://github.com/RattleSN4K3)
+- [#322](https://github.com/LANCommander/LANCommander/pull/322) Re-implement registry save paths game save creation in Launcher
+- [#321](https://github.com/LANCommander/LANCommander/pull/321) Fix game end lag caused by generating game save
+- [#319](https://github.com/LANCommander/LANCommander/pull/319) Fix editing collection and other metadata pages
+- [#318](https://github.com/LANCommander/LANCommander/pull/318) Fix generating of thumbnails on importing games
+- [#316](https://github.com/LANCommander/LANCommander/pull/316) Error messaging for login/register via Launcher
+- [#308](https://github.com/LANCommander/LANCommander/pull/308) Bypass password policy on first-time-setup for administrator creation
+- [#307](https://github.com/LANCommander/LANCommander/pull/307) Launcher: Fix connecting to hostname:port Uri
+- [#306](https://github.com/LANCommander/LANCommander/pull/306) Launcher: Rework on offline mode and connection timeout
+- [#305](https://github.com/LANCommander/LANCommander/pull/305) Launcher: Configure logger with log level from debug settings
+- [#303](https://github.com/LANCommander/LANCommander/pull/303) Fix context menu items not triggering on click
+- [#291](https://github.com/LANCommander/LANCommander/pull/291) Library changes to addon installation
+- [#290](https://github.com/LANCommander/LANCommander/pull/290) Update archive's file sizes for a specific archive/game
+- [#289](https://github.com/LANCommander/LANCommander/pull/289) Depot game changes to update view
+- [#287](https://github.com/LANCommander/LANCommander/pull/287) Remove games via dialog for dependent games
+- [#286](https://github.com/LANCommander/LANCommander/pull/286) Fix crash of base game removal of user Library
+- [#283](https://github.com/LANCommander/LANCommander/pull/283) Fix Avatar uploading
+- [#282](https://github.com/LANCommander/LANCommander/pull/282) Fix packaging and uploading save games by Launcher
+- [#281](https://github.com/LANCommander/LANCommander/pull/281) Fix storing several entities (such as Gamesaves) properly
+- [#277](https://github.com/LANCommander/LANCommander/pull/277) Fix importing tags on Lookup from IGDB
+- [#272](https://github.com/LANCommander/LANCommander/pull/272) Standalone mods/expansions as Base Game
+- [#271](https://github.com/LANCommander/LANCommander/pull/271) Fix changing base game of a game
+- [#269](https://github.com/LANCommander/LANCommander/pull/269) Option to delete selected Media entries
+- [#268](https://github.com/LANCommander/LANCommander/pull/268) Expiring Archives cache after recalculating/updating archives
+- [#260](https://github.com/LANCommander/LANCommander/pull/260) Utilizing MadMilkman.INI for ini parsing
+- [#257](https://github.com/LANCommander/LANCommander/pull/257) Fix "Name Change Script" from context menu nulling username in game files

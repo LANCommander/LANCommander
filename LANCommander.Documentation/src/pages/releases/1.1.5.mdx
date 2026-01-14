@@ -1,0 +1,48 @@
+## Server
+- Fixed an issue where the IPX relay would cause high CPU usage if started/stopped multiple times (#200)
+- Fixed the autostart of the IPX relay (#188)
+- Fixed save uploading (#190)
+- Settings / Scripts are now saved properly (#194)
+- Game servers will now be more responsive when using the start/stop control buttons (#198)
+- Fixed importing of companies when importing metadata from IGDB (#201)
+- Fixed importing of games from local files (#203)
+- Fixed first time setup creation of administrator user (#206)
+- Added graceful error handling for Depot (#210)
+- Added additional paths to first time setup
+- Fixed error when adding media (#216)
+- Fixed update of tables on various entities (#218, #224)
+- Updated Dockerfile to be based off Microsoft's official .NET base Docker images
+- Administrator step is skipped on first time setup if one already exists
+- Fixed user custom fields not being shown when editing a user
+- Moved the "Restrict Games By Collection" switch to Settings / Library
+- Users datatable is now searchable
+- Fixed logging on IPX relay if enabled
+- Fixed some areas where the Created By and Created On fields were not getting populated
+- Added API menu item to Settings for OpenAPI/Scalar integration
+- Reworked downloading of launcher artifacts from GitHub (note, this is still iffy. It's hard to test this until releases are actually posted. Downloading launchers for nightlies is still a WIP)
+- Times are now rendered as local time based on the user's browser locale.
+
+## Launcher
+- New: The server address field will now also try other possible valid URLs if the address input is invalid or incomplete. See [#208](https://github.com/LANCommander/LANCommander/issues/208#issuecomment-2712374078) for more details
+- Fixed: The "Manage Saves" dialog no longer crashes when opened (#207)
+- The library list will now display a button to clear the filter instead of the "Browse Depot" button (#193)
+- Fixed "Register" button (#214)
+- Rebuilt save packing to be more reliable
+
+## Nightlies
+Nightly builds of both the launcher and server are now being hosted on GitHub under [action runs](https://github.com/LANCommander/LANCommander/actions/workflows/LANCommander.Nightly.yml). Docker builds are also being pushed to [GitHub Packages](https://github.com/LANCommander/LANCommander/pkgs/container/lancommander). As all nightlies go, these are unstable builds and may not work as expected.
+
+## Breaking Changes
+The mounting paths for the Docker container have changed in v1.1.5. Directories that were in `/config` now live at `/app/config`. Please update your bindings accordingly.
+
+## WinGet Packages
+LANCommander is now available to install via WinGet! These packages are included in our CI, so releases will get automatically pushed to the public Microsoft source.
+
+![WindowsTerminal_lyR1c4jvrs](https://github.com/user-attachments/assets/f1e14dee-a79d-4dc3-b6dc-70488ee095c4)
+
+## New Contributors
+* @simonmarklar made their first contribution in https://github.com/LANCommander/LANCommander/pull/192
+* @eliaswen made their first contribution in https://github.com/LANCommander/LANCommander/pull/202
+* @PGHJA991id12 made their first contribution in https://github.com/LANCommander/LANCommander/pull/222
+
+**Full Changelog**: https://github.com/LANCommander/LANCommander/compare/v1.1.4...v1.1.5

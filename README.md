@@ -37,22 +37,15 @@ services:
       # Uncomment the line below to install WINE
       # - WINE=1
     volumes:
-      - /path/to/appdata/config:/app/config
-      - /path/to/appdata/Backups:/app/Backups
-      - /path/to/appdata/Launcher:/app/Launcher
-      - /path/to/appdata/Media:/app/Media
-      - /path/to/appdata/Saves:/app/Saves
-      - /path/to/appdata/Servers:/app/Servers
-      - /path/to/appdata/Uploads:/app/Uploads
-      - /path/to/appdata/Updates:/app/Updates
+      - /path/to/app/data:/app/Data
     ports:
       - 1337:1337/tcp   # Webinterface
       - 35891:35891/udp # Beacon Broadcast
-      - 213:213/udp # IPX Relay
+      - 213:213/udp     # IPX Relay
     restart: unless-stopped
 ```
 
-All config files are available from `/config`. This include any archive uploads for games. Many of these paths can be changed under Settings if you wish to add additional volume mappings.
+All config files are available from `/app/Data`. This include any archive uploads for games. Many of these paths can be changed under Settings if you wish to add additional volume mappings.
 
 ### SteamCMD Support
 The Docker image supports optional SteamCMD installation. To enable this feature, set the `STEAMCMD=1` environment variable in your docker-compose.yml file. When enabled, SteamCMD will be installed in `/home/steam/steamcmd` and made available as `steamcmd` command.
@@ -72,9 +65,9 @@ It's worth joining our [Discord](https://discord.gg/vDEEWVt8EM) as some pre-pack
 LANCommander communicates over HTTP(S). There is no LAN cache configuration provided, but all downloads are provided through the `/api/Games/{id}/Download` route.
 
 ### Where can I get some help?
-Documentation can be found at our [documentation site](https://docs.lancommander.app/). The [Getting Started](https://docs.lancommander.app/en/GettingStarted) guide contains enough information to get your server up and running in minutes. 
+Documentation can be found at our [documentation site](https://docs.lancommander.app/). The [Getting Started](https://docs.lancommander.app/2.0.0-rc1/Server/Games) guide for games contains enough information to get your server up and running in minutes. 
 
-Our soon to be retired [wiki](https://lancommander.app/index.php/Main_Page) is still available to plug any documentation holes while we work on updating the documentation site. [Tutorials](https://lancommander.app/index.php/Category:Tutorials) as well as sample configurations for [Games](https://lancommander.app/index.php/Category:Games) and [Redistributables](https://lancommander.app/index.php/Category:Redistributables) can be found there.
+For other help, it is recommended to join the LANCommander community over at our [Discord guild](https://discord.gg/vDEEWVt8EM). This is currently the best location to get help with the platform itself, scripting, and adapting games.
 
 ### How do I contribute?
 Hit that fork button, submit a PR, there are no hard rules right now.
@@ -84,15 +77,13 @@ If you're not a developer but still want to contribute, contributing to our [doc
 The LANCommander dev team is currently spearheaded by one developer in their free time. Paid donation tiers are available over at the [Patreon](https://patreon.com/LANCommander) page.
 
 ## SDK
-A separate assembly called `LANCommander.SDK` has been created for use in client applications. Here is a quick example of how one can authenticate to a LANCommander server and install a game to `C:\Games`:
+A separate assembly called `LANCommander.SDK` has been created for use in client applications. The SDK relies on .NET dependency injection in order to expose services to the consuming application. Use of the SDK can be implemented by calling the extension method for registering the services:
 
 ```csharp
-var client = new LANCommander.SDK.Client("http://localhost:1337", "C:\\Games");
-
-await client.AuthenticateAsync("username", "password");
-
-client.Games.Install("114f653d-ea91-484b-8fe9-8e9bb58bde81");
+builder.Services.AddLANCommanderClient<Settings>();
 ```
+
+The generic type parameter (here `Settings`) can be used to allow extension of settings by providing your own class that inherits from `LANCommander.SDK.Settings`.
 
 ## To Do
 LANCommander is far from complete. The basic implementation that exists will allow you to:
@@ -109,9 +100,9 @@ LANCommander is far from complete. The basic implementation that exists will all
  - IPX Beacon for emulators such as DosBox
  - Game media management and automatic lookup (covers, icons, backgrounds)
  - Dedicated launcher for easy client setup
+ - Basic chat support
 
 The following features are being considered:
  - Peer-to-peer file sharing of game files
  - Built-in VPN client/server for remote LAN parties
- - Social features including chat, friends list, etc.
  - Integration with platforms such as Discord, TeamSpeak, Mumble

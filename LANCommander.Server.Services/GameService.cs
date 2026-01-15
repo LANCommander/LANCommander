@@ -224,6 +224,12 @@ namespace LANCommander.Server.Services
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
                     var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+
+                    if (!Directory.Exists(package.Path))
+                    {
+                        logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
+                        continue;
+                    }
                     
                     var archive = new Archive
                     {
@@ -235,21 +241,12 @@ namespace LANCommander.Server.Services
                     };
 
                     archive = await archiveService.AddAsync(archive);
-
-                    if (Directory.Exists(package.Path))
-                    {
-                        var destination = await archiveService.GetArchiveFileLocationAsync(archive);
-                        
-                        ZipFile.CreateFromDirectory(package.Path, destination);
-                        
-                        logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
-                    }
-                    else
-                    {
-                        logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
-                        
-                        await archiveService.DeleteAsync(archive);
-                    }
+                    
+                    var destination = await archiveService.GetArchiveFileLocationAsync(archive);
+                    
+                    ZipFile.CreateFromDirectory(package.Path, destination);
+                    
+                    logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }
             }
             else

@@ -93,8 +93,35 @@ jobs:
     # .NET builds
     - name: Publish Updater and Server
       run: |
-        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        # Strip leading 'v' if present
+        RAW_VERSION="${{ inputs.version_tag }}"       # e.g. v2.0.0-rc1
+        SEMVER="${RAW_VERSION#v}"                     # 2.0.0-rc1
+
+        # Numeric part only for Assembly/FileVersion
+        NUMERIC="${SEMVER%%-*}"                       # 2.0.0
+        ASSEMBLY_VERSION="${NUMERIC}.0"               # 2.0.0.0
+
+        echo "SEMVER=$SEMVER"
+        echo "ASSEMBLY_VERSION=$ASSEMBLY_VERSION"
+
+        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" \
+          -c "${{ inputs.build_configuration }}" \
+          --self-contained \
+          --runtime "${{ inputs.build_runtime }}" \
+          -p:Version="$SEMVER" \
+          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
+          -p:FileVersion="$ASSEMBLY_VERSION" \
+          -p:InformationalVersion="$SEMVER"
+
+        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" \
+          -c "${{ inputs.build_configuration }}" \
+          --self-contained \
+          --runtime "${{ inputs.build_runtime }}" \
+          -p:Version="$SEMVER" \
+          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
+          -p:FileVersion="$ASSEMBLY_VERSION" \
+          -p:InformationalVersion="$SEMVER"
+
 
     - name: Bundle and Clean
       shell: pwsh

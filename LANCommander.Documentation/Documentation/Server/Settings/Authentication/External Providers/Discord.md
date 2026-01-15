@@ -1,4 +1,4 @@
-# Discord.md
+# Discord
 
 In order to enable authentication via Discord, you must create an app in the [Discord Developers Portal](https://discord.com/developers/applications). Once an application is created in the portal, you can retrieve the client ID and secret from the **OAuth2** section.
 

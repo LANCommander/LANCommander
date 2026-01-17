@@ -44,7 +44,10 @@ internal partial class RpcSubscriber(ITokenProvider tokenProvider, ILogger<RpcSu
     {
         try
         {
-            await _connection.StopAsync();
+            if (_connection != null)
+            {
+                await _connection.StopAsync();
+            }
 
             return true;
         }

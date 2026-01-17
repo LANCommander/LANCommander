@@ -1,0 +1,33 @@
+﻿@using Photino.Blazor.CustomWindow.Components
+@namespace LANCommander.Launcher.UI
+@inherits LayoutComponentBase
+@inject AuthenticationClient AuthenticationClient
+@inject NavigationManager NavigationManager
+@inject LocalizationService LocalizationService
+
+    <CustomWindow HeaderHeight="37">
+        <WindowContent>
+            <ErrorHandler Title="@LocalizationService.GetString("LauncherCrashed")">
+                <Body>
+                    <Layout>
+                        @Body
+                    </Layout>
+                    
+                    <UpdateChecker/>
+                    <AntContainer/>
+                </Body>
+
+                <Extra>
+                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate", true))">@LocalizationService.GetString("Reload")</Button>
+                </Extra>
+            </ErrorHandler>
+        </WindowContent>
+    </CustomWindow>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthenticationClient.ValidateTokenAsync())
+            NavigationManager.NavigateTo("/Library");
+    }
+}

@@ -20,6 +20,7 @@ public static class Endpoints
             endpoints.MapAuthApiEndpoints();
             endpoints.MapChatEndpoints();
             endpoints.MapDownloadEndpoints();
+            endpoints.MapExportEndpoints();
             endpoints.MapGameEndpoints();
             endpoints.MapDepotEndpoints();
             endpoints.MapArchivesEndpoints();

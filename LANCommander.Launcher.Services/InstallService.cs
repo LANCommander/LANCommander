@@ -12,8 +12,10 @@ namespace LANCommander.Launcher.Services
 {
     public class InstallService : BaseService
     {
-        private readonly GameService GameService;
-        private readonly SDK.Client Client;
+        private readonly GameService _gameService;
+        private readonly GameClient _gameClient;
+        private readonly RedistributableClient _redistributableClient;
+        private readonly MediaClient _mediaClient;
 
         private Stopwatch Stopwatch { get; set; }
 
@@ -33,12 +35,17 @@ namespace LANCommander.Launcher.Services
         public event OnInstallFailHandler OnInstallFail;
 
         public InstallService(
-            SDK.Client client,
             ILogger<InstallService> logger,
-            GameService gameService) : base(logger)
+            GameService gameService,
+            GameClient gameClient,
+            RedistributableClient redistributableClient,
+            MediaClient mediaClient) : base(logger)
         {
-            Client = client;
-            GameService = gameService;
+            _gameService = gameService;
+            _gameClient = gameClient;
+            _redistributableClient = redistributableClient;
+            _mediaClient = mediaClient;
+            
             Stopwatch = new Stopwatch();
 
             Queue = new ObservableCollection<IInstallQueueItem>();
@@ -48,18 +55,18 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
             }; 
 
-            Client.Games.OnInstallProgressUpdate += (e) =>
+            _gameClient.OnInstallProgressUpdate += (e) =>
             {
                 OnProgress?.Invoke(e);
             };
 
-            Client.Redistributables.OnInstallProgressUpdate += (e) =>
+            _redistributableClient.OnInstallProgressUpdate += (e) =>
             {
                 OnProgress?.Invoke(e);
             };
 
-            // Client.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
-            // Client.Games.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
+            // _gameClient.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
+            // _gameClient.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
         }
 
         private void Games_OnArchiveExtractionProgress(long position, long length, SDK.Models.Game game)
@@ -75,21 +82,24 @@ namespace LANCommander.Launcher.Services
         [Obsolete("Use Add(Game, string, Game[]) instead.")]
         public async Task AddObsolete(Game game, string installDirectory = "", Guid[]? addonIds = null)
         {
-            var addons = addonIds != null ? await Client.Games.GetAddonsAsync(game.Id) : [];
+            var addons = addonIds != null ? await _gameClient.GetAddonsAsync(game.Id) : [];
             var selectedAddons = addons?.Where(x => addons.Contains(x)).ToArray();
             await Add(game, installDirectory, selectedAddons);
         }
 
         public async Task Add(Game game, string installDirectory = "", SDK.Models.Game[]? addons = null)
         {
-            var gameInfo = await Client.Games.GetAsync(game.Id);
+            var gameInfo = await _gameClient.GetAsync(game.Id);
+            
+            // TODO: Throw exception (and gracefully handle) when gameInfo == null
+            // Game probably couldn't be found or deserialized from server
 
             Logger?.LogTrace("Adding game {GameTitle} to the queue", gameInfo.Title);
 
             // Check to see if we need to install the base game (this game is probably a mod or expansion)
             if (gameInfo.BaseGameId != Guid.Empty)
             {
-                var baseGame = await GameService.GetAsync(gameInfo.BaseGameId);
+                var baseGame = await _gameService.GetAsync(gameInfo.BaseGameId);
 
                 if (baseGame != null && !baseGame.Installed)
                 {
@@ -192,8 +202,8 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                localGame = await GameService.GetAsync(currentItem.Id);
-                remoteGame = await Client.Games.GetAsync(currentItem.Id);
+                localGame = await _gameService.GetAsync(currentItem.Id);
+                remoteGame = await _gameClient.GetAsync(currentItem.Id);
 
                 if (localGame == null)
                 {
@@ -215,7 +225,7 @@ namespace LANCommander.Launcher.Services
                 if (localGame.Installed)
                 {
                     // update current local installed game first, might be moved afterwards
-                    await Client.Games.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                    await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
 
                     // Probably doing a modification of some sort
                     if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
@@ -224,12 +234,12 @@ namespace LANCommander.Launcher.Services
                         var removeAddons = allAddons.Except(currentItem.AddonIds ?? []).ToArray();
                         var addAddons = allAddons.Intersect(currentItem.AddonIds ?? []).ToArray();
 
-                        var uninstallResult = await Client.Games.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
-                        var installResult = await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
-                        await Client.Games.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
+                        var uninstallResult = await _gameClient.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
+                        var installResult = await _gameClient.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
+                        await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
 
                         UpdateGameState(currentItem, localGame, localGame.InstallDirectory);
-                        await GameService.UpdateAsync(localGame);
+                        await _gameService.UpdateAsync(localGame);
                         
                         currentItem.Status = InstallStatus.Complete;
                         OnQueueChanged?.Invoke();
@@ -262,7 +272,7 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    var gameFileList = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds, cancellationToken: currentItem.CancellationToken.Token);
+                    var gameFileList = await _gameClient.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds, cancellationToken: currentItem.CancellationToken.Token);
                     installDirectory = gameFileList.InstallDirectory;
                     UpdateGameState(currentItem, localGame, installDirectory);
                 }
@@ -290,14 +300,14 @@ namespace LANCommander.Launcher.Services
                 {
                     foreach (var manual in remoteGame.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
                     {
-                        var localPath = Path.Combine(Client.Media.GetLocalPath(manual), $"{manual.FileId}-{manual.Crc32}");
+                        var localPath = Path.Combine(_mediaClient.GetLocalPath(manual), $"{manual.FileId}-{manual.Crc32}");
 
                         if (!File.Exists(localPath))
                         {
-                            foreach (var staleFile in Client.Media.GetStaleLocalPaths(manual))
+                            foreach (var staleFile in _mediaClient.GetStaleLocalPaths(manual))
                                 File.Delete(staleFile);
 
-                            await Client.Media.DownloadAsync(new SDK.Models.Media
+                            await _mediaClient.DownloadAsync(new SDK.Models.Media
                             {
                                 Id = manual.Id,
                                 FileId = manual.FileId
@@ -320,7 +330,7 @@ namespace LANCommander.Launcher.Services
 
                     try
                     {
-                        await GameService.UpdateAsync(localGame);
+                        await _gameService.UpdateAsync(localGame);
                     }
                     catch (Exception ex)
                     {
@@ -379,13 +389,13 @@ namespace LANCommander.Launcher.Services
 
                 OnQueueChanged?.Invoke();
                 
-                var newInstallDirectory = await Client.Games.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
+                var newInstallDirectory = await _gameClient.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
 
-                newInstallDirectory = await Client.Games.MoveAsync(remoteGame, localGame.InstallDirectory, newInstallDirectory);
+                newInstallDirectory = await _gameClient.MoveAsync(remoteGame, localGame.InstallDirectory, newInstallDirectory);
 
                 localGame.InstallDirectory = newInstallDirectory;
 
-                await GameService.UpdateAsync(localGame);
+                await _gameService.UpdateAsync(localGame);
 
                 currentItem.Status = InstallStatus.Complete;
 

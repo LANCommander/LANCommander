@@ -1,0 +1,21 @@
+@using LANCommander.UI.Providers
+@namespace LANCommander.UI
+
+<Result
+    Status="ResultStatus.Error"
+    Title="@Title"
+    SubTitle="@Subtitle">
+    <Extra>
+        @Extra
+    </Extra>
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+</Result>
+
+@code {
+    [Parameter] public string? Title { get; set; } = "Not Found";
+    [Parameter] public string? Subtitle { get; set; } = QuipProvider.GetNotFoundQuip();
+    [Parameter] public RenderFragment? Extra { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

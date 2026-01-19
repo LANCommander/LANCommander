@@ -26,6 +26,7 @@ public partial class ShellViewModel : ViewModelBase
     public GamesListViewModel GamesListViewModel { get; private set; } = null!;
     public GameDetailViewModel GameDetailViewModel { get; private set; } = null!;
     public DownloadQueueViewModel DownloadQueue { get; private set; } = null!;
+    public SettingsViewModel SettingsViewModel { get; private set; } = null!;
 
     public event EventHandler? LogoutRequested;
 
@@ -44,17 +45,21 @@ public partial class ShellViewModel : ViewModelBase
         GamesListViewModel = new GamesListViewModel(_serviceProvider);
         GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue = new DownloadQueueViewModel(_serviceProvider);
+        SettingsViewModel = new SettingsViewModel(_serviceProvider);
 
         // Wire up events
         Sidebar.DepotSelected += OnDepotSelected;
         Sidebar.ItemSelected += OnLibraryItemSelected;
         Sidebar.RefreshRequested += async (_, _) => await RefreshAsync();
         Sidebar.LogoutRequested += async (_, _) => await LogoutAsync();
+        Sidebar.SettingsRequested += OnSettingsRequested;
         
         GamesListViewModel.GameSelected += OnGameSelected;
         GameDetailViewModel.BackRequested += OnBackFromGameDetail;
         GameDetailViewModel.LibraryChanged += OnLibraryChanged;
         GameDetailViewModel.InstallRequested += OnInstallRequested;
+        
+        SettingsViewModel.BackRequested += OnBackFromSettings;
         
         DownloadQueue.InstallCompleted += OnInstallCompleted;
         DownloadQueue.Initialize();
@@ -193,5 +198,18 @@ public partial class ShellViewModel : ViewModelBase
             GameDetailViewModel.IsInstalled = true;
             GameDetailViewModel.StatusMessage = "Installation complete!";
         }
+    }
+
+    private void OnSettingsRequested(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Opening settings");
+        Sidebar.ClearSelection();
+        SettingsViewModel.Load();
+        ContentView = SettingsViewModel;
+    }
+
+    private void OnBackFromSettings(object? sender, EventArgs e)
+    {
+        ShowDepot();
     }
 }

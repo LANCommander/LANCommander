@@ -22,6 +22,9 @@
                         <DataTemplate DataType="vm:GameDetailViewModel">
                             <views:GameDetailView />
                         </DataTemplate>
+                        <DataTemplate DataType="vm:SettingsViewModel">
+                            <views:SettingsView />
+                        </DataTemplate>
                     </ContentControl.DataTemplates>
                 </ContentControl>
             </Border>

@@ -52,10 +52,15 @@
             <!-- Footer -->
             <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                 <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Content="Logout"
-                            Command="{Binding LogoutCommand}"
-                            Padding="8,4" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                        <Button Content="⚙"
+                                Command="{Binding SettingsCommand}"
+                                ToolTip.Tip="Settings"
+                                Padding="8,4" />
+                        <Button Content="Logout"
+                                Command="{Binding LogoutCommand}"
+                                Padding="8,4" />
+                    </StackPanel>
                     <TextBlock Text="{Binding StatusMessage}" 
                                Opacity="0.6" 
                                FontSize="11"

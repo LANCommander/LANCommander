@@ -39,6 +39,7 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     public event EventHandler<LibraryItemViewModel>? ItemSelected;
     public event EventHandler? RefreshRequested;
     public event EventHandler? LogoutRequested;
+    public event EventHandler? SettingsRequested;
 
     public LibrarySidebarViewModel(IServiceProvider serviceProvider)
     {
@@ -121,6 +122,12 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     private void Logout()
     {
         LogoutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void Settings()
+    {
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     public void ClearSelection()

@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+    
+    <Border Padding="40" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <StackPanel Spacing="20" Width="400">
+            <TextBlock Text="LANCommander"
+                       FontSize="32"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center" />
+            
+            <TextBlock Text="Sign In"
+                       FontSize="18"
+                       HorizontalAlignment="Center"
+                       Opacity="0.7" />
+            
+            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center" 
+                        Spacing="8"
+                        Opacity="0.6">
+                <TextBlock Text="Connected to:" />
+                <TextBlock Text="{Binding ServerAddress}" FontWeight="SemiBold" />
+                <Button Content="Change" 
+                        Command="{Binding ChangeServerCommand}"
+                        Padding="4,0"
+                        Classes="hyperlink" />
+            </StackPanel>
+            
+            <StackPanel Spacing="8" Margin="0,20,0,0">
+                <TextBlock Text="Username" FontWeight="SemiBold" />
+                <TextBox Watermark="Enter your username"
+                         Text="{Binding Username}"
+                         IsEnabled="{Binding !IsLoading}" />
+            </StackPanel>
+            
+            <StackPanel Spacing="8">
+                <TextBlock Text="Password" FontWeight="SemiBold" />
+                <TextBox Watermark="Enter your password"
+                         PasswordChar="•"
+                         Text="{Binding Password}"
+                         IsEnabled="{Binding !IsLoading}" />
+            </StackPanel>
+            
+            <Button Command="{Binding LoginCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Classes="accent"
+                    Padding="12"
+                    IsEnabled="{Binding !IsLoading}">
+                <Panel>
+                    <TextBlock Text="Sign In" IsVisible="{Binding !IsLoading}" />
+                    <TextBlock Text="Signing in..." IsVisible="{Binding IsLoading}" />
+                </Panel>
+            </Button>
+            
+            <Border IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Padding="12"
+                    CornerRadius="4">
+                <TextBlock Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center" />
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

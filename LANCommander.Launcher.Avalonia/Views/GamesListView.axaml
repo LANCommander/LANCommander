@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
+             x:DataType="vm:GamesListViewModel">
+    
+    <DockPanel>
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Refresh" Command="{Binding LoadGamesInternalCommand}" />
+                </StackPanel>
+                
+                <StackPanel>
+                    <TextBlock Text="Depot - All Games" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding StatusMessage}" Opacity="0.7" FontSize="12" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        
+        <!-- Search Bar -->
+        <Border DockPanel.Dock="Top" Padding="16,8">
+            <TextBox Watermark="Search games..."
+                     Text="{Binding SearchText}" />
+        </Border>
+        
+        <!-- Loading Indicator -->
+        <Border DockPanel.Dock="Top" 
+                IsVisible="{Binding IsLoading}"
+                Padding="16"
+                HorizontalAlignment="Center">
+            <TextBlock Text="Loading games..." />
+        </Border>
+        
+        <!-- Error Message -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding HasError}"
+                Padding="16"
+                Margin="16,0"
+                CornerRadius="4">
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
+        </Border>
+        
+        <!-- Games List -->
+        <ListBox ItemsSource="{Binding Games}"
+                 SelectedItem="{Binding SelectedGame}"
+                 Padding="8"
+                 SelectionMode="Single">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="vm:GameItemViewModel">
+                    <Button Command="{Binding $parent[ListBox].((vm:GamesListViewModel)DataContext).ViewGameDetailsCommand}"
+                            CommandParameter="{Binding}"
+                            Background="Transparent"
+                            Padding="0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            Cursor="Hand">
+                        <Border Padding="12" Margin="4" CornerRadius="8"
+                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                            <DockPanel>
+                                <!-- Game Icon -->
+                                <Border DockPanel.Dock="Left"
+                                        Width="64" Height="64"
+                                        CornerRadius="8"
+                                        ClipToBounds="True"
+                                        Margin="0,0,16,0">
+                                    <Panel>
+                                        <!-- Icon from local file -->
+                                        <Image Source="{Binding IconPath}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasIcon}" />
+                                        
+                                        <!-- Fallback icon -->
+                                        <Border Background="{DynamicResource SystemAccentColor}"
+                                                IsVisible="{Binding !HasIcon}">
+                                            <TextBlock Text="🎮"
+                                                       FontSize="24"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" />
+                                        </Border>
+                                    </Panel>
+                                </Border>
+                                
+                                <!-- Game Info -->
+                                <StackPanel Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="16"
+                                               FontWeight="SemiBold" />
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Opacity="0.7">
+                                        <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}" />
+                                        <TextBlock Text="•"
+                                                   IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="{Binding Developers}"
+                                                   IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Genres}"
+                                                   FontSize="12"
+                                                   Opacity="0.6"
+                                                   IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        
+                                        <!-- In Library indicator -->
+                                        <Border Background="{DynamicResource SystemAccentColor}"
+                                                CornerRadius="4"
+                                                Padding="6,2"
+                                                IsVisible="{Binding InLibrary}">
+                                            <TextBlock Text="In Library" FontSize="10" Foreground="White" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                                
+                                <!-- Arrow indicator -->
+                                <TextBlock DockPanel.Dock="Right"
+                                           Text="›"
+                                           FontSize="24"
+                                           Opacity="0.5"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0" />
+                            </DockPanel>
+                        </Border>
+                    </Button>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

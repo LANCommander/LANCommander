@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
+             x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
+             x:DataType="vm:ShellViewModel">
+    
+    <Grid ColumnDefinitions="280,*">
+        <!-- Left Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <DockPanel>
+                <!-- Header -->
+                <Border DockPanel.Dock="Top" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" 
+                                Content="⟳" 
+                                Command="{Binding RefreshCommand}"
+                                ToolTip.Tip="Refresh"
+                                Padding="8,4" />
+                        <TextBlock Text="LANCommander" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                
+                <!-- Navigation Buttons -->
+                <StackPanel DockPanel.Dock="Top" Margin="8,8,8,0">
+                    <Button Command="{Binding ShowDepotCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="12,10"
+                            Margin="0,0,0,4"
+                            Classes.selected="{Binding IsDepotSelected}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <TextBlock Text="🏪" FontSize="16" />
+                            <TextBlock Text="Depot (All Games)" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                
+                <!-- Library Section Header -->
+                <Border DockPanel.Dock="Top" Padding="16,16,16,8">
+                    <TextBlock Text="MY LIBRARY" 
+                               FontSize="11" 
+                               FontWeight="SemiBold" 
+                               Opacity="0.5" />
+                </Border>
+                
+                <!-- Footer -->
+                <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="Logout"
+                                Command="{Binding LogoutCommand}"
+                                Padding="8,4" />
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   Opacity="0.6" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                </Border>
+                
+                <!-- Library Items List -->
+                <ListBox ItemsSource="{Binding LibraryItems}"
+                         SelectedItem="{Binding SelectedLibraryItem}"
+                         Padding="4"
+                         Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:LibraryItemViewModel">
+                            <Button Command="{Binding $parent[ListBox].((vm:ShellViewModel)DataContext).SelectLibraryItemCommand}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    Padding="8,6"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <!-- Icon -->
+                                    <Border Width="24" Height="24" 
+                                            CornerRadius="4" 
+                                            ClipToBounds="True">
+                                        <Panel>
+                                            <Image Source="{Binding IconPath}"
+                                                   Stretch="UniformToFill"
+                                                   IsVisible="{Binding HasIcon}" />
+                                            <Border Background="{DynamicResource SystemAccentColor}"
+                                                    IsVisible="{Binding !HasIcon}">
+                                                <TextBlock Text="🎮" 
+                                                           FontSize="12" 
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                        </Panel>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Text="{Binding Title}" 
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+        
+        <!-- Main Content Area -->
+        <Border Grid.Column="1">
+            <ContentControl Content="{Binding ContentView}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:GamesListViewModel">
+                        <views:GamesListView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:GameDetailViewModel">
+                        <views:GameDetailView />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
+    </Grid>
+</UserControl>

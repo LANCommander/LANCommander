@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
+             x:DataType="vm:GameDetailViewModel">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with Back Button -->
+        <Border Grid.Row="0" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <Button DockPanel.Dock="Left" 
+                        Content="← Back to Depot" 
+                        Command="{Binding GoBackCommand}"
+                        Padding="12,8" />
+                <TextBlock Text="{Binding Title}" 
+                           FontSize="20" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0" />
+            </DockPanel>
+        </Border>
+        
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <Grid RowDefinitions="Auto,*">
+                <!-- Banner/Cover Image -->
+                <Border Grid.Row="0" 
+                        Height="300" 
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <Panel>
+                        <!-- Background image (if available) -->
+                        <Image Source="{Binding BackgroundPath}"
+                               Stretch="UniformToFill"
+                               Opacity="0.3"
+                               IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        
+                        <!-- Cover/Banner overlay -->
+                        <Border HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                CornerRadius="8"
+                                ClipToBounds="True"
+                                MaxHeight="280"
+                                BoxShadow="0 4 16 0 #40000000">
+                            <Image Source="{Binding BannerPath}"
+                                   Stretch="Uniform"
+                                   MaxHeight="280"
+                                   IsVisible="{Binding BannerPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </Border>
+                        
+                        <!-- Fallback when no banner -->
+                        <Border HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource SystemAccentColor}"
+                                CornerRadius="8"
+                                Padding="40,20"
+                                IsVisible="{Binding BannerPath, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+                            <StackPanel>
+                                <TextBlock Text="🎮" FontSize="48" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding Title}" 
+                                           FontSize="24" 
+                                           FontWeight="Bold" 
+                                           HorizontalAlignment="Center"
+                                           Foreground="White" />
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                </Border>
+                
+                <!-- Game Details -->
+                <StackPanel Grid.Row="1" Margin="24" Spacing="16">
+                    <!-- Title and Year -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Title}" 
+                                   FontSize="28" 
+                                   FontWeight="Bold" />
+                        <TextBlock Text="{Binding ReleaseYear}" 
+                                   FontSize="16" 
+                                   Opacity="0.7" />
+                    </StackPanel>
+                    
+                    <!-- Quick Info Cards -->
+                    <WrapPanel Orientation="Horizontal">
+                        <!-- Developers -->
+                        <Border Margin="0,0,8,8" 
+                                Padding="12,8" 
+                                CornerRadius="4"
+                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="👨‍💻" />
+                                <TextBlock Text="{Binding Developers}" />
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Publishers -->
+                        <Border Margin="0,0,8,8" 
+                                Padding="12,8" 
+                                CornerRadius="4"
+                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="🏢" />
+                                <TextBlock Text="{Binding Publishers}" />
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Singleplayer -->
+                        <Border Margin="0,0,8,8" 
+                                Padding="12,8" 
+                                CornerRadius="4"
+                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                IsVisible="{Binding Singleplayer}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="👤" />
+                                <TextBlock Text="Singleplayer" />
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Multiplayer -->
+                        <Border Margin="0,0,8,8" 
+                                Padding="12,8" 
+                                CornerRadius="4"
+                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                IsVisible="{Binding HasMultiplayer}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="👥" />
+                                <TextBlock Text="{Binding MultiplayerModes}" />
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+                    
+                    <!-- Genres -->
+                    <StackPanel Spacing="8" 
+                                IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="Genres" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="{Binding Genres}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    
+                    <!-- Platforms -->
+                    <StackPanel Spacing="8" 
+                                IsVisible="{Binding Platforms, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="Platforms" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="{Binding Platforms}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    
+                    <!-- Tags -->
+                    <StackPanel Spacing="8" 
+                                IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="Tags" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="{Binding Tags}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    
+                    <!-- Description -->
+                    <StackPanel Spacing="8" 
+                                IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="Description" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="{Binding Description}" 
+                                   TextWrapping="Wrap" 
+                                   LineHeight="24" />
+                    </StackPanel>
+                    
+                    <!-- Placeholder for future actions -->
+                    <Border Margin="0,16,0,0" 
+                            Padding="16" 
+                            CornerRadius="8"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Actions" FontWeight="SemiBold" />
+                            <TextBlock Text="Install, Play, and other game actions will be available here in a future update." 
+                                       Opacity="0.6" 
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

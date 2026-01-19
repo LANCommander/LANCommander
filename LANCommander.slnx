@@ -3,6 +3,7 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/LANCommander.Launcher/">
+    <Project Path="LANCommander.Launcher.Avalonia\LANCommander.Launcher.Avalonia.csproj" />
     <Project Path="LANCommander.Launcher.CLI\LANCommander.Launcher.CLI.csproj" />
     <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />

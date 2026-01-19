@@ -118,12 +118,6 @@ public partial class ShellViewModel : ViewModelBase
         LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    [RelayCommand]
-    private void ToggleDownloadQueue()
-    {
-        DownloadQueue.Toggle();
-    }
-
     private void ShowDepot()
     {
         Sidebar.SelectDepot();
@@ -192,11 +186,10 @@ public partial class ShellViewModel : ViewModelBase
         await Sidebar.LoadAsync();
         await GamesListViewModel.LoadGamesAsync();
         
-        // If we're viewing this game, update its status
+        // If we're viewing this game, refresh its install status
         if (GameDetailViewModel.Id == gameId)
         {
-            GameDetailViewModel.IsInstalled = true;
-            GameDetailViewModel.StatusMessage = "Installation complete!";
+            await GameDetailViewModel.RefreshInstallStatusAsync();
         }
     }
 

@@ -116,6 +116,37 @@ public partial class GameDetailViewModel : ViewModelBase
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
 
+    /// <summary>
+    /// Refreshes the install status from the database.
+    /// Called after an installation completes.
+    /// </summary>
+    public async Task RefreshInstallStatusAsync()
+    {
+        if (Id == Guid.Empty) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+            
+            var localGame = await gameService.GetAsync(Id);
+            if (localGame != null)
+            {
+                IsInstalled = localGame.Installed;
+                InstallDirectory = localGame.InstallDirectory;
+                IsInLibrary = await libraryService.IsInLibraryAsync(Id);
+                LoadPlayStats(localGame);
+                StatusMessage = IsInstalled ? "Installation complete!" : null;
+                _logger.LogInformation("Refreshed install status for {Title}: Installed={Installed}", Title, IsInstalled);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh install status for {GameId}", Id);
+        }
+    }
+
     public GameDetailViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

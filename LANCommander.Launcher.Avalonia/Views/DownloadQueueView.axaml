@@ -6,126 +6,158 @@
     
     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
             BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-            BorderThickness="0,1,0,0"
-            IsVisible="{Binding IsVisible}">
-        <DockPanel MaxHeight="300">
-            <!-- Header -->
-            <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            BorderThickness="0,1,0,0">
+        <DockPanel>
+            <!-- Header - always visible -->
+            <Border DockPanel.Dock="Top" Padding="12,8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" 
-                            Content="✕" 
-                            Command="{Binding HideCommand}"
-                            Padding="8,4"
-                            Background="Transparent" />
+                            Command="{Binding ToggleExpandedCommand}"
+                            Padding="6,2"
+                            FontSize="10"
+                            Background="Transparent"
+                            IsVisible="{Binding HasItems}">
+                        <Panel>
+                            <TextBlock Text="▼" IsVisible="{Binding !IsExpanded}" />
+                            <TextBlock Text="▲" IsVisible="{Binding IsExpanded}" />
+                        </Panel>
+                    </Button>
                     
-                    <TextBlock Text="Downloads" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="📥" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="Downloads" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        
+                        <!-- Badge showing count -->
+                        <Border Background="{DynamicResource SystemAccentColor}" 
+                                CornerRadius="8" 
+                                Padding="6,2"
+                                IsVisible="{Binding HasActiveDownload}">
+                            <TextBlock Text="{Binding ActiveCount}" FontSize="11" Foreground="White" />
+                        </Border>
+                    </StackPanel>
                 </DockPanel>
             </Border>
             
-            <!-- Content -->
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="8" Margin="16">
+            <!-- Collapsed state: show mini progress bar if downloading -->
+            <Border DockPanel.Dock="Top" 
+                    Padding="12,4"
+                    IsVisible="{Binding !IsExpanded}">
+                <StackPanel>
+                    <!-- Mini progress when downloading -->
+                    <Grid IsVisible="{Binding HasActiveDownload}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding TransferSpeedText}" FontSize="11" Opacity="0.7" />
+                            <TextBlock Text="{Binding CurrentItem.Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <ProgressBar Grid.Row="1" 
+                                     Value="{Binding CurrentProgress}" 
+                                     Minimum="0" Maximum="1"
+                                     Height="4"
+                                     Margin="0,4,0,0" />
+                    </Grid>
+                    
+                    <!-- No downloads message -->
+                    <TextBlock Text="No active downloads" 
+                               FontSize="11" 
+                               Opacity="0.5" 
+                               IsVisible="{Binding !HasItems}" />
+                </StackPanel>
+            </Border>
+            
+            <!-- Expanded content -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" 
+                          VerticalScrollBarVisibility="Auto"
+                          MaxHeight="200"
+                          IsVisible="{Binding IsExpanded}">
+                <StackPanel Spacing="4" Margin="8">
                     
                     <!-- Current Download -->
-                    <StackPanel IsVisible="{Binding HasActiveDownload}" Spacing="8">
-                        <TextBlock Text="In Progress" FontWeight="SemiBold" Opacity="0.7" />
-                        
-                        <Border Padding="12" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                IsVisible="{Binding CurrentItem, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-                                <!-- Title -->
-                                <TextBlock Grid.Row="0" Grid.Column="0" 
-                                           Text="{Binding CurrentItem.Title}" 
-                                           FontWeight="SemiBold" />
-                                
-                                <!-- Cancel button -->
-                                <Button Grid.Row="0" Grid.Column="1" Grid.RowSpan="3"
-                                        Content="Cancel"
+                    <Border Padding="8" CornerRadius="6" 
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            IsVisible="{Binding CurrentItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid RowDefinitions="Auto,Auto,Auto">
+                            <!-- Title and Cancel -->
+                            <DockPanel Grid.Row="0">
+                                <Button DockPanel.Dock="Right"
+                                        Content="✕"
                                         Command="{Binding CancelCommand}"
                                         CommandParameter="{Binding CurrentItem}"
-                                        Padding="12,8"
-                                        VerticalAlignment="Center"
-                                        Foreground="IndianRed" />
-                                
-                                <!-- Status -->
-                                <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                                    <TextBlock Text="{Binding CurrentStatus}" Opacity="0.7" />
-                                    <TextBlock Text="•" Opacity="0.5" />
-                                    <TextBlock Text="{Binding CurrentProgressText}" Opacity="0.7" />
-                                    <TextBlock Text="•" Opacity="0.5" />
-                                    <TextBlock Text="{Binding TransferSpeedText}" Opacity="0.7" />
-                                </StackPanel>
-                                
-                                <!-- Progress Bar -->
-                                <ProgressBar Grid.Row="2" Grid.Column="0" 
-                                             Value="{Binding CurrentProgress}" 
-                                             Minimum="0" Maximum="1"
-                                             Height="6"
-                                             Margin="0,8,16,0" />
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                    
-                    <!-- Queued Items -->
-                    <StackPanel IsVisible="{Binding HasQueuedItems}" Spacing="8">
-                        <TextBlock Text="Up Next" FontWeight="SemiBold" Opacity="0.7" Margin="0,8,0,0" />
-                        
-                        <ItemsControl ItemsSource="{Binding QueueItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                    <Border Padding="12" Margin="0,0,0,4" CornerRadius="8" 
-                                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                            IsVisible="{Binding IsQueued}">
-                                        <DockPanel>
-                                            <Button DockPanel.Dock="Right"
-                                                    Content="✕"
-                                                    Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}"
-                                                    CommandParameter="{Binding}"
-                                                    Padding="8,4"
-                                                    Foreground="IndianRed"
-                                                    Background="Transparent" />
-                                            
-                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                                        </DockPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                    
-                    <!-- Empty State -->
-                    <Border Padding="24"
-                            IsVisible="{Binding !HasActiveDownload}">
-                        <StackPanel HorizontalAlignment="Center" Spacing="8" IsVisible="{Binding !HasQueuedItems}">
-                            <TextBlock Text="📥" FontSize="32" HorizontalAlignment="Center" Opacity="0.5" />
-                            <TextBlock Text="No downloads in progress" Opacity="0.5" HorizontalAlignment="Center" />
-                        </StackPanel>
+                                        Padding="4,2"
+                                        FontSize="10"
+                                        Foreground="IndianRed"
+                                        Background="Transparent" />
+                                <TextBlock Text="{Binding CurrentItem.Title}" 
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                            </DockPanel>
+                            
+                            <!-- Status -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding CurrentStatus}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="•" FontSize="11" Opacity="0.5" />
+                                <TextBlock Text="{Binding CurrentProgressText}" FontSize="11" Opacity="0.7" />
+                            </StackPanel>
+                            
+                            <!-- Progress Bar -->
+                            <ProgressBar Grid.Row="2" 
+                                         Value="{Binding CurrentProgress}" 
+                                         Minimum="0" Maximum="1"
+                                         Height="4"
+                                         Margin="0,4,0,0" />
+                        </Grid>
                     </Border>
                     
-                    <!-- Completed Items -->
-                    <StackPanel IsVisible="{Binding HasCompletedItems}" Spacing="8">
-                        <TextBlock Text="Completed" FontWeight="SemiBold" Opacity="0.7" Margin="0,8,0,0" />
-                        
-                        <ItemsControl ItemsSource="{Binding QueueItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                    <Border Padding="12" Margin="0,0,0,4" CornerRadius="8" 
-                                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                            IsVisible="{Binding IsCompleted}">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="Green" 
-                                                       VerticalAlignment="Center" Margin="8,0,0,0" />
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Title}" />
-                                                <TextBlock Text="{Binding ProgressText}" FontSize="12" Opacity="0.6" />
-                                            </StackPanel>
-                                        </DockPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                    <!-- Queued Items -->
+                    <ItemsControl ItemsSource="{Binding QueueItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:InstallQueueItemViewModel">
+                                <Border Padding="8,4" Margin="0,0,0,2" CornerRadius="4" 
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                        IsVisible="{Binding IsQueued}">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Content="✕"
+                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}"
+                                                CommandParameter="{Binding}"
+                                                Padding="4,2"
+                                                FontSize="10"
+                                                Foreground="IndianRed"
+                                                Background="Transparent" />
+                                        
+                                        <TextBlock Text="{Binding Title}" 
+                                                   FontSize="11" 
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     
+                    <!-- Completed Items -->
+                    <ItemsControl ItemsSource="{Binding QueueItems}" IsVisible="{Binding HasCompletedItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:InstallQueueItemViewModel">
+                                <Border Padding="8,4" Margin="0,0,0,2" CornerRadius="4" 
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                        IsVisible="{Binding IsCompleted}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="Green" 
+                                                   FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Title}" 
+                                                   FontSize="11" 
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
         </DockPanel>

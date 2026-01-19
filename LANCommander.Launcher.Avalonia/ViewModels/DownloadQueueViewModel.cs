@@ -23,7 +23,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private InstallService? _installService;
 
     [ObservableProperty]
-    private bool _isVisible;
+    private bool _isExpanded;
 
     [ObservableProperty]
     private ObservableCollection<InstallQueueItemViewModel> _queueItems = new();
@@ -54,6 +54,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasCompletedItems;
+
+    [ObservableProperty]
+    private bool _hasItems;
+
+    [ObservableProperty]
+    private int _activeCount;
 
     public event EventHandler<Guid>? InstallCompleted;
 
@@ -141,26 +147,28 @@ public partial class DownloadQueueViewModel : ViewModelBase
         HasActiveDownload = QueueItems.Any(i => i.IsActive);
         HasQueuedItems = QueueItems.Any(i => i.Status == InstallStatus.Queued);
         HasCompletedItems = QueueItems.Any(i => i.Status == InstallStatus.Complete);
+        HasItems = QueueItems.Any();
+        ActiveCount = QueueItems.Count(i => i.IsActive || i.Status == InstallStatus.Queued);
 
         CurrentItem = QueueItems.FirstOrDefault(i => i.IsActive);
+        
+        // Auto-expand when there's an active download
+        if (HasActiveDownload && !IsExpanded)
+        {
+            IsExpanded = true;
+        }
+    }
+
+    [RelayCommand]
+    public void ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
     }
 
     [RelayCommand]
     public void Show()
     {
-        IsVisible = true;
-    }
-
-    [RelayCommand]
-    public void Hide()
-    {
-        IsVisible = false;
-    }
-
-    [RelayCommand]
-    public void Toggle()
-    {
-        IsVisible = !IsVisible;
+        IsExpanded = true;
     }
 
     [RelayCommand]

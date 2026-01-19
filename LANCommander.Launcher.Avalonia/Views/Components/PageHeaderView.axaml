@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.PageHeaderView">
+    
+    <Border Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+        <DockPanel>
+            <!-- Back Button (optional) -->
+            <Button x:Name="BackButton"
+                    DockPanel.Dock="Left" 
+                    Padding="12,8"
+                    IsVisible="False" />
+            
+            <!-- Actions (right side) -->
+            <StackPanel x:Name="ActionsPanel"
+                        DockPanel.Dock="Right" 
+                        Orientation="Horizontal" 
+                        Spacing="8" />
+            
+            <!-- Title and Subtitle -->
+            <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText" 
+                           FontSize="20" 
+                           FontWeight="Bold" />
+                <TextBlock x:Name="SubtitleText" 
+                           Opacity="0.7" 
+                           FontSize="12"
+                           IsVisible="False" />
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

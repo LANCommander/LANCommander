@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
              x:DataType="vm:GamesListViewModel">
     
@@ -48,7 +49,7 @@
                  Padding="8"
                  SelectionMode="Single">
             <ListBox.ItemTemplate>
-                <DataTemplate DataType="vm:GameItemViewModel">
+                <DataTemplate DataType="vmComponents:GameItemViewModel">
                     <Button Command="{Binding $parent[ListBox].((vm:GamesListViewModel)DataContext).ViewGameDetailsCommand}"
                             CommandParameter="{Binding}"
                             Background="Transparent"

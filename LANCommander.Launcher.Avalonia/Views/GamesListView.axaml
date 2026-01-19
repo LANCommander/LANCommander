@@ -145,6 +145,17 @@
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center" />
                                             </Border>
+                                            
+                                            <!-- In Library badge (📚 on top-right of cover) -->
+                                            <Border Background="#CC000000"
+                                                    CornerRadius="4"
+                                                    Padding="4,2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Margin="4"
+                                                    IsVisible="{Binding InLibrary}">
+                                                <TextBlock Text="📚" FontSize="14" />
+                                            </Border>
                                         </Panel>
                                     </Border>
                                     
@@ -157,20 +168,11 @@
                                                TextWrapping="Wrap"
                                                Height="36" />
                                     
-                                    <!-- Year and In Library indicator -->
-                                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                                        <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
-                                                   FontSize="11"
-                                                   Opacity="0.6" />
-                                        
-                                        <Border Background="{DynamicResource SystemAccentColor}"
-                                                CornerRadius="3"
-                                                Padding="4,1"
-                                                IsVisible="{Binding InLibrary}"
-                                                VerticalAlignment="Center">
-                                            <TextBlock Text="✓" FontSize="9" Foreground="White" />
-                                        </Border>
-                                    </StackPanel>
+                                    <!-- Year -->
+                                    <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
+                                               FontSize="11"
+                                               Opacity="0.6"
+                                               Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
                         </Button>

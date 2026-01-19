@@ -98,7 +98,8 @@ public partial class GamesListViewModel : ViewModelBase
             {
                 if (item.DataItem is SDK.Models.DepotGame depotGame)
                 {
-                    var inLibrary = libraryService.IsInLibrary(depotGame.Id);
+                    // Use async method that checks database directly
+                    var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
                     
                     // Get cover path - use MediaClient which works with SDK models
                     string? coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);

@@ -81,6 +81,9 @@ public partial class GameDetailViewModel : ViewModelBase
     private bool _isInstalling;
 
     [ObservableProperty]
+    private bool _isUninstalling;
+
+    [ObservableProperty]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -385,6 +388,47 @@ public partial class GameDetailViewModel : ViewModelBase
         finally
         {
             IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task UninstallAsync()
+    {
+        if (!IsInstalled || IsUninstalling) return;
+
+        IsUninstalling = true;
+        StatusMessage = "Uninstalling...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+            var localGame = await gameService.GetAsync(Id);
+            if (localGame == null)
+            {
+                throw new InvalidOperationException("Game not found in local database");
+            }
+
+            _logger.LogInformation("Uninstalling game {GameId} ({Title})", Id, Title);
+
+            await gameService.UninstallAsync(localGame);
+
+            IsInstalled = false;
+            StatusMessage = "Uninstalled";
+            _logger.LogInformation("Game {GameId} ({Title}) uninstalled", Id, Title);
+
+            // Notify that library has changed (install status changed)
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to uninstall game {GameId} ({Title})", Id, Title);
+            StatusMessage = $"Failed to uninstall: {ex.Message}";
+        }
+        finally
+        {
+            IsUninstalling = false;
         }
     }
 

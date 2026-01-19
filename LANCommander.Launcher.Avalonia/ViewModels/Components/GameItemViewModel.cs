@@ -38,17 +38,17 @@ public partial class GameItemViewModel : ViewModelBase
     private string _publishers = string.Empty;
 
     [ObservableProperty]
-    private string? _iconPath;
+    private string? _coverPath;
 
     [ObservableProperty]
-    private bool _hasIcon;
+    private bool _hasCover;
 
     [ObservableProperty]
     private bool _inLibrary;
 
     public GameItemViewModel() { }
 
-    public GameItemViewModel(SDK.Models.DepotGame game, string? iconPath = null, bool inLibrary = false)
+    public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, bool inLibrary = false)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -59,12 +59,12 @@ public partial class GameItemViewModel : ViewModelBase
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
-        IconPath = iconPath;
-        HasIcon = !string.IsNullOrEmpty(iconPath);
+        CoverPath = coverPath;
+        HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
     }
 
-    public GameItemViewModel(Game game, string? iconPath = null, bool inLibrary = false)
+    public GameItemViewModel(Game game, string? coverPath = null, bool inLibrary = false)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -75,8 +75,8 @@ public partial class GameItemViewModel : ViewModelBase
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
-        IconPath = iconPath;
-        HasIcon = !string.IsNullOrEmpty(iconPath);
+        CoverPath = coverPath;
+        HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
     }
 }

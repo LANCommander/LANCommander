@@ -60,23 +60,23 @@
                         <Border Padding="12" Margin="4" CornerRadius="8"
                                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                             <DockPanel>
-                                <!-- Game Icon -->
+                                <!-- Game Cover -->
                                 <Border DockPanel.Dock="Left"
-                                        Width="64" Height="64"
-                                        CornerRadius="8"
+                                        Width="80" Height="120"
+                                        CornerRadius="4"
                                         ClipToBounds="True"
                                         Margin="0,0,16,0">
                                     <Panel>
-                                        <!-- Icon from local file -->
-                                        <Image Source="{Binding IconPath}"
+                                        <!-- Cover from local file -->
+                                        <Image Source="{Binding CoverPath}"
                                                Stretch="UniformToFill"
-                                               IsVisible="{Binding HasIcon}" />
+                                               IsVisible="{Binding HasCover}" />
                                         
-                                        <!-- Fallback icon -->
+                                        <!-- Fallback cover -->
                                         <Border Background="{DynamicResource SystemAccentColor}"
-                                                IsVisible="{Binding !HasIcon}">
+                                                IsVisible="{Binding !HasCover}">
                                             <TextBlock Text="🎮"
-                                                       FontSize="24"
+                                                       FontSize="28"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center" />
                                         </Border>

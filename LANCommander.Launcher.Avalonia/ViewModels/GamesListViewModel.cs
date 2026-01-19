@@ -73,8 +73,15 @@ public partial class GamesListViewModel : ViewModelBase
                 if (item.DataItem is SDK.Models.DepotGame depotGame)
                 {
                     var inLibrary = libraryService.IsInLibrary(depotGame.Id);
-                    var iconPath = await mediaService.GetImagePath(item.IconId);
-                    Games.Add(new GameItemViewModel(depotGame, iconPath, inLibrary));
+                    
+                    // Get cover path from the DepotGame's Cover media
+                    string? coverPath = null;
+                    if (depotGame.Cover != null)
+                    {
+                        coverPath = await mediaService.GetImagePath(depotGame.Cover.Id);
+                    }
+                    
+                    Games.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
                 }
             }
 

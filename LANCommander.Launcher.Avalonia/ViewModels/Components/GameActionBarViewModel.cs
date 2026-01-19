@@ -83,6 +83,13 @@ public partial class GameActionBarViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
     private bool _hasMultipleActions;
 
+    // Manuals
+    [ObservableProperty]
+    private ObservableCollection<ManualViewModel> _manuals = new();
+
+    [ObservableProperty]
+    private bool _hasManuals;
+
     /// <summary>
     /// Shows the simple play button when installed but has only one or zero actions
     /// </summary>
@@ -116,6 +123,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
 
         LoadPlayStats(game);
+        LoadManuals(game);
         await LoadActionsAsync();
         StartRunningCheck();
     }
@@ -141,6 +149,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
             LoadPlayStats(localGame);
+            LoadManuals(localGame);
         }
         else
         {
@@ -148,6 +157,8 @@ public partial class GameActionBarViewModel : ViewModelBase
             InstallDirectory = null;
             PlayTime = "None";
             LastPlayed = "Never";
+            Manuals.Clear();
+            HasManuals = false;
         }
 
         await LoadActionsAsync();
@@ -669,6 +680,56 @@ public partial class GameActionBarViewModel : ViewModelBase
             StatusMessage = $"Failed to open folder: {ex.Message}";
         }
     }
+
+    private void LoadManuals(Game game)
+    {
+        Manuals.Clear();
+        
+        if (game.Media == null || !game.Media.Any())
+        {
+            HasManuals = false;
+            return;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+        var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+
+        var manualMedia = game.Media
+            .Where(m => m.Type == SDK.Enums.MediaType.Manual)
+            .ToList();
+
+        foreach (var manual in manualMedia)
+        {
+            var filePath = mediaService.GetImagePath(manual);
+            if (File.Exists(filePath))
+            {
+                var title = string.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name;
+                Manuals.Add(new ManualViewModel(title, filePath, OpenManual));
+            }
+        }
+
+        HasManuals = Manuals.Count > 0;
+    }
+
+    private void OpenManual(ManualViewModel manual)
+    {
+        try
+        {
+            var viewModel = new ManualViewerViewModel(manual.Title, manual.FilePath);
+            var window = new Views.ManualViewerWindow
+            {
+                DataContext = viewModel
+            };
+            
+            viewModel.CloseAction = () => window.Close();
+            window.Show();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open manual {Title}", manual.Title);
+            StatusMessage = $"Failed to open manual: {ex.Message}";
+        }
+    }
 }
 
 /// <summary>
@@ -692,5 +753,29 @@ public partial class GameActionViewModel : ViewModelBase
     private async Task RunAsync()
     {
         await _runAction(Action);
+    }
+}
+
+/// <summary>
+/// ViewModel for a game manual (used in the Manuals menu)
+/// </summary>
+public partial class ManualViewModel : ViewModelBase
+{
+    public string Title { get; }
+    public string FilePath { get; }
+    
+    private readonly Action<ManualViewModel> _openManual;
+
+    public ManualViewModel(string title, string filePath, Action<ManualViewModel> openManual)
+    {
+        Title = title;
+        FilePath = filePath;
+        _openManual = openManual;
+    }
+
+    [RelayCommand]
+    private void Open()
+    {
+        _openManual(this);
     }
 }

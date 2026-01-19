@@ -107,6 +107,23 @@
                         <TextBlock Text="📁" />
                     </Button>
                     
+                    <!-- Manual button (when has manuals) -->
+                    <SplitButton IsVisible="{Binding HasManuals}"
+                                 Padding="12,14"
+                                 ToolTip.Tip="View Manual">
+                        <TextBlock Text="📖" />
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft" ItemsSource="{Binding Manuals}">
+                                <MenuFlyout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ManualViewModel">
+                                        <TextBlock Text="{Binding Title}" />
+                                    </DataTemplate>
+                                </MenuFlyout.ItemTemplate>
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
                     <!-- Uninstall SplitButton (when installed) - combines with Remove from Library -->
                     <SplitButton Command="{Binding UninstallCommand}"
                                  IsVisible="{Binding IsInstalled}"

@@ -6,6 +6,7 @@
     flex-direction: row;
 
     .ant-drawer-content-wrapper {
+        // Add a 128px margin from the top
         height: calc(100% - 128px) !important;
         transform: none !important;
     }

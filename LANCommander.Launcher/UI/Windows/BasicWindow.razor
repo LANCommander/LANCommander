@@ -18,7 +18,7 @@
                 </Body>
 
                 <Extra>
-                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate", true))">@LocalizationService.GetString("Reload")</Button>
+                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">@LocalizationService.GetString("Reload")</Button>
                 </Extra>
             </ErrorHandler>
         </WindowContent>
@@ -29,5 +29,7 @@
     {
         if (await AuthenticationClient.ValidateTokenAsync())
             NavigationManager.NavigateTo("/Library");
+        else
+            NavigationManager.NavigateTo("/Authenticate");
     }
 }

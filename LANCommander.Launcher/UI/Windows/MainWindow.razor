@@ -102,11 +102,7 @@
     ImportHandler ImportHandler;
     ImportHandler.ImportProgressEventArgs ImportStatus = new();
     private ImportProgress _importProgress => ImportService.Progress;
-
-    string RandomQuip = "";
-
-    string[] _crashQuips;
-
+    
     protected override async Task OnInitializedAsync()
     {
         ConnectionClient.OnOfflineModeEnabled += OnOfflineModeChanged;
@@ -119,40 +115,6 @@
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
-        
-        _crashQuips = new[]
-        {
-            LocalizationService.GetString("CrashQuip_YouDied"),
-            LocalizationService.GetString("CrashQuip_Snake"),
-            LocalizationService.GetString("CrashQuip_Wasted"),
-            LocalizationService.GetString("CrashQuip_MajorFracture"),
-            LocalizationService.GetString("CrashQuip_PastIsGapingHole"),
-            LocalizationService.GetString("CrashQuip_TownCenterDestroyed"),
-            LocalizationService.GetString("CrashQuip_ForcesUnderAttack"),
-            LocalizationService.GetString("CrashQuip_LostLead"),
-            LocalizationService.GetString("CrashQuip_TerroristsWin"),
-            LocalizationService.GetString("CrashQuip_WarNeverChanges"),
-            LocalizationService.GetString("CrashQuip_DiedOfDysentery"),
-            LocalizationService.GetString("CrashQuip_FailedToRestoreBooks"),
-            LocalizationService.GetString("CrashQuip_PlayerSplattered"),
-            LocalizationService.GetString("CrashQuip_BlameISP"),
-            LocalizationService.GetString("CrashQuip_BabaNoMore"),
-            LocalizationService.GetString("CrashQuip_GuestsLost"),
-            LocalizationService.GetString("CrashQuip_DarknessOvercome"),
-            LocalizationService.GetString("CrashQuip_GordonFreemanTerminated"),
-            LocalizationService.GetString("CrashQuip_MissionFailedSpotted"),
-            LocalizationService.GetString("CrashQuip_CriticalDamageEject"),
-            LocalizationService.GetString("CrashQuip_MinionsUnhappy"),
-            LocalizationService.GetString("CrashQuip_EmpireTriumphed"),
-            LocalizationService.GetString("CrashQuip_QuestEndedFailure"),
-            LocalizationService.GetString("CrashQuip_EatenByGrue"),
-            LocalizationService.GetString("CrashQuip_NoMessWithLoWang"),
-            LocalizationService.GetString("CrashQuip_SamKilled"),
-            LocalizationService.GetString("CrashQuip_AlienBastardsPay")
-        };
-
-        var randIndex = new Random().Next(0, _crashQuips.Length - 1);
-        RandomQuip = _crashQuips[randIndex];
     }
 
     private async void OnConnect(object? sender, EventArgs e)
@@ -175,13 +137,6 @@
     {
         ImportStatus = importProgress;
         await InvokeAsync(StateHasChanged);
-    }
-
-    async Task CopyError(Exception ex)
-    {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
-
-        MessageService.Info(LocalizationService.GetString("ErrorCopiedToClipboard"));
     }
 
     async Task Connect()

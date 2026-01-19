@@ -5,21 +5,16 @@
 @inject MessageService MessageService
 @inject NavigationManager NavigationManager
 
-<Xterm @ref="Terminal" Options="TerminalOptions" Addons="@Addons" />
+<Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" />
 
 @code {
-    Xterm? Terminal;
-    HubConnection? HubConnection;
+    Terminal? _terminal;
+    HubConnection? _hubConnection;
 
-    TerminalOptions TerminalOptions = new TerminalOptions
+    TerminalOptions _options = new()
     {
         CursorBlink = true,
-        CursorStyle = CursorStyle.Bar
-    };
-
-    HashSet<string> Addons = new HashSet<string>()
-    {
-        "addon-fit"
+        CursorStyle = CursorStyle.Bar,
     };
 
     protected override async Task OnInitializedAsync()
@@ -35,26 +30,22 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    async Task OnFirstRender()
     {
-        if (firstRender)
-        {
-            await Task.Delay(100);
-
-            await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
-        }
+        if (_terminal is not null)
+            await _terminal.FitAsync();
     }
 
     async Task Connect()
     {
-        HubConnection = new HubConnectionBuilder()
+        _hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/logging"))
             .Build();
 
-        HubConnection.On<string, Microsoft.Extensions.Logging.LogLevel, DateTime>("Log", (message, level, timestamp) =>
+        _hubConnection.On<string, Microsoft.Extensions.Logging.LogLevel, DateTime>("Log", (message, level, timestamp) =>
         {
-            var parts = new string[]
-            {
+            string[] parts =
+            [
                 TerminalColor.BrightBlack,
                 "[",
                 TerminalColor.White,
@@ -65,12 +56,12 @@
                 " ",
                 message,
                 TerminalColor.Default
-            };
-
-            Terminal?.WriteLine(String.Join("", parts));
+            ];
+            
+            _terminal?.WriteLine(String.Join("", parts));
         });
 
-        await HubConnection.StartAsync();
+        await _hubConnection.StartAsync();
     }
 
     string GetColorCode(Microsoft.Extensions.Logging.LogLevel level)
@@ -89,7 +80,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (HubConnection is not null)
-            await HubConnection.DisposeAsync();
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
     }
 }

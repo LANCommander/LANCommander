@@ -6,7 +6,7 @@ namespace LANCommander.SDK.Models
 {
     public class Game : BaseModel
     {
-        public int IGDBId { get; set; }
+        public int? IGDBId { get; set; }
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string DirectoryName { get; set; }

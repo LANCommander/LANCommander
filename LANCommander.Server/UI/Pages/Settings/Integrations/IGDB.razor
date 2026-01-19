@@ -1,0 +1,50 @@
+﻿@page "/Settings/Integrations/IGDB"
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
+@inject IGDBService IGDBService
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IMessageService MessageService
+@inject ILogger<SteamGridDb> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="SteamGridDB">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent>
+    <Text Type="@TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <FormItem Label="Client ID">
+            <Input @bind-Value="context.Server.IGDB.ClientId"/>
+        </FormItem>
+
+        <FormItem Label="Client Secret">
+            <InputPassword @bind-Value="context.Server.IGDB.ClientSecret"/>
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    void Save()
+    {
+        try
+        {
+            SettingsProvider.Update(s =>
+            {
+                s.Server.IGDB = Settings.Value.Server.IGDB;
+            });
+            
+            IGDBService.Authenticate();
+            
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

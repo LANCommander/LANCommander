@@ -5,6 +5,7 @@
 @inject LibraryService LibraryService
 @inject GameService GameService
 @inject InstallService InstallService
+@inject ImportService ImportService
 @inject IConnectionClient ConnectionClient
 @inject GameClient GameClient
 @inject ISettingsProvider SettingsProvider
@@ -273,7 +274,7 @@
 
         try
         {
-            // await ImportService.ImportGameAsync(SelectedGame.Id);
+            await ImportService.ImportGameAsync(SelectedGame.Id);
             await LibraryService.AddToLibraryAsync(SelectedGame.Id);
             await LibraryService.RefreshItemsAsync();
 

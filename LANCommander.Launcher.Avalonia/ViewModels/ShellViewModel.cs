@@ -25,6 +25,7 @@ public partial class ShellViewModel : ViewModelBase
     public LibrarySidebarViewModel Sidebar { get; private set; } = null!;
     public GamesListViewModel GamesListViewModel { get; private set; } = null!;
     public GameDetailViewModel GameDetailViewModel { get; private set; } = null!;
+    public DownloadQueueViewModel DownloadQueue { get; private set; } = null!;
 
     public event EventHandler? LogoutRequested;
 
@@ -42,6 +43,7 @@ public partial class ShellViewModel : ViewModelBase
         Sidebar = new LibrarySidebarViewModel(_serviceProvider);
         GamesListViewModel = new GamesListViewModel(_serviceProvider);
         GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
+        DownloadQueue = new DownloadQueueViewModel(_serviceProvider);
 
         // Wire up events
         Sidebar.DepotSelected += OnDepotSelected;
@@ -52,6 +54,10 @@ public partial class ShellViewModel : ViewModelBase
         GamesListViewModel.GameSelected += OnGameSelected;
         GameDetailViewModel.BackRequested += OnBackFromGameDetail;
         GameDetailViewModel.LibraryChanged += OnLibraryChanged;
+        GameDetailViewModel.InstallRequested += OnInstallRequested;
+        
+        DownloadQueue.InstallCompleted += OnInstallCompleted;
+        DownloadQueue.Initialize();
 
         // Import library from server and load data
         await ImportAndLoadAsync();
@@ -107,6 +113,12 @@ public partial class ShellViewModel : ViewModelBase
         LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    [RelayCommand]
+    private void ToggleDownloadQueue()
+    {
+        DownloadQueue.Toggle();
+    }
+
     private void ShowDepot()
     {
         Sidebar.SelectDepot();
@@ -159,5 +171,27 @@ public partial class ShellViewModel : ViewModelBase
         
         // Refresh the games list to update "In Library" status
         await GamesListViewModel.LoadGamesAsync();
+    }
+
+    private void OnInstallRequested(object? sender, EventArgs e)
+    {
+        // Show the download queue when install is requested
+        DownloadQueue.Show();
+    }
+
+    private async void OnInstallCompleted(object? sender, Guid gameId)
+    {
+        _logger.LogInformation("Install completed for game {GameId}, refreshing...", gameId);
+        
+        // Refresh library and games list
+        await Sidebar.LoadAsync();
+        await GamesListViewModel.LoadGamesAsync();
+        
+        // If we're viewing this game, update its status
+        if (GameDetailViewModel.Id == gameId)
+        {
+            GameDetailViewModel.IsInstalled = true;
+            GameDetailViewModel.StatusMessage = "Installation complete!";
+        }
     }
 }

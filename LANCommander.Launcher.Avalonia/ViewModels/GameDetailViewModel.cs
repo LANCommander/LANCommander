@@ -78,10 +78,17 @@ public partial class GameDetailViewModel : ViewModelBase
     private bool _isRemovingFromLibrary;
 
     [ObservableProperty]
+    private bool _isInstalling;
+
+    [ObservableProperty]
+    private bool _isInstalled;
+
+    [ObservableProperty]
     private string? _statusMessage;
 
     public event EventHandler? BackRequested;
     public event EventHandler? LibraryChanged;
+    public event EventHandler? InstallRequested;
 
     public GameDetailViewModel(IServiceProvider serviceProvider)
     {
@@ -102,6 +109,7 @@ public partial class GameDetailViewModel : ViewModelBase
         ReleaseYear = game.ReleasedOn?.Year > 1 ? game.ReleasedOn.Value.Year.ToString() : "Unknown";
         Singleplayer = game.Singleplayer;
         StatusMessage = null;
+        IsInstalled = game.Installed;
 
         // Check library status
         using var scope = _serviceProvider.CreateScope();
@@ -165,10 +173,16 @@ public partial class GameDetailViewModel : ViewModelBase
         Singleplayer = game.Singleplayer;
         StatusMessage = null;
 
-        // Check library status
+        // Check library and install status
         using var scope = _serviceProvider.CreateScope();
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        
         IsInLibrary = libraryService.IsInLibrary(game.Id);
+        
+        // Check if installed from local database
+        var localGame = await gameService.GetAsync(game.Id);
+        IsInstalled = localGame?.Installed ?? false;
 
         // Reset media paths while loading
         BannerPath = null;
@@ -189,7 +203,7 @@ public partial class GameDetailViewModel : ViewModelBase
             : string.Empty;
 
         Platforms = game.Platforms != null 
-            ? string.Join(", ", game.Platforms.Select(p => p.Name)) 
+            ? string.Join(", ", game.Platforms.Select(p => p.Name))
             : string.Empty;
 
         Tags = game.Tags != null 
@@ -312,6 +326,65 @@ public partial class GameDetailViewModel : ViewModelBase
         finally
         {
             IsRemovingFromLibrary = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallAsync()
+    {
+        if (IsInstalling) return;
+
+        IsInstalling = true;
+        StatusMessage = "Preparing to install...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+
+            // First, ensure game is in library
+            if (!IsInLibrary)
+            {
+                _logger.LogInformation("Game {GameId} ({Title}) not in library, adding first", Id, Title);
+                StatusMessage = "Adding to library...";
+                
+                await importService.ImportGameAsync(Id);
+                await libraryService.AddToLibraryAsync(Id);
+                await libraryService.RefreshItemsAsync();
+                
+                IsInLibrary = true;
+                LibraryChanged?.Invoke(this, EventArgs.Empty);
+            }
+
+            // Get the local game record
+            var localGame = await gameService.GetAsync(Id);
+            if (localGame == null)
+            {
+                throw new InvalidOperationException("Game not found in local database after import");
+            }
+
+            StatusMessage = "Starting installation...";
+            _logger.LogInformation("Adding game {GameId} ({Title}) to install queue", Id, Title);
+
+            // Add to install queue
+            await installService.Add(localGame);
+
+            StatusMessage = "Added to download queue";
+            
+            // Notify that install was requested (to show the queue panel)
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start installation for game {GameId} ({Title})", Id, Title);
+            StatusMessage = $"Failed to install: {ex.Message}";
+        }
+        finally
+        {
+            IsInstalling = false;
         }
     }
 

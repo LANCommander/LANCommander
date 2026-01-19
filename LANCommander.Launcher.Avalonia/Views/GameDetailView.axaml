@@ -164,7 +164,7 @@
                                    LineHeight="24" />
                     </StackPanel>
                     
-                    <!-- Placeholder for future actions -->
+                    <!-- Library Section -->
                     <Border Margin="0,16,0,0" 
                             Padding="16" 
                             CornerRadius="8"
@@ -210,6 +210,36 @@
                                     </Panel>
                                 </Button>
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Install Section -->
+                    <Border Margin="0,8,0,0" 
+                            Padding="16" 
+                            CornerRadius="8"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Installation" FontWeight="SemiBold" FontSize="16" />
+                            
+                            <!-- Installed indicator -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsInstalled}">
+                                <TextBlock Text="✓" Foreground="Green" />
+                                <TextBlock Text="Installed" />
+                            </StackPanel>
+                            
+                            <!-- Install button (shown when not installed) -->
+                            <Button Command="{Binding InstallCommand}"
+                                    IsVisible="{Binding !IsInstalled}"
+                                    IsEnabled="{Binding !IsInstalling}"
+                                    HorizontalAlignment="Left"
+                                    Padding="20,12"
+                                    Classes="accent">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="⬇" FontWeight="Bold" IsVisible="{Binding !IsInstalling}" />
+                                    <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
+                                    <TextBlock Text="Starting..." IsVisible="{Binding IsInstalling}" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </StackPanel>

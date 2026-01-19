@@ -68,7 +68,20 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoadingMedia;
 
+    [ObservableProperty]
+    private bool _isInLibrary;
+
+    [ObservableProperty]
+    private bool _isAddingToLibrary;
+
+    [ObservableProperty]
+    private bool _isRemovingFromLibrary;
+
+    [ObservableProperty]
+    private string? _statusMessage;
+
     public event EventHandler? BackRequested;
+    public event EventHandler? LibraryChanged;
 
     public GameDetailViewModel(IServiceProvider serviceProvider)
     {
@@ -88,9 +101,14 @@ public partial class GameDetailViewModel : ViewModelBase
         ReleasedOn = game.ReleasedOn ?? DateTime.MinValue;
         ReleaseYear = game.ReleasedOn?.Year > 1 ? game.ReleasedOn.Value.Year.ToString() : "Unknown";
         Singleplayer = game.Singleplayer;
+        StatusMessage = null;
+
+        // Check library status
+        using var scope = _serviceProvider.CreateScope();
+        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        IsInLibrary = libraryService.IsInLibrary(game.Id);
 
         // Get media paths from local storage
-        using var scope = _serviceProvider.CreateScope();
         var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
         
         BannerPath = GetLocalMediaPath(game.Media, MediaType.Cover, mediaService);
@@ -145,6 +163,12 @@ public partial class GameDetailViewModel : ViewModelBase
         ReleasedOn = game.ReleasedOn;
         ReleaseYear = game.ReleasedOn.Year > 1 ? game.ReleasedOn.Year.ToString() : "Unknown";
         Singleplayer = game.Singleplayer;
+        StatusMessage = null;
+
+        // Check library status
+        using var scope = _serviceProvider.CreateScope();
+        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        IsInLibrary = libraryService.IsInLibrary(game.Id);
 
         // Reset media paths while loading
         BannerPath = null;
@@ -192,7 +216,6 @@ public partial class GameDetailViewModel : ViewModelBase
             IsLoadingMedia = true;
             try
             {
-                using var scope = _serviceProvider.CreateScope();
                 var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
                 BannerPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover, mediaClient);
@@ -207,6 +230,88 @@ public partial class GameDetailViewModel : ViewModelBase
             {
                 IsLoadingMedia = false;
             }
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddToLibraryAsync()
+    {
+        if (IsInLibrary || IsAddingToLibrary) return;
+
+        IsAddingToLibrary = true;
+        StatusMessage = "Adding to library...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            _logger.LogInformation("Adding game {GameId} ({Title}) to library", Id, Title);
+
+            // Import the game data
+            await importService.ImportGameAsync(Id);
+            
+            // Add to library
+            await libraryService.AddToLibraryAsync(Id);
+            
+            // Refresh library items
+            await libraryService.RefreshItemsAsync();
+
+            IsInLibrary = true;
+            StatusMessage = "Added to library!";
+            _logger.LogInformation("Game {GameId} ({Title}) added to library", Id, Title);
+
+            // Notify that library has changed
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add game {GameId} ({Title}) to library", Id, Title);
+            StatusMessage = $"Failed to add to library: {ex.Message}";
+        }
+        finally
+        {
+            IsAddingToLibrary = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveFromLibraryAsync()
+    {
+        if (!IsInLibrary || IsRemovingFromLibrary) return;
+
+        IsRemovingFromLibrary = true;
+        StatusMessage = "Removing from library...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            _logger.LogInformation("Removing game {GameId} ({Title}) from library", Id, Title);
+
+            // Remove from library
+            await libraryService.RemoveFromLibraryAsync(Id);
+            
+            // Refresh library items
+            await libraryService.RefreshItemsAsync();
+
+            IsInLibrary = false;
+            StatusMessage = "Removed from library";
+            _logger.LogInformation("Game {GameId} ({Title}) removed from library", Id, Title);
+
+            // Notify that library has changed
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove game {GameId} ({Title}) from library", Id, Title);
+            StatusMessage = $"Failed to remove from library: {ex.Message}";
+        }
+        finally
+        {
+            IsRemovingFromLibrary = false;
         }
     }
 

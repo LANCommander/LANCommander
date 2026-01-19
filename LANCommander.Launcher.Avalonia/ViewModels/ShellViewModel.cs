@@ -51,6 +51,7 @@ public partial class ShellViewModel : ViewModelBase
         
         GamesListViewModel.GameSelected += OnGameSelected;
         GameDetailViewModel.BackRequested += OnBackFromGameDetail;
+        GameDetailViewModel.LibraryChanged += OnLibraryChanged;
 
         // Import library from server and load data
         await ImportAndLoadAsync();
@@ -147,5 +148,16 @@ public partial class ShellViewModel : ViewModelBase
     private void OnBackFromGameDetail(object? sender, EventArgs e)
     {
         ShowDepot();
+    }
+
+    private async void OnLibraryChanged(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Library changed, refreshing sidebar and games list...");
+        
+        // Refresh the sidebar to show updated library
+        await Sidebar.LoadAsync();
+        
+        // Refresh the games list to update "In Library" status
+        await GamesListViewModel.LoadGamesAsync();
     }
 }

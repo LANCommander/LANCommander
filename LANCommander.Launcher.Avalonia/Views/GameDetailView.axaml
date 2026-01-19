@@ -169,11 +169,47 @@
                             Padding="16" 
                             CornerRadius="8"
                             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Actions" FontWeight="SemiBold" />
-                            <TextBlock Text="Install, Play, and other game actions will be available here in a future update." 
-                                       Opacity="0.6" 
-                                       TextWrapping="Wrap" />
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Library" FontWeight="SemiBold" FontSize="16" />
+                            
+                            <!-- Status message -->
+                            <TextBlock Text="{Binding StatusMessage}" 
+                                       Opacity="0.7"
+                                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            
+                            <!-- Add to Library button (shown when not in library) -->
+                            <Button Command="{Binding AddToLibraryCommand}"
+                                    IsVisible="{Binding !IsInLibrary}"
+                                    IsEnabled="{Binding !IsAddingToLibrary}"
+                                    HorizontalAlignment="Left"
+                                    Padding="16,10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="+" FontWeight="Bold" IsVisible="{Binding !IsAddingToLibrary}" />
+                                    <TextBlock Text="Add to Library" IsVisible="{Binding !IsAddingToLibrary}" />
+                                    <TextBlock Text="Adding..." IsVisible="{Binding IsAddingToLibrary}" />
+                                </StackPanel>
+                            </Button>
+                            
+                            <!-- In Library indicator + Remove button (shown when in library) -->
+                            <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsInLibrary}">
+                                <Border Background="{DynamicResource SystemAccentColor}"
+                                        CornerRadius="4"
+                                        Padding="12,8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="✓" Foreground="White" />
+                                        <TextBlock Text="In Library" Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Button Command="{Binding RemoveFromLibraryCommand}"
+                                        IsEnabled="{Binding !IsRemovingFromLibrary}"
+                                        Padding="12,8">
+                                    <Panel>
+                                        <TextBlock Text="Remove from Library" Foreground="IndianRed" IsVisible="{Binding !IsRemovingFromLibrary}" />
+                                        <TextBlock Text="Removing..." Foreground="IndianRed" IsVisible="{Binding IsRemovingFromLibrary}" />
+                                    </Panel>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>

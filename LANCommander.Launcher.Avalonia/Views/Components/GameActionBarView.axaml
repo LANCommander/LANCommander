@@ -17,15 +17,61 @@
                 
                 <!-- Primary Action Row -->
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <!-- Play button (installed, not running) -->
+                    <!-- Install button (not installed) -->
+                    <Button Command="{Binding InstallCommand}"
+                            IsVisible="{Binding !IsInstalled}"
+                            IsEnabled="{Binding !IsInstalling}"
+                            Padding="24,14"
+                            Classes="accent"
+                            FontSize="16">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="⬇" FontWeight="Bold" IsVisible="{Binding !IsInstalling}" />
+                            <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
+                            <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
+                        </StackPanel>
+                    </Button>
+                    
+                    <!-- Play SplitButton (installed, multiple actions) -->
+                    <SplitButton Command="{Binding PlayCommand}"
+                                 IsVisible="{Binding HasMultipleActions}"
+                                 IsEnabled="{Binding !IsStarting}"
+                                 Padding="24,14"
+                                 Classes="accent"
+                                 FontSize="16">
+                        <Panel>
+                            <!-- Normal state -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
+                                <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
+                            </StackPanel>
+                            
+                            <!-- Running state - shown as indicator -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRunning}">
+                                <TextBlock Text="●" FontWeight="Bold" Foreground="LimeGreen" />
+                                <TextBlock Text="Running" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Panel>
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft" ItemsSource="{Binding Actions}">
+                                <MenuFlyout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameActionViewModel">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </MenuFlyout.ItemTemplate>
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
+                    <!-- Play button (installed, single action - no dropdown) -->
                     <Button Command="{Binding PlayCommand}"
-                            IsVisible="{Binding IsInstalled}"
+                            IsVisible="{Binding ShowSimplePlayButton}"
                             IsEnabled="{Binding !IsStarting}"
                             Padding="24,14"
                             Classes="accent"
                             FontSize="16">
                         <Panel>
-                            <!-- Normal state -->
                             <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
                                 <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
@@ -53,20 +99,6 @@
                         </StackPanel>
                     </Button>
                     
-                    <!-- Install button (not installed) -->
-                    <Button Command="{Binding InstallCommand}"
-                            IsVisible="{Binding !IsInstalled}"
-                            IsEnabled="{Binding !IsInstalling}"
-                            Padding="24,14"
-                            Classes="accent"
-                            FontSize="16">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="⬇" FontWeight="Bold" IsVisible="{Binding !IsInstalling}" />
-                            <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
-                            <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
-                        </StackPanel>
-                    </Button>
-                    
                     <!-- Browse Files button -->
                     <Button Command="{Binding BrowseFilesCommand}"
                             IsVisible="{Binding IsInstalled}"
@@ -74,6 +106,26 @@
                             ToolTip.Tip="Browse Files">
                         <TextBlock Text="📁" />
                     </Button>
+                    
+                    <!-- Uninstall SplitButton (when installed) - combines with Remove from Library -->
+                    <SplitButton Command="{Binding UninstallCommand}"
+                                 IsVisible="{Binding IsInstalled}"
+                                 IsEnabled="{Binding !IsUninstalling}"
+                                 Padding="12,8">
+                        <Panel>
+                            <TextBlock Text="Uninstall" Foreground="IndianRed" IsVisible="{Binding !IsUninstalling}" />
+                            <TextBlock Text="Uninstalling..." Foreground="IndianRed" IsVisible="{Binding IsUninstalling}" />
+                        </Panel>
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Uninstall" Command="{Binding UninstallCommand}" />
+                                <MenuItem Header="Remove from Library" 
+                                          Command="{Binding RemoveFromLibraryCommand}" 
+                                          IsEnabled="{Binding IsInLibrary}" />
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
                 </StackPanel>
                 
                 <!-- Stats Row -->
@@ -120,28 +172,6 @@
                             <TextBlock Text="In Library" Foreground="White" />
                         </StackPanel>
                     </Border>
-                    
-                    <!-- Remove from Library -->
-                    <Button Command="{Binding RemoveFromLibraryCommand}"
-                            IsVisible="{Binding IsInLibrary}"
-                            IsEnabled="{Binding !IsRemovingFromLibrary}"
-                            Padding="12,8">
-                        <Panel>
-                            <TextBlock Text="Remove" Foreground="IndianRed" IsVisible="{Binding !IsRemovingFromLibrary}" />
-                            <TextBlock Text="Removing..." Foreground="IndianRed" IsVisible="{Binding IsRemovingFromLibrary}" />
-                        </Panel>
-                    </Button>
-                    
-                    <!-- Uninstall (when installed) -->
-                    <Button Command="{Binding UninstallCommand}"
-                            IsVisible="{Binding IsInstalled}"
-                            IsEnabled="{Binding !IsUninstalling}"
-                            Padding="12,8">
-                        <Panel>
-                            <TextBlock Text="Uninstall" Foreground="IndianRed" IsVisible="{Binding !IsUninstalling}" />
-                            <TextBlock Text="Uninstalling..." Foreground="IndianRed" IsVisible="{Binding IsUninstalling}" />
-                        </Panel>
-                    </Button>
                 </StackPanel>
             </StackPanel>
         </Border>

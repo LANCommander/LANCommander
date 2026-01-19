@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -40,6 +41,7 @@ public partial class GameActionBarViewModel : ViewModelBase
 
     // Install state
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -72,6 +74,19 @@ public partial class GameActionBarViewModel : ViewModelBase
     [ObservableProperty]
     private string? _statusMessage;
 
+    // Available game actions
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _actions = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+    private bool _hasMultipleActions;
+
+    /// <summary>
+    /// Shows the simple play button when installed but has only one or zero actions
+    /// </summary>
+    public bool ShowSimplePlayButton => IsInstalled && !HasMultipleActions;
+
     // Timer for checking running state
     private System.Threading.Timer? _runningCheckTimer;
 
@@ -100,6 +115,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
 
         LoadPlayStats(game);
+        await LoadActionsAsync();
         StartRunningCheck();
     }
 
@@ -133,7 +149,43 @@ public partial class GameActionBarViewModel : ViewModelBase
             LastPlayed = "Never";
         }
 
+        await LoadActionsAsync();
         StartRunningCheck();
+    }
+
+    /// <summary>
+    /// Loads available actions for the current game
+    /// </summary>
+    private async Task LoadActionsAsync()
+    {
+        Actions.Clear();
+        HasMultipleActions = false;
+
+        if (!IsInstalled || string.IsNullOrEmpty(InstallDirectory))
+            return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+
+            var actions = await gameClient.GetActionsAsync(InstallDirectory, GameId);
+            if (actions != null && actions.Any())
+            {
+                var primaryActions = actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder).ToList();
+                
+                foreach (var action in primaryActions)
+                {
+                    Actions.Add(new GameActionViewModel(action, RunActionAsync));
+                }
+
+                HasMultipleActions = Actions.Count > 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load actions for game {GameId}", GameId);
+        }
     }
 
     /// <summary>
@@ -283,14 +335,72 @@ public partial class GameActionBarViewModel : ViewModelBase
     {
         if (!IsInstalled || IsStarting || IsRunning) return;
 
+        // If we have actions loaded, run the first one
+        if (Actions.Any())
+        {
+            await RunActionAsync(Actions.First().Action);
+        }
+        else
+        {
+            // Fallback: load actions and run first
+            IsStarting = true;
+            StatusMessage = "Starting...";
+
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+                var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+
+                var localGame = await gameService.GetAsync(GameId);
+                if (localGame == null)
+                {
+                    throw new InvalidOperationException("Game not found in local database");
+                }
+
+                // Get available actions
+                var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, GameId);
+                if (actions == null || !actions.Any())
+                {
+                    throw new InvalidOperationException("No actions available for this game");
+                }
+
+                // Find primary action or first action
+                var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction) ?? actions.First();
+
+                _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
+
+                // Run the game
+                await gameService.Run(localGame, primaryAction);
+
+                StatusMessage = null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to play game {GameId}", GameId);
+                StatusMessage = $"Failed to start: {ex.Message}";
+            }
+            finally
+            {
+                IsStarting = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a specific action for the game
+    /// </summary>
+    public async Task RunActionAsync(SDK.Models.Manifest.Action action)
+    {
+        if (!IsInstalled || IsStarting || IsRunning) return;
+
         IsStarting = true;
-        StatusMessage = "Starting...";
+        StatusMessage = $"Starting {action.Name}...";
 
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
 
             var localGame = await gameService.GetAsync(GameId);
             if (localGame == null)
@@ -298,26 +408,16 @@ public partial class GameActionBarViewModel : ViewModelBase
                 throw new InvalidOperationException("Game not found in local database");
             }
 
-            // Get available actions
-            var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, GameId);
-            if (actions == null || !actions.Any())
-            {
-                throw new InvalidOperationException("No actions available for this game");
-            }
+            _logger.LogInformation("Running action {ActionName} for game {GameId}", action.Name, GameId);
 
-            // Find primary action or first action
-            var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction) ?? actions.First();
-
-            _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
-
-            // Run the game
-            await gameService.Run(localGame, primaryAction);
+            // Run the game with the specific action
+            await gameService.Run(localGame, action);
 
             StatusMessage = null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to play game {GameId}", GameId);
+            _logger.LogError(ex, "Failed to run action {ActionName} for game {GameId}", action.Name, GameId);
             StatusMessage = $"Failed to start: {ex.Message}";
         }
         finally
@@ -549,5 +649,29 @@ public partial class GameActionBarViewModel : ViewModelBase
             _logger.LogError(ex, "Failed to open install directory");
             StatusMessage = $"Failed to open folder: {ex.Message}";
         }
+    }
+}
+
+/// <summary>
+/// ViewModel for a game action (used in the Play dropdown)
+/// </summary>
+public partial class GameActionViewModel : ViewModelBase
+{
+    public SDK.Models.Manifest.Action Action { get; }
+    
+    public string Name => Action.Name;
+    
+    private readonly Func<SDK.Models.Manifest.Action, Task> _runAction;
+
+    public GameActionViewModel(SDK.Models.Manifest.Action action, Func<SDK.Models.Manifest.Action, Task> runAction)
+    {
+        Action = action;
+        _runAction = runAction;
+    }
+
+    [RelayCommand]
+    private async Task RunAsync()
+    {
+        await _runAction(Action);
     }
 }

@@ -1,9 +1,6 @@
 ﻿@using LANCommander.Server.Data
-@using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
-@using Microsoft.Extensions.Options
 @inject NavigationManager NavigationManager
-@inject IOptions<Settings> Settings
 
 <!DOCTYPE html>
 <html lang="en">
@@ -24,8 +21,8 @@
 
 
     <div class="page-wrapper">
-        <AntContainer @rendermode="RenderMode.InteractiveServer" />
-        <LocalTimeInitializer @rendermode="RenderMode.InteractiveServer" />
+        <AntContainer @rendermode="InteractiveServer" />
+        <LocalTimeInitializer @rendermode="InteractiveServer" />
 
         <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     </div>
@@ -41,20 +38,9 @@
 
     <script src="_content/XtermBlazor/XtermBlazor.min.js"></script>
 
-    <script>
-        XtermBlazor.registerAddons({
-        "readline": new XtermAddons.Readline(),
-        "addon-fit": new XtermAddons.Fit()
-        });
-    </script>
-
     <script src="_content/BlazorMonaco/jsInterop.js"></script>
     <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
     <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
-
-    <script>
-        Uploader.MaxChunkSize = @(Settings.Value.Server.Archives.MaxChunkSize * 1024 * 1024)
-    </script>
 </body>
 </html>
 

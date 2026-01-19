@@ -131,7 +131,7 @@ public partial class ShellViewModel : ViewModelBase
         }
     }
 
-    private void OnGameSelected(object? sender, SDK.Models.Game game)
+    private async void OnGameSelected(object? sender, SDK.Models.Game game)
     {
         // Update sidebar selection if game is in library
         Sidebar.SelectItemById(game.Id);
@@ -140,8 +140,8 @@ public partial class ShellViewModel : ViewModelBase
             Sidebar.ClearSelection();
         }
         
-        GameDetailViewModel.LoadGame(game);
         ContentView = GameDetailViewModel;
+        await GameDetailViewModel.LoadGameAsync(game);
     }
 
     private void OnBackFromGameDetail(object? sender, EventArgs e)

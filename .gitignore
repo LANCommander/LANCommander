@@ -371,3 +371,5 @@ LANCommander.Server/wwwroot/css/main.js
 LANCommander.Server/config/
 LANCommander.UI/wwwroot/
 LANCommander.Server/Data/
+
+LANCommander.Launcher.Avalonia/Data/

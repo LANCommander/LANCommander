@@ -89,6 +89,29 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     private string? _statusMessage;
 
+    // Play state
+    [ObservableProperty]
+    private bool _isRunning;
+
+    [ObservableProperty]
+    private bool _isStarting;
+
+    [ObservableProperty]
+    private bool _isStopping;
+
+    // Game stats
+    [ObservableProperty]
+    private string _playTime = "None";
+
+    [ObservableProperty]
+    private string _lastPlayed = "Never";
+
+    [ObservableProperty]
+    private string? _installDirectory;
+
+    // Timer for checking running state
+    private System.Threading.Timer? _runningCheckTimer;
+
     public event EventHandler? BackRequested;
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
@@ -97,6 +120,47 @@ public partial class GameDetailViewModel : ViewModelBase
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<GameDetailViewModel>>();
+    }
+
+    public void StartRunningCheck()
+    {
+        _runningCheckTimer?.Dispose();
+        _runningCheckTimer = new System.Threading.Timer(
+            _ => CheckRunningState(),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(500));
+    }
+
+    public void StopRunningCheck()
+    {
+        _runningCheckTimer?.Dispose();
+        _runningCheckTimer = null;
+    }
+
+    private void CheckRunningState()
+    {
+        if (Id == Guid.Empty) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            
+            var wasRunning = IsRunning;
+            IsRunning = gameClient.IsRunning(Id);
+            
+            // If game stopped running, reset states
+            if (wasRunning && !IsRunning)
+            {
+                IsStarting = false;
+                IsStopping = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking running state");
+        }
     }
 
     /// <summary>
@@ -159,6 +223,64 @@ public partial class GameDetailViewModel : ViewModelBase
         else
         {
             MultiplayerModes = string.Empty;
+        }
+
+        // Install directory
+        InstallDirectory = game.InstallDirectory;
+
+        // Play stats
+        LoadPlayStats(game);
+
+        // Start checking running state
+        StartRunningCheck();
+    }
+
+    private void LoadPlayStats(Data.Models.Game game)
+    {
+        // Calculate play time
+        if (game.PlaySessions != null && game.PlaySessions.Any())
+        {
+            var totalTime = new TimeSpan(game.PlaySessions
+                .Where(ps => ps.End != null && ps.Start != null)
+                .Select(ps => ps.End!.Value.Subtract(ps.Start!.Value))
+                .Sum(ts => ts.Ticks));
+
+            if (totalTime.TotalMinutes < 1)
+                PlayTime = "None";
+            else if (totalTime.TotalHours < 1)
+                PlayTime = $"{totalTime.TotalMinutes:0} minutes";
+            else
+                PlayTime = $"{totalTime.TotalHours:0.#} hours";
+
+            // Last played
+            var lastSession = game.PlaySessions
+                .Where(ps => ps.End != null && ps.Start != null)
+                .OrderByDescending(ps => ps.End)
+                .FirstOrDefault();
+
+            if (lastSession?.End != null)
+            {
+                var elapsed = DateTime.Now - lastSession.End.Value;
+                if (elapsed.TotalMinutes < 1)
+                    LastPlayed = "Just now";
+                else if (elapsed.TotalHours < 1)
+                    LastPlayed = $"{elapsed.TotalMinutes:0} minutes ago";
+                else if (elapsed.TotalDays < 1)
+                    LastPlayed = $"{elapsed.TotalHours:0} hours ago";
+                else if (elapsed.TotalDays < 7)
+                    LastPlayed = $"{elapsed.TotalDays:0} days ago";
+                else
+                    LastPlayed = lastSession.End.Value.ToString("MMM d, yyyy");
+            }
+            else
+            {
+                LastPlayed = "Never";
+            }
+        }
+        else
+        {
+            PlayTime = "None";
+            LastPlayed = "Never";
         }
     }
 
@@ -226,6 +348,22 @@ public partial class GameDetailViewModel : ViewModelBase
         {
             MultiplayerModes = string.Empty;
         }
+
+        // Load play stats from local game if available
+        if (localGame != null)
+        {
+            InstallDirectory = localGame.InstallDirectory;
+            LoadPlayStats(localGame);
+        }
+        else
+        {
+            InstallDirectory = null;
+            PlayTime = "None";
+            LastPlayed = "Never";
+        }
+
+        // Start checking running state
+        StartRunningCheck();
 
         // Load media asynchronously
         if (game.Media != null && game.Media.Any())
@@ -474,8 +612,148 @@ public partial class GameDetailViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task PlayAsync()
+    {
+        if (!IsInstalled || IsRunning || IsStarting) return;
+
+        IsStarting = true;
+        StatusMessage = "Starting game...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            var localGame = await gameService.GetAsync(Id);
+            if (localGame == null)
+            {
+                StatusMessage = "Game not found in local database";
+                return;
+            }
+
+            // Get available actions
+            var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, localGame.Id);
+
+            if (actions == null || !actions.Any())
+            {
+                StatusMessage = "No actions found for this game";
+                IsStarting = false;
+                return;
+            }
+
+            var primaryActions = actions.Where(a => a.IsPrimaryAction).ToList();
+
+            if (!primaryActions.Any())
+            {
+                StatusMessage = "No primary action found";
+                IsStarting = false;
+                return;
+            }
+
+            // If single primary action, run it directly
+            if (primaryActions.Count == 1)
+            {
+                _logger.LogInformation("Running game {GameId} ({Title}) with action {Action}", Id, Title, primaryActions.First().Name);
+                
+                StatusMessage = null;
+                
+                // Run the game - this blocks until game exits
+                await gameService.Run(localGame, primaryActions.First());
+                
+                // Refresh stats after play session ends
+                var updatedGame = await gameService.GetAsync(Id);
+                if (updatedGame != null)
+                {
+                    LoadPlayStats(updatedGame);
+                }
+            }
+            else
+            {
+                // Multiple primary actions - for now just run the first one
+                // TODO: Show action selection dialog
+                _logger.LogInformation("Multiple primary actions found, running first: {Action}", primaryActions.First().Name);
+                
+                StatusMessage = null;
+                await gameService.Run(localGame, primaryActions.First());
+                
+                var updatedGame = await gameService.GetAsync(Id);
+                if (updatedGame != null)
+                {
+                    LoadPlayStats(updatedGame);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run game {GameId} ({Title})", Id, Title);
+            StatusMessage = $"Failed to start: {ex.Message}";
+        }
+        finally
+        {
+            IsStarting = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StopAsync()
+    {
+        if (!IsRunning || IsStopping) return;
+
+        IsStopping = true;
+        StatusMessage = "Stopping game...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+
+            await gameClient.Stop(Id);
+            
+            IsRunning = false;
+            StatusMessage = null;
+            _logger.LogInformation("Stopped game {GameId} ({Title})", Id, Title);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop game {GameId} ({Title})", Id, Title);
+            StatusMessage = $"Failed to stop: {ex.Message}";
+        }
+        finally
+        {
+            IsStopping = false;
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseFiles()
+    {
+        if (string.IsNullOrEmpty(InstallDirectory)) return;
+
+        try
+        {
+            _logger.LogInformation("Opening file browser for {Path}", InstallDirectory);
+            
+            // Use Process to open the directory in the file manager
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = InstallDirectory,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open file browser for {Path}", InstallDirectory);
+            StatusMessage = "Could not open file browser";
+        }
+    }
+
+    [RelayCommand]
     private void GoBack()
     {
+        StopRunningCheck();
         BackRequested?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Data.Models;
@@ -245,16 +246,26 @@ public partial class GameActionBarViewModel : ViewModelBase
             var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
 
             var wasRunning = IsRunning;
-            IsRunning = gameClient.IsRunning(GameId);
+            var nowRunning = gameClient.IsRunning(GameId);
 
             // If game stopped running, reset states and refresh stats
-            if (wasRunning && !IsRunning)
+            if (wasRunning && !nowRunning)
             {
-                IsStarting = false;
-                IsStopping = false;
-                
-                // Refresh play stats on background thread
-                _ = RefreshPlayStatsAsync();
+                // Dispatch UI updates to the UI thread
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    IsRunning = false;
+                    IsStarting = false;
+                    IsStopping = false;
+                    
+                    // Refresh play stats
+                    await RefreshPlayStatsAsync();
+                });
+            }
+            else if (nowRunning != IsRunning)
+            {
+                // Update running state on UI thread
+                Dispatcher.UIThread.Post(() => IsRunning = nowRunning);
             }
         }
         catch (Exception ex)
@@ -272,7 +283,15 @@ public partial class GameActionBarViewModel : ViewModelBase
             var localGame = await gameService.GetAsync(GameId);
             if (localGame != null)
             {
-                LoadPlayStats(localGame);
+                // Ensure we're on the UI thread when updating properties
+                if (Dispatcher.UIThread.CheckAccess())
+                {
+                    LoadPlayStats(localGame);
+                }
+                else
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => LoadPlayStats(localGame));
+                }
             }
         }
         catch (Exception ex)

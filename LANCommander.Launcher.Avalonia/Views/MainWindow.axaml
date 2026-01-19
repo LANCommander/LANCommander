@@ -13,6 +13,9 @@
     
     <ContentControl Content="{Binding CurrentView}">
         <ContentControl.DataTemplates>
+            <DataTemplate DataType="vm:SplashViewModel">
+                <views:SplashView />
+            </DataTemplate>
             <DataTemplate DataType="vm:ServerSelectionViewModel">
                 <views:ServerSelectionView />
             </DataTemplate>

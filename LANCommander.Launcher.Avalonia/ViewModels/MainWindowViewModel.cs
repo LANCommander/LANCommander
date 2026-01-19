@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _title = "LANCommander Launcher";
 
+    public SplashViewModel SplashViewModel { get; }
     public ServerSelectionViewModel ServerSelectionViewModel { get; }
     public LoginViewModel LoginViewModel { get; }
     public ShellViewModel ShellViewModel { get; }
@@ -36,6 +37,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _authenticationService = authenticationService;
         _settingsProvider = settingsProvider;
 
+        SplashViewModel = new SplashViewModel();
         ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider);
         LoginViewModel = new LoginViewModel(connectionClient, authenticationService, settingsProvider);
         ShellViewModel = new ShellViewModel(serviceProvider);
@@ -46,28 +48,33 @@ public partial class MainWindowViewModel : ViewModelBase
         LoginViewModel.ChangeServerRequested += OnChangeServerRequested;
         ShellViewModel.LogoutRequested += OnLogoutRequested;
 
-        // Start with server selection
-        _currentView = ServerSelectionViewModel;
+        // Start with splash screen
+        _currentView = SplashViewModel;
     }
 
     public async Task InitializeAsync()
     {
+        SplashViewModel.UpdateStatus("Checking connection...");
+        
         // Check if we have a saved server address and valid token
         var settings = _settingsProvider.CurrentValue;
         
         if (settings.Authentication?.ServerAddress != null)
         {
+            SplashViewModel.UpdateStatus("Connecting to server...");
             await _connectionClient.UpdateServerAddressAsync(settings.Authentication.ServerAddress.ToString());
 
             if (_authenticationService.HasStoredCredentials())
             {
                 try
                 {
+                    SplashViewModel.UpdateStatus("Authenticating...");
                     // Try to login with stored credentials
                     await _authenticationService.Login();
                     
                     if (_connectionClient.IsConnected())
                     {
+                        SplashViewModel.UpdateStatus("Loading library...");
                         // Token is valid - go directly to shell
                         CurrentView = ShellViewModel;
                         await ShellViewModel.InitializeAsync();
@@ -83,8 +90,11 @@ public partial class MainWindowViewModel : ViewModelBase
             // We have a server but no valid token - go to login
             LoginViewModel.ServerAddress = settings.Authentication.ServerAddress.ToString();
             CurrentView = LoginViewModel;
+            return;
         }
-        // Otherwise stay on server selection (default)
+        
+        // No saved server - show server selection
+        CurrentView = ServerSelectionViewModel;
     }
 
     private void OnServerConnected(object? sender, EventArgs e)

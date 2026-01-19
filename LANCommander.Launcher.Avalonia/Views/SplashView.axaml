@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.SplashView"
+             x:DataType="vm:SplashViewModel">
+    
+    <Grid Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="24">
+            <!-- Logo/Title -->
+            <StackPanel HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="🎮" FontSize="64" HorizontalAlignment="Center" />
+                <TextBlock Text="LANCommander" 
+                           FontSize="32" 
+                           FontWeight="Bold" 
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Launcher" 
+                           FontSize="18" 
+                           Opacity="0.7"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+            
+            <!-- Loading indicator -->
+            <StackPanel HorizontalAlignment="Center" Spacing="12" IsVisible="{Binding IsLoading}">
+                <ProgressBar IsIndeterminate="True" 
+                             Width="200" 
+                             Height="4" />
+                <TextBlock Text="{Binding StatusMessage}" 
+                           Opacity="0.6"
+                           FontSize="12"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
+        
+        <!-- Version at bottom -->
+        <TextBlock Text="Avalonia Preview"
+                   FontSize="11"
+                   Opacity="0.4"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom"
+                   Margin="0,0,0,16" />
+    </Grid>
+</UserControl>

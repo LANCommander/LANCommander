@@ -103,7 +103,7 @@ public partial class GameDetailViewModel : ViewModelBase
     /// Load game from local cache (Data.Models.Game)
     /// Used when selecting from the library sidebar
     /// </summary>
-    public void LoadGame(Data.Models.Game game)
+    public async void LoadGame(Data.Models.Game game)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -117,7 +117,7 @@ public partial class GameDetailViewModel : ViewModelBase
         // Check library status
         using var scope = _serviceProvider.CreateScope();
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
-        IsInLibrary = libraryService.IsInLibrary(game.Id);
+        IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
 
         // Get media paths from local storage
         var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
@@ -181,7 +181,7 @@ public partial class GameDetailViewModel : ViewModelBase
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
         var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
         
-        IsInLibrary = libraryService.IsInLibrary(game.Id);
+        IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
         
         // Check if installed from local database
         var localGame = await gameService.GetAsync(game.Id);

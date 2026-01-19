@@ -8,6 +8,9 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Settings.Enums;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +22,8 @@ public partial class GamesListViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<GamesListViewModel> _logger;
     
-    // Store the depot items so we can access them when selecting a game
+    // Store all games for filtering
+    private List<GameItemViewModel> _allGames = new();
     private IEnumerable<ListItem>? _depotItems;
 
     [ObservableProperty]
@@ -40,6 +44,23 @@ public partial class GamesListViewModel : ViewModelBase
     [ObservableProperty]
     private string _searchText = string.Empty;
 
+    // Sort options
+    [ObservableProperty]
+    private SortBy _selectedSortBy = SortBy.Title;
+
+    [ObservableProperty]
+    private bool _sortAscending = true;
+
+    // Filter options
+    [ObservableProperty]
+    private bool _showInLibraryOnly;
+
+    [ObservableProperty]
+    private Genre? _selectedGenre;
+
+    [ObservableProperty]
+    private ObservableCollection<Genre> _availableGenres = new();
+
     // Event now passes the SDK Game model fetched from server
     public event EventHandler<SDK.Models.Game>? GameSelected;
 
@@ -56,6 +77,8 @@ public partial class GamesListViewModel : ViewModelBase
         HasError = false;
         StatusMessage = "Loading games...";
         Games.Clear();
+        _allGames.Clear();
+        AvailableGenres.Clear();
         _logger.LogInformation("Loading games from depot...");
 
         try
@@ -67,6 +90,8 @@ public partial class GamesListViewModel : ViewModelBase
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
             
             _depotItems = await depotService.GetItemsAsync();
+            
+            var allGenres = new HashSet<Genre>(new GenreComparer());
             
             foreach (var item in _depotItems ?? [])
             {
@@ -81,12 +106,27 @@ public partial class GamesListViewModel : ViewModelBase
                         coverPath = await mediaService.GetImagePath(depotGame.Cover.Id);
                     }
                     
-                    Games.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
+                    _allGames.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
+                    
+                    // Collect genres for filter dropdown
+                    if (depotGame.Genres != null)
+                    {
+                        foreach (var genre in depotGame.Genres)
+                        {
+                            allGenres.Add(genre);
+                        }
+                    }
                 }
             }
 
-            StatusMessage = $"{Games.Count} games available";
-            _logger.LogInformation("Loaded {Count} games from depot", Games.Count);
+            // Populate available genres sorted by name
+            foreach (var genre in allGenres.OrderBy(g => g.Name))
+            {
+                AvailableGenres.Add(genre);
+            }
+
+            ApplyFilters();
+            _logger.LogInformation("Loaded {Count} games from depot", _allGames.Count);
         }
         catch (Exception ex)
         {
@@ -98,6 +138,53 @@ public partial class GamesListViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private void ApplyFilters()
+    {
+        var filtered = _allGames.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            filtered = filtered.Where(g =>
+                g.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                g.SortTitle.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply "In Library" filter
+        if (ShowInLibraryOnly)
+        {
+            filtered = filtered.Where(g => g.InLibrary);
+        }
+
+        // Apply genre filter
+        if (SelectedGenre != null)
+        {
+            filtered = filtered.Where(g =>
+                !string.IsNullOrEmpty(g.Genres) &&
+                g.Genres.Contains(SelectedGenre.Name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply sorting
+        filtered = SelectedSortBy switch
+        {
+            SortBy.Title => SortAscending
+                ? filtered.OrderBy(g => string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle, StringComparer.OrdinalIgnoreCase)
+                : filtered.OrderByDescending(g => string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle, StringComparer.OrdinalIgnoreCase),
+            SortBy.DateReleased => SortAscending
+                ? filtered.OrderBy(g => g.ReleasedOn)
+                : filtered.OrderByDescending(g => g.ReleasedOn),
+            _ => filtered
+        };
+
+        Games.Clear();
+        foreach (var game in filtered)
+        {
+            Games.Add(game);
+        }
+
+        StatusMessage = $"{Games.Count} of {_allGames.Count} games";
     }
 
     public Task LoadGamesAsync() => LoadGamesInternalAsync();
@@ -132,8 +219,34 @@ public partial class GamesListViewModel : ViewModelBase
         }
     }
 
-    partial void OnSearchTextChanged(string value)
+    [RelayCommand]
+    private void ToggleSortDirection()
     {
-        // TODO: Implement client-side filtering with debounce
+        SortAscending = !SortAscending;
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        SearchText = string.Empty;
+        SelectedGenre = null;
+        ShowInLibraryOnly = false;
+        SelectedSortBy = SortBy.Title;
+        SortAscending = true;
+    }
+
+    partial void OnSearchTextChanged(string value) => ApplyFilters();
+    partial void OnSelectedSortByChanged(SortBy value) => ApplyFilters();
+    partial void OnSortAscendingChanged(bool value) => ApplyFilters();
+    partial void OnShowInLibraryOnlyChanged(bool value) => ApplyFilters();
+    partial void OnSelectedGenreChanged(Genre? value) => ApplyFilters();
+
+    /// <summary>
+    /// Comparer for Genre that compares by Id
+    /// </summary>
+    private class GenreComparer : IEqualityComparer<Genre>
+    {
+        public bool Equals(Genre? x, Genre? y) => x?.Id == y?.Id;
+        public int GetHashCode(Genre obj) => obj.Id.GetHashCode();
     }
 }

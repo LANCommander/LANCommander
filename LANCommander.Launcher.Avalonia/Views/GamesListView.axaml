@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
              x:DataType="vm:GamesListViewModel">
     
@@ -25,10 +26,64 @@
             </DockPanel>
         </Border>
         
-        <!-- Search Bar -->
-        <Border DockPanel.Dock="Top" Padding="16,8">
-            <TextBox Watermark="Search games..."
-                     Text="{Binding SearchText}" />
+        <!-- Filter Bar -->
+        <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto">
+                <!-- Search -->
+                <TextBox Grid.Column="0" 
+                         Watermark="Search games..."
+                         Text="{Binding SearchText}"
+                         Margin="0,0,12,0" />
+                
+                <!-- Genre Filter -->
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding AvailableGenres}"
+                          SelectedItem="{Binding SelectedGenre}"
+                          PlaceholderText="All Genres"
+                          Width="150"
+                          Margin="0,0,8,0">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                
+                <!-- In Library Toggle -->
+                <ToggleButton Grid.Column="2"
+                              IsChecked="{Binding ShowInLibraryOnly}"
+                              Content="In Library"
+                              Padding="12,8"
+                              Margin="0,0,8,0" />
+                
+                <!-- Sort By -->
+                <ComboBox Grid.Column="3"
+                          SelectedItem="{Binding SelectedSortBy}"
+                          Width="130"
+                          Margin="0,0,4,0">
+                    <ComboBox.Items>
+                        <enums:SortBy>Title</enums:SortBy>
+                        <enums:SortBy>DateReleased</enums:SortBy>
+                    </ComboBox.Items>
+                </ComboBox>
+                
+                <!-- Sort Direction -->
+                <Button Grid.Column="4"
+                        Command="{Binding ToggleSortDirectionCommand}"
+                        Padding="8"
+                        Margin="0,0,8,0">
+                    <Panel>
+                        <TextBlock Text="↑" IsVisible="{Binding SortAscending}" />
+                        <TextBlock Text="↓" IsVisible="{Binding !SortAscending}" />
+                    </Panel>
+                </Button>
+                
+                <!-- Clear Filters -->
+                <Button Grid.Column="5"
+                        Command="{Binding ClearFiltersCommand}"
+                        Content="Clear"
+                        Padding="12,8" />
+            </Grid>
         </Border>
         
         <!-- Loading Indicator -->

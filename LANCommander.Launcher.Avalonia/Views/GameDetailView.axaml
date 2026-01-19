@@ -85,6 +85,9 @@
                                    Opacity="0.7" />
                     </StackPanel>
                     
+                    <!-- Game Action Bar Component (at top for prominence) -->
+                    <components:GameActionBarView DataContext="{Binding ActionBar}" />
+                    
                     <!-- Quick Info Cards -->
                     <WrapPanel Orientation="Horizontal">
                         <!-- Developers -->
@@ -165,9 +168,6 @@
                                    TextWrapping="Wrap" 
                                    LineHeight="24" />
                     </StackPanel>
-                    
-                    <!-- Game Action Bar Component -->
-                    <components:GameActionBarView DataContext="{Binding ActionBar}" Margin="0,16,0,0" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>

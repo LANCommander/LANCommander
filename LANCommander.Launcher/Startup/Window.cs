@@ -1,4 +1,6 @@
 using System.Web;
+using LANCommander.Launcher.Enums;
+using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -102,10 +104,11 @@ public static class MainWindow
 
         if (message == "openChat")
         {
-            new PhotinoWindow(parent)
-                .SetTitle("LANCommander Chat")
-                .Load("wwwroot/index.html")
-                .WaitForClose();
+            WindowService.CreateWindow<UI.App_Chat>(new WindowOptions
+            {
+                Type = WindowType.Chat,
+                Title = "LANCommander Chat",
+            }, null, null, []);
         }
     }
 

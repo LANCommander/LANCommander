@@ -44,8 +44,8 @@ const config: Config = {
           includeCurrentVersion: true,
           versions: {
             current: {
-              label: '2.0.0-rc1',
-              path: '2.0.0-rc1',
+              label: '2.0.0-rc2',
+              path: '2.0.0-rc2',
             },
           },
           sidebarPath: './sidebars.ts',

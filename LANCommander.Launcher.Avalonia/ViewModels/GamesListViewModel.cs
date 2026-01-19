@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -87,7 +88,7 @@ public partial class GamesListViewModel : ViewModelBase
             
             var depotService = scope.ServiceProvider.GetRequiredService<DepotService>();
             var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
-            var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+            var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
             
             _depotItems = await depotService.GetItemsAsync();
             
@@ -99,12 +100,8 @@ public partial class GamesListViewModel : ViewModelBase
                 {
                     var inLibrary = libraryService.IsInLibrary(depotGame.Id);
                     
-                    // Get cover path from the DepotGame's Cover media
-                    string? coverPath = null;
-                    if (depotGame.Cover != null)
-                    {
-                        coverPath = await mediaService.GetImagePath(depotGame.Cover.Id);
-                    }
+                    // Get cover path - use MediaClient which works with SDK models
+                    string? coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
                     
                     _allGames.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
                     
@@ -248,5 +245,39 @@ public partial class GamesListViewModel : ViewModelBase
     {
         public bool Equals(Genre? x, Genre? y) => x?.Id == y?.Id;
         public int GetHashCode(Genre obj) => obj.Id.GetHashCode();
+    }
+
+    /// <summary>
+    /// Gets the cover image path, downloading if necessary
+    /// </summary>
+    private async Task<string?> GetOrDownloadCoverAsync(Media? cover, MediaClient mediaClient)
+    {
+        if (cover == null) return null;
+
+        try
+        {
+            var localPath = mediaClient.GetLocalPath(cover);
+            
+            // Check if file exists locally
+            if (File.Exists(localPath))
+            {
+                return localPath;
+            }
+
+            // Download the cover
+            _logger.LogDebug("Downloading cover {MediaId} for depot game", cover.Id);
+            var fileInfo = await mediaClient.DownloadAsync(cover, localPath);
+            
+            if (fileInfo.Exists)
+            {
+                return fileInfo.FullName;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get or download cover {MediaId}", cover.Id);
+        }
+
+        return null;
     }
 }

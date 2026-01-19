@@ -1,8 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.LibrarySidebarView"
              x:DataType="vm:LibrarySidebarViewModel">
+    
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
     
     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
         <DockPanel>
@@ -86,7 +91,7 @@
                                         CornerRadius="4" 
                                         ClipToBounds="True">
                                     <Panel>
-                                        <Image Source="{Binding IconPath}"
+                                        <Image Source="{Binding IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                                Stretch="UniformToFill"
                                                IsVisible="{Binding HasIcon}" />
                                         <Border Background="{DynamicResource SystemAccentColor}"

@@ -2,8 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
              x:DataType="vm:GamesListViewModel">
+    
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
     
     <DockPanel>
         <!-- Header -->
@@ -68,7 +73,7 @@
                                         Margin="0,0,16,0">
                                     <Panel>
                                         <!-- Cover from local file -->
-                                        <Image Source="{Binding CoverPath}"
+                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                                Stretch="UniformToFill"
                                                IsVisible="{Binding HasCover}" />
                                         

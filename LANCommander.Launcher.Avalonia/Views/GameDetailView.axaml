@@ -1,8 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
              x:DataType="vm:GameDetailViewModel">
+    
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
     
     <Grid RowDefinitions="Auto,*">
         <!-- Header with Back Button -->
@@ -29,7 +34,7 @@
                         Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                     <Panel>
                         <!-- Background image (if available) -->
-                        <Image Source="{Binding BackgroundPath}"
+                        <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                Stretch="UniformToFill"
                                Opacity="0.3"
                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -41,7 +46,7 @@
                                 ClipToBounds="True"
                                 MaxHeight="280"
                                 BoxShadow="0 4 16 0 #40000000">
-                            <Image Source="{Binding BannerPath}"
+                            <Image Source="{Binding BannerPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                    Stretch="Uniform"
                                    MaxHeight="280"
                                    IsVisible="{Binding BannerPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

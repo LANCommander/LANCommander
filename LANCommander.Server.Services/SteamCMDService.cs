@@ -93,6 +93,7 @@ public class SteamCMDService(
         {
             possiblePaths.AddRange(new[]
             {
+                "/app/Data/Steam/steamcmd.sh",
                 "/usr/local/bin/steamcmd",
                 "/usr/bin/steamcmd",
                 "/home/steam/steamcmd/steamcmd.sh",

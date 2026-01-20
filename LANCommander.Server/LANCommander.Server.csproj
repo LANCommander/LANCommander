@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -75,11 +75,6 @@
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
 	    <DefineConstants>MACOS</DefineConstants>
     </PropertyGroup>
-    <ItemGroup>
-      <Page Include="Templates\AuthenticationProviders\OAuth2\Discord.yml">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Page>
-    </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AntDesign.Charts" />
@@ -133,133 +128,20 @@
     <None Update="favicon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Snippets\Examples\Copy Directory.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Create Directory.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Create Registry Path.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Get User Registry Virtual Store.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Remove Directory.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Remove Registry Key.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Rename File.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Sanitize Filename.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Set Compatibility Mode.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Set Registry Key.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Trim String.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Write ASCII File.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Examples\Write to File.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Convert-AspectRatio.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\ConvertTo-StringBytes.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Edit-PatchBinary.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Get-GameManifest.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Get-UserCustomField.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Update-IniValue.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Get-PrimaryDisplay.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Update-UserCustomField.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Write-ReplaceContentInFile.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Paths\AppData.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Paths\Documents.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Paths\LocalAppData.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Paths\Registry VirtualStore.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Allocated Key.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Default Install Directory.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Game Install Directory.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Game Manifest.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\New Player Alias.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Old Player Alias.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Variables\Server Address.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\AuthenticationProviders\OAuth2\Facebook.yml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\AuthenticationProviders\OAuth2\Google.yml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\AuthenticationProviders\OAuth2\Microsoft.yml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Out-PlayerAvatar.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Get-VerticalFov.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Snippets\Functions\Get-HorizontalFov.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="InstallService-Linux.sh">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="InstallService-macOS.sh">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="InstallService-Windows.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
+
+  <!-- Copy Templates, Modules, and Snippets directories to Data folder in published output -->
+  <Target Name="CopyDataDirectories" AfterTargets="Publish">
+    <ItemGroup>
+      <TemplatesFiles Include="Templates\**\*" />
+      <ModulesFiles Include="Modules\**\*" />
+      <SnippetsFiles Include="Snippets\**\*" />
+    </ItemGroup>
+    <Message Text="Copying Templates, Modules, and Snippets to Data directory" Importance="high" />
+    <Copy SourceFiles="@(TemplatesFiles)" DestinationFolder="$(PublishDir)Data\Templates\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ModulesFiles)" DestinationFolder="$(PublishDir)Data\Modules\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SnippetsFiles)" DestinationFolder="$(PublishDir)Data\Snippets\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 

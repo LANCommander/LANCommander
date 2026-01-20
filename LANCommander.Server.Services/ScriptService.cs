@@ -98,6 +98,19 @@ namespace LANCommander.Server.Services
         
         public IEnumerable<Snippet> GetSnippets()
         {
+            var storagePath = settingsProvider.CurrentValue.Server.Scripts.Snippets.StoragePath;
+            
+            if (string.IsNullOrWhiteSpace(storagePath))
+            {
+                // Set default storage path
+                storagePath = AppPaths.GetConfigPath("Snippets");
+                
+                settingsProvider.Update(s =>
+                {
+                    s.Server.Scripts.Snippets.StoragePath = storagePath;
+                });
+            }
+            
             var files = Directory.GetFiles(settingsProvider.CurrentValue.Server.Scripts.Snippets.StoragePath, "*.ps1", SearchOption.AllDirectories);
 
             return files.Select(f =>

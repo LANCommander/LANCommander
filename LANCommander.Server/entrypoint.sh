@@ -62,10 +62,17 @@ install_steamcmd() {
 
   apt_install wget ca-certificates software-properties-common lib32gcc-s1 lib32stdc++6
 
-  ensure_user "steam" "/home/steam"
-  ensure_dir_owned "/home/steam/steamcmd" "steam" "steam"
+  # Create SteamCMD directory in /app/Data/Steam for persistence
+  STEAMCMD_DIR="/app/Data/Steam"
+  mkdir -p "$STEAMCMD_DIR"
+  
+  # Create .steam directory for credential persistence
+  mkdir -p "$STEAMCMD_DIR/.steam/steamcmd"
+  
+  # Set permissions to allow the app to use SteamCMD
+  chmod -R 755 "$STEAMCMD_DIR"
 
-  if [[ -x "/home/steam/steamcmd/steamcmd.sh" ]]; then
+  if [[ -x "$STEAMCMD_DIR/steamcmd.sh" ]]; then
     echo "SteamCMD already present. Skipping download."
   else
     echo "Downloading SteamCMD..."
@@ -73,13 +80,16 @@ install_steamcmd() {
     (
       cd "$tmpdir"
       wget -qO steamcmd_linux.tar.gz "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
-      tar -xzf steamcmd_linux.tar.gz -C /home/steam/steamcmd
+      tar -xzf steamcmd_linux.tar.gz -C "$STEAMCMD_DIR"
     )
     rm -rf "$tmpdir"
-    chown -R steam:steam /home/steam/steamcmd
-    chmod +x /home/steam/steamcmd/steamcmd.sh
-    echo "SteamCMD installed."
+    chmod +x "$STEAMCMD_DIR/steamcmd.sh"
+    echo "SteamCMD installed to $STEAMCMD_DIR."
   fi
+  
+  # Ensure .steam directory exists for credential persistence
+  mkdir -p "$STEAMCMD_DIR/.steam/steamcmd"
+  chmod -R 755 "$STEAMCMD_DIR/.steam"
 }
 
 # ---------- WINE ----------

@@ -2,6 +2,9 @@
 
 .depot-game-details {
     z-index: 600 !important;
+    display: flex;
+    justify-content: center;
+    align-items: end;
 
     .ant-drawer-mask {
         background: linear-gradient(45deg, #00000096, #3a3a3a8a);
@@ -18,9 +21,10 @@
     }
 
     .ant-drawer-content-wrapper {
+        position: relative;
         height: calc(100% - 128px) !important;
-        width: Variables.$cover-aspect-ratio * Variables.$hero-max-height;
-        left: calc(50vw - 53.33vh);
+        width: 100%;
+        max-width: Variables.$hero-aspect-ratio * Variables.$hero-max-height;
         right: auto;
         box-shadow: none;
     }

@@ -48,7 +48,7 @@ services:
 All config files are available from `/app/Data`. This include any archive uploads for games. Many of these paths can be changed under Settings if you wish to add additional volume mappings.
 
 ### SteamCMD Support
-The Docker image supports optional SteamCMD installation. To enable this feature, set the `STEAMCMD=1` environment variable in your docker-compose.yml file. When enabled, SteamCMD will be installed in `/home/steam/steamcmd` and made available as `steamcmd` command.
+The Docker image supports optional SteamCMD installation. To enable this feature, set the `STEAMCMD=1` environment variable in your docker-compose.yml file. When enabled, SteamCMD will be installed in `/app/Data/Steam` and made available as `steamcmd` command. SteamCMD cached credentials are persisted in `/app/Data/Steam/.steam` to maintain authentication across container restarts.
 
 ### WINE Support
 The Docker image supports optional WINE installation. To enable this feature, set the `WINE=1` environment variable in your docker-compose.yml file. When enabled, WINE will be installed with wine32, wine64, and winetricks support. A `wine` user will be created with a configured WINE environment in `/home/wine/.wine`.

@@ -14,13 +14,17 @@ public class SteamCMDService(
         try
         {
             // Auto-populate SteamCMD path if not configured
-            if (String.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
+            if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 var detectedPath = await AutoDetectSteamCmdPathAsync();
                 
-                if (!String.IsNullOrWhiteSpace(detectedPath))
+                if (!string.IsNullOrWhiteSpace(detectedPath))
                 {
-                    _settingsProvider.CurrentValue.Server.SteamCMD.Path = detectedPath;
+                    _settingsProvider.Update(s =>
+                    {
+                        s.Server.SteamCMD.Path = detectedPath;
+                    });
+                    
                     _logger.LogInformation("Auto-detected SteamCMD at: {Path}", detectedPath);
                 }
                 else
@@ -56,7 +60,7 @@ public class SteamCMDService(
         }
     }
 
-    private async Task<string> AutoDetectSteamCmdPathAsync()
+    public async Task<string> AutoDetectSteamCmdPathAsync()
     {
         var possiblePaths = new List<string>();
 

@@ -66,6 +66,16 @@
     {
         if (!Settings.Value.Server.SteamCMD.Profiles.Any())
             AddProfile();
+
+        if (string.IsNullOrWhiteSpace(Settings.Value.Server.SteamCMD.Path))
+        {
+            var detectedPath = await SteamCmdService.AutoDetectSteamCmdPathAsync();
+            
+            SettingsProvider.Update(s =>
+            {
+                s.Server.SteamCMD.Path = detectedPath;
+            });
+        }
     }
 
     void AddProfile()

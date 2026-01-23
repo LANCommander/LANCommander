@@ -2,6 +2,7 @@ using LANCommander.Server.Services.Enums;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace LANCommander.Server.Services;
 
@@ -13,6 +14,9 @@ public class SteamCMDService(
     {
         try
         {
+            if (!IsValidUsername(username))
+                throw new ArgumentException("Invalid username", nameof(username));
+            
             // Auto-populate SteamCMD path if not configured
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
@@ -46,7 +50,6 @@ public class SteamCMDService(
             if (result.Success)
             {
                 // Check if we're logged in by trying to get user info
-                #warning Susceptible to some sort of injection attack
                 var loginResult = await ExecuteSteamCmdCommandAsync($"+login {username} +quit");
                 return loginResult.Success ? SteamCmdConnectionStatus.Authenticated : SteamCmdConnectionStatus.Unauthenticated;
             }
@@ -166,10 +169,13 @@ public class SteamCMDService(
         return String.Empty;
     }
 
-    public async Task<bool> LoginToSteamAsync(string username, string password = null)
+    public async Task<bool> LoginToSteamAsync(string username, string? password = null)
     {
         try
         {
+            if (!IsValidUsername(username))
+                throw new ArgumentException("Invalid username", nameof(username));
+            
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
@@ -210,6 +216,9 @@ public class SteamCMDService(
     {
         try
         {
+            if (!IsValidUsername(username))
+                throw new ArgumentException("Invalid username", nameof(username));
+            
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
@@ -248,6 +257,9 @@ public class SteamCMDService(
     {
         try
         {
+            if (!IsValidUsername(username))
+                throw new ArgumentException("Invalid username", nameof(username));
+            
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
@@ -398,6 +410,12 @@ public class SteamCMDService(
                 ErrorOutput = ex.Message
             };
         }
+    }
+    
+    private static bool IsValidUsername(string value)
+    {
+        return !string.IsNullOrEmpty(value) &&
+               Regex.IsMatch(value, @"^[a-zA-Z0-9_]+$");
     }
 
     private class SteamCmdResult

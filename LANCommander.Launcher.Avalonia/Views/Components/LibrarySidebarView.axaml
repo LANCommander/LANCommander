@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:svg="using:Avalonia.Svg.Skia"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.LibrarySidebarView"
              x:DataType="vm:LibrarySidebarViewModel">
     
@@ -12,17 +13,16 @@
     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
         <DockPanel>
             <!-- Header -->
-            <Border DockPanel.Dock="Top" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" 
                             Content="⟳" 
                             Command="{Binding RefreshCommand}"
                             ToolTip.Tip="Refresh"
                             Padding="8,4" />
-                    <TextBlock Text="LANCommander" 
-                               FontSize="20" 
-                               FontWeight="Bold" 
-                               VerticalAlignment="Center" />
+                    <svg:Svg Path="/Assets/logo.svg" 
+                             Height="28"
+                             VerticalAlignment="Center" />
                 </DockPanel>
             </Border>
             

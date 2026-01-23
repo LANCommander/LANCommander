@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
+             x:DataType="vm:GamesListViewModel">
+    
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+    
+    <DockPanel>
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Refresh" Command="{Binding LoadGamesInternalCommand}" />
+                </StackPanel>
+                
+                <StackPanel>
+                    <TextBlock Text="Depot - All Games" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding StatusMessage}" Opacity="0.7" FontSize="12" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        
+        <!-- Filter Bar -->
+        <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto">
+                <!-- Search -->
+                <TextBox Grid.Column="0" 
+                         Watermark="Search games..."
+                         Text="{Binding SearchText}"
+                         Margin="0,0,12,0" />
+                
+                <!-- Genre Filter -->
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding AvailableGenres}"
+                          SelectedItem="{Binding SelectedGenre}"
+                          PlaceholderText="All Genres"
+                          Width="150"
+                          Margin="0,0,8,0">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                
+                <!-- In Library Toggle -->
+                <ToggleButton Grid.Column="2"
+                              IsChecked="{Binding ShowInLibraryOnly}"
+                              Content="In Library"
+                              Padding="12,8"
+                              Margin="0,0,8,0" />
+                
+                <!-- Sort By -->
+                <ComboBox Grid.Column="3"
+                          SelectedItem="{Binding SelectedSortBy}"
+                          Width="130"
+                          Margin="0,0,4,0">
+                    <ComboBox.Items>
+                        <enums:SortBy>Title</enums:SortBy>
+                        <enums:SortBy>DateReleased</enums:SortBy>
+                    </ComboBox.Items>
+                </ComboBox>
+                
+                <!-- Sort Direction -->
+                <Button Grid.Column="4"
+                        Command="{Binding ToggleSortDirectionCommand}"
+                        Padding="8"
+                        Margin="0,0,8,0">
+                    <Panel>
+                        <TextBlock Text="↑" IsVisible="{Binding SortAscending}" />
+                        <TextBlock Text="↓" IsVisible="{Binding !SortAscending}" />
+                    </Panel>
+                </Button>
+                
+                <!-- Clear Filters -->
+                <Button Grid.Column="5"
+                        Command="{Binding ClearFiltersCommand}"
+                        Content="Clear"
+                        Padding="12,8" />
+            </Grid>
+        </Border>
+        
+        <!-- Loading Indicator -->
+        <Border DockPanel.Dock="Top" 
+                IsVisible="{Binding IsLoading}"
+                Padding="16"
+                HorizontalAlignment="Center">
+            <TextBlock Text="Loading games..." />
+        </Border>
+        
+        <!-- Error Message -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding HasError}"
+                Padding="16"
+                Margin="16,0"
+                CornerRadius="4">
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
+        </Border>
+        
+        <!-- Games Grid -->
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Games}"
+                          Padding="8">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vmComponents:GameItemViewModel">
+                        <Button Command="{Binding $parent[ItemsControl].((vm:GamesListViewModel)DataContext).ViewGameDetailsCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent"
+                                Padding="0"
+                                Margin="4"
+                                Cursor="Hand">
+                            <Border Width="140" 
+                                    Padding="8" 
+                                    CornerRadius="8"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                <StackPanel>
+                                    <!-- Game Cover -->
+                                    <Border Width="124" Height="170"
+                                            CornerRadius="4"
+                                            ClipToBounds="True"
+                                            Margin="0,0,0,8">
+                                        <Panel>
+                                            <!-- Cover from local file -->
+                                            <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                   Stretch="UniformToFill"
+                                                   IsVisible="{Binding HasCover}" />
+                                            
+                                            <!-- Fallback cover -->
+                                            <Border Background="{DynamicResource SystemAccentColor}"
+                                                    IsVisible="{Binding !HasCover}">
+                                                <TextBlock Text="🎮"
+                                                           FontSize="32"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                            
+                                            <!-- In Library badge (📚 on top-right of cover) -->
+                                            <Border Background="#CC000000"
+                                                    CornerRadius="4"
+                                                    Padding="4,2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Margin="4"
+                                                    IsVisible="{Binding InLibrary}">
+                                                <TextBlock Text="📚" FontSize="14" />
+                                            </Border>
+                                        </Panel>
+                                    </Border>
+                                    
+                                    <!-- Game Title -->
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="2"
+                                               TextWrapping="Wrap"
+                                               Height="36" />
+                                    
+                                    <!-- Year -->
+                                    <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
+                                               FontSize="11"
+                                               Opacity="0.6"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

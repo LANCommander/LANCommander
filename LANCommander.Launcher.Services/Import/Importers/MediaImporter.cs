@@ -105,5 +105,5 @@ public class MediaImporter(
     }
 
     public override async Task<bool> ExistsAsync(ImportItemInfo<Media> importItemInfo) =>
-        await mediaService.FileExists(importItemInfo.Record.Id);
+        await mediaService.GetAsync(importItemInfo.Record.Id) != null;
 }

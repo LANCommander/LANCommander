@@ -1,0 +1,225 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.GameActionBarView"
+             x:DataType="vm:GameActionBarViewModel">
+    
+    <StackPanel Spacing="12">
+        <!-- Game Action Bar -->
+        <Border Padding="16" 
+                CornerRadius="8"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Spacing="16">
+                <!-- Status message -->
+                <TextBlock Text="{Binding StatusMessage}" 
+                           Foreground="{DynamicResource SystemAccentColor}"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                
+                <!-- Primary Action Row -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <!-- Install button (not installed) -->
+                    <Button Command="{Binding InstallCommand}"
+                            IsVisible="{Binding !IsInstalled}"
+                            IsEnabled="{Binding CanInstall}"
+                            Padding="24,14"
+                            Classes="accent"
+                            FontSize="16">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="⬇" FontWeight="Bold" IsVisible="{Binding !IsInstalling}" />
+                            <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
+                            <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
+                        </StackPanel>
+                    </Button>
+                    
+                    <!-- Play SplitButton (installed, multiple actions) -->
+                    <SplitButton Command="{Binding PlayCommand}"
+                                 IsVisible="{Binding HasMultipleActions}"
+                                 IsEnabled="{Binding !IsStarting}"
+                                 Padding="24,14"
+                                 Classes="accent"
+                                 FontSize="16">
+                        <Panel>
+                            <!-- Normal state -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
+                                <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
+                            </StackPanel>
+                            
+                            <!-- Running state - shown as indicator -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRunning}">
+                                <TextBlock Text="●" FontWeight="Bold" Foreground="LimeGreen" />
+                                <TextBlock Text="Running" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Panel>
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuFlyout.ItemsSource>
+                                    <Binding Path="Actions" />
+                                </MenuFlyout.ItemsSource>
+                                <MenuFlyout.ItemContainerTheme>
+                                    <ControlTheme TargetType="MenuItem" x:DataType="vm:GameActionViewModel" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                        <Setter Property="Header" Value="{Binding Name}" />
+                                        <Setter Property="Command" Value="{Binding RunCommand}" />
+                                    </ControlTheme>
+                                </MenuFlyout.ItemContainerTheme>
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
+                    <!-- Play button (installed, single action - no dropdown) -->
+                    <Button Command="{Binding PlayCommand}"
+                            IsVisible="{Binding ShowSimplePlayButton}"
+                            IsEnabled="{Binding !IsStarting}"
+                            Padding="24,14"
+                            Classes="accent"
+                            FontSize="16">
+                        <Panel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
+                                <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
+                                <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
+                            </StackPanel>
+                            
+                            <!-- Running state - shown as indicator -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRunning}">
+                                <TextBlock Text="●" FontWeight="Bold" Foreground="LimeGreen" />
+                                <TextBlock Text="Running" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Panel>
+                    </Button>
+                    
+                    <!-- Stop button (when running) -->
+                    <Button Command="{Binding StopCommand}"
+                            IsVisible="{Binding IsRunning}"
+                            IsEnabled="{Binding !IsStopping}"
+                            Padding="16,14"
+                            Foreground="IndianRed">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="⏹" IsVisible="{Binding !IsStopping}" />
+                            <TextBlock Text="Stop" IsVisible="{Binding !IsStopping}" />
+                            <TextBlock Text="Stopping..." IsVisible="{Binding IsStopping}" />
+                        </StackPanel>
+                    </Button>
+                    
+                    <!-- Browse Files button -->
+                    <Button Command="{Binding BrowseFilesCommand}"
+                            IsVisible="{Binding IsInstalled}"
+                            Padding="12,14"
+                            ToolTip.Tip="Browse Files">
+                        <TextBlock Text="📁" />
+                    </Button>
+                    
+                    <!-- Manual button (when has manuals) -->
+                    <SplitButton IsVisible="{Binding HasManuals}"
+                                 Command="{Binding OpenFirstManualCommand}"
+                                 Padding="12,14"
+                                 ToolTip.Tip="View Manual">
+                        <TextBlock Text="📖" />
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuFlyout.ItemsSource>
+                                    <Binding Path="Manuals" />
+                                </MenuFlyout.ItemsSource>
+                                <MenuFlyout.ItemContainerTheme>
+                                    <ControlTheme TargetType="MenuItem" x:DataType="vm:ManualViewModel" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                        <Setter Property="Header" Value="{Binding Title}" />
+                                        <Setter Property="Command" Value="{Binding OpenCommand}" />
+                                    </ControlTheme>
+                                </MenuFlyout.ItemContainerTheme>
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
+                    <!-- Debug Scripts button (when script debugging is enabled and installed) -->
+                    <SplitButton Command="{Binding OpenPowerShellConsoleCommand}"
+                                 IsVisible="{Binding IsScriptDebuggingEnabled}"
+                                 IsEnabled="{Binding IsInstalled}"
+                                 Padding="12,14"
+                                 ToolTip.Tip="Debug Scripts">
+                        <TextBlock Text="🐛" />
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Open PowerShell Console" Command="{Binding OpenPowerShellConsoleCommand}" />
+                                <Separator />
+                                <MenuItem Header="Run Install Scripts" Command="{Binding RunInstallScriptsCommand}" />
+                                <MenuItem Header="Run Uninstall Scripts" Command="{Binding RunUninstallScriptsCommand}" />
+                                <MenuItem Header="Run Name Change Scripts" Command="{Binding RunNameChangeScriptsCommand}" />
+                                <MenuItem Header="Run Key Change Scripts" Command="{Binding RunKeyChangeScriptsCommand}" />
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
+                    <!-- Uninstall SplitButton (when installed) - combines with Remove from Library -->
+                    <SplitButton Command="{Binding UninstallCommand}"
+                                 IsVisible="{Binding IsInstalled}"
+                                 IsEnabled="{Binding !IsUninstalling}"
+                                 Padding="12,8">
+                        <Panel>
+                            <TextBlock Text="Uninstall" Foreground="IndianRed" IsVisible="{Binding !IsUninstalling}" />
+                            <TextBlock Text="Uninstalling..." Foreground="IndianRed" IsVisible="{Binding IsUninstalling}" />
+                        </Panel>
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Uninstall" Command="{Binding UninstallCommand}" />
+                                <MenuItem Header="Remove from Library" 
+                                          Command="{Binding RemoveFromLibraryCommand}" 
+                                          IsEnabled="{Binding IsInLibrary}" />
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                </StackPanel>
+                
+                <!-- Stats Row -->
+                <StackPanel Orientation="Horizontal" Spacing="32">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Play Time" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="{Binding PlayTime}" FontSize="14" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Last Played" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="{Binding LastPlayed}" FontSize="14" FontWeight="SemiBold" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        
+        <!-- Library Management -->
+        <Border Padding="16" 
+                CornerRadius="8"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Library" FontWeight="SemiBold" FontSize="14" Opacity="0.8" />
+                
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <!-- Add to Library (not in library) -->
+                    <Button Command="{Binding AddToLibraryCommand}"
+                            IsVisible="{Binding !IsInLibrary}"
+                            IsEnabled="{Binding !IsAddingToLibrary}"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="+" FontWeight="Bold" IsVisible="{Binding !IsAddingToLibrary}" />
+                            <TextBlock Text="Add to Library" IsVisible="{Binding !IsAddingToLibrary}" />
+                            <TextBlock Text="Adding..." IsVisible="{Binding IsAddingToLibrary}" />
+                        </StackPanel>
+                    </Button>
+                    
+                    <!-- In Library badge -->
+                    <Border Background="{DynamicResource SystemAccentColor}"
+                            CornerRadius="4"
+                            Padding="12,8"
+                            IsVisible="{Binding IsInLibrary}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="✓" Foreground="White" />
+                            <TextBlock Text="In Library" Foreground="White" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

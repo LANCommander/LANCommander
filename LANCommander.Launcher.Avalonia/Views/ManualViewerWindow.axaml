@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+        xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+        x:Class="LANCommander.Launcher.Avalonia.Views.ManualViewerWindow"
+        x:DataType="vm:ManualViewerViewModel"
+        Title="{Binding Title}"
+        Width="900"
+        Height="700"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Padding="16,12" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Title}" 
+                           FontSize="18" 
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1" 
+                        Content="Close" 
+                        Command="{Binding CloseCommand}"
+                        Padding="16,8" />
+            </Grid>
+        </Border>
+        
+        <!-- PDF Viewer -->
+        <components:PdfViewerControl Grid.Row="1" 
+                                     Source="{Binding FilePath}" />
+    </Grid>
+</Window>

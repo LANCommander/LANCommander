@@ -49,10 +49,39 @@
                            Opacity="0.5" />
             </Border>
             
+            <!-- Offline Mode Indicator -->
+            <Border DockPanel.Dock="Bottom" 
+                    Padding="8" 
+                    Background="#4A2D00"
+                    IsVisible="{Binding IsOfflineMode}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="Go Online"
+                            Command="{Binding GoOnlineCommand}"
+                            Padding="8,4"
+                            Background="#0E639C"
+                            Foreground="White"
+                            FontSize="11" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="⚠" Foreground="#FFA500" FontSize="14" />
+                        <TextBlock Text="Offline Mode" 
+                                   Foreground="#FFA500" 
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            
             <!-- Footer -->
             <Border DockPanel.Dock="Bottom" Padding="8" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                        <Button Content="📴"
+                                Command="{Binding GoOfflineCommand}"
+                                ToolTip.Tip="Go Offline"
+                                Padding="8,4"
+                                IsVisible="{Binding !IsOfflineMode}" />
                         <Button Content="⚙"
                                 Command="{Binding SettingsCommand}"
                                 ToolTip.Tip="Settings"

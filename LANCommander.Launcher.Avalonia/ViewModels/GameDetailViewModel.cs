@@ -69,6 +69,19 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoadingMedia;
 
+    private bool _isOfflineMode;
+    public bool IsOfflineMode
+    {
+        get => _isOfflineMode;
+        set
+        {
+            if (SetProperty(ref _isOfflineMode, value))
+            {
+                ActionBar.IsOfflineMode = value;
+            }
+        }
+    }
+
     // Action bar component
     public GameActionBarViewModel ActionBar { get; }
 

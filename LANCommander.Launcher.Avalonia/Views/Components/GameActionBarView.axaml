@@ -20,7 +20,7 @@
                     <!-- Install button (not installed) -->
                     <Button Command="{Binding InstallCommand}"
                             IsVisible="{Binding !IsInstalled}"
-                            IsEnabled="{Binding !IsInstalling}"
+                            IsEnabled="{Binding CanInstall}"
                             Padding="24,14"
                             Classes="accent"
                             FontSize="16">

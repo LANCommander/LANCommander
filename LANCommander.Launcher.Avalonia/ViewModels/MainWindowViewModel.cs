@@ -5,6 +5,7 @@ using LANCommander.Launcher.Services;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Avalonia.ViewModels;
 
@@ -14,6 +15,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IConnectionClient _connectionClient;
     private readonly AuthenticationService _authenticationService;
     private readonly SettingsProvider<Settings.Settings> _settingsProvider;
+    private readonly ILogger<MainWindowViewModel> _logger;
 
     [ObservableProperty]
     private ViewModelBase _currentView;
@@ -36,6 +38,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _connectionClient = connectionClient;
         _authenticationService = authenticationService;
         _settingsProvider = settingsProvider;
+        _logger = serviceProvider.GetRequiredService<ILogger<MainWindowViewModel>>();
 
         SplashViewModel = new SplashViewModel();
         ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider);
@@ -64,31 +67,52 @@ public partial class MainWindowViewModel : ViewModelBase
             SplashViewModel.UpdateStatus("Connecting to server...");
             await _connectionClient.UpdateServerAddressAsync(settings.Authentication.ServerAddress.ToString());
 
+            // Check if server is reachable
+            var serverOnline = await _connectionClient.PingAsync();
+            
             if (_authenticationService.HasStoredCredentials())
             {
-                try
+                if (serverOnline)
                 {
-                    SplashViewModel.UpdateStatus("Authenticating...");
-                    // Try to login with stored credentials
-                    await _authenticationService.Login();
-                    
-                    if (_connectionClient.IsConnected())
+                    try
                     {
-                        SplashViewModel.UpdateStatus("Loading library...");
-                        // Token is valid - go directly to shell
-                        CurrentView = ShellViewModel;
-                        await ShellViewModel.InitializeAsync();
-                        return;
+                        SplashViewModel.UpdateStatus("Authenticating...");
+                        // Try to login with stored credentials
+                        await _authenticationService.Login();
+                        
+                        if (_connectionClient.IsConnected())
+                        {
+                            SplashViewModel.UpdateStatus("Loading library...");
+                            // Token is valid - go directly to shell in online mode
+                            ShellViewModel.SetOfflineMode(false);
+                            CurrentView = ShellViewModel;
+                            await ShellViewModel.InitializeAsync();
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Token validation failed");
+                        // Token validation failed - continue to check offline mode
                     }
                 }
-                catch
+                else
                 {
-                    // Token validation failed - continue to login
+                    // Server offline but we have stored credentials - go to shell in offline mode
+                    _logger.LogInformation("Server unreachable, starting in offline mode with stored credentials");
+                    SplashViewModel.UpdateStatus("Server offline, starting in offline mode...");
+                    await _connectionClient.EnableOfflineModeAsync();
+                    ShellViewModel.SetOfflineMode(true);
+                    CurrentView = ShellViewModel;
+                    await ShellViewModel.InitializeAsync();
+                    return;
                 }
             }
 
             // We have a server but no valid token - go to login
+            // If server is offline and no credentials, user stays on login (can't proceed)
             LoginViewModel.ServerAddress = settings.Authentication.ServerAddress.ToString();
+            LoginViewModel.IsServerOffline = !serverOnline;
             CurrentView = LoginViewModel;
             return;
         }
@@ -100,11 +124,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OnServerConnected(object? sender, EventArgs e)
     {
         LoginViewModel.ServerAddress = _connectionClient.GetServerAddress()?.ToString() ?? string.Empty;
+        LoginViewModel.IsServerOffline = false;
         CurrentView = LoginViewModel;
     }
 
     private async void OnLoginSucceeded(object? sender, EventArgs e)
     {
+        ShellViewModel.SetOfflineMode(false);
         CurrentView = ShellViewModel;
         await ShellViewModel.InitializeAsync();
     }

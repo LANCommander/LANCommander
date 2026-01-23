@@ -35,11 +35,16 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    [ObservableProperty]
+    private bool _isOfflineMode;
+
     public event EventHandler? DepotSelected;
     public event EventHandler<LibraryItemViewModel>? ItemSelected;
     public event EventHandler? RefreshRequested;
     public event EventHandler? LogoutRequested;
     public event EventHandler? SettingsRequested;
+    public event EventHandler? GoOnlineRequested;
+    public event EventHandler? GoOfflineRequested;
 
     public LibrarySidebarViewModel(IServiceProvider serviceProvider)
     {
@@ -71,7 +76,7 @@ public partial class LibrarySidebarViewModel : ViewModelBase
                 }
             }
 
-            StatusMessage = $"{Items.Count} games";
+            StatusMessage = IsOfflineMode ? $"{Items.Count} games (offline)" : $"{Items.Count} games";
             _logger.LogDebug("Loaded {Count} library items", Items.Count);
         }
         catch (Exception ex)
@@ -128,6 +133,18 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     private void Settings()
     {
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void GoOnline()
+    {
+        GoOnlineRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void GoOffline()
+    {
+        GoOfflineRequested?.Invoke(this, EventArgs.Empty);
     }
 
     public void ClearSelection()

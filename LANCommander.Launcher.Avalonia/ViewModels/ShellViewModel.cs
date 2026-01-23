@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,15 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoOnline))]
+    private bool _isOfflineMode;
+
+    [ObservableProperty]
+    private bool _isCheckingConnection;
+
+    public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
+
     // Child view models
     public LibrarySidebarViewModel Sidebar { get; private set; } = null!;
     public GamesListViewModel GamesListViewModel { get; private set; } = null!;
@@ -36,9 +46,18 @@ public partial class ShellViewModel : ViewModelBase
         _logger = serviceProvider.GetRequiredService<ILogger<ShellViewModel>>();
     }
 
+    /// <summary>
+    /// Sets the offline mode state. Called from MainWindowViewModel during initialization.
+    /// </summary>
+    public void SetOfflineMode(bool offline)
+    {
+        IsOfflineMode = offline;
+        _logger.LogInformation("Offline mode set to: {IsOffline}", offline);
+    }
+
     public async Task InitializeAsync()
     {
-        _logger.LogInformation("ShellViewModel initializing...");
+        _logger.LogInformation("ShellViewModel initializing... (Offline: {IsOffline})", IsOfflineMode);
         
         // Create child view models
         Sidebar = new LibrarySidebarViewModel(_serviceProvider);
@@ -47,12 +66,19 @@ public partial class ShellViewModel : ViewModelBase
         DownloadQueue = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel = new SettingsViewModel(_serviceProvider);
 
+        // Propagate offline state to child view models
+        Sidebar.IsOfflineMode = IsOfflineMode;
+        GamesListViewModel.IsOfflineMode = IsOfflineMode;
+        GameDetailViewModel.IsOfflineMode = IsOfflineMode;
+
         // Wire up events
         Sidebar.DepotSelected += OnDepotSelected;
         Sidebar.ItemSelected += OnLibraryItemSelected;
         Sidebar.RefreshRequested += async (_, _) => await RefreshAsync();
         Sidebar.LogoutRequested += async (_, _) => await LogoutAsync();
         Sidebar.SettingsRequested += OnSettingsRequested;
+        Sidebar.GoOnlineRequested += async (_, _) => await TryGoOnlineAsync();
+        Sidebar.GoOfflineRequested += (_, _) => GoOffline();
         
         GamesListViewModel.GameSelected += OnGameSelected;
         GameDetailViewModel.BackRequested += OnBackFromGameDetail;
@@ -64,7 +90,7 @@ public partial class ShellViewModel : ViewModelBase
         DownloadQueue.InstallCompleted += OnInstallCompleted;
         DownloadQueue.Initialize();
 
-        // Import library from server and load data
+        // Import library from server (if online) and load data
         await ImportAndLoadAsync();
         
         // Default to showing depot
@@ -76,25 +102,42 @@ public partial class ShellViewModel : ViewModelBase
     private async Task ImportAndLoadAsync()
     {
         IsLoading = true;
-        Sidebar.StatusMessage = "Importing library...";
-        _logger.LogInformation("Starting library import...");
+        
+        if (IsOfflineMode)
+        {
+            Sidebar.StatusMessage = "Loading library (offline)...";
+            _logger.LogInformation("Loading library in offline mode (skipping server import)");
+        }
+        else
+        {
+            Sidebar.StatusMessage = "Importing library...";
+            _logger.LogInformation("Starting library import...");
+
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+                
+                await importService.ImportLibraryAsync();
+                _logger.LogInformation("Library import complete");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Import failed");
+                Sidebar.StatusMessage = $"Import failed: {ex.Message}";
+            }
+        }
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
-            
-            await importService.ImportLibraryAsync();
-            _logger.LogInformation("Library import complete");
-            
-            // Load sidebar and games list
+            // Load sidebar and games list from local database
             await Sidebar.LoadAsync();
             await GamesListViewModel.LoadGamesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Import failed");
-            Sidebar.StatusMessage = $"Import failed: {ex.Message}";
+            _logger.LogError(ex, "Failed to load library data");
+            Sidebar.StatusMessage = $"Load failed: {ex.Message}";
         }
         finally
         {
@@ -105,7 +148,79 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        if (IsOfflineMode)
+        {
+            _logger.LogDebug("Skipping refresh - offline mode");
+            Sidebar.StatusMessage = "Cannot refresh in offline mode";
+            return;
+        }
+        
         await ImportAndLoadAsync();
+    }
+
+    [RelayCommand]
+    private async Task TryGoOnlineAsync()
+    {
+        if (!IsOfflineMode)
+            return;
+
+        IsCheckingConnection = true;
+        Sidebar.StatusMessage = "Checking connection...";
+        _logger.LogInformation("Attempting to go online...");
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+            var authService = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
+
+            if (await connectionClient.PingAsync())
+            {
+                _logger.LogInformation("Server is reachable, going online");
+                
+                // Re-authenticate
+                await authService.Login();
+                
+                if (connectionClient.IsConnected())
+                {
+                    IsOfflineMode = false;
+                    Sidebar.IsOfflineMode = false;
+                    GamesListViewModel.IsOfflineMode = false;
+                    GameDetailViewModel.IsOfflineMode = false;
+                    
+                    Sidebar.StatusMessage = "Connected!";
+                    
+                    // Refresh data from server
+                    await ImportAndLoadAsync();
+                    return;
+                }
+            }
+
+            _logger.LogWarning("Server still unreachable");
+            Sidebar.StatusMessage = "Server unreachable - staying offline";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to go online");
+            Sidebar.StatusMessage = $"Connection failed: {ex.Message}";
+        }
+        finally
+        {
+            IsCheckingConnection = false;
+        }
+    }
+
+    private void GoOffline()
+    {
+        if (IsOfflineMode)
+            return;
+
+        _logger.LogInformation("Manually entering offline mode");
+        IsOfflineMode = true;
+        Sidebar.IsOfflineMode = true;
+        GamesListViewModel.IsOfflineMode = true;
+        GameDetailViewModel.IsOfflineMode = true;
+        Sidebar.StatusMessage = "Offline mode";
     }
 
     [RelayCommand]

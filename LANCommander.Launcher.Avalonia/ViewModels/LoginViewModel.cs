@@ -32,6 +32,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private string _serverAddress = string.Empty;
 
+    [ObservableProperty]
+    private bool _isServerOffline;
+
     public event EventHandler? LoginSucceeded;
     public event EventHandler? ChangeServerRequested;
 
@@ -50,6 +53,13 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task LoginAsync()
     {
+        if (IsServerOffline)
+        {
+            StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
         {
             StatusMessage = "Please enter username and password";

@@ -105,10 +105,20 @@ public partial class GameActionBarViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScriptDebuggingEnabled;
 
+    // Offline mode - disables install
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    private bool _isOfflineMode;
+
     /// <summary>
     /// Shows the simple play button when installed but has only one or zero actions
     /// </summary>
     public bool ShowSimplePlayButton => IsInstalled && !HasMultipleActions;
+
+    /// <summary>
+    /// Can install only when online and not already installed
+    /// </summary>
+    public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling;
 
     // Timer for checking running state
     private System.Threading.Timer? _runningCheckTimer;

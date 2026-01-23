@@ -62,6 +62,9 @@ public partial class GamesListViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<Genre> _availableGenres = new();
 
+    [ObservableProperty]
+    private bool _isOfflineMode;
+
     // Event now passes the SDK Game model fetched from server
     public event EventHandler<SDK.Models.Game>? GameSelected;
 
@@ -76,11 +79,11 @@ public partial class GamesListViewModel : ViewModelBase
     {
         IsLoading = true;
         HasError = false;
-        StatusMessage = "Loading games...";
+        StatusMessage = IsOfflineMode ? "Loading local library..." : "Loading games...";
         Games.Clear();
         _allGames.Clear();
         AvailableGenres.Clear();
-        _logger.LogInformation("Loading games from depot...");
+        _logger.LogInformation("Loading games from depot (offline: {IsOffline})...", IsOfflineMode);
 
         try
         {
@@ -89,38 +92,47 @@ public partial class GamesListViewModel : ViewModelBase
             var depotService = scope.ServiceProvider.GetRequiredService<DepotService>();
             var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
             var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
-            
-            _depotItems = await depotService.GetItemsAsync();
-            
-            var allGenres = new HashSet<Genre>(new GenreComparer());
-            
-            foreach (var item in _depotItems ?? [])
+
+            if (IsOfflineMode)
             {
-                if (item.DataItem is SDK.Models.DepotGame depotGame)
+                // In offline mode, only load from local library (installed games)
+                await LoadFromLocalLibraryAsync(scope, libraryService);
+            }
+            else
+            {
+                // Online mode - load from server depot
+                _depotItems = await depotService.GetItemsAsync();
+                
+                var allGenres = new HashSet<Genre>(new GenreComparer());
+                
+                foreach (var item in _depotItems ?? [])
                 {
-                    // Use async method that checks database directly
-                    var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
-                    
-                    // Get cover path - use MediaClient which works with SDK models
-                    string? coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
-                    
-                    _allGames.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
-                    
-                    // Collect genres for filter dropdown
-                    if (depotGame.Genres != null)
+                    if (item.DataItem is SDK.Models.DepotGame depotGame)
                     {
-                        foreach (var genre in depotGame.Genres)
+                        // Use async method that checks database directly
+                        var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
+                        
+                        // Get cover path - use MediaClient which works with SDK models
+                        string? coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
+                        
+                        _allGames.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
+                        
+                        // Collect genres for filter dropdown
+                        if (depotGame.Genres != null)
                         {
-                            allGenres.Add(genre);
+                            foreach (var genre in depotGame.Genres)
+                            {
+                                allGenres.Add(genre);
+                            }
                         }
                     }
                 }
-            }
 
-            // Populate available genres sorted by name
-            foreach (var genre in allGenres.OrderBy(g => g.Name))
-            {
-                AvailableGenres.Add(genre);
+                // Populate available genres sorted by name
+                foreach (var genre in allGenres.OrderBy(g => g.Name))
+                {
+                    AvailableGenres.Add(genre);
+                }
             }
 
             ApplyFilters();
@@ -135,6 +147,42 @@ public partial class GamesListViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LoadFromLocalLibraryAsync(IServiceScope scope, LibraryService libraryService)
+    {
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+
+        // Get all installed games from local database
+        var localGames = await gameService.GetAsync();
+
+        foreach (var game in localGames ?? [])
+        {
+            // Create a DepotGame-like view model from local data
+            string? coverPath = null;
+            var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+            if (coverMedia != null && mediaService.FileExists(coverMedia))
+            {
+                coverPath = mediaService.GetImagePath(coverMedia);
+            }
+
+            // For offline mode, all games shown are "in library"
+            var vm = new GameItemViewModel(
+                new SDK.Models.DepotGame
+                {
+                    Id = game.Id,
+                    Title = game.Title ?? "Unknown",
+                    SortTitle = game.SortTitle ?? game.Title ?? "",
+                    Description = game.Description,
+                    ReleasedOn = game.ReleasedOn ?? DateTime.MinValue
+                },
+                coverPath,
+                inLibrary: true
+            );
+
+            _allGames.Add(vm);
         }
     }
 
@@ -182,7 +230,8 @@ public partial class GamesListViewModel : ViewModelBase
             Games.Add(game);
         }
 
-        StatusMessage = $"{Games.Count} of {_allGames.Count} games";
+        var suffix = IsOfflineMode ? " (offline)" : "";
+        StatusMessage = $"{Games.Count} of {_allGames.Count} games{suffix}";
     }
 
     public Task LoadGamesAsync() => LoadGamesInternalAsync();
@@ -197,23 +246,49 @@ public partial class GamesListViewModel : ViewModelBase
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             
-            var game = await gameClient.GetAsync(gameItem.Id);
-            
-            if (game != null)
+            if (IsOfflineMode)
             {
-                _logger.LogDebug("Got game from server: {Title}", game.Title);
-                GameSelected?.Invoke(this, game);
+                // In offline mode, create Game from local database
+                var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+                var localGame = await gameService.GetAsync(gameItem.Id);
+                
+                if (localGame != null)
+                {
+                    // Convert local game to SDK Game model
+                    var sdkGame = new SDK.Models.Game
+                    {
+                        Id = localGame.Id,
+                        Title = localGame.Title ?? "Unknown",
+                        SortTitle = localGame.SortTitle,
+                        Description = localGame.Description,
+                        ReleasedOn = localGame.ReleasedOn ?? DateTime.MinValue
+                    };
+                    
+                    _logger.LogDebug("Got game from local DB: {Title}", sdkGame.Title);
+                    GameSelected?.Invoke(this, sdkGame);
+                }
             }
             else
             {
-                _logger.LogWarning("Game {GameId} not found on server", gameItem.Id);
+                var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+                
+                var game = await gameClient.GetAsync(gameItem.Id);
+                
+                if (game != null)
+                {
+                    _logger.LogDebug("Got game from server: {Title}", game.Title);
+                    GameSelected?.Invoke(this, game);
+                }
+                else
+                {
+                    _logger.LogWarning("Game {GameId} not found on server", gameItem.Id);
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch game {GameId} from server", gameItem.Id);
+            _logger.LogError(ex, "Failed to fetch game {GameId}", gameItem.Id);
         }
     }
 
@@ -265,13 +340,16 @@ public partial class GamesListViewModel : ViewModelBase
                 return localPath;
             }
 
-            // Download the cover
-            _logger.LogDebug("Downloading cover {MediaId} for depot game", cover.Id);
-            var fileInfo = await mediaClient.DownloadAsync(cover, localPath);
-            
-            if (fileInfo.Exists)
+            // Download the cover (only works online)
+            if (!IsOfflineMode)
             {
-                return fileInfo.FullName;
+                _logger.LogDebug("Downloading cover {MediaId} for depot game", cover.Id);
+                var fileInfo = await mediaClient.DownloadAsync(cover, localPath);
+                
+                if (fileInfo.Exists)
+                {
+                    return fileInfo.FullName;
+                }
             }
         }
         catch (Exception ex)

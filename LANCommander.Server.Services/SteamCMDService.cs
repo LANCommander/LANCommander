@@ -50,7 +50,7 @@ public class SteamCMDService(
             if (result.Success)
             {
                 // Check if we're logged in by trying to get user info
-                var loginResult = await ExecuteSteamCmdCommandAsync($"+login {username} +quit");
+                var loginResult = await ExecuteSteamCmdCommandAsync($"+login {username} +quit", TimeSpan.FromSeconds(30));
                 return loginResult.Success ? SteamCmdConnectionStatus.Authenticated : SteamCmdConnectionStatus.Unauthenticated;
             }
 
@@ -85,7 +85,7 @@ public class SteamCMDService(
             possiblePaths.AddRange(steamPaths);
 
             // Check PATH environment variable
-            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
+            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? [];
             
             foreach (var dir in pathDirs)
             {
@@ -109,7 +109,7 @@ public class SteamCMDService(
             });
 
             // Check PATH environment variable
-            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(':') ?? Array.Empty<string>();
+            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(':') ?? [];
             
             foreach (var dir in pathDirs)
             {
@@ -130,7 +130,7 @@ public class SteamCMDService(
             });
 
             // Check PATH environment variable
-            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(':') ?? Array.Empty<string>();
+            var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(':') ?? [];
             
             foreach (var dir in pathDirs)
             {
@@ -149,7 +149,7 @@ public class SteamCMDService(
                 try
                 {
                     // Verify it's actually SteamCMD by checking if it responds to --version or +quit
-                    var testResult = await ExecuteSteamCmdCommandAsync("+quit", path);
+                    var testResult = await ExecuteSteamCmdCommandAsync("+quit", TimeSpan.FromSeconds(30), path);
                     
                     if (testResult.Success)
                     {
@@ -169,7 +169,7 @@ public class SteamCMDService(
         return String.Empty;
     }
 
-    public async Task<bool> LoginToSteamAsync(string username, string? password = null)
+    public async Task<SteamCmdStatus> LoginToSteamAsync(string username, string? password = null)
     {
         try
         {
@@ -179,56 +179,57 @@ public class SteamCMDService(
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
-                return false;
+                return SteamCmdStatus.PathNotConfigured;
             }
 
             if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
-                return false;
+                return SteamCmdStatus.ExecutableNotFound;
             }
 
             var loginCommand = string.IsNullOrWhiteSpace(password) 
                 ? $"+login {username}" 
                 : $"+login {username} {password}";
 
-            var result = await ExecuteSteamCmdCommandAsync($"{loginCommand} +quit");
+            var result = await ExecuteSteamCmdCommandAsync($"{loginCommand} +quit", TimeSpan.FromSeconds(30));
+
+            if (result.Output.Contains("Invalid Password"))
+                return SteamCmdStatus.InvalidPassword;
             
             if (result.Success)
             {
                 _logger.LogInformation("Successfully logged into Steam as {Username}", username);
-                return true;
+                return SteamCmdStatus.Success;
             }
-            else
-            {
-                _logger.LogError("Failed to log into Steam: {Error}", result.ErrorOutput);
-                return false;
-            }
+
+            _logger.LogError("Failed to log into Steam: {Error}", result.ErrorOutput);
+            return SteamCmdStatus.Error;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error logging into Steam");
-            return false;
+            return SteamCmdStatus.UnknownError;
         }
     }
 
-    public async Task<bool> LogoutAsync(string username)
+    public async Task<SteamCmdStatus> LogoutAsync(string username)
     {
         try
         {
             if (!IsValidUsername(username))
-                throw new ArgumentException("Invalid username", nameof(username));
+                return SteamCmdStatus.InvalidUsername;
             
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
-                return false;
+                return SteamCmdStatus.PathNotConfigured;
             }
 
             if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
-                return false;
+                return SteamCmdStatus.ExecutableNotFound;
             }
 
             var logoutCommand = $"+logout {username}";
@@ -238,22 +239,20 @@ public class SteamCMDService(
             if (result.Success)
             {
                 _logger.LogInformation("Successfully logged out of the Steam account {Username}", username);
-                return true;
+                return SteamCmdStatus.Success;
             }
-            else
-            {
-                _logger.LogError("Failed to log out of Steam: {Error}", result.ErrorOutput);
-                return false;
-            }
+
+            _logger.LogError("Failed to log out of Steam: {Error}", result.ErrorOutput);
+            return SteamCmdStatus.Error;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error logging out of Steam");
-            return false;
+            return SteamCmdStatus.UnknownError;
         }
     }
     
-    public async Task<bool> InstallContentAsync(uint appId, string installDirectory, string username)
+    public async Task<SteamCmdStatus> InstallContentAsync(uint appId, string installDirectory, string username)
     {
         try
         {
@@ -263,13 +262,13 @@ public class SteamCMDService(
             if (string.IsNullOrWhiteSpace(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD path is not configured");
-                return false;
+                return SteamCmdStatus.PathNotConfigured;
             }
 
             if (!File.Exists(_settingsProvider.CurrentValue.Server.SteamCMD.Path))
             {
                 _logger.LogError("SteamCMD executable not found at configured path: {Path}", _settingsProvider.CurrentValue.Server.SteamCMD.Path);
-                return false;
+                return SteamCmdStatus.ExecutableNotFound;
             }
 
             // Ensure install directory exists
@@ -300,51 +299,49 @@ public class SteamCMDService(
             if (result.Success)
             {
                 _logger.LogInformation("Successfully installed Steam app {AppId} to {InstallDirectory}", appId, installDirectory);
-                return true;
+                return SteamCmdStatus.Success;
             }
-            else
-            {
-                _logger.LogError("Failed to install Steam app {AppId}: {Error}", appId, result.ErrorOutput);
-                return false;
-            }
+
+            _logger.LogError("Failed to install Steam app {AppId}: {Error}", appId, result.ErrorOutput);
+            return SteamCmdStatus.Error;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error installing Steam content for app {AppId}", appId);
-            return false;
+            return SteamCmdStatus.UnknownError;
         }
     }
 
-    public async Task<bool> RemoveContentAsync(string installDirectory)
+    public async Task<SteamCmdStatus> RemoveContentAsync(string installDirectory)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
             {
                 _logger.LogError("Install directory is not specified");
-                return false;
+                return SteamCmdStatus.InstallDirectoryNotFound;
             }
 
             if (!Directory.Exists(installDirectory))
             {
                 _logger.LogWarning("Install directory does not exist: {InstallDirectory}", installDirectory);
-                return true; // Consider it already removed
+                return SteamCmdStatus.Success; // Consider it already removed
             }
 
             // Remove the directory and all its contents
             Directory.Delete(installDirectory, true);
             
             _logger.LogInformation("Successfully removed content from {InstallDirectory}", installDirectory);
-            return true;
+            return SteamCmdStatus.Success;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing content from {InstallDirectory}", installDirectory);
-            return false;
+            return SteamCmdStatus.UnknownError;
         }
     }
 
-    private async Task<SteamCmdResult> ExecuteSteamCmdCommandAsync(string arguments, string steamCmdPath = "")
+    private async Task<SteamCmdResult> ExecuteSteamCmdCommandAsync(string arguments, TimeSpan? timeout = null, string steamCmdPath = "")
     {
         try
         {
@@ -388,8 +385,24 @@ public class SteamCMDService(
             
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            
-            await process.WaitForExitAsync();
+
+            try
+            {
+                if (timeout.HasValue)
+                    await process.WaitForExitAsync().WaitAsync(timeout.Value);
+                else
+                    await process.WaitForExitAsync();
+            }
+            catch (TimeoutException)
+            {
+                _logger.LogWarning("SteamCMD timed out");
+
+                process.Kill();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,  "Error while executing SteamCMD");
+            }
 
             return new SteamCmdResult
             {

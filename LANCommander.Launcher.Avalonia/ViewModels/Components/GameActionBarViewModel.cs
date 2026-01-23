@@ -47,9 +47,11 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Install state
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalling;
 
     [ObservableProperty]

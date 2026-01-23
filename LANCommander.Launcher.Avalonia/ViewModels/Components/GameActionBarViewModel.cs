@@ -85,10 +85,17 @@ public partial class GameActionBarViewModel : ViewModelBase
 
     // Manuals
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
     private ObservableCollection<ManualViewModel> _manuals = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
     private bool _hasManuals;
+
+    /// <summary>
+    /// Command to open the first manual. Returns null if no manuals exist.
+    /// </summary>
+    public IRelayCommand? OpenFirstManualCommand => Manuals.FirstOrDefault()?.OpenCommand;
 
     /// <summary>
     /// Shows the simple play button when installed but has only one or zero actions

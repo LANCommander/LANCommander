@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
-        xmlns:avaloniaPdfViewer="clr-namespace:AvaloniaPdfViewer;assembly=AvaloniaPdfViewer"
+        xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
         x:Class="LANCommander.Launcher.Avalonia.Views.ManualViewerWindow"
         x:DataType="vm:ManualViewerViewModel"
         Title="{Binding Title}"
@@ -27,7 +27,7 @@
         </Border>
         
         <!-- PDF Viewer -->
-        <avaloniaPdfViewer:PdfViewer Grid.Row="1" 
-                                      Source="{Binding FilePath}" />
+        <components:PdfViewerControl Grid.Row="1" 
+                                     Source="{Binding FilePath}" />
     </Grid>
 </Window>

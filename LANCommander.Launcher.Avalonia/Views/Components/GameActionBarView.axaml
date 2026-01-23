@@ -54,12 +54,16 @@
                         </Panel>
                         
                         <SplitButton.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft" ItemsSource="{Binding Actions}">
-                                <MenuFlyout.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:GameActionViewModel">
-                                        <TextBlock Text="{Binding Name}" />
-                                    </DataTemplate>
-                                </MenuFlyout.ItemTemplate>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuFlyout.ItemsSource>
+                                    <Binding Path="Actions" />
+                                </MenuFlyout.ItemsSource>
+                                <MenuFlyout.ItemContainerTheme>
+                                    <ControlTheme TargetType="MenuItem" x:DataType="vm:GameActionViewModel" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                        <Setter Property="Header" Value="{Binding Name}" />
+                                        <Setter Property="Command" Value="{Binding RunCommand}" />
+                                    </ControlTheme>
+                                </MenuFlyout.ItemContainerTheme>
                             </MenuFlyout>
                         </SplitButton.Flyout>
                     </SplitButton>
@@ -109,17 +113,22 @@
                     
                     <!-- Manual button (when has manuals) -->
                     <SplitButton IsVisible="{Binding HasManuals}"
+                                 Command="{Binding OpenFirstManualCommand}"
                                  Padding="12,14"
                                  ToolTip.Tip="View Manual">
                         <TextBlock Text="📖" />
                         
                         <SplitButton.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft" ItemsSource="{Binding Manuals}">
-                                <MenuFlyout.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ManualViewModel">
-                                        <TextBlock Text="{Binding Title}" />
-                                    </DataTemplate>
-                                </MenuFlyout.ItemTemplate>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuFlyout.ItemsSource>
+                                    <Binding Path="Manuals" />
+                                </MenuFlyout.ItemsSource>
+                                <MenuFlyout.ItemContainerTheme>
+                                    <ControlTheme TargetType="MenuItem" x:DataType="vm:ManualViewModel" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                        <Setter Property="Header" Value="{Binding Title}" />
+                                        <Setter Property="Command" Value="{Binding OpenCommand}" />
+                                    </ControlTheme>
+                                </MenuFlyout.ItemContainerTheme>
                             </MenuFlyout>
                         </SplitButton.Flyout>
                     </SplitButton>

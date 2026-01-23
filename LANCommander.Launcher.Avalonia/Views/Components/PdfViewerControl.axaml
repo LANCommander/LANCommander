@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.PdfViewerControl">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Toolbar -->
+        <Border Grid.Row="0" 
+                Padding="8" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <Button x:Name="PrevPageButton" Content="◀" Padding="8,4" ToolTip.Tip="Previous Page" />
+                <TextBlock x:Name="PageIndicator" VerticalAlignment="Center" Margin="8,0" />
+                <Button x:Name="NextPageButton" Content="▶" Padding="8,4" ToolTip.Tip="Next Page" />
+                <Border Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,0" />
+                <Button x:Name="ZoomOutButton" Content="−" Padding="8,4" ToolTip.Tip="Zoom Out" />
+                <TextBlock x:Name="ZoomIndicator" VerticalAlignment="Center" Margin="8,0" />
+                <Button x:Name="ZoomInButton" Content="+" Padding="8,4" ToolTip.Tip="Zoom In" />
+            </StackPanel>
+        </Border>
+        
+        <!-- PDF Content -->
+        <ScrollViewer Grid.Row="1" 
+                      HorizontalScrollBarVisibility="Auto" 
+                      VerticalScrollBarVisibility="Auto"
+                      x:Name="PdfScrollViewer">
+            <Image x:Name="PdfImage" 
+                   Stretch="None"
+                   HorizontalAlignment="Center"
+                   Margin="16" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

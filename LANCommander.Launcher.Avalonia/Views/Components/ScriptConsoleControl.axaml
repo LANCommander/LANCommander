@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.ScriptConsoleControl"
+             x:DataType="local:ScriptConsoleControl"
+             Background="#1E1E1E">
+    
+    <Grid RowDefinitions="*,Auto">
+        <!-- Output Area -->
+        <Border Grid.Row="0" 
+                BorderBrush="#3C3C3C" 
+                BorderThickness="0,0,0,1"
+                Padding="8">
+            <ScrollViewer x:Name="OutputScrollViewer"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock x:Name="OutputTextBlock"
+                                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                     FontSize="13"
+                                     Foreground="#CCCCCC"
+                                     TextWrapping="NoWrap" />
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Input Area -->
+        <Border Grid.Row="1" 
+                x:Name="InputBorder"
+                Background="#2D2D2D" 
+                Padding="8"
+                IsVisible="False">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="PS>"
+                           FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                           FontSize="13"
+                           Foreground="#569CD6"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0" />
+                
+                <TextBox Grid.Column="1"
+                         x:Name="CommandInput"
+                         FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                         FontSize="13"
+                         Background="#1E1E1E"
+                         Foreground="#CCCCCC"
+                         BorderThickness="1"
+                         BorderBrush="#3C3C3C"
+                         Padding="8,6"
+                         Watermark="Enter command (type 'exit' to finish)..." />
+                
+                <Button Grid.Column="2"
+                        x:Name="ExecuteButton"
+                        Content="Run"
+                        Margin="8,0,0,0"
+                        Padding="16,6"
+                        Background="#0E639C"
+                        Foreground="White" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

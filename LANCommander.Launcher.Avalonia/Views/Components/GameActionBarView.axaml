@@ -133,6 +133,26 @@
                         </SplitButton.Flyout>
                     </SplitButton>
                     
+                    <!-- Debug Scripts button (when script debugging is enabled and installed) -->
+                    <SplitButton Command="{Binding OpenPowerShellConsoleCommand}"
+                                 IsVisible="{Binding IsScriptDebuggingEnabled}"
+                                 IsEnabled="{Binding IsInstalled}"
+                                 Padding="12,14"
+                                 ToolTip.Tip="Debug Scripts">
+                        <TextBlock Text="🐛" />
+                        
+                        <SplitButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Open PowerShell Console" Command="{Binding OpenPowerShellConsoleCommand}" />
+                                <Separator />
+                                <MenuItem Header="Run Install Scripts" Command="{Binding RunInstallScriptsCommand}" />
+                                <MenuItem Header="Run Uninstall Scripts" Command="{Binding RunUninstallScriptsCommand}" />
+                                <MenuItem Header="Run Name Change Scripts" Command="{Binding RunNameChangeScriptsCommand}" />
+                                <MenuItem Header="Run Key Change Scripts" Command="{Binding RunKeyChangeScriptsCommand}" />
+                            </MenuFlyout>
+                        </SplitButton.Flyout>
+                    </SplitButton>
+                    
                     <!-- Uninstall SplitButton (when installed) - combines with Remove from Library -->
                     <SplitButton Command="{Binding UninstallCommand}"
                                  IsVisible="{Binding IsInstalled}"

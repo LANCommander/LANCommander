@@ -9,6 +9,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.PowerShell;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -97,6 +101,10 @@ public partial class GameActionBarViewModel : ViewModelBase
     /// </summary>
     public IRelayCommand? OpenFirstManualCommand => Manuals.FirstOrDefault()?.OpenCommand;
 
+    // Script debugging
+    [ObservableProperty]
+    private bool _isScriptDebuggingEnabled;
+
     /// <summary>
     /// Shows the simple play button when installed but has only one or zero actions
     /// </summary>
@@ -127,7 +135,10 @@ public partial class GameActionBarViewModel : ViewModelBase
 
         using var scope = _serviceProvider.CreateScope();
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
         IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
+        IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
 
         LoadPlayStats(game);
         LoadManuals(game);
@@ -146,8 +157,10 @@ public partial class GameActionBarViewModel : ViewModelBase
         using var scope = _serviceProvider.CreateScope();
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
         var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
 
         IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
+        IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
 
         // Check if installed from local database
         var localGame = await gameService.GetAsync(game.Id);
@@ -192,7 +205,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             if (actions != null && actions.Any())
             {
                 var primaryActions = actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder).ToList();
-                
+
                 foreach (var action in primaryActions)
                 {
                     Actions.Add(new GameActionViewModel(action, RunActionAsync));
@@ -275,7 +288,7 @@ public partial class GameActionBarViewModel : ViewModelBase
                     IsRunning = false;
                     IsStarting = false;
                     IsStopping = false;
-                    
+
                     // Refresh play stats
                     await RefreshPlayStatsAsync();
                 });
@@ -691,7 +704,7 @@ public partial class GameActionBarViewModel : ViewModelBase
     private void LoadManuals(Game game)
     {
         Manuals.Clear();
-        
+
         if (game.Media == null || !game.Media.Any())
         {
             HasManuals = false;
@@ -727,7 +740,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             {
                 DataContext = viewModel
             };
-            
+
             viewModel.CloseAction = () => window.Close();
             window.Show();
         }
@@ -737,6 +750,169 @@ public partial class GameActionBarViewModel : ViewModelBase
             StatusMessage = $"Failed to open manual: {ex.Message}";
         }
     }
+
+    /// <summary>
+    /// Opens a PowerShell console in the game's install directory
+    /// </summary>
+    [RelayCommand]
+    private void OpenPowerShellConsole()
+    {
+        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+        {
+            StatusMessage = "Game is not installed";
+            return;
+        }
+
+        try
+        {
+            // Open a standalone PowerShell window for the install directory
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoLogo -NoExit -WorkingDirectory \"{InstallDirectory}\"",
+                UseShellExecute = true
+            };
+            Process.Start(processInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open PowerShell console for {Title}", Title);
+            StatusMessage = $"Failed to open console: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Opens a console window, runs the specified script type using the SDK's script execution, then stays interactive
+    /// </summary>
+    private async Task OpenScriptTerminalAsync(ScriptType scriptType, string scriptTypeName)
+    {
+        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+        {
+            StatusMessage = "Game is not installed";
+            return;
+        }
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var scriptClient = scope.ServiceProvider.GetRequiredService<ScriptClient>();
+            var scriptDebugger = _serviceProvider.GetRequiredService<ScriptDebugger>();
+
+            // Create and show the console window
+            var viewModel = new PowerShellConsoleViewModel($"{scriptTypeName} Scripts - {Title}", InstallDirectory);
+            var window = new Views.PowerShellConsoleWindow
+            {
+                DataContext = viewModel
+            };
+
+            viewModel.CloseAction = () => window.Close();
+
+            // Wire up the debugger events to the console control
+            var console = window.ConsoleControl;
+
+            scriptDebugger.OnDebugStart = context =>
+            {
+                console.OnDebugStart(context);
+                return Task.CompletedTask;
+            };
+
+            scriptDebugger.OnOutput = (level, message) =>
+            {
+                console.OnOutput(level, message);
+                return Task.CompletedTask;
+            };
+
+            scriptDebugger.OnDebugBreak = async context =>
+            {
+                await console.OnDebugBreakAsync(context);
+            };
+
+            scriptDebugger.OnDebugEnd = context =>
+            {
+                console.OnDebugEnd(context);
+                return Task.CompletedTask;
+            };
+
+            // Show the window
+            window.Show();
+
+            // Run the appropriate script type
+            // The script client already handles debug mode when EnableScriptDebugging is true
+            scriptClient.Debug = true; // Force debug mode for this execution
+
+            StatusMessage = $"Running {scriptTypeName} scripts...";
+
+            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var manifests = await gameClient.GetManifestsAsync(InstallDirectory, GameId);
+
+            foreach (var manifest in manifests)
+            {
+                switch (scriptType)
+                {
+                    case ScriptType.Install:
+                        await scriptClient.RunInstallScriptAsync(InstallDirectory, GameId);
+                        break;
+                    case ScriptType.Uninstall:
+                        await scriptClient.RunUninstallScriptAsync(InstallDirectory, GameId);
+                        break;
+                    case ScriptType.NameChange:
+                        var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+                        var user = await userService.GetCurrentUser();
+                        await scriptClient.RunNameChangeScriptAsync(InstallDirectory, GameId, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
+
+                        break;
+                    case ScriptType.KeyChange:
+                        // Key change scripts are run per manifest
+                        var key = await scope.ServiceProvider.GetRequiredService<SDK.Client>().Games.GetAllocatedKeyAsync(manifest.Id);
+                        await scriptClient.RunKeyChangeScriptAsync(InstallDirectory, GameId, key);
+                        break;
+                }
+            }
+
+            StatusMessage = $"{scriptTypeName} scripts completed";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run {ScriptType} scripts for {Title}", scriptTypeName, Title);
+            StatusMessage = $"Script error: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Runs install scripts in a debug console
+    /// </summary>
+    [RelayCommand]
+    private Task RunInstallScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.Install, "Install");
+    }
+
+    /// <summary>
+    /// Runs uninstall scripts in a debug console
+    /// </summary>
+    [RelayCommand]
+    private Task RunUninstallScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.Uninstall, "Uninstall");
+    }
+
+    /// <summary>
+    /// Runs name change scripts
+    /// </summary>
+    [RelayCommand]
+    private Task RunNameChangeScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.NameChange, "Name Change");
+    }
+
+    /// <summary>
+    /// Runs key change scripts
+    /// </summary>
+    [RelayCommand]
+    private Task RunKeyChangeScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.KeyChange, "Key Change");
+    }
 }
 
 /// <summary>
@@ -745,9 +921,9 @@ public partial class GameActionBarViewModel : ViewModelBase
 public partial class GameActionViewModel : ViewModelBase
 {
     public SDK.Models.Manifest.Action Action { get; }
-    
+
     public string Name => Action.Name;
-    
+
     private readonly Func<SDK.Models.Manifest.Action, Task> _runAction;
 
     public GameActionViewModel(SDK.Models.Manifest.Action action, Func<SDK.Models.Manifest.Action, Task> runAction)
@@ -770,7 +946,7 @@ public partial class ManualViewModel : ViewModelBase
 {
     public string Title { get; }
     public string FilePath { get; }
-    
+
     private readonly Action<ManualViewModel> _openManual;
 
     public ManualViewModel(string title, string filePath, Action<ManualViewModel> openManual)

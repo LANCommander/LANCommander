@@ -17,7 +17,7 @@ public partial class GetSteamCmdConnectionStatusCmdlet : DependencyCmdlet<PowerS
     public string Username { get; set; } = string.Empty;
 
     [ServiceDependency]
-    private ISteamCmdService _steamCmdService;
+    private LANCommander.Steam.Abstractions.ISteamCmdService _steamCmdService;
 
     public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {

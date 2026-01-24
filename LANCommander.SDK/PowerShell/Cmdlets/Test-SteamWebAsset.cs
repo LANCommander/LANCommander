@@ -20,7 +20,7 @@ public partial class TestSteamWebAssetCmdlet : DependencyCmdlet<PowerShellStartu
     public WebAssetType WebAssetType { get; set; }
 
     [ServiceDependency]
-    private SteamStoreService _steamStoreService;
+    private LANCommander.Steam.Services.SteamStoreService _steamStoreService;
 
     public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {

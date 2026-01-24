@@ -16,7 +16,7 @@ public partial class TestSteamManualCmdlet : DependencyCmdlet<PowerShellStartup>
     public int AppId { get; set; }
 
     [ServiceDependency]
-    private SteamStoreService _steamStoreService;
+    private LANCommander.Steam.Services.SteamStoreService _steamStoreService;
 
     public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {

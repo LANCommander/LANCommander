@@ -17,7 +17,7 @@ public partial class SearchSteamGamesCmdlet : DependencyCmdlet<PowerShellStartup
     public string Keyword { get; set; } = string.Empty;
 
     [ServiceDependency]
-    private SteamStoreService _steamStoreService;
+    private LANCommander.Steam.Services.SteamStoreService _steamStoreService;
 
     public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {

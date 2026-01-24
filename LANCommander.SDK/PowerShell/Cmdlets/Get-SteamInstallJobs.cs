@@ -14,7 +14,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 public partial class GetSteamInstallJobsCmdlet : DependencyCmdlet<PowerShellStartup>
 {
     [ServiceDependency]
-    private ISteamCmdService _steamCmdService;
+    private LANCommander.Steam.Abstractions.ISteamCmdService _steamCmdService;
 
     public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {

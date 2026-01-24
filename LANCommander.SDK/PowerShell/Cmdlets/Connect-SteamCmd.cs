@@ -21,7 +21,7 @@ public partial class ConnectSteamCmdCmdlet : DependencyCmdlet<PowerShellStartup>
     public SecureString? Password { get; set; }
 
     [ServiceDependency]
-    private ISteamCmdService _steamCmdService;
+    private LANCommander.Steam.Abstractions.ISteamCmdService _steamCmdService;
 
     public override async Task ProcessRecordAsync(CancellationToken token)
     {

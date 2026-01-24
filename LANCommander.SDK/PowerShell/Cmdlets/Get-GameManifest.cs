@@ -7,7 +7,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "GameManifest")]
     [OutputType(typeof(SDK.Models.Manifest.Game))]
-    public class GetGameManifestCmdlet : BaseCmdlet
+    public class GetGameManifestCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public string Path { get; set; }

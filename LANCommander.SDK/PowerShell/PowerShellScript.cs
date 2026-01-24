@@ -1,4 +1,4 @@
-﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;

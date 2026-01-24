@@ -1,10 +1,12 @@
 ﻿@page "/Settings/Integrations/Steam"
-@using LANCommander.Server.Services.Enums
 @using LANCommander.Server.Settings
-@using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Settings.Components
+@using LANCommander.Steam.Abstractions
+@using LANCommander.Steam.Enums
+@using LANCommander.Steam.Models
 @using Microsoft.Extensions.Options
-@inject SteamCMDService SteamCmdService
+@inject ISteamCmdService SteamCmdService
+@inject ISteamCmdProfileStore SteamCmdProfileStore
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
@@ -20,7 +22,7 @@
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="SteamCMD Path">
-            <FilePicker @bind-Value="context.Server.SteamCMD.Path" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
+            <FilePicker @bind-Value="SteamCmdService.ExecutablePath" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
         </FormItem>
     </Form>
     
@@ -28,7 +30,7 @@
     
     <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
         <Collapse>
-            @foreach (var profile in Settings.Value.Server.SteamCMD.Profiles)
+            @foreach (var profile in _profiles)
             {
                 <Panel Header="@(String.IsNullOrWhiteSpace(profile.Username) ? "New Profile" : profile.Username)">
                     <ExtraTemplate>
@@ -57,6 +59,8 @@
 
     SteamCmdConnectionStatus _connectionStatus;
 
+    List<SteamCmdProfile> _profiles = [];
+    
     string _username;
     string _password;
 
@@ -64,35 +68,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!Settings.Value.Server.SteamCMD.Profiles.Any())
+        _profiles = (await SteamCmdService.GetProfilesAsync()).ToList();
+
+        if (!_profiles.Any())
             AddProfile();
-
-        if (string.IsNullOrWhiteSpace(Settings.Value.Server.SteamCMD.Path))
-        {
-            var detectedPath = await SteamCmdService.AutoDetectSteamCmdPathAsync();
-
-            if (!string.IsNullOrWhiteSpace(detectedPath))
-            {
-                Settings.Value.Server.SteamCMD.Path = detectedPath;
-                
-                SettingsProvider.Update(s =>
-                {
-                    s.Server.SteamCMD.Path = detectedPath;
-                });
-            }
-        }
     }
 
     void AddProfile()
     {
-        Settings.Value.Server.SteamCMD.Profiles.Add(new SteamCmdProfile());
+        _profiles.Add(new SteamCmdProfile());
     }
 
     async Task RemoveProfile(SteamCmdProfile profile)
     {
-        Settings.Value.Server.SteamCMD.Profiles.Remove(profile);
-
-        if (!String.IsNullOrWhiteSpace(profile.Username))
+        if (!string.IsNullOrWhiteSpace(profile.Username))
         {
             var logoutMessage = new MessageConfig
             {
@@ -104,14 +93,17 @@
             MessageService.Loading(logoutMessage);
 
             await SteamCmdService.LogoutAsync(profile.Username);
+            await SteamCmdService.DeleteProfileAsync(profile.Username);
 
             logoutMessage.Content = "Successfully logged out from Steam!";
             logoutMessage.Duration = 3;
             
+            _profiles = (await SteamCmdService.GetProfilesAsync()).ToList();
+            
             MessageService.Success(logoutMessage);
         }
 
-        if (!Settings.Value.Server.SteamCMD.Profiles.Any())
+        if (!_profiles.Any())
             AddProfile();
     }
 
@@ -119,12 +111,10 @@
     {
         try
         {
-            Settings.Value.Server.SteamCMD.Profiles = Settings.Value.Server.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
-
-            SettingsProvider.Update(s =>
+            foreach (var profile in _profiles)
             {
-                s.Server.SteamCMD = Settings.Value.Server.SteamCMD;
-            });
+                await SteamCmdService.SaveProfileAsync(profile);
+            }
             
             MessageService.Success("Settings saved!");
         }

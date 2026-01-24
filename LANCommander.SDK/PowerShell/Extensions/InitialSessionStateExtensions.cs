@@ -27,5 +27,28 @@ public static class InitialSessionStateExtensions
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-UserCustomField", typeof(UpdateUserCustomFieldCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
+        
+        // SteamCMD cmdlets
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Connect-SteamCmd", typeof(ConnectSteamCmdCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Disconnect-SteamCmd", typeof(DisconnectSteamCmdCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdConnectionStatus", typeof(GetSteamCmdConnectionStatusCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdPath", typeof(GetSteamCmdPathCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdProfile", typeof(GetSteamCmdProfileCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdProfiles", typeof(GetSteamCmdProfilesCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamInstallJob", typeof(GetSteamInstallJobCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamInstallJobs", typeof(GetSteamInstallJobsCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Install-SteamContent", typeof(InstallSteamContentCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamContent", typeof(RemoveSteamContentCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamCmdProfile", typeof(RemoveSteamCmdProfileCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Set-SteamCmdProfile", typeof(SetSteamCmdProfileCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Stop-SteamInstallJob", typeof(StopSteamInstallJobCmdlet), null));
+        
+        // Steam Store cmdlets
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamManual", typeof(GetSteamManualCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamManualUri", typeof(GetSteamManualUriCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamWebAssetUri", typeof(GetSteamWebAssetUriCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Search-SteamGames", typeof(SearchSteamGamesCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Test-SteamManual", typeof(TestSteamManualCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Test-SteamWebAsset", typeof(TestSteamWebAssetCmdlet), null));
     }
 }

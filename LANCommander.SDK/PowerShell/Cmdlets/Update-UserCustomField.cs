@@ -5,7 +5,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Update, "UserCustomField")]
     [OutputType(typeof(string))]
-    public class UpdateUserCustomFieldCmdlet(ProfileClient profileClient) : BaseCmdlet
+    public class UpdateUserCustomFieldCmdlet(ProfileClient profileClient) : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Name { get; set; }

@@ -8,7 +8,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "UserCustomField")]
     [OutputType(typeof(string))]
-    public class GetUserCustomFieldCmdlet(ProfileClient profileClient) : BaseCmdlet
+    public class GetUserCustomFieldCmdlet(ProfileClient profileClient) : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Name { get; set; }

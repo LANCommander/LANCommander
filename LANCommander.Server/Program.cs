@@ -23,6 +23,7 @@ builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices();
 builder.AddMigrations();
 builder.AddDatabase(args);
+builder.UseSteam();
 
 builder.Services.AddHealthChecks();
 

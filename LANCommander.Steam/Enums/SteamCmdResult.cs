@@ -1,4 +1,4 @@
-namespace LANCommander.Server.Services.Enums;
+namespace LANCommander.Steam.Enums;
 
 public enum SteamCmdStatus
 {

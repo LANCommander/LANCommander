@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +10,7 @@ namespace LANCommander.Launcher.Services
     public class PlaySessionService(
         ILogger<PlaySessionService> logger,
         DatabaseContext dbContext,
-        SDK.Client client) : BaseDatabaseService<PlaySession>(dbContext, logger)
+        GameClient gameClient) : BaseDatabaseService<PlaySession>(dbContext, logger)
     {
         public async Task<PlaySession> GetLatestSession(Guid gameId, Guid userId)
         {
@@ -39,7 +40,7 @@ namespace LANCommander.Launcher.Services
 
                     await AddAsync(session);
                 
-                    await client.Games.StartedAsync(gameId);
+                    await gameClient.StartedAsync(gameId);
                 }
                 catch (Exception ex)
                 {
@@ -74,7 +75,7 @@ namespace LANCommander.Launcher.Services
                 }
                 finally
                 {
-                    await client.Games.StoppedAsync(gameId);
+                    await gameClient.StoppedAsync(gameId);
                 }
                 
                 op.Complete();

@@ -1,12 +1,13 @@
 ﻿using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services
 {
     public class SaveService(
         ILogger<SaveService> logger,
-        SDK.Client client) : BaseService(logger)
+        SaveClient saveClient) : BaseService(logger)
     {
         public async Task<IEnumerable<GameSave>> Get(Guid gameId)
         {
@@ -14,7 +15,7 @@ namespace LANCommander.Launcher.Services
             {
                 op.Enrich("GameId", gameId);
                 
-                var saves = await client.Saves.GetAsync(gameId);
+                var saves = await saveClient.GetAsync(gameId);
             
                 if (saves == null)
                     saves = new List<GameSave>();
@@ -32,7 +33,7 @@ namespace LANCommander.Launcher.Services
                 op.Enrich("GameId", gameId);
                 op.Enrich("InstallDirectory", installDirectory);
                 
-                await client.Saves.DownloadAsync(installDirectory, gameId);
+                await saveClient.DownloadAsync(installDirectory, gameId);
                 
                 op.Complete();
             }
@@ -45,7 +46,7 @@ namespace LANCommander.Launcher.Services
                 op.Enrich("GameId", gameId);
                 op.Enrich("InstallDirectory", installDirectory);
                 
-                await client.Saves.DownloadAsync(installDirectory, gameId);
+                await saveClient.DownloadAsync(installDirectory, gameId);
                 
                 op.Complete();
             }
@@ -59,7 +60,7 @@ namespace LANCommander.Launcher.Services
                 op.Enrich("SaveId", saveId);
                 op.Enrich("InstallDirectory", installDirectory);
                 
-                await client.Saves.DownloadAsync(installDirectory, gameId, saveId);
+                await saveClient.DownloadAsync(installDirectory, gameId, saveId);
                 
                 op.Complete();
             }
@@ -72,7 +73,7 @@ namespace LANCommander.Launcher.Services
                 op.Enrich("GameId", gameId);
                 op.Enrich("InstallDirectory", installDirectory);
                 
-                await client.Saves.UploadAsync(installDirectory, gameId);
+                await saveClient.UploadAsync(installDirectory, gameId);
                 
                 op.Complete();
             }
@@ -84,7 +85,7 @@ namespace LANCommander.Launcher.Services
             {
                 op.Enrich("SaveId", saveId);
                 
-                await client.Saves.DeleteAsync(saveId);
+                await saveClient.DeleteAsync(saveId);
                 
                 op.Complete();
             }

@@ -3,6 +3,7 @@ using LANCommander.Launcher.Models;
 using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
 using LANCommander.SDK;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
@@ -14,11 +15,17 @@ namespace LANCommander.Launcher.Services
         InstallService installService,
         ImportService importService,
         ProfileService profileService,
-        SDK.Client client) : BaseService(logger)
+        AuthenticationClient authenticationClient,
+        ScriptClient scriptClient,
+        GameClient gameClient,
+        RedistributableClient redistributableClient,
+        ServerClient serverClient,
+        IConnectionClient connectionClient,
+        SettingsProvider<Settings.Settings> settingsProvider) : BaseService(logger)
     {
         public async Task ParseCommandLineAsync(string[] args)
         {
-            await client.Authentication.ValidateTokenAsync();
+            await authenticationClient.ValidateTokenAsync();
 
                 
             var result = Parser.Default.ParseArguments
@@ -53,27 +60,27 @@ namespace LANCommander.Launcher.Services
             switch (options.Type)
             {
                 case SDK.Enums.ScriptType.Install:
-                    await client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.Uninstall:
-                    await client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.BeforeStart:
-                    await client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.AfterStop:
-                    await client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.NameChange:
-                    await client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.Settings.DEFAULT_GAME_USERNAME);
+                    await scriptClient.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.Settings.DEFAULT_GAME_USERNAME);
                     break;
 
                 case SDK.Enums.ScriptType.KeyChange:
-                    await client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
+                    await scriptClient.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
                     break;
             }
         }
@@ -168,19 +175,19 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Uploading game import file to server...");
 
-                    await client.Games.ImportAsync(options.Path);
+                    await gameClient.ImportAsync(options.Path);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Uploading redistributable archive file to server...");
 
-                    await client.Redistributables.ImportAsync(options.Path);
+                    await redistributableClient.ImportAsync(options.Path);
                     break;
 
                 case ArchiveType.Server:
                     Logger.LogInformation("Uploading server archive file to server...");
 
-                    await client.Servers.ImportAsync(options.Path);
+                    await serverClient.ImportAsync(options.Path);
                     break;
             }
 
@@ -200,19 +207,19 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Exporting game from server...");
 
-                    await client.Games.ExportAsync(options.Path, options.Id);
+                    await gameClient.ExportAsync(options.Path, options.Id);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Exporting redistributable from server...");
 
-                    await client.Redistributables.ExportAsync(options.Path, options.Id);
+                    await redistributableClient.ExportAsync(options.Path, options.Id);
                     break;
 
                 case ArchiveType.Server:
                     Logger.LogInformation("Exporting server from server...");
 
-                    await client.Servers.ExportAsync(options.Path, options.Id);
+                    await serverClient.ExportAsync(options.Path, options.Id);
                     break;
             }
 
@@ -232,13 +239,13 @@ namespace LANCommander.Launcher.Services
                 case ArchiveType.Game:
                     Logger.LogInformation("Uploading game archive to server...");
 
-                    await client.Games.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    await gameClient.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
                     break;
 
                 case ArchiveType.Redistributable:
                     Logger.LogInformation("Uploading redistributable archive to server...");
 
-                    await client.Redistributables.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    await redistributableClient.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
                     break;
             }
         }
@@ -248,19 +255,19 @@ namespace LANCommander.Launcher.Services
             try
             {
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
-                    options.ServerAddress = client.Settings.CurrentValue.Authentication.ServerAddress.ToString();
+                    options.ServerAddress = settingsProvider.CurrentValue.Authentication.ServerAddress.ToString();
 
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
                     throw new ArgumentException("A server address must be specified");
 
-                await client.Connection.UpdateServerAddressAsync(options.ServerAddress);
+                await connectionClient.UpdateServerAddressAsync(options.ServerAddress);
 
-                var token = await client.Authentication.AuthenticateAsync(options.Username, options.Password, client.Connection.GetServerAddress());
+                var token = await authenticationClient.AuthenticateAsync(options.Username, options.Password, connectionClient.GetServerAddress());
                 
-                client.Settings.Update(s =>
+                settingsProvider.Update(s =>
                 {
                     s.Authentication.Token = token;
-                    s.Authentication.ServerAddress = client.Connection.GetServerAddress();
+                    s.Authentication.ServerAddress = connectionClient.GetServerAddress();
                 });
 
                 Logger.LogInformation("Logged in!");
@@ -273,9 +280,9 @@ namespace LANCommander.Launcher.Services
 
         private async Task Logout(LogoutCommandLineOptions options)
         {
-            await client.Authentication.LogoutAsync();
+            await authenticationClient.LogoutAsync();
             
-            client.Settings.Update(s =>
+            settingsProvider.Update(s =>
             {
                 s.Authentication.Token = null;
                 s.Authentication.OfflineModeEnabled = false;

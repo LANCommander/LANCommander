@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
@@ -15,7 +16,7 @@ namespace LANCommander.Launcher.Services
         private readonly AuthenticationService AuthenticationService;
         private readonly InstallService InstallService;
         private readonly GameService GameService;
-        private readonly SDK.Client Client;
+        private readonly LibraryClient LibraryClient;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -37,17 +38,16 @@ namespace LANCommander.Launcher.Services
 
         public LibraryService(
             DatabaseContext databaseContext,
-            SDK.Client client,
             ILogger<LibraryService> logger,
             AuthenticationService authenticationService,
             InstallService installService,
             GameService gameService,
-            UserService userService) : base(databaseContext, logger)
+            LibraryClient libraryClient) : base(databaseContext, logger)
         {
             AuthenticationService = authenticationService;
             InstallService = installService;
             GameService = gameService;
-            Client = client;
+            LibraryClient = libraryClient;
 
             InstallService.OnInstallComplete += InstallService_OnInstallComplete;
             Filter.OnChanged += Filter_OnChanged;
@@ -287,7 +287,7 @@ namespace LANCommander.Launcher.Services
 
                 await AddToLibraryAsync(localGame);
 
-                await Client.Library.AddToLibrary(id);
+                await LibraryClient.AddToLibrary(id);
                 
                 op.Complete();
             }
@@ -324,7 +324,7 @@ namespace LANCommander.Launcher.Services
             
                 await UpdateAsync(library);
 
-                await Client.Library.RemoveFromLibrary(id, addonIds);
+                await LibraryClient.RemoveFromLibrary(id, addonIds);
 
 
                 // handle removing item from libray list locally

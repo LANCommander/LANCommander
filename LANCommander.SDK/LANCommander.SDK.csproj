@@ -25,6 +25,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
         <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" />
         <PackageReference Include="Microsoft.PowerShell.SDK" />

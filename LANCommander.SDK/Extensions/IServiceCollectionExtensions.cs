@@ -48,8 +48,6 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ServerClient>();
         services.AddSingleton<TagClient>();
 
-        services.AddSingleton<Client>();
-
         services.AddSingleton<MigrationHistoryService>();
         services.AddSingleton<MigrationService>();
         

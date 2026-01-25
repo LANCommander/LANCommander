@@ -38,7 +38,7 @@
                 
                 @if (context != null && context.Id != Guid.Empty)
                 {
-                    <Button OnClick="OpenExportDialog">Export</Button>
+                    <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
                 }
                 
                 <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
@@ -139,6 +139,8 @@
     
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
     bool PortInUse = false;
+
+    bool _openingExportDialog;
     
     IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
     {
@@ -206,6 +208,11 @@
     
     private async Task OpenExportDialog()
     {
+        _openingExportDialog = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
         var server = await ServerService.GetAsync(Id);
 
         var modalOptions = new ModalOptions()
@@ -225,5 +232,10 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+
+        _openingExportDialog = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 }

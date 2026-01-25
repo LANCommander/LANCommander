@@ -31,12 +31,12 @@
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
             @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
             {
-                <Button OnClick="Package" Loading="Packaging">Package</Button>
+                <Button OnClick="Package" Loading="_packaging">Package</Button>
             }
             
             @if (context != null && context.Id != Guid.Empty)
             {
-                <Button OnClick="OpenExportDialog">Export</Button>
+                <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
             }
 
             <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
@@ -159,16 +159,12 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    bool Loaded;
-    bool Success;
-    bool Packaging;
+    bool _loaded;
+    bool _success;
+    bool _packaging;
+    bool _openingExportDialog;
 
     IEnumerable<Engine> Engines = new List<Engine>();
-    IEnumerable<Company> Companies = new List<Company>();
-    IEnumerable<Genre> Genres = new List<Genre>();
-    IEnumerable<Platform> Platforms = new List<Platform>();
-    IEnumerable<Data.Models.Tag> Tags = new List<Data.Models.Tag>();
-    IEnumerable<Collection> Collections = new List<Collection>();
     IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
     IEnumerable<Game> Games = new List<Game>();
 
@@ -178,7 +174,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!Loaded)
+        if (!_loaded)
             await LoadData();
     }
 
@@ -187,18 +183,13 @@
         var allowedTypes = new[] { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
 
         Engines = await EngineService.SortBy(g => g.Name).GetAsync();
-        Companies = await CompanyService.SortBy(g => g.Name).GetAsync();
-        Genres = await GenreService.SortBy(g => g.Name).GetAsync();
-        Platforms = await PlatformService.SortBy(g => g.Name).GetAsync();
-        Tags = await TagService.SortBy(g => g.Name).GetAsync();
-        Collections = await CollectionService.SortBy(g => g.Name).GetAsync();
         Games = (await GameService
             .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
             .GetAsync(g => allowedTypes.Contains(g.Type)))
             .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
         Redistributables = (await RedistributableService.GetAsync()).OrderByTitle(r => r.Name);
 
-        Loaded = true;
+        _loaded = true;
     }
 
     private async Task Save(Game game)
@@ -284,6 +275,11 @@
 
     private async Task OpenExportDialog()
     {
+        _openingExportDialog = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
         var game = await GameService.GetAsync(Id);
         
         var modalOptions = new ModalOptions()
@@ -303,14 +299,19 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+
+        _openingExportDialog = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 
     private async Task Package()
     {
-        Packaging = true;
+        _packaging = true;
 
         await GameService.PackageAsync(Id);
 
-        Packaging = false;
+        _packaging = false;
     }
 }

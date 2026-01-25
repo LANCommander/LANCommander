@@ -23,12 +23,12 @@
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
             @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
             {
-                <Button OnClick="Package" Loading="Packaging">Package</Button>
+                <Button OnClick="Package" Loading="_packaging">Package</Button>
             }
             
             @if (context != null && context.Id != Guid.Empty)
             {
-                <Button OnClick="OpenExportDialog">Export</Button>
+                <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
             }
 
             <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
@@ -71,7 +71,8 @@
     ICollection<Game> Games;
     RedistributableEditView EditView;
 
-    bool Packaging;
+    bool _packaging;
+    bool _openingExportDialog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,6 +87,11 @@
 
     private async Task OpenExportDialog()
     {
+        _openingExportDialog = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
         var redistributable = await RedistributableService.GetAsync(Id);
 
         var modalOptions = new ModalOptions()
@@ -105,14 +111,19 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+        
+        _openingExportDialog = false;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
     
     private async Task Package()
     {
-        Packaging = true;
+        _packaging = true;
 
         await RedistributableService.PackageAsync(Id);
 
-        Packaging = false;
+        _packaging = false;
     }
 }

@@ -32,4 +32,5 @@ export class SplitPane {
 
 class SplitPaneOptions implements Split.Options {
     sizes: number[] = [];
+    gutterSize: number = 0;
 }

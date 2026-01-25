@@ -33,13 +33,19 @@
         </BoundDataColumn>
 
         <DataActions TData="string">
-            <Button Icon="@IconType.Outline.Sync" Type="@ButtonType.Text" OnClick="() => RecalculateFileSize(context)" />
+            <Tooltip Title="Recalculate File Size">
+                <Button Icon="@IconType.Outline.Sync" Type="@ButtonType.Text" OnClick="() => RecalculateFileSize(context)"/>
+            </Tooltip>
 
-            <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
-                <Icon Type="@IconType.Outline.Download"/>
-            </a>
+            <Tooltip Title="Download">
+                <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                    <Icon Type="@IconType.Outline.Download"/>
+                </a>
+            </Tooltip>
 
-            <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)" />
+            <Tooltip Title="Browse">
+                <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)" Loading="_browsing"/>
+            </Tooltip>
 
             <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
@@ -56,6 +62,8 @@
 
     DataTable<Archive> _table;
     ArchiveUploader _uploader;
+
+    bool _browsing;
 
     protected override void OnInitialized()
     {
@@ -114,6 +122,11 @@
 
     private async Task BrowseArchive(Archive archive)
     {
+        _browsing = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
         var modalOptions = new ModalOptions()
         {
             Title = "Browse Archive",
@@ -124,6 +137,11 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, Guid, Guid>(modalOptions, archive.Id);
+
+        _browsing = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 
     private async Task Update(Archive archive)

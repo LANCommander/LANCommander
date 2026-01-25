@@ -1,5 +1,7 @@
 @using LANCommander.Server.Services.Enums
-@inject SteamCMDService SteamCmdService
+@using LANCommander.Steam.Abstractions
+@using LANCommander.Steam.Enums
+@inject ISteamCmdService SteamCmdService
 @inject IMessageService MessageService
 
 <Spin Spinning="_connectionStatus == SteamCmdConnectionStatus.Unknown">

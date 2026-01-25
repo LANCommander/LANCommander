@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services;
 using LANCommander.Server.ImportExport.Services;
 using Microsoft.AspNetCore.Http.Features;
@@ -27,8 +28,10 @@ public static class ExportEndpoints
         if (syncIOFeature != null)
             syncIOFeature.AllowSynchronousIO = true;
 
+        var name = context.GetName();
+
         httpContext.Response.ContentType = MediaTypeNames.Application.Octet;
-        httpContext.Response.Headers.Append("Content-Disposition", "attachment; filename=\"export.lcx\"");
+        httpContext.Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{name.SanitizeFilename()}.lcx\"");
 
         await exportService.ExportAsync(contextId, httpContext.Response.Body);
 

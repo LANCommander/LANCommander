@@ -109,6 +109,20 @@ public class ExportContext(
         ServerHttpPaths.UseContext(context);
         Tags.UseContext(context);
     }
+
+    public string GetName()
+    {
+        if (DataRecord is Data.Models.Game game)
+            return game.Title; 
+        
+        if (DataRecord is Data.Models.Redistributable redistributable)
+            return redistributable.Name;
+        
+        if (DataRecord is Data.Models.Server server)
+            return server.Name;
+
+        return string.Empty;
+    }
     
     #region Initialize Export
     public async Task<IEnumerable<ExportItemInfo>> InitializeExportAsync(Guid recordId, ImportExportRecordType recordType)

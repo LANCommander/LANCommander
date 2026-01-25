@@ -3,10 +3,7 @@
 @page "/Servers/{id:guid}/General"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using System.Runtime.InteropServices
-@using Docker.DotNet.Models
 @using LANCommander.SDK.Enums
-@using LANCommander.Server.Data.Enums
-@using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
@@ -19,6 +16,7 @@
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ModalService ModalService
 @inject ILogger<General> Logger
 
 <ServerEditView Id="Id">
@@ -37,19 +35,13 @@
         {
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
-
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
+                
+                @if (context != null && context.Id != Guid.Empty)
+                {
+                    <Button OnClick="OpenExportDialog">Export</Button>
+                }
+                
+                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
             </Flex>
         }
     </TitleExtraTemplate>
@@ -133,9 +125,6 @@
             <FormItem Label="Termination Method">
                 <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
             </FormItem>
-            <FormItem>
-                <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
-            </FormItem>
         </Form>
     </ChildContent>
 </ServerEditView>
@@ -213,5 +202,28 @@
         NavigationManager.LocationChanged -= NotifyServerAdded;
 
         MessageService.Success("Server added!");
+    }
+    
+    private async Task OpenExportDialog()
+    {
+        var server = await ServerService.GetAsync(Id);
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Export {server.Name}",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Add",
+            Footer = null,
+        };
+
+        var options = new ExportDialogOptions()
+        {
+            RecordId = Id,
+            RecordType = ImportExportRecordType.Server
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
     }
 }

@@ -3,13 +3,10 @@
 @page "/Redistributables/Add"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Redistributables.Components
-@using Microsoft.EntityFrameworkCore
-@using SortDirection = LANCommander.SDK.Enums.SortDirection
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject IMessageService MessageService
-@inject NavigationManager NavigationManager
-@inject ILogger<General> Logger
 @inject GameService GameService
+@inject RedistributableService RedistributableService
+@inject ModalService ModalService
 
 <RedistributableEditView @ref="EditView" Id="Id">
     <TitleTemplate>
@@ -24,23 +21,14 @@
     </TitleTemplate>
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
+            {
+                <Button OnClick="Package" Loading="Packaging">Package</Button>
+            }
+            
             @if (context != null && context.Id != Guid.Empty)
             {
-                <Dropdown Trigger="@(new[] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Redistributables/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                            <MenuItem>
-                                <a href="/Redistributables/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
+                <Button OnClick="OpenExportDialog">Export</Button>
             }
 
             <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
@@ -51,7 +39,7 @@
         {
             <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
                 <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
+                    <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
                 </FormItem>
 
                 <FormItem Label="Notes">
@@ -83,6 +71,8 @@
     ICollection<Game> Games;
     RedistributableEditView EditView;
 
+    bool Packaging;
+
     protected override async Task OnInitializedAsync()
     {
         Games = await GameService
@@ -92,5 +82,37 @@
             .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
 
         Games = Games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+    }
+
+    private async Task OpenExportDialog()
+    {
+        var redistributable = await RedistributableService.GetAsync(Id);
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Export {redistributable.Name}",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Add",
+            Footer = null,
+        };
+
+        var options = new ExportDialogOptions()
+        {
+            RecordId = Id,
+            RecordType = ImportExportRecordType.Redistributable
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+    }
+    
+    private async Task Package()
+    {
+        Packaging = true;
+
+        await RedistributableService.PackageAsync(Id);
+
+        Packaging = false;
     }
 }

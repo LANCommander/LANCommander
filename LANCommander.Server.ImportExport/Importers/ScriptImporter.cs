@@ -55,12 +55,14 @@ public class ScriptImporter(
         {
             var newScript = new Data.Models.Script
             {
+                Id = record.Id,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
                 Name = record.Name,
                 Description = record.Description,
                 RequiresAdmin = record.RequiresAdmin,
                 Type = record.Type,
+                Contents = string.Empty,
             };
 
             if (ImportContext.Manifest is Game game)

@@ -164,7 +164,7 @@ public class ArchiveImporter(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Could not injest archive entry");
+            logger.LogError(ex, "Could not ingest archive entry");
         }
 
         return false;

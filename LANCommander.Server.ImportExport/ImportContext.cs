@@ -126,6 +126,10 @@ public class ImportContext : IDisposable
         Archive = ZipArchive.Open(archivePath);
 
         var manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == ManifestHelper.ManifestFilename);
+        
+        // Legacy purposes
+        if (manifestEntry == null)
+            manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == "_manifest.yml");
 
         if (manifestEntry == null)
             throw new InvalidOperationException("Invalid import file, cannot load manifest");
@@ -163,11 +167,11 @@ public class ImportContext : IDisposable
         if (gameManifest.Scripts != null)
             foreach (var script in gameManifest.Scripts)
             {
-                _scripts.AddAsset(new ImportAssetText
+                _scripts.AddAsset(new ImportAssetArchiveEntry
                 {
                     Name = script.Name,
                     RecordId = script.Id,
-                    Contents = script.Contents,
+                    Path = $"Scripts/{script.Id}",
                 });
             }
         

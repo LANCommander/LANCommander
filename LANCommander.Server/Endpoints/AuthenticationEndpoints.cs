@@ -23,7 +23,7 @@ public static class AuthenticationEndpoints
     {
         await signInManager.SignOutAsync();
 
-        return TypedResults.Redirect("/Login");
+        return TypedResults.Redirect("/");
     }
 
     public static async Task<IResult> SignInWebAsync(

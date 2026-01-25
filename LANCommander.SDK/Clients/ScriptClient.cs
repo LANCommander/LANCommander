@@ -973,6 +973,45 @@ namespace LANCommander.SDK.Services
 
             return null;
         }
+        
+        public async Task<Package> RunPackageScriptAsync(Script packageScript, Redistributable redistributable)
+        {
+            try
+            {
+                using (var op = logger.BeginOperation("Executing game package script"))
+                {
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
+
+                    script.AddVariable("Redistributable", redistributable);
+
+                    script.UseInline(packageScript.Contents);
+                    
+                    try
+                    {
+                        op
+                            .Enrich("RedistributableId", redistributable.Id)
+                            .Enrich("RedistributableName", redistributable.Name)
+                            .Enrich("ScriptId", packageScript.Id)
+                            .Enrich("ScriptName", packageScript.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not enrich logs");
+                    }
+                    
+                    if (Debug)
+                        script.EnableDebug();
+
+                    return await script.ExecuteAsync<Package>();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not execute redistributable package script");
+            }
+
+            return null;
+        }
         #endregion
 
         private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)

@@ -27,7 +27,7 @@
     
     <ChildContent>
         <CascadingValue Name="ServerId" Value="context.Id">
-            <ScriptEditor ArchiveId="@context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }"/>
+            <ScriptEditor AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }"/>
         </CascadingValue>
     </ChildContent>
 </ServerEditView>

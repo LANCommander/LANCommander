@@ -51,22 +51,7 @@ public interface ISteamCmdService
     /// Queue an installation job for Steam content
     /// Returns a job ID that can be used to track progress
     /// </summary>
-    Task<SteamCmdInstallJob> InstallContentAsync(uint appId, string installDirectory, string? username = null);
-
-    /// <summary>
-    /// Get an install job by ID
-    /// </summary>
-    SteamCmdInstallJob? GetInstallJob(Guid jobId);
-
-    /// <summary>
-    /// Get all install jobs
-    /// </summary>
-    IEnumerable<SteamCmdInstallJob> GetInstallJobs();
-
-    /// <summary>
-    /// Cancel an install job
-    /// </summary>
-    Task<bool> CancelInstallJobAsync(Guid jobId);
+    Task InstallContentAsync(uint appId, string installDirectory, string? username = null);
 
     /// <summary>
     /// Remove installed content from a directory

@@ -39,8 +39,7 @@ public partial class InstallSteamContentCmdlet : DependencyCmdlet<PowerShellStar
 
         try
         {
-            var job = await _steamCmdService.InstallContentAsync(AppId, InstallDirectory, Username);
-            WriteObject(job);
+            await _steamCmdService.InstallContentAsync(AppId, InstallDirectory, Username);
         }
         catch (Exception ex)
         {

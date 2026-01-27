@@ -21,15 +21,15 @@ namespace LANCommander.Steam.Services;
 /// <summary>
 /// Service for interacting with SteamCMD
 /// </summary>
-public class SteamCmdService : ISteamCmdService
+public class SteamCmdService(
+    ILogger<SteamCmdService> logger,
+    IOptions<SteamCmdOptions>? options = null,
+    ISteamCmdProfileStore? profileStore = null)
+    : ISteamCmdService
 {
-    private readonly ILogger<SteamCmdService> _logger;
-    private readonly ISteamCmdProfileStore? _profileStore;
-    private readonly SteamCmdOptions _options;
-    private readonly ConcurrentDictionary<Guid, SteamCmdInstallJob> _installJobs = new();
-    private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
+    private readonly ILogger<SteamCmdService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly SteamCmdOptions _options = options?.Value ?? new SteamCmdOptions();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private Task? _queueProcessorTask;
 
     private string? _executablePath;
 
@@ -52,18 +52,6 @@ public class SteamCmdService : ISteamCmdService
         set => _executablePath = value;
     }
 
-    public SteamCmdService(
-        ILogger<SteamCmdService> logger,
-        IOptions<SteamCmdOptions>? options = null,
-        ISteamCmdProfileStore? profileStore = null)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options?.Value ?? new SteamCmdOptions();
-        _profileStore = profileStore;
-        
-        // Start the queue processor
-        _queueProcessorTask = Task.Run(ProcessInstallQueueAsync, _cancellationTokenSource.Token);
-    }
     public async Task<SteamCmdConnectionStatus> GetConnectionStatusAsync(string username)
     {
         try
@@ -310,7 +298,7 @@ public class SteamCmdService : ISteamCmdService
         }
     }
     
-    public async Task<SteamCmdInstallJob> InstallContentAsync(uint appId, string installDirectory, string? username = null)
+    public async Task InstallContentAsync(uint appId, string installDirectory, string? username = null)
     {
         if (!string.IsNullOrWhiteSpace(username) && !IsValidUsername(username))
             throw new ArgumentException("Invalid username", nameof(username));
@@ -326,55 +314,78 @@ public class SteamCmdService : ISteamCmdService
             _logger.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
             throw new FileNotFoundException("SteamCMD executable not found", ExecutablePath);
         }
+        
+        Directory.CreateDirectory(installDirectory);
 
+        var commands = new List<string>();
+        
+        if (!string.IsNullOrWhiteSpace(username))
+            commands.Add($"+install {username}");
+        else
+            commands.Add("+login anonymous");
+        
+        commands.Add($"+force_install_dir \"{installDirectory}\"");
+        commands.Add($"+app_update {appId} validate");
+        commands.Add("+quit");
+        
         // Create install job
         var job = new SteamCmdInstallJob
         {
             AppId = appId,
             InstallDirectory = installDirectory,
             Username = username,
-            Status = SteamCmdInstallStatus.Queued,
-            StatusMessage = "Queued for installation",
+            Status = SteamCmdInstallStatus.InProgress,
+            StatusMessage = "Starting installation...",
             CompletionSource = new TaskCompletionSource<SteamCmdStatus>()
         };
-
-        _installJobs[job.Id] = job;
         
-        _logger.LogInformation("Queued installation job {JobId} for app {AppId} to {InstallDirectory}", job.Id, appId, installDirectory);
-        
-        // Queue processor will pick it up automatically
-        return job;
-    }
+        OnInstallStatusChanged(job, SteamCmdInstallStatus.InProgress);
 
-    public SteamCmdInstallJob? GetInstallJob(Guid jobId)
-    {
-        _installJobs.TryGetValue(jobId, out var job);
-        return job;
-    }
+        try
+        {
+            var result =
+                await ExecuteSteamCmdCommandWithProgressAsync(string.Join(" ", commands), job,
+                    _cancellationTokenSource.Token);
 
-    public IEnumerable<SteamCmdInstallJob> GetInstallJobs()
-    {
-        return _installJobs.Values.ToList();
-    }
+            if (result.Success)
+            {
+                job.Status = SteamCmdInstallStatus.Completed;
+                job.StatusMessage = "Installation completed sucessfully";
+                job.Progress = 100;
+                job.CompletedAt = DateTime.UtcNow;
+                job.CompletionSource.TrySetResult(SteamCmdStatus.Success);
 
-    public async Task<bool> CancelInstallJobAsync(Guid jobId)
-    {
-        if (!_installJobs.TryGetValue(jobId, out var job))
-            return false;
+                OnInstallStatusChanged(job, SteamCmdInstallStatus.Completed);
+                OnInstallProgress(job, 100, "Installation completed successfully");
 
-        if (job.Status == SteamCmdInstallStatus.Completed || job.Status == SteamCmdInstallStatus.Failed)
-            return false;
+                _logger.LogInformation("Successfully installed Steam app {AppId} to {InstallDirectory}", job.AppId,
+                    job.InstallDirectory);
+            }
+            else
+            {
+                job.Status = SteamCmdInstallStatus.Failed;
+                job.StatusMessage = $"Installation failed: {result.ErrorOutput}";
+                job.ErrorMessage = result.ErrorOutput;
+                job.CompletedAt = DateTime.UtcNow;
+                job.CompletionSource?.TrySetResult(SteamCmdStatus.Error);
 
-        job.Status = SteamCmdInstallStatus.Cancelled;
-        job.StatusMessage = "Cancelled by user";
-        job.CompletedAt = DateTime.UtcNow;
-        job.CompletionSource?.TrySetCanceled();
+                OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, result.ErrorOutput);
 
-        OnInstallStatusChanged(job, SteamCmdInstallStatus.Cancelled);
-        
-        _logger.LogInformation("Cancelled install job {JobId}", jobId);
-        
-        return true;
+                _logger.LogError("Failed to install Steam app {AppId}: {Error}", job.AppId, result.ErrorOutput);
+            }
+        }
+        catch (Exception ex)
+        {
+            job.Status = SteamCmdInstallStatus.Failed;
+            job.StatusMessage = $"Installation failed: {ex.Message}";
+            job.ErrorMessage = ex.Message;
+            job.CompletedAt = DateTime.UtcNow;
+            job.CompletionSource?.TrySetException(ex);
+            
+            OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, ex.Message);
+            
+            _logger.LogError(ex, "Error installing Steam content for app {AppId}", job.AppId);
+        }
     }
 
     public async Task<SteamCmdStatus> RemoveContentAsync(string installDirectory)
@@ -408,27 +419,27 @@ public class SteamCmdService : ISteamCmdService
 
     public async Task<IEnumerable<SteamCmdProfile>> GetProfilesAsync()
     {
-        if (_profileStore == null)
+        if (profileStore == null)
         {
             throw new InvalidOperationException("Profile store is not configured. Provide an ISteamCmdProfileStore implementation.");
         }
 
-        return await _profileStore.GetAllAsync();
+        return await profileStore.GetAllAsync();
     }
 
     public async Task<SteamCmdProfile?> GetProfileAsync(string username)
     {
-        if (_profileStore == null)
+        if (profileStore == null)
         {
             throw new InvalidOperationException("Profile store is not configured. Provide an ISteamCmdProfileStore implementation.");
         }
 
-        return await _profileStore.GetByUsernameAsync(username);
+        return await profileStore.GetByUsernameAsync(username);
     }
 
     public async Task SaveProfileAsync(SteamCmdProfile profile)
     {
-        if (_profileStore == null)
+        if (profileStore == null)
         {
             throw new InvalidOperationException("Profile store is not configured. Provide an ISteamCmdProfileStore implementation.");
         }
@@ -443,13 +454,13 @@ public class SteamCmdService : ISteamCmdService
             throw new ArgumentException("Profile username cannot be empty", nameof(profile));
         }
 
-        await _profileStore.SaveAsync(profile);
+        await profileStore.SaveAsync(profile);
         _logger.LogInformation("Saved profile for username: {Username}", profile.Username);
     }
 
     public async Task DeleteProfileAsync(string username)
     {
-        if (_profileStore == null)
+        if (profileStore == null)
         {
             throw new InvalidOperationException("Profile store is not configured. Provide an ISteamCmdProfileStore implementation.");
         }
@@ -459,132 +470,10 @@ public class SteamCmdService : ISteamCmdService
             throw new ArgumentException("Username cannot be empty", nameof(username));
         }
 
-        await _profileStore.DeleteAsync(username);
+        await profileStore.DeleteAsync(username);
         _logger.LogInformation("Deleted profile for username: {Username}", username);
     }
-
-    private async Task ProcessInstallQueueAsync()
-    {
-        while (!_cancellationTokenSource.Token.IsCancellationRequested)
-        {
-            try
-            {
-                var queuedJob = _installJobs.Values
-                    .FirstOrDefault(j => j.Status == SteamCmdInstallStatus.Queued);
-
-                if (queuedJob == null)
-                {
-                    await Task.Delay(1000, _cancellationTokenSource.Token);
-                    continue;
-                }
-
-                // Process the job (semaphore is acquired inside ProcessInstallJobAsync)
-                await ProcessInstallJobAsync(queuedJob);
-            }
-            catch (OperationCanceledException)
-            {
-                // Service is being disposed
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing install queue");
-                await Task.Delay(5000, _cancellationTokenSource.Token);
-            }
-        }
-    }
-
-    private async Task ProcessInstallJobAsync(SteamCmdInstallJob job)
-    {
-        await _queueSemaphore.WaitAsync(_cancellationTokenSource.Token);
-        
-        try
-        {
-            job.Status = SteamCmdInstallStatus.InProgress;
-            job.StartedAt = DateTime.UtcNow;
-            job.StatusMessage = "Starting installation...";
-            OnInstallStatusChanged(job, SteamCmdInstallStatus.InProgress);
-
-            // Ensure install directory exists
-            Directory.CreateDirectory(job.InstallDirectory);
-
-            var commands = new List<string>();
-
-            // Add login command if credentials provided
-            if (!string.IsNullOrWhiteSpace(job.Username))
-            {
-                commands.Add($"+login {job.Username}");
-            }
-            else
-            {
-                commands.Add("+login anonymous");
-            }
-
-            // Add install commands
-            commands.Add($"+force_install_dir \"{job.InstallDirectory}\"");
-            commands.Add($"+app_update {job.AppId} validate");
-            commands.Add("+quit");
-
-            var commandString = string.Join(" ", commands);
-            
-            var result = await ExecuteSteamCmdCommandWithProgressAsync(
-                commandString,
-                job,
-                _cancellationTokenSource.Token);
-
-            if (result.Success)
-            {
-                job.Status = SteamCmdInstallStatus.Completed;
-                job.StatusMessage = "Installation completed successfully";
-                job.Progress = 100;
-                job.CompletedAt = DateTime.UtcNow;
-                job.CompletionSource?.TrySetResult(SteamCmdStatus.Success);
-                
-                OnInstallStatusChanged(job, SteamCmdInstallStatus.Completed);
-                OnInstallProgress(job, 100, "Installation completed successfully");
-                
-                _logger.LogInformation("Successfully installed Steam app {AppId} to {InstallDirectory}", job.AppId, job.InstallDirectory);
-            }
-            else
-            {
-                job.Status = SteamCmdInstallStatus.Failed;
-                job.StatusMessage = $"Installation failed: {result.ErrorOutput}";
-                job.ErrorMessage = result.ErrorOutput;
-                job.CompletedAt = DateTime.UtcNow;
-                job.CompletionSource?.TrySetResult(SteamCmdStatus.Error);
-                
-                OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, result.ErrorOutput);
-                
-                _logger.LogError("Failed to install Steam app {AppId}: {Error}", job.AppId, result.ErrorOutput);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            job.Status = SteamCmdInstallStatus.Cancelled;
-            job.StatusMessage = "Installation cancelled";
-            job.CompletedAt = DateTime.UtcNow;
-            job.CompletionSource?.TrySetCanceled();
-            
-            OnInstallStatusChanged(job, SteamCmdInstallStatus.Cancelled);
-        }
-        catch (Exception ex)
-        {
-            job.Status = SteamCmdInstallStatus.Failed;
-            job.StatusMessage = $"Installation error: {ex.Message}";
-            job.ErrorMessage = ex.Message;
-            job.CompletedAt = DateTime.UtcNow;
-            job.CompletionSource?.TrySetException(ex);
-            
-            OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, ex.Message);
-            
-            _logger.LogError(ex, "Error installing Steam content for app {AppId}", job.AppId);
-        }
-        finally
-        {
-            _queueSemaphore.Release();
-        }
-    }
-
+    
     private async Task<SteamCmdResult> ExecuteSteamCmdCommandWithProgressAsync(
         string arguments,
         SteamCmdInstallJob? job = null,

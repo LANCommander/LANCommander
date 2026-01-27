@@ -35,13 +35,10 @@ public static class InitialSessionStateExtensions
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdPath", typeof(GetSteamCmdPathCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdProfile", typeof(GetSteamCmdProfileCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdProfiles", typeof(GetSteamCmdProfilesCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamInstallJob", typeof(GetSteamInstallJobCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamInstallJobs", typeof(GetSteamInstallJobsCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Install-SteamContent", typeof(InstallSteamContentCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamContent", typeof(RemoveSteamContentCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamCmdProfile", typeof(RemoveSteamCmdProfileCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Set-SteamCmdProfile", typeof(SetSteamCmdProfileCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Stop-SteamInstallJob", typeof(StopSteamInstallJobCmdlet), null));
         
         // Steam Store cmdlets
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamManual", typeof(GetSteamManualCmdlet), null));

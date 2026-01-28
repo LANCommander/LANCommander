@@ -175,6 +175,19 @@ namespace LANCommander.SDK.PowerShell
                 runspace.SessionStateProxy.SetVariable("ScriptType", Type);
                 runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
                 
+                // Store services in session state for cmdlets to access
+                var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
+                if (settingsProvider != null)
+                {
+                    runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
+                }
+                
+                var logger = ServiceProvider.GetService<Microsoft.Extensions.Logging.ILogger<LANCommander.Steam.Services.SteamCmdService>>();
+                if (logger != null)
+                {
+                    runspace.SessionStateProxy.SetVariable("LANCommander.Steam.SteamCmdService.Logger", logger);
+                }
+                
                 Context = System.Management.Automation.PowerShell.Create();
 
                 Context.Runspace = runspace;

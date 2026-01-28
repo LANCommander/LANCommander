@@ -7,6 +7,11 @@
         <Input TValue="string" Type="InputType.Text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" Disabled="@Disabled" />
     </SpaceItem>
     <SpaceItem>
+        @if (Before is not null)
+        {
+            @Before
+        }
+        
         <FilePickerButton
             Type="ButtonType.Primary"
             Icon="@IconType.Outline.FolderOpen"
@@ -19,7 +24,12 @@
             Disabled="@Disabled"
             EntrySelectable="@EntrySelectable"
             EntryVisible="@EntryVisible"
-            OnSelected="OnFileSelected" />
+            OnSelected="OnFileSelected"/>
+        
+        @if (After is not null)
+        {
+            @After
+        }
     </SpaceItem>
 </Space>
 
@@ -31,11 +41,13 @@
     [Parameter] public string Title { get; set; } = "Choose File";
     [Parameter] public string OkText { get; set; } = "Select File";
     [Parameter] public bool AllowDirectories { get; set; } = false;
-    [Parameter] public string Prefix { get; set; }
-    [Parameter] public string Root { get; set; }
+    [Parameter] public string? Prefix { get; set; }
+    [Parameter] public string? Root { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+    [Parameter] public RenderFragment? Before { get; set; }
+    [Parameter] public RenderFragment? After { get; set; }
 
     async Task OnInput(ChangeEventArgs args)
     {

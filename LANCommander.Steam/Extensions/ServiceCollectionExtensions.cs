@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using LANCommander.Steam.Abstractions;
 using LANCommander.Steam.Implementations;
@@ -9,7 +10,8 @@ using LANCommander.Steam.Services;
 namespace LANCommander.Steam.Extensions;
 
 /// <summary>
-/// Extension methods for registering SteamCMD services
+/// Extension methods for registering SteamCMD services (optional, for DI-based hosts).
+/// Steam types can also be constructed directly without DI.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
@@ -28,7 +30,10 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISteamCmdProfileStore, InMemorySteamCmdProfileStore>();
-        services.AddScoped<ISteamCmdService, SteamCmdService>();
+        services.AddScoped<ISteamCmdService>(sp => new SteamCmdService(
+            sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
+            sp.GetService<ISteamCmdProfileStore>(),
+            sp.GetService<ILogger<SteamCmdService>>()));
 
         return services;
     }
@@ -51,7 +56,10 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISteamCmdProfileStore, TProfileStore>();
-        services.AddScoped<ISteamCmdService, SteamCmdService>();
+        services.AddScoped<ISteamCmdService>(sp => new SteamCmdService(
+            sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
+            sp.GetService<ISteamCmdProfileStore>(),
+            sp.GetService<ILogger<SteamCmdService>>()));
 
         return services;
     }
@@ -74,7 +82,10 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton(profileStore);
-        services.AddScoped<ISteamCmdService, SteamCmdService>();
+        services.AddScoped<ISteamCmdService>(sp => new SteamCmdService(
+            sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
+            sp.GetService<ISteamCmdProfileStore>(),
+            sp.GetService<ILogger<SteamCmdService>>()));
 
         return services;
     }

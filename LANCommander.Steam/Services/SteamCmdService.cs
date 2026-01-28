@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -19,16 +18,17 @@ using LANCommander.Steam.Options;
 namespace LANCommander.Steam.Services;
 
 /// <summary>
-/// Service for interacting with SteamCMD
+/// Service for interacting with SteamCMD.
+/// Can be constructed without dependency injection using optional parameters.
 /// </summary>
 public class SteamCmdService(
-    ILogger<SteamCmdService> logger,
-    IOptions<SteamCmdOptions>? options = null,
-    ISteamCmdProfileStore? profileStore = null)
+    SteamCmdOptions? options = null,
+    ISteamCmdProfileStore? profileStore = null,
+    ILogger<SteamCmdService>? logger = null)
     : ISteamCmdService
 {
-    private readonly ILogger<SteamCmdService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly SteamCmdOptions _options = options?.Value ?? new SteamCmdOptions();
+    private readonly ILogger<SteamCmdService>? _logger = logger;
+    private readonly SteamCmdOptions _options = options ?? new SteamCmdOptions();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     private string? _executablePath;
@@ -69,24 +69,24 @@ public class SteamCmdService(
                     if (!string.IsNullOrWhiteSpace(detectedPath))
                     {
                         ExecutablePath = detectedPath;
-                        _logger.LogInformation("Auto-detected SteamCMD at: {Path}", detectedPath);
+                        _logger?.LogInformation("Auto-detected SteamCMD at: {Path}", detectedPath);
                     }
                     else
                     {
-                        _logger.LogWarning("SteamCMD path is not configured and could not be auto-detected");
+                        _logger?.LogWarning("SteamCMD path is not configured and could not be auto-detected");
                         return SteamCmdConnectionStatus.NotInstalled;
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("SteamCMD path is not configured and auto-detection is disabled");
+                    _logger?.LogWarning("SteamCMD path is not configured and auto-detection is disabled");
                     return SteamCmdConnectionStatus.NotInstalled;
                 }
             }
 
             if (!File.Exists(ExecutablePath))
             {
-                _logger.LogWarning("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
+                _logger?.LogWarning("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
                 return SteamCmdConnectionStatus.NotInstalled;
             }
 
@@ -104,7 +104,7 @@ public class SteamCmdService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking SteamCMD connection status");
+            _logger?.LogError(ex, "Error checking SteamCMD connection status");
             return SteamCmdConnectionStatus.NotInstalled;
         }
     }
@@ -199,18 +199,18 @@ public class SteamCmdService(
                     
                     if (testResult.Success)
                     {
-                        _logger.LogDebug("Found SteamCMD at: {Path}", path);
+                        _logger?.LogDebug("Found SteamCMD at: {Path}", path);
                         return path;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "Failed to verify SteamCMD at: {Path}", path);
+                    _logger?.LogDebug(ex, "Failed to verify SteamCMD at: {Path}", path);
                 }
             }
         }
 
-        _logger.LogWarning("SteamCMD not found in common installation locations");
+        _logger?.LogWarning("SteamCMD not found in common installation locations");
         
         return string.Empty;
     }
@@ -224,13 +224,13 @@ public class SteamCmdService(
             
             if (string.IsNullOrWhiteSpace(ExecutablePath))
             {
-                _logger.LogError("SteamCMD path is not configured");
+                _logger?.LogError("SteamCMD path is not configured");
                 return SteamCmdStatus.PathNotConfigured;
             }
 
             if (!File.Exists(ExecutablePath))
             {
-                _logger.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
+                _logger?.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
                 return SteamCmdStatus.ExecutableNotFound;
             }
 
@@ -245,16 +245,16 @@ public class SteamCmdService(
             
             if (result.Success)
             {
-                _logger.LogInformation("Successfully logged into Steam as {Username}", username);
+                _logger?.LogInformation("Successfully logged into Steam as {Username}", username);
                 return SteamCmdStatus.Success;
             }
 
-            _logger.LogError("Failed to log into Steam: {Error}", result.ErrorOutput);
+            _logger?.LogError("Failed to log into Steam: {Error}", result.ErrorOutput);
             return SteamCmdStatus.Error;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error logging into Steam");
+            _logger?.LogError(ex, "Error logging into Steam");
             return SteamCmdStatus.UnknownError;
         }
     }
@@ -268,13 +268,13 @@ public class SteamCmdService(
             
             if (string.IsNullOrWhiteSpace(ExecutablePath))
             {
-                _logger.LogError("SteamCMD path is not configured");
+                _logger?.LogError("SteamCMD path is not configured");
                 return SteamCmdStatus.PathNotConfigured;
             }
 
             if (!File.Exists(ExecutablePath))
             {
-                _logger.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
+                _logger?.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
                 return SteamCmdStatus.ExecutableNotFound;
             }
 
@@ -284,16 +284,16 @@ public class SteamCmdService(
             
             if (result.Success)
             {
-                _logger.LogInformation("Successfully logged out of the Steam account {Username}", username);
+                _logger?.LogInformation("Successfully logged out of the Steam account {Username}", username);
                 return SteamCmdStatus.Success;
             }
 
-            _logger.LogError("Failed to log out of Steam: {Error}", result.ErrorOutput);
+            _logger?.LogError("Failed to log out of Steam: {Error}", result.ErrorOutput);
             return SteamCmdStatus.Error;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error logging out of Steam");
+            _logger?.LogError(ex, "Error logging out of Steam");
             return SteamCmdStatus.UnknownError;
         }
     }
@@ -305,13 +305,13 @@ public class SteamCmdService(
         
         if (string.IsNullOrWhiteSpace(ExecutablePath))
         {
-            _logger.LogError("SteamCMD path is not configured");
+            _logger?.LogError("SteamCMD path is not configured");
             throw new InvalidOperationException("SteamCMD path is not configured");
         }
 
         if (!File.Exists(ExecutablePath))
         {
-            _logger.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
+            _logger?.LogError("SteamCMD executable not found at configured path: {Path}", ExecutablePath);
             throw new FileNotFoundException("SteamCMD executable not found", ExecutablePath);
         }
         
@@ -320,7 +320,7 @@ public class SteamCmdService(
         var commands = new List<string>();
         
         if (!string.IsNullOrWhiteSpace(username))
-            commands.Add($"+install {username}");
+            commands.Add($"+login {username}");
         else
             commands.Add("+login anonymous");
         
@@ -358,7 +358,7 @@ public class SteamCmdService(
                 OnInstallStatusChanged(job, SteamCmdInstallStatus.Completed);
                 OnInstallProgress(job, 100, "Installation completed successfully");
 
-                _logger.LogInformation("Successfully installed Steam app {AppId} to {InstallDirectory}", job.AppId,
+                _logger?.LogInformation("Successfully installed Steam app {AppId} to {InstallDirectory}", job.AppId,
                     job.InstallDirectory);
             }
             else
@@ -371,7 +371,7 @@ public class SteamCmdService(
 
                 OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, result.ErrorOutput);
 
-                _logger.LogError("Failed to install Steam app {AppId}: {Error}", job.AppId, result.ErrorOutput);
+                _logger?.LogError("Failed to install Steam app {AppId}: {Error}", job.AppId, result.ErrorOutput);
             }
         }
         catch (Exception ex)
@@ -384,7 +384,7 @@ public class SteamCmdService(
             
             OnInstallStatusChanged(job, SteamCmdInstallStatus.Failed, ex.Message);
             
-            _logger.LogError(ex, "Error installing Steam content for app {AppId}", job.AppId);
+            _logger?.LogError(ex, "Error installing Steam content for app {AppId}", job.AppId);
         }
     }
 
@@ -394,25 +394,25 @@ public class SteamCmdService(
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
             {
-                _logger.LogError("Install directory is not specified");
+                _logger?.LogError("Install directory is not specified");
                 return SteamCmdStatus.InstallDirectoryNotFound;
             }
 
             if (!Directory.Exists(installDirectory))
             {
-                _logger.LogWarning("Install directory does not exist: {InstallDirectory}", installDirectory);
+                _logger?.LogWarning("Install directory does not exist: {InstallDirectory}", installDirectory);
                 return SteamCmdStatus.Success; // Consider it already removed
             }
 
             // Remove the directory and all its contents
             Directory.Delete(installDirectory, true);
             
-            _logger.LogInformation("Successfully removed content from {InstallDirectory}", installDirectory);
+            _logger?.LogInformation("Successfully removed content from {InstallDirectory}", installDirectory);
             return SteamCmdStatus.Success;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing content from {InstallDirectory}", installDirectory);
+            _logger?.LogError(ex, "Error removing content from {InstallDirectory}", installDirectory);
             return SteamCmdStatus.UnknownError;
         }
     }
@@ -455,7 +455,7 @@ public class SteamCmdService(
         }
 
         await profileStore.SaveAsync(profile);
-        _logger.LogInformation("Saved profile for username: {Username}", profile.Username);
+        _logger?.LogInformation("Saved profile for username: {Username}", profile.Username);
     }
 
     public async Task DeleteProfileAsync(string username)
@@ -471,7 +471,7 @@ public class SteamCmdService(
         }
 
         await profileStore.DeleteAsync(username);
-        _logger.LogInformation("Deleted profile for username: {Username}", username);
+        _logger?.LogInformation("Deleted profile for username: {Username}", username);
     }
     
     private async Task<SteamCmdResult> ExecuteSteamCmdCommandWithProgressAsync(
@@ -507,7 +507,7 @@ public class SteamCmdService(
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     output.AppendLine(e.Data);
-                    _logger.LogDebug("SteamCMD Output: {Output}", e.Data);
+                    _logger?.LogDebug("SteamCMD Output: {Output}", e.Data);
                     
                     // Parse progress if job is provided
                     if (job != null)
@@ -522,7 +522,7 @@ public class SteamCmdService(
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     error.AppendLine(e.Data);
-                    _logger.LogDebug("SteamCMD Error: {Error}", e.Data);
+                    _logger?.LogDebug("SteamCMD Error: {Error}", e.Data);
                 }
             };
 
@@ -537,13 +537,13 @@ public class SteamCmdService(
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("SteamCMD operation was cancelled");
+                _logger?.LogWarning("SteamCMD operation was cancelled");
                 process.Kill();
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while executing SteamCMD");
+                _logger?.LogError(ex, "Error while executing SteamCMD");
             }
 
             return new SteamCmdResult
@@ -556,7 +556,7 @@ public class SteamCmdService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing SteamCMD command: {Arguments}", arguments);
+            _logger?.LogError(ex, "Error executing SteamCMD command: {Arguments}", arguments);
             
             return new SteamCmdResult
             {
@@ -628,7 +628,7 @@ public class SteamCmdService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error invoking InstallStatusChanged event");
+            _logger?.LogError(ex, "Error invoking InstallStatusChanged event");
         }
     }
 
@@ -640,7 +640,7 @@ public class SteamCmdService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error invoking InstallProgress event");
+            _logger?.LogError(ex, "Error invoking InstallProgress event");
         }
     }
 
@@ -676,7 +676,7 @@ public class SteamCmdService(
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     output.AppendLine(e.Data);
-                    _logger.LogDebug("SteamCMD Output: {Output}", e.Data);
+                    _logger?.LogDebug("SteamCMD Output: {Output}", e.Data);
                 }
             };
 
@@ -685,7 +685,7 @@ public class SteamCmdService(
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     error.AppendLine(e.Data);
-                    _logger.LogDebug("SteamCMD Error: {Error}", e.Data);
+                    _logger?.LogDebug("SteamCMD Error: {Error}", e.Data);
                 }
             };
 
@@ -703,13 +703,13 @@ public class SteamCmdService(
             }
             catch (TimeoutException)
             {
-                _logger.LogWarning("SteamCMD timed out");
+                _logger?.LogWarning("SteamCMD timed out");
 
                 process.Kill();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,  "Error while executing SteamCMD");
+                _logger?.LogError(ex,  "Error while executing SteamCMD");
             }
 
             return new SteamCmdResult
@@ -722,7 +722,7 @@ public class SteamCmdService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing SteamCMD command: {Arguments}", arguments);
+            _logger?.LogError(ex, "Error executing SteamCMD command: {Arguments}", arguments);
             
             return new SteamCmdResult
             {

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -33,7 +33,6 @@
         <PackageReference Include="PeanutButter.INI" />
         <PackageReference Include="Semver" />
         <PackageReference Include="SharpCompress" />
-        <PackageReference Include="Svrooij.PowerShell.DI" />
         <PackageReference Include="System.Management.Automation" />
         <PackageReference Include="YamlDotNet" />
     </ItemGroup>

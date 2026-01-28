@@ -1,0 +1,70 @@
+using System;
+using System.Management.Automation;
+using LANCommander.Steam.Abstractions;
+using LANCommander.Steam.Options;
+using LANCommander.Steam.Services;
+using Microsoft.Extensions.Logging;
+
+namespace LANCommander.SDK.PowerShell;
+
+/// <summary>
+/// Provides Steam services for PowerShell cmdlets without dependency injection.
+/// Services are created with <c>new</c> and cached in session state per runspace.
+/// </summary>
+public static class SteamServicesProvider
+{
+    private const string SteamCmdServiceKey = "LANCommander.Steam.SteamCmdService";
+    private const string SteamStoreServiceKey = "LANCommander.Steam.SteamStoreService";
+    private const string SettingsProviderKey = "LANCommander.SDK.ISettingsProvider";
+    private const string LoggerKey = "LANCommander.Steam.SteamCmdService.Logger";
+
+    /// <summary>
+    /// Gets or creates the SteamCMD service for the current session.
+    /// Retrieves ISettingsProvider and ILogger from session state if available.
+    /// </summary>
+    public static ISteamCmdService GetSteamCmdService(SessionState sessionState)
+    {
+        var existing = sessionState.PSVariable.GetValue(SteamCmdServiceKey) as ISteamCmdService;
+        
+        if (existing != null)
+            return existing;
+
+        var settingsProvider = sessionState.PSVariable.GetValue(SettingsProviderKey) as LANCommander.SDK.Abstractions.ISettingsProvider;
+        if (settingsProvider == null)
+        {
+            throw new InvalidOperationException("ISettingsProvider not found in session state. Ensure the PowerShell runspace is properly initialized.");
+        }
+
+        var logger = sessionState.PSVariable.GetValue(LoggerKey) as ILogger<SteamCmdService>;
+
+        var options = new SteamCmdOptions
+        {
+            ExecutablePath = settingsProvider.CurrentValue.Steam.Path,
+            AutoDetectPath = true
+        };
+        
+        var profileStore = new Providers.SteamCmdProfileStore(settingsProvider);
+        var service = new SteamCmdService(options, profileStore, logger);
+        
+        sessionState.PSVariable.Set(SteamCmdServiceKey, service);
+        
+        return service;
+    }
+
+    /// <summary>
+    /// Gets or creates the Steam Store service for the current session.
+    /// </summary>
+    public static SteamStoreService GetSteamStoreService(SessionState sessionState)
+    {
+        var existing = sessionState.PSVariable.GetValue(SteamStoreServiceKey) as SteamStoreService;
+        
+        if (existing != null)
+            return existing;
+
+        var service = new SteamStoreService();
+        
+        sessionState.PSVariable.Set(SteamStoreServiceKey, service);
+        
+        return service;
+    }
+}

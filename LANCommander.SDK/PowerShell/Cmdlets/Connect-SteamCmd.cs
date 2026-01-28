@@ -5,14 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.Steam.Abstractions;
 using LANCommander.Steam.Enums;
-using Svrooij.PowerShell.DI;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
 [Cmdlet(VerbsCommunications.Connect, "SteamCmd")]
 [OutputType(typeof(SteamCmdStatus))]
-[GenerateBindings]
-public partial class ConnectSteamCmdCmdlet : DependencyCmdlet<PowerShellStartup>
+public class ConnectSteamCmdCmdlet : AsyncCmdlet
 {
     [Parameter(Mandatory = true, Position = 0)]
     public string Username { get; set; } = string.Empty;
@@ -20,21 +18,10 @@ public partial class ConnectSteamCmdCmdlet : DependencyCmdlet<PowerShellStartup>
     [Parameter(Mandatory = false)]
     public SecureString? Password { get; set; }
 
-    [ServiceDependency]
-    private LANCommander.Steam.Abstractions.ISteamCmdService _steamCmdService;
-
-    public override async Task ProcessRecordAsync(CancellationToken token)
+    protected override async Task ProcessRecordAsync(CancellationToken token)
     {
-        if (_steamCmdService == null)
-        {
-            WriteError(new ErrorRecord(
-                new InvalidOperationException("SteamCmdService is not available in the PowerShell session"),
-                "SteamCmdServiceNotAvailable",
-                ErrorCategory.InvalidOperation,
-                null));
-            return;
-        }
-        
+        var steamCmdService = SteamServicesProvider.GetSteamCmdService(SessionState);
+
         try
         {
             string? password = null;
@@ -51,7 +38,7 @@ public partial class ConnectSteamCmdCmdlet : DependencyCmdlet<PowerShellStartup>
                 }
             }
 
-            var status = await _steamCmdService.LoginToSteamAsync(Username, password);
+            var status = await steamCmdService.LoginToSteamAsync(Username, password);
             
             WriteObject(status);
         }

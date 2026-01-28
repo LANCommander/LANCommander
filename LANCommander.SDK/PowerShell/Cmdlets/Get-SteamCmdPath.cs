@@ -3,33 +3,20 @@ using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.Steam.Abstractions;
-using Svrooij.PowerShell.DI;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
 [Cmdlet(VerbsCommon.Get, "SteamCmdPath")]
 [OutputType(typeof(string))]
-[GenerateBindings]
-public partial class GetSteamCmdPathCmdlet : DependencyCmdlet<PowerShellStartup>
+public class GetSteamCmdPathCmdlet : AsyncCmdlet
 {
-    [ServiceDependency]
-    private LANCommander.Steam.Abstractions.ISteamCmdService _steamCmdService;
-
-    public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
+    protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {
-        if (_steamCmdService == null)
-        {
-            WriteError(new ErrorRecord(
-                new InvalidOperationException("SteamCmdService is not available in the PowerShell session"),
-                "SteamCmdServiceNotAvailable",
-                ErrorCategory.InvalidOperation,
-                null));
-            return;
-        }
+        var steamCmdService = SteamServicesProvider.GetSteamCmdService(SessionState);
 
         try
         {
-            var path = await _steamCmdService.AutoDetectSteamCmdPathAsync();
+            var path = await steamCmdService.AutoDetectSteamCmdPathAsync();
             if (!string.IsNullOrEmpty(path))
             {
                 WriteObject(path);

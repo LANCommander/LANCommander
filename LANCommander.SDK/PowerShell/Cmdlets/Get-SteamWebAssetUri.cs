@@ -4,14 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.Steam;
 using LANCommander.Steam.Services;
-using Svrooij.PowerShell.DI;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
 [Cmdlet(VerbsCommon.Get, "SteamWebAssetUri")]
 [OutputType(typeof(Uri))]
-[GenerateBindings]
-public partial class GetSteamWebAssetUriCmdlet : DependencyCmdlet<PowerShellStartup>
+public class GetSteamWebAssetUriCmdlet : AsyncCmdlet
 {
     [Parameter(Mandatory = true, Position = 0)]
     public int AppId { get; set; }
@@ -19,7 +17,7 @@ public partial class GetSteamWebAssetUriCmdlet : DependencyCmdlet<PowerShellStar
     [Parameter(Mandatory = true, Position = 1)]
     public WebAssetType WebAssetType { get; set; }
 
-    public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
+    protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {
         try
         {

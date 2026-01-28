@@ -4,36 +4,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.Steam;
 using LANCommander.Steam.Services;
-using Svrooij.PowerShell.DI;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
 [Cmdlet(VerbsCommon.Search, "SteamGames")]
 [OutputType(typeof(GameSearchResult))]
-[GenerateBindings]
-public partial class SearchSteamGamesCmdlet : DependencyCmdlet<PowerShellStartup>
+public class SearchSteamGamesCmdlet : AsyncCmdlet
 {
     [Parameter(Mandatory = true, Position = 0)]
     public string Keyword { get; set; } = string.Empty;
 
-    [ServiceDependency]
-    private LANCommander.Steam.Services.SteamStoreService _steamStoreService;
-
-    public override async Task ProcessRecordAsync(CancellationToken cancellationToken)
+    protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {
-        if (_steamStoreService == null)
-        {
-            WriteError(new ErrorRecord(
-                new InvalidOperationException("SteamStoreService is not available in the PowerShell session"),
-                "SteamStoreServiceNotAvailable",
-                ErrorCategory.InvalidOperation,
-                null));
-            return;
-        }
+        var steamStoreService = SteamServicesProvider.GetSteamStoreService(SessionState);
 
         try
         {
-            var results = await _steamStoreService.SearchGamesAsync(Keyword);
+            var results = await steamStoreService.SearchGamesAsync(Keyword);
             foreach (var result in results)
             {
                 WriteObject(result);

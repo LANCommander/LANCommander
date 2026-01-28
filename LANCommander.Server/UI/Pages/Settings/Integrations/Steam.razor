@@ -22,7 +22,13 @@
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="SteamCMD Path">
-            <FilePicker @bind-Value="SteamCmdService.ExecutablePath" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
+            <FilePicker @bind-Value="SteamCmdService.ExecutablePath" Title="Choose SteamCMD Executable Path" Root="@_rootPath">
+                <After>
+                    <Tooltip Title="Auto Detect">
+                        <Button OnClick="AutoDetectPath" Icon="@IconType.Outline.Search"/>
+                    </Tooltip>
+                </After>
+            </FilePicker>
         </FormItem>
     </Form>
     
@@ -116,6 +122,8 @@
                 await SteamCmdService.SaveProfileAsync(profile);
             }
             
+            SettingsProvider.Update(s => s.Steam.Path = SteamCmdService.ExecutablePath);
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)
@@ -123,5 +131,22 @@
             MessageService.Error("An unknown error occurred.");
             Logger.LogError(ex, "An unknown error occurred.");
         }
+    }
+
+    async Task AutoDetectPath()
+    {
+        var path = await SteamCmdService.AutoDetectSteamCmdPathAsync();
+
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            SteamCmdService.ExecutablePath = path;
+
+            SettingsProvider.Update(s =>
+            {
+                s.Steam.Path = path;
+            });
+        }
+        else
+            MessageService.Error("Could not automatically find SteamCMD! Is it installed?");
     }
 }

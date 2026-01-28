@@ -16,11 +16,11 @@ public static class SteamServicesProvider
     private const string SteamCmdServiceKey = "LANCommander.Steam.SteamCmdService";
     private const string SteamStoreServiceKey = "LANCommander.Steam.SteamStoreService";
     private const string SettingsProviderKey = "LANCommander.SDK.ISettingsProvider";
-    private const string LoggerKey = "LANCommander.Steam.SteamCmdService.Logger";
+    private const string PSHostUIKey = "LANCommander.SDK.PSHostUI";
 
     /// <summary>
     /// Gets or creates the SteamCMD service for the current session.
-    /// Retrieves ISettingsProvider and ILogger from session state if available.
+    /// Uses host UI from session state (set by AsyncCmdlet) to log to the PowerShell runtime.
     /// </summary>
     public static ISteamCmdService GetSteamCmdService(SessionState sessionState)
     {
@@ -35,7 +35,12 @@ public static class SteamServicesProvider
             throw new InvalidOperationException("ISettingsProvider not found in session state. Ensure the PowerShell runspace is properly initialized.");
         }
 
-        var logger = sessionState.PSVariable.GetValue(LoggerKey) as ILogger<SteamCmdService>;
+        ILogger<SteamCmdService>? logger = null;
+        var hostUI = sessionState.PSVariable.GetValue(PSHostUIKey) as System.Management.Automation.Host.PSHostUserInterface;
+        if (hostUI != null)
+        {
+            logger = new PowerShellHostLogger<SteamCmdService>(hostUI);
+        }
 
         var options = new SteamCmdOptions
         {

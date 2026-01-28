@@ -182,11 +182,7 @@ namespace LANCommander.SDK.PowerShell
                     runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
                 }
                 
-                var logger = ServiceProvider.GetService<Microsoft.Extensions.Logging.ILogger<LANCommander.Steam.Services.SteamCmdService>>();
-                if (logger != null)
-                {
-                    runspace.SessionStateProxy.SetVariable("LANCommander.Steam.SteamCmdService.Logger", logger);
-                }
+                // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
                 
                 Context = System.Management.Automation.PowerShell.Create();
 

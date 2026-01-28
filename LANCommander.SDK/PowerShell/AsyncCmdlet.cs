@@ -30,6 +30,8 @@ public abstract class AsyncCmdlet : PSCmdlet
     {
         try
         {
+            // Expose host UI in session state so application loggers can write to the PowerShell runtime
+            SessionState.PSVariable.Set("LANCommander.SDK.PSHostUI", Host.UI);
             _cancellationTokenSource = new CancellationTokenSource();
             ProcessRecordAsync(_cancellationTokenSource.Token).GetAwaiter().GetResult();
         }

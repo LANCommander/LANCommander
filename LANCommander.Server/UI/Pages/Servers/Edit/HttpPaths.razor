@@ -10,19 +10,6 @@
         {
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
-
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
                 
                 <Button Type="ButtonType.Primary" OnClick="_httpPathEditor.Save">Save</Button>
             </Flex>

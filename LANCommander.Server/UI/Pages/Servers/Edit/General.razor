@@ -31,19 +31,19 @@
         }
     </TitleTemplate>
     <TitleExtraTemplate>
-        @if (context != null && context.Id != Guid.Empty)
-        {
-            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-                <ServerControl ServerId="context.Id" />
-                
+        <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+            @if (context != null && context.Id != Guid.Empty)
+            {
+                <ServerControl ServerId="context.Id"/>
+
                 @if (context != null && context.Id != Guid.Empty)
                 {
                     <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
                 }
-                
-                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-            </Flex>
-        }
+            }
+            
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
     </TitleExtraTemplate>
     
     <ChildContent>

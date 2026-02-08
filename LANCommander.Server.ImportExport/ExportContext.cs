@@ -224,6 +224,7 @@ public class ExportContext(
             })
             .GetAsync(redistributableId);
         
+        DataRecord = redistributable;
         Manifest = mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
         
         var exportItemInfo = new List<ExportItemInfo>();
@@ -249,7 +250,8 @@ public class ExportContext(
 
             })
             .GetAsync(serverId);
-        
+
+        DataRecord = server;
         Manifest = mapper.Map<SDK.Models.Manifest.Server>(server);
         
         var exportItemInfo = new List<ExportItemInfo>();
@@ -274,7 +276,8 @@ public class ExportContext(
                     .Include(t => t.Scripts);
             })
             .GetAsync(toolId);
-        
+
+        DataRecord = tool;
         Manifest = mapper.Map<SDK.Models.Manifest.Tool>(tool);
         
         var exportItemInfo = new List<ExportItemInfo>();

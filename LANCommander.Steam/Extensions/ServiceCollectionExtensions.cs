@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
             sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
             sp.GetService<ISteamCmdProfileStore>(),
             sp.GetService<ILogger<SteamCmdService>>()));
+        services.AddSingleton<ISteamWebApiService, SteamWebApiService>();
 
         return services;
     }
@@ -60,6 +61,7 @@ public static class ServiceCollectionExtensions
             sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
             sp.GetService<ISteamCmdProfileStore>(),
             sp.GetService<ILogger<SteamCmdService>>()));
+        services.AddSingleton<ISteamWebApiService, SteamWebApiService>();
 
         return services;
     }
@@ -86,6 +88,7 @@ public static class ServiceCollectionExtensions
             sp.GetService<IOptions<SteamCmdOptions>>()?.Value,
             sp.GetService<ISteamCmdProfileStore>(),
             sp.GetService<ILogger<SteamCmdService>>()));
+        services.AddSingleton<ISteamWebApiService, SteamWebApiService>();
 
         return services;
     }

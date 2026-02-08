@@ -473,7 +473,66 @@ public class SteamCmdService(
         await profileStore.DeleteAsync(username);
         _logger?.LogInformation("Deleted profile for username: {Username}", username);
     }
-    
+
+    /// <inheritdoc />
+    public async Task<SteamCmdAppInfo?> GetAppInfoAsync(uint appId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ExecutablePath))
+        {
+            if (_options.AutoDetectPath)
+            {
+                var detected = await AutoDetectSteamCmdPathAsync();
+                if (!string.IsNullOrEmpty(detected))
+                    ExecutablePath = detected;
+            }
+            if (string.IsNullOrWhiteSpace(ExecutablePath))
+            {
+                _logger?.LogWarning("SteamCMD path is not configured; cannot get app changenumber.");
+                return null;
+            }
+        }
+
+        if (!File.Exists(ExecutablePath))
+        {
+            _logger?.LogWarning("SteamCMD executable not found at {Path}", ExecutablePath);
+            return null;
+        }
+
+        // +quit can suppress output on some SteamCMD versions; we parse both stdout and stderr
+        var arguments = $"+login anonymous +app_info_update 1 +app_info_print {appId} +quit";
+        var result = await ExecuteSteamCmdCommandAsync(arguments, TimeSpan.FromSeconds(60));
+        var combined = (result.Output + "\n" + result.ErrorOutput);
+
+        var info = ParseAppInfoPrintOutput(appId, combined);
+        if (info != null)
+            _logger?.LogDebug("SteamCMD app info for {AppId}: changenumber={Changenumber}", appId, info.Changenumber);
+        return info;
+    }
+
+    private static SteamCmdAppInfo? ParseAppInfoPrintOutput(uint appId, string output)
+    {
+        // VDF-like output: "buildid"		"3936003" and "timeupdated"		"1560990358" (often under "public" branch)
+        var buildIdMatch = Regex.Match(output, @"""buildid""\s+""([^""]+)""", RegexOptions.IgnoreCase);
+        var timeUpdatedMatch = Regex.Match(output, @"""timeupdated""\s+""([^""]+)""", RegexOptions.IgnoreCase);
+        if (!buildIdMatch.Success)
+            return null;
+
+        var changenumber = buildIdMatch.Groups[1].Value.Trim();
+        if (string.IsNullOrEmpty(changenumber))
+            return null;
+
+        DateTimeOffset? timeUpdated = null;
+        if (timeUpdatedMatch.Success && long.TryParse(timeUpdatedMatch.Groups[1].Value.Trim(), out var unixSeconds))
+            timeUpdated = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+
+        return new SteamCmdAppInfo
+        {
+            AppId = appId,
+            Changenumber = changenumber,
+            TimeUpdated = timeUpdated
+        };
+    }
+
     private async Task<SteamCmdResult> ExecuteSteamCmdCommandWithProgressAsync(
         string arguments,
         SteamCmdInstallJob? job = null,
@@ -502,38 +561,45 @@ public class SteamCmdService(
             var output = new StringBuilder();
             var error = new StringBuilder();
 
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    output.AppendLine(e.Data);
-                    _logger?.LogDebug("SteamCMD Output: {Output}", e.Data);
-                    
-                    // Parse progress if job is provided
-                    if (job != null)
-                    {
-                        ParseProgressFromOutput(e.Data, job);
-                    }
-                }
-            };
-
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    error.AppendLine(e.Data);
-                    _logger?.LogDebug("SteamCMD Error: {Error}", e.Data);
-                }
-            };
-
             process.Start();
-            
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+
+            // Read streams with \r and \n as line delimiters so we get progress updates in real time.
+            // SteamCMD uses \r for progress lines and full buffering when piped; BeginOutputReadLine
+            // only fires on \n, so output would otherwise appear only at the end.
+            var readStdOut = ReadStreamByLineAsync(
+                process.StandardOutput.BaseStream,
+                Encoding.UTF8,
+                line =>
+                {
+                    if (string.IsNullOrEmpty(line))
+                        return;
+                    output.AppendLine(line);
+                    _logger?.LogDebug("SteamCMD Output: {Output}", line);
+                    if (job != null)
+                        ParseProgressFromOutput(line, job);
+                },
+                cancellationToken);
+
+            var readStdErr = ReadStreamByLineAsync(
+                process.StandardError.BaseStream,
+                Encoding.UTF8,
+                line =>
+                {
+                    if (string.IsNullOrEmpty(line))
+                        return;
+                    error.AppendLine(line);
+                    _logger?.LogDebug("SteamCMD Error: {Error}", line);
+                    if (job != null)
+                        ParseProgressFromOutput(line, job);
+                },
+                cancellationToken);
 
             try
             {
-                await process.WaitForExitAsync(cancellationToken);
+                await Task.WhenAll(
+                    readStdOut,
+                    readStdErr,
+                    process.WaitForExitAsync(cancellationToken));
             }
             catch (OperationCanceledException)
             {
@@ -565,6 +631,43 @@ public class SteamCmdService(
                 ErrorOutput = ex.Message
             };
         }
+    }
+
+    /// <summary>
+    /// Reads a stream and invokes the callback for each line. Lines are split on \r and \n
+    /// so that progress output (often \r-only) is delivered in real time instead of buffered.
+    /// </summary>
+    private static async Task ReadStreamByLineAsync(
+        Stream stream,
+        Encoding encoding,
+        Action<string> onLine,
+        CancellationToken cancellationToken = default)
+    {
+        using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+        var lineBuilder = new StringBuilder();
+        var charBuffer = new char[256];
+        int read;
+        while ((read = await reader.ReadAsync(charBuffer.AsMemory(), cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            for (var i = 0; i < read; i++)
+            {
+                var ch = charBuffer[i];
+                if (ch == '\r' || ch == '\n')
+                {
+                    if (lineBuilder.Length > 0)
+                    {
+                        onLine(lineBuilder.ToString());
+                        lineBuilder.Clear();
+                    }
+                }
+                else
+                {
+                    lineBuilder.Append(ch);
+                }
+            }
+        }
+        if (lineBuilder.Length > 0)
+            onLine(lineBuilder.ToString());
     }
 
     private void ParseProgressFromOutput(string line, SteamCmdInstallJob job)

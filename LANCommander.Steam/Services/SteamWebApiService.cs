@@ -1,30 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Mime;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using LANCommander.Steam.Abstractions;
+using LANCommander.Steam.Models.SteamCmdNet;
 
 namespace LANCommander.Steam.Services;
 
-public class SteamStoreService
+public class SteamWebApiService(HttpClient httpClient) : ISteamWebApiService
 {
-    private readonly HttpClient HttpClient;
-
-    public SteamStoreService()
+    public async Task<AppInfo> GetAppInfo(uint appId)
     {
-        HttpClient = new HttpClient();
-        HttpClient.BaseAddress = new Uri("https://store.steampowered.com");
+        var response = await httpClient.GetFromJsonAsync<AppInfoResponse>($"https://api.steamcmd.net/v1/info/{appId}");
+
+        if (response.Data?.ContainsKey(appId) ?? false)
+            return response.Data[appId];
+
+        return null;
     }
 
     public async Task<IEnumerable<GameSearchResult>> SearchGamesAsync(string keyword)
     {
         HtmlWeb web = new HtmlWeb();
-        HtmlDocument dom = await web.LoadFromWebAsync($"https://store.steampowered.com/search/suggest?term={keyword}&f=games&cc=US");
+        HtmlDocument dom =
+            await web.LoadFromWebAsync($"https://store.steampowered.com/search/suggest?term={keyword}&f=games&cc=US");
 
-        var results = new List<GameSearchResult>();
+        List<GameSearchResult> results = [];
         var matches = dom.DocumentNode.SelectNodes("//a[@data-ds-appid]");
 
         if (matches == null || matches.Count == 0)
@@ -48,51 +52,15 @@ public class SteamStoreService
                     });
                 }
             }
-            catch (Exception ex) { }
+            catch
+            {
+                // Ignore
+            }
         }
 
         return results;
     }
-
-    public async Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appId, WebAssetType webAssetType)
-    {
-        var webAssetUri = GetWebAssetUri(appId, webAssetType);
-        var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, webAssetUri));
-
-        var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg || response.Content.Headers.ContentType.MediaType == "image/png";
-
-        return (exists, response.Content.Headers.ContentType.MediaType);
-    }
-
-    public async Task<bool> HasManualAsync(int appId)
-    {
-        var manualUri = GetManualUri(appId);
-        var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, manualUri));
-
-        return response.Content.Headers.ContentType.MediaType == MediaTypeNames.Application.Pdf;
-    }
-
-    public async Task<byte[]> DownloadManualAsync(int appId)
-    {
-        var manualUri = GetManualUri(appId);
-        var response = await HttpClient.GetAsync(manualUri);
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        using (var ms = new MemoryStream())
-        {
-            await response.Content.CopyToAsync(ms);
-
-            return ms.ToArray();
-        }
-    }
-
-    public static Uri GetManualUri(int appId)
-    {
-        return new Uri($"https://store.steampowered.com/manual/{appId}");
-    }
-
+    
     public static Uri GetWebAssetUri(int appId, WebAssetType type)
     {
         Dictionary<WebAssetType, string> webAssetTypeMap = new Dictionary<WebAssetType, string>()

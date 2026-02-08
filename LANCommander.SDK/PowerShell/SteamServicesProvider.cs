@@ -1,5 +1,6 @@
 using System;
 using System.Management.Automation;
+using System.Net.Http;
 using LANCommander.Steam.Abstractions;
 using LANCommander.Steam.Options;
 using LANCommander.Steam.Services;
@@ -14,7 +15,7 @@ namespace LANCommander.SDK.PowerShell;
 public static class SteamServicesProvider
 {
     private const string SteamCmdServiceKey = "LANCommander.Steam.SteamCmdService";
-    private const string SteamStoreServiceKey = "LANCommander.Steam.SteamStoreService";
+    private const string SteamWebApiServiceKey = "LANCommander.Steam.SteamStoreService";
     private const string SettingsProviderKey = "LANCommander.SDK.ISettingsProvider";
     private const string PSHostUIKey = "LANCommander.SDK.PSHostUI";
 
@@ -59,17 +60,19 @@ public static class SteamServicesProvider
     /// <summary>
     /// Gets or creates the Steam Store service for the current session.
     /// </summary>
-    public static SteamStoreService GetSteamStoreService(SessionState sessionState)
+    public static ISteamWebApiService GetSteamWebApiService(SessionState sessionState)
     {
-        var existing = sessionState.PSVariable.GetValue(SteamStoreServiceKey) as SteamStoreService;
+        var existing = sessionState.PSVariable.GetValue(SteamWebApiServiceKey) as SteamWebApiService;
         
         if (existing != null)
             return existing;
 
-        var service = new SteamStoreService();
+        var service = new SteamWebApiService(new HttpClient());
         
-        sessionState.PSVariable.Set(SteamStoreServiceKey, service);
+        sessionState.PSVariable.Set(SteamWebApiServiceKey, service);
         
         return service;
     }
+    
+    
 }

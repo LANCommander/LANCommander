@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.Steam.Enums;
 using LANCommander.Steam.Events;
@@ -16,6 +17,12 @@ public interface ISteamCmdService
     /// Get or set the SteamCMD executable path
     /// </summary>
     string? ExecutablePath { get; set; }
+
+    /// <summary>
+    /// Get app info (changenumber / buildid and time updated) for the public branch via app_info_print.
+    /// Requires SteamCMD to be installed and configured. Returns null if SteamCMD is unavailable or the app cannot be queried.
+    /// </summary>
+    Task<SteamCmdAppInfo?> GetAppInfoAsync(uint appId, System.Threading.CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Event fired when an install job status changes (started, completed, failed)

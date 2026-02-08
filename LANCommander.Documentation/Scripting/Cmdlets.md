@@ -1,4 +1,4 @@
----
+.---
 title: Cmdlets
 ---
 
@@ -222,9 +222,9 @@ Update-UserCustomField -Name "SteamId" -Value "34950494"
 
 The following cmdlets provide functionality for interacting with SteamCMD and the Steam Store API. These cmdlets enable you to install Steam games, manage SteamCMD profiles, search for games, and retrieve Steam assets.
 
-## Connection Management
+# Connection Management
 
-### `Connect-SteamCmd`
+## `Connect-SteamCmd`
 Connects to SteamCMD with the specified username and optional password.
 
 ### Syntax
@@ -243,7 +243,7 @@ $securePassword = ConvertTo-SecureString "mypassword" -AsPlainText -Force
 Connect-SteamCmd -Username "myusername" -Password $securePassword
 ```
 
-### `Disconnect-SteamCmd`
+## `Disconnect-SteamCmd`
 Disconnects from SteamCMD for the specified username.
 
 ### Syntax
@@ -260,7 +260,7 @@ The `Disconnect-SteamCmd` cmdlet logs out the specified username from SteamCMD. 
 Disconnect-SteamCmd -Username "myusername"
 ```
 
-### `Get-SteamCmdConnectionStatus`
+## `Get-SteamCmdConnectionStatus`
 Gets the connection status for a SteamCMD username.
 
 ### Syntax
@@ -278,9 +278,9 @@ $status = Get-SteamCmdConnectionStatus -Username "myusername"
 Write-Host "Connected: $($status.IsConnected)"
 ```
 
-## SteamCMD Configuration
+# SteamCMD Configuration
 
-### `Get-SteamCmdPath`
+## `Get-SteamCmdPath`
 Gets the path to the SteamCMD executable.
 
 ### Syntax
@@ -299,7 +299,7 @@ if ($steamCmdPath) {
 }
 ```
 
-### `Get-SteamCmdProfile`
+## `Get-SteamCmdProfile`
 Gets a SteamCMD profile for the specified username.
 
 ### Syntax
@@ -319,7 +319,7 @@ if ($profile) {
 }
 ```
 
-### `Get-SteamCmdProfiles`
+## `Get-SteamCmdProfiles`
 Gets all SteamCMD profiles.
 
 ### Syntax
@@ -338,7 +338,7 @@ foreach ($profile in $profiles) {
 }
 ```
 
-### `Set-SteamCmdProfile`
+## `Set-SteamCmdProfile`
 Creates or updates a SteamCMD profile.
 
 ### Syntax
@@ -356,7 +356,7 @@ The `Set-SteamCmdProfile` cmdlet creates or updates a SteamCMD profile with the 
 Set-SteamCmdProfile -Username "myusername" -InstallDirectory "C:\Steam\Content"
 ```
 
-### `Remove-SteamCmdProfile`
+## `Remove-SteamCmdProfile`
 Removes a SteamCMD profile.
 
 ### Syntax
@@ -373,9 +373,9 @@ The `Remove-SteamCmdProfile` cmdlet deletes the SteamCMD profile for the specifi
 Remove-SteamCmdProfile -Username "myusername"
 ```
 
-## Content Installation
+# Steam Content Installation
 
-### `Install-SteamContent`
+## `Install-SteamContent`
 Installs Steam content (game, DLC, etc.) using SteamCMD.
 
 ### Syntax
@@ -395,7 +395,7 @@ $job = Install-SteamContent -AppId 730 -InstallDirectory "C:\Games\Counter-Strik
 Write-Host "Installation job started: $($job.Id)"
 ```
 
-### `Remove-SteamContent`
+## `Remove-SteamContent`
 Removes Steam content from the specified install directory.
 
 ### Syntax
@@ -412,66 +412,9 @@ The `Remove-SteamContent` cmdlet removes Steam content from the specified instal
 Remove-SteamContent -InstallDirectory "C:\Games\Counter-Strike 2"
 ```
 
-### `Get-SteamInstallJob`
-Gets a Steam installation job by its ID.
+# Steam Store
 
-### Syntax
-```powershell
-Get-SteamInstallJob
-    -JobId <Guid>
-```
-
-### Description
-The `Get-SteamInstallJob` cmdlet retrieves information about a specific Steam installation job. Returns a `SteamCmdInstallJob` object containing status, progress, and other details about the installation.
-
-### Example
-```powershell
-$job = Get-SteamInstallJob -JobId "12345678-1234-1234-1234-123456789012"
-Write-Host "Status: $($job.Status), Progress: $($job.Progress)%"
-```
-
-### `Get-SteamInstallJobs`
-Gets all active Steam installation jobs.
-
-### Syntax
-```powershell
-Get-SteamInstallJobs
-```
-
-### Description
-The `Get-SteamInstallJobs` cmdlet retrieves all active Steam installation jobs. Returns a collection of `SteamCmdInstallJob` objects.
-
-### Example
-```powershell
-$jobs = Get-SteamInstallJobs
-foreach ($job in $jobs) {
-    Write-Host "$($job.AppId): $($job.Status) - $($job.Progress)%"
-}
-```
-
-### `Stop-SteamInstallJob`
-Stops a Steam installation job.
-
-### Syntax
-```powershell
-Stop-SteamInstallJob
-    -JobId <Guid>
-```
-
-### Description
-The `Stop-SteamInstallJob` cmdlet cancels a running Steam installation job. Returns a boolean indicating whether the job was successfully cancelled.
-
-### Example
-```powershell
-$cancelled = Stop-SteamInstallJob -JobId "12345678-1234-1234-1234-123456789012"
-if ($cancelled) {
-    Write-Host "Installation job cancelled"
-}
-```
-
-## Steam Store
-
-### `Search-SteamGames`
+## `Search-SteamGames`
 Searches for games on the Steam Store.
 
 ### Syntax
@@ -491,67 +434,7 @@ foreach ($result in $results) {
 }
 ```
 
-### `Get-SteamManual`
-Downloads a game manual from the Steam Store.
-
-### Syntax
-```powershell
-Get-SteamManual
-    -AppId <int>
-    -OutputPath <string> (optional)
-```
-
-### Description
-The `Get-SteamManual` cmdlet downloads the PDF manual for the specified Steam App ID. If `OutputPath` is provided, the manual is saved to that location and the path is returned. Otherwise, the manual data is returned as a byte array.
-
-### Example
-```powershell
-# Save manual to file
-Get-SteamManual -AppId 730 -OutputPath "C:\Games\CS2\manual.pdf"
-
-# Get manual as byte array
-$manualData = Get-SteamManual -AppId 730
-```
-
-### `Get-SteamManualUri`
-Gets the URI for a game's manual on the Steam Store.
-
-### Syntax
-```powershell
-Get-SteamManualUri
-    -AppId <int>
-```
-
-### Description
-The `Get-SteamManualUri` cmdlet returns the URI where the manual for the specified Steam App ID can be accessed. Returns a `Uri` object.
-
-### Example
-```powershell
-$uri = Get-SteamManualUri -AppId 730
-Write-Host "Manual URL: $uri"
-```
-
-### `Test-SteamManual`
-Tests whether a game has a manual available on the Steam Store.
-
-### Syntax
-```powershell
-Test-SteamManual
-    -AppId <int>
-```
-
-### Description
-The `Test-SteamManual` cmdlet checks if a manual exists for the specified Steam App ID. Returns a boolean indicating whether a manual is available.
-
-### Example
-```powershell
-$hasManual = Test-SteamManual -AppId 730
-if ($hasManual) {
-    Write-Host "Manual available"
-}
-```
-
-### `Get-SteamWebAssetUri`
+## `Get-SteamWebAssetUri`
 Gets the URI for a Steam web asset (logo, header, etc.).
 
 ### Syntax
@@ -580,23 +463,25 @@ $logoUri = Get-SteamWebAssetUri -AppId 730 -WebAssetType Logo
 Write-Host "Logo URL: $logoUri"
 ```
 
-### `Test-SteamWebAsset`
-Tests whether a Steam web asset exists for a game.
+## `Get-SteamAppInfo`
+Gets app details from the Steam Store (no API key required) and the **changenumber** (build ID) and last updated time from Steam via SteamKit2 (PICS).
 
 ### Syntax
 ```powershell
-Test-SteamWebAsset
-    -AppId <int>
-    -WebAssetType <WebAssetType>
+Get-SteamAppInfo
+    -AppId <uint>
 ```
 
 ### Description
-The `Test-SteamWebAsset` cmdlet checks if a specific web asset type exists for the specified Steam App ID. Returns a boolean indicating whether the asset is available. The `WebAssetType` parameter accepts the same values as `Get-SteamWebAssetUri`.
+The `Get-SteamAppInfo` cmdlet returns a `SteamAppInfo` object with name, short description, release date, developers, publishers, and store URL from the public Steam Store `appdetails` endpoint. It also connects to Steam via SteamKit2 (PICS) to fill **LastChangenumber** and **LastUpdated** for the public branch—no Web API key required. If SteamKit2 cannot connect or the app cannot be queried, those two properties are null.
 
 ### Example
 ```powershell
-$hasLogo = Test-SteamWebAsset -AppId 730 -WebAssetType Logo
-if ($hasLogo) {
-    Write-Host "Logo available"
+$info = Get-SteamAppInfo -AppId 413150
+if ($info) {
+    Write-Host "Name: $($info.Name)"
+    Write-Host "Description: $($info.Description)"
+    Write-Host "Release date: $($info.ReleaseDate)"
+    Write-Host "Developer: $($info.Developer)"
 }
 ```

@@ -16,7 +16,7 @@ public class SearchSteamGamesCmdlet : AsyncCmdlet
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {
-        var steamStoreService = SteamServicesProvider.GetSteamStoreService(SessionState);
+        var steamStoreService = SteamServicesProvider.GetSteamWebApiService(SessionState);
 
         try
         {

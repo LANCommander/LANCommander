@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LANCommander.Steam
+﻿namespace LANCommander.Steam
 {
     public enum WebAssetType
     {

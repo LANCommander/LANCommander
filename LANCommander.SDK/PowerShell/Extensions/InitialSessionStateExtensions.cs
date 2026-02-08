@@ -1,8 +1,4 @@
-using System;
-using System.Linq;
-using System.Management.Automation;
 using System.Management.Automation.Runspaces;
-using System.Reflection;
 using LANCommander.SDK.PowerShell.Cmdlets;
 
 namespace LANCommander.SDK.PowerShell.Extensions;
@@ -28,7 +24,6 @@ public static class InitialSessionStateExtensions
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
         
-        // SteamCMD cmdlets
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Connect-SteamCmd", typeof(ConnectSteamCmdCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Disconnect-SteamCmd", typeof(DisconnectSteamCmdCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamCmdConnectionStatus", typeof(GetSteamCmdConnectionStatusCmdlet), null));
@@ -39,13 +34,8 @@ public static class InitialSessionStateExtensions
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamContent", typeof(RemoveSteamContentCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Remove-SteamCmdProfile", typeof(RemoveSteamCmdProfileCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Set-SteamCmdProfile", typeof(SetSteamCmdProfileCmdlet), null));
-        
-        // Steam Store cmdlets
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamManual", typeof(GetSteamManualCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamManualUri", typeof(GetSteamManualUriCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamAppInfo", typeof(GetSteamAppInfoCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-SteamWebAssetUri", typeof(GetSteamWebAssetUriCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Search-SteamGames", typeof(SearchSteamGamesCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Test-SteamManual", typeof(TestSteamManualCmdlet), null));
-        initialSessionState.Commands.Add(new SessionStateCmdletEntry("Test-SteamWebAsset", typeof(TestSteamWebAssetCmdlet), null));
     }
 }

@@ -21,7 +21,7 @@ public class GetSteamWebAssetUriCmdlet : AsyncCmdlet
     {
         try
         {
-            var uri = SteamStoreService.GetWebAssetUri(AppId, WebAssetType);
+            var uri = SteamWebApiService.GetWebAssetUri(AppId, WebAssetType);
             WriteObject(uri);
         }
         catch (Exception ex)

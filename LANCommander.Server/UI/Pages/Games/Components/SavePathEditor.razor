@@ -18,11 +18,11 @@
             }
             else
             {
-                <FilePicker @bind-Value="context.Path" ArchiveId="@_archive.Id" AllowDirectories="true" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories="true" />
             }
         </PropertyColumn>
         <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@_archive.Id" AllowDirectories Title="Select Working Directory" />
+            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories Title="Select Working Directory" />
         </PropertyColumn>
         <PropertyColumn Property="p => p.IsRegex" Title="Regex">
             <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
@@ -42,7 +42,7 @@
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    Archive _archive;
+    Archive? _archive;
     ICollection<SavePath> _savePaths = new List<SavePath>();
 
     protected override async Task OnInitializedAsync()

@@ -1,10 +1,13 @@
-﻿<div class="main-window">
-    <Router AppAssembly="@typeof(Program).Assembly">
-        <Found Context="routeData">
-            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainWindow)" />
-        </Found>
-        <NotFound>
-            <RedirectToRoute Route="/Authenticate" />
-        </NotFound>
-    </Router>
+﻿@using LANCommander.Launcher.Enums
+<div class="main-window">
+    <CascadingValue Name="WindowType" Value="WindowType.Main">
+        <Router AppAssembly="@typeof(Program).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainWindow)"/>
+            </Found>
+            <NotFound>
+                <RedirectToRoute Route="/Authenticate"/>
+            </NotFound>
+        </Router>
+    </CascadingValue>
 </div>

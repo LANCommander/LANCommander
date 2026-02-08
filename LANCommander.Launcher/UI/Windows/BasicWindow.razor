@@ -1,4 +1,5 @@
-﻿@using Photino.Blazor.CustomWindow.Components
+﻿@using LANCommander.Launcher.Enums
+@using Photino.Blazor.CustomWindow.Components
 @namespace LANCommander.Launcher.UI
 @inherits LayoutComponentBase
 @inject AuthenticationClient AuthenticationClient
@@ -25,10 +26,24 @@
     </CustomWindow>
 
 @code {
+    [CascadingParameter(Name = "WindowType")]
+    public WindowType WindowType { get; set; }
+    
     protected override async Task OnInitializedAsync()
     {
         if (await AuthenticationClient.ValidateTokenAsync())
-            NavigationManager.NavigateTo("/Library");
+        {
+            switch (WindowType)
+            {
+                case WindowType.Chat:
+                    NavigationManager.NavigateTo("/Chat");
+                    break;
+                case WindowType.Main:
+                default:
+                    NavigationManager.NavigateTo("/Library");
+                    break;
+            }
+        }
         else
             NavigationManager.NavigateTo("/Authenticate");
     }

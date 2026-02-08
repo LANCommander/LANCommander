@@ -1,9 +1,11 @@
-﻿@using LANCommander.Server.Data.Models
-@using LANCommander.Server.Extensions;
+﻿@using System.Collections.ObjectModel
 @inject NavigationManager NavigationManager
+@inject ServerHttpPathService ServerHttpPathService
+@inject IMessageService MessageService
+@inject ILogger<ServerHttpPathEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <Table TItem="ServerHttpPath" DataSource="@_httpPaths" HidePagination="true" Responsive>
         <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
             <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
         </PropertyColumn>
@@ -32,45 +34,54 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<ServerHttpPath> Values { get; set; }
-    [Parameter] public EventCallback<ICollection<ServerHttpPath>> ValuesChanged { get; set; }
     [Parameter] public Guid ServerId { get; set; }
     [Parameter] public string WorkingDirectory { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    ObservableCollection<ServerHttpPath> _httpPaths = new();
+
+    protected override async Task OnInitializedAsync() => await LoadHttpPaths();
+
+    async Task LoadHttpPaths()
     {
-        if (Values == null)
-            Values = new List<ServerHttpPath>();
-
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
-
-        StateHasChanged();
+        _httpPaths = new ObservableCollection<ServerHttpPath>(await ServerHttpPathService.GetAsync(p => p.ServerId == ServerId));
     }
 
-    private async Task Add()
+    void Add()
     {
-        if (Values == null)
-            Values = new List<ServerHttpPath>();
-
-        Values.Add(new ServerHttpPath
+        _httpPaths.Add(new ServerHttpPath
         {
-            ServerId = ServerId
+            ServerId = ServerId,
         });
-
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
-
-        StateHasChanged();
     }
 
-    private async Task Remove(ServerHttpPath httpPath)
+    async Task Remove(ServerHttpPath httpPath)
     {
-        Values.Remove(httpPath);
+        if (httpPath.Id != Guid.Empty)
+            await ServerHttpPathService.DeleteAsync(httpPath);
+        
+        _httpPaths.Remove(httpPath);
+    }
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
+    public async Task Save()
+    {
+        try
+        {
+            foreach (var httpPath in _httpPaths)
+            {
+                if (httpPath.Id == Guid.Empty)
+                    await ServerHttpPathService.AddAsync(httpPath);
+                else
+                    await ServerHttpPathService.UpdateAsync(httpPath);
+            }
 
-        StateHasChanged();
+            await LoadHttpPaths();
+
+            MessageService.Success("HTTP paths updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update HTTP paths!");
+            Logger.LogError(ex, "Could not update HTTP paths!");
+        }
     }
 }

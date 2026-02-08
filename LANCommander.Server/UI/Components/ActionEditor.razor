@@ -97,7 +97,8 @@
 
     async Task RemoveAction(Action action)
     {
-        await ActionService.DeleteAsync(action);
+        if (action.Id != Guid.Empty)
+            await ActionService.DeleteAsync(action);
         
         _sortedActions.Remove(action);
 

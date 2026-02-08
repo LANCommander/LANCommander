@@ -1,14 +1,16 @@
-﻿@using LANCommander.SDK.Enums
-@using LANCommander.Server.Data.Models
-@using LANCommander.Server.Extensions;
+﻿@using System.Collections.ObjectModel
+@using LANCommander.SDK.Enums
+@inject ServerConsoleService ServerConsoleService
+@inject IMessageService MessageService
+@inject ILogger<ServerConsoleEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
-    @if (Value == null || Value.Count == 0)
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    @if (_consoles == null || _consoles.Count == 0)
     {
         <Empty />
     }
 
-    @foreach (var console in Value)
+    @foreach (var console in _consoles)
     {
         @if (console.Type == ServerConsoleType.RCON)
         {
@@ -85,44 +87,50 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<ServerConsole> Value { get; set; }
-    [Parameter] public EventCallback<ICollection<ServerConsole>> ValueChanged { get; set; }
     [Parameter] public Guid ServerId { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    ObservableCollection<ServerConsole> _consoles = new();
+
+    protected override async Task OnInitializedAsync() => await LoadConsoles();
+
+    async Task LoadConsoles()
     {
-        if (Value == null)
-            Value = new List<ServerConsole>();
-
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
-
-        StateHasChanged();
+        _consoles = new ObservableCollection<ServerConsole>(await ServerConsoleService.GetAsync(c => c.ServerId == ServerId));
     }
-
-    private async Task Add()
+    
+    public async Task Save()
     {
-        if (Value == null)
-            Value = new List<ServerConsole>();
-
-        Value.Add(new ServerConsole
+        try
         {
-            ServerId = ServerId
-        });
+            foreach (var console in _consoles)
+            {
+                if (console.Id == Guid.Empty)
+                    await ServerConsoleService.AddAsync(console);
+                else
+                    await ServerConsoleService.UpdateAsync(console);
+            }
 
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
+            await LoadConsoles();
 
-        StateHasChanged();
+            MessageService.Success("Consoles updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update consoles!");
+            Logger.LogError(ex, "Could not update consoles!");
+        }
     }
 
-    private async Task Remove(ServerConsole console)
+    private void Add()
     {
-        Value.Remove(console);
+        _consoles.Add(new ServerConsole
+        {
+            ServerId = ServerId,
+        });
+    }
 
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
-
-        StateHasChanged();
+    private void Remove(ServerConsole console)
+    {
+        _consoles.Remove(console);
     }
 }

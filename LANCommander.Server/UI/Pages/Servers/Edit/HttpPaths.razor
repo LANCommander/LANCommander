@@ -23,20 +23,22 @@
                         <Button>Export</Button>
                     </ChildContent>
                 </Dropdown>
+                
+                <Button Type="ButtonType.Primary" OnClick="_httpPathEditor.Save">Save</Button>
             </Flex>
         }
     </TitleExtraTemplate>
     
     <ChildContent>
         <Text>HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</Text>
-        <ServerHttpPathEditor @bind-Values="context.HttpPaths" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" />
-
-        <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
+        <ServerHttpPathEditor @ref="_httpPathEditor" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" />
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
+    ServerHttpPathEditor _httpPathEditor;
     
     async Task Save(Server server)
     {

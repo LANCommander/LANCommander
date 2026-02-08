@@ -9,14 +9,18 @@
                 <ServerControl ServerId="context.Id" />
             </Flex>
         }
+        
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="_actionEditor.Save">Save</Button>
+            </SpaceItem>
+        </Space>
     </TitleExtraTemplate>
     
     <ChildContent>
         <CascadingValue Name="ServerId" Value="context.Id">
             <ActionEditor @ref="_actionEditor" />
         </CascadingValue>
-
-        <Button Type="@ButtonType.Primary" OnClick="_actionEditor.Save" Icon="@IconType.Fill.Save">Save</Button>
     </ChildContent>
 </ServerEditView>
 

@@ -1,8 +1,5 @@
 @page "/Servers/{id:guid}/Consoles"
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject ServerService ServerService
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
 
 <ServerEditView Id="Id" Title="Consoles">
     <TitleExtraTemplate>
@@ -10,45 +7,19 @@
         {
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
-
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
+                
+                <Button Type="ButtonType.Primary" OnClick="_serverConsoleEditor.Save">Save</Button>
             </Flex>
         }
     </TitleExtraTemplate>
     
     <ChildContent>
-        <ServerConsoleEditor @bind-Value="context.ServerConsoles" ServerId="Id" />
-
-        <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
+        <ServerConsoleEditor @ref="_serverConsoleEditor" ServerId="Id" />
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
-    async Task Save(Server server)
-    {
-        try
-        {
-            server = await ServerService.UpdateAsync(server);
 
-            await MessageService.SuccessAsync("Consoles updated!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
-        }
-    }
+    ServerConsoleEditor _serverConsoleEditor;
 }

@@ -26,6 +26,12 @@
                 </Dropdown>
             </Flex>
         }
+        
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+            </SpaceItem>
+        </Space>
     </TitleExtraTemplate>
     
     <ChildContent>
@@ -45,10 +51,6 @@
                 <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
                     <Suffix>Seconds</Suffix>
                 </AntDesign.Input>
-            </FormItem>
-
-            <FormItem>
-                <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
             </FormItem>
         </Form>
     </ChildContent>

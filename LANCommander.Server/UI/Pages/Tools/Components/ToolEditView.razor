@@ -1,0 +1,113 @@
+﻿@inject ToolService ToolService
+@inject NavigationManager NavigationManager
+@inject MessageService MessageService
+@inject ILogger<ToolEditView> Logger
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            @if (Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Tools/{Id}/General")">General</MenuItem>
+                <MenuItem RouterLink="@($"/Tools/{Id}/Actions")">Actions</MenuItem>
+                <MenuItem RouterLink="@($"/Tools/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Tools/{Id}/Scripts")">Scripts</MenuItem>
+            }
+            else
+            {
+                @* Add button without RouterLink, prevents routing on disabled/inactive menu item *@
+                <MenuItem>General</MenuItem>
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        <CascadingValue Value="Tool">
+            <PageHeader>
+                <PageHeaderTitle>
+                    @if (TitleTemplate != null)
+                    {
+                        @TitleTemplate(Tool)
+                    }
+                    else {
+                        <Text>@Title</Text>
+                    }
+                </PageHeaderTitle>
+
+                <PageHeaderExtra>
+                    @TitleExtraTemplate?.Invoke(Tool)
+                </PageHeaderExtra>
+            </PageHeader>
+        </CascadingValue>
+
+        <div class="panel-layout-content">
+            <CascadingValue Value="Tool.Id" Name="ToolId">
+                @ChildContent?.Invoke(Tool)
+            </CascadingValue>
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment<Tool>? TitleTemplate { get; set; }
+    [Parameter] public RenderFragment<Tool>? TitleExtraTemplate { get; set; }
+    [Parameter] public RenderFragment<Tool>? ChildContent { get; set; }
+
+    Tool Tool { get; set; } = new();
+    Guid _id;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_id != Id)
+        {
+            _id = Id;
+
+            if (_id != Guid.Empty)
+                Tool = await ToolService
+                    .Include(r => r.Games)
+                    .Include(r => r.CreatedBy)
+                    .Include(r => r.UpdatedBy)
+                    .GetAsync(_id);
+            else
+                Tool = new();
+
+            if (Tool == null)
+                NavigationManager.NavigateTo("/Tools");
+        }
+    }
+
+    public async Task Save()
+    {
+        try
+        {
+            if (_id != Guid.Empty)
+            {
+                await ToolService.UpdateAsync(Tool);
+
+                MessageService.Success("Tool updated!");
+            }
+            else
+            {
+                Tool = await ToolService.AddAsync(Tool);
+
+                NavigationManager.LocationChanged += NotifyToolAdded;
+                NavigationManager.NavigateTo($"/Tools/{Tool.Id}");
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Tool could not be saved!");
+            MessageService.Error("Tool could not be saved!");
+        }
+    }
+    
+    private void NotifyToolAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyToolAdded;
+
+        MessageService.Success("Tool added!");
+    }
+}

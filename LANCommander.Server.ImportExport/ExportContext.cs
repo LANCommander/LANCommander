@@ -17,9 +17,11 @@ public class ExportContext(
     GameExporter gameExporter,
     RedistributableExporter redistributableExporter,
     ServerExporter serverExporter,
+    ToolExporter toolExporter,
     GameService gameService,
     RedistributableService redistributableService,
     ServerService serverService,
+    ToolService toolService,
     ActionExporter actionExporter,
     ArchiveExporter archiveExporter,
     CollectionExporter collectionExporter,
@@ -50,6 +52,7 @@ public class ExportContext(
     public GameExporter Games = gameExporter;
     public RedistributableExporter Redistributables = redistributableExporter;
     public ServerExporter Servers = serverExporter;
+    public ToolExporter Tools = toolExporter;
 
     public ActionExporter Actions = actionExporter;
     public ArchiveExporter Archives = archiveExporter;
@@ -88,6 +91,7 @@ public class ExportContext(
         Games.UseContext(context);
         Redistributables.UseContext(context);
         Servers.UseContext(context);
+        Tools.UseContext(context);
         
         Actions.UseContext(context);
         Archives.UseContext(context);
@@ -121,6 +125,9 @@ public class ExportContext(
         if (DataRecord is Data.Models.Server server)
             return server.Name;
 
+        if (DataRecord is Data.Models.Tool tool)
+            return tool.Name;
+
         return string.Empty;
     }
     
@@ -139,6 +146,9 @@ public class ExportContext(
             
             case ImportExportRecordType.Server:
                 return await InitializeServerExportAsync(recordId);
+            
+            case ImportExportRecordType.Tool:
+                return await InitializeToolExportAsync(recordId);
             
             default:
                 throw new InvalidOperationException("Unknown record type");
@@ -169,7 +179,8 @@ public class ExportContext(
                 .Include(g => g.Redistributables)
                 .Include(g => g.Scripts)
                 .Include(g => g.SavePaths)
-                .Include(g => g.Tags);
+                .Include(g => g.Tags)
+                .Include(g => g.Tools);
         }).GetAsync(gameId);
         
         var gameManifest = mapper.Map<SDK.Models.Manifest.Game>(game);
@@ -250,6 +261,29 @@ public class ExportContext(
         
         return exportItemInfo;
     }
+    
+    private async Task<IEnumerable<ExportItemInfo>> InitializeToolExportAsync(Guid toolId)
+    {
+        var tool = await toolService
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Query(q =>
+            {
+                return q
+                    .Include(t => t.Archives)
+                    .Include(t => t.Scripts);
+            })
+            .GetAsync(toolId);
+        
+        Manifest = mapper.Map<SDK.Models.Manifest.Tool>(tool);
+        
+        var exportItemInfo = new List<ExportItemInfo>();
+        
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(tool.Archives, Archives).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(tool.Scripts, Scripts).ToListAsync());
+
+        return exportItemInfo;
+    }
     #endregion
 
     #region Prepare Export Queue
@@ -265,6 +299,9 @@ public class ExportContext(
         
         if (DataRecord is Data.Models.Server server)
             await PrepareServerExportQueueAsync(server);
+
+        if (DataRecord is Data.Models.Tool tool)
+            await PrepareToolExportQueueAsync(tool);
     }
     
     public async Task PrepareGameExportQueueAsync(Game game)
@@ -301,6 +338,12 @@ public class ExportContext(
         await AddToExportQueueAsync(ImportExportRecordType.ServerConsole, server.ServerConsoles);
         await AddToExportQueueAsync(ImportExportRecordType.ServerHttpPath, server.HttpPaths);
     }
+    
+    public async Task PrepareToolExportQueueAsync(Data.Models.Tool tool)
+    {
+        await AddToExportQueueAsync(ImportExportRecordType.Archive, tool.Archives);
+        await AddToExportQueueAsync(ImportExportRecordType.Script, tool.Scripts);
+    }
     #endregion
     
     private async Task AddToExportQueueAsync<TEntity>(ImportExportRecordType type, IEnumerable<TEntity> records) where TEntity : Data.Models.BaseModel
@@ -318,6 +361,7 @@ public class ExportContext(
         SDK.Models.Manifest.Game gameManifest = null;
         SDK.Models.Manifest.Redistributable redistributableManifest = null;
         SDK.Models.Manifest.Server serverManifest = null;
+        SDK.Models.Manifest.Tool toolManifest = null;
         
         Archive = new ZipArchive(stream, ZipArchiveMode.Create);
         
@@ -327,6 +371,8 @@ public class ExportContext(
             redistributableManifest = await ExportRedistributableQueueAsync(redistributable);
         else if (DataRecord is Data.Models.Server server)
             serverManifest = await ExportServerQueueAsync(server);
+        else if (DataRecord is Data.Models.Tool tool)
+            toolManifest = await ExportToolQueueAsync(tool);
         
         using (var ms = new MemoryStream())
         using (var writer = new StreamWriter(ms))
@@ -337,6 +383,8 @@ public class ExportContext(
                 await writer.WriteAsync(ManifestHelper.Serialize(redistributableManifest));
             else if (serverManifest != null)
                 await writer.WriteAsync(ManifestHelper.Serialize(serverManifest));
+            else if (toolManifest != null)
+                await writer.WriteAsync(ManifestHelper.Serialize(toolManifest));
             
             await writer.FlushAsync();
 
@@ -432,6 +480,23 @@ public class ExportContext(
                 manifest.ServerConsoles.Add(await ExportRecordAsync(queueItem, ServerConsoles));
             else if (queueItem.Type == ImportExportRecordType.ServerHttpPath)
                 await ExportRecordAsync(queueItem, ServerHttpPaths);
+        }
+
+        return manifest;
+    }
+    
+    public async Task<SDK.Models.Manifest.Tool> ExportToolQueueAsync(Data.Models.Tool tool)
+    {
+        var manifest = await Tools.ExportAsync(tool.Id);
+        
+        manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        
+        foreach (var queueItem in _queue)
+        {
+            if (queueItem.Type == ImportExportRecordType.Archive)
+                manifest.Archives.Add(await ExportRecordAsync(queueItem, Archives));
+            else if (queueItem.Type == ImportExportRecordType.Script)
+                manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
         }
 
         return manifest;

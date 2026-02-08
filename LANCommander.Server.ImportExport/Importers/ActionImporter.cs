@@ -12,8 +12,10 @@ public class ActionImporter(
     ActionService actionService,
     GameService gameService,
     ServerService serverService,
+    ToolService toolService,
     GameImporter gameImporter,
-    ServerImporter serverImporter) : BaseImporter<Action>
+    ServerImporter serverImporter,
+    ToolImporter toolImporter) : BaseImporter<Action>
 {
     public override string GetKey(Action record)
         => $"{nameof(Action)}/{record.Name}";
@@ -48,6 +50,9 @@ public class ActionImporter(
             else if (ImportContext.Manifest is SDK.Models.Manifest.Server server &&
                      !ImportContext.InQueue(server, serverImporter))
                 action.Server = await serverService.GetAsync(server.Id);
+            else if (ImportContext.Manifest is Tool tool &&
+                     !ImportContext.InQueue(tool, toolImporter))
+                action.Tool = await toolService.GetAsync(tool.Id);
             else
                 return false;
 
@@ -71,6 +76,8 @@ public class ActionImporter(
             existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name && a.GameId == game.Id);
         else if (ImportContext.Manifest is SDK.Models.Manifest.Server server)
             existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name && a.ServerId == server.Id);
+        else if (ImportContext.Manifest is Tool tool)
+            existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name && a.ToolId == tool.Id);
         else
             return false;
 

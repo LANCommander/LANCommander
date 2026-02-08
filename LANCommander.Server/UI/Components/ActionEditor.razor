@@ -44,12 +44,14 @@
 @code {
     [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
     [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
 
     Archive? _archive;
     Game? _game;
     Server? _server;
+    Tool? _tool;
     
-    ObservableCollection<Action> _sortedActions  = new();
+    ObservableCollection<Action> _sortedActions = new();
 
     protected override async Task OnInitializedAsync() => await LoadActions();
 
@@ -63,6 +65,12 @@
         
         if (ServerId.HasValue)
             _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ServerId == ServerId.Value));
+
+        if (ToolId.HasValue)
+        {
+            _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ToolId == ToolId.Value));
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == ToolId);
+        }
     }
 
     void AddAction()
@@ -78,6 +86,9 @@
         
         if (ServerId.HasValue)
             newAction.ServerId = ServerId;
+
+        if (ToolId.HasValue)
+            newAction.ToolId = ToolId;
 
         _sortedActions.Add(newAction);
 
@@ -123,6 +134,9 @@
 
         if (ServerId.HasValue && _server != null)
             _server.Actions = _sortedActions;
+
+        if (ToolId.HasValue && _tool != null)
+            _tool.Actions = _sortedActions;
     }
 
     public async Task Save()

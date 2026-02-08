@@ -1,0 +1,20 @@
+﻿@page "/Tools/{id:guid}/Scripts"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Tools.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject NavigationManager NavigationManager
+
+<ToolEditView Id="Id">
+    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+</ToolEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Panel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            NavigationManager.NavigateTo($"/Tools", true);
+    }
+}

@@ -18,8 +18,10 @@ public class ArchiveImporter(
     ArchiveService archiveService,
     GameService gameService,
     RedistributableService redistributableService,
+    ToolService toolService,
     GameImporter gameImporter,
-    RedistributableImporter redistributableImporter) : BaseImporter<Archive>
+    RedistributableImporter redistributableImporter,
+    ToolImporter toolImporter) : BaseImporter<Archive>
 {
     public override string GetKey(Archive record)
         => $"{nameof(Archive)}/{record.Id}";
@@ -33,7 +35,7 @@ public class ArchiveImporter(
             Record = record,
         };
 
-    public override async Task<bool> CanImportAsync(Archive record) => ImportContext.Manifest is Game || ImportContext.Manifest is Redistributable;
+    public override async Task<bool> CanImportAsync(Archive record) => ImportContext.Manifest is Game || ImportContext.Manifest is Redistributable || ImportContext.Manifest is Tool;
 
     public override async Task<bool> AddAsync(Archive record)
     {
@@ -78,6 +80,13 @@ public class ArchiveImporter(
                     return false;
                 
                 newArchive.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
+            else if (ImportContext.Manifest is Tool tool)
+            {
+                if (ImportContext.InQueue(tool, toolImporter))
+                    return false;
+                
+                newArchive.Tool = await toolService.GetAsync(tool.Id);
             }
                 
             else
@@ -132,6 +141,13 @@ public class ArchiveImporter(
                     return false;
                 
                 existing.Redistributable = await redistributableService.GetAsync(redistributable.Id);
+            }
+            else if (ImportContext.Manifest is Tool tool)
+            {
+                if (ImportContext.InQueue(tool, toolImporter))
+                    return false;
+                
+                existing.Tool = await toolService.GetAsync(tool.Id);
             }
             
             await archiveService.UpdateAsync(existing);

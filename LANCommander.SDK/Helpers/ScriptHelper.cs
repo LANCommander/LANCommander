@@ -81,6 +81,26 @@ namespace LANCommander.SDK.Helpers
                 await File.WriteAllTextAsync(fileName, scriptContents);
             }
         }
+        
+        public static async Task SaveScriptAsync(Game game, Tool tool, ScriptType type)
+        {
+            var scriptContents = GetScriptContents(tool, type);
+
+            if (!String.IsNullOrWhiteSpace(scriptContents))
+            {
+                var fileName = GetScriptFilePath(game.InstallDirectory, tool.Id, type);
+
+                if (!Directory.Exists(Path.GetDirectoryName(fileName)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
+                
+                if (File.Exists(fileName))
+                    File.Delete(fileName);
+                
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, fileName);
+
+                await File.WriteAllTextAsync(fileName, scriptContents);
+            }
+        }
 
         public static string GetScriptContents(Game game, ScriptType type)
         {
@@ -98,6 +118,19 @@ namespace LANCommander.SDK.Helpers
         public static string GetScriptContents(Redistributable redistributable, ScriptType type)
         {
             var script = redistributable.Scripts.FirstOrDefault(s => s.Type == type);
+
+            if (script == null)
+                return String.Empty;
+            
+            if (script.RequiresAdmin)
+                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+
+            return script.Contents;
+        }
+        
+        public static string GetScriptContents(Tool tool, ScriptType type)
+        {
+            var script = tool.Scripts.FirstOrDefault(s => s.Type == type);
 
             if (script == null)
                 return String.Empty;

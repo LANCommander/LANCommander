@@ -47,6 +47,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<PlaySessionService>();
         services.AddScoped<MediaService>();
         services.AddScoped<RedistributableService>();
+        services.AddScoped<ToolService>();
         services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
         services.AddScoped<UpdateService>();
         services.AddScoped<IssueService>();

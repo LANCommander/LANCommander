@@ -1,0 +1,129 @@
+﻿@page "/Tools/{id:guid}"
+@page "/Tools/{id:guid}/General"
+@page "/Tools/Add"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Tools.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject GameService GameService
+@inject ToolService ToolService
+@inject ModalService ModalService
+
+<ToolEditView @ref="EditView" Id="Id">
+    <TitleTemplate>
+        @if (Id == Guid.Empty)
+        {
+            <Text>Add New Tool</Text>
+        }
+        else
+        {
+            <Text>General</Text>
+        }
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
+            {
+                <Button OnClick="Package" Loading="_packaging">Package</Button>
+            }
+            
+            @if (context != null && context.Id != Guid.Empty)
+            {
+                <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
+            }
+
+            <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    <ChildContent>
+        @if (context != null)
+        {
+            <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+                <FormItem Label="Name">
+                    <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
+                </FormItem>
+
+                <FormItem Label="Notes">
+                    <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                </FormItem>
+
+                <FormItem Label="Description">
+                    <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                </FormItem>
+
+                <FormItem Label="Games">
+                    <TransferInput
+                        Style="height: 350px"
+                        Searchable
+                        LeftTitle="Available"
+                        RightTitle="Selected"
+                        DataSource="Games"
+                        TitleSelector="r => r.Title"
+                        @bind-Values="context.Games" />
+                </FormItem>
+            </Form>
+        }
+    </ChildContent>
+</ToolEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    ICollection<Game> Games;
+    ToolEditView EditView;
+
+    bool _packaging;
+    bool _openingExportDialog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Games = await GameService
+            .AsNoTracking()
+            .Include(g => g.Media)
+            .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+
+        Games = Games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+    }
+
+    private async Task OpenExportDialog()
+    {
+        _openingExportDialog = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
+        var tool = await ToolService.GetAsync(Id);
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Export {tool.Name}",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Add",
+            Footer = null,
+        };
+
+        var options = new ExportDialogOptions()
+        {
+            RecordId = Id,
+            RecordType = ImportExportRecordType.Tool
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+        
+        _openingExportDialog = false;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+    }
+    
+    private async Task Package()
+    {
+        _packaging = true;
+
+        await ToolService.PackageAsync(Id);
+
+        _packaging = false;
+    }
+}

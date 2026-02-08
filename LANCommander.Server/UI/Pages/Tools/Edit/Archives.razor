@@ -1,0 +1,11 @@
+﻿@page "/Tools/{id:guid}/Archives"
+@using LANCommander.Server.UI.Pages.Tools.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<ToolEditView Id="Id" Title="Archives">
+    <ArchiveEditor />
+</ToolEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

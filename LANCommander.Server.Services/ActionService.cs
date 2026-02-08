@@ -22,6 +22,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Server);
+                await context.UpdateRelationshipAsync(a => a.Tool);
             });
         }
 
@@ -31,6 +32,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Server);
+                await context.UpdateRelationshipAsync(a => a.Tool);
             });
         }
     }

@@ -1,0 +1,118 @@
+﻿@page "/Tools"
+@using LANCommander.Server.UI.Pages.Tools.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ToolService ToolService
+@inject ModalService ModalService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<PageHeader Title="Tools" Subtitle="@Total.ToString()" />
+
+<DataTable
+    @ref="Table"
+    TItem="Tool"
+    Size="TableSize.Small"
+    @bind-Total="Total"
+    Responsive
+    ColumnPicker
+    Searchable
+    SearchProperty="r => r.Name">
+    <RightToolbar>
+        <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
+        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Tool</Button>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="r => r.Games.Count" Title="Games" Sortable Include="Games" />
+        <BoundDataColumn Property="r => r.CreatedOn" Title="Created On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
+        <BoundDataColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+        <BoundDataColumn Property="r => r.UpdatedOn" Title="Updated On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
+        <BoundDataColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+        <DataActions TData="string">
+            <a href="@($"/Tools/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this tool?">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+
+    <PaginationTemplate>
+        <Pagination
+            Total="context.Total"
+            PageSize="context.PageSize"
+            Current="context.PageIndex"
+            DefaultPageSize="25"
+            PageSizeOptions="new [] { 25, 50, 100, 200 }"
+            ShowSizeChanger
+            OnChange="context.HandlePageChange" />
+    </PaginationTemplate>
+</DataTable>
+
+ @code {
+    bool Loading = true;
+
+    int Total;
+
+    DataTable<Tool> Table;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Loading = false;
+    }
+
+    void Add()
+    {
+        NavigationManager.NavigateTo("/Tools/Add");
+    }
+
+    async Task Delete(Tool tool)
+    {
+        try
+        {
+            Loading = true;
+        
+            await ToolService.DeleteAsync(tool);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete the tool!");
+            Logger.LogError(ex, "Could not delete the tool!");
+        }
+        finally
+        {
+            Loading = false;
+        }
+
+        await Reload();
+    }
+
+    async Task OpenImportDialog()
+    {
+        var options = new ImportDialogOptions
+        {
+            Hint = "Only LCX files are supported for importing tools"
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Import Tool",
+            DestroyOnClose = true,
+            MaskClosable = false,
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        modalRef.OnOk = modalRef.OnCancel = Reload;
+    }
+
+    async Task Reload()
+    {
+        Table.ReloadData();
+    }
+}

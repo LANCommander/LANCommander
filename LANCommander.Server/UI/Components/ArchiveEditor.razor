@@ -11,7 +11,7 @@
     TItem="Archive"
     HidePagination
     Responsive
-    Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId)">
+    Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId) || (ToolId != Guid.Empty && a.ToolId == ToolId)">
     <RightToolbar>
         <Button OnClick="RecalculateFileSizes" Type="@ButtonType.Default">Recalculate File Sizes</Button>
         <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
@@ -59,6 +59,7 @@
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
     [CascadingParameter(Name = "RedistributableId")] public Guid RedistributableId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid ToolId { get; set; }
 
     DataTable<Archive> _table;
     ArchiveUploader _uploader;

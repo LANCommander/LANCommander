@@ -48,6 +48,7 @@ namespace LANCommander.Server.Data.Models
         public ICollection<SavePath>? SavePaths { get; set; }
         public ICollection<Server>? Servers { get; set; }
         public ICollection<Redistributable>? Redistributables { get; set; }
+        public ICollection<Tool>? Tools { get; set; }
         public ICollection<Media>? Media { get; set; }
 
         public string? ValidKeyRegex { get; set; }

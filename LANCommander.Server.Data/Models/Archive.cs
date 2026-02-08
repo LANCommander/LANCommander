@@ -30,6 +30,12 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(RedistributableId))]
         [InverseProperty("Archives")]
         public Redistributable? Redistributable { get; set; }
+        
+        public Guid? ToolId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(ToolId))]
+        [InverseProperty("Archives")]
+        public Tool? Tool { get; set; }
 
         [Display(Name = "Last Version")]
         public Archive? LastVersion { get; set; }

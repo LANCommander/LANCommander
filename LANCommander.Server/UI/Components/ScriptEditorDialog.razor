@@ -3,6 +3,7 @@
 @inject ScriptService ScriptService
 @inject ArchiveService ArchiveService
 @inject ServerService ServerService
+@inject ToolService ToolService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
@@ -134,6 +135,15 @@
             var server = await ServerService.GetAsync(Options.ServerId.Value);
 
             _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
+        }
+        else if (Options.ToolId != Guid.Empty)
+        {
+            Script = new Script()
+            {
+                ToolId = Options.ToolId
+            };
+
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == Options.ToolId);
         }
         
         Snippets = ScriptService.GetSnippets();

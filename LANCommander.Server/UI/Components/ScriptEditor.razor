@@ -48,10 +48,11 @@
     [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
     [CascadingParameter(Name = "RedistributableId")] public Guid? RedistributableId { get; set; }
     [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
     
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
-    Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
+    Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty && s.ToolId == Guid.Empty;
 
     DataTable<Script> Table;
 
@@ -67,13 +68,18 @@
         
         if (ServerId.HasValue)
             return s => s.ServerId == ServerId;
+
+        if (ToolId.HasValue)
+            return s => s.ToolId == ToolId;
         
         return s => 
             (s.GameId == null || s.GameId == Guid.Empty)
             &&
             (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
             &&
-            (s.ServerId == null || s.ServerId == Guid.Empty);
+            (s.ServerId == null || s.ServerId == Guid.Empty)
+            &&
+            (s.ToolId == null || s.ToolId == Guid.Empty);
     }
 
     async void Edit(Guid? scriptId = null)
@@ -94,6 +100,7 @@
             GameId = GameId,
             RedistributableId = RedistributableId,
             ServerId = ServerId,
+            ToolId = ToolId,
         };
 
         var modalRef = await ModalService.CreateModalAsync<ScriptEditorDialog, ScriptEditorOptions, Script>(modalOptions, options);

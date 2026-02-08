@@ -3,6 +3,7 @@ using System;
 using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260208071606_AddTools")]
+    partial class AddTools
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -201,9 +204,6 @@ namespace LANCommander.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid?>("ToolId")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
 
@@ -220,8 +220,6 @@ namespace LANCommander.Migrations
                     b.HasIndex("GameId");
 
                     b.HasIndex("ServerId");
-
-                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -2056,11 +2054,6 @@ namespace LANCommander.Migrations
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
-                        .WithMany("Actions")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2071,8 +2064,6 @@ namespace LANCommander.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Server");
-
-                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -3099,8 +3090,6 @@ namespace LANCommander.Migrations
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
                 {
-                    b.Navigation("Actions");
-
                     b.Navigation("Archives");
 
                     b.Navigation("Pages");

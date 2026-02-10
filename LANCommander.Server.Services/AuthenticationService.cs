@@ -42,7 +42,7 @@ namespace LANCommander.Server.Services
 
                     foreach (var script in scripts)
                     {
-                        await scriptClient.RunUserLoginScript(script, user);
+                        await scriptClient.Authentication_RunUserLoginScript(script, user);
                     }
                 }
             }
@@ -194,7 +194,7 @@ namespace LANCommander.Server.Services
 
                             foreach (var script in scripts)
                             {
-                                await scriptClient.RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
+                                await scriptClient.Authentication_RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
                             }
                         }
                     }

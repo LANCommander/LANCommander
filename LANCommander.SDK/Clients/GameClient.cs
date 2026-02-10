@@ -719,7 +719,7 @@ namespace LANCommander.SDK.Services
             }
             #endregion
 
-            await scriptClient.RunUninstallScriptAsync(installDirectory, gameId);
+            await scriptClient.Game_RunUninstallScriptAsync(installDirectory, gameId);
 
             #region Cleanup Install Directory
             var metadataPath = GetMetadataDirectoryPath(installDirectory, gameId);
@@ -954,9 +954,9 @@ namespace LANCommander.SDK.Services
                 {
                     var allocatedKey = await GetAllocatedKeyAsync(game.Id);
 
-                    await scriptClient.RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await scriptClient.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
-                    await scriptClient.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await profileClient.GetAliasAsync());
+                    await scriptClient.Game_RunInstallScriptAsync(game.InstallDirectory, game.Id);
+                    await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+                    await scriptClient.Game_RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await profileClient.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {
@@ -1337,13 +1337,13 @@ namespace LANCommander.SDK.Services
 
                         if (currentGamePlayerAlias != alias)
                         {
-                            await scriptClient.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+                            await scriptClient.Game_RunNameChangeScriptAsync(installDirectory, gameId, alias);
 
                             if (manifest.Redistributables != null)
                             {
                                 foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                                 {
-                                    await scriptClient.RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    await scriptClient.Redistributable_RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
                                 }
                             }
                         }
@@ -1356,7 +1356,7 @@ namespace LANCommander.SDK.Services
                         var newKey = await GetAllocatedKeyAsync(manifest.Id);
 
                         if (currentGameKey != newKey)
-                            await scriptClient.RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                            await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
                     }
                     #endregion
 
@@ -1378,13 +1378,13 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Run Before Start Script
-                    await scriptClient.RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+                    await scriptClient.Game_RunBeforeStartScriptAsync(installDirectory, manifest.Id);
                     
                     if (manifest.Redistributables != null)
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await scriptClient.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await scriptClient.Redistributable_RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion
@@ -1412,13 +1412,13 @@ namespace LANCommander.SDK.Services
                 foreach (var manifest in manifests)
                 {
                     #region Run After Stop Script
-                    await scriptClient.RunAfterStopScriptAsync(installDirectory, gameId);
+                    await scriptClient.Game_RunAfterStopScriptAsync(installDirectory, gameId);
                     
                     if (manifest.Redistributables != null)
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await scriptClient.RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await scriptClient.Redistributable_RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion

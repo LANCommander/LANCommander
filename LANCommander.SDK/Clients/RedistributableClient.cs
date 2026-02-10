@@ -92,7 +92,7 @@ namespace LANCommander.SDK.Services
                 }
 
                 var installed =
-                    await scriptClient.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                    await scriptClient.Redistributable_RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
 
                 _logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
@@ -154,8 +154,8 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    await scriptClient.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
-                    await scriptClient.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await profileClient.GetAliasAsync());
+                    await scriptClient.Redistributable_RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                    await scriptClient.Redistributable_RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await profileClient.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {

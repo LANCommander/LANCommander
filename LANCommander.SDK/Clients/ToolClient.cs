@@ -154,8 +154,8 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    await scriptClient.RunInstallScriptAsync(game.InstallDirectory, game.Id, tool.Id);
-                    await scriptClient.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, tool.Id, await profileClient.GetAliasAsync());
+                    await scriptClient.Redistributable_RunInstallScriptAsync(installDirectory, game.Id, tool.Id);
+                    await scriptClient.Redistributable_RunNameChangeScriptAsync(game.InstallDirectory, game.Id, tool.Id, await profileClient.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {

@@ -60,27 +60,27 @@ namespace LANCommander.Launcher.Services
             switch (options.Type)
             {
                 case SDK.Enums.ScriptType.Install:
-                    await scriptClient.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.Game_RunInstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.Uninstall:
-                    await scriptClient.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.Game_RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.BeforeStart:
-                    await scriptClient.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.Game_RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.AfterStop:
-                    await scriptClient.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
+                    await scriptClient.Game_RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
                     break;
 
                 case SDK.Enums.ScriptType.NameChange:
-                    await scriptClient.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.Settings.DEFAULT_GAME_USERNAME);
+                    await scriptClient.Game_RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.Settings.DEFAULT_GAME_USERNAME);
                     break;
 
                 case SDK.Enums.ScriptType.KeyChange:
-                    await scriptClient.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
+                    await scriptClient.Game_RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
                     break;
             }
         }

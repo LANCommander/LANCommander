@@ -87,7 +87,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in redistributable.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable));
+                    var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable));
 
                     if (!Directory.Exists(package.Path))
                     {

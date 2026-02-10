@@ -87,7 +87,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in tool.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
+                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
 
                     if (!Directory.Exists(package.Path))
                     {

@@ -282,7 +282,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await ScriptClient.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await ScriptClient.Game_RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
@@ -292,7 +292,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await ScriptClient.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
+            await ScriptClient.Game_RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
@@ -303,7 +303,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await ScriptClient.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
+            await ScriptClient.Game_RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
         }
     }
 
@@ -315,7 +315,7 @@ else
         {
             var key = await GameClient.GetAllocatedKeyAsync(manifest.Id);
 
-            await ScriptClient.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
+            await ScriptClient.Game_RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }
     }
 

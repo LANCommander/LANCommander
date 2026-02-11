@@ -43,6 +43,7 @@ namespace LANCommander.Launcher.Data.Models
         public virtual ICollection<Company>? Developers { get; set; } = new List<Company>();
         public virtual ICollection<Platform>? Platforms { get; set; } = new List<Platform>();
         public virtual ICollection<Redistributable>? Redistributables { get; set; } = new List<Redistributable>();
+        public virtual ICollection<Tool>? Tools { get; set; } = new List<Tool>();
         public virtual ICollection<Media>? Media { get; set; } = new List<Media>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();

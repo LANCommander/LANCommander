@@ -28,6 +28,7 @@ public class ImportContext
     private readonly PlatformImporter _platforms;
     private readonly PublisherImporter _publishers;
     private readonly TagImporter _tags;
+    private readonly ToolImporter _tools;
 
     private readonly ILogger<ImportContext> _logger;
 
@@ -60,6 +61,11 @@ public class ImportContext
         await AddAsync(game, game.Publishers, _publishers);
         await AddAsync(game, game.Tags, _tags);
         await AddAsync(game, game, _games);
+    }
+
+    public async Task AddAsync(Tool tool)
+    {
+        await AddAsync(tool, tool, _tools);
     }
 
     private async Task AddAsync<TRecord>(BaseManifest manifest, IEnumerable<TRecord> records, BaseImporter<TRecord> importer)

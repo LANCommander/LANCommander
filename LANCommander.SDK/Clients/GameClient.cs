@@ -71,7 +71,8 @@ namespace LANCommander.SDK.Services
         SaveClient saveClient,
         ScriptClient scriptClient,
         ProfileClient profileClient,
-        LobbyClient lobbyClient)
+        LobbyClient lobbyClient,
+        ToolClient toolClient)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -234,6 +235,16 @@ namespace LANCommander.SDK.Services
                 .UseVersioning()
                 .UseRoute($"/api/Games/{id}/Addons")
                 .GetAsync<IEnumerable<Game>>();
+        }
+
+        public async Task<IEnumerable<Tool>> GetToolsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Tools")
+                .GetAsync<IEnumerable<Tool>>();
         }
 
         public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)

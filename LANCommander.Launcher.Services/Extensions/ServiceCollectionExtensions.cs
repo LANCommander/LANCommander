@@ -58,6 +58,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<PlaySessionService>();
             services.AddScoped<ProfileService>();
             services.AddScoped<RedistributableService>();
+            services.AddScoped<ToolService>();
             services.AddScoped<SaveService>();
             services.AddScoped<TagService>();
             services.AddScoped<UpdateService>();

@@ -82,23 +82,23 @@ namespace LANCommander.SDK.Helpers
             }
         }
         
-        public static async Task SaveScriptAsync(Game game, Tool tool, ScriptType type)
+        public static async Task SaveScriptAsync(Tool tool, ScriptType type, string installDirectory)
         {
             var scriptContents = GetScriptContents(tool, type);
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var fileName = GetScriptFilePath(game.InstallDirectory, tool.Id, type);
+                var filename = GetScriptFilePath(installDirectory, tool.Id, type);
 
-                if (!Directory.Exists(Path.GetDirectoryName(fileName)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
-                
-                if (File.Exists(fileName))
-                    File.Delete(fileName);
-                
-                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, fileName);
+                if (!Directory.Exists(Path.GetDirectoryName(filename)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(filename));
 
-                await File.WriteAllTextAsync(fileName, scriptContents);
+                if (File.Exists(filename))
+                    File.Delete(filename);
+
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
+
+                await File.WriteAllTextAsync(filename, scriptContents);
             }
         }
 

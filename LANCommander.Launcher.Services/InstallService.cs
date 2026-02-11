@@ -13,8 +13,11 @@ namespace LANCommander.Launcher.Services
     public class InstallService : BaseService
     {
         private readonly GameService _gameService;
+        private readonly ToolService _toolService;
+        private readonly ImportService _importService;
         private readonly GameClient _gameClient;
         private readonly RedistributableClient _redistributableClient;
+        private readonly ToolClient _toolClient;
         private readonly MediaClient _mediaClient;
 
         private Stopwatch Stopwatch { get; set; }
@@ -37,13 +40,19 @@ namespace LANCommander.Launcher.Services
         public InstallService(
             ILogger<InstallService> logger,
             GameService gameService,
+            ToolService toolService,
+            ImportService importService,
             GameClient gameClient,
             RedistributableClient redistributableClient,
+            ToolClient toolClient,
             MediaClient mediaClient) : base(logger)
         {
             _gameService = gameService;
+            _toolService = toolService;
+            _importService = importService;
             _gameClient = gameClient;
             _redistributableClient = redistributableClient;
+            _toolClient = toolClient;
             _mediaClient = mediaClient;
             
             Stopwatch = new Stopwatch();
@@ -154,6 +163,54 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
             }
         }
+        
+        public async Task Add(SDK.Models.Tool tool, string installDirectory = "")
+        {
+            var toolInfo = await _toolClient.GetAsync(tool.Id);
+            
+            // TODO: Throw exception (and gracefully handle) when gameInfo == null
+            // Game probably couldn't be found or deserialized from server
+
+            Logger?.LogTrace("Adding game {ToolName} to the queue", toolInfo.Name);
+
+            try
+            {
+                var toolCompletedQueueItems = Queue.Where(i => i.Status == InstallStatus.Complete && i.Id == tool.Id).ToList();
+
+                foreach (var queueItem in toolCompletedQueueItems)
+                {
+                    Queue.Remove(queueItem);
+                }
+
+                OnQueueChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            if (!Queue.Any(i => i.Id == tool.Id && i.Status == InstallStatus.Queued))
+            {
+                var queueItem = new InstallQueueTool(toolInfo);
+
+                queueItem.InstallDirectory = installDirectory;
+
+                if (Queue.Any(i => i.State))
+                    Queue.Add(queueItem);
+                else
+                {
+                    Logger?.LogTrace("Download queue is empty, starting the tool download immediately");
+
+                    queueItem.Status = InstallStatus.Starting;
+
+                    Queue.Add(queueItem);
+
+                    await Next();
+                }
+
+                OnQueueChanged?.Invoke();
+            }
+        }
 
         public void Remove(Guid id)
         {
@@ -197,18 +254,27 @@ namespace LANCommander.Launcher.Services
             if (currentItem == null)
                 return;
 
+            if (currentItem is InstallQueueGame gameQueueItem)
+                await Next(gameQueueItem);
+
+            if (currentItem is InstallQueueTool toolQueueItem)
+                await Next(toolQueueItem);
+        }
+
+        private async Task Next(InstallQueueGame queueItem)
+        {
             Game localGame = null;
             SDK.Models.Game remoteGame = null;
 
             try
             {
-                localGame = await _gameService.GetAsync(currentItem.Id);
-                remoteGame = await _gameClient.GetAsync(currentItem.Id);
+                localGame = await _gameService.GetAsync(queueItem.Id);
+                remoteGame = await _gameClient.GetAsync(queueItem.Id);
 
                 if (localGame == null)
                 {
                     Logger?.LogError("Game does not exist in local database, skipping");
-                    Remove(currentItem);
+                    Remove(queueItem);
                     OnQueueChanged?.Invoke();
                     return;
                 }
@@ -217,7 +283,7 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogError("Game info could not be retrieved from the server");
 
-                    currentItem.Status = InstallStatus.Failed;
+                    queueItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
                     return;
                 }
@@ -228,31 +294,31 @@ namespace LANCommander.Launcher.Services
                     await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
 
                     // Probably doing a modification of some sort
-                    if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
+                    if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
                     {
                         var allAddons = remoteGame.DependentGames.ToArray();
-                        var removeAddons = allAddons.Except(currentItem.AddonIds ?? []).ToArray();
-                        var addAddons = allAddons.Intersect(currentItem.AddonIds ?? []).ToArray();
+                        var removeAddons = allAddons.Except(queueItem.AddonIds ?? []).ToArray();
+                        var addAddons = allAddons.Intersect(queueItem.AddonIds ?? []).ToArray();
 
                         var uninstallResult = await _gameClient.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
                         var installResult = await _gameClient.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
                         await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
 
-                        UpdateGameState(currentItem, localGame, localGame.InstallDirectory);
+                        UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
                         await _gameService.UpdateAsync(localGame);
                         
-                        currentItem.Status = InstallStatus.Complete;
+                        queueItem.Status = InstallStatus.Complete;
                         OnQueueChanged?.Invoke();
                         OnInstallComplete?.Invoke(localGame);
                     }
                     else
                     {
-                        await Move(currentItem, localGame, remoteGame);
+                        await Move(queueItem, localGame, remoteGame);
                     }
                 }
                 else
                 {
-                    await Install(currentItem, localGame, remoteGame);
+                    await Install(queueItem, localGame, remoteGame);
                 }
             }
             catch (Exception ex)
@@ -261,7 +327,51 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Install(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)
+        private async Task Next(InstallQueueTool queueItem)
+        {
+            Tool localTool = null;
+            SDK.Models.Tool remoteTool = null;
+
+            try
+            {
+                localTool = await _toolService.GetAsync(queueItem.Id);
+                remoteTool = await _toolClient.GetAsync(queueItem.Id);
+                
+                if (remoteTool == null)
+                {
+                    Logger?.LogError("Tool info could not be retrieved from the server");
+
+                    queueItem.Status = InstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
+                    return;
+                }
+
+                if (localTool == null)
+                {
+                    Logger?.LogError("Tool does not exist in local database, importing");
+                    
+                    await _importService.ImportToolAsync(queueItem.Id);
+
+                    await Next(queueItem);
+
+                    return;
+                }
+
+                if (localTool.Installed)
+                {
+                    // Modify
+                }
+                else
+                {
+                    await Install(queueItem, localTool, remoteTool);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        public async Task Install(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
         {
             using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
             {
@@ -352,7 +462,65 @@ namespace LANCommander.Launcher.Services
             await Next();
         }
 
-        private static void UpdateGameState(IInstallQueueItem currentItem, Game localGame, string installDirectory)
+        public async Task Install(InstallQueueTool currentItem, Tool localTool, SDK.Models.Tool remoteTool)
+        {
+            using (var operation = Logger.BeginOperation("Installing tool {ToolName} ({ToolId})", localTool.Name, localTool.Id))
+            {
+                currentItem.Status = InstallStatus.Downloading;
+                OnQueueChanged?.Invoke();
+
+                try
+                {
+                    var result = await _toolClient.InstallAsync(remoteTool, currentItem.InstallDirectory);
+
+                    UpdateToolState(currentItem, localTool, result.InstallDirectory);
+                }
+                catch (InstallCanceledException ex)
+                {
+                    Logger?.LogError("Install canceled, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (InstallException ex)
+                {
+                    Logger?.LogError(ex, "An error occurred during install, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "An unknown error occurred during install, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+
+                currentItem.CompletedOn = DateTime.Now;
+                currentItem.Status = InstallStatus.Complete;
+                currentItem.Progress = 1;
+                currentItem.BytesDownloaded = currentItem.TotalBytes;
+
+                try
+                {
+                    await _toolService.UpdateAsync(localTool);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred while trying to write changes to the database after install of tool {ToolName} ({ToolId})", localTool.Name, localTool.Id);
+                }
+                
+                OnQueueChanged?.Invoke();
+                
+                Logger?.LogTrace("Install of tool {ToolName} ({ToolId}) complete!", localTool.Name, localTool.Id);
+
+                // OnInstallComplete?.Invoke(localTool);
+
+                operation.Complete();
+            }
+
+            await Next();
+        }
+
+        private static void UpdateGameState(InstallQueueGame currentItem, Game localGame, string installDirectory)
         {
             localGame.InstallDirectory = installDirectory;
             localGame.Installed = true;
@@ -379,6 +547,14 @@ namespace LANCommander.Launcher.Services
                     localAddon.InstalledOn = null;
                 }
             }
+        }
+        
+        private static void UpdateToolState(InstallQueueTool currentItem, Tool localTool, string installDirectory)
+        {
+            localTool.InstallDirectory = installDirectory;
+            localTool.Installed = true;
+            localTool.InstalledVersion = currentItem.Version;
+            localTool.InstalledOn ??= DateTime.Now;
         }
 
         public async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)

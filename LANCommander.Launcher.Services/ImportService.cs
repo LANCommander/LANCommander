@@ -11,6 +11,7 @@ namespace LANCommander.Launcher.Services
         ILogger<ImportService> logger,
         ImportContextFactory importContextFactory,
         GameClient gameClient,
+        ToolClient toolClient,
         LibraryClient libraryClient) : BaseService(logger)
     {
         private ImportProgress _importProgress = new();
@@ -61,6 +62,16 @@ namespace LANCommander.Launcher.Services
             var importContext = importContextFactory.Create();
             
             var manifest = await gameClient.GetManifestAsync(gameId);
+            
+            await importContext.AddAsync(manifest);
+            await importContext.ImportQueueAsync();
+        }
+
+        public async Task ImportToolAsync(Guid toolId)
+        {
+            var importContext = importContextFactory.Create();
+            
+            var manifest = await toolClient.GetManifestAsync(toolId);
             
             await importContext.AddAsync(manifest);
             await importContext.ImportQueueAsync();

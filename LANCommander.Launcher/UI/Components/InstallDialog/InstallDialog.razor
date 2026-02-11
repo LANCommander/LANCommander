@@ -3,6 +3,7 @@
 @namespace LANCommander.Launcher.UI
 @inherits FeedbackComponent<Models.ListItem, string>
 @inject InstallService InstallService
+@inject ToolService ToolService
 @inject LocalizationService LocalizationService
 @inject GameClient GameClient
 @inject ISettingsProvider SettingsProvider
@@ -23,6 +24,13 @@
         <Divider Text="@LocalizationService.GetString("Addons")" />
 
         <CheckboxButtonGroup @bind-Selected="SelectedAddons" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
+    }
+    
+    @if (Tools.Any())
+    {
+        <Divider Text="@LocalizationService.GetString("Tools")" />
+        
+        <CheckboxButtonGroup @bind-Selected="SelectedTools" DataSource="Tools" KeySelector="t => t.Id" LabelSelector="t => t.Name" Direction="SpaceDirection.Vertical" />
     }
 
     @if (SettingsProvider.CurrentValue.Games.InstallDirectories.Length > 1)
@@ -65,7 +73,8 @@
     List<SDK.Models.Game> Addons = new();
     IEnumerable<SDK.Models.Game> SelectedAddons = new List<SDK.Models.Game>();
 
-
+    List<SDK.Models.Tool> Tools = new();
+    IEnumerable<SDK.Models.Tool> SelectedTools = new List<SDK.Models.Tool>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,10 +87,41 @@
             SelectedDirectory = SettingsProvider.CurrentValue.Games.InstallDirectories.First();
 
         RemoteGame = await GameClient.GetAsync(Options.Key);
-        Addons = (await GameClient.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();
+
+        await LoadAddons();
+        await LoadTools();
 
         var localAddons = Game?.DependentGames.Where(g => g.Installed).Select(addon => addon.Id).ToArray() ?? [];
         SelectedAddons = Addons?.Where(addon => localAddons.Contains(addon.Id)).ToList() ?? [];
+
+        var localTools = Game?.Tools.Where(t => t.Installed).Select(tool => tool.Id).ToArray() ?? [];
+        SelectedTools = Tools?.Where(tool => localTools.Contains(tool.Id)).ToList() ?? [];
+    }
+
+    async Task LoadAddons()
+    {
+        try
+        {
+            Addons = (await GameClient.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();
+        }
+        catch (Exception ex)
+        {
+            // TODO: Add logging
+            Addons = [];
+        }
+    }
+
+    async Task LoadTools()
+    {
+        try
+        {
+            Tools = (await GameClient.GetToolsAsync(Options.Key)).OrderByTitle(t => t.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            // TODO: Add logging
+            Tools = [];
+        }
     }
 
     async Task Close()
@@ -93,7 +133,13 @@
     {
         var game = Options.DataItem as Game;
 
-        InstallService.Add(game, SelectedDirectory, SelectedAddons.ToArray());
+        await InstallService.Add(game, SelectedDirectory, SelectedAddons.ToArray());
+
+        foreach (var tool in SelectedTools)
+        {
+            
+            await InstallService.Add(tool, SelectedDirectory);
+        }
 
         await CloseFeedbackAsync();
     }
@@ -121,6 +167,8 @@
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
 
             size += SelectedAddons.Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
+
+            size += SelectedTools.Sum(t => t.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
         }
 
         return size;
@@ -135,6 +183,8 @@
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
 
             size += SelectedAddons.Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
+
+            size += SelectedTools.Sum(t => t.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
         }
 
         return size;

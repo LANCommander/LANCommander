@@ -15,14 +15,14 @@ namespace LANCommander.SDK.Services;
 
 public partial class ScriptClient
 {
-    public async Task<bool> Tool_RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Tool tool)
+    public async Task<bool> Tool_RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Guid toolId)
     {
         bool result = default;
         
         var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-        var toolManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Tool>(installDirectory, tool.Id);
+        var toolManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Tool>(installDirectory, toolId);
         
-        var path = ScriptHelper.GetScriptFilePath(installDirectory, tool.Id, Enums.ScriptType.DetectInstall);
+        var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.DetectInstall);
 
         try
         {
@@ -42,7 +42,7 @@ public partial class ScriptClient
                     {
                         op.Enrich("InstallDirectory", installDirectory)
                             .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, tool.Id))
+                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, toolId))
                             .Enrich("ScriptPath", path)
                             .Enrich("GameTitle", gameManifest.Title)
                             .Enrich("GameId", gameManifest.Id)
@@ -62,7 +62,7 @@ public partial class ScriptClient
                         }
                     }
 
-                    script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, tool.Id)));
+                    script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId)));
                     script.UseFile(path);
                     
                     if (Debug)
@@ -102,14 +102,13 @@ public partial class ScriptClient
         return result;
     }
 
-    public async Task<int> Tool_RunInstallScriptAsync(string installDirectory, Guid gameId, Tool tool)
+    public async Task<int> Tool_RunInstallScriptAsync(string installDirectory, Guid toolId)
     {
         int result = default;
+        
+        var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
 
-        var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-        var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, tool.Id);
-
-        var path = ScriptHelper.GetScriptFilePath(installDirectory, tool.Id, Enums.ScriptType.Install);
+        var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.Install);
         
         try
         {
@@ -120,7 +119,6 @@ public partial class ScriptClient
                     var script = powerShellScriptFactory.Create(Enums.ScriptType.Install);
 
                     script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", gameManifest);
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -129,11 +127,8 @@ public partial class ScriptClient
                     {
                         op
                             .Enrich("InstallDirectory", installDirectory)
-                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, tool.Id))
+                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, toolId))
                             .Enrich("ScriptPath", path)
-                            .Enrich("GameTitle", gameManifest.Title)
-                            .Enrich("GameId", gameManifest.Id)
                             .Enrich("ToolName", toolManifest.Name)
                             .Enrich("ToolId", toolManifest.Id);
                     }
@@ -142,15 +137,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                    {
-                        foreach (var customField in gameManifest.CustomFields)
-                        {
-                            script.AddVariable(customField.Name, customField.Value);
-                        }
-                    }
-                    
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, tool.Id), "Files");
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
 
                     script.UseWorkingDirectory(extractionPath);
                     script.UseFile(path);
@@ -175,41 +162,33 @@ public partial class ScriptClient
         return result;
     }
     
-    public async Task<int> Tool_RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Tool tool)
+    public async Task<int> Tool_RunBeforeStartScriptAsync(string installDirectory, Guid toolId)
     {
         int result = default;
 
         try
         {
-            var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-            var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, tool.Id);
+            var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
             
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, tool.Id, Enums.ScriptType.BeforeStart);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.BeforeStart);
 
             using (var op = logger.BeginOperation("Executing before start script"))
             {
                 if (File.Exists(path))
                 {
                     var script = powerShellScriptFactory.Create(Enums.ScriptType.BeforeStart);
-                    var playerAlias = await GameClient.GetPlayerAliasAsync(installDirectory, gameId);
 
                     script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", gameManifest);
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
-                    script.AddVariable("PlayerAlias", playerAlias);
 
                     try
                     {
                         op
                             .Enrich("InstallDirectory", installDirectory)
-                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, tool.Id))
+                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, toolId))
                             .Enrich("ScriptPath", path)
-                            .Enrich("PlayerAlias", playerAlias)
-                            .Enrich("GameTitle", gameManifest.Title)
-                            .Enrich("GameId", gameManifest.Id)
                             .Enrich("ToolName", toolManifest.Name)
                             .Enrich("ToolId", toolManifest.Id);
                     }
@@ -218,15 +197,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                    {
-                        foreach (var customField in gameManifest.CustomFields)
-                        {
-                            script.AddVariable(customField.Name, customField.Value);
-                        }
-                    }
-                    
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, tool.Id), "Files");
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
 
                     script.UseWorkingDirectory(extractionPath);
                     script.UseFile(path);
@@ -255,16 +226,15 @@ public partial class ScriptClient
         return result;
     }
 
-    public async Task<int> Tool_RunAfterStopScriptAsync(string installDirectory, Guid gameId, Tool tool)
+    public async Task<int> Tool_RunAfterStopScriptAsync(string installDirectory, Guid toolId)
     {
         int result = default;
 
         try
         {
-            var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-            var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, tool.Id);
+            var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
             
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, tool.Id, Enums.ScriptType.AfterStop);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.AfterStop);
 
             using (var op = logger.BeginOperation("Executing after stop script"))
             {
@@ -273,21 +243,16 @@ public partial class ScriptClient
                     var script = powerShellScriptFactory.Create(Enums.ScriptType.AfterStop);
 
                     script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", gameManifest);
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
-                    script.AddVariable("PlayerAlias", await GameClient.GetPlayerAliasAsync(installDirectory, gameId));
 
                     try
                     {
                         op
                             .Enrich("InstallDirectory", installDirectory)
-                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, tool.Id))
+                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, toolId))
                             .Enrich("ScriptPath", path)
-                            .Enrich("GameTitle", gameManifest.Title)
-                            .Enrich("GameId", gameManifest.Id)
                             .Enrich("ToolName", toolManifest.Name)
                             .Enrich("ToolId", toolManifest.Id);
                     }
@@ -296,15 +261,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                    {
-                        foreach (var customField in gameManifest.CustomFields)
-                        {
-                            script.AddVariable(customField.Name, customField.Value);
-                        }
-                    }
-                    
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, tool.Id), "Files");
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
 
                     script.UseWorkingDirectory(extractionPath);
                     script.UseFile(path);

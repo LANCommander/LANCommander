@@ -69,6 +69,12 @@
     LANCommander Launcher v@(UpdateService.GetCurrentVersion().ToString())
 </Flex>
 
+<style>
+    .logo {
+        display: none;
+    }
+</style>
+
 @code {
     Launcher.Settings.Settings _settings;
     List<InstallDirectory> _installDirectories = new();

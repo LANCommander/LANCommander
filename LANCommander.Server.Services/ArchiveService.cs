@@ -74,6 +74,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.Tool);
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
         }
@@ -94,6 +95,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.Tool);
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
         }

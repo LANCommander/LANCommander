@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using AutoMapper;
+using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
@@ -261,11 +262,15 @@ namespace LANCommander.Server.Services
 
         public static async Task<List<Settings.Models.AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
         {
-            var files = Directory.GetFiles(@"Templates/AuthenticationProviders", "*.yml", SearchOption.AllDirectories);
+            var templateDirectory = AppPaths.GetConfigPath("Templates", "AuthenticationProviders");
+
+            if (!Directory.Exists(templateDirectory))
+                return [];
+            
+            var files = Directory.GetFiles(templateDirectory, "*.yml", SearchOption.AllDirectories);
 
             var externalProviders = new List<Settings.Models.AuthenticationProvider>();
-
-
+            
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();

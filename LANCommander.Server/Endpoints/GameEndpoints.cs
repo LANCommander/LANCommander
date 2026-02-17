@@ -352,7 +352,7 @@ public static class GameEndpoints
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            64 * 1024,
+            1024 * 1024, // 1 MB buffer for higher throughput on large archive downloads
             true);
         
         var contentType = MediaTypeNames.Application.Octet;

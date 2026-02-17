@@ -54,7 +54,7 @@
     </Columns>
 </DataTable>
 
-<ArchiveUploader @ref="_uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="ArchiveUploaded" />
+<ArchiveUploader @ref="_uploader" GameId="GameId" RedistributableId="RedistributableId" ToolId="ToolId" OnArchiveUploaded="ArchiveUploaded" />
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }

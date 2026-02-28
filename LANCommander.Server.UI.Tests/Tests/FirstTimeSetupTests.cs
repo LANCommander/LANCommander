@@ -5,15 +5,12 @@ namespace LANCommander.Server.UI.Tests.Tests;
 
 /// <summary>
 /// Tests for the first-time setup wizard when the server has no existing configuration.
-/// These tests require a clean server state (no database, no settings).
-/// 
-/// IMPORTANT: These tests manage their own server lifecycle. The server must NOT be
-/// running when these tests execute. They back up and restore existing data directories.
+/// Each test gets a fresh server instance via WebApplicationFactory with an empty in-memory database.
 /// </summary>
 public class FirstTimeSetupTests : IAsyncLifetime
 {
     private PlaywrightFixture _playwright = null!;
-    private ServerManager _serverManager = null!;
+    private UITestApplicationFactory _factory = null!;
     private IBrowserContext _context = null!;
     private IPage _page = null!;
 
@@ -22,11 +19,11 @@ public class FirstTimeSetupTests : IAsyncLifetime
         _playwright = new PlaywrightFixture();
         await _playwright.InitializeAsync();
 
-        _serverManager = new ServerManager();
-        _serverManager.EnsureCleanState();
-        await _serverManager.StartAsync();
+        _factory = new UITestApplicationFactory();
+        // Trigger the factory to start the Kestrel server
+        _ = _factory.Services;
 
-        _context = await _playwright.NewContextAsync();
+        _context = await _playwright.NewContextAsync(_factory.BaseAddress);
         _page = await _context.NewPageAsync();
     }
 
@@ -34,7 +31,7 @@ public class FirstTimeSetupTests : IAsyncLifetime
     {
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
-        await _serverManager.DisposeAsync();
+        await _factory.DisposeAsync();
         await _playwright.DisposeAsync();
     }
 
@@ -82,7 +79,7 @@ public class FirstTimeSetupTests : IAsyncLifetime
         Assert.True(await _page.GetByRole(AriaRole.Option, new() { Name = "PostgreSQL" }).IsVisibleAsync());
     }
 
-    [Fact]
+    [Fact(Skip = "Requires real database and file I/O - not supported with in-memory WebApplicationFactory")]
     public async Task FirstTimeSetup_CompleteWizardAndLogin()
     {
         var setupPage = new FirstTimeSetupPage(_page);

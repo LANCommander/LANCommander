@@ -26,12 +26,12 @@ public class PlaywrightFixture : IAsyncLifetime
         Playwright.Dispose();
     }
 
-    public async Task<IBrowserContext> NewContextAsync()
+    public async Task<IBrowserContext> NewContextAsync(string? baseUrl = null)
     {
         return await Browser.NewContextAsync(new BrowserNewContextOptions
         {
             IgnoreHTTPSErrors = true,
-            BaseURL = TestConstants.BaseUrl,
+            BaseURL = baseUrl ?? TestConstants.BaseUrl,
         });
     }
 }

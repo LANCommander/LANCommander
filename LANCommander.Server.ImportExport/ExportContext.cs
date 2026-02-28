@@ -500,6 +500,8 @@ public class ExportContext(
                 manifest.Archives.Add(await ExportRecordAsync(queueItem, Archives));
             else if (queueItem.Type == ImportExportRecordType.Script)
                 manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
+            else if (queueItem.Type == ImportExportRecordType.Action)
+                manifest.Actions.Add(await ExportRecordAsync(queueItem, Actions));
         }
 
         return manifest;

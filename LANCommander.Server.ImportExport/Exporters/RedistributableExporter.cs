@@ -20,6 +20,14 @@ public class RedistributableExporter(RedistributableService redistributableServi
 
     public override async Task<Redistributable> ExportAsync(Guid id)
     {
-        return await redistributableService.GetAsync<Redistributable>(id);
+        var redistributable = await redistributableService.GetAsync<Redistributable>(id);
+
+        if (redistributable.Archives is null)
+            redistributable.Archives = new List<Archive>();
+
+        if (redistributable.Scripts is null)
+            redistributable.Scripts = new List<Script>();
+
+        return redistributable;
     }
 } 

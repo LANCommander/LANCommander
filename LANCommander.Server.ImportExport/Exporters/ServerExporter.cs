@@ -1,6 +1,8 @@
 using AutoMapper;
+using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
@@ -59,6 +61,18 @@ public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Mode
                 // File could not be added to archive
             }
         }
+
+        if (entity.Scripts is null)
+            entity.Scripts = new List<Script>();
+
+        if (entity.Actions is null)
+            entity.Actions = new List<Action>();
+
+        if (entity.HttpPaths is null)
+            entity.HttpPaths = new List<ServerHttpPath>();
+        
+        if (entity.ServerConsoles is null)
+            entity.ServerConsoles = new List<ServerConsole>();
         
         return entity;
     }

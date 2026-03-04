@@ -1,65 +1,185 @@
-﻿@using AntDesign.TableModels;
-@using LANCommander.PCGamingWiki
-@using LANCommander.SDK.Enums
-@inject IGDBService IGDBService
-@inject NavigationManager NavigationManager
+@using AntDesign.TableModels
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.Services.Providers.Metadata
+@inject MetadataService MetadataService
+@inject GameService GameService
+@inject ImportContextFactory ImportContextFactory
 @inject IMessageService MessageService
 @inject ILogger<GameMetadataLookup> Logger
 
 @{
-    RenderFragment Footer =
+    RenderFragment SearchFooter =
+        @<Template>
+            <Flex Gap="FlexGap.Small">
+                <Select Value="_selectedProvider" ValueChanged="OnProviderChanged" DataSource="_availableProviders" TItem="string" TItemValue="string"/>
+                <Button OnClick="BeginMerge" Disabled="@(_loading || SelectedResults == null || !SelectedResults.Any() || !(_results?.Results?.Any() ?? false))" Type="ButtonType.Primary">Select</Button>
+                <Button OnClick="Close" Style="margin-left: 0;">Cancel</Button>
+            </Flex>
+        </Template>;
+
+    RenderFragment MergeFooter =
     @<Template>
-        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="ButtonType.Primary">Select</Button>
-        <Button OnClick="() => ModalVisible = false">Cancel</Button>
+        <Button OnClick="ImportWithMerge" Loading="_loading" Type="ButtonType.Primary">Import</Button>
+        <Button OnClick="BackToSearch" Disabled="_loading">Back</Button>
+        <Button OnClick="Close" Disabled="_loading">Cancel</Button>
     </Template>;
 }
 
-<Modal Visible="ModalVisible" Title="Game Metadata Lookup" Footer="@Footer" Class="game-metadata-lookup-modal" OnCancel="Close">
-    <Table
-        @ref="ResultsTable"
-        TItem="Game"
-        DataSource="Results"
-        HidePagination="true"
-        Loading="Loading"
-        OnRowClick="OnRowClicked"
-        @bind-SelectedRows="SelectedResults"
-        Responsive>
-
-        <Selection Key="@context.IGDBId.ToString()" Type="SelectionType.Radio" />
-        <PropertyColumn Property="g => g.Title" Title="Title" />
-        <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Title="Released" />
-        <PropertyColumn Property="g => g.Developers">
-            @String.Join(", ", context.Developers?.Select(d => d.Name))
-        </PropertyColumn>
-    </Table>
-
-    @if (MoreResults && IGDBService.Authenticated)
+<Modal Visible="_modalVisible" Title="Game Metadata Lookup" Footer="@(_stage == ModalStage.Search ? SearchFooter : MergeFooter)" Class="game-metadata-lookup-modal" OnCancel="Close">
+    @if (_stage == ModalStage.Search)
     {
-        <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+        @if (_errorMessage != null)
+        {
+            <Result Status="ResultStatus.Error" Title="Search Failed" SubTitle="@_errorMessage">
+                <Extra>
+                    <Button OnClick="DismissError">Dismiss</Button>
+                </Extra>
+            </Result>
+        }
+        else
+        {
+            <Table
+                @ref="ResultsTable"
+                TItem="MetadataSearchResult<SDK.Models.Manifest.Game>"
+                DataSource="@(_results?.Results ?? [])"
+                HidePagination="true"
+                Loading="_loading"
+                OnRowClick="OnRowClicked"
+                @bind-SelectedRows="SelectedResults"
+                Responsive>
+
+                <Selection Key="@context.Id" Type="SelectionType.Radio"/>
+                <PropertyColumn Property="g => g.Data.Title" Title="Title"/>
+                <PropertyColumn Property="g => g.Data.ReleasedOn" Format="MM/dd/yyyy" Title="Released"/>
+                <PropertyColumn Property="g => g.Data.Developers">
+                    @string.Join(", ", context.Data.Developers?.Select(d => d.Name) ?? [])
+                </PropertyColumn>
+            </Table>
+
+            @if (_results?.More ?? false)
+            {
+                <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+            }
+        }
+    }
+    else if (_stage == ModalStage.Merge)
+    {
+        @if (_errorMessage != null)
+        {
+            <Result Status="ResultStatus.Error" Title="Import Failed" SubTitle="@_errorMessage">
+                <Extra>
+                    <Button OnClick="DismissError">Dismiss</Button>
+                </Extra>
+            </Result>
+        }
+        else
+        {
+            <div class="ant-table">
+                <div class="ant-table-container">
+                    <div class="ant-table-content">
+                        <table class="metadata-merge-table">
+                            <thead class="ant-table-thead">
+                                <tr>
+                                    <th>Import</th>
+                                    <th>Field</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="ant-table-tbody">
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importTitle" /></td>
+                                    <td class="ant-table-cell">Title</td>
+                                    <td class="ant-table-cell">@_fetchedManifest?.Title</td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importDescription" /></td>
+                                    <td class="ant-table-cell">Description</td>
+                                    <td class="ant-table-cell"><span class="metadata-merge-truncate">@_fetchedManifest?.Description</span></td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importReleasedOn" /></td>
+                                    <td class="ant-table-cell">Released On</td>
+                                    <td class="ant-table-cell">@(_fetchedManifest?.ReleasedOn.ToString("MM/dd/yyyy"))</td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importSingleplayer" /></td>
+                                    <td class="ant-table-cell">Singleplayer</td>
+                                    <td class="ant-table-cell">@(_fetchedManifest?.Singleplayer == true ? "Yes" : "No")</td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importEngine" /></td>
+                                    <td class="ant-table-cell">Engine</td>
+                                    <td class="ant-table-cell">@(_fetchedManifest?.Engine?.Name ?? "—")</td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importDevelopers" /></td>
+                                    <td class="ant-table-cell">Developers</td>
+                                    <td class="ant-table-cell">
+                                        @foreach (var item in _fetchedManifest?.Developers ?? [])
+                                        {
+                                            <Tag>@item.Name</Tag>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importPublishers" /></td>
+                                    <td class="ant-table-cell">Publishers</td>
+                                    <td class="ant-table-cell">
+                                        @foreach (var item in _fetchedManifest?.Publishers ?? [])
+                                        {
+                                            <Tag>@item.Name</Tag>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importGenres" /></td>
+                                    <td class="ant-table-cell">Genres</td>
+                                    <td class="ant-table-cell">
+                                        @foreach (var item in _fetchedManifest?.Genres ?? [])
+                                        {
+                                            <Tag>@item.Name</Tag>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importTags" /></td>
+                                    <td class="ant-table-cell">Tags</td>
+                                    <td class="ant-table-cell">
+                                        @foreach (var item in _fetchedManifest?.Tags ?? [])
+                                        {
+                                            <Tag>@item.Name</Tag>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importMultiplayerModes" /></td>
+                                    <td class="ant-table-cell">Multiplayer Modes</td>
+                                    <td class="ant-table-cell">@(_fetchedManifest?.MultiplayerModes?.Count ?? 0) mode(s)</td>
+                                </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importSavePaths" /></td>
+                                    <td class="ant-table-cell">Save Paths</td>
+                                    <td class="ant-table-cell">@(_fetchedManifest?.SavePaths?.Count ?? 0) path(s)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </Modal>
 
-@if (IGDBService.Authenticated)
-{
-    <Flex Gap="FlexGap.Small">
-        <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" AutoFocus="AutoFocus" />
-
-        <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
-    </Flex>
-}
-else
-{
-    <Flex Gap="FlexGap.Small">
-        <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
-
-        <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
-            <Button Type="ButtonType.Primary">@ButtonText</Button>
-        </Popconfirm>
-    </Flex>
-}
+<Flex Gap="FlexGap.Small">
+    <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" AutoFocus="AutoFocus" />
+    <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value) || !_availableProviders.Any())">@ButtonText</Button>
+</Flex>
 
 @code {
-    [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
+    private enum ModalStage { Search, Merge }
+
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public EventCallback<Guid> OnImported { get; set; }
     [Parameter] public string ButtonText { get; set; }
     [Parameter] public bool AutoFocus { get; set; }
     [Parameter] public string Value { get; set; }
@@ -67,22 +187,54 @@ else
 
     ITable? ResultsTable;
 
-    List<Game> Results { get; set; } = new List<Game>();
-    IEnumerable<Game> SelectedResults { get; set; }
-    PCGamingWikiClient PCGamingWikiClient { get; set; }
-    bool ModalVisible { get; set; } = false;
-    bool Loading = true;
-    bool MoreResults = false;
-    int Offset = 0;
+    MetadataSearchResultsCollection<SDK.Models.Manifest.Game>? _results;
+    
+    IEnumerable<MetadataSearchResult<SDK.Models.Manifest.Game>> SelectedResults { get; set; }
+    bool _modalVisible { get; set; } = false;
+    bool _loading = false;
+    int _limit = 10;
+    int _offset = 0;
+
+    string _selectedProvider = string.Empty;
+    IEnumerable<string> _availableProviders = [];
+
+    ModalStage _stage = ModalStage.Search;
+    string? _errorMessage = null;
+    LANCommander.SDK.Models.Manifest.Game? _fetchedManifest = null;
+
+    // Scalar field merge options
+    bool _importTitle = true;
+    bool _importDescription = true;
+    bool _importReleasedOn = true;
+    bool _importSingleplayer = true;
+    bool _importEngine = true;
+
+    // Collection merge options
+    bool _importDevelopers = true;
+    bool _importPublishers = true;
+    bool _importGenres = true;
+    bool _importTags = true;
+    bool _importMultiplayerModes = true;
+    bool _importSavePaths = true;
 
     protected override void OnInitialized()
     {
-        PCGamingWikiClient = new PCGamingWikiClient();
+        _availableProviders = MetadataService.GetProviderNames();
+        _selectedProvider = _availableProviders.FirstOrDefault() ?? string.Empty;
     }
 
-    private void OnRowClicked(RowData<Game> row)
+    private async Task OnProviderChanged(string provider)
     {
-        ResultsTable.SetSelection(new string[] { row.Data.IGDBId.ToString() });
+        _selectedProvider = provider;
+        _errorMessage = null;
+
+        if (!string.IsNullOrWhiteSpace(Value))
+            await SearchForGame(Value);
+    }
+
+    private void OnRowClicked(RowData<MetadataSearchResult<SDK.Models.Manifest.Game>> row)
+    {
+        ResultsTable?.SetSelection([row.Data.Id]);
     }
 
     private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
@@ -93,174 +245,188 @@ else
 
     private async Task SearchForGame(string title, bool newSearch = true)
     {
+        var provider = MetadataService.GetProvider(_selectedProvider);
+
+        if (provider is null)
+        {
+            MessageService.Error($"Provider \"{_selectedProvider}\" is not available");
+            return;
+        }
+
         try
         {
-            Loading = true;
-            ModalVisible = true;
+            _loading = true;
+            _modalVisible = true;
+            _errorMessage = null;
 
             if (newSearch)
             {
-                Results = new List<Game>();
-                Offset = 0;
+                _results = null;
+                _offset = 0;
             }
 
-            int limit = 10;
-
-            string[] fields = new string[]
-            {
-            "involved_companies.developer",
-            "involved_companies.publisher",
-            "involved_companies.company.name"
-            };
-
-            var results = await IGDBService.SearchAsync(title, limit, Offset, fields);
-
-            MoreResults = results.Count() == limit;
-
-            Loading = false;
-
-            if (results == null)
-                Results = new List<Game>();
-            else
-            {
-                Results.AddRange(results.Select(r =>
-                {
-                    var result = new Game()
-                        {
-                            IGDBId = r.Id.GetValueOrDefault(),
-                            Title = r.Name,
-                            ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
-                            Developers = new List<Company>(),
-                            Publishers = new List<Company>()
-                        };
-
-                    if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
-                    {
-                        result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
-                            {
-                                Name = c.Company.Value.Name
-                            }).ToList();
-
-                        result.Publishers = r.InvolvedCompanies.Values.Where(c => c.Publisher.HasValue && c.Publisher.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
-                            {
-                                Name = c.Company.Value.Name
-                            }).ToList();
-                    }
-
-                    return result;
-                }));
-            }
+            _results = await provider.SearchGamesAsync(title, _limit, _offset);
+            
+            _loading = false;
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred when retrieving IGDB metadata");
-            Logger.LogError(ex, "An unknown error occurred when retrieving IGDB metadata");
+            Logger.LogError(ex, "An error occurred searching {Provider}", _selectedProvider);
 
-            Loading = false;
-            ModalVisible = false;
+            _loading = false;
+            _errorMessage = ex.Message;
         }
     }
 
-    private async Task SelectGame()
+    private async Task BeginMerge()
     {
-        Loading = true;
+        var provider = MetadataService.GetProvider(_selectedProvider);
 
-        var result = new GameLookupResult();
+        if (provider is null)
+            return;
 
-        string[] fields = new string[]
+        _loading = true;
+        _errorMessage = null;
+
+        try
         {
-            "genres.*",
-            "game_modes.*",
-            "multiplayer_modes.*",
-            "release_dates.*",
-            "platforms.*",
-            "keywords.*",
-            "involved_companies.developer",
-            "involved_companies.publisher",
-            "involved_companies.company.name",
-            "cover.*",
-            "game_engines.*"
-        };
+            var selected = SelectedResults.First();
+            
+            var manifest = await provider.GetGameAsync(selected.Id);
 
-        result.IGDBMetadata = await IGDBService.GetAsync(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
-        result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
+            if (manifest is null)
+            {
+                _errorMessage = "Could not retrieve game metadata from the provider.";
+                _loading = false;
+                return;
+            }
 
-        await OnResultSelected.InvokeAsync(result);
+            _fetchedManifest = manifest;
 
-        Close();
+            // Default collection toggles to false if the manifest has no data for them
+            _importTitle = true;
+            _importDescription = !string.IsNullOrWhiteSpace(manifest.Description);
+            _importReleasedOn = manifest.ReleasedOn != default;
+            _importSingleplayer = true;
+            _importEngine = manifest.Engine != null;
+            _importDevelopers = manifest.Developers?.Any() == true;
+            _importPublishers = manifest.Publishers?.Any() == true;
+            _importGenres = manifest.Genres?.Any() == true;
+            _importTags = manifest.Tags?.Any() == true;
+            _importMultiplayerModes = manifest.MultiplayerModes?.Any() == true;
+            _importSavePaths = manifest.SavePaths?.Any() == true;
+
+            _stage = ModalStage.Merge;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An error occurred fetching metadata from {Provider}", _selectedProvider);
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ImportWithMerge()
+    {
+        if (_fetchedManifest is null)
+            return;
+
+        _loading = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Load existing game data so we can restore unchecked scalar fields
+            LANCommander.Server.Data.Models.Game? existing = null;
+
+            if (GameId != Guid.Empty)
+                existing = await GameService.GetAsync(GameId);
+
+            var manifest = _fetchedManifest;
+            manifest.Id = GameId == Guid.Empty ? Guid.NewGuid() : GameId;
+
+            // Restore scalar fields the user opted out of
+            if (!_importTitle && existing != null)
+                manifest.Title = existing.Title;
+
+            if (!_importDescription && existing != null)
+                manifest.Description = existing.Description;
+
+            if (!_importReleasedOn && existing != null)
+                manifest.ReleasedOn = existing.ReleasedOn ?? default;
+
+            if (!_importSingleplayer && existing != null)
+                manifest.Singleplayer = existing.Singleplayer;
+
+            if (!_importEngine)
+                manifest.Engine = null;
+
+            // Clear collections the user opted out of so importers skip them
+            if (!_importDevelopers)
+                manifest.Developers = new List<LANCommander.SDK.Models.Manifest.Company>();
+
+            if (!_importPublishers)
+                manifest.Publishers = new List<LANCommander.SDK.Models.Manifest.Company>();
+
+            if (!_importGenres)
+                manifest.Genres = new List<LANCommander.SDK.Models.Manifest.Genre>();
+
+            if (!_importTags)
+                manifest.Tags = new List<LANCommander.SDK.Models.Manifest.Tag>();
+
+            if (!_importMultiplayerModes)
+                manifest.MultiplayerModes = new List<LANCommander.SDK.Models.Manifest.MultiplayerMode>();
+
+            if (!_importSavePaths)
+                manifest.SavePaths = new List<LANCommander.SDK.Models.Manifest.SavePath>();
+
+            using var context = ImportContextFactory.Create();
+            await context.InitializeMetadataUpdateAsync(manifest);
+            await context.ImportQueueAsync();
+
+            Close();
+
+            await OnImported.InvokeAsync(manifest.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An error occurred importing metadata from {Provider}", _selectedProvider);
+            _errorMessage = ex.Message;
+            _loading = false;
+        }
+    }
+
+    private void BackToSearch()
+    {
+        _stage = ModalStage.Search;
+        _errorMessage = null;
+        _fetchedManifest = null;
+        SelectedResults = [];
+    }
+
+    private void DismissError()
+    {
+        _errorMessage = null;
     }
 
     private void Close()
     {
-        Results = new List<Game>();
-        MoreResults = false;
-        Offset = 0;
-        ModalVisible = false;
+        _results = null;
+        _limit = 10;
+        _offset = 0;
+        _modalVisible = false;
+        _stage = ModalStage.Search;
+        _errorMessage = null;
+        _fetchedManifest = null;
     }
 
     private async Task ShowMore()
     {
-        MoreResults = false;
-        Offset += Results.Count;
+        _offset += _results?.Limit ?? _limit;
 
         await SearchForGame(Value, false);
-    }
-
-    private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)
-    {
-        var multiplayerModes = new List<MultiplayerMode>();
-
-        try
-        {
-            var multiplayerInfo = await PCGamingWikiClient.GetMultiplayerPlayerInfo(gameTitle);
-
-            if (multiplayerInfo != null)
-            {
-                foreach (var info in multiplayerInfo)
-                {
-                    MultiplayerType type;
-
-                    switch (info.MultiplayerType.ToLower())
-                    {
-                        case "local":
-                        case "local play":
-                            type = MultiplayerType.Local;
-                            break;
-
-                        case "lan":
-                        case "lan play":
-                            type = MultiplayerType.LAN;
-                            break;
-
-                        case "online":
-                        case "online play":
-                            type = MultiplayerType.Online;
-                            break;
-
-                        default:
-                            continue;
-                    }
-
-                    multiplayerModes.Add(new MultiplayerMode()
-                    {
-                        Type = type,
-                        MaxPlayers = info.PlayerCount,
-                        MinPlayers = 2,
-                        Description = info.Notes,
-                    });
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Could not retrieve multiplayer modes from PCGamingWiki");
-        }
-
-        return multiplayerModes;
-    }
-
-    private void NavigateToSettings()
-    {
-        NavigationManager.NavigateTo("/Settings/Integrations/IGDB", true);
     }
 }

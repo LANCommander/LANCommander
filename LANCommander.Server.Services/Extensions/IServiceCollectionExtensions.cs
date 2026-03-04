@@ -10,6 +10,7 @@ using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
 using LANCommander.Server.Services.Providers;
+using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,7 +39,6 @@ public static class IServiceCollectionExtensions
         services.AddScoped<EngineService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<MultiplayerModeService>();
-        services.AddScoped<IGDBService>();
         services.AddScoped<ServerService>();
         services.AddScoped<ServerHttpPathService>();
         services.AddScoped<ServerConsoleService>();
@@ -61,6 +61,11 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ChatThreadService>();
         services.AddScoped<ChatThreadReadStatusService>();
         services.AddTransient<SetupService>();
+        
+        // Register metadata providers
+        services.AddScoped<MetadataService>();
+        services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
+        services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();

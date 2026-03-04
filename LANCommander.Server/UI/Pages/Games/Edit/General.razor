@@ -7,7 +7,6 @@
 @inject EngineService EngineService
 @inject GameService GameService
 @inject GenreService GenreService
-@inject IGDBService IgdbService
 @inject PlatformService PlatformService
 @inject RedistributableService RedistributableService
 @inject TagService TagService
@@ -54,7 +53,8 @@
                     ButtonText="Lookup"
                     AutoFocus="context.Id == Guid.Empty"
                     @bind-Value="context.Title"
-                    OnResultSelected="(result) => OnGameLookupResultSelected(result, context)" />
+                    GameId="@context.Id"
+                    OnImported="OnGameImported" />
             </FormItem>
             <FormItem Label="Sort Title">
                 <Input @bind-Value="@context.SortTitle" />
@@ -233,19 +233,9 @@
         MessageService.Success("Game added!");
     }
 
-    private async Task OnGameLookupResultSelected(GameLookupResult result, Game game)
+    private void OnGameImported(Guid gameId)
     {
-        try
-        {
-            game = await IgdbService.ImportGameAsync(result, game);
-
-            NavigationManager.NavigateTo($"/Games/{game.Id}");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not import info from IGDB!");
-            Logger.LogError(ex, "Could not import info from IGDB!");
-        }
+        NavigationManager.NavigateTo($"/Games/{gameId}");
     }
 
     private string GetIcon(Game game)

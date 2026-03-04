@@ -165,6 +165,32 @@ public class ImportContext : IDisposable
         }
     }
 
+    public async Task InitializeMetadataUpdateAsync(SDK.Models.Manifest.Game gameManifest)
+    {
+        _developers.UseContext(this);
+        _engines.UseContext(this);
+        _games.UseContext(this);
+        _genres.UseContext(this);
+        _multiplayerModes.UseContext(this);
+        _publishers.UseContext(this);
+        _savePaths.UseContext(this);
+        _tags.UseContext(this);
+
+        Manifest = gameManifest;
+
+        await AddAsync(gameManifest.Developers, _developers);
+
+        if (gameManifest.Engine != null)
+            await AddAsync(gameManifest.Engine, _engines);
+
+        await AddAsync(gameManifest.Genres, _genres);
+        await AddAsync(gameManifest.MultiplayerModes, _multiplayerModes);
+        await AddAsync(gameManifest.Publishers, _publishers);
+        await AddAsync(gameManifest.SavePaths, _savePaths);
+        await AddAsync(gameManifest.Tags, _tags);
+        await AddAsync(gameManifest, _games);
+    }
+
     private async Task<IEnumerable<IImportItemInfo>> InitializeLegacyGameImportAsync(
         Legacy.Models.GameManifest gameManifest)
     {

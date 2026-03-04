@@ -19,6 +19,7 @@ namespace LANCommander.SDK.Models.Manifest
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
         public string BaseGame { get; set; }
+        public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
         public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
         public virtual ICollection<Archive> Archives { get; set; } = new List<Archive>();

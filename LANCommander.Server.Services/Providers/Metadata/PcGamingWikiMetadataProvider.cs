@@ -409,7 +409,7 @@ public class PcGamingWikiMetadataProvider : IMetadataProvider
                     Description = string.IsNullOrWhiteSpace(descriptions[i])
                         ? null
                         : descriptions[i],
-                    Url = urls[i]
+                    Url = urls[i].Replace("https://www.pcgamingwiki.com/wiki/", "")
                 });
             }
 

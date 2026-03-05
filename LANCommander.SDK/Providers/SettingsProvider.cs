@@ -75,7 +75,7 @@ public class SettingsProvider<TSettings> : ISettingsProvider
         }
         catch (OperationCanceledException)
         {
-            
+            return;
         }
 
         await _ioGate.WaitAsync(token).ConfigureAwait(false);

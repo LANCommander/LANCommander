@@ -16,12 +16,15 @@
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <FormItem Label="Storage Path">
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Server.Scripts.Snippets.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+        </FormItem>
         <FormItem Label="Automatically Repackage">
-            <Switch @bind-Checked="context.Server.Scripts.EnableAutomaticRepackaging" />
+            <Switch @bind-Checked="context.Server.Scripts.EnableAutomaticRepackaging"/>
         </FormItem>
         <FormItem Label="Repackage Every">
             <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Small" Align="FlexAlign.Center">
-                <AntDesign.InputNumber @bind-Value="context.Server.Scripts.RepackageEvery" Min="1" DefaultValue="24" />
+                <AntDesign.InputNumber @bind-Value="context.Server.Scripts.RepackageEvery" Min="1" DefaultValue="24"/>
                 <Text>Hours</Text>
             </Flex>
         </FormItem>
@@ -33,6 +36,8 @@
 </PageContent>
 
 @code {
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+    
     void Save()
     {
         try
@@ -49,5 +54,15 @@
             MessageService.Error("An unknown error occurred.");
             Logger.LogError(ex, "An unknown error occurred.");
         }
+    }
+    
+    void OnPathSelected(string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        Settings.Value.Server.Scripts.Snippets.StoragePath = path;
     }
 }

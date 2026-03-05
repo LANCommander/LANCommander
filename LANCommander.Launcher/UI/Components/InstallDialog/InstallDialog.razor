@@ -132,16 +132,13 @@
     async Task Install()
     {
         var game = Options.DataItem as Game;
+        
+        await CloseFeedbackAsync();
 
         await InstallService.Add(game, SelectedDirectory, SelectedAddons.ToArray());
 
         foreach (var tool in SelectedTools)
-        {
-            
             await InstallService.Add(tool, SelectedDirectory);
-        }
-
-        await CloseFeedbackAsync();
     }
 
     string GetOperation()

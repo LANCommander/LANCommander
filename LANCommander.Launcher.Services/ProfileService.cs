@@ -92,7 +92,7 @@ namespace LANCommander.Launcher.Services
                 await userService.UpdateAsync(localUser);
             }
 
-            if (localUser.Avatar == null)
+            if (localUser.Avatar == null || !File.Exists(mediaService.GetImagePath(localUser.Avatar)))
             {
                 try
                 {
@@ -112,6 +112,9 @@ namespace LANCommander.Launcher.Services
                         };
 
                         media = await mediaService.AddAsync(media);
+
+                        localUser.Avatar = media;
+                        await userService.UpdateAsync(localUser);
 
                         var localPath = mediaService.GetImagePath(media);
 

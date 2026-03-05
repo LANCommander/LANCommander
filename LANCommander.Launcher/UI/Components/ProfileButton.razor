@@ -61,6 +61,8 @@
 
             AvatarId = User?.Avatar?.Id ?? Guid.Empty;
             Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME : User.Alias;
+
+            await InvokeAsync(StateHasChanged);
         };
 
         if (ConnectionClient.IsOfflineMode())

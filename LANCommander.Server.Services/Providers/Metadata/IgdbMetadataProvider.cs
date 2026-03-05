@@ -31,6 +31,10 @@ public class IgdbMetadataProvider(
         Authenticate();
         
         var fields = DefaultFields.Split(',').ToList();
+        
+        fields.Add("involved_companies.developer");
+        fields.Add("involved_companies.publisher");
+        fields.Add("involved_companies.company.name");
 
         var sb = new StringBuilder();
 
@@ -50,6 +54,18 @@ public class IgdbMetadataProvider(
     public async Task<Game?> GetGameAsync(string gameId)
     {
         var fields = DefaultFields.Split(',').ToList();
+        
+        fields.Add("genres.*");
+        fields.Add("game_modes.*");
+        fields.Add("multiplayer_modes.*");
+        fields.Add("release_dates.*");
+        fields.Add("platforms.*");
+        fields.Add("keywords.*");
+        fields.Add("involved_companies.developer");
+        fields.Add("involved_companies.publisher");
+        fields.Add("involved_companies.company.name");
+        fields.Add("cover.*");
+        fields.Add("game_engines.*");
         
         var games = await _client.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, $"fields {String.Join(',', fields)}; where id = {gameId};");
 

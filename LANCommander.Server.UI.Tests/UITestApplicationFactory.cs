@@ -118,14 +118,17 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
             }
             catch
             {
-                // Suppress shutdown errors — the host may stack overflow during
-                // Hangfire/DI container disposal with complex dependency chains
+                // Suppress shutdown errors
             }
 
-            try { _realHost.Dispose(); } catch { }
+            // Do NOT call _realHost.Dispose() — the DI container's deep dependency
+            // chain (Hangfire, EF, SignalR, etc.) causes a native stack overflow that
+            // cannot be caught. Stopping the host is sufficient for test cleanup.
         }
 
         try { await base.DisposeAsync(); } catch { }
+
+        GC.SuppressFinalize(this);
     }
 
     private static string FindServerProjectDirectory()

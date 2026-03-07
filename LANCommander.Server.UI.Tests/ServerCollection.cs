@@ -15,6 +15,6 @@ public class ServerCollection : ICollectionFixture<ConfiguredServerFixture>
 /// Having it in its own collection ensures it doesn't share state with the Server collection.
 /// </summary>
 [CollectionDefinition("FirstTimeSetup")]
-public class FirstTimeSetupCollection
+public class FirstTimeSetupCollection : ICollectionFixture<FreshServerFixture>
 {
 }

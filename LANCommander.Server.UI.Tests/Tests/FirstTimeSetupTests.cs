@@ -11,30 +11,24 @@ namespace LANCommander.Server.UI.Tests.Tests;
 [Collection("FirstTimeSetup")]
 public class FirstTimeSetupTests : IAsyncLifetime
 {
-    private PlaywrightFixture _playwright = null!;
-    private UITestApplicationFactory _factory = null!;
+    private readonly FreshServerFixture _fixture;
     private IBrowserContext _context = null!;
     private IPage _page = null!;
 
+    public FirstTimeSetupTests(FreshServerFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     public async Task InitializeAsync()
     {
-        _playwright = new PlaywrightFixture();
-        await _playwright.InitializeAsync();
-
-        _factory = new UITestApplicationFactory();
-        // Trigger the factory to start the Kestrel server
-        _ = _factory.Services;
-
-        _context = await _playwright.NewContextAsync(_factory.BaseAddress);
-        _page = await _context.NewPageAsync();
+        (_context, _page) = await _fixture.CreatePageAsync();
     }
 
     public async Task DisposeAsync()
     {
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
-        await _factory.DisposeAsync();
-        await _playwright.DisposeAsync();
     }
 
     [Fact]

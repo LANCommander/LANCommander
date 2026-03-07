@@ -56,6 +56,38 @@ jobs:
                   echo "version_semver=$VERSION_SEMVER" >> $GITHUB_OUTPUT
                   echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
 
+    ui_tests:
+        needs: [prep]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ needs.prep.outputs.build_dotnet_version }}
+
+            - name: Restore dependencies
+              run: dotnet restore LANCommander.Server.UI.Tests
+
+            - name: Build test project
+              run: dotnet build LANCommander.Server.UI.Tests --no-restore --configuration Release
+
+            - name: Install Playwright browsers
+              run: pwsh LANCommander.Server.UI.Tests/bin/Release/net9.0/playwright.ps1 install --with-deps chromium
+
+            - name: Run UI tests
+              run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ui-test-results
+                  path: ./TestResults
+                  retention-days: 7
+
     build_server_linux_arm64:
         needs: [prep]
         uses: ./.github/workflows/LANCommander.Server.yml

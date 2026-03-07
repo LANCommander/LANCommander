@@ -30,11 +30,13 @@ public class GamesPage
     /// </summary>
     public async Task<int> GetGameCountAsync()
     {
+        // Wait a moment for table rendering
+        await _page.WaitForTimeoutAsync(500);
+
         var noData = _page.GetByText("No data");
         if (await noData.IsVisibleAsync())
             return 0;
 
-        // Game rows are table body rows; each row has a title cell
         var rows = _page.Locator(".ant-table-tbody tr.ant-table-row");
         return await rows.CountAsync();
     }
@@ -105,16 +107,20 @@ public class GamesPage
         // Close the dialog
         await modal.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
 
-        // Wait for the modal to animate out and the table to reload
-        await _page.WaitForTimeoutAsync(2000);
+        // Wait for the modal to animate out, then navigate to Games to ensure fresh table
+        await _page.WaitForTimeoutAsync(1000);
+        await _page.GotoAsync(_page.Url.Split('?')[0]);
+        await _page.WaitForSelectorAsync("text=Add Game", new() { Timeout = 10000 });
     }
 
     /// <summary>
-    /// Click on a game row to open its edit page.
+    /// Click the Edit link for a game to open its detail/edit page.
     /// </summary>
     public async Task OpenGameEditAsync(string title)
     {
-        await _page.GetByRole(AriaRole.Cell, new() { Name = title, Exact = true }).ClickAsync();
-        await _page.WaitForURLAsync("**/Games/*/Edit/**", new() { Timeout = 15000 });
+        // Find the table row containing the game title, then click its Edit link
+        var row = _page.Locator("tr.ant-table-row", new() { HasText = title });
+        await row.GetByRole(AriaRole.Link, new() { Name = "Edit" }).ClickAsync();
+        await _page.WaitForURLAsync("**/Games/*", new() { Timeout = 15000 });
     }
 }

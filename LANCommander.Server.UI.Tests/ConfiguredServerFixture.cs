@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
@@ -37,6 +38,35 @@ public class ConfiguredServerFixture : IAsyncLifetime
         var user = await userService.AddAsync(new User { UserName = TestConstants.AdminUserName });
         await userService.ChangePassword(user.UserName, TestConstants.AdminPassword);
         await userService.AddToRoleAsync(user.UserName, RoleService.AdministratorRoleName);
+
+        // Seed default storage locations so the import dialog can initialize
+        var storageLocationService = scope.ServiceProvider.GetRequiredService<StorageLocationService>();
+        var archivePath = Path.Combine(Path.GetTempPath(), "LANCommander_UITest_Archives");
+        Directory.CreateDirectory(archivePath);
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = archivePath,
+            Type = StorageLocationType.Archive,
+            Default = true
+        });
+
+        var savePath = Path.Combine(Path.GetTempPath(), "LANCommander_UITest_Saves");
+        Directory.CreateDirectory(savePath);
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = savePath,
+            Type = StorageLocationType.Save,
+            Default = true
+        });
+
+        var mediaPath = Path.Combine(Path.GetTempPath(), "LANCommander_UITest_Media");
+        Directory.CreateDirectory(mediaPath);
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = mediaPath,
+            Type = StorageLocationType.Media,
+            Default = true
+        });
 
         // Now set the database provider so the server doesn't redirect to /FirstTimeSetup
         DatabaseContext.Provider = DatabaseProvider.SQLite;

@@ -70,15 +70,19 @@ public class GamesPage
         // The modal renders inside .ant-modal-wrap
         var modal = _page.Locator(".ant-modal-wrap");
 
-        // Wait for the modal with file input to be attached (it's hidden via opacity: 0)
-        await modal.Locator("input[type='file']").WaitForAsync(new()
+        // Wait for the upload area to render
+        await modal.Locator(".ant-upload").First.WaitForAsync(new()
         {
-            State = WaitForSelectorState.Attached,
+            State = WaitForSelectorState.Visible,
             Timeout = 15000
         });
 
-        // Upload the file via the hidden input
-        await modal.Locator("input[type='file']").SetInputFilesAsync(filePath);
+        // Upload the file via the FileChooser API (more reliable than SetInputFilesAsync
+        // on hidden inputs, especially with AntDesign's JS interop in headless Linux)
+        var fileChooserTask = _page.WaitForFileChooserAsync();
+        await modal.Locator(".ant-upload").First.ClickAsync();
+        var fileChooser = await fileChooserTask;
+        await fileChooser.SetFilesAsync(filePath);
 
         // Click the "Upload" button to start the chunk upload
         await modal.GetByRole(AriaRole.Button, new() { Name = "Upload", Exact = true }).ClickAsync();

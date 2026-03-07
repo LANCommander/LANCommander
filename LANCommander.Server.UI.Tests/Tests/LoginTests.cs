@@ -8,7 +8,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// These tests assume the server is running with a known admin user.
 /// Uses IClassFixture to start the server once for all tests in this class.
 /// </summary>
-public class LoginTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class LoginTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

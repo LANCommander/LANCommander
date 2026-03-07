@@ -6,7 +6,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// <summary>
 /// Tests for the Settings > Users page and user registration flow.
 /// </summary>
-public class UserManagementTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class UserManagementTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

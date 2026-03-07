@@ -8,7 +8,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Verifies adding, viewing, and deleting roles, and that the
 /// Administrator role cannot be deleted.
 /// </summary>
-public class RoleManagementTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class RoleManagementTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

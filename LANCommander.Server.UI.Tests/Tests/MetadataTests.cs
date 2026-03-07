@@ -9,7 +9,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Tests for metadata management pages (Tags, Genres, Platforms).
 /// Verifies CRUD operations through the admin UI using a shared page object.
 /// </summary>
-public class MetadataTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class MetadataTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

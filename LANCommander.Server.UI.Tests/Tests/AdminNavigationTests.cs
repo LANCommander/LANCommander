@@ -9,7 +9,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// after logging in as an administrator.
 /// Uses IClassFixture to start the server once for all tests in this class.
 /// </summary>
-public class AdminNavigationTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class AdminNavigationTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

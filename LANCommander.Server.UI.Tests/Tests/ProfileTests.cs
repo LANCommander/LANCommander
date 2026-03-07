@@ -7,7 +7,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Tests for the user profile and change password pages.
 /// Uses IClassFixture to share the server instance across all tests in this class.
 /// </summary>
-public class ProfileTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class ProfileTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

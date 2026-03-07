@@ -7,7 +7,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Tests for the game import flow via the admin UI.
 /// Imports an .lcx file and verifies the game appears in the list.
 /// </summary>
-public class GameImportTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class GameImportTests : IAsyncLifetime
 {
     private const string LcxFilePath = @"C:\Users\aapowell\Downloads\OpenRCT2.lcx";
     private const string ExpectedGameTitle = "OpenRCT2";

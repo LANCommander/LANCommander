@@ -7,7 +7,8 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Tests for the Settings pages of the admin application.
 /// Verifies that each settings sub-page is accessible and renders its expected content.
 /// </summary>
-public class SettingsTests : IClassFixture<ConfiguredServerFixture>, IAsyncLifetime
+[Collection("Server")]
+public class SettingsTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;

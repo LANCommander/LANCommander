@@ -5,8 +5,10 @@ namespace LANCommander.Server.UI.Tests.Tests;
 
 /// <summary>
 /// Tests for the first-time setup wizard when the server has no existing configuration.
-/// Each test gets a fresh server instance via WebApplicationFactory with an empty in-memory database.
+/// Runs in its own collection to avoid conflicts with ConfiguredServerFixture over
+/// the static DatabaseContext.Provider.
 /// </summary>
+[Collection("FirstTimeSetup")]
 public class FirstTimeSetupTests : IAsyncLifetime
 {
     private PlaywrightFixture _playwright = null!;

@@ -64,6 +64,13 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
                 d => typeof(IGitHubService).IsAssignableFrom(d.ServiceType));
             if (gitHubServiceDescriptor != null) services.Remove(gitHubServiceDescriptor);
             services.AddSingleton<IGitHubService, StubGitHubService>();
+
+            // Remove Hangfire hosted services to prevent stack overflow during process shutdown.
+            // The Hangfire background job server has a deep disposal chain that can overflow the stack.
+            var hangfireHostedServices = services.Where(
+                d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+                    && d.ImplementationType?.FullName?.Contains("Hangfire") == true).ToList();
+            foreach (var svc in hangfireHostedServices) services.Remove(svc);
         });
     }
 
@@ -104,10 +111,21 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
     {
         if (_realHost != null)
         {
-            await _realHost.StopAsync();
-            _realHost.Dispose();
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await _realHost.StopAsync(cts.Token);
+            }
+            catch
+            {
+                // Suppress shutdown errors — the host may stack overflow during
+                // Hangfire/DI container disposal with complex dependency chains
+            }
+
+            try { _realHost.Dispose(); } catch { }
         }
-        await base.DisposeAsync();
+
+        try { await base.DisposeAsync(); } catch { }
     }
 
     private static string FindServerProjectDirectory()

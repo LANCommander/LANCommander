@@ -68,6 +68,16 @@ jobs:
               with:
                   dotnet-version: ${{ needs.prep.outputs.build_dotnet_version }}
 
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            - name: Install Node packages
+              run: |
+                  npm install --prefix ./LANCommander.UI
+                  npm install --prefix ./LANCommander.Server
+
             - name: Restore dependencies
               run: dotnet restore LANCommander.Server.UI.Tests
 

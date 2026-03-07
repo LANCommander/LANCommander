@@ -10,7 +10,7 @@ namespace LANCommander.Server.UI.Tests.Tests;
 [Collection("Server")]
 public class GameImportTests : IAsyncLifetime
 {
-    private const string LcxFilePath = @"C:\Users\aapowell\Downloads\OpenRCT2.lcx";
+    private static readonly string LcxFilePath = Path.Combine(AppContext.BaseDirectory, "TestData", "OpenRCT2.lcx");
     private const string ExpectedGameTitle = "OpenRCT2";
 
     private readonly ConfiguredServerFixture _fixture;

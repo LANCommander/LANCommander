@@ -70,44 +70,34 @@ public class GamesPage
         // The modal renders inside .ant-modal-wrap
         var modal = _page.Locator(".ant-modal-wrap");
 
-        // Wait for the file input to be attached (it's hidden via opacity: 0)
-        var fileInput = modal.Locator("input[type='file']");
-        await fileInput.WaitForAsync(new()
+        // Wait for the upload area to render
+        await modal.Locator(".ant-upload").First.WaitForAsync(new()
         {
-            State = WaitForSelectorState.Attached,
+            State = WaitForSelectorState.Visible,
             Timeout = 15000
         });
 
-        // Wait for Blazor's InputFile JS interop to register the change handler.
-        // On CI runners (especially headless Linux), there's a race condition where
-        // SetInputFilesAsync dispatches the change event before Blazor's handler is ready.
-        await _page.WaitForTimeoutAsync(2000);
+        // Use the label click → FileChooser approach. Clicking the upload label opens
+        // the native file dialog, which Playwright intercepts with WaitForFileChooserAsync.
+        // This is the most reliable method because it triggers a real browser file selection
+        // that Blazor's InputFile component always recognizes (unlike SetInputFilesAsync
+        // which creates synthetic FileList objects that Blazor Server may not process).
+        var fileChooserTask = _page.WaitForFileChooserAsync();
+        await modal.Locator("label.ant-upload").ClickAsync();
+        var fileChooser = await fileChooserTask;
+        await fileChooser.SetFilesAsync(filePath);
 
-        // Set the files on the input element
-        await fileInput.SetInputFilesAsync(filePath);
-
-        // Try to click the Upload button. If it's still disabled (Blazor didn't process
-        // the change event), retry by dispatching the change event manually via JS.
+        // Wait for the Upload button to become enabled
         var uploadBtn = modal.GetByRole(AriaRole.Button, new() { Name = "Upload", Exact = true });
-        try
-        {
-            await uploadBtn.ClickAsync(new() { Timeout = 5000 });
-        }
-        catch (TimeoutException)
-        {
-            // Re-dispatch the change event for Blazor's InputFile component
-            await fileInput.EvaluateAsync("el => el.dispatchEvent(new Event('change', { bubbles: true }))");
-            await _page.WaitForTimeoutAsync(1000);
+        await uploadBtn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
 
-            // If still disabled, try setting files again with a fresh dispatch
-            if (await uploadBtn.IsDisabledAsync())
-            {
-                await fileInput.SetInputFilesAsync(filePath);
-                await _page.WaitForTimeoutAsync(1000);
-            }
+        // Wait for Blazor to process the file selection and enable the button
+        await _page.WaitForFunctionAsync(@"() => {
+            const btn = document.querySelector('.ant-modal-wrap button.ant-btn-primary');
+            return btn && !btn.disabled;
+        }", null, new() { Timeout = 15000 });
 
-            await uploadBtn.ClickAsync(new() { Timeout = 15000 });
-        }
+        await uploadBtn.ClickAsync();
 
         // Stage 2 – Wait for the record-selection tree to appear (has checkboxes)
         await modal.Locator(".ant-tree").WaitForAsync(new() { Timeout = 60000 });

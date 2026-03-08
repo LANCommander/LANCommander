@@ -5,13 +5,11 @@ namespace LANCommander.Server.UI.Tests.Tests;
 
 /// <summary>
 /// Tests for the game edit page, covering tab navigation, form fields, and persistence.
+/// Uses a game created via the service layer (seeded in ConfiguredServerFixture).
 /// </summary>
 [Collection("Server")]
 public class GameEditTests : IAsyncLifetime
 {
-    private static readonly string LcxFilePath = Path.Combine(AppContext.BaseDirectory, "TestData", "OpenRCT2.lcx");
-    private const string ExpectedGameTitle = "OpenRCT2";
-
     private readonly ConfiguredServerFixture _fixture;
     private IBrowserContext _context = null!;
     private IPage _page = null!;
@@ -35,7 +33,7 @@ public class GameEditTests : IAsyncLifetime
     private async Task<GameEditPage> NavigateToGameEditAsync()
     {
         var editPage = new GameEditPage(_page);
-        await editPage.NavigateAsync(ExpectedGameTitle, LcxFilePath);
+        await editPage.NavigateToGameByIdAsync(_fixture.TestGameId);
         return editPage;
     }
 
@@ -53,7 +51,7 @@ public class GameEditTests : IAsyncLifetime
     public async Task GameEdit_CanModifyTitle()
     {
         var editPage = await NavigateToGameEditAsync();
-        const string modifiedTitle = "OpenRCT2 Modified";
+        const string modifiedTitle = "Test Game Modified";
 
         await editPage.SetTitleAsync(modifiedTitle);
         await editPage.SaveAsync();
@@ -67,7 +65,7 @@ public class GameEditTests : IAsyncLifetime
         Assert.Equal(modifiedTitle, titleAfterReload);
 
         // Restore original title for other tests
-        await editPageAfterReload.SetTitleAsync(ExpectedGameTitle);
+        await editPageAfterReload.SetTitleAsync(ConfiguredServerFixture.TestGameTitle);
         await editPageAfterReload.SaveAsync();
     }
 

@@ -19,6 +19,12 @@ public class ConfiguredServerFixture : IAsyncLifetime
     public PlaywrightFixture Playwright { get; private set; } = null!;
     public UITestApplicationFactory Factory { get; private set; } = null!;
 
+    /// <summary>
+    /// ID of a game created via the service layer for edit tests.
+    /// </summary>
+    public Guid TestGameId { get; private set; }
+    public const string TestGameTitle = "Test Game";
+
     public async Task InitializeAsync()
     {
         Playwright = new PlaywrightFixture();
@@ -67,6 +73,16 @@ public class ConfiguredServerFixture : IAsyncLifetime
             Type = StorageLocationType.Media,
             Default = true
         });
+
+        // Seed a test game via the service layer for edit tests
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var game = await gameService.AddAsync(new Game
+        {
+            Title = TestGameTitle,
+            Type = GameType.MainGame,
+            Singleplayer = true
+        });
+        TestGameId = game.Id;
 
         // Now set the database provider so the server doesn't redirect to /FirstTimeSetup
         DatabaseContext.Provider = DatabaseProvider.SQLite;

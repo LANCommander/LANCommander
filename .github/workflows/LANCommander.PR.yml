@@ -12,6 +12,8 @@ on:
 permissions:
     contents: write
     packages: read
+    checks: write
+    pull-requests: write
 
 jobs:
     prep:
@@ -89,6 +91,14 @@ jobs:
 
             - name: Run UI tests
               run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults
+
+            - name: Test report
+              if: always()
+              uses: dorny/test-reporter@v1
+              with:
+                  name: UI Test Results
+                  path: ./TestResults/ui-test-results.trx
+                  reporter: dotnet-trx
 
             - name: Upload test results
               if: always()

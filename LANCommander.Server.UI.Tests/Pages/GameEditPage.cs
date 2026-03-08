@@ -16,6 +16,17 @@ public class GameEditPage
     }
 
     /// <summary>
+    /// Navigates directly to a game's edit page by its ID.
+    /// </summary>
+    public async Task NavigateToGameByIdAsync(Guid gameId)
+    {
+        var uri = new Uri(_page.Url);
+        var baseUrl = $"{uri.Scheme}://{uri.Authority}";
+        await _page.GotoAsync($"{baseUrl}/Games/{gameId}/General");
+        await WaitForFormLoadedAsync();
+    }
+
+    /// <summary>
     /// Ensures a game is imported and navigates to its edit page.
     /// If the game already exists, it opens the edit page directly.
     /// </summary>

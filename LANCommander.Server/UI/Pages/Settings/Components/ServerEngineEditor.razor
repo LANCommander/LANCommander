@@ -65,13 +65,13 @@
                             </FormItem>
 
                             <FormItem Label="Status">
-                                @if (!String.IsNullOrWhiteSpace(context.AccessToken) && context.TokenExpiration > DateTime.UtcNow)
+                                @if (!string.IsNullOrWhiteSpace(context.AccessToken) && context.TokenExpiration > DateTime.UtcNow)
                                 {
-                                    <Tag Color="success">Connected</Tag>
+                                    <Tag Color="TagColor.Success">Connected</Tag>
                                 }
                                 else
                                 {
-                                    <Tag Color="default">Not Connected</Tag>
+                                    <Tag>Not Connected</Tag>
                                 }
                             </FormItem>
 

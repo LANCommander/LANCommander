@@ -2,6 +2,7 @@ using LANCommander.Server.Services;
 using LANCommander.Server.UI.Tests.Pages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace LANCommander.Server.UI.Tests.Tests;
 
@@ -13,12 +14,14 @@ namespace LANCommander.Server.UI.Tests.Tests;
 public class MetadataTests : IAsyncLifetime
 {
     private readonly ConfiguredServerFixture _fixture;
+    private readonly ITestOutputHelper _output;
     private IBrowserContext _context = null!;
     private IPage _page = null!;
 
-    public MetadataTests(ConfiguredServerFixture fixture)
+    public MetadataTests(ConfiguredServerFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _output = output;
     }
 
     public async Task InitializeAsync()
@@ -28,6 +31,7 @@ public class MetadataTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }

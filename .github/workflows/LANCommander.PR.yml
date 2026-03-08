@@ -91,6 +91,8 @@ jobs:
 
             - name: Run UI tests
               run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults
+              env:
+                  SCREENSHOT_DIR: ${{ github.workspace }}/TestResults/Screenshots
 
             - name: Test report
               if: always()

@@ -1,5 +1,6 @@
 using LANCommander.Server.UI.Tests.Pages;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace LANCommander.Server.UI.Tests.Tests;
 
@@ -14,12 +15,14 @@ public class GameImportTests : IAsyncLifetime
     private const string ExpectedGameTitle = "OpenRCT2";
 
     private readonly ConfiguredServerFixture _fixture;
+    private readonly ITestOutputHelper _output;
     private IBrowserContext _context = null!;
     private IPage _page = null!;
 
-    public GameImportTests(ConfiguredServerFixture fixture)
+    public GameImportTests(ConfiguredServerFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _output = output;
     }
 
     public async Task InitializeAsync()
@@ -29,6 +32,7 @@ public class GameImportTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }

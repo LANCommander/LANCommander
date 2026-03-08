@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject GameService GameService
 @inject LibraryService LibraryService
+@inject InstallService InstallService
 @inject GameClient GameClient
 @inject LobbyClient LobbyClient
 @inject ModalService ModalService
@@ -67,6 +68,33 @@ else
     protected override async Task OnInitializedAsync()
     {
         StateTimer = new Timer(state => { InvokeAsync(UpdateState); }, null, 0, 250);
+
+        InstallService.OnQueueChanged += HandleQueueChanged;
+        InstallService.OnInstallComplete += HandleInstallComplete;
+    }
+
+    async Task HandleQueueChanged()
+    {
+        if (LibraryItem == null)
+            return;
+
+        var queueItem = InstallService.Queue.FirstOrDefault(qi => qi.Id == LibraryItem.Key);
+
+        if (queueItem != null && (queueItem.Status == SDK.Enums.InstallStatus.Canceled ||
+                                   queueItem.Status == SDK.Enums.InstallStatus.Failed))
+        {
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItem.Key);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task HandleInstallComplete(Data.Models.Game game)
+    {
+        if (LibraryItem?.Key == game.Id)
+        {
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItem.Key);
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -169,5 +197,7 @@ else
     public void Dispose()
     {
         StateTimer?.Dispose();
+        InstallService.OnQueueChanged -= HandleQueueChanged;
+        InstallService.OnInstallComplete -= HandleInstallComplete;
     }
 }

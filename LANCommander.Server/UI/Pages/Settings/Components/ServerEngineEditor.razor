@@ -85,7 +85,7 @@
 
                             @if (!string.IsNullOrWhiteSpace(_remoteErrors[serverEngine.Id]))
                             {
-                                <Alert Type="@AlertType.Error" Message="@_remoteErrors[serverEngine.Id]" ShowIcon />
+                                <Alert Type="@AlertType.Error" Message="@_remoteErrors[serverEngine.Id]" ShowIcon="true" />
                             }
 
                             <FormItem>

@@ -157,5 +157,22 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        if (!string.IsNullOrWhiteSpace(manifest.BaseGame) || manifest.BaseGameId != Guid.Empty)
+        {
+            Data.Models.Game? baseGame = null;
+
+            if (manifest.BaseGameId != Guid.Empty)
+                baseGame = await gameService.FirstOrDefaultAsync(g => g.Id == manifest.BaseGameId);
+
+            if (baseGame == null && !String.IsNullOrWhiteSpace(manifest.BaseGame))
+                baseGame = await gameService.FirstOrDefaultAsync(g => g.Title == manifest.BaseGame);
+
+            if (baseGame != null && game.BaseGameId != baseGame.Id)
+            {
+                game.BaseGameId = baseGame.Id;
+                await gameService.UpdateAsync(game);
+            }
+        }
     }
 }

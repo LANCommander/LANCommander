@@ -124,10 +124,10 @@ else
     async Task Run()
     {
         var game = (Game)LibraryItem.DataItem;
-        
-        var actions = await GameClient.GetActionsAsync(game.InstallDirectory, game.Id);
 
         await ChangeState(PlayButtonState.Starting);
+
+        var actions = await GameClient.GetActionsAsync(game.InstallDirectory, game.Id);
 
         if (actions == null || actions.Count() == 0)
         {

@@ -163,14 +163,17 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                if (connectionClient.IsConnected())
+                if (connectionClient.IsConnected() && !connectionClient.IsOfflineMode())
                 {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
                     actions.AddRange(
                         await apiRequestFactory
                             .Create()
                             .UseRoute($"/api/Games/{id}/Actions")
                             .UseAuthenticationToken()
                             .UseVersioning()
+                            .UseCancellationToken(cts.Token)
                             .GetAsync<IEnumerable<Models.Manifest.Action>>()
                         );
                 }

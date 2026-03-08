@@ -1370,6 +1370,12 @@ namespace LANCommander.Migrations
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
 

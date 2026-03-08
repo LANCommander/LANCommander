@@ -72,6 +72,9 @@ public static class IServiceCollectionExtensions
         
         services.AddSingleton<DockerServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
+
+        services.AddSingleton<RemoteServerEngine>();
+        services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
         
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>

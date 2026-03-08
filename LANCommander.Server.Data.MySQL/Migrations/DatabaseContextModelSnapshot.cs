@@ -1204,6 +1204,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
 

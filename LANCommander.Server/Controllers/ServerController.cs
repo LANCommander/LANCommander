@@ -2,6 +2,7 @@
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers
@@ -10,15 +11,18 @@ namespace LANCommander.Server.Controllers
     {
         private readonly ServerService ServerService;
         private readonly IMapper Mapper;
+        private readonly IOptions<Settings.Settings> _settings;
 
         public ServerController(
             ILogger<ServerController> logger,
             SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
-            ServerService serverService) : base(logger, settingsProvider)
+            ServerService serverService,
+            IOptions<Settings.Settings> settings) : base(logger, settingsProvider)
         {
             ServerService = serverService;
             Mapper = mapper;
+            _settings = settings;
         }
 
         [HttpGet("/Server/{id:guid}/{*path}")]
@@ -30,6 +34,17 @@ namespace LANCommander.Server.Controllers
 
             if (server == null)
                 return NotFound();
+
+            if (server.Engine == Settings.Enums.ServerEngine.Remote)
+            {
+                var config = _settings.Value.Server.GameServers.ServerEngines
+                    .FirstOrDefault(e => e.Id == server.RemoteHostId);
+
+                if (config == null)
+                    return NotFound();
+
+                return Redirect($"{config.Address.TrimEnd('/')}/Server/{server.RemoteServerId}/{path}");
+            }
 
             if (server.HttpPaths == null || server.HttpPaths.Count == 0)
                 return NotFound();

@@ -1204,6 +1204,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
 

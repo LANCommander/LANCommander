@@ -24,6 +24,12 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
+        if (args.Any(a => a.Equals("RunScript", StringComparison.OrdinalIgnoreCase)))
+        {
+            RunHeadlessAsync(args).GetAwaiter().GetResult();
+            return;
+        }
+
         WindowService.CreateWindow<UI.App_Main>(new WindowOptions
         {
             Title = "LANCommander",
@@ -31,11 +37,11 @@ class Program
         }, null, async (app) =>
         {
             app.RegisterImportHandler();
-            
+
             var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
             logger.LogInformation("Starting launcher | Version: {Version}", UpdateService.GetCurrentVersion());
-            
+
             // Initialize application
             using var scope = app.Services.CreateScope();
 
@@ -58,7 +64,7 @@ class Program
                     _ => throw new NotSupportedException("Unsupported OS platform")
                 });
             }
-        
+
             if ((await databaseContext.Database.GetPendingMigrationsAsync()).Any())
                 await databaseContext.Database.MigrateAsync();
         }, args);
@@ -73,5 +79,30 @@ class Program
                 return OSPlatform.OSX;
             throw new NotSupportedException("Unsupported OS platform");
         }
+    }
+
+    static async Task RunHeadlessAsync(string[] args)
+    {
+        var builder = Host.CreateApplicationBuilder(args);
+
+        builder.AddServiceDefaults();
+        builder.Configuration.ReadFromFile<Settings.Settings>();
+        builder.Services.Configure<Settings.Settings>(builder.Configuration);
+        builder.Services.AddLANCommanderClient<Settings.Settings>();
+        builder.Services.AddLANCommanderLauncher(options => { });
+
+        using var host = builder.Build();
+
+        host.Services.InitializeLANCommander();
+
+        using var scope = host.Services.CreateScope();
+
+        var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+        var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
+
+        if (!await connectionClient.PingAsync())
+            await connectionClient.EnableOfflineModeAsync();
+
+        await commandLineService.ParseCommandLineAsync(args);
     }
 }

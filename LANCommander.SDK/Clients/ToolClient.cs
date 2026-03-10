@@ -35,7 +35,7 @@ namespace LANCommander.SDK.Services
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
         private TrackableStream _transferStream;
-        private IReader _reader;
+        private IAsyncReader _reader;
         
         private InstallProgress _installProgress;
         
@@ -239,45 +239,42 @@ namespace LANCommander.SDK.Services
 
                 var stream = await StreamLatestArchiveAsync(tool.Id);
 
-                _reader = ReaderFactory.Open(stream);
-
-                using (var monitor = new FileTransferMonitor(stream.Length))
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
                 {
-                    _reader.EntryExtractionProgress += (sender, e) =>
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            _reader.Cancel();
+                        _reader?.Cancel();
 
-                            _installProgress.Status = InstallStatus.Canceled;
+                        _installProgress.Status = InstallStatus.Canceled;
 
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
 
-                            return;
-                        }
+                        return;
+                    }
 
-                        if (monitor.CanUpdate())
-                        {
-                            monitor.Update(stream.Position);
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
 
-                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = stream.Length;
-                            _installProgress.TransferSpeed = monitor.GetSpeed();
-                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
 
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
-                        }
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
 
-                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                        {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
-                            Game = null,
-                        });
-                    };
-                }
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = null,
+                    });
+                });
 
-                while (_reader.MoveToNextEntry())
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
                         break;
@@ -296,7 +293,7 @@ namespace LANCommander.SDK.Services
 
                                 while (true)
                                 {
-                                    var count = fs.Read(buffer, 0, buffer.Length);
+                                    var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
                                     if (count == 0)
                                         break;
@@ -314,20 +311,20 @@ namespace LANCommander.SDK.Services
                         });
 
                         if (crc == 0 || crc != _reader.Entry.Crc)
-                            _reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                            await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
-                            });
+                            }, cancellationToken);
                         else // Skip to next entry
                             try
                             {
-                                _reader.OpenEntryStream().Dispose();
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
                             catch
                             {
-                                logger?.LogError("Could not skip to next entry in archive");
+                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", _reader.Entry.Key);
                             }
                     }
                     catch (IOException ex)
@@ -337,14 +334,14 @@ namespace LANCommander.SDK.Services
                         if (errorCode == 87)
                             throw ex;
                         else
-                            logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
 
                         // Skip to next entry
-                        _reader.OpenEntryStream().Dispose();
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                     }
                 }
 
-                _reader.Dispose();
+                await _reader.DisposeAsync();
                 await stream.DisposeAsync();
             }
             catch (ReaderCancelledException ex)

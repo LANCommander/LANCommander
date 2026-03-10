@@ -385,7 +385,7 @@ namespace LANCommander.SDK.Services
         {
             using (var fs = File.OpenRead(zipPath))
             using (var ts = new TrackableStream(fs, fs.Length))
-            using (var reader = ReaderFactory.Open(ts))
+            using (var reader = ReaderFactory.OpenReader(ts, new ReaderOptions()))
             {
                 reader.WriteAllToDirectory(destination, new ExtractionOptions()
                 {

@@ -87,7 +87,7 @@
     <PackageVersion Include="RestSharp" Version="112.1.0" />
     <PackageVersion Include="rix0rrr.BeaconLib" Version="1.0.2" />
     <PackageVersion Include="Semver" Version="3.0.0" />
-    <PackageVersion Include="SharpCompress" Version="0.40.0" />
+    <PackageVersion Include="SharpCompress" Version="0.47.0" />
     <PackageVersion Include="SteamWebAPI2" Version="4.4.1" />
   </ItemGroup>
   <ItemGroup Label="Entity Framework Core">

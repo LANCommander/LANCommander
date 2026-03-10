@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
@@ -110,7 +111,7 @@ namespace LANCommander.SDK.Services
                             {
                                 _logger?.LogTrace("Attempting to download and extract redistributable");
 
-                                return await Task.Run(async () => await DownloadAndExtractAsync(redistributable, game));
+                                return await DownloadAndExtractAsync(redistributable, game, CancellationToken.None);
                             });
                         
                         if (!result.Success && !result.Canceled)
@@ -164,7 +165,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Redistributable redistributable, Game game)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Redistributable redistributable, Game game, CancellationToken cancellationToken = default)
         {
             if (redistributable == null)
             {
@@ -182,44 +183,44 @@ namespace LANCommander.SDK.Services
                 Directory.CreateDirectory(destination);
 
                 using (var redistributableStream = await Stream(redistributable.Id))
-                using (var reader = ReaderFactory.Open(redistributableStream))
-                using (var monitor = new FileTransferMonitor(redistributableStream.Length))
                 {
-                    /*(redistributableStream.OnProgress += (pos, len) =>
+                    var monitor = new FileTransferMonitor(redistributableStream.Length);
+                    var seenEntries = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var progress = new Progress<ProgressReport>(report =>
                     {
+                        if (!string.IsNullOrEmpty(report.EntryPath) && seenEntries.Add(report.EntryPath))
+                        {
+                            files.Add(new ExtractionResult.FileEntry
+                            {
+                                EntryPath = report.EntryPath,
+                                LocalPath = Path.Combine(destination, report.EntryPath),
+                            });
+                        }
+
                         if (monitor.CanUpdate())
                         {
-                            monitor.Update(pos);
+                            monitor.Update(redistributableStream.Position);
 
                             _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = len;
+                            _installProgress.TotalBytes = redistributableStream.Length;
                             _installProgress.TransferSpeed = monitor.GetSpeed();
                             _installProgress.TimeRemaining = monitor.GetTimeRemaining();
-                            
+
                             OnInstallProgressUpdate?.Invoke(_installProgress);
                         }
-                    };*/
-
-                    reader.EntryExtractionProgress += (sender, e) =>
-                    {
-                        files.Add(new ExtractionResult.FileEntry
-                        {
-                            EntryPath = e.Item.Key,
-                            LocalPath = Path.Combine(destination, e.Item.Key),
-                        });
 
                         OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
                         {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
+                            Progress = report,
                         });
-                    };
+                    });
 
-                    reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                    await using var reader = await ReaderFactory.OpenAsyncReader(redistributableStream, new ReaderOptions { Progress = progress }, cancellationToken);
+                    await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,
                         Overwrite = true
-                    });
+                    }, cancellationToken);
                 }
             }
             catch (Exception ex)

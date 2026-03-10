@@ -87,7 +87,7 @@ namespace LANCommander.SDK.Services
         private const string KeyFilename = "Key";
 
         private TrackableStream _transferStream;
-        private IReader _reader;
+        private IAsyncReader _reader;
 
         private readonly InstallProgress _installProgress = new();
 
@@ -1012,46 +1012,42 @@ namespace LANCommander.SDK.Services
 
                 var stream = await StreamLatestArchiveAsync(game.Id);
 
-                _reader = ReaderFactory.Open(stream);
-
-                using (var monitor = new FileTransferMonitor(stream.Length))
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
                 {
-                    _reader.EntryExtractionProgress += (sender, e) =>
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            _reader.Cancel();
-                            
-                            _installProgress.Status = InstallStatus.Canceled;
-                            
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        _reader?.Cancel();
 
-                            return;
-                        }
-                        
-                        if (monitor.CanUpdate())
-                        {
-                            monitor.Update(stream.Position);
+                        _installProgress.Status = InstallStatus.Canceled;
 
-                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = stream.Length;
-                            _installProgress.TransferSpeed = monitor.GetSpeed();
-                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
-                            
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
-                        }
-                        
-                        // Do we need this granular of control? If so, invocations should be rate limited
-                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                        {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
-                            Game = game,
-                        });
-                    };
-                }
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
 
-                while (_reader.MoveToNextEntry())
+                        return;
+                    }
+
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
+
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
+
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = game,
+                    });
+                });
+
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
                         break;
@@ -1070,7 +1066,7 @@ namespace LANCommander.SDK.Services
 
                                 while (true)
                                 {
-                                    var count = fs.Read(buffer, 0, buffer.Length);
+                                    var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
                                     if (count == 0)
                                         break;
@@ -1088,20 +1084,20 @@ namespace LANCommander.SDK.Services
                         });
 
                         if (crc == 0 || crc != _reader.Entry.Crc)
-                            _reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                            await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
-                            });
+                            }, cancellationToken);
                         else // Skip to next entry
                             try
                             {
-                                _reader.OpenEntryStream().Dispose();
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
                             catch
                             {
-                                logger?.LogError("Could not skip to next entry in archive");
+                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", _reader.Entry.Key);
                             }
                     }
                     catch (IOException ex)
@@ -1111,14 +1107,14 @@ namespace LANCommander.SDK.Services
                         if (errorCode == 87)
                             throw ex;
                         else
-                            logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
 
                         // Skip to next entry
-                        _reader.OpenEntryStream().Dispose();
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                     }
                 }
 
-                _reader.Dispose();
+                await _reader.DisposeAsync();
                 await stream.DisposeAsync();
                 // _transferStream.Dispose();
             }
@@ -1655,66 +1651,62 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The directory where the game is installed.</param>
         /// <param name="gameId">The unique identifier of the game.</param>
         /// <param name="entries">A collection of file paths to download.</param>
-        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries)
+        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, CancellationToken cancellationToken = default)
         {
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
-            await Task.Run(async () =>
+            try
             {
-                try
-                {
-                    var stream = await StreamLatestArchiveAsync(gameId);
-                    _reader = ReaderFactory.Open(stream);
+                var stream = await StreamLatestArchiveAsync(gameId);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
 
-                    while (_reader.MoveToNextEntry())
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
+                {
+                    if (_reader.Cancelled)
+                        break;
+
+                    try
                     {
-                        if (_reader.Cancelled)
-                            break;
-
-                        try
+                        if (entries.Contains(_reader.Entry.Key))
                         {
-                            if (entries.Contains(_reader.Entry.Key))
+                            await _reader.WriteEntryToDirectoryAsync(installDirectory, new ExtractionOptions
                             {
-                                var destination = Path.Combine(installDirectory, _reader.Entry.Key?.Replace('/', Path.DirectorySeparatorChar) ?? string.Empty);
-
-                                _reader.WriteEntryToFile(destination, new ExtractionOptions
-                                {
-                                    Overwrite = true,
-                                    PreserveFileTime = true,
-                                });
+                                ExtractFullPath = true,
+                                Overwrite = true,
+                                PreserveFileTime = true,
+                            }, cancellationToken);
+                        }
+                        else // Skip to next entry
+                            try
+                            {
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
-                            else // Skip to next entry
-                                try
-                                {
-                                    _reader.OpenEntryStream().Dispose();
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger?.LogError(ex, "Could not skip to the next entry in the archive");
-                                }
-                        }
-                        catch (IOException ex)
-                        {
-                            var errorCode = ex.HResult & 0xFFFF;
-
-                            if (errorCode == 87)
-                                throw;
-                            else
-                                logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
-
-                            // Skip to next entry
-                            _reader.OpenEntryStream().Dispose();
-                        }
+                            catch (Exception ex)
+                            {
+                                logger?.LogError(ex, "Could not skip to the next entry in the archive: {EntryKey}", _reader.Entry.Key);
+                            }
                     }
+                    catch (IOException ex)
+                    {
+                        var errorCode = ex.HResult & 0xFFFF;
 
-                    _reader.Dispose();
-                    _transferStream.Dispose();
+                        if (errorCode == 87)
+                            throw;
+                        else
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
+
+                        // Skip to next entry
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
-                }
-            });
+
+                await _reader.DisposeAsync();
+                await stream.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+            }
         }
 
         public Task RestoreFilesAsync(string installDirectory, Guid gameId, GameInstallationFileList fileListRemoved, GameInstallationFileList fileListAdded)

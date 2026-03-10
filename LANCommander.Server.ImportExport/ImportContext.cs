@@ -8,6 +8,8 @@ using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpCompress.Archives;
+using SharpCompress.Readers;
 using ZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 
 namespace LANCommander.Server.ImportExport;
@@ -18,7 +20,7 @@ public class ImportContext : IDisposable
     public object Manifest { get; private set; }
     public BaseModel DataRecord { get; private set; }
     public StorageLocation ArchiveStorageLocation { get; set; }
-    public ZipArchive Archive { get; private set; }
+    public IArchive Archive { get; private set; }
 
     public IImportItemInfo CurrentItem { get; set; }
     public int Processed;
@@ -35,6 +37,8 @@ public class ImportContext : IDisposable
     private readonly ImportService _importService;
     private readonly StorageLocationService _storageLocationService;
     private readonly ILogger<ImportContext> _logger;
+
+    private string? _uploadedArchivePath;
     
     #region Importers
     private readonly ActionImporter _actions;
@@ -99,6 +103,8 @@ public class ImportContext : IDisposable
 
     public void SetId(Guid id) => Id = id;
 
+    public void TrackUploadedArchive(string path) => _uploadedArchivePath = path;
+
     #region Initialize Import
     public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(string archivePath)
     {
@@ -126,7 +132,7 @@ public class ImportContext : IDisposable
         _tags.UseContext(this);
         _tools.UseContext(this);
         
-        Archive = ZipArchive.Open(archivePath);
+        Archive = ZipArchive.OpenArchive(archivePath, new ReaderOptions());
 
         var manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == ManifestHelper.ManifestFilename);
         
@@ -547,5 +553,17 @@ public class ImportContext : IDisposable
     {
         if (Archive != null)
             Archive.Dispose();
+
+        if (_uploadedArchivePath != null && File.Exists(_uploadedArchivePath))
+        {
+            try
+            {
+                File.Delete(_uploadedArchivePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not delete uploaded import archive at {Path}", _uploadedArchivePath);
+            }
+        }
     }
 }

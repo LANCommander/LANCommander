@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LANCommander.Server.Data.PostgreSQL.Migrations
+namespace LANCommander.Migrations
 {
     /// <inheritdoc />
-    public partial class AddRemoteServerEngine : Migration
+    public partial class AddRemoteServers : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,13 +14,13 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
             migrationBuilder.AddColumn<Guid>(
                 name: "RemoteHostId",
                 table: "Servers",
-                type: "uuid",
+                type: "TEXT",
                 nullable: true);
 
             migrationBuilder.AddColumn<Guid>(
                 name: "RemoteServerId",
                 table: "Servers",
-                type: "uuid",
+                type: "TEXT",
                 nullable: true);
         }
 

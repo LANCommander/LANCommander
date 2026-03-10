@@ -88,7 +88,7 @@ public static class LibraryEndpoints
                     return mapper.Map<IEnumerable<SDK.Models.EntityReference>>(ordered);
                 },
                 TimeSpan.MaxValue,
-                tags: ["Library"]);
+                tags: ["Library", "Games"]);
 
             return TypedResults.Ok(result);
         }

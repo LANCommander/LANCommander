@@ -12,7 +12,8 @@ namespace LANCommander.Launcher.Services
         ImportContextFactory importContextFactory,
         GameClient gameClient,
         ToolClient toolClient,
-        LibraryClient libraryClient) : BaseService(logger)
+        LibraryClient libraryClient,
+        GameService gameService) : BaseService(logger)
     {
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
@@ -30,7 +31,7 @@ namespace LANCommander.Launcher.Services
         public async Task ImportLibraryAsync()
         {
             var remoteLibrary = await libraryClient.GetAsync();
-            
+
             Logger?.LogInformation("Starting library import");
 
             var importContext = importContextFactory.Create();
@@ -44,6 +45,14 @@ namespace LANCommander.Launcher.Services
             {
                 try
                 {
+                    var existing = await gameService.GetAsync(game.Id);
+
+                    if (existing != null && game.UpdatedOn <= existing.ImportedOn)
+                    {
+                        Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
+                        continue;
+                    }
+
                     var manifest = await gameClient.GetManifestAsync(game.Id);
 
                     await importContext.AddAsync(manifest);

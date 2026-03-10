@@ -125,7 +125,7 @@ public class ScriptHelperTests : IDisposable
 
         var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
 
-        Assert.StartsWith("# Requires Admin", result);
+        Assert.StartsWith("#Requires -RunAsAdministrator", result);
         Assert.Contains("Write-Host 'install'", result);
     }
 
@@ -136,7 +136,7 @@ public class ScriptHelperTests : IDisposable
 
         var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
 
-        Assert.DoesNotContain("# Requires Admin", result);
+        Assert.DoesNotContain("#Requires -RunAsAdministrator", result);
     }
 
     [Fact]

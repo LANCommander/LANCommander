@@ -110,7 +110,7 @@ namespace LANCommander.SDK.Helpers
                 return String.Empty;
 
             if (script.RequiresAdmin)
-                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+                script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
 
             return script.Contents;
         }
@@ -123,7 +123,7 @@ namespace LANCommander.SDK.Helpers
                 return String.Empty;
             
             if (script.RequiresAdmin)
-                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+                script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
 
             return script.Contents;
         }
@@ -136,7 +136,7 @@ namespace LANCommander.SDK.Helpers
                 return String.Empty;
             
             if (script.RequiresAdmin)
-                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+                script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
 
             return script.Contents;
         }

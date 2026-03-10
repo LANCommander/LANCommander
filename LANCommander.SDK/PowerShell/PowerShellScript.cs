@@ -7,6 +7,7 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
@@ -71,8 +72,8 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = File.ReadAllText(path);
 
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin = true;
+            if (RequiresAdmin())
+                AsAdmin();
 
             return this;
         }
@@ -81,8 +82,8 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = contents;
 
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin = true;
+            if (RequiresAdmin())
+                AsAdmin();
 
             return this;
         }
@@ -148,6 +149,13 @@ namespace LANCommander.SDK.PowerShell
             RunAsAdmin = true;
 
             return this;
+        }
+
+        private bool RequiresAdmin()
+        {
+            var pattern = @"^#(\s?Requires\s?Admin)|(Requires -RunAsAdministrator)\s*$";
+            
+            return Regex.IsMatch(Contents, pattern);
         }
 
         public async Task<T> ExecuteAsync<T>()

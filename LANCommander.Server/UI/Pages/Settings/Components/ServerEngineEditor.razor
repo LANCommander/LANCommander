@@ -79,7 +79,7 @@
                                 var state = _remoteStates[serverEngine.Id];
                             }
 
-                            @if (!string.IsNullOrWhiteSpace(context.AccessToken) && context.TokenExpiration > DateTime.UtcNow)
+                            @if (string.IsNullOrWhiteSpace(context.AccessToken) || context.TokenExpiration > DateTime.UtcNow)
                             {
                                 <FormItem Label="Username">
                                     <Input @bind-Value="state.Username" />

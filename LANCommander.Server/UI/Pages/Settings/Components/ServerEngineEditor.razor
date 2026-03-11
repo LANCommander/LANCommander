@@ -75,21 +75,28 @@
                                 }
                             </FormItem>
 
-                            <FormItem Label="Username">
-                                <Input @bind-Value="_remoteUsernames[serverEngine.Id]" />
-                            </FormItem>
+                            @{
+                                var state = _remoteStates[serverEngine.Id];
+                            }
 
-                            <FormItem Label="Password">
-                                <InputPassword @bind-Value="_remotePasswords[serverEngine.Id]" />
-                            </FormItem>
-
-                            @if (!string.IsNullOrWhiteSpace(_remoteErrors[serverEngine.Id]))
+                            @if (!string.IsNullOrWhiteSpace(context.AccessToken) && context.TokenExpiration > DateTime.UtcNow)
                             {
-                                <Alert Type="@AlertType.Error" Message="@_remoteErrors[serverEngine.Id]" ShowIcon="true" />
+                                <FormItem Label="Username">
+                                    <Input @bind-Value="state.Username" />
+                                </FormItem>
+
+                                <FormItem Label="Password">
+                                    <InputPassword @bind-Value="state.Password" />
+                                </FormItem>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(state.Error))
+                            {
+                                <Alert Type="@AlertType.Error" Message="@state.Error" ShowIcon="true" />
                             }
 
                             <FormItem>
-                                <Button Type="ButtonType.Primary" Loading="_remoteConnecting[serverEngine.Id]" OnClick="() => Connect(serverEngine)">Connect</Button>
+                                <Button Type="ButtonType.Primary" Loading="state.Connecting" OnClick="() => Connect(serverEngine)">Connect</Button>
                             </FormItem>
                         </Form>
                     </ChildContent>
@@ -108,25 +115,26 @@
 @code {
     [Parameter] public IEnumerable<ServerEngineConfiguration> Values { get; set; }
     [Parameter] public EventCallback<IEnumerable<ServerEngineConfiguration>> ValuesChanged { get; set; }
+    [Parameter] public EventCallback Save { get; set; }
+
+    class RemoteEngineState
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Error { get; set; } = string.Empty;
+        public bool Connecting { get; set; } = false;
+    }
 
     List<ServerEngineConfiguration> ServerEngines = new();
 
-    Dictionary<Guid, string> _remoteUsernames = new();
-    Dictionary<Guid, string> _remotePasswords = new();
-    Dictionary<Guid, string> _remoteErrors = new();
-    Dictionary<Guid, bool> _remoteConnecting = new();
+    Dictionary<Guid, RemoteEngineState> _remoteStates = new();
 
     protected override void OnParametersSet()
     {
         ServerEngines = Values.OrderBy(e => e.Type).ThenBy(e => e.Name).ToList();
 
         foreach (var engine in ServerEngines.Where(e => e.Type == ServerEngine.Remote))
-        {
-            _remoteUsernames.TryAdd(engine.Id, string.Empty);
-            _remotePasswords.TryAdd(engine.Id, string.Empty);
-            _remoteErrors.TryAdd(engine.Id, string.Empty);
-            _remoteConnecting.TryAdd(engine.Id, false);
-        }
+            _remoteStates.TryAdd(engine.Id, new RemoteEngineState());
     }
 
     async Task Add(ServerEngine type)
@@ -140,12 +148,7 @@
         ServerEngines.Add(newEngine);
 
         if (type == ServerEngine.Remote)
-        {
-            _remoteUsernames[newEngine.Id] = string.Empty;
-            _remotePasswords[newEngine.Id] = string.Empty;
-            _remoteErrors[newEngine.Id] = string.Empty;
-            _remoteConnecting[newEngine.Id] = false;
-        }
+            _remoteStates[newEngine.Id] = new RemoteEngineState();
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(ServerEngines);
@@ -155,31 +158,33 @@
     {
         ServerEngines.Remove(serverEngine);
 
-        _remoteUsernames.Remove(serverEngine.Id);
-        _remotePasswords.Remove(serverEngine.Id);
-        _remoteErrors.Remove(serverEngine.Id);
-        _remoteConnecting.Remove(serverEngine.Id);
+        _remoteStates.Remove(serverEngine.Id);
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(ServerEngines);
+        
+        if (Save.HasDelegate)
+            await Save.InvokeAsync();
     }
 
     async Task Connect(ServerEngineConfiguration serverEngine)
     {
-        _remoteConnecting[serverEngine.Id] = true;
-        _remoteErrors[serverEngine.Id] = string.Empty;
+        var state = _remoteStates[serverEngine.Id];
+
+        state.Connecting = true;
+        state.Error = string.Empty;
 
         await InvokeAsync(StateHasChanged);
 
-        var username = _remoteUsernames.GetValueOrDefault(serverEngine.Id, string.Empty);
-        var password = _remotePasswords.GetValueOrDefault(serverEngine.Id, string.Empty);
+        if (Save.HasDelegate)
+            await Save.InvokeAsync();
 
-        var error = await RemoteServerEngine.AuthenticateAsync(serverEngine.Id, username, password);
+        var error = await RemoteServerEngine.AuthenticateAsync(serverEngine.Id, state.Username, state.Password);
 
         if (!string.IsNullOrWhiteSpace(error))
-            _remoteErrors[serverEngine.Id] = error;
+            state.Error = error;
 
-        _remoteConnecting[serverEngine.Id] = false;
+        state.Connecting = false;
 
         await InvokeAsync(StateHasChanged);
     }

@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1386,10 +1388,20 @@ namespace LANCommander.SDK.Services
                         {
                             logger?.LogTrace("Attempting to download save");
 
-                            var latestSave = await saveClient.GetLatestAsync(manifest.Id);
+                            try
+                            {
+                                var latestSave = await saveClient.GetLatestAsync(manifest.Id);
 
-                            if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
-                                await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
+                                    await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                            }
+                            catch (HttpRequestException ex)
+                            {
+                                if (ex.StatusCode == HttpStatusCode.NotFound)
+                                    return true;
+                                
+                                throw;
+                            }
 
                             return true;
                         });

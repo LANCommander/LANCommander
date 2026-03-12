@@ -63,7 +63,7 @@ namespace LANCommander.SDK.Services
                 logger?.LogTrace($"Saving scripts for redistributable {redistributable.Name} ({redistributable.Id}) into {game.InstallDirectory}");
                 
                 foreach (var script in scripts)
-                    await ScriptHelper.SaveScriptAsync(game, redistributable, script.Type);
+                    await ScriptHelper.SaveScriptAsync(game, redistributable, script);
             }
         }
         

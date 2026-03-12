@@ -36,19 +36,14 @@ namespace LANCommander.SDK.Helpers
 
             return tempPath;
         }
-
-        public static Task SaveScriptAsync(Game game, ScriptType type)
-        {
-            return SaveScriptAsync(game, type, game.InstallDirectory);
-        }
         
-        public static async Task SaveScriptAsync(Game game, ScriptType type, string installDirectory)
+        public static async Task SaveScriptAsync(Game game, Script script, string installDirectory)
         {
-            var scriptContents = GetScriptContents(game, type);
+            var scriptContents = GetScriptContents(script);
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var filename = GetScriptFilePath(installDirectory, game.Id, type);
+                var filename = GetScriptFilePath(installDirectory, game.Id, script.Type);
 
                 if (!Directory.Exists(Path.GetDirectoryName(filename)))
                     Directory.CreateDirectory(Path.GetDirectoryName(filename));
@@ -56,19 +51,19 @@ namespace LANCommander.SDK.Helpers
                 if (File.Exists(filename))
                     File.Delete(filename);
 
-                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", script.Type, filename);
 
                 await File.WriteAllTextAsync(filename, scriptContents);
             }
         }
 
-        public static async Task SaveScriptAsync(Game game, Redistributable redistributable, ScriptType type)
+        public static async Task SaveScriptAsync(Game game, Redistributable redistributable, Script script)
         {
-            var scriptContents = GetScriptContents(redistributable, type);
+            var scriptContents = GetScriptContents(script);
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var fileName = GetScriptFilePath(game.InstallDirectory, redistributable.Id, type);
+                var fileName = GetScriptFilePath(game.InstallDirectory, redistributable.Id, script.Type);
 
                 if (!Directory.Exists(Path.GetDirectoryName(fileName)))
                     Directory.CreateDirectory(Path.GetDirectoryName(fileName));
@@ -76,19 +71,19 @@ namespace LANCommander.SDK.Helpers
                 if (File.Exists(fileName))
                     File.Delete(fileName);
                 
-                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, fileName);
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", script.Type, fileName);
 
                 await File.WriteAllTextAsync(fileName, scriptContents);
             }
         }
         
-        public static async Task SaveScriptAsync(Tool tool, ScriptType type, string installDirectory)
+        public static async Task SaveScriptAsync(Tool tool, Script script, string installDirectory)
         {
-            var scriptContents = GetScriptContents(tool, type);
+            var scriptContents = GetScriptContents(script);
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var filename = GetScriptFilePath(installDirectory, tool.Id, type);
+                var filename = GetScriptFilePath(installDirectory, tool.Id, script.Type);
 
                 if (!Directory.Exists(Path.GetDirectoryName(filename)))
                     Directory.CreateDirectory(Path.GetDirectoryName(filename));
@@ -96,45 +91,17 @@ namespace LANCommander.SDK.Helpers
                 if (File.Exists(filename))
                     File.Delete(filename);
 
-                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", script.Type, filename);
 
                 await File.WriteAllTextAsync(filename, scriptContents);
             }
         }
 
-        public static string GetScriptContents(Game game, ScriptType type)
+        public static string GetScriptContents(Script script)
         {
-            var script = game.Scripts.FirstOrDefault(s => s.Type == type);
-
             if (script == null)
                 return String.Empty;
 
-            if (script.RequiresAdmin)
-                script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
-
-            return script.Contents;
-        }
-
-        public static string GetScriptContents(Redistributable redistributable, ScriptType type)
-        {
-            var script = redistributable.Scripts.FirstOrDefault(s => s.Type == type);
-
-            if (script == null)
-                return String.Empty;
-            
-            if (script.RequiresAdmin)
-                script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
-
-            return script.Contents;
-        }
-        
-        public static string GetScriptContents(Tool tool, ScriptType type)
-        {
-            var script = tool.Scripts.FirstOrDefault(s => s.Type == type);
-
-            if (script == null)
-                return String.Empty;
-            
             if (script.RequiresAdmin)
                 script.Contents = "#Requires -RunAsAdministrator" + "\r\n\r\n" + script.Contents;
 

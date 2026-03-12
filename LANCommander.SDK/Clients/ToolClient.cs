@@ -76,7 +76,7 @@ namespace LANCommander.SDK.Services
                 logger?.LogTrace($"Saving scripts for tool {tool.Name} ({tool.Id}) into {installDirectory}");
                 
                 foreach (var script in scripts)
-                    await ScriptHelper.SaveScriptAsync(tool, script.Type, installDirectory);
+                    await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
             }
         }
         

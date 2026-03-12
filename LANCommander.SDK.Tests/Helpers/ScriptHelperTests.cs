@@ -89,65 +89,34 @@ public class ScriptHelperTests : IDisposable
     // ── GetScriptContents (Game) ──────────────────────────────────────────────
 
     [Fact]
-    public void GetScriptContents_Game_WhenNoScripts_ReturnsEmpty()
+    public void GetScriptContents_WhenRequiresAdmin_PrependsAdminHeader()
     {
-        var game = MakeGame();
+        var script = MakeScript(ScriptType.Install, "Write-Host 'install'", requiresAdmin: true);
 
-        var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
-
-        Assert.Equal(string.Empty, result);
-    }
-
-    [Fact]
-    public void GetScriptContents_Game_WhenScriptTypeNotPresent_ReturnsEmpty()
-    {
-        var game = MakeGame(MakeScript(ScriptType.Uninstall, "uninstall contents"));
-
-        var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
-
-        Assert.Equal(string.Empty, result);
-    }
-
-    [Fact]
-    public void GetScriptContents_Game_WhenScriptExists_ReturnsContents()
-    {
-        var game = MakeGame(MakeScript(ScriptType.Install, "Write-Host 'install'"));
-
-        var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
-
-        Assert.Equal("Write-Host 'install'", result);
-    }
-
-    [Fact]
-    public void GetScriptContents_Game_WhenRequiresAdmin_PrependsAdminHeader()
-    {
-        var game = MakeGame(MakeScript(ScriptType.Install, "Write-Host 'install'", requiresAdmin: true));
-
-        var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
+        var result = ScriptHelper.GetScriptContents(script);
 
         Assert.StartsWith("#Requires -RunAsAdministrator", result);
         Assert.Contains("Write-Host 'install'", result);
     }
 
     [Fact]
-    public void GetScriptContents_Game_WhenDoesNotRequireAdmin_DoesNotPrependHeader()
+    public void GetScriptContents_WhenDoesNotRequireAdmin_DoesNotPrependHeader()
     {
-        var game = MakeGame(MakeScript(ScriptType.Install, "Write-Host 'install'", requiresAdmin: false));
+        var script = MakeScript(ScriptType.Install, "Write-Host 'install'", requiresAdmin: false);
 
-        var result = ScriptHelper.GetScriptContents(game, ScriptType.Install);
+        var result = ScriptHelper.GetScriptContents(script);
 
         Assert.DoesNotContain("#Requires -RunAsAdministrator", result);
     }
 
     [Fact]
-    public void GetScriptContents_Game_WhenMultipleScripts_ReturnsCorrectOne()
+    public void GetScriptContents_WhenMultipleScripts_ReturnsCorrectOne()
     {
-        var game = MakeGame(
-            MakeScript(ScriptType.Install,   "install contents"),
-            MakeScript(ScriptType.Uninstall, "uninstall contents"));
+        var installScript = MakeScript(ScriptType.Install, "install contents");
+        var uninstallScript = MakeScript(ScriptType.Uninstall, "uninstall contents");
 
-        Assert.Equal("install contents",   ScriptHelper.GetScriptContents(game, ScriptType.Install));
-        Assert.Equal("uninstall contents", ScriptHelper.GetScriptContents(game, ScriptType.Uninstall));
+        Assert.Equal("install contents",   ScriptHelper.GetScriptContents(installScript));
+        Assert.Equal("uninstall contents", ScriptHelper.GetScriptContents(uninstallScript));
     }
 
     // ── SaveTempScriptAsync (string) ──────────────────────────────────────────
@@ -225,7 +194,7 @@ public class ScriptHelperTests : IDisposable
         var script = MakeScript(ScriptType.Install, "Write-Host 'install'");
         var game = MakeGame(script);
 
-        await ScriptHelper.SaveScriptAsync(game, ScriptType.Install, _tempDir);
+        await ScriptHelper.SaveScriptAsync(game, script, _tempDir);
 
         var expectedPath = ScriptHelper.GetScriptFilePath(_tempDir, game.Id, ScriptType.Install);
         Assert.True(File.Exists(expectedPath));
@@ -237,7 +206,7 @@ public class ScriptHelperTests : IDisposable
     {
         var game = MakeGame(); // no scripts
 
-        await ScriptHelper.SaveScriptAsync(game, ScriptType.Install, _tempDir);
+        await ScriptHelper.SaveScriptAsync(game, null, _tempDir);
 
         var path = ScriptHelper.GetScriptFilePath(_tempDir, game.Id, ScriptType.Install);
         Assert.False(File.Exists(path));
@@ -250,7 +219,7 @@ public class ScriptHelperTests : IDisposable
         var game = MakeGame(script);
         var nestedInstallDir = Path.Combine(_tempDir, "nested", "install");
 
-        await ScriptHelper.SaveScriptAsync(game, ScriptType.Uninstall, nestedInstallDir);
+        await ScriptHelper.SaveScriptAsync(game, script, nestedInstallDir);
 
         var expectedPath = ScriptHelper.GetScriptFilePath(nestedInstallDir, game.Id, ScriptType.Uninstall);
         Assert.True(File.Exists(expectedPath));
@@ -259,12 +228,13 @@ public class ScriptHelperTests : IDisposable
     [Fact]
     public async Task SaveScriptAsync_Game_OverwritesExistingFile()
     {
-        var game = MakeGame(MakeScript(ScriptType.Install, "first"));
-        await ScriptHelper.SaveScriptAsync(game, ScriptType.Install, _tempDir);
+        var script = MakeScript(ScriptType.Install, "first");
+        var game = MakeGame(script);
+        await ScriptHelper.SaveScriptAsync(game, script, _tempDir);
 
         // Replace the script on the game object and save again
-        game.Scripts = new[] { MakeScript(ScriptType.Install, "second") };
-        await ScriptHelper.SaveScriptAsync(game, ScriptType.Install, _tempDir);
+        var secondScript = MakeScript(ScriptType.Install, "second");
+        await ScriptHelper.SaveScriptAsync(game, secondScript, _tempDir);
 
         var path = ScriptHelper.GetScriptFilePath(_tempDir, game.Id, ScriptType.Install);
         Assert.Equal("second", await File.ReadAllTextAsync(path));

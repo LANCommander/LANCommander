@@ -28,7 +28,7 @@ namespace LANCommander.Server.Services
         {
             await cache.ExpireGameCacheAsync();
 
-            return await base.AddAsync(entity, async context =>
+            entity = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(s => s.Actions);
                 await context.UpdateRelationshipAsync(s => s.Game);
@@ -37,13 +37,21 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(s => s.Scripts);
                 await context.UpdateRelationshipAsync(s => s.ServerConsoles);
             });
+            
+            var serverEngines = serviceProvider.GetServices<IServerEngine>();
+            
+            // Update tracking, helpful if tracked server has changed engines
+            foreach (var engine in serverEngines)
+                await engine.RefreshTrackingAsync();
+
+            return entity;
         }
 
         public override async Task<Data.Models.Server> UpdateAsync(Data.Models.Server entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
-
-            return await base.UpdateAsync(entity, async context =>
+            
+            entity = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(s => s.Actions);
                 await context.UpdateRelationshipAsync(s => s.Game);
@@ -52,6 +60,14 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(s => s.Scripts);
                 await context.UpdateRelationshipAsync(s => s.ServerConsoles);
             });
+            
+            var serverEngines = serviceProvider.GetServices<IServerEngine>();
+            
+            // Update tracking, helpful if tracked server has changed engines
+            foreach (var engine in serverEngines)
+                await engine.RefreshTrackingAsync();
+
+            return entity;
         }
 
         public async Task<SDK.Models.Manifest.Server> GetManifestAsync(Guid serverId)

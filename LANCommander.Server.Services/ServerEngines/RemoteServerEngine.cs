@@ -38,21 +38,27 @@ public class RemoteServerEngine(
             }
         }
 
-        using var scope = serviceProvider.CreateScope();
-        var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+        _pollTimer = new Timer(PollStatus, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+    }
 
-        var servers = await serverService.GetAsync(s => s.Engine == ServerEngine.Remote);
-
-        foreach (var server in servers)
+    public async Task RefreshTrackingAsync()
+    {
+        using (var scope = serviceProvider.CreateScope())
         {
-            if (server.RemoteHostId.HasValue && server.RemoteServerId.HasValue &&
-                _clients.ContainsKey(server.RemoteHostId.Value))
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+            var servers = await serverService.GetAsync(s =>
+                s.Engine == ServerEngine.Remote);
+
+            foreach (var server in servers)
             {
-                _tracked[server.Id] = new RemoteServerInfo(server.RemoteHostId.Value, server.RemoteServerId.Value);
+                if (server.RemoteHostId.HasValue && server.RemoteServerId.HasValue &&
+                    _clients.ContainsKey(server.RemoteHostId.Value))
+                    _tracked[server.Id] = new RemoteServerInfo(server.RemoteHostId.Value, server.RemoteServerId.Value);
+                else
+                    _tracked.Remove(server.Id);
             }
         }
-
-        _pollTimer = new Timer(PollStatus, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
     }
 
     public bool IsManaging(Guid serverId) => _tracked.ContainsKey(serverId);

@@ -229,7 +229,7 @@ namespace LANCommander.SDK.Services
 
             return actions;
         }
-
+        
         public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
         {
             return await apiRequestFactory
@@ -250,6 +250,16 @@ namespace LANCommander.SDK.Services
                 .GetAsync<IEnumerable<Tool>>();
         }
 
+        public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Scripts")
+                .GetAsync<IEnumerable<Script>>();
+        }
+
         public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
         {
             return await apiRequestFactory
@@ -259,7 +269,6 @@ namespace LANCommander.SDK.Services
                 .UseRoute($"/api/Games/{id}/CheckForUpdate?version={currentVersion}")
                 .GetAsync<bool>();
         }
-
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)
         {
@@ -945,14 +954,14 @@ namespace LANCommander.SDK.Services
 
         private async Task WriteScriptsAsync(string installDirectory, Game game)
         {
-            if (game.Scripts != null)
+            var scripts = await GetScriptsAsync(game.Id);
+
+            if (scripts != null && scripts.Any())
             {
                 logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
                 
-                foreach (var script in game.Scripts)
-                {
+                foreach (var script in scripts)
                     await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
-                }
             }
         }
 

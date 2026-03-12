@@ -4,6 +4,7 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -44,6 +45,25 @@ public static class ToolsEndpoints
             return TypedResults.NotFound();
 
         return TypedResults.Ok(mapper.Map<SDK.Models.Tool>(tool));
+    }
+    
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Tools/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.RedistributableId == id);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Tools/{id}/Scripts", "Tools", $"Tools/{id}"]);
+        
+        return TypedResults.Ok(scripts);
     }
 
     internal static async Task<IResult> DownloadAsync(

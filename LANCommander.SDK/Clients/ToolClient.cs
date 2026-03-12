@@ -22,8 +22,7 @@ namespace LANCommander.SDK.Services
         ILogger<ToolClient> logger,
         ISettingsProvider settingsProvider,
         ApiRequestFactory apiRequestFactory,
-        ScriptClient scriptClient,
-        ProfileClient profileClient)
+        ScriptClient scriptClient)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -33,8 +32,7 @@ namespace LANCommander.SDK.Services
         
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
-
-        private TrackableStream _transferStream;
+        
         private IAsyncReader _reader;
         
         private InstallProgress _installProgress;
@@ -57,6 +55,29 @@ namespace LANCommander.SDK.Services
                 .UseVersioning()
                 .UseRoute($"/api/Tool/{id}")
                 .GetAsync<SDK.Models.Manifest.Tool>();
+        }
+        
+        public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Tool/{id}/Scripts")
+                .GetAsync<IEnumerable<Script>>();
+        }
+
+        public async Task WriteScriptsAsync(Tool tool, string installDirectory)
+        {
+            var scripts = await GetScriptsAsync(tool.Id);
+
+            if (scripts != null && scripts.Any())
+            {
+                logger?.LogTrace($"Saving scripts for tool {tool.Name} ({tool.Id}) into {installDirectory}");
+                
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(tool, script.Type, installDirectory);
+            }
         }
         
         public async Task<Stream> Stream(Guid id)
@@ -83,15 +104,16 @@ namespace LANCommander.SDK.Services
 
             var installResult = new InstallResult();
             
-            _installProgress = new InstallProgress();
-            
-            _installProgress.Status = InstallStatus.Downloading;
-            _installProgress.Title = tool.Name;
-            _installProgress.Progress = 0;
-            _installProgress.TransferSpeed = 0;
-            _installProgress.TotalBytes = 0;
-            _installProgress.BytesTransferred = 0;
-            
+            _installProgress = new InstallProgress
+            {
+                Status = InstallStatus.Downloading,
+                Title = tool.Name,
+                Progress = 0,
+                TransferSpeed = 0,
+                TotalBytes = 0,
+                BytesTransferred = 0
+            };
+
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
             try
@@ -103,9 +125,8 @@ namespace LANCommander.SDK.Services
                 await ManifestHelper.WriteAsync(manifest, installDirectory);
                 
                 logger?.LogTrace("Saving scripts");
-                    
-                foreach (var script in tool.Scripts)
-                    await ScriptHelper.SaveScriptAsync(tool, script.Type, installDirectory);
+                
+                await WriteScriptsAsync(tool, installDirectory);
                 
                 if (tool.Archives?.Any() ?? false)
                 {
@@ -287,19 +308,17 @@ namespace LANCommander.SDK.Services
 
                         if (File.Exists(localFile))
                         {
-                            using (FileStream fs = File.Open(localFile, FileMode.Open))
+                            await using FileStream fs = File.Open(localFile, FileMode.Open);
+                            var buffer = new byte[65536];
+
+                            while (true)
                             {
-                                var buffer = new byte[65536];
+                                var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
-                                while (true)
-                                {
-                                    var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                                if (count == 0)
+                                    break;
 
-                                    if (count == 0)
-                                        break;
-
-                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
-                                }
+                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
                             }
                         }
 
@@ -352,7 +371,7 @@ namespace LANCommander.SDK.Services
 
                 if (Directory.Exists(destination))
                 {
-                    logger?.LogTrace("Cleaning up ophaned files after cancelled install");
+                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
 
                     Directory.Delete(destination, true);
                 }
@@ -382,7 +401,7 @@ namespace LANCommander.SDK.Services
                 if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
                     Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
 
-                File.WriteAllText(fileListDestination, fileManifest.ToString());
+                await File.WriteAllTextAsync(fileListDestination, fileManifest.ToString(), cancellationToken);
 
                 logger?.LogTrace("Tool {Tool} successfully downloaded and extracted to {Destination}", tool.Name, destination);
             }
@@ -421,22 +440,21 @@ namespace LANCommander.SDK.Services
 
         public async Task ImportAsync(string archivePath)
         {
-            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            {
-                var objectKey = await apiRequestFactory
+            await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            
+            var objectKey = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+
+            if (objectKey != Guid.Empty)
+                await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
-
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute($"/api/Tools/Import/{objectKey}")
-                        .PostAsync();
-            }
+                    .UseRoute($"/api/Tools/Import/{objectKey}")
+                    .PostAsync();
         }
 
         [Obsolete("Exporter no longer provides \"full\" exports")]
@@ -452,29 +470,28 @@ namespace LANCommander.SDK.Services
 
         public async Task UploadArchiveAsync(string archivePath, Guid toolId, string version, string changelog = "")
         {
-            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            {
-                var objectKey = await apiRequestFactory
+            await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            
+            var objectKey = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+
+            if (objectKey != Guid.Empty)
+                await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
-
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute("/api/Tools/UploadArchive")
-                        .AddBody(new UploadArchiveRequest
-                        {
-                            Id = toolId,
-                            ObjectKey = objectKey,
-                            Version = version,
-                            Changelog = changelog,
-                        })
-                        .PostAsync();
-            }
+                    .UseRoute("/api/Tools/UploadArchive")
+                    .AddBody(new UploadArchiveRequest
+                    {
+                        Id = toolId,
+                        ObjectKey = objectKey,
+                        Version = version,
+                        Changelog = changelog,
+                    })
+                    .PostAsync();
         }
     }
 }

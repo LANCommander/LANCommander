@@ -25,6 +25,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
+        group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
         group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
@@ -193,6 +194,25 @@ public static class GameEndpoints
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(addons);
+    }
+
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Games/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.GameId == id);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
+        
+        return TypedResults.Ok(scripts);
     }
 
     internal static async Task<IResult> StartedAsync(

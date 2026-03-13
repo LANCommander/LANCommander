@@ -153,7 +153,7 @@ namespace LANCommander.SDK.PowerShell
 
         private bool RequiresAdmin()
         {
-            var pattern = @"^#(\s?Requires\s?Admin)|(Requires -RunAsAdministrator)\s*$";
+            var pattern = @"^#(\s?Requires\s?Admin|Requires -RunAsAdministrator)\s*";
             
             return Regex.IsMatch(Contents, pattern);
         }

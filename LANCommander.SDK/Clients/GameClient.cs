@@ -197,24 +197,22 @@ namespace LANCommander.SDK.Services
                     .ToList();
             }
             
-            /*
-            if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
+            if (manifests.Any(m => m.MultiplayerModes.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby)))
             {
                 var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
-
+                
                 try
                 {
                     var lobbies = lobbyClient.GetSteamLobbies(installDirectory, id);
 
                     foreach (var lobby in lobbies)
                     {
-                        var lobbyAction = new Models.Action
+                        var lobbyAction = new Models.Manifest.Action
                         {
                             Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
                             IsPrimaryAction = true,
                             Name = $"Join {lobby.ExternalUsername}'s lobby",
                             SortOrder = actions.Count,
-                            Variables = primaryAction.Variables,
                             Path = primaryAction.Path,
                             WorkingDirectory = primaryAction.WorkingDirectory
                         };
@@ -227,7 +225,6 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not get lobbies");
                 }
             }
-            */
 
             return actions;
         }

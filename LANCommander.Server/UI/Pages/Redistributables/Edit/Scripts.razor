@@ -5,7 +5,9 @@
 @inject NavigationManager NavigationManager
 
 <RedistributableEditView Id="Id">
-    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.NameChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+    <CascadingValue Name="RedistributableId" Value="context.Id">
+        <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.NameChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+    </CascadingValue>
 </RedistributableEditView>
 
 @code {

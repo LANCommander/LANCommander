@@ -163,6 +163,9 @@
     {
         try
         {
+            if (Editor != null)
+                Script.Contents = await Editor.GetValue();
+
             if (Form.Validate())
             {
                 if (Script.Id == Guid.Empty)

@@ -2,7 +2,9 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Scripts">
-    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
+    <CascadingValue Name="GameId" Value="context.Id">
+        <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
+    </CascadingValue>
 </GameEditView>
 
 @code {

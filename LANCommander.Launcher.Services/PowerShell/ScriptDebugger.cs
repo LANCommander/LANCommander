@@ -10,6 +10,12 @@ public class ScriptDebugger : IScriptDebugger
     public Func<IScriptDebugContext, Task>? OnDebugBreak;
     public Func<IScriptDebugContext, Task>? OnDebugEnd;
     public Func<LogLevel, string, Task>? OnOutput;
+
+    private readonly TaskCompletionSource _readyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Task WaitForReadyAsync() => _readyTcs.Task;
+
+    public void SignalReady() => _readyTcs.TrySetResult();
     
     private static readonly Regex TokenRegex = new(@"\{[^}]+\}", RegexOptions.Compiled);
     

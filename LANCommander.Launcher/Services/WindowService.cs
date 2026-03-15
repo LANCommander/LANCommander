@@ -36,14 +36,16 @@ internal static class WindowService
         builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddStandardLogging());
         builder.Services.AddOpenTelemetryDefaults("Launcher", false);
 
-        builder.Services.AddCustomWindow();
+        if (options.CustomWindow)
+            builder.Services.AddCustomWindow();
+        
         builder.Services.AddAntDesign();
         builder.Services.AddSingleton<LocalizationService>();
         builder.Services.AddLANCommanderUI();
         builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderLauncher(options =>
         {
-
+            
         });
         
         builder.RootComponents.Add(options.RootComponentType, "app");
@@ -51,7 +53,7 @@ internal static class WindowService
         var app = builder.Build();
 
         app
-            .RegisterMainWindow()
+            .RegisterMainWindow(options)
             .RegisterMediaHandler()
             .RegisterNotificationHandler();
         

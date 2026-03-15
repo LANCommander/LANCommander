@@ -164,13 +164,30 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
 
-            var actions = new List<Data.Models.Action>();
-                
-            actions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
-            actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
-            actions.AddRange(game.Servers.SelectMany(s => s.Actions));
-                
-            return mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
+            var dataActions = new List<Data.Models.Action>();
+
+            dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
+            dataActions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
+
+            var mappedActions = mapper.Map<List<SDK.Models.Action>>(dataActions);
+
+            foreach (var server in game.Servers)
+            {
+                foreach (var serverAction in server.Actions)
+                {
+                    var mappedAction = mapper.Map<SDK.Models.Action>(serverAction);
+
+                    if (!String.IsNullOrWhiteSpace(server.Host))
+                        mappedAction.Variables["ServerHost"] = server.Host;
+
+                    if (server.Port > 0)
+                        mappedAction.Variables["ServerPort"] = server.Port.ToString();
+
+                    mappedActions.Add(mappedAction);
+                }
+            }
+
+            return mappedActions;
         }, tags: ["Games", $"Games/{id}"]);
             
         return TypedResults.Ok(actions);

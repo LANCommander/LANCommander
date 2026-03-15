@@ -1339,6 +1339,12 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
+                if (action.Variables != null)
+                {
+                    foreach (var variable in action.Variables)
+                        context.AddVariable(variable.Key, variable.Value);
+                }
+
                 #region Run Scripts
                 var manifests = await ReadManifestsAsync(installDirectory, gameId);
 

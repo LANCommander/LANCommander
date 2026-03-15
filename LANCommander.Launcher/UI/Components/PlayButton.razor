@@ -105,7 +105,7 @@ else
 
     async Task UpdateState()
     {
-        if (GameClient.IsRunning(LibraryItem.Key))
+        if (State != PlayButtonState.Starting && GameClient.IsRunning(LibraryItem.Key))
         {
             await ChangeState(PlayButtonState.Running);
         }
@@ -151,7 +151,13 @@ else
         {
             var task = GameService.Run(game, primaryActions.First());
 
-            await InvokeAsync(StateHasChanged);
+            while (!GameClient.IsRunning(game.Id) && !task.IsCompleted)
+                await Task.Delay(100);
+
+            if (GameClient.IsRunning(game.Id))
+                await ChangeState(PlayButtonState.Running);
+            else
+                await ChangeState(PlayButtonState.Idle);
 
             await task;
         }

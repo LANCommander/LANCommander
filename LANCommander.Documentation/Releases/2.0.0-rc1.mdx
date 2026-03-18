@@ -2,6 +2,8 @@
 title: 2.0.0-rc1
 ---
 
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+
 # LANCommander 2.0.0-rc1 Release Notes
 LANCommander 2.0.0 is up there as one of the largest updates in the project's history. This release represents over nine months of development, with more individual contributors than previous versions. The jump from 1.x to 2.x reflects substantial architectural changes, new features, and significant improvements in the server, launcher, and SDK.
 
@@ -20,7 +22,7 @@ Importing and exporting has been rebuilt from the ground up. An effort to allow 
 ### User Data Paths
 In previous versions of LANCommander, user data files/directories such as the database, settings, media, and uploads were thrown into the same directory as the main executable (for both server and launcher). In 2.0.0 a new directory called "Data" will be created and used for all user data. This change should make it easier to create backups and map Docker volumes.
 
-A migration has been written to assist with this change, but as always make sure you backup your data before upgrading. **For Docker users**: Before updating to 2.0.0, make sure you map `/app/Data` _with_ your volumes from previous versions. The migration will do its best attempt at discovering if this directory is mapped before moving any data. 
+A migration has been written to assist with this change, but as always make sure you backup your data before upgrading. **For Docker users**: Before updating to 2.0.0, make sure you map `/app/Data` _with_ your volumes from previous versions. The migration will do its best attempt at discovering if this directory is mapped before moving any data.
 
 ### Logging
 Previous versions have relied on Serilog to provide logging for both the server and launcher. An effort is being made to update this to more modern practices by integrating OpenTelemetry. As of right now, logging support for Seq and ElasticSearch is non-functional.
@@ -65,6 +67,10 @@ As if there weren't already enough changes in this release, here's a list of not
 - Thumbnail sizes can now be customized in settings
 - IGDB metadata importing should now be more consistent
 - Taxonomy metadata such as genre or tags is no longer being lost when updating other game information
+
+## Downloads
+
+<ReleaseDownloads release="v2.0.0-rc1" />
 
 ## Contributors
 As mentioned previously, this update had the most outside contributions over any other version. A big thanks to the following contributors and their pull requests:

@@ -1,0 +1,78 @@
+@using BlazorMonaco.Editor
+@namespace LANCommander.UI.Components
+
+<StandaloneCodeEditor
+    @ref="_editor"
+    OnDidChangeModelContent="OnChangedContent"
+    OnDidInit="OnInit"
+    ConstructionOptions="_editorConstructionOptions" />
+
+@code {
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public Language Language { get; set; }
+    [Parameter] public int Height { get; set; } = 450;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    bool _isEditorInitialized = false;
+    string? _previousValue;
+
+    StandaloneCodeEditor _editor;
+
+    StandaloneEditorConstructionOptions _editorConstructionOptions(StandaloneCodeEditor editor) => new()
+    {
+        AutomaticLayout = true,
+        Language = Language.Id,
+        Theme = "vs-dark",
+        Value = Value,
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_isEditorInitialized && ValueChanged.HasDelegate && Value != _previousValue)
+        {
+            _previousValue = Value;
+            await _editor.SetValue(Value);
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+    async Task OnInit()
+    {
+        _isEditorInitialized = true;
+        
+        await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
+        {
+            if (OnSave.HasDelegate)
+                await OnSave.InvokeAsync();
+        }, null);
+    }
+
+    public async Task InsertText(string text)
+    {
+        var position = await _editor.GetPosition();
+        var range = new BlazorMonaco.Range(position.LineNumber, 1, position.LineNumber, 1);
+        var selections = await _editor.GetSelections();
+
+        await _editor.ExecuteEdits("CodeInput", new List<IdentifiedSingleEditOperation>
+        {
+            new IdentifiedSingleEditOperation
+            {
+                Range = range,
+                Text = text,
+                ForceMoveMarkers = true
+            }
+        }, selections);
+    }
+
+    async Task OnChangedContent(ModelContentChangedEvent e)
+    {
+        if (ValueChanged.HasDelegate)
+        {
+            _previousValue = await _editor.GetValue();
+
+            await ValueChanged.InvokeAsync(_previousValue);
+        }
+    }
+}

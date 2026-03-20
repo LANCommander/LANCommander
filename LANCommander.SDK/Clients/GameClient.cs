@@ -163,29 +163,41 @@ namespace LANCommander.SDK.Services
         {
             var actions = new List<Models.Manifest.Action>();
 
+            var manifests = await GetManifestsAsync(installDirectory, id);
+            var installedIds = manifests.Select(m => m.Id).ToHashSet();
+
             try
             {
                 if (connectionClient.IsConnected() && !connectionClient.IsOfflineMode())
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-                    actions.AddRange(
-                        await apiRequestFactory
-                            .Create()
-                            .UseRoute($"/api/Games/{id}/Actions")
-                            .UseAuthenticationToken()
-                            .UseVersioning()
-                            .UseCancellationToken(cts.Token)
-                            .GetAsync<IEnumerable<Models.Manifest.Action>>()
-                        );
+                    var serverActions = await apiRequestFactory
+                        .Create()
+                        .UseRoute($"/api/Games/{id}/Actions")
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseCancellationToken(cts.Token)
+                        .GetAsync<IEnumerable<SDK.Models.Action>>();
+
+                    actions.AddRange(serverActions
+                        .Where(a => installedIds.Contains(a.GameId))
+                        .Select(a => new Models.Manifest.Action
+                        {
+                            Name = a.Name,
+                            Arguments = a.Arguments,
+                            Path = a.Path,
+                            WorkingDirectory = a.WorkingDirectory,
+                            IsPrimaryAction = a.IsPrimaryAction,
+                            SortOrder = a.SortOrder,
+                            Variables = a.Variables
+                        }));
                 }
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Could not get actions from server");
             }
-            
-            var manifests = await GetManifestsAsync(installDirectory, id);
 
             if (!actions.Any())
             {
@@ -196,11 +208,11 @@ namespace LANCommander.SDK.Services
                     .ThenBy(a => a.SortOrder)
                     .ToList();
             }
-            
+
             if (manifests.Any(m => m.MultiplayerModes.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby)))
             {
                 var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
-                
+
                 try
                 {
                     var lobbies = lobbyClient.GetSteamLobbies(installDirectory, id);

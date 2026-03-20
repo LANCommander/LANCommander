@@ -36,7 +36,11 @@ public static class Razor
 
         builder.Services
             .AddRazorComponents()
-            .AddInteractiveServerComponents();
+            .AddInteractiveServerComponents()
+            .AddHubOptions(options =>
+            {
+                options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB — needed for large script pastes in Monaco editor
+            });
 
         return builder;
     }

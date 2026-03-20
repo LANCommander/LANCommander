@@ -40,7 +40,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Redistributable/{id}")
+                .UseRoute($"/api/Redistributables/{id}")
                 .GetAsync<SDK.Models.Manifest.Redistributable>();
         }
 
@@ -50,7 +50,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Redistributable/{id}/Scripts")
+                .UseRoute($"/api/Redistributables/{id}/Scripts")
                 .GetAsync<IEnumerable<Script>>();
         }
 
@@ -73,7 +73,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Redistributable/{id}/Download")
+                .UseRoute($"/api/Redistributables/{id}/Download")
                 .StreamAsync();
         }
 

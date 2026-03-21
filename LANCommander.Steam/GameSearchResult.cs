@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace LANCommander.Steam;
 
-namespace LANCommander.Steam
+public class GameSearchResult
 {
-    public class GameSearchResult
-    {
-        public string Name { get; set; }
-        public int AppId { get; set; }
-    }
+    public string Name { get; set; }
+    public int AppId { get; set; }
 }

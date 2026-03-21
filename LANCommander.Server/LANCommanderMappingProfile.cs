@@ -52,7 +52,9 @@ namespace LANCommander.Server
 
             CreateMap<Data.Models.Game, EntityReference>()
                 .ForMember(dest => dest.Name,
-                    opt => opt.MapFrom(src => src.Title));
+                    opt => opt.MapFrom(src => src.Title))
+                .ForMember(dest => dest.UpdatedOn,
+                    opt => opt.MapFrom(src => src.UpdatedOn));
         }
 
         private void CreateEntityReferenceMap<TEntity>(Expression<Func<TEntity, string>> nameMember)

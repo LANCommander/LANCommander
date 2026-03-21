@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject GameService GameService
 @inject LibraryService LibraryService
+@inject InstallService InstallService
 @inject GameClient GameClient
 @inject LobbyClient LobbyClient
 @inject ModalService ModalService
@@ -67,6 +68,33 @@ else
     protected override async Task OnInitializedAsync()
     {
         StateTimer = new Timer(state => { InvokeAsync(UpdateState); }, null, 0, 250);
+
+        InstallService.OnQueueChanged += HandleQueueChanged;
+        InstallService.OnInstallComplete += HandleInstallComplete;
+    }
+
+    async Task HandleQueueChanged()
+    {
+        if (LibraryItem == null)
+            return;
+
+        var queueItem = InstallService.Queue.FirstOrDefault(qi => qi.Id == LibraryItem.Key);
+
+        if (queueItem != null && (queueItem.Status == SDK.Enums.InstallStatus.Canceled ||
+                                   queueItem.Status == SDK.Enums.InstallStatus.Failed))
+        {
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItem.Key);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task HandleInstallComplete(Data.Models.Game game)
+    {
+        if (LibraryItem?.Key == game.Id)
+        {
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItem.Key);
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -77,7 +105,7 @@ else
 
     async Task UpdateState()
     {
-        if (GameClient.IsRunning(LibraryItem.Key))
+        if (State != PlayButtonState.Starting && GameClient.IsRunning(LibraryItem.Key))
         {
             await ChangeState(PlayButtonState.Running);
         }
@@ -96,10 +124,10 @@ else
     async Task Run()
     {
         var game = (Game)LibraryItem.DataItem;
-        
-        var actions = await GameClient.GetActionsAsync(game.InstallDirectory, game.Id);
 
         await ChangeState(PlayButtonState.Starting);
+
+        var actions = await GameClient.GetActionsAsync(game.InstallDirectory, game.Id);
 
         if (actions == null || actions.Count() == 0)
         {
@@ -123,7 +151,13 @@ else
         {
             var task = GameService.Run(game, primaryActions.First());
 
-            await InvokeAsync(StateHasChanged);
+            while (!GameClient.IsRunning(game.Id) && !task.IsCompleted)
+                await Task.Delay(100);
+
+            if (GameClient.IsRunning(game.Id))
+                await ChangeState(PlayButtonState.Running);
+            else
+                await ChangeState(PlayButtonState.Idle);
 
             await task;
         }
@@ -169,5 +203,7 @@ else
     public void Dispose()
     {
         StateTimer?.Dispose();
+        InstallService.OnQueueChanged -= HandleQueueChanged;
+        InstallService.OnInstallComplete -= HandleInstallComplete;
     }
 }

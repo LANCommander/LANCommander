@@ -10,6 +10,7 @@ using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
 using LANCommander.Server.Services.Providers;
+using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,7 +39,6 @@ public static class IServiceCollectionExtensions
         services.AddScoped<EngineService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<MultiplayerModeService>();
-        services.AddScoped<IGDBService>();
         services.AddScoped<ServerService>();
         services.AddScoped<ServerHttpPathService>();
         services.AddScoped<ServerConsoleService>();
@@ -47,6 +47,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<PlaySessionService>();
         services.AddScoped<MediaService>();
         services.AddScoped<RedistributableService>();
+        services.AddScoped<ToolService>();
         services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
         services.AddScoped<UpdateService>();
         services.AddScoped<IssueService>();
@@ -55,18 +56,25 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<GameCustomFieldService>();
-        services.AddScoped<SteamCMDService>();
         services.AddScoped<ChatService>();
         services.AddScoped<ChatMessageService>();
         services.AddScoped<ChatThreadService>();
         services.AddScoped<ChatThreadReadStatusService>();
         services.AddTransient<SetupService>();
         
+        // Register metadata providers
+        services.AddScoped<MetadataService>();
+        services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
+        services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
+        
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
         
         services.AddSingleton<DockerServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
+
+        services.AddSingleton<RemoteServerEngine>();
+        services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
         
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>

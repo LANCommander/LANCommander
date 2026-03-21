@@ -131,6 +131,9 @@ namespace LANCommander.Server.UI.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
 
+            if (returnUrl == "/Logout")
+                returnUrl = "/";
+
             ExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (!String.IsNullOrWhiteSpace(provider) && await HttpContext.IsProviderSupportedAsync(provider))

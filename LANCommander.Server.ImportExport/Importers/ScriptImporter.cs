@@ -12,10 +12,12 @@ public class ScriptImporter(
     ScriptService scriptService,
     GameService gameService,
     RedistributableService redistributableService,
+    ToolService toolService,
     ServerService serverService,
     GameImporter gameImporter,
     RedistributableImporter redistributableImporter,
-    ServerImporter serverImporter) : BaseImporter<Script>
+    ServerImporter serverImporter,
+    ToolImporter toolImporter) : BaseImporter<Script>
 {
     public override string GetKey(Script record)
         => $"{nameof(Script)}/{record.Id}";
@@ -34,7 +36,9 @@ public class ScriptImporter(
         ||
         ImportContext.Manifest is Redistributable
         ||
-        ImportContext.Manifest is SDK.Models.Manifest.Server;
+        ImportContext.Manifest is SDK.Models.Manifest.Server
+        ||
+        ImportContext.Manifest is Tool;
 
     public override async Task<bool> AddAsync(Script record)
     {
@@ -55,12 +59,14 @@ public class ScriptImporter(
         {
             var newScript = new Data.Models.Script
             {
+                Id = record.Id,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
                 Name = record.Name,
                 Description = record.Description,
                 RequiresAdmin = record.RequiresAdmin,
                 Type = record.Type,
+                Contents = string.Empty,
             };
 
             if (ImportContext.Manifest is Game game)
@@ -83,6 +89,13 @@ public class ScriptImporter(
                     return false;
                 
                 newScript.Server = await serverService.GetAsync(server.Id);
+            }
+            else if (ImportContext.Manifest is Tool tool)
+            {
+                if (ImportContext.InQueue(tool, toolImporter))
+                    return false;
+                
+                newScript.Tool = await toolService.GetAsync(tool.Id);
             }
             else
                 return false;
@@ -140,6 +153,13 @@ public class ScriptImporter(
                     return false;
                 
                 existing.Server = await serverService.GetAsync(server.Id);
+            }
+            else if (ImportContext.Manifest is Tool tool)
+            {
+                if (ImportContext.InQueue(tool, toolImporter))
+                    return false;
+                
+                existing.Tool = await toolService.GetAsync(tool.Id);
             }
             else
                 return false;

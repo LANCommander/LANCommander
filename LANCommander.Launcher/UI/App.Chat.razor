@@ -1,10 +1,13 @@
-﻿<div class="chat-window">
-    <Router AppAssembly="@typeof(Program).Assembly">
-        <Found Context="routeData">
-            <RouteView RouteData="@routeData" DefaultLayout="@typeof(ChatWindow)" />
-        </Found>
-        <NotFound>
-            <RedirectToRoute Route="/Chat" />
-        </NotFound>
-    </Router>
+﻿@using LANCommander.Launcher.Enums
+<div class="chat-window">
+    <CascadingValue Name="WindowType" Value="WindowType.Chat">
+        <Router AppAssembly="@typeof(Program).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(ChatWindow)"/>
+            </Found>
+            <NotFound>
+                <RedirectToRoute Route="/Chat"/>
+            </NotFound>
+        </Router>
+    </CascadingValue>
 </div>

@@ -5,7 +5,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.Out, "PlayerAvatar")]
     [OutputType(typeof(string))]
-    public class OutPlayerAvatarCmdlet(ProfileClient profileClient) : BaseCmdlet
+    public class OutPlayerAvatarCmdlet(ProfileClient profileClient) : Cmdlet
     {
         protected override void ProcessRecord()
         {

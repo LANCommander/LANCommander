@@ -9,11 +9,11 @@ namespace LANCommander.Launcher.Services
     {
         private readonly ResourceManager _resourceManager;
 
-        public LocalizationService(SDK.Client client)
+        public LocalizationService(SettingsProvider<Settings.Settings> settingsProvider)
         {
             _resourceManager = new ResourceManager("LANCommander.Launcher.Resources.SharedResources", typeof(LocalizationService).Assembly);
             
-            var culture = new CultureInfo(client.Settings.CurrentValue.Culture);
+            var culture = new CultureInfo(settingsProvider.CurrentValue.Culture);
             
             Thread.CurrentThread.CurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;

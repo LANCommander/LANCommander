@@ -1,7 +1,6 @@
 ﻿@page "/Settings/Integrations/IGDB"
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
-@inject IGDBService IGDBService
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
@@ -36,8 +35,6 @@
             {
                 s.Server.IGDB = Settings.Value.Server.IGDB;
             });
-            
-            IGDBService.Authenticate();
             
             MessageService.Success("Settings saved!");
         }

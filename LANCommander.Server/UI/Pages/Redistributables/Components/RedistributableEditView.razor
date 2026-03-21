@@ -41,7 +41,9 @@
         </CascadingValue>
 
         <div class="panel-layout-content">
-            @ChildContent?.Invoke(Redistributable)
+            <CascadingValue Value="Redistributable.Id" Name="RedistributableId">
+                @ChildContent?.Invoke(Redistributable)
+            </CascadingValue>
         </div>
     </Content>
 </Layout>

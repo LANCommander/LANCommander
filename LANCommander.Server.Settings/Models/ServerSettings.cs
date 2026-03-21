@@ -17,7 +17,6 @@ public class ServerSettings
     public RoleSettings Roles { get; set; } = new();
     public ScriptSettings Scripts { get; set; } = new();
     public GameServerSettings GameServers { get; set; } = new();
-    public SteamCmdSettings SteamCMD { get; set; } = new();
     public UpdateSettings Update { get; set; } = new();
     public UserSaveSettings UserSaves { get; set; } = new();
 }

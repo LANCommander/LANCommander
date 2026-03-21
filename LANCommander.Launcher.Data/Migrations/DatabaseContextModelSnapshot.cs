@@ -137,6 +137,21 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.ToTable("GameTag");
                 });
 
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.Property<Guid>("GamesId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ToolsId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GamesId", "ToolsId");
+
+                    b.HasIndex("ToolsId");
+
+                    b.ToTable("GameTool");
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -567,6 +582,51 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.Tool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstallDirectory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Installed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("InstalledOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstalledVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LatestVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tools");
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -724,6 +784,21 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasOne("LANCommander.Launcher.Data.Models.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Launcher.Data.Models.Tool", null)
+                        .WithMany()
+                        .HasForeignKey("ToolsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

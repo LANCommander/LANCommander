@@ -18,6 +18,7 @@ public static class Kestrel
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.Limits.MaxRequestBodySize = long.MaxValue;
+            options.Limits.MaxResponseBufferSize = null; // Unlimited; avoids throttling large file downloads (e.g. game archives)
             options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
             
             if (settings.Server.Http.UseSSL)

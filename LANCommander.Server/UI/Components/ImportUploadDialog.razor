@@ -254,6 +254,7 @@ else if (_stage == ImportStage.Failed)
         {
             _stage = ImportStage.Failed;
             Logger?.LogError(ex, "An unknown error occurred while trying to import");
+            ImportContext.Dispose();
         }
     }
 
@@ -293,6 +294,8 @@ else if (_stage == ImportStage.Failed)
             try
             {
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+
+                ImportContext.TrackUploadedArchive(archivePath);
 
                 ImportItems = await ImportContext.InitializeImportAsync(archivePath);
 

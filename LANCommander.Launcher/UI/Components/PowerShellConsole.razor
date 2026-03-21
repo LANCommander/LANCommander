@@ -9,7 +9,9 @@
 </div>
 
 @code {
-    private bool Visible { get; set; }
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    
     private Terminal? _terminal;
 
     private TerminalOptions _options = new()
@@ -22,42 +24,60 @@
     {
         Debugger.OnDebugStart = async _ =>
         {
-            if (_terminal is null)
-                return;
-            
-            await _terminal.Clear();
-            Visible = true;
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(async () =>
+            {
+                if (_terminal is null)
+                    return;
 
-            await _terminal.FitAsync();
+                await _terminal.Clear();
+
+                Visible = true;
+
+                if (VisibleChanged.HasDelegate)
+                    await VisibleChanged.InvokeAsync(Visible);
+
+                StateHasChanged();
+
+                await _terminal.FitAsync();
+            });
         };
 
         Debugger.OnOutput = async (level, message) =>
         {
-            if (_terminal is not null)
-                await _terminal.WriteLine(message, level);
+            await InvokeAsync(async () =>
+            {
+                if (_terminal is not null)
+                    await _terminal.WriteLine(message, level);
+            });
         };
 
         Debugger.OnDebugBreak = async context =>
         {
-            if (_terminal is null)
-                return;
-            
-            while (true)
+            await InvokeAsync(async () =>
             {
-                var input = await _terminal.ReadLineAsync();
+                if (_terminal is null)
+                    return;
 
-                if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
-                    break;
+                while (true)
+                {
+                    var input = await _terminal.ReadLineAsync();
 
-                if (input.StartsWith('$'))
-                    input = "Write-Host " + input;
+                    if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                        break;
 
-                await context.ExecuteAsync(input);
-            }
+                    if (input.StartsWith('$'))
+                        input = "Write-Host " + input;
 
-            Visible = false;
-            await InvokeAsync(StateHasChanged);
+                    await context.ExecuteAsync(input);
+                }
+
+                Visible = false;
+
+                if (VisibleChanged.HasDelegate)
+                    await VisibleChanged.InvokeAsync(Visible);
+
+                StateHasChanged();
+            });
         };
     }
 
@@ -65,5 +85,7 @@
     {
         if (_terminal is not null)
             await _terminal.FitAsync();
+
+        Debugger.SignalReady();
     }
 }

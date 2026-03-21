@@ -5,12 +5,14 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
     public class UpdateService(
         ILogger<UpdateService> logger,
-        SDK.Client client) : BaseService(logger)
+        LauncherClient launcherClient,
+        SettingsProvider<Settings.Settings> settingsProvider) : BaseService(logger)
     {
         public delegate Task OnUpdateAvailableHandler(CheckForUpdateResponse response);
         public event OnUpdateAvailableHandler OnUpdateAvailable;
@@ -19,7 +21,7 @@ namespace LANCommander.Launcher.Services
         {
             using (var op = Logger.BeginOperation("Checking for updates"))
             {
-                var response = await client.Launcher.CheckForUpdateAsync();
+                var response = await launcherClient.CheckForUpdateAsync();
 
                 if (response != null && response.UpdateAvailable)
                     OnUpdateAvailable?.Invoke(response);
@@ -38,9 +40,9 @@ namespace LANCommander.Launcher.Services
                 
                 Logger?.LogInformation("Downloading launcher v{Version}", version);
 
-                string path = Path.Combine(client.Settings.CurrentValue.Updates.StoragePath, $"{version}.zip");
+                string path = Path.Combine(settingsProvider.CurrentValue.Updates.StoragePath, $"{version}.zip");
 
-                await client.Launcher.DownloadAsync(path);
+                await launcherClient.DownloadAsync(path);
 
                 Logger?.LogInformation("Update version {Version} has been downloaded", version);
 
@@ -67,12 +69,12 @@ namespace LANCommander.Launcher.Services
                 var process = new ProcessStartInfo();
 
                 process.FileName = processExecutable;
-                process.Arguments = $"-Version {version} -Path \"{client.Settings.CurrentValue.Updates.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
+                process.Arguments = $"-Version {version} -Path \"{settingsProvider.CurrentValue.Updates.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
                 process.UseShellExecute = true;
 
                 Process.Start(process);
 
-                client.Settings.Update(s => s.Launcher.LaunchCount = 0);
+                settingsProvider.Update(s => s.Launcher.LaunchCount = 0);
 
                 Logger?.LogInformation("Shutting down to get out of the way");
                 

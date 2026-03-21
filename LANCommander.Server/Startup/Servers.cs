@@ -31,6 +31,7 @@ public static class Servers
             foreach (var engine in serverEngines)
             {
                 await engine.InitializeAsync();
+                await engine.RefreshTrackingAsync();
             }
             
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();

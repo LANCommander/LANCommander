@@ -31,11 +31,11 @@ public class MonacoCodeEditor : StandaloneCodeEditor
         }, null);
     }
 
-    private async void OnChanged(ModelContentChangedEvent e)
+    private async Task OnChanged(ModelContentChangedEvent e)
     {
         Value = await GetValue();
         
         if (ValueChanged.HasDelegate)
-            ValueChanged.InvokeAsync(Value);
+            await ValueChanged.InvokeAsync(Value);
     }
 }

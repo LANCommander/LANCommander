@@ -460,6 +460,7 @@ jobs:
           # ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

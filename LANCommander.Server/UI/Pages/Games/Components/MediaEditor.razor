@@ -196,8 +196,8 @@
             modalRef.Config.ConfirmLoading = true;
 
             media.SourceUrl = result.SourceUrl;
-            media.MimeType = result.MimeType; 
-            
+            media.MimeType = result.MimeType;
+
             if (media.Id == Guid.Empty)
             {
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
@@ -212,6 +212,12 @@
             }
 
             _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+
+            await InvokeAsync(() =>
+            {
+                ResultsTable?.ReloadData();
+                StateHasChanged();
+            });
         };
     }
 
@@ -251,6 +257,8 @@
         }
 
         _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+
+        ResultsTable?.ReloadData();
     }
 
     async Task DeleteAll()

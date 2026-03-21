@@ -1,0 +1,23 @@
+﻿@page "/Tools/{id:guid}/Actions"
+@using LANCommander.Server.UI.Pages.Tools.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<ToolEditView Id="Id" Title="Actions">
+    <TitleExtraTemplate>
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="_actionEditor.Save">Save</Button>
+            </SpaceItem>
+        </Space>
+    </TitleExtraTemplate>
+
+    <ChildContent>
+        <ActionEditor @ref="_actionEditor" />
+    </ChildContent>
+</ToolEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    ActionEditor _actionEditor;
+}

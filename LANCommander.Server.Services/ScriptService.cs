@@ -111,11 +111,11 @@ namespace LANCommander.Server.Services
                 });
             }
             
-            var files = Directory.GetFiles(settingsProvider.CurrentValue.Server.Scripts.Snippets.StoragePath, "*.ps1", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(storagePath, "*.ps1", SearchOption.AllDirectories);
 
             return files.Select(f =>
             {
-                var split = f.Split(Path.DirectorySeparatorChar);
+                var split = f.Substring(storagePath.Length).TrimStart('/').Split(Path.DirectorySeparatorChar);
 
                 return new Snippet
                 {

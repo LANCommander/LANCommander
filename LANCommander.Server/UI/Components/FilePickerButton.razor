@@ -14,7 +14,7 @@ else if (!String.IsNullOrWhiteSpace(Root))
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<string> OnSelected { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public Guid? ArchiveId { get; set; }
     [Parameter] public string Title { get; set; } = "Choose File";
     [Parameter] public string OkText { get; set; } = "Select File";
     [Parameter] public bool AllowDirectories { get; set; } = false;
@@ -31,8 +31,8 @@ else if (!String.IsNullOrWhiteSpace(Root))
 
     protected override async Task OnInitializedAsync()
     {
-        if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.FileExistsAsync(ArchiveId);
+        if (ArchiveId != null && ArchiveId != Guid.Empty)
+            ArchiveExists = await ArchiveService.FileExistsAsync(ArchiveId.Value);
     }
 
     private async void BrowseForFile()
@@ -47,7 +47,7 @@ else if (!String.IsNullOrWhiteSpace(Root))
             WrapClassName = "file-picker-dialog"
         };
 
-        var browserOptions = new FilePickerOptions()
+        var browserOptions = new FilePickerOptions
         {
             ArchiveId = ArchiveId,
             Root = Root,

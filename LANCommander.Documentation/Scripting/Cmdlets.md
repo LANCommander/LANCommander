@@ -217,3 +217,271 @@ The companion to `Get-UserCustomField`, this cmdlet lets you update or set the v
 ```powershell
 Update-UserCustomField -Name "SteamId" -Value "34950494"
 ```
+
+# Steam-Related Cmdlets
+
+The following cmdlets provide functionality for interacting with SteamCMD and the Steam Store API. These cmdlets enable you to install Steam games, manage SteamCMD profiles, search for games, and retrieve Steam assets.
+
+# Connection Management
+
+## `Connect-SteamCmd`
+Connects to SteamCMD with the specified username and optional password.
+
+### Syntax
+```powershell
+Connect-SteamCmd
+    -Username <string>
+    -Password <SecureString> (optional)
+```
+
+### Description
+The `Connect-SteamCmd` cmdlet authenticates with SteamCMD using the provided username and optional password. This is required before installing Steam content that requires authentication. Returns a `SteamCmdStatus` object indicating the connection result.
+
+### Example
+```powershell
+$securePassword = ConvertTo-SecureString "mypassword" -AsPlainText -Force
+Connect-SteamCmd -Username "myusername" -Password $securePassword
+```
+
+## `Disconnect-SteamCmd`
+Disconnects from SteamCMD for the specified username.
+
+### Syntax
+```powershell
+Disconnect-SteamCmd
+    -Username <string>
+```
+
+### Description
+The `Disconnect-SteamCmd` cmdlet logs out the specified username from SteamCMD. Returns a `SteamCmdStatus` object indicating the logout result.
+
+### Example
+```powershell
+Disconnect-SteamCmd -Username "myusername"
+```
+
+## `Get-SteamCmdConnectionStatus`
+Gets the connection status for a SteamCMD username.
+
+### Syntax
+```powershell
+Get-SteamCmdConnectionStatus
+    -Username <string>
+```
+
+### Description
+The `Get-SteamCmdConnectionStatus` cmdlet retrieves the current connection status for the specified username. Returns a `SteamCmdConnectionStatus` object containing information about whether the user is connected and authenticated.
+
+### Example
+```powershell
+$status = Get-SteamCmdConnectionStatus -Username "myusername"
+Write-Host "Connected: $($status.IsConnected)"
+```
+
+# SteamCMD Configuration
+
+## `Get-SteamCmdPath`
+Gets the path to the SteamCMD executable.
+
+### Syntax
+```powershell
+Get-SteamCmdPath
+```
+
+### Description
+The `Get-SteamCmdPath` cmdlet attempts to auto-detect the SteamCMD executable path on the system. Returns the path as a string if found, or nothing if SteamCMD is not detected.
+
+### Example
+```powershell
+$steamCmdPath = Get-SteamCmdPath
+if ($steamCmdPath) {
+    Write-Host "SteamCMD found at: $steamCmdPath"
+}
+```
+
+## `Get-SteamCmdProfile`
+Gets a SteamCMD profile for the specified username.
+
+### Syntax
+```powershell
+Get-SteamCmdProfile
+    -Username <string>
+```
+
+### Description
+The `Get-SteamCmdProfile` cmdlet retrieves the SteamCMD profile configuration for the specified username. Returns a `SteamCmdProfile` object containing the username and install directory, or nothing if the profile doesn't exist.
+
+### Example
+```powershell
+$profile = Get-SteamCmdProfile -Username "myusername"
+if ($profile) {
+    Write-Host "Install Directory: $($profile.InstallDirectory)"
+}
+```
+
+## `Get-SteamCmdProfiles`
+Gets all SteamCMD profiles.
+
+### Syntax
+```powershell
+Get-SteamCmdProfiles
+```
+
+### Description
+The `Get-SteamCmdProfiles` cmdlet retrieves all configured SteamCMD profiles. Returns a collection of `SteamCmdProfile` objects.
+
+### Example
+```powershell
+$profiles = Get-SteamCmdProfiles
+foreach ($profile in $profiles) {
+    Write-Host "$($profile.Username): $($profile.InstallDirectory)"
+}
+```
+
+## `Set-SteamCmdProfile`
+Creates or updates a SteamCMD profile.
+
+### Syntax
+```powershell
+Set-SteamCmdProfile
+    -Username <string>
+    -InstallDirectory <string>
+```
+
+### Description
+The `Set-SteamCmdProfile` cmdlet creates or updates a SteamCMD profile with the specified username and install directory. This profile is used to store SteamCMD configuration settings.
+
+### Example
+```powershell
+Set-SteamCmdProfile -Username "myusername" -InstallDirectory "C:\Steam\Content"
+```
+
+## `Remove-SteamCmdProfile`
+Removes a SteamCMD profile.
+
+### Syntax
+```powershell
+Remove-SteamCmdProfile
+    -Username <string>
+```
+
+### Description
+The `Remove-SteamCmdProfile` cmdlet deletes the SteamCMD profile for the specified username.
+
+### Example
+```powershell
+Remove-SteamCmdProfile -Username "myusername"
+```
+
+# Steam Content Installation
+
+## `Install-SteamContent`
+Installs Steam content (game, DLC, etc.) using SteamCMD.
+
+### Syntax
+```powershell
+Install-SteamContent
+    -AppId <uint>
+    -InstallDirectory <string>
+    -Username <string> (optional)
+```
+
+### Description
+The `Install-SteamContent` cmdlet queues an installation job to download and install Steam content using SteamCMD. The `AppId` parameter specifies the Steam App ID to install, and `InstallDirectory` is where the content will be installed. If `Username` is provided, it will use that profile's authentication. Returns a `SteamCmdInstallJob` object that can be used to track the installation progress.
+
+### Example
+```powershell
+$job = Install-SteamContent -AppId 730 -InstallDirectory "C:\Games\Counter-Strike 2" -Username "myusername"
+Write-Host "Installation job started: $($job.Id)"
+```
+
+## `Remove-SteamContent`
+Removes Steam content from the specified install directory.
+
+### Syntax
+```powershell
+Remove-SteamContent
+    -InstallDirectory <string>
+```
+
+### Description
+The `Remove-SteamContent` cmdlet removes Steam content from the specified installation directory. Returns a `SteamCmdStatus` object indicating the result of the operation.
+
+### Example
+```powershell
+Remove-SteamContent -InstallDirectory "C:\Games\Counter-Strike 2"
+```
+
+# Steam Store
+
+## `Search-SteamGames`
+Searches for games on the Steam Store.
+
+### Syntax
+```powershell
+Search-SteamGames
+    -Keyword <string>
+```
+
+### Description
+The `Search-SteamGames` cmdlet searches the Steam Store for games matching the specified keyword. Returns a collection of `GameSearchResult` objects containing the game name and App ID.
+
+### Example
+```powershell
+$results = Search-SteamGames -Keyword "Counter-Strike"
+foreach ($result in $results) {
+    Write-Host "$($result.Name) - App ID: $($result.AppId)"
+}
+```
+
+## `Get-SteamWebAssetUri`
+Gets the URI for a Steam web asset (logo, header, etc.).
+
+### Syntax
+```powershell
+Get-SteamWebAssetUri
+    -AppId <int>
+    -WebAssetType <WebAssetType>
+```
+
+### Description
+The `Get-SteamWebAssetUri` cmdlet returns the URI for a specific web asset type for the given Steam App ID. The `WebAssetType` parameter accepts one of the following values:
+- `Capsule` - Small capsule image (231x87)
+- `CapsuleLarge` - Large capsule image (616x353)
+- `Header` - Header image
+- `HeroCapsule` - Hero capsule image
+- `LibraryCover` - Library cover image (600x900)
+- `LibraryHeader` - Library header image
+- `LibraryHero` - Library hero image
+- `Logo` - Game logo (PNG)
+
+Returns a `Uri` object.
+
+### Example
+```powershell
+$logoUri = Get-SteamWebAssetUri -AppId 730 -WebAssetType Logo
+Write-Host "Logo URL: $logoUri"
+```
+
+## `Get-SteamAppInfo`
+Gets app details from the Steam Store (no API key required) and the **changenumber** (build ID) and last updated time from Steam via SteamKit2 (PICS).
+
+### Syntax
+```powershell
+Get-SteamAppInfo
+    -AppId <uint>
+```
+
+### Description
+The `Get-SteamAppInfo` cmdlet returns a `SteamAppInfo` object with name, short description, release date, developers, publishers, and store URL from the public Steam Store `appdetails` endpoint. It also connects to Steam via SteamKit2 (PICS) to fill **LastChangenumber** and **LastUpdated** for the public branch—no Web API key required. If SteamKit2 cannot connect or the app cannot be queried, those two properties are null.
+
+### Example
+```powershell
+$info = Get-SteamAppInfo -AppId 413150
+if ($info) {
+    Write-Host "Name: $($info.Name)"
+    Write-Host "Description: $($info.Description)"
+    Write-Host "Release date: $($info.ReleaseDate)"
+    Write-Host "Developer: $($info.Developer)"
+}
+```

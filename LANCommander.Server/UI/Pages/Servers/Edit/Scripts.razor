@@ -8,26 +8,13 @@
         {
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
-
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
             </Flex>
         }
     </TitleExtraTemplate>
     
     <ChildContent>
         <CascadingValue Name="ServerId" Value="context.Id">
-            <ScriptEditor ArchiveId="@context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }"/>
+            <ScriptEditor AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }"/>
         </CascadingValue>
     </ChildContent>
 </ServerEditView>

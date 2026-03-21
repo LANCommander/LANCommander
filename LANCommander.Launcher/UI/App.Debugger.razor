@@ -1,0 +1,17 @@
+﻿@using LANCommander.Launcher.Enums
+@using Photino.Blazor
+@inject PhotinoBlazorApp PhotinoBlazorApp
+
+<div class="debugger-window">
+    <CascadingValue Name="WindowType" Value="WindowType.Debugger">
+        <PowerShellConsole Visible VisibleChanged="OnVisibleChange" />
+    </CascadingValue>
+</div>
+
+@code {
+    void OnVisibleChange(bool state)
+    {
+        if (!state)
+            PhotinoBlazorApp.MainWindow.Close();
+    }
+}

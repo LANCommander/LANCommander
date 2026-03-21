@@ -9,7 +9,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "VerticalFov")]
     [OutputType(typeof(string))]
-    public class GetHorizontalFovCmdlet : BaseCmdlet
+    public class GetHorizontalFovCmdlet : Cmdlet
     {
         [Parameter] public int Width { get; set; } = 0;
         [Parameter] public int Height { get; set; } = 0;

@@ -76,6 +76,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Platform>();
             builder.ConfigureBaseRelationships<PlaySession>();
             builder.ConfigureBaseRelationships<Redistributable>();
+            builder.ConfigureBaseRelationships<Tool>();
             builder.ConfigureBaseRelationships<SavePath>();
             builder.ConfigureBaseRelationships<Script>();
             builder.ConfigureBaseRelationships<Models.Server>();
@@ -387,6 +388,26 @@ namespace LANCommander.Server.Data
             builder.Entity<Redistributable>()
                 .HasMany(r => r.Scripts)
                 .WithOne(s => s.Redistributable)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+            
+            #region Tool Relationships
+            builder.Entity<Tool>()
+                .HasMany(t => t.Archives)
+                .WithOne(a => a.Tool)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Tool>()
+                .HasMany(t => t.Scripts)
+                .WithOne(s => s.Tool)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            builder.Entity<Tool>()
+                .HasMany(t => t.Actions)
+                .WithOne(s => s.Tool)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
             #endregion

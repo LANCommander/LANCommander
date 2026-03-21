@@ -27,13 +27,15 @@
         </BoundDataColumn>
         <BoundDataColumn Property="t => t.UpdatedBy != null ? t.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions TData="string">
-            <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
-            @* TODO: Add seperate Edit page and navigate to it *@
-            @* <a href="@($"/Metadata/Tags/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
+            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
+                <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+                @* TODO: Add seperate Edit page and navigate to it *@
+                @* <a href="@($"/Metadata/Tags/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
 
-            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this tag?">
-                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-            </Popconfirm>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this tag?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+                </Popconfirm>
+            </Flex>
         </DataActions>
     </Columns>
 </DataTable>

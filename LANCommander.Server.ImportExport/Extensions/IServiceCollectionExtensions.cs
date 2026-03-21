@@ -20,6 +20,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<GameImporter>();
         services.AddScoped<RedistributableImporter>();
         services.AddScoped<ServerImporter>();
+        services.AddScoped<ToolImporter>();
         
         services.AddScoped<ActionImporter>();
         services.AddScoped<ArchiveImporter>();
@@ -50,6 +51,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<GameExporter>();
         services.AddScoped<RedistributableExporter>();
         services.AddScoped<ServerExporter>();
+        services.AddScoped<ToolExporter>();
         
         services.AddScoped<ActionExporter>();
         services.AddScoped<ArchiveExporter>();

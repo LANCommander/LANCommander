@@ -1,4 +1,4 @@
-﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
@@ -71,8 +72,8 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = File.ReadAllText(path);
 
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin = true;
+            if (RequiresAdmin())
+                AsAdmin();
 
             return this;
         }
@@ -81,8 +82,8 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = contents;
 
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin = true;
+            if (RequiresAdmin())
+                AsAdmin();
 
             return this;
         }
@@ -150,6 +151,13 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        private bool RequiresAdmin()
+        {
+            var pattern = @"^#(\s?Requires\s?Admin|Requires -RunAsAdministrator)\s*";
+            
+            return Regex.IsMatch(Contents, pattern);
+        }
+
         public async Task<T> ExecuteAsync<T>()
         {
             T result = default;
@@ -174,6 +182,15 @@ namespace LANCommander.SDK.PowerShell
                 runspace.SessionStateProxy.SetVariable("Logo", Logo);
                 runspace.SessionStateProxy.SetVariable("ScriptType", Type);
                 runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
+                
+                // Store services in session state for cmdlets to access
+                var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
+                if (settingsProvider != null)
+                {
+                    runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
+                }
+                
+                // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
                 
                 Context = System.Management.Automation.PowerShell.Create();
 

@@ -8,6 +8,8 @@ using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpCompress.Archives;
+using SharpCompress.Readers;
 using ZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 
 namespace LANCommander.Server.ImportExport;
@@ -18,7 +20,7 @@ public class ImportContext : IDisposable
     public object Manifest { get; private set; }
     public BaseModel DataRecord { get; private set; }
     public StorageLocation ArchiveStorageLocation { get; set; }
-    public ZipArchive Archive { get; private set; }
+    public IArchive Archive { get; private set; }
 
     public IImportItemInfo CurrentItem { get; set; }
     public int Processed;
@@ -35,6 +37,8 @@ public class ImportContext : IDisposable
     private readonly ImportService _importService;
     private readonly StorageLocationService _storageLocationService;
     private readonly ILogger<ImportContext> _logger;
+
+    private string? _uploadedArchivePath;
     
     #region Importers
     private readonly ActionImporter _actions;
@@ -59,6 +63,7 @@ public class ImportContext : IDisposable
     private readonly ServerHttpPathImporter _serverHttpPaths;
     private readonly ServerImporter _servers;
     private readonly TagImporter _tags;
+    private readonly ToolImporter _tools;
     #endregion
 
     public ImportContext(IServiceProvider serviceProvider)
@@ -85,6 +90,7 @@ public class ImportContext : IDisposable
         _serverHttpPaths = serviceProvider.GetRequiredService<ServerHttpPathImporter>();
         _servers = serviceProvider.GetRequiredService<ServerImporter>();
         _tags = serviceProvider.GetRequiredService<TagImporter>();
+        _tools = serviceProvider.GetRequiredService<ToolImporter>();
         
         _importService = serviceProvider.GetRequiredService<ImportService>();
         _storageLocationService = serviceProvider.GetRequiredService<StorageLocationService>();
@@ -96,6 +102,8 @@ public class ImportContext : IDisposable
         Queue.Any(qi => qi.Key == importer.GetKey(record));
 
     public void SetId(Guid id) => Id = id;
+
+    public void TrackUploadedArchive(string path) => _uploadedArchivePath = path;
 
     #region Initialize Import
     public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(string archivePath)
@@ -122,10 +130,15 @@ public class ImportContext : IDisposable
         _serverHttpPaths.UseContext(this);
         _servers.UseContext(this);
         _tags.UseContext(this);
+        _tools.UseContext(this);
         
-        Archive = ZipArchive.Open(archivePath);
+        Archive = ZipArchive.OpenArchive(archivePath, new ReaderOptions());
 
         var manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == ManifestHelper.ManifestFilename);
+        
+        // Legacy purposes
+        if (manifestEntry == null)
+            manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == "_manifest.yml");
 
         if (manifestEntry == null)
             throw new InvalidOperationException("Invalid import file, cannot load manifest");
@@ -150,9 +163,38 @@ public class ImportContext : IDisposable
             
             if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Server>(manifestContents, out var serverManifest))
                 return await InitializeServerImportAsync(serverManifest);
+            
+            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Tool>(manifestContents, out var toolManifest))
+                return await InitializeToolImportAsync(toolManifest);
                 
             throw new InvalidOperationException("Unknown manifest file");
         }
+    }
+
+    public async Task InitializeMetadataUpdateAsync(SDK.Models.Manifest.Game gameManifest)
+    {
+        _developers.UseContext(this);
+        _engines.UseContext(this);
+        _games.UseContext(this);
+        _genres.UseContext(this);
+        _multiplayerModes.UseContext(this);
+        _publishers.UseContext(this);
+        _savePaths.UseContext(this);
+        _tags.UseContext(this);
+
+        Manifest = gameManifest;
+
+        await AddAsync(gameManifest.Developers, _developers);
+
+        if (gameManifest.Engine != null)
+            await AddAsync(gameManifest.Engine, _engines);
+
+        await AddAsync(gameManifest.Genres, _genres);
+        await AddAsync(gameManifest.MultiplayerModes, _multiplayerModes);
+        await AddAsync(gameManifest.Publishers, _publishers);
+        await AddAsync(gameManifest.SavePaths, _savePaths);
+        await AddAsync(gameManifest.Tags, _tags);
+        await AddAsync(gameManifest, _games);
     }
 
     private async Task<IEnumerable<IImportItemInfo>> InitializeLegacyGameImportAsync(
@@ -163,11 +205,11 @@ public class ImportContext : IDisposable
         if (gameManifest.Scripts != null)
             foreach (var script in gameManifest.Scripts)
             {
-                _scripts.AddAsset(new ImportAssetText
+                _scripts.AddAsset(new ImportAssetArchiveEntry
                 {
                     Name = script.Name,
                     RecordId = script.Id,
-                    Contents = script.Contents,
+                    Path = $"Scripts/{script.Id}",
                 });
             }
         
@@ -251,6 +293,18 @@ public class ImportContext : IDisposable
         
         return importItemInfo;
     }
+    
+    private async Task<IEnumerable<IImportItemInfo>> InitializeToolImportAsync(SDK.Models.Manifest.Tool toolManifest)
+    {
+        Manifest = toolManifest;
+        
+        var importItemInfo = new List<IImportItemInfo>();
+        
+        importItemInfo.AddRange(await GetImportItemInfoAsync(toolManifest.Archives, _archives).ToListAsync());
+        importItemInfo.AddRange(await GetImportItemInfoAsync(toolManifest.Scripts, _scripts).ToListAsync());
+
+        return importItemInfo;
+    }
     #endregion
     
     public async Task PrepareImportQueueAsync(IEnumerable<Guid> selectedRecordIds, Guid storageLocationId)
@@ -267,6 +321,9 @@ public class ImportContext : IDisposable
         
         if (Manifest is SDK.Models.Manifest.Server serverManifest)
             await AddAsync(serverManifest);
+        
+        if (Manifest is SDK.Models.Manifest.Tool toolManifest)
+            await AddAsync(toolManifest);
     }
 
     public async Task AddAsync(SDK.Models.Manifest.Game game)
@@ -305,6 +362,13 @@ public class ImportContext : IDisposable
         await AddAsync(server.HttpPaths, _serverHttpPaths);
         await AddAsync(server.ServerConsoles, _serverConsoles);
         await AddAsync(server, _servers);
+    }
+    
+    public async Task AddAsync(SDK.Models.Manifest.Tool tool)
+    {
+        await AddAsync(tool.Archives, _archives);
+        await AddAsync(tool.Scripts, _scripts);
+        await AddAsync(tool, _tools);
     }
     
     private async Task AddAsync<TRecord>(IEnumerable<TRecord> records, BaseImporter<TRecord> importer)
@@ -447,6 +511,9 @@ public class ImportContext : IDisposable
 
                 case ImportExportRecordType.Tag:
                     return await _tags.ImportAsync(queueItem);
+                
+                case ImportExportRecordType.Tool:
+                    return await _tools.ImportAsync(queueItem);
             }
         }
         catch (Exception ex)
@@ -486,5 +553,17 @@ public class ImportContext : IDisposable
     {
         if (Archive != null)
             Archive.Dispose();
+
+        if (_uploadedArchivePath != null && File.Exists(_uploadedArchivePath))
+        {
+            try
+            {
+                File.Delete(_uploadedArchivePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not delete uploaded import archive at {Path}", _uploadedArchivePath);
+            }
+        }
     }
 }

@@ -11,7 +11,9 @@ namespace LANCommander.Launcher.Services
         ILogger<ImportService> logger,
         ImportContextFactory importContextFactory,
         GameClient gameClient,
-        LibraryClient libraryClient) : BaseService(logger)
+        ToolClient toolClient,
+        LibraryClient libraryClient,
+        GameService gameService) : BaseService(logger)
     {
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
@@ -29,7 +31,7 @@ namespace LANCommander.Launcher.Services
         public async Task ImportLibraryAsync()
         {
             var remoteLibrary = await libraryClient.GetAsync();
-            
+
             Logger?.LogInformation("Starting library import");
 
             var importContext = importContextFactory.Create();
@@ -43,6 +45,14 @@ namespace LANCommander.Launcher.Services
             {
                 try
                 {
+                    var existing = await gameService.GetAsync(game.Id);
+
+                    if (existing != null && game.UpdatedOn <= existing.ImportedOn)
+                    {
+                        Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
+                        continue;
+                    }
+
                     var manifest = await gameClient.GetManifestAsync(game.Id);
 
                     await importContext.AddAsync(manifest);
@@ -61,6 +71,16 @@ namespace LANCommander.Launcher.Services
             var importContext = importContextFactory.Create();
             
             var manifest = await gameClient.GetManifestAsync(gameId);
+            
+            await importContext.AddAsync(manifest);
+            await importContext.ImportQueueAsync();
+        }
+
+        public async Task ImportToolAsync(Guid toolId)
+        {
+            var importContext = importContextFactory.Create();
+            
+            var manifest = await toolClient.GetManifestAsync(toolId);
             
             await importContext.AddAsync(manifest);
             await importContext.ImportQueueAsync();

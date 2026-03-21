@@ -1,12 +1,14 @@
+@using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
+@inject RemoteServerEngine RemoteServerEngine
 
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
     @if (!ServerEngines.Any())
     {
-        <Empty Description="@("No Docker hosts have been configured")" />
+        <Empty Description="@("No engines have been configured")" />
     }
-    
+
     <Collapse>
         @foreach (var serverEngine in ServerEngines)
         {
@@ -23,9 +25,9 @@
                             </FormItem>
                         </Form>
                     </ChildContent>
-                </Panel>                
+                </Panel>
             }
-            
+
             @if (serverEngine.Type == ServerEngine.Docker)
             {
                 <Panel Header="@serverEngine.Name">
@@ -37,9 +39,64 @@
                             <FormItem Label="Name">
                                 <Input @bind-Value="context.Name" BindOnInput />
                             </FormItem>
-                        
+
                             <FormItem Label="Address">
                                 <Input @bind-Value="context.Address" />
+                            </FormItem>
+                        </Form>
+                    </ChildContent>
+                </Panel>
+            }
+
+            @if (serverEngine.Type == ServerEngine.Remote)
+            {
+                <Panel Header="@serverEngine.Name">
+                    <ExtraTemplate>
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(serverEngine)"/>
+                    </ExtraTemplate>
+                    <ChildContent>
+                        <Form Model="serverEngine" Layout="FormLayout.Vertical">
+                            <FormItem Label="Name">
+                                <Input @bind-Value="context.Name" BindOnInput />
+                            </FormItem>
+
+                            <FormItem Label="Address">
+                                <Input @bind-Value="context.Address" Placeholder="http://other-server:1337" />
+                            </FormItem>
+
+                            <FormItem Label="Status">
+                                @if (!string.IsNullOrWhiteSpace(context.AccessToken) && context.TokenExpiration > DateTime.UtcNow)
+                                {
+                                    <Tag Color="TagColor.Success">Connected</Tag>
+                                }
+                                else
+                                {
+                                    <Tag>Not Connected</Tag>
+                                }
+                            </FormItem>
+
+                            @{
+                                var state = _remoteStates[serverEngine.Id];
+                            }
+
+                            @if (string.IsNullOrWhiteSpace(context.AccessToken) || context.TokenExpiration > DateTime.UtcNow)
+                            {
+                                <FormItem Label="Username">
+                                    <Input @bind-Value="state.Username" />
+                                </FormItem>
+
+                                <FormItem Label="Password">
+                                    <InputPassword @bind-Value="state.Password" />
+                                </FormItem>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(state.Error))
+                            {
+                                <Alert Type="@AlertType.Error" Message="@state.Error" ShowIcon="true" />
+                            }
+
+                            <FormItem>
+                                <Button Type="ButtonType.Primary" Loading="state.Connecting" OnClick="() => Connect(serverEngine)">Connect</Button>
                             </FormItem>
                         </Form>
                     </ChildContent>
@@ -48,35 +105,87 @@
         }
     </Collapse>
 
-    <Flex Justify="FlexJustify.Center">
-        <Button OnClick="Add" Type="ButtonType.Primary">Add Engine</Button>
+    <Flex Justify="FlexJustify.Center" Gap="FlexGap.Small">
+        <Button OnClick="() => Add(ServerEngine.Local)" Type="ButtonType.Default">Add Local</Button>
+        <Button OnClick="() => Add(ServerEngine.Docker)" Type="ButtonType.Default">Add Docker</Button>
+        <Button OnClick="() => Add(ServerEngine.Remote)" Type="ButtonType.Primary">Add Remote</Button>
     </Flex>
 </Flex>
 
 @code {
     [Parameter] public IEnumerable<ServerEngineConfiguration> Values { get; set; }
     [Parameter] public EventCallback<IEnumerable<ServerEngineConfiguration>> ValuesChanged { get; set; }
+    [Parameter] public EventCallback Save { get; set; }
+
+    class RemoteEngineState
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Error { get; set; } = string.Empty;
+        public bool Connecting { get; set; } = false;
+    }
 
     List<ServerEngineConfiguration> ServerEngines = new();
+
+    Dictionary<Guid, RemoteEngineState> _remoteStates = new();
 
     protected override void OnParametersSet()
     {
         ServerEngines = Values.OrderBy(e => e.Type).ThenBy(e => e.Name).ToList();
+
+        foreach (var engine in ServerEngines.Where(e => e.Type == ServerEngine.Remote))
+            _remoteStates.TryAdd(engine.Id, new RemoteEngineState());
     }
-    
-    async Task Add()
+
+    async Task Add(ServerEngine type)
     {
-        ServerEngines.Add(new ServerEngineConfiguration());
+        var newEngine = new ServerEngineConfiguration
+        {
+            Type = type,
+            Name = type.ToString()
+        };
+
+        ServerEngines.Add(newEngine);
+
+        if (type == ServerEngine.Remote)
+            _remoteStates[newEngine.Id] = new RemoteEngineState();
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(ServerEngines);
     }
-    
+
     async Task Remove(ServerEngineConfiguration serverEngine)
     {
         ServerEngines.Remove(serverEngine);
 
+        _remoteStates.Remove(serverEngine.Id);
+
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(ServerEngines);
+        
+        if (Save.HasDelegate)
+            await Save.InvokeAsync();
+    }
+
+    async Task Connect(ServerEngineConfiguration serverEngine)
+    {
+        var state = _remoteStates[serverEngine.Id];
+
+        state.Connecting = true;
+        state.Error = string.Empty;
+
+        await InvokeAsync(StateHasChanged);
+
+        if (Save.HasDelegate)
+            await Save.InvokeAsync();
+
+        var error = await RemoteServerEngine.AuthenticateAsync(serverEngine.Id, state.Username, state.Password);
+
+        if (!string.IsNullOrWhiteSpace(error))
+            state.Error = error;
+
+        state.Connecting = false;
+
+        await InvokeAsync(StateHasChanged);
     }
 }

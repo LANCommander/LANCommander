@@ -13,7 +13,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
     /// </summary>
     [Cmdlet(VerbsData.Update, "IniValue")]
     [OutputType(typeof(string))]
-    public class UpdateIniValueCmdlet : BaseCmdlet
+    public class UpdateIniValueCmdlet : Cmdlet
     {
         /// <summary>
         /// Gets or sets the section in the INI file that contains the key to be updated.

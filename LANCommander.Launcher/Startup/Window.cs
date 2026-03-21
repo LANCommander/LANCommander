@@ -11,14 +11,17 @@ namespace LANCommander.Launcher.Startup;
 
 public static class MainWindow
 {
-    public static PhotinoBlazorApp RegisterMainWindow(this PhotinoBlazorApp app)
+    public static PhotinoBlazorApp RegisterMainWindow(this PhotinoBlazorApp app, WindowOptions options)
     {
         app.MainWindow
             .SetTitle("LANCommander Launcher")
             .RegisterWebMessageReceivedHandler(ChatWindowMessageDelegate)
-            .SetChromeless(true);
+            .SetWidth(options.Width)
+            .SetHeight(options.Height)
+            .SetChromeless(options.CustomWindow);
 
-        app.MainWindow.WindowClosing += SaveWindowPosition;
+        if (options.Type == WindowType.Main)
+            app.MainWindow.WindowClosing += SaveWindowPosition;
 
         return app;
     }

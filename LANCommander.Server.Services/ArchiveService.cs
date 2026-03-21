@@ -36,7 +36,9 @@ namespace LANCommander.Server.Services
         
         public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
         {
-            return Path.Combine(storageLocation.Path, archive.ObjectKey);
+            return Path.IsPathRooted(storageLocation.Path)
+                ? Path.Combine(storageLocation.Path, archive.ObjectKey)
+                : AppPaths.GetConfigPath(storageLocation.Path, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(Archive archive)
@@ -54,7 +56,7 @@ namespace LANCommander.Server.Services
             
             return Path.IsPathRooted(storageLocationPath) ?
                 Path.Combine(storageLocationPath, archive.ObjectKey) :
-                Path.Combine(AppPaths.GetConfigDirectory(), storageLocationPath, archive.ObjectKey);
+                AppPaths.GetConfigPath(storageLocationPath, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)
@@ -72,6 +74,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.Tool);
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
         }
@@ -92,6 +95,7 @@ namespace LANCommander.Server.Services
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.Tool);
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
         }

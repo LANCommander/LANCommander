@@ -2,6 +2,7 @@
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers
@@ -10,91 +11,18 @@ namespace LANCommander.Server.Controllers
     {
         private readonly ServerService ServerService;
         private readonly IMapper Mapper;
+        private readonly IOptions<Settings.Settings> _settings;
 
         public ServerController(
             ILogger<ServerController> logger,
             SettingsProvider<Settings.Settings> settingsProvider,
             IMapper mapper,
-            ServerService serverService) : base(logger, settingsProvider)
+            ServerService serverService,
+            IOptions<Settings.Settings> settings) : base(logger, settingsProvider)
         {
             ServerService = serverService;
             Mapper = mapper;
-        }
-
-        [HttpGet("/Server/{id:guid}/Export/Full")]
-        public async Task ExportFullAsync(Guid id)
-        {
-            var server = await ServerService
-                .Include(s => s.Actions)
-                .Include(s => s.HttpPaths)
-                .Include(s => s.Scripts)
-                .Include(s => s.ServerConsoles)
-                .GetAsync(id);
-
-            if (server == null)
-            {
-                Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-
-            Response.ContentType = "application/octet-stream";
-            Response.Headers.Append("Content-Disposition", @$"attachment; filename=""{server.Name}.lcx""");
-
-            using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
-            {
-                var manifest = Mapper.Map<SDK.Models.Server>(server);
-                var serializedManifest = ManifestHelper.Serialize(manifest);
-
-                using (var manistream = new MemoryStream())
-                using (var sw = new StreamWriter(manistream))
-                {
-                    sw.Write(serializedManifest);
-                    sw.Flush();
-
-                    var manifestEntry = export.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.NoCompression);
-
-                    using (var entryStream = manifestEntry.Open())
-                    {
-                        manistream.Seek(0, SeekOrigin.Begin);
-                        manistream.CopyTo(entryStream);
-                    }
-                }
-
-                if (server.Scripts != null)
-                foreach (var script in server.Scripts)
-                {
-                    using (var scriptStream = new MemoryStream())
-                    using (var sw = new StreamWriter(scriptStream))
-                    {
-                        sw.Write(script.Contents);
-                        sw.Flush();
-
-                        var scriptEntry = export.CreateEntry($"Scripts/{script.Id}", CompressionLevel.NoCompression);
-
-                        using (var entryStream = scriptEntry.Open())
-                        {
-                            scriptStream.Seek(0, SeekOrigin.Begin);
-                            scriptStream.CopyTo(entryStream);
-                        }
-                    }
-                }
-
-                var files = Directory.EnumerateFileSystemEntries($"{server.WorkingDirectory}", "*", SearchOption.AllDirectories);
-
-                foreach (var file in files)
-                {
-                    var entryName = file.Substring(server.WorkingDirectory.Length, file.Length - server.WorkingDirectory.Length).Replace(Path.DirectorySeparatorChar, '/').TrimStart('/');
-
-                    if (System.IO.File.Exists(file))
-                    {
-                        export.CreateEntryFromFile(file, $"Files/{entryName}", CompressionLevel.NoCompression);
-                    }
-                    else if (System.IO.Directory.Exists(file))
-                    {
-                        export.CreateEntry($"Files/{entryName}/");
-                    }
-                }
-            }
+            _settings = settings;
         }
 
         [HttpGet("/Server/{id:guid}/{*path}")]
@@ -106,6 +34,17 @@ namespace LANCommander.Server.Controllers
 
             if (server == null)
                 return NotFound();
+
+            if (server.Engine == Settings.Enums.ServerEngine.Remote)
+            {
+                var config = _settings.Value.Server.GameServers.ServerEngines
+                    .FirstOrDefault(e => e.Id == server.RemoteHostId);
+
+                if (config == null)
+                    return NotFound();
+
+                return Redirect($"{config.Address.TrimEnd('/')}/Server/{server.RemoteServerId}/{path}");
+            }
 
             if (server.HttpPaths == null || server.HttpPaths.Count == 0)
                 return NotFound();

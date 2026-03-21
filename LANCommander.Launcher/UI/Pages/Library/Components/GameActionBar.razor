@@ -58,13 +58,15 @@
 
         @if (CurrentItem?.State == ListItemState.NotInstalled)
         {
-            <ConnectionStateView>
-                <Online>
-                    <SpaceItem>
-                        <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
-                    </SpaceItem>
-                </Online>
-            </ConnectionStateView>
+            <SpaceItem>
+                <ConnectionStateView>
+                    <Online>
+                        <SpaceItem>
+                            <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
+                        </SpaceItem>
+                    </Online>
+                </ConnectionStateView>
+            </SpaceItem>
         }
 
         @if (CurrentGame is not null)

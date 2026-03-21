@@ -32,6 +32,7 @@ public class LocalServerEngine(
     private Dictionary<Guid, CancellationTokenSource> _running { get; set; } = new();
     private Dictionary<Guid, ServerProcessStatus> _status { get; set; } = new();
     private Dictionary<Guid, LogFileMonitor> _logFileMonitors { get; set; } = new();
+    private List<Guid> _tracked { get; set; } = new();
 
     public async Task InitializeAsync()
     {
@@ -49,9 +50,31 @@ public class LocalServerEngine(
         }
     }
 
+    public async Task RefreshTrackingAsync()
+    {
+        using (var scope = serviceProvider.CreateScope())
+        {
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+            var servers = await serverService.GetAsync(s =>
+                s.Engine == ServerEngine.Remote);
+
+            foreach (var server in servers)
+            {
+                if (_running.ContainsKey(server.Id) || _status.ContainsKey(server.Id))
+                {
+                    if (!_tracked.Contains(server.Id))
+                        _tracked.Add(server.Id);
+                }
+                else
+                    _tracked.Remove(server.Id);
+            }
+        }
+    }
+
     public bool IsManaging(Guid serverId)
     {
-        return _running.ContainsKey(serverId) || _status.ContainsKey(serverId);
+        return _tracked.Contains(serverId);
     }
 
     public async Task StartAsync(Guid serverId)

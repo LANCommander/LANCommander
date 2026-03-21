@@ -24,5 +24,11 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(ServerId))]
         [InverseProperty("Actions")]
         public Server? Server { get; set; }
+        
+        public Guid? ToolId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(ToolId))]
+        [InverseProperty("Actions")]
+        public Tool? Tool { get; set; }
     }
 }

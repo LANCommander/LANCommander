@@ -152,6 +152,21 @@ namespace LANCommander.Migrations
                     b.ToTable("GameTag");
                 });
 
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.Property<Guid>("GamesId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ToolsId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GamesId", "ToolsId");
+
+                    b.HasIndex("ToolsId");
+
+                    b.ToTable("GameTool");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Action", b =>
                 {
                     b.Property<Guid>("Id")
@@ -186,6 +201,9 @@ namespace LANCommander.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
 
@@ -202,6 +220,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("GameId");
 
                     b.HasIndex("ServerId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -242,6 +262,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("UncompressedSize")
                         .HasColumnType("INTEGER");
 
@@ -266,6 +289,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("RedistributableId");
 
                     b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -973,6 +998,9 @@ namespace LANCommander.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
 
@@ -984,6 +1012,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -1246,6 +1276,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
@@ -1264,6 +1297,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("RedistributableId");
 
                     b.HasIndex("ServerId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -1334,6 +1369,12 @@ namespace LANCommander.Migrations
 
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
@@ -1525,6 +1566,43 @@ namespace LANCommander.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Tools");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>
@@ -1952,6 +2030,21 @@ namespace LANCommander.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", null)
+                        .WithMany()
+                        .HasForeignKey("ToolsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Action", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -1969,6 +2062,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Actions")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -1979,6 +2077,8 @@ namespace LANCommander.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Server");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2010,6 +2110,11 @@ namespace LANCommander.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Archives")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2024,6 +2129,8 @@ namespace LANCommander.Migrations
                     b.Navigation("Redistributable");
 
                     b.Navigation("StorageLocation");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2447,6 +2554,10 @@ namespace LANCommander.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", null)
+                        .WithMany("Pages")
+                        .HasForeignKey("ToolId");
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2597,6 +2708,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Scripts")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2609,6 +2725,8 @@ namespace LANCommander.Migrations
                     b.Navigation("Redistributable");
 
                     b.Navigation("Server");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2703,6 +2821,23 @@ namespace LANCommander.Migrations
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Tag", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
                         .WithMany()
@@ -2966,6 +3101,17 @@ namespace LANCommander.Migrations
                     b.Navigation("GameSaves");
 
                     b.Navigation("Media");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
+                {
+                    b.Navigation("Actions");
+
+                    b.Navigation("Archives");
+
+                    b.Navigation("Pages");
+
+                    b.Navigation("Scripts");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>

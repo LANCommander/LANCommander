@@ -7,6 +7,7 @@ public enum ImportExportRecordType
     Game,
     Redistributable,
     Server,
+    Tool,
     
     [Display(Name = "Actions")]
     Action,

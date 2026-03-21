@@ -128,10 +128,10 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
             game = await gameService.AddAsync(game);
 
             // Mock game install directory
-            var sdkGame = await Client.Games.GetAsync(game.Id);
+            var sdkGame = await gameClient.GetAsync(game.Id);
 
-            var gameInstallDirectory = await Client.Games.GetInstallDirectory(sdkGame, installDirectory);
-            var manifest = Client.Games.GetManifest(game.Id);
+            var gameInstallDirectory = await gameClient.GetInstallDirectory(sdkGame, installDirectory);
+            var manifest = gameClient.GetManifest(game.Id);
 
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, ".lancommander"));
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, "save"));

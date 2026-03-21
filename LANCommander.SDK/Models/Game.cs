@@ -37,6 +37,7 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Tag> Tags { get; set; }
         
         public virtual IEnumerable<Redistributable> Redistributables { get; set; }
+        public virtual IEnumerable<Tool> Tools { get; set; }
         public virtual IEnumerable<Server> Servers { get; set; }
         public virtual IEnumerable<Guid> DependentGames { get; set; }
 

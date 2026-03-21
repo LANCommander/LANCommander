@@ -3,6 +3,7 @@
 @forward 'Windows/MainWindow.razor';
 @forward 'Windows/ChatWindow.razor';
 
+@forward 'Components/PowerShellConsole.razor';
 @forward 'Components/ActionSelectorDialog/ActionSelectorDialog.razor';
 @forward 'Components/Authentication/AuthenticationForm.razor';
 @forward 'Components/Button/Button.razor';

@@ -1,5 +1,7 @@
 @using LANCommander.Server.Services.Enums
-@inject SteamCMDService SteamCmdService
+@using LANCommander.Steam.Abstractions
+@using LANCommander.Steam.Enums
+@inject ISteamCmdService SteamCmdService
 @inject IMessageService MessageService
 
 <Spin Spinning="_connectionStatus == SteamCmdConnectionStatus.Unknown">
@@ -68,17 +70,15 @@
         _loginMessage.Duration = 0;
 
         MessageService.Loading(_loginMessage);
+        
         MessageService.Info("Check the Steam mobile app to confirm this login", 10);
         
-        var success = await SteamCmdService.LoginToSteamAsync(Username, _password);
+        var status = await SteamCmdService.LoginToSteamAsync(Username, _password);
 
-        _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
-
-        _processingLogin = false;
-        await InvokeAsync(StateHasChanged);
-
-        if (success)
+        if (status == SteamCmdStatus.Success)
         {
+            _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
+            
             _loginMessage.Content = "Successfully authenticated to Steam!";
             _loginMessage.Duration = 3;
             
@@ -97,10 +97,38 @@
         }
         else
         {
-            _loginMessage.Content = "Could not authenticate to Steam!";
-            _loginMessage.Duration = 5;
+            switch (status)
+            {
+                case SteamCmdStatus.InvalidUsername:
+                case SteamCmdStatus.InvalidPassword:
+                    _loginMessage.Content = "Invalid username or password";
+                    break;
+                    
+                case SteamCmdStatus.ExecutableNotFound:
+                    _loginMessage.Content = "SteamCMD executable not found";
+                    break;
+                    
+                case SteamCmdStatus.PathNotConfigured:
+                    _loginMessage.Content = "SteamCMD path not configured";
+                    break;
+                    
+                case SteamCmdStatus.Error:
+                    _loginMessage.Content = "SteamCMD returned an error, check logs for info.";
+                    break;
+                    
+                case SteamCmdStatus.UnknownError:
+                default:
+                    _loginMessage.Content = "An unknown error occurred, check logs for more info";
+                    break;
+            }
+            
+            _loginMessage.Duration = 8;
             
             MessageService.Error(_loginMessage);
         }
+        
+        _processingLogin = false;
+        
+        await InvokeAsync(StateHasChanged);
     }
 }

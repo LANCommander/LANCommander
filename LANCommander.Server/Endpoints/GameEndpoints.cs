@@ -25,6 +25,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
+        group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
         group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
@@ -163,13 +164,30 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
 
-            var actions = new List<Data.Models.Action>();
-                
-            actions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
-            actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
-            actions.AddRange(game.Servers.SelectMany(s => s.Actions));
-                
-            return mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
+            var dataActions = new List<Data.Models.Action>();
+
+            dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
+            dataActions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
+
+            var mappedActions = mapper.Map<List<SDK.Models.Action>>(dataActions);
+
+            foreach (var server in game.Servers)
+            {
+                foreach (var serverAction in server.Actions)
+                {
+                    var mappedAction = mapper.Map<SDK.Models.Action>(serverAction);
+
+                    if (!String.IsNullOrWhiteSpace(server.Host))
+                        mappedAction.Variables["ServerHost"] = server.Host;
+
+                    if (server.Port > 0)
+                        mappedAction.Variables["ServerPort"] = server.Port.ToString();
+
+                    mappedActions.Add(mappedAction);
+                }
+            }
+
+            return mappedActions;
         }, tags: ["Games", $"Games/{id}"]);
             
         return TypedResults.Ok(actions);
@@ -193,6 +211,25 @@ public static class GameEndpoints
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(addons);
+    }
+
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Games/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.GameId == id);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
+        
+        return TypedResults.Ok(scripts);
     }
 
     internal static async Task<IResult> StartedAsync(
@@ -352,7 +389,7 @@ public static class GameEndpoints
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            64 * 1024,
+            1024 * 1024, // 1 MB buffer for higher throughput on large archive downloads
             true);
         
         var contentType = MediaTypeNames.Application.Octet;

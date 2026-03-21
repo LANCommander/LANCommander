@@ -3,13 +3,13 @@
 @inject IJSRuntime JSRuntime
 
 <Flex Vertical Gap="FlexGap.Large">
-    @if (!Providers.Any())
+    @if (!_providers.Any())
     {
         <Empty Description="@("No external authentication providers have been configured")" />
     }
 
     <Collapse>
-        @foreach (var externalProvider in Providers)
+        @foreach (var externalProvider in _providers)
         {
             <Panel Header="@externalProvider.Name">
                 <ExtraTemplate>
@@ -25,13 +25,13 @@
 
                                 <SpaceItem>
                                     <Space>
-                                        @if (Templates.Any())
+                                        @if (_templates.Any())
                                         {
                                             <SpaceItem>
                                                 <Dropdown>
                                                     <Overlay>
                                                         <Menu>
-                                                            @foreach (var template in Templates)
+                                                            @foreach (var template in _templates)
                                                             {
                                                                 <MenuItem OnClick="() => UseTemplate(externalProvider, template)">
                                                                     @template.Name
@@ -122,19 +122,19 @@
     [Parameter] public IEnumerable<AuthenticationProvider> Values { get; set; }
     [Parameter] public EventCallback<IEnumerable<AuthenticationProvider>> ValuesChanged { get; set; }
 
-    List<AuthenticationProvider> Templates = new();
-    List<AuthenticationProvider> Providers = new();
+    List<AuthenticationProvider> _templates = new();
+    List<AuthenticationProvider> _providers = new();
 
-    AuthenticationProvider SelectedTemplate;
+    AuthenticationProvider _selectedTemplate;
 
     protected override async Task OnInitializedAsync()
     {
-        Templates = await AuthenticationService.GetAuthenticationProviderTemplatesAsync();
+        _templates = await AuthenticationService.GetAuthenticationProviderTemplatesAsync();
     }
 
     protected override void OnParametersSet()
     {
-        Providers = Values.ToList();
+        _providers = Values.ToList();
     }
 
     void OpenDocumentation(AuthenticationProvider authenticationProvider)
@@ -144,18 +144,18 @@
 
     async Task Add()
     {
-        Providers.Add(new AuthenticationProvider());
+        _providers.Add(new AuthenticationProvider());
 
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Providers);
+            await ValuesChanged.InvokeAsync(_providers);
     }
 
     async Task Remove(AuthenticationProvider authenticationProvider)
     {
-        Providers.Remove(authenticationProvider);
+        _providers.Remove(authenticationProvider);
 
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Providers);
+            await ValuesChanged.InvokeAsync(_providers);
     }
 
     async Task UseTemplate(AuthenticationProvider authenticationProvider, AuthenticationProvider template)

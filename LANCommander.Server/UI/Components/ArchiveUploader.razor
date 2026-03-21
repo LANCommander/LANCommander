@@ -54,6 +54,7 @@
 @code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
+    [Parameter] public Guid ToolId { get; set; }
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
     Archive Archive;
@@ -104,6 +105,8 @@
                 Archive.GameId = GameId;
             else if (RedistributableId != Guid.Empty)
                 Archive.RedistributableId = RedistributableId;
+            else if (ToolId != Guid.Empty)
+                Archive.ToolId = ToolId;
         }
 
         Visible = true;
@@ -121,6 +124,7 @@
 
             uploadedArchive.GameId = Archive.GameId;
             uploadedArchive.RedistributableId = Archive.RedistributableId;
+            uploadedArchive.ToolId = Archive.ToolId;
             uploadedArchive.Version = Archive.Version;
             uploadedArchive.Changelog = Archive.Changelog;
             uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
@@ -140,6 +144,8 @@
                     lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != Archive.Id && a.GameId == Archive.GameId);
                 else if (Archive.RedistributableId != Guid.Empty)
                     lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId);
+                else if (Archive.ToolId != Guid.Empty)
+                    lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != Archive.Id && a.ToolId == Archive.ToolId);
 
                 if (lastArchive != null && Settings.Value.Server.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));

@@ -130,6 +130,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async void OnLoginSucceeded(object? sender, EventArgs e)
     {
+        // Show the splash screen with a loading message while initializing
+        SplashViewModel.UpdateStatus("Loading library...");
+        CurrentView = SplashViewModel;
+
         // Initialize shell fully before switching view to avoid rendering uninitialized state
         ShellViewModel.SetOfflineMode(false);
         await ShellViewModel.InitializeAsync();

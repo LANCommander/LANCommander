@@ -85,8 +85,8 @@ public partial class MainWindowViewModel : ViewModelBase
                             SplashViewModel.UpdateStatus("Loading library...");
                             // Token is valid - go directly to shell in online mode
                             ShellViewModel.SetOfflineMode(false);
-                            CurrentView = ShellViewModel;
                             await ShellViewModel.InitializeAsync();
+                            CurrentView = ShellViewModel;
                             return;
                         }
                     }
@@ -103,8 +103,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     SplashViewModel.UpdateStatus("Server offline, starting in offline mode...");
                     await _connectionClient.EnableOfflineModeAsync();
                     ShellViewModel.SetOfflineMode(true);
-                    CurrentView = ShellViewModel;
                     await ShellViewModel.InitializeAsync();
+                    CurrentView = ShellViewModel;
                     return;
                 }
             }
@@ -130,9 +130,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async void OnLoginSucceeded(object? sender, EventArgs e)
     {
+        // Initialize shell fully before switching view to avoid rendering uninitialized state
         ShellViewModel.SetOfflineMode(false);
-        CurrentView = ShellViewModel;
         await ShellViewModel.InitializeAsync();
+        CurrentView = ShellViewModel;
     }
 
     private void OnChangeServerRequested(object? sender, EventArgs e)

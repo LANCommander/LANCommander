@@ -6,7 +6,8 @@
     
     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
             BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-            BorderThickness="0,1,0,0">
+            BorderThickness="0,1,0,0"
+            IsVisible="{Binding HasItems}">
         <DockPanel>
             <!-- Header - always visible -->
             <Border DockPanel.Dock="Top" Padding="12,8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
@@ -41,31 +42,22 @@
             <!-- Collapsed state: show mini progress bar if downloading -->
             <Border DockPanel.Dock="Top" 
                     Padding="12,4"
-                    IsVisible="{Binding !IsExpanded}">
-                <StackPanel>
-                    <!-- Mini progress when downloading -->
-                    <Grid IsVisible="{Binding HasActiveDownload}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <DockPanel Grid.Row="0">
-                            <TextBlock DockPanel.Dock="Right" Text="{Binding TransferSpeedText}" FontSize="11" Opacity="0.7" />
-                            <TextBlock Text="{Binding CurrentItem.Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                        <ProgressBar Grid.Row="1" 
-                                     Value="{Binding CurrentProgress}" 
-                                     Minimum="0" Maximum="1"
-                                     Height="4"
-                                     Margin="0,4,0,0" />
-                    </Grid>
-                    
-                    <!-- No downloads message -->
-                    <TextBlock Text="No active downloads" 
-                               FontSize="11" 
-                               Opacity="0.5" 
-                               IsVisible="{Binding !HasItems}" />
-                </StackPanel>
+                    IsVisible="{Binding HasActiveDownload}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding TransferSpeedText}" FontSize="11" Opacity="0.7" />
+                        <TextBlock Text="{Binding CurrentItem.Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <ProgressBar Grid.Row="1" 
+                                 Value="{Binding CurrentProgress}" 
+                                 Minimum="0" Maximum="1"
+                                 Height="4"
+                                 Margin="0,4,0,0" />
+                </Grid>
             </Border>
             
             <!-- Expanded content -->

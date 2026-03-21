@@ -19,7 +19,6 @@ public class ApiRequestBuilder(
     ITokenProvider tokenProvider,
     ISettingsProvider settingsProvider)
 {
-    private AuthToken _token { get; set; } = tokenProvider.GetToken();
     private bool _ignoreVersion { get; set; }
     private object _body { get; set; }
     private string _route { get; set; }
@@ -47,7 +46,8 @@ public class ApiRequestBuilder(
 
     public ApiRequestBuilder UseAuthenticationToken()
     {
-        _request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token.AccessToken);
+        var token = tokenProvider.GetToken();
+        _request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
 
         return this;
     }

@@ -211,7 +211,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
 
             var actions = await gameClient.GetActionsAsync(InstallDirectory, GameId);
             if (actions != null && actions.Any())
@@ -286,7 +286,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
 
             var wasRunning = IsRunning;
             var nowRunning = gameClient.IsRunning(GameId);
@@ -412,7 +412,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             {
                 using var scope = _serviceProvider.CreateScope();
                 var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-                var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+                var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
 
                 var localGame = await gameService.GetAsync(GameId);
                 if (localGame == null)
@@ -499,7 +499,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
 
             gameClient.Stop(GameId);
             _logger.LogInformation("Stop requested for game {GameId}", GameId);
@@ -854,7 +854,7 @@ public partial class GameActionBarViewModel : ViewModelBase
 
             StatusMessage = $"Running {scriptTypeName} scripts...";
 
-            var gameClient = scope.ServiceProvider.GetRequiredService<SDK.Client>().Games;
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             var manifests = await gameClient.GetManifestsAsync(InstallDirectory, GameId);
 
             foreach (var manifest in manifests)
@@ -862,21 +862,20 @@ public partial class GameActionBarViewModel : ViewModelBase
                 switch (scriptType)
                 {
                     case ScriptType.Install:
-                        await scriptClient.RunInstallScriptAsync(InstallDirectory, GameId);
+                        await scriptClient.Game_RunInstallScriptAsync(InstallDirectory, GameId);
                         break;
                     case ScriptType.Uninstall:
-                        await scriptClient.RunUninstallScriptAsync(InstallDirectory, GameId);
+                        await scriptClient.Game_RunUninstallScriptAsync(InstallDirectory, GameId);
                         break;
                     case ScriptType.NameChange:
                         var userService = scope.ServiceProvider.GetRequiredService<UserService>();
                         var user = await userService.GetCurrentUser();
-                        await scriptClient.RunNameChangeScriptAsync(InstallDirectory, GameId, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
+                        await scriptClient.Game_RunNameChangeScriptAsync(InstallDirectory, GameId, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
 
                         break;
                     case ScriptType.KeyChange:
-                        // Key change scripts are run per manifest
-                        var key = await scope.ServiceProvider.GetRequiredService<SDK.Client>().Games.GetAllocatedKeyAsync(manifest.Id);
-                        await scriptClient.RunKeyChangeScriptAsync(InstallDirectory, GameId, key);
+                        var key = await gameClient.GetAllocatedKeyAsync(manifest.Id);
+                        await scriptClient.Game_RunKeyChangeScriptAsync(InstallDirectory, GameId, key);
                         break;
                 }
             }

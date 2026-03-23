@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+        xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
+        x:Class="LANCommander.Launcher.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1200"
+        Height="800"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+    
+    <ContentControl Content="{Binding CurrentView}">
+        <ContentControl.DataTemplates>
+            <DataTemplate DataType="vm:SplashViewModel">
+                <views:SplashView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ServerSelectionViewModel">
+                <views:ServerSelectionView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:LoginViewModel">
+                <views:LoginView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ShellViewModel">
+                <views:ShellView />
+            </DataTemplate>
+        </ContentControl.DataTemplates>
+    </ContentControl>
+</Window>

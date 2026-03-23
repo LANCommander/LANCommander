@@ -46,6 +46,7 @@ namespace LANCommander.Launcher.Models
 
         public ListItem(Game game)
         {
+            
             Key = game.Id;
             Type = ListItemType.Game;
             Name = game.Title;

@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
+             x:DataType="vm:ShellViewModel">
+    
+    <Grid ColumnDefinitions="280,*">
+        <!-- Left Sidebar with Download Queue integrated -->
+        <DockPanel Grid.Column="0">
+            <!-- Download Queue at bottom of sidebar -->
+            <views:DownloadQueueView DockPanel.Dock="Bottom" DataContext="{Binding DownloadQueue}" />
+            
+            <!-- Library Sidebar -->
+            <components:LibrarySidebarView DataContext="{Binding Sidebar}" />
+        </DockPanel>
+        
+        <!-- Main Content Area -->
+        <Border Grid.Column="1">
+            <ContentControl Content="{Binding ContentView}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:GamesListViewModel">
+                        <views:GamesListView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:GameDetailViewModel">
+                        <views:GameDetailView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:SettingsViewModel">
+                        <views:SettingsView />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
+    </Grid>
+</UserControl>

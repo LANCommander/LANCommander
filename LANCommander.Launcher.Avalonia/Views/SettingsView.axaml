@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" Padding="24,16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <Button DockPanel.Dock="Left"
+                        Content="← Back"
+                        Command="{Binding GoBackCommand}"
+                        Padding="12,8"
+                        Margin="0,0,16,0" />
+                
+                <Button DockPanel.Dock="Right"
+                        Command="{Binding SaveCommand}"
+                        IsEnabled="{Binding !IsSaving}"
+                        Padding="16,8"
+                        Classes="accent">
+                    <Panel>
+                        <TextBlock Text="Save" IsVisible="{Binding !IsSaving}" />
+                        <TextBlock Text="Saving..." IsVisible="{Binding IsSaving}" />
+                    </Panel>
+                </Button>
+                
+                <TextBlock Text="Settings" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+        
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="24" Margin="24">
+                
+                <!-- Status Message -->
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource SystemAccentColor}"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                
+                <!-- Games Section -->
+                <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Games" FontWeight="SemiBold" FontSize="16" />
+                        
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Install Directories" Opacity="0.7" />
+                            
+                            <ItemsControl ItemsSource="{Binding InstallDirectories}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallDirectoryItem">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                                            <TextBox Grid.Column="0" 
+                                                     Text="{Binding Path, Mode=TwoWay}" 
+                                                     Watermark="Enter install directory path..."
+                                                     Margin="0,0,8,0" />
+                                            <Button Grid.Column="1"
+                                                    Content="✕"
+                                                    Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveInstallDirectoryCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="8,6"
+                                                    Foreground="IndianRed" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <Button Content="+ Add Directory"
+                                    Command="{Binding AddInstallDirectoryCommand}"
+                                    HorizontalAlignment="Left"
+                                    Padding="12,8" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Media Section -->
+                <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Media" FontWeight="SemiBold" FontSize="16" />
+                        
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Storage Path" Opacity="0.7" />
+                            <TextBox Text="{Binding MediaStoragePath, Mode=TwoWay}" 
+                                     Watermark="Path to store media files..." />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- UI Section -->
+                <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="User Interface" FontWeight="SemiBold" FontSize="16" />
+                        
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Language" Opacity="0.7" />
+                            <ComboBox ItemsSource="{Binding AvailableCultures}"
+                                      SelectedItem="{Binding SelectedCultureItem}"
+                                      HorizontalAlignment="Stretch"
+                                      MinWidth="200">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CultureItem">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Debug Section -->
+                <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Debug" FontWeight="SemiBold" FontSize="16" />
+                        
+                        <StackPanel Spacing="4">
+                            <CheckBox IsChecked="{Binding EnableScriptDebugging}" 
+                                      Content="Enable Script Debugging" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Logging Path" Opacity="0.7" />
+                            <TextBox Text="{Binding LoggingPath, Mode=TwoWay}" 
+                                     Watermark="Path for log files..." />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Log Level" Opacity="0.7" />
+                            <ComboBox ItemsSource="{Binding AvailableLogLevels}"
+                                      SelectedItem="{Binding SelectedLogLevel}"
+                                      HorizontalAlignment="Stretch"
+                                      MinWidth="200" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Footer -->
+        <Border Grid.Row="2" Padding="24,12" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <TextBlock Text="LANCommander Launcher" 
+                       Opacity="0.5" 
+                       HorizontalAlignment="Center" />
+        </Border>
+    </Grid>
+</UserControl>

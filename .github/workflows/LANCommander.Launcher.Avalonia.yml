@@ -1,0 +1,120 @@
+name: LANCommander Launcher Avalonia Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version_semver:
+        description: "Semantic Version"
+        required: true
+        type: string
+      version_tag:
+        description: 'Version Tag'
+        required: true
+        type: string
+      build_dotnet_version:
+        description: 'Build .NET Version'
+        required: true
+        type: string
+      build_runtime:
+        description: 'Build Runtime'
+        required: false
+        type: string
+        default: 'win-x64'
+      build_arch:
+        description: 'Build Architecture'
+        required: false
+        type: string
+        default: 'x64'
+      build_platform:
+        description: 'Build Platform'
+        required: false
+        type: string
+        default: 'Windows'
+      build_configuration:
+        description: 'Build Configuration (Debug/Release)'
+        required: false
+        type: string
+        default: 'Release'
+
+permissions:
+  contents: write
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/package
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    # Checkout code
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # .NET Setup
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.build_dotnet_version }}
+
+    - name: Restore dependencies
+      run: dotnet restore --locked-mode
+
+    - name: Publish Avalonia Launcher
+      run: |
+        # Strip leading 'v' if present
+        RAW_VERSION="${{ inputs.version_tag }}"       # e.g. v2.0.0-rc1
+        SEMVER="${RAW_VERSION#v}"                     # 2.0.0-rc1
+
+        # Numeric part only for Assembly/FileVersion
+        NUMERIC="${SEMVER%%-*}"                       # 2.0.0
+        ASSEMBLY_VERSION="${NUMERIC}.0"               # 2.0.0.0
+
+        echo "SEMVER=$SEMVER"
+        echo "ASSEMBLY_VERSION=$ASSEMBLY_VERSION"
+
+        dotnet publish "./LANCommander.Launcher.Avalonia/LANCommander.Launcher.Avalonia.csproj" \
+          -c "${{ inputs.build_configuration }}" \
+          --self-contained \
+          --runtime "${{ inputs.build_runtime }}" \
+          -p:Version="$SEMVER" \
+          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
+          -p:FileVersion="$ASSEMBLY_VERSION" \
+          -p:InformationalVersion="$SEMVER" \
+          -p:PublishSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true
+
+    - name: Bundle and Clean
+      shell: pwsh
+      run: |
+        $BasePath = "LANCommander.Launcher.Avalonia/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+        
+        # Remove unnecessary files
+        $PathsToRemove = @(
+          '*.pdb'
+        )
+        
+        foreach ($path in $PathsToRemove) {
+          Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
+        }
+
+    - name: Compress Build Output
+      shell: pwsh
+      run: |
+        $compress = @{
+          Path = "LANCommander.Launcher.Avalonia/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          DestinationPath = "LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
+          CompressionLevel = "Fastest"
+        }
+        Compress-Archive @compress
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        name: LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

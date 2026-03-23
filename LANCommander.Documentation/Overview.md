@@ -23,7 +23,7 @@ If you would like to support the project, there is a [Patreon page](https://patr
 # Installation and Use
 This site serves as the main documentation platform for the project. As such, it is recommended to check out the following resources:
 - [Getting Started](/GettingStarted)
-- [Server](/Server)
-- [Launcher](/Launcher)
-- [Scripting](/Scripting)
-- [SDK Documentation](/SDK)
+- [Server](/Server/Overview)
+- [Launcher](/Launcher/Overview)
+- [Scripting](/Scripting/Overview)
+- [SDK Documentation](/SDK/Overview)

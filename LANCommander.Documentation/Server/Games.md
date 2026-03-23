@@ -163,10 +163,3 @@ New-ItemProperty -Path "registry::\HKEY_CURRENT_USER\Software\Classes\VirtualSto
 The final, but most important, step of creating a game in LANCommander is uploading the archive for the game. You will need to make a ZIP archive from the game files from a *Call of Duty* installation. At this point in the process it is worth checking out the wonderful [PCGamingWiki](https://pcgamingwiki.com) for any patches or game fixes that might be needed for modern systems.
 
 Once you have your ZIP archive, click on the Upload Archive button. A modal will pop up where you can specify the version of the archive, a changelog (if needed), and then you can select your archive. Once a valid file is chosen, click the Upload button and your archive will begin uploading to the server.
-
-## Final Steps
-This tutorial has walked you through how to take a game and add it to LANCommander. If you have done everything correctly, you should now be able to see the game listed in Playnite after a library sync.
-
-This tutorial used a fairly basic example of the type of game that LANCommander was built to work for. Games can get complicated depending on their use of configs and registry entries. On this site we have a fairly extensive list of [games](/games) that you can use as reference. If you're adding a game that's not on our list, feel free to contribute!
-
-Also feel free to check out any other [tutorials](/tutorials)! Over time this section will become more populated with useful tools, script development tips, and common practices used by game installers. 

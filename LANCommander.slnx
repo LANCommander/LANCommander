@@ -25,6 +25,7 @@
   <Folder Name="/LANCommander.Tests/">
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
     <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Server.UI.Tests\LANCommander.Server.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/Scripts/">
     <File Path="Scripts\Clean.ps1" />

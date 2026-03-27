@@ -6,170 +6,185 @@
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
              x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
              x:DataType="vm:GameDetailViewModel">
-    
+
     <UserControl.Resources>
         <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
     </UserControl.Resources>
-    
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header with Back Button -->
-        <Border Grid.Row="0" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <DockPanel>
-                <Button DockPanel.Dock="Left" 
-                        Content="← Back to Depot" 
-                        Command="{Binding GoBackCommand}"
-                        Padding="12,8" />
-                <TextBlock Text="{Binding Title}" 
-                           FontSize="20" 
-                           FontWeight="Bold" 
-                           VerticalAlignment="Center"
-                           Margin="16,0,0,0" />
-            </DockPanel>
-        </Border>
-        
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-            <Grid RowDefinitions="Auto,*">
-                <!-- Banner/Cover Image -->
-                <Border Grid.Row="0" 
-                        Height="300" 
-                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid RowDefinitions="Auto,*">
+                <!-- Hero Section (extends into title bar) -->
+                <Border Grid.Row="0"
+                        Height="340"
+                        Background="Black">
                     <Panel>
-                        <!-- Background image (if available) -->
+                        <!-- Background image -->
                         <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                Stretch="UniformToFill"
-                               Opacity="0.3"
+                               Opacity="0.55"
                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        
-                        <!-- Cover/Banner overlay -->
-                        <Border HorizontalAlignment="Center" 
-                                VerticalAlignment="Center"
-                                CornerRadius="8"
+
+                        <!-- Top fade gradient (covers title bar + header area) -->
+                        <Border VerticalAlignment="Top"
+                                Height="120"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#CC000000" Offset="0" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <!-- Bottom fade gradient -->
+                        <Border VerticalAlignment="Bottom"
+                                Height="160"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#FF000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <!-- Back button (overlaid at top-left, below title bar) -->
+                        <Button HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="16,48,0,0"
+                                Content="← Back to Depot"
+                                Command="{Binding GoBackCommand}"
+                                Background="Transparent"
+                                Padding="12,8" />
+
+                        <!-- Logo (bottom-left) -->
+                        <Border HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Margin="24,0,0,24"
                                 ClipToBounds="True"
-                                MaxHeight="280"
-                                BoxShadow="0 4 16 0 #40000000">
-                            <Image Source="{Binding BannerPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                MaxHeight="110"
+                                MaxWidth="380"
+                                IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}}"
                                    Stretch="Uniform"
-                                   MaxHeight="280"
-                                   IsVisible="{Binding BannerPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                   MaxHeight="110" />
                         </Border>
-                        
-                        <!-- Fallback when no banner -->
-                        <Border HorizontalAlignment="Center" 
-                                VerticalAlignment="Center"
-                                Background="{DynamicResource SystemAccentColor}"
-                                CornerRadius="8"
-                                Padding="40,20"
-                                IsVisible="{Binding BannerPath, Converter={x:Static StringConverters.IsNullOrEmpty}}">
-                            <StackPanel>
-                                <TextBlock Text="🎮" FontSize="48" HorizontalAlignment="Center" />
-                                <TextBlock Text="{Binding Title}" 
-                                           FontSize="24" 
-                                           FontWeight="Bold" 
-                                           HorizontalAlignment="Center"
-                                           Foreground="White" />
-                            </StackPanel>
-                        </Border>
+
+                        <!-- Title fallback when no logo (bottom-left) -->
+                        <TextBlock HorizontalAlignment="Left"
+                                   VerticalAlignment="Bottom"
+                                   Margin="24,0,0,28"
+                                   Text="{Binding Title}"
+                                   FontSize="32"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
                     </Panel>
                 </Border>
-                
-                <!-- Game Details -->
-                <StackPanel Grid.Row="1" Margin="24" Spacing="16">
-                    <!-- Title and Year -->
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{Binding Title}" 
-                                   FontSize="28" 
-                                   FontWeight="Bold" />
-                        <TextBlock Text="{Binding ReleaseYear}" 
-                                   FontSize="16" 
-                                   Opacity="0.7" />
+
+                <!-- Game Details Content -->
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                    <!-- Left: Action Bar, Metadata -->
+                    <StackPanel Grid.Column="0" Margin="24,24,0,24" Spacing="16">
+                        <!-- Game Action Bar Component -->
+                        <components:GameActionBarView DataContext="{Binding ActionBar}" />
+
+                        <!-- Quick Info Cards -->
+                        <WrapPanel Orientation="Horizontal">
+                            <!-- Developers -->
+                            <Border Margin="0,0,8,8"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="👨‍💻" />
+                                    <TextBlock Text="{Binding Developers}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Publishers -->
+                            <Border Margin="0,0,8,8"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="🏢" />
+                                    <TextBlock Text="{Binding Publishers}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Singleplayer -->
+                            <Border Margin="0,0,8,8"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    IsVisible="{Binding Singleplayer}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="👤" />
+                                    <TextBlock Text="Singleplayer" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Multiplayer -->
+                            <Border Margin="0,0,8,8"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    IsVisible="{Binding HasMultiplayer}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="👥" />
+                                    <TextBlock Text="{Binding MultiplayerModes}" />
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
+
+                        <!-- Genres -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="Genres" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                            <TextBlock Text="{Binding Genres}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Platforms -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding Platforms, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="Platforms" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                            <TextBlock Text="{Binding Platforms}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Tags -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="Tags" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                            <TextBlock Text="{Binding Tags}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Description -->
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="Description" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                            <TextBlock Text="{Binding Description}"
+                                       TextWrapping="Wrap"
+                                       LineHeight="24" />
+                        </StackPanel>
                     </StackPanel>
-                    
-                    <!-- Game Action Bar Component (at top for prominence) -->
-                    <components:GameActionBarView DataContext="{Binding ActionBar}" />
-                    
-                    <!-- Quick Info Cards -->
-                    <WrapPanel Orientation="Horizontal">
-                        <!-- Developers -->
-                        <Border Margin="0,0,8,8" 
-                                Padding="12,8" 
-                                CornerRadius="4"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="👨‍💻" />
-                                <TextBlock Text="{Binding Developers}" />
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Publishers -->
-                        <Border Margin="0,0,8,8" 
-                                Padding="12,8" 
-                                CornerRadius="4"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="🏢" />
-                                <TextBlock Text="{Binding Publishers}" />
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Singleplayer -->
-                        <Border Margin="0,0,8,8" 
-                                Padding="12,8" 
-                                CornerRadius="4"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                IsVisible="{Binding Singleplayer}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="👤" />
-                                <TextBlock Text="Singleplayer" />
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Multiplayer -->
-                        <Border Margin="0,0,8,8" 
-                                Padding="12,8" 
-                                CornerRadius="4"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                IsVisible="{Binding HasMultiplayer}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="👥" />
-                                <TextBlock Text="{Binding MultiplayerModes}" />
-                            </StackPanel>
-                        </Border>
-                    </WrapPanel>
-                    
-                    <!-- Genres -->
-                    <StackPanel Spacing="8" 
-                                IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Genres" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                        <TextBlock Text="{Binding Genres}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    
-                    <!-- Platforms -->
-                    <StackPanel Spacing="8" 
-                                IsVisible="{Binding Platforms, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Platforms" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                        <TextBlock Text="{Binding Platforms}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    
-                    <!-- Tags -->
-                    <StackPanel Spacing="8" 
-                                IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Tags" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                        <TextBlock Text="{Binding Tags}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    
-                    <!-- Description -->
-                    <StackPanel Spacing="8" 
-                                IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Description" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                        <TextBlock Text="{Binding Description}" 
-                                   TextWrapping="Wrap" 
-                                   LineHeight="24" />
-                    </StackPanel>
-                </StackPanel>
+
+                    <!-- Right: Cover Image (overlaps hero with negative top margin) -->
+                    <Border Grid.Column="1"
+                            Width="200"
+                            Margin="16,-100,24,24"
+                            VerticalAlignment="Top"
+                            CornerRadius="8"
+                            ClipToBounds="True"
+                            ZIndex="1"
+                            BoxShadow="0 16 48 8 #A0000000, 0 4 12 0 #60000000"
+                            IsVisible="{Binding CoverPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                               Stretch="Uniform" />
+                    </Border>
+                </Grid>
             </Grid>
-        </ScrollViewer>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

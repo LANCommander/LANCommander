@@ -9,6 +9,7 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using LANCommander.Launcher.Avalonia.ViewModels;
 using LANCommander.Launcher.Avalonia.Views;
+using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
@@ -182,7 +183,12 @@ public partial class App : Application
         // Add SDK client and Launcher services
         services.AddLANCommanderClient<Settings.Settings>();
         services.AddLANCommanderLauncher();
-        
+
+        // InstallService must be a singleton so all consumers (GameActionBarViewModel,
+        // DownloadQueueViewModel, etc.) share the same queue and event subscriptions.
+        // This overrides the scoped registration from AddLANCommanderLauncher().
+        services.AddSingleton<InstallService>();
+
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
     }

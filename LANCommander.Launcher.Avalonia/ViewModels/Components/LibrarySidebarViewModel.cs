@@ -46,10 +46,22 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     public event EventHandler? GoOnlineRequested;
     public event EventHandler? GoOfflineRequested;
 
+    // Prevents OnSelectedItemChanged from firing ItemSelected during programmatic selection
+    private bool _suppressItemSelected;
+
     public LibrarySidebarViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<LibrarySidebarViewModel>>();
+    }
+
+    partial void OnSelectedItemChanged(LibraryItemViewModel? value)
+    {
+        if (!_suppressItemSelected && value != null)
+        {
+            IsDepotSelected = false;
+            ItemSelected?.Invoke(this, value);
+        }
     }
 
     [RelayCommand]
@@ -111,10 +123,8 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     private void SelectItem(LibraryItemViewModel? item)
     {
         if (item == null) return;
-
         SelectedItem = item;
-        IsDepotSelected = false;
-        ItemSelected?.Invoke(this, item);
+        // OnSelectedItemChanged handles IsDepotSelected and ItemSelected event
     }
 
     [RelayCommand]
@@ -164,7 +174,9 @@ public partial class LibrarySidebarViewModel : ViewModelBase
         var item = Items.FirstOrDefault(i => i.Id == id);
         if (item != null)
         {
+            _suppressItemSelected = true;
             SelectedItem = item;
+            _suppressItemSelected = false;
             IsDepotSelected = false;
         }
     }

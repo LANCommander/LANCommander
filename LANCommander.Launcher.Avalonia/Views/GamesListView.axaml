@@ -5,42 +5,108 @@
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
-             x:DataType="vm:GamesListViewModel">
-    
+             x:DataType="vm:GamesCollectionViewModel">
+
     <UserControl.Resources>
         <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
     </UserControl.Resources>
-    
+
+    <UserControl.Styles>
+
+        <!-- Remove default button hover chrome for cover cards -->
+        <Style Selector="Button.cover-card /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- Scale transition lives on the Button so ZIndex elevation works correctly -->
+        <Style Selector="Button.cover-card">
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Hover: scale up + rise above neighbouring covers -->
+        <Style Selector="Button.cover-card:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+            <Setter Property="ZIndex" Value="100" />
+        </Style>
+
+        <!-- Shadow on the inner border -->
+        <Style Selector="Button.cover-card Border.cover-inner">
+            <Setter Property="BoxShadow" Value="0 2 10 0 #40000000" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Deeper shadow on hover -->
+        <Style Selector="Button.cover-card:pointerover Border.cover-inner">
+            <Setter Property="BoxShadow" Value="0 8 28 4 #70000000" />
+        </Style>
+
+        <!-- Glass overlay: hidden by default with opacity transition -->
+        <Style Selector="Button.cover-card Border.glass-overlay">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Glass overlay: fade in on hover -->
+        <Style Selector="Button.cover-card:pointerover Border.glass-overlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <!-- Active view-type button -->
+        <Style Selector="Button.active">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+        </Style>
+
+    </UserControl.Styles>
+
     <DockPanel>
-        <!-- Header -->
-        <Border DockPanel.Dock="Top" Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+        <!-- ── Header ───────────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top" Padding="16,56,16,16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Refresh" Command="{Binding LoadGamesInternalCommand}" />
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}" />
                 </StackPanel>
-                
                 <StackPanel>
-                    <TextBlock Text="Depot - All Games" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding ViewTitle}" FontSize="20" FontWeight="Bold" />
                     <TextBlock Text="{Binding StatusMessage}" Opacity="0.7" FontSize="12" />
                 </StackPanel>
             </DockPanel>
         </Border>
-        
-        <!-- Filter Bar -->
-        <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto">
+
+        <!-- ── Filter / Controls Bar ─────────────────────────────────── -->
+        <Border DockPanel.Dock="Bottom" Padding="12,8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+
                 <!-- Search -->
-                <TextBox Grid.Column="0" 
+                <TextBox Grid.Column="0"
                          Watermark="Search games..."
                          Text="{Binding SearchText}"
-                         Margin="0,0,12,0" />
-                
+                         Margin="0,0,8,0" />
+
                 <!-- Genre Filter -->
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding AvailableGenres}"
                           SelectedItem="{Binding SelectedGenre}"
                           PlaceholderText="All Genres"
-                          Width="150"
+                          Width="140"
                           Margin="0,0,8,0">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
@@ -48,137 +114,485 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                
-                <!-- In Library Toggle -->
+
+                <!-- In Library (depot only) -->
                 <ToggleButton Grid.Column="2"
                               IsChecked="{Binding ShowInLibraryOnly}"
                               Content="In Library"
-                              Padding="12,8"
-                              Margin="0,0,8,0" />
-                
+                              Padding="10,6"
+                              Margin="0,0,8,0"
+                              IsVisible="{Binding ShowInLibraryFilter}" />
+
                 <!-- Sort By -->
                 <ComboBox Grid.Column="3"
                           SelectedItem="{Binding SelectedSortBy}"
-                          Width="130"
+                          Width="120"
                           Margin="0,0,4,0">
                     <ComboBox.Items>
                         <enums:SortBy>Title</enums:SortBy>
                         <enums:SortBy>DateReleased</enums:SortBy>
                     </ComboBox.Items>
                 </ComboBox>
-                
+
                 <!-- Sort Direction -->
                 <Button Grid.Column="4"
                         Command="{Binding ToggleSortDirectionCommand}"
-                        Padding="8"
+                        Padding="8,6"
                         Margin="0,0,8,0">
                     <Panel>
                         <TextBlock Text="↑" IsVisible="{Binding SortAscending}" />
                         <TextBlock Text="↓" IsVisible="{Binding !SortAscending}" />
                     </Panel>
                 </Button>
-                
+
+                <!-- View Type Toggle: Grid | List | Horizontal -->
+                <Border Grid.Column="5"
+                        CornerRadius="4"
+                        Margin="0,0,8,0"
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="8,6"
+                                ToolTip.Tip="Grid view"
+                                Classes.active="{Binding IsGridView}"
+                                Click="GridViewButton_Click">
+                            <TextBlock Text="▦" />
+                        </Button>
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="8,6"
+                                ToolTip.Tip="List view"
+                                Classes.active="{Binding IsListView}"
+                                Click="ListViewButton_Click">
+                            <TextBlock Text="☰" />
+                        </Button>
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="8,6"
+                                ToolTip.Tip="Horizontal view"
+                                Classes.active="{Binding IsHorizontalView}"
+                                Click="HorizontalViewButton_Click">
+                            <TextBlock Text="⇔" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Group By -->
+                <ComboBox Grid.Column="6"
+                          SelectedItem="{Binding SelectedGroupBy}"
+                          Width="140"
+                          Margin="0,0,8,0">
+                    <ComboBox.Items>
+                        <enums:GroupBy>None</enums:GroupBy>
+                        <enums:GroupBy>Genre</enums:GroupBy>
+                        <enums:GroupBy>Collection</enums:GroupBy>
+                        <enums:GroupBy>FirstLetter</enums:GroupBy>
+                    </ComboBox.Items>
+                </ComboBox>
+
                 <!-- Clear Filters -->
-                <Button Grid.Column="5"
+                <Button Grid.Column="7"
                         Command="{Binding ClearFiltersCommand}"
                         Content="Clear"
-                        Padding="12,8" />
+                        Padding="10,6" />
             </Grid>
         </Border>
-        
-        <!-- Loading Indicator -->
-        <Border DockPanel.Dock="Top" 
+
+        <!-- ── Loading ───────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top"
                 IsVisible="{Binding IsLoading}"
                 Padding="16"
                 HorizontalAlignment="Center">
             <TextBlock Text="Loading games..." />
         </Border>
-        
-        <!-- Error Message -->
+
+        <!-- ── Error ─────────────────────────────────────────────────── -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding HasError}"
-                Padding="16"
+                Padding="12"
                 Margin="16,0"
                 CornerRadius="4">
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
         </Border>
-        
-        <!-- Games Grid -->
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Games}"
-                          Padding="8">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vmComponents:GameItemViewModel">
-                        <Button Command="{Binding $parent[ItemsControl].((vm:GamesListViewModel)DataContext).ViewGameDetailsCommand}"
-                                CommandParameter="{Binding}"
-                                Background="Transparent"
-                                Padding="0"
-                                Margin="4"
-                                Cursor="Hand">
-                            <Border Width="140" 
-                                    Padding="8" 
-                                    CornerRadius="8"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-                                <StackPanel>
-                                    <!-- Game Cover -->
-                                    <Border Width="124" Height="170"
-                                            CornerRadius="4"
-                                            ClipToBounds="True"
-                                            Margin="0,0,0,8">
-                                        <Panel>
-                                            <!-- Cover from local file -->
-                                            <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                   Stretch="UniformToFill"
-                                                   IsVisible="{Binding HasCover}" />
-                                            
-                                            <!-- Fallback cover -->
-                                            <Border Background="{DynamicResource SystemAccentColor}"
-                                                    IsVisible="{Binding !HasCover}">
-                                                <TextBlock Text="🎮"
-                                                           FontSize="32"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center" />
+
+        <!-- ── Main Content — four views, only one visible at a time ─── -->
+        <Grid>
+
+            <!-- FLAT GRID VIEW ─────────────────────────────────────────── -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding IsGridViewFlat}">
+                <ItemsRepeater ItemsSource="{Binding Games}" Margin="8">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout MinItemWidth="148"
+                                           MinItemHeight="218"
+                                           ItemsStretch="None"
+                                           ItemsJustification="SpaceAround" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate DataType="vmComponents:GameItemViewModel">
+                            <Button Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                    CommandParameter="{Binding}"
+                                    Classes="cover-card"
+                                    Background="Transparent" BorderThickness="0"
+                                    Padding="0" Margin="4" Cursor="Hand">
+                                <Border Classes="cover-inner" Width="140" Height="210"
+                                        CornerRadius="8" ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                               Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                        <Border IsVisible="{Binding !HasCover}">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                    <GradientStop Color="#3D1A6B" Offset="0" />
+                                                    <GradientStop Color="#0F3460" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" TextAlignment="Center"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Margin="12" Foreground="White" />
+                                        </Border>
+                                        <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="8">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                        <Border Background="#CC000000" CornerRadius="4"
+                                                Padding="4,2" HorizontalAlignment="Right"
+                                                VerticalAlignment="Top" Margin="4"
+                                                IsVisible="{Binding InLibrary}">
+                                            <TextBlock Text="📚" FontSize="12" />
+                                        </Border>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+            <!-- FLAT LIST VIEW ──────────────────────────────────────────── -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding IsListViewFlat}">
+                <ItemsRepeater ItemsSource="{Binding Games}" Margin="8">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Orientation="Vertical" Spacing="2" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate DataType="vmComponents:GameItemViewModel">
+                            <Button Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="4,2"
+                                    Cursor="Hand">
+                                <Border Padding="8,6" CornerRadius="6"
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                    Spacing="8" VerticalAlignment="Center">
+                                            <Border Background="#CC000000" CornerRadius="4"
+                                                    Padding="4,2" IsVisible="{Binding InLibrary}">
+                                                <TextBlock Text="📚" FontSize="11" />
                                             </Border>
-                                            
-                                            <!-- In Library badge (📚 on top-right of cover) -->
-                                            <Border Background="#CC000000"
-                                                    CornerRadius="4"
-                                                    Padding="4,2"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Margin="4"
-                                                    IsVisible="{Binding InLibrary}">
-                                                <TextBlock Text="📚" FontSize="14" />
-                                            </Border>
-                                        </Panel>
-                                    </Border>
-                                    
-                                    <!-- Game Title -->
-                                    <TextBlock Text="{Binding Title}"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="2"
-                                               TextWrapping="Wrap"
-                                               Height="36" />
-                                    
-                                    <!-- Year -->
-                                    <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
-                                               FontSize="11"
-                                               Opacity="0.6"
-                                               Margin="0,4,0,0" />
-                                </StackPanel>
-                            </Border>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                            <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
+                                                       FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Border Width="40" Height="55" CornerRadius="4"
+                                                ClipToBounds="True" Margin="0,0,12,0">
+                                            <Panel>
+                                                <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                       Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                                <Border IsVisible="{Binding !HasCover}">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                            <GradientStop Color="#3D1A6B" Offset="0" />
+                                                            <GradientStop Color="#0F3460" Offset="1" />
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+                                            </Panel>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="14" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Genres}"
+                                                       FontSize="12" Opacity="0.6"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+            <!-- FLAT HORIZONTAL VIEW ───────────────────────────────────── -->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          IsVisible="{Binding IsHorizontalViewFlat}">
+                <ItemsRepeater ItemsSource="{Binding Games}" Margin="12,12,12,8">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Orientation="Horizontal" Spacing="8" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate DataType="vmComponents:GameItemViewModel">
+                            <Button Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                    CommandParameter="{Binding}"
+                                    Classes="cover-card"
+                                    Background="Transparent" BorderThickness="0"
+                                    Padding="0" Cursor="Hand">
+                                <Border Classes="cover-inner" Width="120" Height="180"
+                                        CornerRadius="8" ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                               Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                        <Border IsVisible="{Binding !HasCover}">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                    <GradientStop Color="#3D1A6B" Offset="0" />
+                                                    <GradientStop Color="#0F3460" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="12" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" TextAlignment="Center"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Margin="10" Foreground="White" />
+                                        </Border>
+                                        <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="8">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                        <Border Background="#CC000000" CornerRadius="4"
+                                                Padding="4,2" HorizontalAlignment="Right"
+                                                VerticalAlignment="Top" Margin="4"
+                                                IsVisible="{Binding InLibrary}">
+                                            <TextBlock Text="📚" FontSize="12" />
+                                        </Border>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+            <!-- GROUPED VIEW (shared for all three view types) ──────────── -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding IsGrouped}">
+                <ItemsRepeater ItemsSource="{Binding GroupedGames}" Margin="8,4,8,8">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate DataType="vm:GameGroupViewModel">
+                            <StackPanel Margin="0,0,0,24">
+
+                                <!-- Group Header -->
+                                <Border Padding="4,8,4,6">
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Right"
+                                                Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                                VerticalAlignment="Center" Height="1"
+                                                HorizontalAlignment="Stretch" Margin="8,0,0,0" />
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="13" FontWeight="SemiBold"
+                                                   Opacity="0.7" LetterSpacing="1" />
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Grid layout inside group -->
+                                <ItemsRepeater ItemsSource="{Binding Items}"
+                                               IsVisible="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).IsGridView}">
+                                    <ItemsRepeater.Layout>
+                                        <UniformGridLayout MinItemWidth="148" MinItemHeight="218"
+                                                           ItemsStretch="None"
+                                                           ItemsJustification="SpaceAround" />
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate DataType="vmComponents:GameItemViewModel">
+                                            <Button Command="{Binding $parent[ItemsRepeater;1].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Classes="cover-card"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Padding="0" Margin="4" Cursor="Hand">
+                                                <Border Classes="cover-inner" Width="140" Height="210"
+                                                        CornerRadius="8" ClipToBounds="True">
+                                                    <Panel>
+                                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                               Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                                        <Border IsVisible="{Binding !HasCover}">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                                    <GradientStop Color="#3D1A6B" Offset="0" />
+                                                                    <GradientStop Color="#0F3460" Offset="1" />
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       FontSize="14" FontWeight="SemiBold"
+                                                                       TextWrapping="Wrap" TextAlignment="Center"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                       Margin="12" Foreground="White" />
+                                                        </Border>
+                                                        <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="8">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                                                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                                                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <Border Background="#CC000000" CornerRadius="4"
+                                                                Padding="4,2" HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top" Margin="4"
+                                                                IsVisible="{Binding InLibrary}">
+                                                            <TextBlock Text="📚" FontSize="12" />
+                                                        </Border>
+                                                    </Panel>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+
+                                <!-- List layout inside group -->
+                                <ItemsRepeater ItemsSource="{Binding Items}"
+                                               IsVisible="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).IsListView}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Vertical" Spacing="2" />
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate DataType="vmComponents:GameItemViewModel">
+                                            <Button Command="{Binding $parent[ItemsRepeater;1].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="Transparent"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch"
+                                                    Padding="4,2" Cursor="Hand">
+                                                <Border Padding="8,6" CornerRadius="6"
+                                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                                    Spacing="8" VerticalAlignment="Center">
+                                                            <Border Background="#CC000000" CornerRadius="4" Padding="4,2"
+                                                                    IsVisible="{Binding InLibrary}">
+                                                                <TextBlock Text="📚" FontSize="11" />
+                                                            </Border>
+                                                            <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
+                                                                       FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <Border Width="40" Height="55" CornerRadius="4"
+                                                                ClipToBounds="True" Margin="0,0,12,0">
+                                                            <Panel>
+                                                                <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                                       Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                                                <Border IsVisible="{Binding !HasCover}">
+                                                                    <Border.Background>
+                                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                                            <GradientStop Color="#3D1A6B" Offset="0" />
+                                                                            <GradientStop Color="#0F3460" Offset="1" />
+                                                                        </LinearGradientBrush>
+                                                                    </Border.Background>
+                                                                </Border>
+                                                            </Panel>
+                                                        </Border>
+                                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       FontSize="14" FontWeight="SemiBold"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding Genres}" FontSize="12" Opacity="0.6"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+
+                                <!-- Horizontal layout inside group (each group = one scrolling row) -->
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Disabled"
+                                              IsVisible="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
+                                    <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,4,0,8">
+                                        <ItemsRepeater.Layout>
+                                            <StackLayout Orientation="Horizontal" Spacing="8" />
+                                        </ItemsRepeater.Layout>
+                                        <ItemsRepeater.ItemTemplate>
+                                            <DataTemplate DataType="vmComponents:GameItemViewModel">
+                                                <Button Command="{Binding $parent[ItemsRepeater;1].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Classes="cover-card"
+                                                        Background="Transparent" BorderThickness="0"
+                                                        Padding="0" Cursor="Hand">
+                                                    <Border Classes="cover-inner" Width="120" Height="180"
+                                                            CornerRadius="8" ClipToBounds="True">
+                                                        <Panel>
+                                                            <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                                   Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                                            <Border IsVisible="{Binding !HasCover}">
+                                                                <Border.Background>
+                                                                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                                        <GradientStop Color="#3D1A6B" Offset="0" />
+                                                                        <GradientStop Color="#0F3460" Offset="1" />
+                                                                    </LinearGradientBrush>
+                                                                </Border.Background>
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           FontSize="12" FontWeight="SemiBold"
+                                                                           TextWrapping="Wrap" TextAlignment="Center"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           Margin="10" Foreground="White" />
+                                                            </Border>
+                                                            <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="8">
+                                                                <Border.Background>
+                                                                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                                                        <GradientStop Color="#45FFFFFF" Offset="0" />
+                                                                        <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                                                        <GradientStop Color="#00FFFFFF" Offset="1" />
+                                                                    </LinearGradientBrush>
+                                                                </Border.Background>
+                                                            </Border>
+                                                            <Border Background="#CC000000" CornerRadius="4"
+                                                                    Padding="4,2" HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top" Margin="4"
+                                                                    IsVisible="{Binding InLibrary}">
+                                                                <TextBlock Text="📚" FontSize="12" />
+                                                            </Border>
+                                                        </Panel>
+                                                    </Border>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsRepeater.ItemTemplate>
+                                    </ItemsRepeater>
+                                </ScrollViewer>
+
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+        </Grid>
     </DockPanel>
 </UserControl>

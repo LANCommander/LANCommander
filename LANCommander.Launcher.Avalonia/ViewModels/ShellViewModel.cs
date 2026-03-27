@@ -29,14 +29,20 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isCheckingConnection;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLibraryActive))]
+    private bool _isDepotActive = true;
+
+    public bool IsLibraryActive => !IsDepotActive;
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
 
     // Child view models
-    public LibrarySidebarViewModel Sidebar { get; private set; } = null!;
-    public GamesListViewModel GamesListViewModel { get; private set; } = null!;
+    public GamesListViewModel GamesListViewModel  { get; private set; } = null!;
+    public LibraryViewModel   LibraryViewModel    { get; private set; } = null!;
     public GameDetailViewModel GameDetailViewModel { get; private set; } = null!;
-    public DownloadQueueViewModel DownloadQueue { get; private set; } = null!;
-    public SettingsViewModel SettingsViewModel { get; private set; } = null!;
+    public DownloadQueueViewModel DownloadQueue   { get; private set; } = null!;
+    public SettingsViewModel  SettingsViewModel   { get; private set; } = null!;
+    public ProfileViewModel   Profile             { get; private set; } = null!;
 
     public event EventHandler? LogoutRequested;
 
@@ -46,9 +52,6 @@ public partial class ShellViewModel : ViewModelBase
         _logger = serviceProvider.GetRequiredService<ILogger<ShellViewModel>>();
     }
 
-    /// <summary>
-    /// Sets the offline mode state. Called from MainWindowViewModel during initialization.
-    /// </summary>
     public void SetOfflineMode(bool offline)
     {
         IsOfflineMode = offline;
@@ -58,86 +61,64 @@ public partial class ShellViewModel : ViewModelBase
     public async Task InitializeAsync()
     {
         _logger.LogInformation("ShellViewModel initializing... (Offline: {IsOffline})", IsOfflineMode);
-        
-        // Create child view models
-        Sidebar = new LibrarySidebarViewModel(_serviceProvider);
-        GamesListViewModel = new GamesListViewModel(_serviceProvider);
-        GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
-        DownloadQueue = new DownloadQueueViewModel(_serviceProvider);
-        SettingsViewModel = new SettingsViewModel(_serviceProvider);
 
-        // Propagate offline state to child view models
-        Sidebar.IsOfflineMode = IsOfflineMode;
-        GamesListViewModel.IsOfflineMode = IsOfflineMode;
+        GamesListViewModel  = new GamesListViewModel(_serviceProvider);
+        LibraryViewModel    = new LibraryViewModel(_serviceProvider);
+        GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
+        DownloadQueue       = new DownloadQueueViewModel(_serviceProvider);
+        SettingsViewModel   = new SettingsViewModel(_serviceProvider);
+        Profile             = new ProfileViewModel(_serviceProvider);
+
+        GamesListViewModel.IsOfflineMode  = IsOfflineMode;
+        LibraryViewModel.IsOfflineMode    = IsOfflineMode;
         GameDetailViewModel.IsOfflineMode = IsOfflineMode;
 
-        // Wire up events
-        Sidebar.DepotSelected += OnDepotSelected;
-        Sidebar.ItemSelected += OnLibraryItemSelected;
-        Sidebar.RefreshRequested += async (_, _) => await RefreshAsync();
-        Sidebar.LogoutRequested += async (_, _) => await LogoutAsync();
-        Sidebar.SettingsRequested += OnSettingsRequested;
-        Sidebar.GoOnlineRequested += async (_, _) => await TryGoOnlineAsync();
-        Sidebar.GoOfflineRequested += (_, _) => GoOffline();
-        
-        GamesListViewModel.GameSelected += OnGameSelected;
-        GameDetailViewModel.BackRequested += OnBackFromGameDetail;
+        GamesListViewModel.GameSelected  += OnGameSelected;
+        LibraryViewModel.GameSelected    += OnGameSelected;
+        GameDetailViewModel.BackRequested  += OnBackFromGameDetail;
         GameDetailViewModel.LibraryChanged += OnLibraryChanged;
         GameDetailViewModel.InstallRequested += OnInstallRequested;
-        
+
         SettingsViewModel.BackRequested += OnBackFromSettings;
-        
+
         DownloadQueue.InstallCompleted += OnInstallCompleted;
+        DownloadQueue.BackRequested    += OnBackFromDownloadQueue;
         DownloadQueue.Initialize();
 
-        // Import library from server (if online) and load data
         await ImportAndLoadAsync();
-        
-        // Default to showing depot
+        _ = Profile.LoadAsync(IsOfflineMode);
+
         ShowDepot();
-        
+
         _logger.LogInformation("ShellViewModel initialization complete");
     }
 
     private async Task ImportAndLoadAsync()
     {
         IsLoading = true;
-        
-        if (IsOfflineMode)
-        {
-            Sidebar.StatusMessage = "Loading library (offline)...";
-            _logger.LogInformation("Loading library in offline mode (skipping server import)");
-        }
-        else
-        {
-            Sidebar.StatusMessage = "Importing library...";
-            _logger.LogInformation("Starting library import...");
 
+        if (!IsOfflineMode)
+        {
             try
             {
                 using var scope = _serviceProvider.CreateScope();
                 var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
-                
                 await importService.ImportLibraryAsync();
-                _logger.LogInformation("Library import complete");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Import failed");
-                Sidebar.StatusMessage = $"Import failed: {ex.Message}";
             }
         }
 
         try
         {
-            // Load sidebar and games list from local database
-            await Sidebar.LoadAsync();
             await GamesListViewModel.LoadGamesAsync();
+            await LibraryViewModel.LoadGamesAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load library data");
-            Sidebar.StatusMessage = $"Load failed: {ex.Message}";
         }
         finally
         {
@@ -148,61 +129,44 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        if (IsOfflineMode)
-        {
-            _logger.LogDebug("Skipping refresh - offline mode");
-            Sidebar.StatusMessage = "Cannot refresh in offline mode";
-            return;
-        }
-        
+        if (IsOfflineMode) return;
         await ImportAndLoadAsync();
     }
 
     [RelayCommand]
     private async Task TryGoOnlineAsync()
     {
-        if (!IsOfflineMode)
-            return;
+        if (!IsOfflineMode) return;
 
         IsCheckingConnection = true;
-        Sidebar.StatusMessage = "Checking connection...";
-        _logger.LogInformation("Attempting to go online...");
 
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
-            var authService = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
+            var authService      = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
 
             if (await connectionClient.PingAsync())
             {
-                _logger.LogInformation("Server is reachable, going online");
-                
-                // Re-authenticate
                 await authService.Login();
-                
+
                 if (connectionClient.IsConnected())
                 {
                     IsOfflineMode = false;
-                    Sidebar.IsOfflineMode = false;
-                    GamesListViewModel.IsOfflineMode = false;
+                    GamesListViewModel.IsOfflineMode  = false;
+                    LibraryViewModel.IsOfflineMode    = false;
                     GameDetailViewModel.IsOfflineMode = false;
-                    
-                    Sidebar.StatusMessage = "Connected!";
-                    
-                    // Refresh data from server
+
                     await ImportAndLoadAsync();
                     return;
                 }
             }
 
             _logger.LogWarning("Server still unreachable");
-            Sidebar.StatusMessage = "Server unreachable - staying offline";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to go online");
-            Sidebar.StatusMessage = $"Connection failed: {ex.Message}";
         }
         finally
         {
@@ -210,17 +174,15 @@ public partial class ShellViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
     private void GoOffline()
     {
-        if (IsOfflineMode)
-            return;
+        if (IsOfflineMode) return;
 
-        _logger.LogInformation("Manually entering offline mode");
         IsOfflineMode = true;
-        Sidebar.IsOfflineMode = true;
-        GamesListViewModel.IsOfflineMode = true;
+        GamesListViewModel.IsOfflineMode  = true;
+        LibraryViewModel.IsOfflineMode    = true;
         GameDetailViewModel.IsOfflineMode = true;
-        Sidebar.StatusMessage = "Offline mode";
     }
 
     [RelayCommand]
@@ -229,95 +191,73 @@ public partial class ShellViewModel : ViewModelBase
         using var scope = _serviceProvider.CreateScope();
         var authService = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
         await authService.Logout();
-        
         LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    [RelayCommand]
+    private void ShowDownloadQueue() => ContentView = DownloadQueue;
+
+    [RelayCommand]
     private void ShowDepot()
     {
-        Sidebar.SelectDepot();
-        ContentView = GamesListViewModel;
-        _logger.LogDebug("Showing depot view");
-    }
-
-    private void OnDepotSelected(object? sender, EventArgs e)
-    {
+        IsDepotActive = true;
         ContentView = GamesListViewModel;
     }
 
-    private async void OnLibraryItemSelected(object? sender, LibraryItemViewModel item)
+    [RelayCommand]
+    private void ShowLibrary()
     {
-        using var scope = _serviceProvider.CreateScope();
-        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
-        
-        var listItem = await libraryService.GetItemAsync(item.Id);
-        if (listItem?.DataItem is Game game)
-        {
-            GameDetailViewModel.LoadGame(game);
-            ContentView = GameDetailViewModel;
-        }
+        IsDepotActive = false;
+        ContentView = LibraryViewModel;
     }
 
-    private async void OnGameSelected(object? sender, SDK.Models.Game game)
+    private void OnGameSelected(object? sender, SDK.Models.Game game)
     {
-        // Update sidebar selection if game is in library
-        Sidebar.SelectItemById(game.Id);
-        if (Sidebar.SelectedItem == null)
-        {
-            Sidebar.ClearSelection();
-        }
-        
         ContentView = GameDetailViewModel;
-        await GameDetailViewModel.LoadGameAsync(game);
+        _ = GameDetailViewModel.LoadGameAsync(game);
     }
 
     private void OnBackFromGameDetail(object? sender, EventArgs e)
     {
-        ShowDepot();
+        if (IsDepotActive)
+            ShowDepot();
+        else
+            ShowLibrary();
     }
 
     private async void OnLibraryChanged(object? sender, EventArgs e)
     {
-        _logger.LogInformation("Library changed, refreshing sidebar and games list...");
-        
-        // Refresh the sidebar to show updated library
-        await Sidebar.LoadAsync();
-        
-        // Refresh the games list to update "In Library" status
+        await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
     }
 
-    private void OnInstallRequested(object? sender, EventArgs e)
-    {
-        // Show the download queue when install is requested
-        DownloadQueue.Show();
-    }
+    private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
 
     private async void OnInstallCompleted(object? sender, Guid gameId)
     {
-        _logger.LogInformation("Install completed for game {GameId}, refreshing...", gameId);
-        
-        // Refresh library and games list
-        await Sidebar.LoadAsync();
+        await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
-        
-        // If we're viewing this game, refresh its install status
+
         if (GameDetailViewModel.Id == gameId)
-        {
             await GameDetailViewModel.RefreshInstallStatusAsync();
-        }
     }
 
-    private void OnSettingsRequested(object? sender, EventArgs e)
+    [RelayCommand]
+    private void ShowSettings()
     {
-        _logger.LogDebug("Opening settings");
-        Sidebar.ClearSelection();
         SettingsViewModel.Load();
         ContentView = SettingsViewModel;
     }
 
     private void OnBackFromSettings(object? sender, EventArgs e)
     {
-        ShowDepot();
+        if (IsDepotActive) ShowDepot();
+        else ShowLibrary();
+    }
+
+    private void OnBackFromDownloadQueue(object? sender, EventArgs e)
+    {
+        if (IsDepotActive) ShowDepot();
+        else ShowLibrary();
     }
 }

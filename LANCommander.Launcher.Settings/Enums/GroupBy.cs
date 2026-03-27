@@ -5,6 +5,7 @@
         None,
         Collection,
         Genre,
-        Platform
+        Platform,
+        FirstLetter
     }
 }

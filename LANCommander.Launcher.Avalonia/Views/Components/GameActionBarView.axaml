@@ -15,8 +15,22 @@
                            Foreground="{DynamicResource SystemAccentColor}"
                            IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 
-                <!-- Primary Action Row -->
-                <StackPanel Orientation="Horizontal" Spacing="12">
+                <!-- Primary Action Row + Stats -->
+                <DockPanel>
+                    <!-- Stats (right side) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="32" VerticalAlignment="Center">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Play Time" FontSize="11" Opacity="0.6" />
+                            <TextBlock Text="{Binding PlayTime}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Last Played" FontSize="11" Opacity="0.6" />
+                            <TextBlock Text="{Binding LastPlayed}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Buttons (left side) -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
                     <!-- Install button (not installed) -->
                     <Button Command="{Binding InstallCommand}"
                             IsVisible="{Binding !IsInstalled}"
@@ -172,19 +186,8 @@
                             </MenuFlyout>
                         </SplitButton.Flyout>
                     </SplitButton>
-                </StackPanel>
-                
-                <!-- Stats Row -->
-                <StackPanel Orientation="Horizontal" Spacing="32">
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="Play Time" FontSize="11" Opacity="0.6" />
-                        <TextBlock Text="{Binding PlayTime}" FontSize="14" FontWeight="SemiBold" />
                     </StackPanel>
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="Last Played" FontSize="11" Opacity="0.6" />
-                        <TextBlock Text="{Binding LastPlayed}" FontSize="14" FontWeight="SemiBold" />
-                    </StackPanel>
-                </StackPanel>
+                </DockPanel>
             </StackPanel>
         </Border>
         

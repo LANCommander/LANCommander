@@ -112,38 +112,30 @@
                      Background="Transparent">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:LibraryItemViewModel">
-                        <Button Command="{Binding $parent[ListBox].((vm:LibrarySidebarViewModel)DataContext).SelectItemCommand}"
-                                CommandParameter="{Binding}"
-                                Background="Transparent"
-                                Padding="8,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
-                                Cursor="Hand">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <!-- Icon -->
-                                <Border Width="24" Height="24" 
-                                        CornerRadius="4" 
-                                        ClipToBounds="True">
-                                    <Panel>
-                                        <Image Source="{Binding IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                               Stretch="UniformToFill"
-                                               IsVisible="{Binding HasIcon}" />
-                                        <Border Background="{DynamicResource SystemAccentColor}"
-                                                IsVisible="{Binding !HasIcon}">
-                                            <TextBlock Text="🎮" 
-                                                       FontSize="12" 
-                                                       HorizontalAlignment="Center" 
-                                                       VerticalAlignment="Center" />
-                                        </Border>
-                                    </Panel>
-                                </Border>
-                                
-                                <!-- Title -->
-                                <TextBlock Text="{Binding Title}" 
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="4,2">
+                            <!-- Icon -->
+                            <Border Width="24" Height="24"
+                                    CornerRadius="4"
+                                    ClipToBounds="True">
+                                <Panel>
+                                    <Image Source="{Binding IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                           Stretch="UniformToFill"
+                                           IsVisible="{Binding HasIcon}" />
+                                    <Border Background="{DynamicResource SystemAccentColor}"
+                                            IsVisible="{Binding !HasIcon}">
+                                        <TextBlock Text="🎮"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                </Panel>
+                            </Border>
+
+                            <!-- Title -->
+                            <TextBlock Text="{Binding Title}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

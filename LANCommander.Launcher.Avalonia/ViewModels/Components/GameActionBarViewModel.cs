@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Views;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.PowerShell;
@@ -531,12 +534,14 @@ public partial class GameActionBarViewModel : ViewModelBase
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
-            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var importService      = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var libraryService     = scope.ServiceProvider.GetRequiredService<LibraryService>();
+            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
 
-            // First, ensure game is in library
+            // Ensure game is in library
             if (!IsInLibrary)
             {
                 _logger.LogInformation("Game {GameId} ({Title}) not in library, adding first", GameId, Title);
@@ -550,22 +555,65 @@ public partial class GameActionBarViewModel : ViewModelBase
                 LibraryChanged?.Invoke(this, EventArgs.Empty);
             }
 
-            // Get the local game record
             var localGame = await gameService.GetAsync(GameId);
             if (localGame == null)
-            {
                 throw new InvalidOperationException("Game not found in local database after import");
+
+            // ── Gather options ─────────────────────────────────────────────────
+            StatusMessage = "Checking available options...";
+
+            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+            var availableAddons    = Array.Empty<SDK.Models.Game>();
+
+            try
+            {
+                var addons = await gameClient.GetAddonsAsync(GameId);
+                availableAddons = addons?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
             }
 
+            var needsDialog = availableAddons.Length > 0 || installDirectories.Length > 1;
+
+            // ── Build options VM ───────────────────────────────────────────────
+            var optionsVm = new InstallOptionsViewModel();
+
+            foreach (var dir in installDirectories)
+                optionsVm.InstallDirectories.Add(dir);
+
+            optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+
+            foreach (var addon in availableAddons)
+                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: false));
+
+            // ── Show dialog if needed ──────────────────────────────────────────
+            if (needsDialog)
+            {
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var dialog = new InstallOptionsWindow { DataContext = optionsVm };
+                var confirmed = await dialog.ShowDialog<bool?>(mainWindow);
+
+                if (confirmed != true)
+                {
+                    StatusMessage = null;
+                    return;
+                }
+            }
+
+            // ── Queue the install ──────────────────────────────────────────────
             StatusMessage = "Starting installation...";
             _logger.LogInformation("Adding game {GameId} ({Title}) to install queue", GameId, Title);
 
-            // Add to install queue
-            await installService.Add(localGame);
+            await installService.Add(
+                localGame,
+                optionsVm.SelectedInstallDirectory,
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null);
 
             StatusMessage = "Added to download queue";
-
-            // Notify that install was requested (to show the queue panel)
             InstallRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)

@@ -28,7 +28,10 @@ public partial class GameDetailViewModel : ViewModelBase
     private string _description = string.Empty;
 
     [ObservableProperty]
-    private string? _bannerPath;
+    private string? _coverPath;
+
+    [ObservableProperty]
+    private string? _logoPath;
 
     [ObservableProperty]
     private string? _backgroundPath;
@@ -127,7 +130,8 @@ public partial class GameDetailViewModel : ViewModelBase
         using var scope = _serviceProvider.CreateScope();
         var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
         
-        BannerPath = GetLocalMediaPath(game.Media, MediaType.Cover, mediaService);
+        CoverPath = GetLocalMediaPath(game.Media, MediaType.Cover, mediaService);
+        LogoPath = GetLocalMediaPath(game.Media, MediaType.Logo, mediaService);
         BackgroundPath = GetLocalMediaPath(game.Media, MediaType.Background, mediaService);
         IconPath = GetLocalMediaPath(game.Media, MediaType.Icon, mediaService);
 
@@ -184,7 +188,8 @@ public partial class GameDetailViewModel : ViewModelBase
         Singleplayer = game.Singleplayer;
 
         // Reset media paths while loading
-        BannerPath = null;
+        CoverPath = null;
+        LogoPath = null;
         BackgroundPath = null;
         IconPath = null;
 
@@ -235,7 +240,8 @@ public partial class GameDetailViewModel : ViewModelBase
                 using var scope = _serviceProvider.CreateScope();
                 var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
-                BannerPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover, mediaClient);
+                CoverPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover, mediaClient);
+                LogoPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Logo, mediaClient);
                 BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background, mediaClient);
                 IconPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon, mediaClient);
             }

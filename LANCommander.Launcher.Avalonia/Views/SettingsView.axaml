@@ -6,7 +6,7 @@
     
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Header -->
-        <Border Grid.Row="0" Padding="24,16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+        <Border Grid.Row="0" Padding="24,56,24,16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <DockPanel>
                 <Button DockPanel.Dock="Left"
                         Content="← Back"

@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
         xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
+        xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+        xmlns:svg="using:Avalonia.Svg.Skia"
         x:Class="LANCommander.Launcher.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
@@ -9,22 +11,139 @@
         Height="800"
         MinWidth="900"
         MinHeight="600"
-        WindowStartupLocation="CenterScreen">
-    
-    <ContentControl Content="{Binding CurrentView}">
-        <ContentControl.DataTemplates>
-            <DataTemplate DataType="vm:SplashViewModel">
-                <views:SplashView />
-            </DataTemplate>
-            <DataTemplate DataType="vm:ServerSelectionViewModel">
-                <views:ServerSelectionView />
-            </DataTemplate>
-            <DataTemplate DataType="vm:LoginViewModel">
-                <views:LoginView />
-            </DataTemplate>
-            <DataTemplate DataType="vm:ShellViewModel">
-                <views:ShellView />
-            </DataTemplate>
-        </ContentControl.DataTemplates>
-    </ContentControl>
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Window.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </Window.Resources>
+
+    <Grid>
+        <!-- Main Content (fills full window height) -->
+        <ContentControl Content="{Binding CurrentView}" ZIndex="0">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:SplashViewModel">
+                    <views:SplashView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ServerSelectionViewModel">
+                    <views:ServerSelectionView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:LoginViewModel">
+                    <views:LoginView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ShellViewModel">
+                    <views:ShellView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- Floating Title Bar (overlays content) -->
+        <Grid VerticalAlignment="Top"
+              Height="40"
+              ZIndex="10"
+              ColumnDefinitions="Auto,*,Auto,Auto">
+
+            <!-- Blurred / translucent background -->
+            <Border Grid.ColumnSpan="4"
+                    IsHitTestVisible="False"
+                    Background="#CC000000" />
+
+            <!-- Logo -->
+            <Border Grid.Column="0" Padding="12,0" VerticalAlignment="Center">
+                <svg:Svg Path="/Assets/logo.svg" Height="22" VerticalAlignment="Center" />
+            </Border>
+
+            <!-- Drag Region -->
+            <Border Grid.Column="1"
+                    x:Name="TitleBarDragRegion"
+                    Background="Transparent"
+                    PointerPressed="TitleBarDragRegion_PointerPressed"
+                    DoubleTapped="TitleBarDragRegion_DoubleTapped" />
+
+            <!-- Profile Button (visible only when shell is active) -->
+            <Border Grid.Column="2"
+                    IsVisible="{Binding IsShellActive}"
+                    Padding="0,0,4,0"
+                    VerticalAlignment="Center">
+                <Button Background="Transparent"
+                        Padding="8,4">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="Settings"
+                                      Command="{Binding ShellViewModel.ShowSettingsCommand}" />
+                            <MenuItem Header="Switch to Offline Mode"
+                                      Command="{Binding ShellViewModel.GoOfflineCommand}"
+                                      IsVisible="{Binding !ShellViewModel.IsOfflineMode}" />
+                            <MenuItem Header="Go Online"
+                                      Command="{Binding ShellViewModel.TryGoOnlineCommand}"
+                                      IsVisible="{Binding ShellViewModel.CanGoOnline}" />
+                            <MenuItem Header="Logout"
+                                      Command="{Binding ShellViewModel.LogoutCommand}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="22" Height="22"
+                                CornerRadius="11"
+                                ClipToBounds="True"
+                                IsVisible="{Binding ShellViewModel.Profile.HasAvatar}">
+                            <Image Source="{Binding ShellViewModel.Profile.AvatarPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Text="{Binding ShellViewModel.Profile.Alias}"
+                                   VerticalAlignment="Center"
+                                   FontSize="13" />
+                    </StackPanel>
+                </Button>
+            </Border>
+
+            <!-- Window Controls -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button x:Name="MinimizeButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="MinimizeButton_Click">
+                    <TextBlock Text="—" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+                <Button x:Name="MaximizeButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="MaximizeButton_Click">
+                    <TextBlock Text="□" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+                <Button x:Name="CloseButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="CloseButton_Click">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#C42B1C" />
+                        </Style>
+                    </Button.Styles>
+                    <TextBlock Text="✕" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
 </Window>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Models;
@@ -47,6 +48,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private string _transferSpeedText = string.Empty;
 
     [ObservableProperty]
+    private string _timeRemainingText = string.Empty;
+
+    [ObservableProperty]
     private bool _hasActiveDownload;
 
     [ObservableProperty]
@@ -62,6 +66,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private int _activeCount;
 
     public event EventHandler<Guid>? InstallCompleted;
+    public event EventHandler? BackRequested;
 
     public DownloadQueueViewModel(IServiceProvider serviceProvider)
     {
@@ -71,10 +76,10 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     public void Initialize()
     {
-        using var scope = _serviceProvider.CreateScope();
-        _installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+        // InstallService is a singleton — resolve directly from the root provider,
+        // not through a child scope that would be disposed immediately.
+        _installService = _serviceProvider.GetRequiredService<InstallService>();
 
-        // Subscribe to InstallService events
         _installService.OnQueueChanged += OnQueueChanged;
         _installService.OnProgress += OnProgress;
         _installService.OnInstallComplete += OnInstallComplete;
@@ -85,34 +90,61 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private Task OnQueueChanged()
     {
-        RefreshQueue();
+        Dispatcher.UIThread.Post(RefreshQueue);
         return Task.CompletedTask;
     }
 
     private Task OnProgress(InstallProgress progress)
     {
-        CurrentStatus = progress.Status.ToString();
-        CurrentProgress = progress.Progress;
-        CurrentTransferSpeed = progress.TransferSpeed;
-        
-        // Format progress text
-        var bytesDownloaded = FormatBytes(progress.BytesTransferred);
-        var totalBytes = FormatBytes(progress.TotalBytes);
-        CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({progress.Progress:P0})";
-        
-        // Format transfer speed
-        TransferSpeedText = $"{FormatBytes(progress.TransferSpeed)}/s";
-
-        // Update current item if we have one
-        var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
-        if (item != null)
+        Dispatcher.UIThread.Post(() =>
         {
-            item.Status = progress.Status;
-            item.Progress = progress.Progress;
-            item.TransferSpeed = progress.TransferSpeed;
-            item.BytesDownloaded = progress.BytesTransferred;
-            item.TotalBytes = progress.TotalBytes;
-        }
+            CurrentStatus = progress.Status.ToString();
+            CurrentProgress = progress.Progress;
+            CurrentTransferSpeed = progress.TransferSpeed;
+
+            // Format progress text
+            var bytesDownloaded = FormatBytes(progress.BytesTransferred);
+            var totalBytes = FormatBytes(progress.TotalBytes);
+            CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({progress.Progress:P0})";
+
+            // Format transfer speed
+            TransferSpeedText = $"{FormatBytes(progress.TransferSpeed)}/s";
+
+            // Format time remaining
+            var bytesRemaining = progress.TotalBytes - progress.BytesTransferred;
+            if (progress.TransferSpeed > 0 && bytesRemaining > 0)
+            {
+                var seconds = (double)bytesRemaining / progress.TransferSpeed;
+                var ts = TimeSpan.FromSeconds(seconds);
+                TimeRemainingText = ts.TotalHours >= 1
+                    ? $"{(int)ts.TotalHours}h {ts.Minutes}m remaining"
+                    : ts.TotalMinutes >= 1
+                        ? $"{ts.Minutes}m {ts.Seconds}s remaining"
+                        : $"{ts.Seconds}s remaining";
+            }
+            else
+            {
+                TimeRemainingText = string.Empty;
+            }
+
+            // Update the matching queue item
+            var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
+            if (item != null)
+            {
+                item.Status = progress.Status;
+                item.Progress = progress.Progress;
+                item.TransferSpeed = progress.TransferSpeed;
+                item.BytesDownloaded = progress.BytesTransferred;
+                item.TotalBytes = progress.TotalBytes;
+
+                // Ensure footer visibility and CurrentItem are up-to-date
+                // without waiting for the next OnQueueChanged cycle
+                if (!HasActiveDownload)
+                    HasActiveDownload = true;
+
+                CurrentItem ??= item;
+            }
+        });
 
         return Task.CompletedTask;
     }
@@ -120,15 +152,18 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private Task OnInstallComplete(Data.Models.Game game)
     {
         _logger.LogInformation("Install complete for game {GameTitle}", game.Title);
-        RefreshQueue();
-        InstallCompleted?.Invoke(this, game.Id);
+        Dispatcher.UIThread.Post(() =>
+        {
+            RefreshQueue();
+            InstallCompleted?.Invoke(this, game.Id);
+        });
         return Task.CompletedTask;
     }
 
     private Task OnInstallFail(Data.Models.Game game)
     {
         _logger.LogError("Install failed for game {GameTitle}", game.Title);
-        RefreshQueue();
+        Dispatcher.UIThread.Post(RefreshQueue);
         return Task.CompletedTask;
     }
 
@@ -160,6 +195,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void Back() => BackRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
     public void ToggleExpanded()
     {
         IsExpanded = !IsExpanded;
@@ -178,6 +216,14 @@ public partial class DownloadQueueViewModel : ViewModelBase
         
         _logger.LogInformation("Canceling install for {Title}", item.Title);
         await _installService.CancelInstallAsync(item.Id);
+    }
+
+    [RelayCommand]
+    private void ClearCompleted()
+    {
+        if (_installService == null) return;
+        foreach (var item in QueueItems.Where(i => i.IsCompleted || i.IsFailed).ToList())
+            _installService.Remove(item.Id);
     }
 
     [RelayCommand]

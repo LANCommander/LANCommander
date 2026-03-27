@@ -23,6 +23,14 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _title = "LANCommander Launcher";
 
+    [ObservableProperty]
+    private bool _isShellActive;
+
+    partial void OnCurrentViewChanged(ViewModelBase value)
+    {
+        IsShellActive = value is ShellViewModel;
+    }
+
     public SplashViewModel SplashViewModel { get; }
     public ServerSelectionViewModel ServerSelectionViewModel { get; }
     public LoginViewModel LoginViewModel { get; }

@@ -32,6 +32,9 @@ public partial class GameItemViewModel : ViewModelBase
     private string _genres = string.Empty;
 
     [ObservableProperty]
+    private string _collections = string.Empty;
+
+    [ObservableProperty]
     private string _developers = string.Empty;
 
     [ObservableProperty]
@@ -57,6 +60,7 @@ public partial class GameItemViewModel : ViewModelBase
         ReleasedOn = game.ReleasedOn;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
+        Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
         CoverPath = coverPath;
@@ -73,6 +77,7 @@ public partial class GameItemViewModel : ViewModelBase
         ReleasedOn = game.ReleasedOn ?? DateTime.MinValue;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
+        Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
         CoverPath = coverPath;

@@ -375,3 +375,9 @@ LANCommander.Server/Data/
 LANCommander.Launcher.Avalonia/Data/
 
 Data/
+
+# Visual test output — screenshots & diffs are CI artifacts, not committed.
+# Baselines/ is committed; everything else is transient.
+LANCommander.Launcher.Avalonia.Tests/Screenshots/
+LANCommander.Launcher.Avalonia.Tests/Diffs/
+visual-test-output/

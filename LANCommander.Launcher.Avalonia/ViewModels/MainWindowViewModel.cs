@@ -18,6 +18,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ILogger<MainWindowViewModel> _logger;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLogoVisible))]
     private ViewModelBase _currentView;
 
     [ObservableProperty]
@@ -26,9 +27,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isShellActive;
 
+    public bool IsLogoVisible => CurrentView != ServerSelectionViewModel && CurrentView != LoginViewModel;
+    public bool ShowTitlebarTint => !IsShellActive || ShellViewModel.IsTitlebarTinted;
+
     partial void OnCurrentViewChanged(ViewModelBase value)
     {
         IsShellActive = value is ShellViewModel;
+        OnPropertyChanged(nameof(ShowTitlebarTint));
     }
 
     public SplashViewModel SplashViewModel { get; }
@@ -52,6 +57,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider);
         LoginViewModel = new LoginViewModel(connectionClient, authenticationService, settingsProvider);
         ShellViewModel = new ShellViewModel(serviceProvider);
+
+        // Propagate shell titlebar tint changes
+        ShellViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.IsTitlebarTinted))
+                OnPropertyChanged(nameof(ShowTitlebarTint));
+        };
 
         // Wire up navigation events
         ServerSelectionViewModel.ServerConnected += OnServerConnected;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -49,12 +50,15 @@ public partial class GameDetailViewModel : ViewModelBase
     private bool _singleplayer;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GenreList))]
     private string _genres = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeveloperList))]
     private string _developers = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PublisherList))]
     private string _publishers = string.Empty;
 
     [ObservableProperty]
@@ -64,7 +68,23 @@ public partial class GameDetailViewModel : ViewModelBase
     private string _multiplayerModes = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TagList))]
     private string _tags = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackLabel))]
+    private bool _fromLibrary;
+
+    public string BackLabel => FromLibrary ? "← Back to Library" : "← Back to Depot";
+
+    // Split list properties for chip rendering
+    public IEnumerable<string> GenreList       => SplitCsv(Genres);
+    public IEnumerable<string> DeveloperList   => SplitCsv(Developers);
+    public IEnumerable<string> PublisherList   => SplitCsv(Publishers);
+    public IEnumerable<string> TagList         => SplitCsv(Tags);
+
+    private static IEnumerable<string> SplitCsv(string csv) =>
+        csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
 
     [ObservableProperty]
     private bool _hasMultiplayer;
@@ -91,6 +111,7 @@ public partial class GameDetailViewModel : ViewModelBase
     public event EventHandler? BackRequested;
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
+    public event EventHandler<string>? SearchRequested;
 
     public GameDetailViewModel(IServiceProvider serviceProvider)
     {
@@ -302,5 +323,12 @@ public partial class GameDetailViewModel : ViewModelBase
     {
         ActionBar.StopRunningCheck();
         BackRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void SearchFor(string term)
+    {
+        if (!string.IsNullOrWhiteSpace(term))
+            SearchRequested?.Invoke(this, term);
     }
 }

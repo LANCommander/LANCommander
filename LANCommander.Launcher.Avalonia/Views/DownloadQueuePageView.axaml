@@ -4,10 +4,10 @@
              x:Class="LANCommander.Launcher.Avalonia.Views.DownloadQueuePageView"
              x:DataType="vm:DownloadQueueViewModel">
 
-    <DockPanel>
+    <Grid RowDefinitions="Auto,*">
 
         <!-- ── Header ──────────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Top"
+        <Border Grid.Row="0"
                 Padding="16,52,16,12"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <DockPanel>
@@ -39,17 +39,22 @@
             </DockPanel>
         </Border>
 
-        <!-- ── Empty state ─────────────────────────────────────────────── -->
-        <Border IsVisible="{Binding !HasItems}"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Center">
-            <StackPanel Spacing="8" HorizontalAlignment="Center">
-                <TextBlock Text="📥" FontSize="48" HorizontalAlignment="Center" Opacity="0.3" />
-                <TextBlock Text="No downloads" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
-                <TextBlock Text="Install a game from the Depot to see it here."
-                           FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
-            </StackPanel>
-        </Border>
+        <!-- ── Content area (empty state + queue list) ─────────────────── -->
+        <Panel Grid.Row="1">
+
+        <!-- Empty state (centered) -->
+        <StackPanel Spacing="8"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding !HasItems}">
+            <PathIcon Data="{StaticResource PhosphorArrowCircleDown}"
+                      Width="48" Height="48"
+                      HorizontalAlignment="Center"
+                      Opacity="0.3" />
+            <TextBlock Text="No downloads" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+            <TextBlock Text="Install a game from the Depot to see it here."
+                       FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
+        </StackPanel>
 
         <!-- ── Queue list ───────────────────────────────────────────────── -->
         <ScrollViewer HorizontalScrollBarVisibility="Disabled"
@@ -214,5 +219,7 @@
             </StackPanel>
         </ScrollViewer>
 
-    </DockPanel>
+        </Panel>
+
+    </Grid>
 </UserControl>

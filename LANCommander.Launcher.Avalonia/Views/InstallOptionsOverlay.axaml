@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             x:Class="LANCommander.Launcher.Avalonia.Views.InstallOptionsOverlay"
+             x:DataType="vm:InstallOptionsViewModel">
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="#AA000000">
+
+        <!-- Centered card -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Width="460"
+                MaxHeight="600"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BoxShadow="0 8 40 8 #88000000">
+
+            <StackPanel Spacing="0">
+
+                <!-- ── Install directory ──────────────────────────────────── -->
+                <Border IsVisible="{Binding HasMultipleDirectories}"
+                        Padding="20,16,20,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Install Location"
+                                   FontSize="13" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding InstallDirectories}"
+                                  SelectedItem="{Binding SelectedInstallDirectory}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Addons ─────────────────────────────────────────────── -->
+                <Border IsVisible="{Binding HasAddons}"
+                        Padding="20,16,20,0">
+                    <StackPanel Spacing="8">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Content="None"
+                                    Background="Transparent"
+                                    Padding="8,2"
+                                    FontSize="12"
+                                    Click="DeselectAllAddons_Click" />
+                            <Button DockPanel.Dock="Right"
+                                    Content="All"
+                                    Background="Transparent"
+                                    Padding="8,2"
+                                    FontSize="12"
+                                    Margin="0,0,4,0"
+                                    Click="SelectAllAddons_Click" />
+                            <TextBlock Text="Optional Add-ons"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <ScrollViewer MaxHeight="280"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Addons}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallAddonItemViewModel">
+                                        <Border Padding="10,8"
+                                                Margin="0,0,0,3"
+                                                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                            <DockPanel>
+                                                <CheckBox DockPanel.Dock="Left"
+                                                          IsChecked="{Binding IsSelected}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,10,0" />
+                                                <TextBlock DockPanel.Dock="Right"
+                                                           Text="{Binding TypeLabel}"
+                                                           FontSize="11"
+                                                           Opacity="0.55"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Buttons ────────────────────────────────────────────── -->
+                <Border Padding="20,16">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8">
+                        <Button Content="Cancel"
+                                Width="90"
+                                Click="Cancel_Click" />
+                        <Button Content="Install"
+                                Width="90"
+                                Classes="accent"
+                                Click="Confirm_Click" />
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

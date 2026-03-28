@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +19,9 @@ public partial class ShellViewModel : ViewModelBase
     private readonly ILogger<ShellViewModel> _logger;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ContentViewTitle))]
+    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTitlebarTinted))]
     private ViewModelBase? _contentView;
 
     [ObservableProperty]
@@ -24,7 +29,35 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoOnline))]
+    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     private bool _isOfflineMode;
+
+    public string ContentViewTitle => ContentView switch
+    {
+        GamesListViewModel _ => "Depot",
+        LibraryViewModel _ => "My Library",
+        GameDetailViewModel gd => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
+        SettingsViewModel _ => "Settings",
+        DownloadQueueViewModel _ => "Downloads",
+        _ => string.Empty
+    };
+
+    public bool IsRefreshVisible => ContentView is GamesCollectionViewModel && !IsOfflineMode;
+    public bool IsTitlebarTinted => true;
+
+    partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
+    {
+        if (oldValue is GameDetailViewModel oldDetail)
+            oldDetail.PropertyChanged -= OnGameDetailPropertyChanged;
+        if (newValue is GameDetailViewModel newDetail)
+            newDetail.PropertyChanged += OnGameDetailPropertyChanged;
+    }
+
+    private void OnGameDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GameDetailViewModel.Title))
+            OnPropertyChanged(nameof(ContentViewTitle));
+    }
 
     [ObservableProperty]
     private bool _isCheckingConnection;
@@ -50,6 +83,9 @@ public partial class ShellViewModel : ViewModelBase
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<ShellViewModel>>();
+
+        // Initialize Profile early so titlebar bindings never hit null
+        Profile = new ProfileViewModel(serviceProvider);
     }
 
     public void SetOfflineMode(bool offline)
@@ -67,7 +103,7 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue       = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel   = new SettingsViewModel(_serviceProvider);
-        Profile             = new ProfileViewModel(_serviceProvider);
+        // Profile is already created in the constructor; reuse it here
 
         GamesListViewModel.IsOfflineMode  = IsOfflineMode;
         LibraryViewModel.IsOfflineMode    = IsOfflineMode;
@@ -75,9 +111,10 @@ public partial class ShellViewModel : ViewModelBase
 
         GamesListViewModel.GameSelected  += OnGameSelected;
         LibraryViewModel.GameSelected    += OnGameSelected;
-        GameDetailViewModel.BackRequested  += OnBackFromGameDetail;
-        GameDetailViewModel.LibraryChanged += OnLibraryChanged;
+        GameDetailViewModel.BackRequested    += OnBackFromGameDetail;
+        GameDetailViewModel.LibraryChanged   += OnLibraryChanged;
         GameDetailViewModel.InstallRequested += OnInstallRequested;
+        GameDetailViewModel.SearchRequested  += OnSearchRequested;
 
         SettingsViewModel.BackRequested += OnBackFromSettings;
 
@@ -213,8 +250,71 @@ public partial class ShellViewModel : ViewModelBase
 
     private void OnGameSelected(object? sender, SDK.Models.Game game)
     {
+        GameDetailViewModel.FromLibrary = !IsDepotActive;
         ContentView = GameDetailViewModel;
         _ = GameDetailViewModel.LoadGameAsync(game);
+    }
+
+    public async Task NavigateToGameByIdAsync(Guid gameId)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+
+            if (!IsOfflineMode)
+            {
+                var client = scope.ServiceProvider.GetRequiredService<GameClient>();
+                var game = await client.GetAsync(gameId);
+                if (game != null)
+                {
+                    OnGameSelected(this, game);
+                    return;
+                }
+            }
+
+            // Fallback: load from local database
+            var gameService = scope.ServiceProvider.GetRequiredService<LANCommander.Launcher.Services.GameService>();
+            var localGame = await gameService.GetAsync(gameId);
+            if (localGame != null)
+            {
+                var sdkGame = new SDK.Models.Game
+                {
+                    Id          = localGame.Id,
+                    Title       = localGame.Title ?? "Unknown",
+                    SortTitle   = localGame.SortTitle,
+                    Description = localGame.Description,
+                    ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue,
+                };
+                OnGameSelected(this, sdkGame);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to navigate to game {GameId}", gameId);
+        }
+    }
+
+    private void OnSearchRequested(object? sender, string term)
+    {
+        var collection = IsDepotActive ? (GamesCollectionViewModel)GamesListViewModel : LibraryViewModel;
+
+        // If the term matches a known genre, select it in the dropdown instead of searching
+        var matchedGenre = collection.AvailableGenres
+            .FirstOrDefault(g => string.Equals(g.Name, term, StringComparison.OrdinalIgnoreCase));
+
+        if (matchedGenre != null)
+        {
+            collection.SearchText = string.Empty;
+            collection.SelectedGenre = matchedGenre;
+        }
+        else
+        {
+            collection.SelectedGenre = null;
+            collection.SearchText = term;
+        }
+
+        if (IsDepotActive) ShowDepot();
+        else ShowLibrary();
     }
 
     private void OnBackFromGameDetail(object? sender, EventArgs e)

@@ -60,27 +60,37 @@ public partial class GamesListViewModel : GamesCollectionViewModel
             {
                 _depotItems = await depotService.GetItemsAsync();
 
-                var allGenres = new HashSet<Genre>(new GenreComparer());
-
-                foreach (var item in _depotItems ?? [])
+                // Collect games + covers on a thread-pool thread so the UI stays responsive
+                var (collected, collectedGenres) = await Task.Run(async () =>
                 {
-                    if (item.DataItem is SDK.Models.DepotGame depotGame)
+                    var items = new List<GameItemViewModel>();
+                    var genres = new HashSet<Genre>(new GenreComparer());
+
+                    foreach (var item in _depotItems ?? [])
                     {
-                        if (depotGame.Type == GameType.Mod || depotGame.Type == GameType.Expansion)
-                            continue;
+                        if (item.DataItem is SDK.Models.DepotGame depotGame)
+                        {
+                            if (depotGame.Type == GameType.Mod || depotGame.Type == GameType.Expansion)
+                                continue;
 
-                        var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
-                        var coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
+                            var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
+                            var coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
 
-                        _allGames.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
+                            items.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
 
-                        if (depotGame.Genres != null)
-                            foreach (var genre in depotGame.Genres)
-                                allGenres.Add(genre);
+                            if (depotGame.Genres != null)
+                                foreach (var genre in depotGame.Genres)
+                                    genres.Add(genre);
+                        }
                     }
-                }
 
-                foreach (var genre in allGenres.OrderBy(g => g.Name))
+                    return (items, genres);
+                });
+
+                foreach (var vm in collected)
+                    _allGames.Add(vm);
+
+                foreach (var genre in collectedGenres.OrderBy(g => g.Name))
                     AvailableGenres.Add(genre);
             }
 

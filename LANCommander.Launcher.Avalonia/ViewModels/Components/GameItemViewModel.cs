@@ -49,9 +49,12 @@ public partial class GameItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _inLibrary;
 
+    [ObservableProperty]
+    private bool _showInLibraryBadge;
+
     public GameItemViewModel() { }
 
-    public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, bool inLibrary = false)
+    public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, bool inLibrary = false, bool showInLibraryBadge = true)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -66,9 +69,10 @@ public partial class GameItemViewModel : ViewModelBase
         CoverPath = coverPath;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
+        ShowInLibraryBadge = inLibrary && showInLibraryBadge;
     }
 
-    public GameItemViewModel(Game game, string? coverPath = null, bool inLibrary = false)
+    public GameItemViewModel(Game game, string? coverPath = null, bool inLibrary = false, bool showInLibraryBadge = true)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -83,5 +87,6 @@ public partial class GameItemViewModel : ViewModelBase
         CoverPath = coverPath;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
+        ShowInLibraryBadge = inLibrary && showInLibraryBadge;
     }
 }

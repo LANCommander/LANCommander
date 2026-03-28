@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
@@ -18,19 +19,39 @@
                         Height="340"
                         Background="Black">
                     <Panel>
+                        <!-- Blurred backdrop strip — visible through the transparent titlebar.
+                             Sits beneath all other hero content so only the top 40 px (titlebar
+                             height) is exposed; the extra 20 px lets the blur radius taper
+                             naturally before the sharp hero image takes over below. -->
+                        <Border VerticalAlignment="Top"
+                                Height="60"
+                                ClipToBounds="True"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <Panel>
+                                <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                                       Stretch="UniformToFill">
+                                    <Image.Effect>
+                                        <BlurEffect Radius="24" />
+                                    </Image.Effect>
+                                </Image>
+                                <!-- Slight darkening so titlebar text/icons remain legible -->
+                                <Border Background="#33000000" />
+                            </Panel>
+                        </Border>
+
                         <!-- Background image -->
-                        <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                        <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
                                Stretch="UniformToFill"
-                               Opacity="0.55"
                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                        <!-- Top fade gradient (covers title bar + header area) -->
+                        <!-- Top fade gradient — softened so the blur beneath can breathe -->
                         <Border VerticalAlignment="Top"
                                 Height="120"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                    <GradientStop Color="#CC000000" Offset="0" />
+                                    <GradientStop Color="#55000000" Offset="0" />
                                     <GradientStop Color="#00000000" Offset="1" />
                                 </LinearGradientBrush>
                             </Border.Background>
@@ -52,9 +73,9 @@
                         <Button HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Margin="16,48,0,0"
-                                Content="← Back to Depot"
+                                Content="{Binding BackLabel}"
                                 Command="{Binding GoBackCommand}"
-                                Background="Transparent"
+                                Background="#33000000"
                                 Padding="12,8" />
 
                         <!-- Logo (bottom-left) -->
@@ -65,7 +86,7 @@
                                 MaxHeight="110"
                                 MaxWidth="380"
                                 IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
                                    Stretch="Uniform"
                                    MaxHeight="110" />
                         </Border>
@@ -84,6 +105,13 @@
 
                 <!-- Game Details Content -->
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                    <Grid.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Color="#FF000000" Offset="0" />
+                            <GradientStop Color="#FF050505" Offset="0.08" />
+                            <GradientStop Color="#FF000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Grid.Background>
                     <!-- Left: Action Bar, Metadata -->
                     <StackPanel Grid.Column="0" Margin="24,24,0,24" Spacing="16">
                         <!-- Game Action Bar Component -->
@@ -91,74 +119,122 @@
 
                         <!-- Quick Info Cards -->
                         <WrapPanel Orientation="Horizontal">
-                            <!-- Developers -->
-                            <Border Margin="0,0,8,8"
-                                    Padding="12,8"
-                                    CornerRadius="4"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="👨‍💻" />
-                                    <TextBlock Text="{Binding Developers}" />
-                                </StackPanel>
-                            </Border>
+                            <!-- Developers (clickable chips) -->
+                            <ItemsControl ItemsSource="{Binding DeveloperList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <Button Margin="0,0,6,6"
+                                                Padding="10,6"
+                                                CornerRadius="4"
+                                                Background="#22FFFFFF"
+                                                Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding}" FontSize="13" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                            <!-- Publishers -->
-                            <Border Margin="0,0,8,8"
-                                    Padding="12,8"
-                                    CornerRadius="4"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="🏢" />
-                                    <TextBlock Text="{Binding Publishers}" />
-                                </StackPanel>
-                            </Border>
+                            <!-- Publishers (clickable chips) -->
+                            <ItemsControl ItemsSource="{Binding PublisherList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <Button Margin="0,0,6,6"
+                                                Padding="10,6"
+                                                CornerRadius="4"
+                                                Background="#22FFFFFF"
+                                                Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding}" FontSize="13" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                            <!-- Singleplayer -->
-                            <Border Margin="0,0,8,8"
-                                    Padding="12,8"
+                            <!-- Singleplayer badge -->
+                            <Border Margin="0,0,6,6"
+                                    Padding="10,6"
                                     CornerRadius="4"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    Background="#22FFFFFF"
                                     IsVisible="{Binding Singleplayer}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="👤" />
-                                    <TextBlock Text="Singleplayer" />
-                                </StackPanel>
+                                <TextBlock Text="Singleplayer" FontSize="13" />
                             </Border>
 
-                            <!-- Multiplayer -->
-                            <Border Margin="0,0,8,8"
-                                    Padding="12,8"
+                            <!-- Multiplayer badge -->
+                            <Border Margin="0,0,6,6"
+                                    Padding="10,6"
                                     CornerRadius="4"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    Background="#22FFFFFF"
                                     IsVisible="{Binding HasMultiplayer}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="👥" />
-                                    <TextBlock Text="{Binding MultiplayerModes}" />
-                                </StackPanel>
+                                <TextBlock Text="{Binding MultiplayerModes}" FontSize="13" />
                             </Border>
                         </WrapPanel>
 
-                        <!-- Genres -->
+                        <!-- Genres (clickable chips) -->
                         <StackPanel Spacing="8"
                                     IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="Genres" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                            <TextBlock Text="{Binding Genres}" TextWrapping="Wrap" />
+                            <TextBlock Text="Genres" FontWeight="SemiBold" FontSize="13" Opacity="0.5" />
+                            <ItemsControl ItemsSource="{Binding GenreList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <Button Margin="0,0,6,6"
+                                                Padding="10,5"
+                                                CornerRadius="100"
+                                                Background="#22FFFFFF"
+                                                Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding}" FontSize="12" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
 
                         <!-- Platforms -->
                         <StackPanel Spacing="8"
                                     IsVisible="{Binding Platforms, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="Platforms" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                            <TextBlock Text="{Binding Platforms}" TextWrapping="Wrap" />
+                            <TextBlock Text="Platforms" FontWeight="SemiBold" FontSize="13" Opacity="0.5" />
+                            <TextBlock Text="{Binding Platforms}" TextWrapping="Wrap" FontSize="13" Opacity="0.8" />
                         </StackPanel>
 
-                        <!-- Tags -->
+                        <!-- Tags (clickable chips) -->
                         <StackPanel Spacing="8"
                                     IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="Tags" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
-                            <TextBlock Text="{Binding Tags}" TextWrapping="Wrap" />
+                            <TextBlock Text="Tags" FontWeight="SemiBold" FontSize="13" Opacity="0.5" />
+                            <ItemsControl ItemsSource="{Binding TagList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <Button Margin="0,0,6,6"
+                                                Padding="10,5"
+                                                CornerRadius="100"
+                                                Background="#22FFFFFF"
+                                                Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding}" FontSize="12" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
 
                         <!-- Description -->
@@ -176,12 +252,12 @@
                             Width="200"
                             Margin="16,-100,24,24"
                             VerticalAlignment="Top"
-                            CornerRadius="8"
+                            CornerRadius="0"
                             ClipToBounds="True"
                             ZIndex="1"
                             BoxShadow="0 16 48 8 #A0000000, 0 4 12 0 #60000000"
                             IsVisible="{Binding CoverPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
                                Stretch="Uniform" />
                     </Border>
                 </Grid>

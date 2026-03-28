@@ -7,6 +7,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using LANCommander.Launcher.Avalonia.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels;
 using LANCommander.Launcher.Avalonia.Views;
 using LANCommander.Launcher.Services;
@@ -75,7 +77,32 @@ public partial class App : Application
                 
                 desktop.MainWindow = mainWindow;
                 mainWindow.Show();
-                
+
+                // Initialize taskbar progress service with the window handle
+                mainWindow.Opened += (_, _) =>
+                {
+                    var hwnd = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+                    if (hwnd != IntPtr.Zero)
+                        Services.GetRequiredService<TaskbarProgressService>().Initialize(hwnd);
+                };
+
+                // Single-instance pipe server: forward notification-click navigations
+                var singleInstance = Services.GetRequiredService<SingleInstanceService>();
+                singleInstance.RegisterProtocolHandler();
+                singleInstance.StartServer();
+                singleInstance.NavigateToGameRequested += async (_, gameId) =>
+                {
+                    mainWindow.Activate();
+                    var shell = Services.GetRequiredService<MainWindowViewModel>().ShellViewModel;
+                    await shell.NavigateToGameByIdAsync(gameId).ConfigureAwait(false);
+                };
+                mainWindow.Closed += (_, _) => singleInstance.Dispose();
+
+                // Start gamepad navigation (gracefully disabled if SDL2 is absent)
+                var gamepadService = Services.GetRequiredService<GamepadService>();
+                mainWindow.Closed += (_, _) => gamepadService.Stop();
+                gamepadService.Start();
+
                 _logger.LogInformation("Main window created and shown, IsVisible={IsVisible}", mainWindow.IsVisible);
             }
 
@@ -191,6 +218,14 @@ public partial class App : Application
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
+
+        // Input
+        services.AddSingleton<GamepadService>();
+
+        // Platform services
+        services.AddSingleton<NotificationService>();
+        services.AddSingleton<TaskbarProgressService>();
+        services.AddSingleton<SingleInstanceService>();
     }
     
     private static OSPlatform GetOSPlatform()

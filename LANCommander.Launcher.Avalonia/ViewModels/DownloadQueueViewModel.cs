@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
@@ -21,6 +22,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DownloadQueueViewModel> _logger;
+    private readonly NotificationService _notificationService;
+    private readonly TaskbarProgressService _taskbarProgressService;
     private InstallService? _installService;
 
     [ObservableProperty]
@@ -63,6 +66,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private bool _hasItems;
 
     [ObservableProperty]
+    private bool _hasPendingItems;
+
+    [ObservableProperty]
     private int _activeCount;
 
     public event EventHandler<Guid>? InstallCompleted;
@@ -72,6 +78,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<DownloadQueueViewModel>>();
+        _notificationService = serviceProvider.GetRequiredService<NotificationService>();
+        _taskbarProgressService = serviceProvider.GetRequiredService<TaskbarProgressService>();
     }
 
     public void Initialize()
@@ -96,6 +104,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private Task OnProgress(InstallProgress progress)
     {
+        _taskbarProgressService.SetProgress(progress.Progress);
+
         Dispatcher.UIThread.Post(() =>
         {
             CurrentStatus = progress.Status.ToString();
@@ -152,6 +162,26 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private Task OnInstallComplete(Data.Models.Game game)
     {
         _logger.LogInformation("Install complete for game {GameTitle}", game.Title);
+
+        _taskbarProgressService.ClearProgress();
+
+        // Resolve cover art path for the notification
+        string? coverPath = null;
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+            var cover = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
+            if (cover != null && mediaService.FileExists(cover))
+                coverPath = mediaService.GetImagePath(cover);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to resolve cover for notification");
+        }
+
+        _notificationService.NotifyInstallComplete(game.Title ?? "Game", coverPath, game.Id);
+
         Dispatcher.UIThread.Post(() =>
         {
             RefreshQueue();
@@ -163,6 +193,10 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private Task OnInstallFail(Data.Models.Game game)
     {
         _logger.LogError("Install failed for game {GameTitle}", game.Title);
+
+        _taskbarProgressService.ClearProgress();
+        _notificationService.NotifyInstallFailed(game.Title ?? "Game", game.Id);
+
         Dispatcher.UIThread.Post(RefreshQueue);
         return Task.CompletedTask;
     }
@@ -184,6 +218,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         HasCompletedItems = QueueItems.Any(i => i.Status == InstallStatus.Complete);
         HasItems = QueueItems.Any();
         ActiveCount = QueueItems.Count(i => i.IsActive || i.Status == InstallStatus.Queued);
+        HasPendingItems = ActiveCount > 0;
 
         CurrentItem = QueueItems.FirstOrDefault(i => i.IsActive);
         

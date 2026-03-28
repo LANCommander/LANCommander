@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -83,6 +84,10 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Status
     [ObservableProperty]
     private string? _statusMessage;
+
+    // Download size (from server archive metadata)
+    [ObservableProperty]
+    private string _downloadSizeText = string.Empty;
 
     // Available game actions
     [ObservableProperty]
@@ -196,8 +201,23 @@ public partial class GameActionBarViewModel : ViewModelBase
             HasManuals = false;
         }
 
+        // Download size from latest archive
+        var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+        DownloadSizeText = latestArchive?.CompressedSize > 0
+            ? FormatBytes(latestArchive.CompressedSize)
+            : string.Empty;
+
         await LoadActionsAsync();
         StartRunningCheck();
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1) { order++; size /= 1024; }
+        return $"{size:0.##} {sizes[order]}";
     }
 
     /// <summary>
@@ -395,6 +415,9 @@ public partial class GameActionBarViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task PlayOrStopAsync() => IsRunning ? StopAsync() : PlayAsync();
+
     [RelayCommand]
     private async Task PlayAsync()
     {
@@ -591,11 +614,19 @@ public partial class GameActionBarViewModel : ViewModelBase
             // ── Show dialog if needed ──────────────────────────────────────────
             if (needsDialog)
             {
-                var mainWindow = (Application.Current?.ApplicationLifetime
-                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
 
-                var dialog = new InstallOptionsWindow { DataContext = optionsVm };
-                var confirmed = await dialog.ShowDialog<bool?>(mainWindow);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var overlay = new Views.InstallOptionsOverlay { DataContext = optionsVm };
+                    overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                    var mainWindow = (Application.Current?.ApplicationLifetime
+                        as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                    OverlayLayer.GetOverlayLayer(mainWindow)?.Children.Add(overlay);
+                });
+
+                var confirmed = await tcs.Task;
 
                 if (confirmed != true)
                 {

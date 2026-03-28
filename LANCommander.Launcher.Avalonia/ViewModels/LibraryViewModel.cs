@@ -58,7 +58,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 if (coverMedia != null && mediaService.FileExists(coverMedia))
                     coverPath = mediaService.GetImagePath(coverMedia);
 
-                _allGames.Add(new GameItemViewModel(game, coverPath, inLibrary: true));
+                _allGames.Add(new GameItemViewModel(game, coverPath, inLibrary: true, showInLibraryBadge: false));
             }
 
             PopulateGenres();

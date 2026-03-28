@@ -6,9 +6,11 @@
              x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
              x:DataType="vm:ShellViewModel">
 
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="Button.active">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+        </Style>
+    </UserControl.Styles>
 
     <Grid RowDefinitions="*,Auto">
 
@@ -35,10 +37,10 @@
 
         <!-- ── Footer ────────────────────────────────────────────────── -->
         <Border Grid.Row="1"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                Background="Black"
+                BorderBrush="#22FFFFFF"
                 BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto,*,Auto" Height="52">
+            <Grid ColumnDefinitions="Auto,*" Height="52">
 
                 <!-- Left: Depot / Library toggle -->
                 <StackPanel Grid.Column="0"
@@ -47,17 +49,21 @@
                             Margin="12,0">
                     <Button Command="{Binding ShowDepotCommand}"
                             Padding="16,8"
-                            Classes.active="{Binding IsDepotActive}">
+                            IsVisible="{Binding !IsDepotActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="🏪" FontSize="14" VerticalAlignment="Center" />
+                            <PathIcon Data="{StaticResource PhosphorStorefront}"
+                                      Width="14" Height="14"
+                                      VerticalAlignment="Center" />
                             <TextBlock Text="Depot" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding ShowLibraryCommand}"
                             Padding="16,8"
-                            Classes.active="{Binding IsLibraryActive}">
+                            IsVisible="{Binding !IsLibraryActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="📚" FontSize="14" VerticalAlignment="Center" />
+                            <PathIcon Data="{StaticResource PhosphorBooks}"
+                                      Width="14" Height="14"
+                                      VerticalAlignment="Center" />
                             <TextBlock Text="Library" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -84,9 +90,10 @@
                                     Background="{DynamicResource SystemAccentColor}"
                                     Margin="0,0,10,0"
                                     VerticalAlignment="Center">
-                                <TextBlock Text="📥" FontSize="16"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
+                                <PathIcon Data="{StaticResource PhosphorArrowCircleDown}"
+                                          Width="16" Height="16"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
                             </Border>
 
                             <!-- Title + time remaining -->
@@ -131,12 +138,14 @@
                                 BorderThickness="0"
                                 Padding="10,6">
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <TextBlock Text="📥" FontSize="13" VerticalAlignment="Center" />
+                                <PathIcon Data="{StaticResource PhosphorDownloadSimple}"
+                                          Width="13" Height="13"
+                                          VerticalAlignment="Center" />
                                 <TextBlock Text="Downloads" FontSize="13" VerticalAlignment="Center" />
                                 <Border Background="{DynamicResource SystemAccentColor}"
                                         CornerRadius="8"
                                         Padding="5,1"
-                                        IsVisible="{Binding DownloadQueue.HasItems}">
+                                        IsVisible="{Binding DownloadQueue.HasPendingItems}">
                                     <TextBlock Text="{Binding DownloadQueue.ActiveCount}"
                                                FontSize="11" Foreground="White" />
                                 </Border>
@@ -163,48 +172,6 @@
                     </StackPanel>
 
                 </Panel>
-
-                <!-- Right: Profile button -->
-                <Button Grid.Column="2"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Padding="8,0"
-                        Margin="0,0,4,0"
-                        VerticalAlignment="Stretch"
-                        VerticalContentAlignment="Center">
-                    <Button.Flyout>
-                        <MenuFlyout Placement="Top">
-                            <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}" />
-                            <Separator />
-                            <MenuItem Header="Logout" Command="{Binding LogoutCommand}" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <!-- Avatar -->
-                        <Panel Width="28" Height="28">
-                            <!-- Fallback initials circle -->
-                            <Border CornerRadius="14"
-                                    Background="{DynamicResource SystemAccentColor}"
-                                    IsVisible="{Binding Profile.HasAvatar, Converter={x:Static BoolConverters.Not}}">
-                                <TextBlock Text="{Binding Profile.AliasInitial}"
-                                           FontSize="13" FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <!-- Avatar image clipped to circle -->
-                            <Border CornerRadius="14"
-                                    ClipToBounds="True"
-                                    IsVisible="{Binding Profile.HasAvatar}">
-                                <Image Source="{Binding Profile.AvatarPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                       Stretch="UniformToFill" />
-                            </Border>
-                        </Panel>
-                        <!-- Alias -->
-                        <TextBlock Text="{Binding Profile.Alias}"
-                                   FontSize="13"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
 
             </Grid>
         </Border>

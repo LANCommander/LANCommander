@@ -27,6 +27,10 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<GameItemViewModel> _games = new();
 
+    /// <summary>Currently highlighted game — driven by ListBox keyboard/gamepad navigation.</summary>
+    [ObservableProperty]
+    private GameItemViewModel? _selectedGame;
+
     /// <summary>Filtered list organised into named groups — used when GroupBy != None.</summary>
     [ObservableProperty]
     private ObservableCollection<GameGroupViewModel> _groupedGames = new();
@@ -77,12 +81,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGrouped))]
+    [NotifyPropertyChangedFor(nameof(IsGroupByFirstLetter))]
     [NotifyPropertyChangedFor(nameof(IsGridViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsListViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsHorizontalViewFlat))]
     private GroupBy _selectedGroupBy = GroupBy.None;
 
     public bool IsGrouped => SelectedGroupBy != GroupBy.None;
+    public bool IsGroupByFirstLetter => SelectedGroupBy == GroupBy.FirstLetter;
 
     // ── Filters ───────────────────────────────────────────────────────────────
 

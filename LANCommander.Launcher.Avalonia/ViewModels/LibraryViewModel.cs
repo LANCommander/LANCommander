@@ -36,6 +36,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         Games.Clear();
         _allGames.Clear();
         AvailableGenres.Clear();
+        AvailableTags.Clear();
+        AvailableDevelopers.Clear();
+        AvailablePublishers.Clear();
 
         _logger.LogInformation("Loading library (offline: {IsOffline})...", IsOfflineMode);
 
@@ -62,6 +65,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
             }
 
             PopulateGenres();
+            PopulateTags();
+            PopulateDevelopers();
+            PopulatePublishers();
             ApplyFilters();
             _logger.LogInformation("Loaded {Count} library games", _allGames.Count);
         }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LANCommander.Launcher.Data.Models;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Launcher.Avalonia.ViewModels.Components;
 
@@ -41,6 +42,18 @@ public partial class GameItemViewModel : ViewModelBase
     private string _publishers = string.Empty;
 
     [ObservableProperty]
+    private string _tags = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasLocalMultiplayer;
+
+    [ObservableProperty]
+    private bool _hasLanMultiplayer;
+
+    [ObservableProperty]
+    private bool _hasOnlineMultiplayer;
+
+    [ObservableProperty]
     private string? _coverPath;
 
     [ObservableProperty]
@@ -66,6 +79,10 @@ public partial class GameItemViewModel : ViewModelBase
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
+        Tags = game.Tags != null ? string.Join(", ", game.Tags.Select(t => t.Name)) : string.Empty;
+        HasLocalMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Local) ?? false;
+        HasLanMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.LAN) ?? false;
+        HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
         CoverPath = coverPath;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;

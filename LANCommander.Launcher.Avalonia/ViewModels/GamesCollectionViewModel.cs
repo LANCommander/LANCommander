@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Launcher.Avalonia.ViewModels;
 
@@ -66,7 +67,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsGridViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsListViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsHorizontalViewFlat))]
+    [NotifyPropertyChangedFor(nameof(AvailableGroupByOptions))]
     private GameViewType _selectedViewType = GameViewType.Grid;
+
+    partial void OnSelectedViewTypeChanged(GameViewType value)
+    {
+        if (value == GameViewType.Horizontal && SelectedGroupBy == GroupBy.None)
+            SelectedGroupBy = GroupBy.FirstLetter;
+    }
 
     public bool IsGridView       => SelectedViewType == GameViewType.Grid;
     public bool IsListView       => SelectedViewType == GameViewType.List;
@@ -90,6 +98,11 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     public bool IsGrouped => SelectedGroupBy != GroupBy.None;
     public bool IsGroupByFirstLetter => SelectedGroupBy == GroupBy.FirstLetter;
 
+    public IReadOnlyList<GroupBy> AvailableGroupByOptions =>
+        IsHorizontalView
+            ? [GroupBy.FirstLetter, GroupBy.Genre, GroupBy.Collection]
+            : [GroupBy.None, GroupBy.FirstLetter, GroupBy.Genre, GroupBy.Collection];
+
     // ── Filters ───────────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -103,6 +116,32 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<Genre> _availableGenres = new();
+
+    [ObservableProperty]
+    private string? _selectedTag;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _availableTags = new();
+
+    [ObservableProperty]
+    private string? _selectedDeveloper;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _availableDevelopers = new();
+
+    [ObservableProperty]
+    private string? _selectedPublisher;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _availablePublishers = new();
+
+    [ObservableProperty]
+    private string? _selectedMultiplayerType;
+
+    [ObservableProperty]
+    private bool _isAdvancedFilterOpen;
+
+    public static readonly IReadOnlyList<string> AvailableMultiplayerTypes = ["Local", "LAN", "Online"];
 
     // ── Sorting ───────────────────────────────────────────────────────────────
 
@@ -122,14 +161,21 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     private void ToggleSortDirection() => SortAscending = !SortAscending;
 
     [RelayCommand]
+    private void ToggleAdvancedFilter() => IsAdvancedFilterOpen = !IsAdvancedFilterOpen;
+
+    [RelayCommand]
     private void ClearFilters()
     {
-        SearchText       = string.Empty;
-        SelectedGenre    = null;
-        ShowInLibraryOnly = false;
-        SelectedSortBy   = SortBy.Title;
-        SortAscending    = true;
-        SelectedGroupBy  = GroupBy.None;
+        SearchText            = string.Empty;
+        SelectedGenre         = null;
+        SelectedTag           = null;
+        SelectedDeveloper     = null;
+        SelectedPublisher     = null;
+        SelectedMultiplayerType = null;
+        ShowInLibraryOnly     = false;
+        SelectedSortBy        = SortBy.Title;
+        SortAscending         = true;
+        SelectedGroupBy       = IsHorizontalView ? GroupBy.FirstLetter : GroupBy.None;
     }
 
     [RelayCommand]
@@ -160,6 +206,30 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
             filtered = filtered.Where(g =>
                 !string.IsNullOrEmpty(g.Genres) &&
                 g.Genres.Contains(SelectedGenre.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(SelectedTag))
+            filtered = filtered.Where(g =>
+                !string.IsNullOrEmpty(g.Tags) &&
+                g.Tags.Contains(SelectedTag, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(SelectedDeveloper))
+            filtered = filtered.Where(g =>
+                !string.IsNullOrEmpty(g.Developers) &&
+                g.Developers.Contains(SelectedDeveloper, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(SelectedPublisher))
+            filtered = filtered.Where(g =>
+                !string.IsNullOrEmpty(g.Publishers) &&
+                g.Publishers.Contains(SelectedPublisher, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(SelectedMultiplayerType))
+            filtered = SelectedMultiplayerType switch
+            {
+                "Local"  => filtered.Where(g => g.HasLocalMultiplayer),
+                "LAN"    => filtered.Where(g => g.HasLanMultiplayer),
+                "Online" => filtered.Where(g => g.HasOnlineMultiplayer),
+                _        => filtered
+            };
 
         filtered = SelectedSortBy switch
         {
@@ -250,16 +320,56 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
             TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    partial void OnSelectedSortByChanged(SortBy value)    => ApplyFilters();
-    partial void OnSortAscendingChanged(bool value)        => ApplyFilters();
-    partial void OnShowInLibraryOnlyChanged(bool value)    => ApplyFilters();
-    partial void OnSelectedGenreChanged(Genre? value)      => ApplyFilters();
-    partial void OnSelectedGroupByChanged(GroupBy value)   => ApplyFilters();
+    partial void OnSelectedSortByChanged(SortBy value)          => ApplyFilters();
+    partial void OnSortAscendingChanged(bool value)              => ApplyFilters();
+    partial void OnShowInLibraryOnlyChanged(bool value)          => ApplyFilters();
+    partial void OnSelectedGenreChanged(Genre? value)            => ApplyFilters();
+    partial void OnSelectedGroupByChanged(GroupBy value)         => ApplyFilters();
+    partial void OnSelectedTagChanged(string? value)             => ApplyFilters();
+    partial void OnSelectedDeveloperChanged(string? value)       => ApplyFilters();
+    partial void OnSelectedPublisherChanged(string? value)       => ApplyFilters();
+    partial void OnSelectedMultiplayerTypeChanged(string? value) => ApplyFilters();
 
     // ── Helpers for subclasses ────────────────────────────────────────────────
 
     protected void RaiseGameSelected(SDK.Models.Game game) =>
         GameSelected?.Invoke(this, game);
+
+    protected void PopulateTags()
+    {
+        AvailableTags.Clear();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in _allGames)
+            if (!string.IsNullOrEmpty(g.Tags))
+                foreach (var t in g.Tags.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+                    seen.Add(t);
+        foreach (var t in seen.OrderBy(x => x))
+            AvailableTags.Add(t);
+    }
+
+    protected void PopulateDevelopers()
+    {
+        AvailableDevelopers.Clear();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in _allGames)
+            if (!string.IsNullOrEmpty(g.Developers))
+                foreach (var d in g.Developers.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+                    seen.Add(d);
+        foreach (var d in seen.OrderBy(x => x))
+            AvailableDevelopers.Add(d);
+    }
+
+    protected void PopulatePublishers()
+    {
+        AvailablePublishers.Clear();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in _allGames)
+            if (!string.IsNullOrEmpty(g.Publishers))
+                foreach (var p in g.Publishers.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+                    seen.Add(p);
+        foreach (var p in seen.OrderBy(x => x))
+            AvailablePublishers.Add(p);
+    }
 
     protected void PopulateGenres()
     {

@@ -42,6 +42,9 @@ public partial class GamesListViewModel : GamesCollectionViewModel
         Games.Clear();
         _allGames.Clear();
         AvailableGenres.Clear();
+        AvailableTags.Clear();
+        AvailableDevelopers.Clear();
+        AvailablePublishers.Clear();
         _logger.LogInformation("Loading games from depot (offline: {IsOffline})...", IsOfflineMode);
 
         try
@@ -94,6 +97,9 @@ public partial class GamesListViewModel : GamesCollectionViewModel
                     AvailableGenres.Add(genre);
             }
 
+            PopulateTags();
+            PopulateDevelopers();
+            PopulatePublishers();
             ApplyFilters();
             _logger.LogInformation("Loaded {Count} games from depot", _allGames.Count);
         }

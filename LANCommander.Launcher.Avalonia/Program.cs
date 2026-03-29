@@ -22,7 +22,11 @@ class Program
             }
         }
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        BuildAvaloniaApp()
+#if DEBUG
+            .WithDeveloperTools()
+#endif
+            .StartWithClassicDesktopLifetime(args);
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

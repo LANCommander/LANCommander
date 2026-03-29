@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -618,12 +619,27 @@ public partial class GameActionBarViewModel : ViewModelBase
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    var overlay = new Views.InstallOptionsOverlay { DataContext = optionsVm };
+                    var overlay = new Views.InstallOptionsOverlay
+                    {
+                        DataContext = optionsVm,
+                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                        VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                    };
+                    
                     overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
 
                     var mainWindow = (Application.Current?.ApplicationLifetime
                         as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-                    OverlayLayer.GetOverlayLayer(mainWindow)?.Children.Add(overlay);
+
+                    var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                    if (layer is not null)
+                    {
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                        layer.Children.Add(overlay);
+                    }
                 });
 
                 var confirmed = await tcs.Task;

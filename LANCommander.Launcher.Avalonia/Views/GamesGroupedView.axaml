@@ -2,60 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
-             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesGroupedView"
              x:DataType="vm:GamesCollectionViewModel">
-
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
-
-    <UserControl.Styles>
-        <Style Selector="Button.cover-button">
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="RenderTransform" Value="scale(1)" />
-            <Setter Property="Transitions">
-                <Setter.Value>
-                    <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                    </Transitions>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="Button.cover-button:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.1)" />
-            <Setter Property="ZIndex" Value="100" />
-        </Style>
-        <Style Selector="Button.cover-button Border.cover-inner">
-            <Setter Property="BoxShadow" Value="0 0 0 0 transparent" />
-            <Setter Property="Transitions">
-                <Setter.Value>
-                    <Transitions>
-                        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" />
-                    </Transitions>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="Button.cover-button:pointerover Border.cover-inner">
-            <Setter Property="BoxShadow" Value="0 8 32 8 #CC000000" />
-        </Style>
-        <Style Selector="Button.cover-button Border.glass-overlay">
-            <Setter Property="Opacity" Value="0" />
-            <Setter Property="Transitions">
-                <Setter.Value>
-                    <Transitions>
-                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
-                    </Transitions>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="Button.cover-button:pointerover Border.glass-overlay">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-    </UserControl.Styles>
 
     <Grid ColumnDefinitions="*,Auto">
 
@@ -93,7 +42,8 @@
 
                             <!-- Grid layout inside group -->
                             <ItemsRepeater ItemsSource="{Binding Items}"
-                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsGridView}">
+                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsGridView}"
+                                           ClipToBounds="False">
                                 <ItemsRepeater.Layout>
                                     <UniformGridLayout MinItemWidth="148" MinItemHeight="218"
                                                        MinColumnSpacing="12" MinRowSpacing="12"
@@ -102,48 +52,11 @@
                                 </ItemsRepeater.Layout>
                                 <ItemsRepeater.ItemTemplate>
                                     <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                        <Button Classes="cover-button"
-                                                Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
-                                                CommandParameter="{Binding}"
-                                                Margin="4"
-                                                HorizontalContentAlignment="Stretch"
-                                                VerticalContentAlignment="Stretch">
-                                            <Border Classes="cover-inner" Width="140" Height="210"
-                                                    CornerRadius="0" ClipToBounds="True">
-                                                <Panel>
-                                                    <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                           Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
-                                                    <Border IsVisible="{Binding !HasCover}">
-                                                        <Border.Background>
-                                                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                                                <GradientStop Color="#3D1A6B" Offset="0" />
-                                                                <GradientStop Color="#0F3460" Offset="1" />
-                                                            </LinearGradientBrush>
-                                                        </Border.Background>
-                                                        <TextBlock Text="{Binding Title}"
-                                                                   FontSize="14" FontWeight="SemiBold"
-                                                                   TextWrapping="Wrap" TextAlignment="Center"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                   Margin="12" Foreground="White" />
-                                                    </Border>
-                                                    <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="0">
-                                                        <Border.Background>
-                                                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
-                                                                <GradientStop Color="#45FFFFFF" Offset="0" />
-                                                                <GradientStop Color="#10FFFFFF" Offset="0.45" />
-                                                                <GradientStop Color="#00FFFFFF" Offset="1" />
-                                                            </LinearGradientBrush>
-                                                        </Border.Background>
-                                                    </Border>
-                                                    <Border Background="#CC000000" CornerRadius="0"
-                                                            Padding="4,2" HorizontalAlignment="Right"
-                                                            VerticalAlignment="Top" Margin="4"
-                                                            IsVisible="{Binding ShowInLibraryBadge}">
-                                                        <PathIcon Data="{StaticResource PhosphorCheck}" Width="10" Height="10" Foreground="White" />
-                                                    </Border>
-                                                </Panel>
-                                            </Border>
-                                        </Button>
+                                        <components:CoverButton
+                                            Width="140" Height="210"
+                                            Margin="4"
+                                            Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                            CommandParameter="{Binding}" />
                                     </DataTemplate>
                                 </ItemsRepeater.ItemTemplate>
                             </ItemsRepeater>
@@ -208,51 +121,16 @@
                             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Disabled"
                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
-                                <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,4,0,8">
+                                <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,10,0,16" ClipToBounds="False">
                                     <ItemsRepeater.Layout>
                                         <StackLayout Orientation="Horizontal" Spacing="8" />
                                     </ItemsRepeater.Layout>
                                     <ItemsRepeater.ItemTemplate>
                                         <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                            <Button Classes="cover-button"
-                                                    Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
-                                                    CommandParameter="{Binding}">
-                                                <Border Classes="cover-inner" Width="120" Height="180"
-                                                        CornerRadius="0" ClipToBounds="True">
-                                                    <Panel>
-                                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                               Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
-                                                        <Border IsVisible="{Binding !HasCover}">
-                                                            <Border.Background>
-                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                                                    <GradientStop Color="#3D1A6B" Offset="0" />
-                                                                    <GradientStop Color="#0F3460" Offset="1" />
-                                                                </LinearGradientBrush>
-                                                            </Border.Background>
-                                                            <TextBlock Text="{Binding Title}"
-                                                                       FontSize="12" FontWeight="SemiBold"
-                                                                       TextWrapping="Wrap" TextAlignment="Center"
-                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                       Margin="10" Foreground="White" />
-                                                        </Border>
-                                                        <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="0">
-                                                            <Border.Background>
-                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
-                                                                    <GradientStop Color="#45FFFFFF" Offset="0" />
-                                                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
-                                                                    <GradientStop Color="#00FFFFFF" Offset="1" />
-                                                                </LinearGradientBrush>
-                                                            </Border.Background>
-                                                        </Border>
-                                                        <Border Background="#CC000000" CornerRadius="0"
-                                                                Padding="4,2" HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top" Margin="4"
-                                                                IsVisible="{Binding ShowInLibraryBadge}">
-                                                            <PathIcon Data="{StaticResource PhosphorCheck}" Width="10" Height="10" Foreground="White" />
-                                                        </Border>
-                                                    </Panel>
-                                                </Border>
-                                            </Button>
+                                            <components:CoverButton
+                                                Width="120" Height="180"
+                                                Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                                CommandParameter="{Binding}" />
                                         </DataTemplate>
                                     </ItemsRepeater.ItemTemplate>
                                 </ItemsRepeater>

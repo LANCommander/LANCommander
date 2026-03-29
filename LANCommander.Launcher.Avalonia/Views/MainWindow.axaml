@@ -66,7 +66,7 @@
             <!-- Translucent tint — hidden on depot/library so covers show through -->
             <Border Grid.ColumnSpan="6"
                     IsHitTestVisible="False"
-                    Background="#44000000"
+                    Background="#80000000"
                     IsVisible="{Binding ShowTitlebarTint}" />
 
             <!-- Logo -->

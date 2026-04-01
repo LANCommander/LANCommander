@@ -117,10 +117,13 @@ export class ChunkUploader {
     UpdateProgressBar(chunkIndex: number, progressEvent: AxiosProgressEvent) {
         var percent = ((1 / this.TotalChunks) * progressEvent.progress) + ((chunkIndex - 1) / this.TotalChunks);
 
-        this.ProgressBar.style.strokeDasharray = percent * 295.31 + 'px, 295.31px';
-        this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
+        if (this.ProgressBar)
+            this.ProgressBar.style.strokeDasharray = percent * 295.31 + 'px, 295.31px';
 
-        if (progressEvent.rate > 0)
+        if (this.ProgressText)
+            this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
+
+        if (this.ProgressRate && progressEvent.rate > 0)
             this.ProgressRate.innerText = this.GetHumanFileSize(progressEvent.rate, false, 1) + '/s';
     }
 

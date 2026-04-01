@@ -37,20 +37,14 @@ export class ChunkUploader {
         this.ProgressRate = document.querySelector('.uploader-progress-rate');
 
         if (objectKey == undefined || objectKey == "") {
-            try {
-                var request = new UploadInitRequest();
+            var request = new UploadInitRequest();
 
-                request.storageLocationId = storageLocationId;
-                request.key = objectKey;
+            request.storageLocationId = storageLocationId;
+            request.key = objectKey;
 
-                var response = await axios.post<string>(this.InitRoute, request);
+            var response = await axios.post<string>(this.InitRoute, request);
 
-                this.Key = response.data;
-            }
-            catch (ex) {
-                this.Key = null;
-                console.error(`Could not init upload: ${ex}`);
-            }
+            this.Key = response.data;
         }
         else
             this.Key = objectKey;

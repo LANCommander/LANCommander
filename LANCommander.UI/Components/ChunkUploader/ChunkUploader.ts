@@ -31,7 +31,6 @@ export class ChunkUploader {
 
     async Init(fileInputId: string, storageLocationId: string, objectKey: string)
     {
-        debugger;
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');

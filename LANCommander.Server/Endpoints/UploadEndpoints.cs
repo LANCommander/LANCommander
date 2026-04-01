@@ -71,7 +71,7 @@ public static class UploadEndpoints
 
             var data = ms.ToArray();
 
-            using (var fs = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None))
+            using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
                 fs.Position = chunk.Start;
                 fs.Write(data, 0, data.Length);

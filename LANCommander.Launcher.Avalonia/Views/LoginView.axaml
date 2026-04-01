@@ -99,22 +99,23 @@
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         Classes="Primary Large"
+                        IsVisible="{Binding !IsLoading}"
                         IsEnabled="{Binding !IsLoading}">
                     <Panel>
-                        <TextBlock Text="Sign In" IsVisible="{Binding !IsLoading}" />
-                        <TextBlock Text="Signing in..." IsVisible="{Binding IsLoading}" />
+                        <TextBlock Text="Sign In" />
                     </Panel>
                 </Button>
-
-                <Border IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                        Padding="12"
-                        Background="#44FF0000"
-                        CornerRadius="4">
+                
+                <StackPanel HorizontalAlignment="Center" Spacing="12" IsVisible="{Binding IsLoading}">
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="200"
+                                 Height="4" />
                     <TextBlock Text="{Binding StatusMessage}"
-                               TextWrapping="Wrap"
-                               HorizontalAlignment="Center"
-                               Foreground="White" />
-                </Border>
+                               Foreground="White"
+                               Opacity="0.75"
+                               FontSize="12"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

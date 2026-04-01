@@ -32,6 +32,7 @@
                 <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/ColorPalette.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <converters:MultiplyConverter x:Key="MultiplyConverter" />
             <converters:StringFormatConverter x:Key="StringFormatConverter" />
 
         <!-- ArrowClockwise — single refresh arrow -->

@@ -59,7 +59,7 @@
 
                         <!-- Bottom fade gradient -->
                         <Border VerticalAlignment="Bottom"
-                                Height="160"
+                                Height="128"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -78,16 +78,22 @@
                                 Classes="Glass" />
 
                         <!-- Logo (bottom-left) -->
-                        <Border HorizontalAlignment="Left"
-                                VerticalAlignment="Bottom"
-                                Margin="24,0,0,24"
-                                ClipToBounds="True"
-                                MaxHeight="110"
-                                MaxWidth="380"
-                                IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
-                                   Stretch="Uniform"
-                                   MaxHeight="110" />
+                        <Border HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Margin="48,0,0,64"
+                                ClipToBounds="True">
+
+                            <Viewbox Stretch="Uniform"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Bottom"
+                                     MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.33}"
+                                     MaxHeight="{Binding Bounds.Height, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.5}">
+
+                                <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Bottom"/>
+                            </Viewbox>
                         </Border>
 
                         <!-- Title fallback when no logo (bottom-left) -->
@@ -104,13 +110,6 @@
 
                 <!-- Game Details Content -->
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
-                    <Grid.Background>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="#FF000000" Offset="0" />
-                            <GradientStop Color="#FF050505" Offset="0.08" />
-                            <GradientStop Color="#FF000000" Offset="1" />
-                        </LinearGradientBrush>
-                    </Grid.Background>
                     <!-- Left: Action Bar, Metadata -->
                     <StackPanel Grid.Column="0" Margin="24,24,0,24" Spacing="16">
                         <!-- Game Action Bar Component -->

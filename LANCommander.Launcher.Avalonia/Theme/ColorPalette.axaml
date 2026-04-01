@@ -82,7 +82,7 @@
   <Color x:Key="ColorWarning">#D89614</Color>
   <Color x:Key="ColorError">#DC4446</Color>
 
-  <Color x:Key="TextPrimary">#FFFFFFD9</Color>
+  <Color x:Key="TextPrimary">#D9FFFFFF</Color>
   <Color x:Key="TextSecondary">#A6FFFFFF</Color>
   <Color x:Key="TextDisabled">#40FFFFFF</Color>
 
@@ -152,7 +152,7 @@
   <!-- Toast -->
   <Color x:Key="ToastBg">#1F1F1F</Color>
   <Color x:Key="ToastBorder">#303030</Color>
-  <Color x:Key="ToastText">#FFFFFFD9</Color>
+  <Color x:Key="ToastText">#D9FFFFFF</Color>
 
   <!-- ===================== -->
   <!-- Component Brushes     -->

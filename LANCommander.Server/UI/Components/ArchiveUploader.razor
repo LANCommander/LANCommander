@@ -159,7 +159,7 @@
             }
 
             if (OnArchiveUploaded.HasDelegate)
-                await OnArchiveUploaded.InvokeAsync(Archive.Id);
+                await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);
 
             MessageService.Success("Archive uploaded!");
         }

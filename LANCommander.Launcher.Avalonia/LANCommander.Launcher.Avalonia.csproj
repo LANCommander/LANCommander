@@ -22,6 +22,7 @@
     <PackageReference Include="HotAvalonia" PrivateAssets="All" Publish="True" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Notify.NET" />
     <PackageReference Include="PDFtoImage" />
   </ItemGroup>
 
@@ -32,5 +33,9 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaXaml Remove="Theme\ColorPalette.axaml" />
+    <AvaloniaResource Include="Theme\ColorPalette.axaml" />
+    <AvaloniaXaml Remove="Theme\LANCommander.axaml" />
+    <AvaloniaResource Include="Theme\LANCommander.axaml" />
   </ItemGroup>
 </Project>

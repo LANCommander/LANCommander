@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GameActionsOverlay"
+             x:DataType="vm:GameActionsOverlayViewModel">
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="#AA000000">
+
+        <!-- Centered card -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Width="380"
+                MaxHeight="520"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BoxShadow="0 8 40 8 #88000000">
+
+            <StackPanel Spacing="0">
+
+                <!-- Header -->
+                <Border Padding="20,16,20,8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Choose an action"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding GameTitle}"
+                                   FontSize="12" Opacity="0.55"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Action buttons -->
+                <Border Padding="12,4,12,0">
+                    <ScrollViewer MaxHeight="340"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Actions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GameActionViewModel">
+                                    <Button Content="{Binding Name}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Padding="14,10"
+                                            Margin="0,0,0,4"
+                                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                            Click="Action_Click" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Footer -->
+                <Border Padding="20,12,20,16">
+                    <Button Content="Cancel"
+                            Width="90"
+                            HorizontalAlignment="Right"
+                            Click="Cancel_Click" />
+                </Border>
+
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

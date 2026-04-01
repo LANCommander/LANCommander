@@ -1,0 +1,205 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- ===================== -->
+  <!-- Primary (Blue) Scale  -->
+  <!-- ===================== -->
+  <Color x:Key="Primary1">#E6F4FF</Color>
+  <Color x:Key="Primary2">#BAE0FF</Color>
+  <Color x:Key="Primary3">#91CAFF</Color>
+  <Color x:Key="Primary4">#69B1FF</Color>
+  <Color x:Key="Primary5">#4096FF</Color>
+  <Color x:Key="Primary6">#1677FF</Color> <!-- Base -->
+  <Color x:Key="Primary7">#0958D9</Color>
+  <Color x:Key="Primary8">#003EB3</Color>
+  <Color x:Key="Primary9">#002C8C</Color>
+  <Color x:Key="Primary10">#001D66</Color>
+
+  <!-- ===================== -->
+  <!-- Success (Green)       -->
+  <!-- ===================== -->
+  <Color x:Key="Success1">#F6FFED</Color>
+  <Color x:Key="Success2">#D9F7BE</Color>
+  <Color x:Key="Success3">#B7EB8F</Color>
+  <Color x:Key="Success4">#95DE64</Color>
+  <Color x:Key="Success5">#73D13D</Color>
+  <Color x:Key="Success6">#52C41A</Color>
+  <Color x:Key="Success7">#389E0D</Color>
+  <Color x:Key="Success8">#237804</Color>
+  <Color x:Key="Success9">#135200</Color>
+  <Color x:Key="Success10">#092B00</Color>
+
+  <!-- ===================== -->
+  <!-- Warning (Gold)        -->
+  <!-- ===================== -->
+  <Color x:Key="Warning1">#FFFBE6</Color>
+  <Color x:Key="Warning2">#FFF1B8</Color>
+  <Color x:Key="Warning3">#FFE58F</Color>
+  <Color x:Key="Warning4">#FFD666</Color>
+  <Color x:Key="Warning5">#FFC53D</Color>
+  <Color x:Key="Warning6">#FAAD14</Color>
+  <Color x:Key="Warning7">#D48806</Color>
+  <Color x:Key="Warning8">#AD6800</Color>
+  <Color x:Key="Warning9">#874D00</Color>
+  <Color x:Key="Warning10">#613400</Color>
+
+  <!-- ===================== -->
+  <!-- Error (Red)           -->
+  <!-- ===================== -->
+  <Color x:Key="Error1">#FFF2F0</Color>
+  <Color x:Key="Error2">#FFF1F0</Color>
+  <Color x:Key="Error3">#FFCCC7</Color>
+  <Color x:Key="Error4">#FFA39E</Color>
+  <Color x:Key="Error5">#FF7875</Color>
+  <Color x:Key="Error6">#FF4D4F</Color>
+  <Color x:Key="Error7">#CF1322</Color>
+  <Color x:Key="Error8">#A8071A</Color>
+  <Color x:Key="Error9">#820014</Color>
+  <Color x:Key="Error10">#5C0011</Color>
+
+  <!-- ===================== -->
+  <!-- Neutral (Gray)        -->
+  <!-- ===================== -->
+  <!-- Dark scale: 1=darkest → 13=lightest -->
+  <Color x:Key="Gray1">#000000</Color>
+  <Color x:Key="Gray2">#141414</Color>
+  <Color x:Key="Gray3">#1F1F1F</Color>
+  <Color x:Key="Gray4">#282828</Color>
+  <Color x:Key="Gray5">#303030</Color>
+  <Color x:Key="Gray6">#3A3A3A</Color>
+  <Color x:Key="Gray7">#424242</Color>
+  <Color x:Key="Gray8">#595959</Color>
+  <Color x:Key="Gray9">#8C8C8C</Color>
+  <Color x:Key="Gray10">#BFBFBF</Color>
+  <Color x:Key="Gray11">#D9D9D9</Color>
+  <Color x:Key="Gray12">#F0F0F0</Color>
+  <Color x:Key="Gray13">#FFFFFF</Color>
+
+  <!-- ===================== -->
+  <!-- Semantic Tokens       -->
+  <!-- ===================== -->
+  <Color x:Key="ColorPrimary">#1677FF</Color>
+  <Color x:Key="ColorSuccess">#49AA19</Color>
+  <Color x:Key="ColorWarning">#D89614</Color>
+  <Color x:Key="ColorError">#DC4446</Color>
+
+  <Color x:Key="TextPrimary">#FFFFFFD9</Color>
+  <Color x:Key="TextSecondary">#A6FFFFFF</Color>
+  <Color x:Key="TextDisabled">#40FFFFFF</Color>
+
+  <Color x:Key="BackgroundBase">#141414</Color>
+  <Color x:Key="BackgroundLayout">#000000</Color>
+
+  <!-- ===================== -->
+  <!-- Brushes (Auto-map)    -->
+  <!-- ===================== -->
+  <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource ColorPrimary}" />
+  <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}" />
+  <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ColorError}" />
+
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
+  <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabled}" />
+  <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundBase}" />
+
+  <SolidColorBrush x:Key="Primary5Brush" Color="{StaticResource Primary5}" />
+  <SolidColorBrush x:Key="Primary7Brush" Color="{StaticResource Primary7}" />
+  <SolidColorBrush x:Key="Gray3Brush" Color="{StaticResource Gray3}" />
+  
+  <!-- Button - Primary -->
+  <Color x:Key="ButtonPrimaryBg">#1677FF</Color>
+  <Color x:Key="ButtonPrimaryHover">#4096FF</Color>
+  <Color x:Key="ButtonPrimaryActive">#0958D9</Color>
+  <Color x:Key="ButtonPrimaryText">#FFFFFF</Color>
+
+  <!-- Button - Success -->
+  <Color x:Key="ButtonSuccessBg">#49AA19</Color>
+  <Color x:Key="ButtonSuccessHover">#6ABF40</Color>
+  <Color x:Key="ButtonSuccessActive">#338F0F</Color>
+  <Color x:Key="ButtonSuccessText">#FFFFFF</Color>
+
+  <!-- Button - Warning -->
+  <Color x:Key="ButtonWarningBg">#D89614</Color>
+  <Color x:Key="ButtonWarningHover">#E8B838</Color>
+  <Color x:Key="ButtonWarningActive">#B07808</Color>
+  <Color x:Key="ButtonWarningText">#FFFFFF</Color>
+
+  <!-- Button - Error -->
+  <Color x:Key="ButtonErrorBg">#DC4446</Color>
+  <Color x:Key="ButtonErrorHover">#E96263</Color>
+  <Color x:Key="ButtonErrorActive">#B82A2C</Color>
+  <Color x:Key="ButtonErrorText">#FFFFFF</Color>
+
+  <!-- Button - Text/Glass -->
+  <Color x:Key="ButtonTextHoverBg">#1AFFFFFF</Color>
+  <Color x:Key="ButtonTextPressedBg">#2AFFFFFF</Color>
+  <Color x:Key="ButtonGlassBg">#00000080</Color>
+  <Color x:Key="ButtonGlassHoverBg">#1AFFFFFF</Color>
+  <Color x:Key="ButtonGlassPressedBg">#2AFFFFFF</Color>
+
+  <!-- Button - Shared -->
+  <Color x:Key="ButtonDisabledBg">#14FFFFFF</Color>
+  <Color x:Key="ButtonDisabledText">#40FFFFFF</Color>
+
+  <!-- Input -->
+  <Color x:Key="InputBg">#0FFFFFFF</Color>
+  <Color x:Key="InputBorder">#424242</Color>
+  <Color x:Key="InputHoverBorder">#4096FF</Color>
+  <Color x:Key="InputFocusBorder">#1677FF</Color>
+  <Color x:Key="InputText">#FFFFFFD9</Color>
+  <Color x:Key="InputPlaceholder">#40FFFFFF</Color>
+
+  <!-- Toast -->
+  <Color x:Key="ToastBg">#1F1F1F</Color>
+  <Color x:Key="ToastBorder">#303030</Color>
+  <Color x:Key="ToastText">#FFFFFFD9</Color>
+
+  <!-- ===================== -->
+  <!-- Component Brushes     -->
+  <!-- ===================== -->
+  <SolidColorBrush x:Key="ButtonPrimaryBgBrush" Color="{StaticResource ButtonPrimaryBg}" />
+  <SolidColorBrush x:Key="ButtonPrimaryHoverBrush" Color="{StaticResource ButtonPrimaryHover}" />
+  <SolidColorBrush x:Key="ButtonPrimaryActiveBrush" Color="{StaticResource ButtonPrimaryActive}" />
+  <SolidColorBrush x:Key="ButtonPrimaryTextBrush" Color="{StaticResource ButtonPrimaryText}" />
+
+  <SolidColorBrush x:Key="ButtonSuccessBgBrush" Color="{StaticResource ButtonSuccessBg}" />
+  <SolidColorBrush x:Key="ButtonSuccessHoverBrush" Color="{StaticResource ButtonSuccessHover}" />
+  <SolidColorBrush x:Key="ButtonSuccessActiveBrush" Color="{StaticResource ButtonSuccessActive}" />
+  <SolidColorBrush x:Key="ButtonSuccessTextBrush" Color="{StaticResource ButtonSuccessText}" />
+
+  <SolidColorBrush x:Key="ButtonWarningBgBrush" Color="{StaticResource ButtonWarningBg}" />
+  <SolidColorBrush x:Key="ButtonWarningHoverBrush" Color="{StaticResource ButtonWarningHover}" />
+  <SolidColorBrush x:Key="ButtonWarningActiveBrush" Color="{StaticResource ButtonWarningActive}" />
+  <SolidColorBrush x:Key="ButtonWarningTextBrush" Color="{StaticResource ButtonWarningText}" />
+
+  <SolidColorBrush x:Key="ButtonErrorBgBrush" Color="{StaticResource ButtonErrorBg}" />
+  <SolidColorBrush x:Key="ButtonErrorHoverBrush" Color="{StaticResource ButtonErrorHover}" />
+  <SolidColorBrush x:Key="ButtonErrorActiveBrush" Color="{StaticResource ButtonErrorActive}" />
+  <SolidColorBrush x:Key="ButtonErrorTextBrush" Color="{StaticResource ButtonErrorText}" />
+
+  <SolidColorBrush x:Key="ButtonTextHoverBgBrush" Color="{StaticResource ButtonTextHoverBg}" />
+  <SolidColorBrush x:Key="ButtonTextPressedBgBrush" Color="{StaticResource ButtonTextPressedBg}" />
+  <SolidColorBrush x:Key="ButtonGlassBgBrush" Color="{StaticResource ButtonGlassBg}" />
+  <SolidColorBrush x:Key="ButtonGlassHoverBgBrush" Color="{StaticResource ButtonGlassHoverBg}" />
+  <SolidColorBrush x:Key="ButtonGlassPressedBgBrush" Color="{StaticResource ButtonGlassPressedBg}" />
+
+  <SolidColorBrush x:Key="ButtonDisabledBgBrush" Color="{StaticResource ButtonDisabledBg}" />
+  <SolidColorBrush x:Key="ButtonDisabledTextBrush" Color="{StaticResource ButtonDisabledText}" />
+
+  <!-- Override FluentTheme TextBox internal resource keys -->
+  <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource InputBg}" />
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource InputBg}" />
+  <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource InputBg}" />
+  <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="{StaticResource Gray3}" />
+
+  <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBg}" />
+  <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorder}" />
+  <SolidColorBrush x:Key="InputHoverBorderBrush" Color="{StaticResource InputHoverBorder}" />
+  <SolidColorBrush x:Key="InputFocusBorderBrush" Color="{StaticResource InputFocusBorder}" />
+  <SolidColorBrush x:Key="InputTextBrush" Color="{StaticResource InputText}" />
+  <SolidColorBrush x:Key="InputPlaceholderBrush" Color="{StaticResource InputPlaceholder}" />
+
+  <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBg}" />
+  <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorder}" />
+  <SolidColorBrush x:Key="ToastTextBrush" Color="{StaticResource ToastText}" />
+</ResourceDictionary>

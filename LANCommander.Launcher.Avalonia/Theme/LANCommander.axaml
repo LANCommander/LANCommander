@@ -1,0 +1,531 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls">
+
+  <!-- ===================================================== -->
+  <!-- BUTTONS — Base                                        -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+
+  <Style Selector="Button.Default:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Primary5Brush}" />
+  </Style>
+  <Style Selector="Button.Default:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Primary7Brush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- BUTTONS — Solid variants                              -->
+  <!-- ===================================================== -->
+
+  <!-- shared base for all solid variants -->
+  <Style Selector="Button.Primary, Button.Success, Button.Warning, Button.Error">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+
+  <Style Selector="Button.Primary:disabled, Button.Success:disabled, Button.Warning:disabled, Button.Error:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonDisabledTextBrush}" />
+  </Style>
+
+  <Style Selector="Button.Primary:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Success:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Warning:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Error:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+
+  <!-- Primary -->
+  <Style Selector="Button.Primary">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+  </Style>
+  <Style Selector="Button.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+
+  <!-- Success -->
+  <Style Selector="Button.Success">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+  </Style>
+  <Style Selector="Button.Success:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Success:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+
+  <!-- Warning -->
+  <Style Selector="Button.Warning">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+  </Style>
+  <Style Selector="Button.Warning:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Warning:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+  </Style>
+
+  <!-- Error -->
+  <Style Selector="Button.Error">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+  </Style>
+  <Style Selector="Button.Error:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Error:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- SPLITBUTTONS — helpers                                -->
+  <!-- ===================================================== -->
+
+  <!-- shared base for all solid SplitButton variants -->
+  <Style Selector="SplitButton.Primary, SplitButton.Success, SplitButton.Warning, SplitButton.Error">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+
+  <Style Selector="SplitButton.Primary:disabled, SplitButton.Success:disabled, SplitButton.Warning:disabled, SplitButton.Error:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonDisabledTextBrush}" />
+  </Style>
+
+  <Style Selector="SplitButton.Primary:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Primary:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- SPLITBUTTONS — Solid variants                         -->
+  <!-- ===================================================== -->
+
+  <!-- Primary -->
+  <Style Selector="SplitButton.Primary">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Primary /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+
+  <!-- Success -->
+  <Style Selector="SplitButton.Success">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+
+  <!-- Warning -->
+  <Style Selector="SplitButton.Warning">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+  </Style>
+
+  <!-- Error -->
+  <Style Selector="SplitButton.Error">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+  </Style>
+  
+  <!-- ===================================================== -->
+  <!-- TOGGLEBUTTONS — helpers                               -->
+  <!-- ===================================================== -->
+
+  <!-- shared base for all solid ToggleButton variants -->
+  <Style Selector="ToggleButton.Primary, ToggleButton.Success, ToggleButton.Warning, ToggleButton.Error">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+
+  <Style Selector="ToggleButton.Primary:disabled, ToggleButton.Success:disabled, ToggleButton.Warning:disabled, ToggleButton.Error:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonDisabledTextBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.Primary:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Primary:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error:disabled /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error:disabled /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- TOGGLEBUTTONS — Solid variants                        -->
+  <!-- ===================================================== -->
+
+  <!-- Primary -->
+  <Style Selector="ToggleButton.Primary">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Primary /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+
+  <!-- Success -->
+  <Style Selector="ToggleButton.Success">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Success /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+
+  <!-- Warning -->
+  <Style Selector="ToggleButton.Warning">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Warning /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+  </Style>
+
+  <!-- Error -->
+  <Style Selector="ToggleButton.Error">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_SecondaryButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_SecondaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorHoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.Error /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- BUTTONS — Text variant (declared after solid so      -->
+  <!-- declaration order wins for equal-specificity rules)  -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Button.Text">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Text:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+  </Style>
+
+  <!-- Text + color: two-class selector wins over single-class solid styles -->
+  <Style Selector="Button.Text.Primary">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.Text.Success">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Success:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Success:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.Text.Warning">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Warning:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Warning:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.Text.Error">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Error:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Text.Error:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- BUTTONS — Glass variant                              -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Button.Glass">
+    <Setter Property="Background" Value="{DynamicResource ButtonGlassBgBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Glass:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonGlassHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Glass:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonGlassPressedBgBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- TEXT INPUTS                                           -->
+  <!-- ===================================================== -->
+
+  <Style Selector="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+
+  <!-- Override inner template Border to defeat FluentTheme's internal state styles -->
+  <Style Selector="TextBox /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:pointerover /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:focus-within /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:disabled /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource Gray3Brush}" />
+  </Style>
+  <Style Selector="TextBox:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- TOAST (CUSTOM CONTROL STYLE)                          -->
+  <!-- ===================================================== -->
+
+  <Style Selector="controls|ContentControl.toast">
+    <Setter Property="Background" Value="{DynamicResource ToastBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ToastTextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ToastBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+
+  <!-- Toast Variants -->
+  <Style Selector="controls|ContentControl.toast.success">
+    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+
+  <Style Selector="controls|ContentControl.toast.error">
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+  </Style>
+
+  <Style Selector="controls|ContentControl.toast.warning">
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
+</Styles>

@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Notify.NET.Extensions;
 
 namespace LANCommander.Launcher.Avalonia;
 
@@ -223,6 +224,11 @@ public partial class App : Application
         services.AddSingleton<GamepadService>();
 
         // Platform services
+        services.AddNotifications(opts =>
+        {
+            opts.AppName = "LANCommander";
+            opts.AppUserModelId = "LANCommander.Launcher";
+        });
         services.AddSingleton<NotificationService>();
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<SingleInstanceService>();

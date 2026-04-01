@@ -98,11 +98,11 @@
                     IsVisible="{Binding ShellViewModel.IsRefreshVisible}"
                     Padding="0,0,2,0"
                     VerticalAlignment="Center">
-                <Button Background="Transparent"
+                <Button Classes="Text"
                         Padding="8,6"
                         Command="{Binding ShellViewModel.RefreshCommand}">
-                    <PathIcon Data="{StaticResource PhosphorArrowClockwise}"
-                              Width="14" Height="14" />
+                    <PathIcon Data="{StaticResource PhosphorArrowsClockwise}"
+                              Width="16" Height="16" />
                 </Button>
             </Border>
 
@@ -111,8 +111,7 @@
                     IsVisible="{Binding IsShellActive}"
                     Padding="0,0,4,0"
                     VerticalAlignment="Center">
-                <Button Background="#0E639C"
-                        CornerRadius="4"
+                <Button Classes="Primary"
                         Padding="8,4">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">

@@ -159,7 +159,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    private Task OnInstallComplete(Data.Models.Game game)
+    private async Task OnInstallComplete(Data.Models.Game game)
     {
         _logger.LogInformation("Install complete for game {GameTitle}", game.Title);
 
@@ -171,7 +171,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
         {
             using var scope = _serviceProvider.CreateScope();
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
-            var cover = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
+            
+            var cover = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Cover);
+            
             if (cover != null && mediaService.FileExists(cover))
                 coverPath = mediaService.GetImagePath(cover);
         }
@@ -187,7 +189,6 @@ public partial class DownloadQueueViewModel : ViewModelBase
             RefreshQueue();
             InstallCompleted?.Invoke(this, game.Id);
         });
-        return Task.CompletedTask;
     }
 
     private Task OnInstallFail(Data.Models.Game game)

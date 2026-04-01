@@ -5,12 +5,14 @@
              x:DataType="vm:GameActionBarViewModel">
 
     <UserControl.Styles>
-        <!-- Red background on the primary button when running + hovered -->
-        <Style Selector="SplitButton.play-btn.running /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter">
+        <!-- Green background on the primary button when running -->
+        <!--<Style Selector="SplitButton.PlayButton.Running">
+            <Setter Property="Background" Value="#52c41a" />
+        </Style>
+        <Style Selector="SplitButton.PlayButton.Running:pointerover">
             <Setter Property="Background" Value="#C42B1C" />
         </Style>
-        <!-- "Running" label: visible normally, fades out on hover -->
-        <Style Selector="SplitButton.play-btn.running StackPanel.running-state">
+        <Style Selector="SplitButton.PlayButton.Running TextBlock.RunningState">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="Transitions">
                 <Setter.Value>
@@ -20,11 +22,10 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="SplitButton.play-btn.running:pointerover StackPanel.running-state">
+        <Style Selector="SplitButton.PlayButton.Running:pointerover TextBlock.RunningState">
             <Setter Property="Opacity" Value="0" />
         </Style>
-        <!-- "Stop" label: hidden normally, fades in on hover -->
-        <Style Selector="SplitButton.play-btn.running StackPanel.stop-state">
+        <Style Selector="SplitButton.PlayButton.Running StackPanel.Stop">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
                 <Setter.Value>
@@ -34,9 +35,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="SplitButton.play-btn.running:pointerover StackPanel.stop-state">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
+        -->
     </UserControl.Styles>
     
     <StackPanel Spacing="12" HorizontalAlignment="Left">
@@ -57,9 +56,7 @@
                     <Button Command="{Binding InstallCommand}"
                             IsVisible="{Binding !IsInstalled}"
                             IsEnabled="{Binding CanInstall}"
-                            Padding="24,14"
-                            Classes="accent"
-                            FontSize="16">
+                            Classes="Primary Large">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
                             <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
@@ -67,36 +64,29 @@
                     </Button>
 
                     <!-- Play / Stop SplitButton (installed) -->
-                    <SplitButton Command="{Binding PlayOrStopCommand}"
+                    <SplitButton x:Name="PlaySplitButton"
+                                 Command="{Binding PlayOrStopCommand}"
                                  IsVisible="{Binding IsInstalled}"
-                                 IsEnabled="{Binding !IsStarting}"
-                                 Classes.running="{Binding IsRunning}"
-                                 Padding="24,14"
-                                 Classes="accent play-btn"
-                                 FontSize="16">
+                                 IsEnabled="{Binding PlayButtonIsEnabled}"
+                                 Classes.Running="{Binding IsRunning}"
+                                 Classes.Starting="{Binding IsStarting}"
+                                 Classes.Stopping="{Binding IsStopping}"
+                                 Classes="Primary Large">
                         <Panel>
                             <!-- Not running: Play / Starting -->
                             <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
-                                <PathIcon Data="{StaticResource PhosphorArrowClockwise}"
-                                          Width="14" Height="14"
-                                          IsVisible="{Binding IsStarting}" />
                                 <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
                             </StackPanel>
+                            
                             <!-- Running: overlapping "Running" and "Stop" labels -->
                             <Panel IsVisible="{Binding IsRunning}">
                                 <!-- Shown by default; fades out on hover via CSS -->
-                                <StackPanel Classes="running-state" Orientation="Horizontal" Spacing="8">
-                                    <PathIcon Data="{StaticResource PhosphorCircle}"
-                                              Width="10" Height="10"
-                                              Foreground="LimeGreen"
-                                              IsVisible="{Binding !IsStopping}" />
-                                    <TextBlock Text="Running" FontWeight="SemiBold" IsVisible="{Binding !IsStopping}" />
-                                    <TextBlock Text="Stopping..." IsVisible="{Binding IsStopping}" />
-                                </StackPanel>
+                                <TextBlock Classes="RunningState" IsVisible="{Binding !IsStopping}" Text="Running" />
+                                <TextBlock Classes="StoppingState" IsVisible="{Binding IsStopping}" Text="Stopping" />
                                 <!-- Hidden by default; fades in on hover via CSS -->
-                                <StackPanel Classes="stop-state" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Classes="Stop" Orientation="Horizontal" Spacing="8">
                                     <PathIcon Data="{StaticResource PhosphorStop}"
                                               Width="14" Height="14" />
                                     <TextBlock Text="Stop" FontWeight="SemiBold" />

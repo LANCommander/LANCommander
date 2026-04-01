@@ -48,7 +48,7 @@
                             Spacing="4"
                             Margin="12,0">
                     <Button Command="{Binding ShowDepotCommand}"
-                            Padding="16,8"
+                            Classes="Text"
                             IsVisible="{Binding !IsDepotActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <PathIcon Data="{StaticResource PhosphorStorefront}"
@@ -58,7 +58,7 @@
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding ShowLibraryCommand}"
-                            Padding="16,8"
+                            Classes="Text"
                             IsVisible="{Binding !IsLibraryActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <PathIcon Data="{StaticResource PhosphorBooks}"
@@ -73,9 +73,7 @@
                 <Panel Grid.Column="1">
 
                     <!-- Active download progress -->
-                    <Button Background="Transparent"
-                            BorderThickness="0"
-                            Padding="8,0"
+                    <Button Classes="Text"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
                             VerticalAlignment="Stretch"
@@ -134,9 +132,7 @@
                                 IsVisible="{Binding !DownloadQueue.HasActiveDownload}">
 
                         <Button Command="{Binding ShowDownloadQueueCommand}"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Padding="10,6">
+                                Classes="Text">
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                 <PathIcon Data="{StaticResource PhosphorDownloadSimple}"
                                           Width="13" Height="13"

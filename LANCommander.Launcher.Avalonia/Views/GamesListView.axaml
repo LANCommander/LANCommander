@@ -130,8 +130,9 @@
 
                     <!-- View type toggle -->
                     <Border Grid.Column="1"
-                            CornerRadius="0"
+                            CornerRadius="2"
                             Margin="0,0,8,0"
+                            Padding="4"
                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                         <StackPanel Orientation="Horizontal">
                             <Button Background="Transparent" BorderThickness="0" Padding="8,6"
@@ -157,6 +158,7 @@
 
                     <!-- Advanced toggle -->
                     <ToggleButton Grid.Column="2"
+                                  Classes="Text"
                                   IsChecked="{Binding IsAdvancedFilterOpen}"
                                   Padding="8,6"
                                   Margin="0,0,8,0"
@@ -166,8 +168,9 @@
 
                     <Button Grid.Column="3"
                             Command="{Binding ClearFiltersCommand}"
-                            Content="Clear"
-                            Padding="10,6" />
+                            Content="✕"
+                            Classes="Text Error"
+                            Padding="8,6" />
 
                 </Grid>
             </Border>

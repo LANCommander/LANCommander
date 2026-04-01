@@ -75,8 +75,7 @@
                                 Margin="16,48,0,0"
                                 Content="{Binding BackLabel}"
                                 Command="{Binding GoBackCommand}"
-                                Background="#33000000"
-                                Padding="12,8" />
+                                Classes="Glass" />
 
                         <!-- Logo (bottom-left) -->
                         <Border HorizontalAlignment="Left"

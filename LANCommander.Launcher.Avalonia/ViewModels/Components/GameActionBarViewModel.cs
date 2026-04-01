@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -98,6 +99,13 @@ public partial class GameActionBarViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
     private bool _hasMultipleActions;
 
+    // Non-primary (secondary) actions shown in the split-button dropdown
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _secondaryActions = new();
+
+    [ObservableProperty]
+    private bool _hasSecondaryActions;
+
     // Manuals
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
@@ -130,6 +138,8 @@ public partial class GameActionBarViewModel : ViewModelBase
     /// Can install only when online and not already installed
     /// </summary>
     public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling;
+
+    public bool PlayButtonIsEnabled => !IsStopping && !IsStarting;
 
     // Timer for checking running state
     private System.Threading.Timer? _runningCheckTimer;
@@ -227,7 +237,9 @@ public partial class GameActionBarViewModel : ViewModelBase
     private async Task LoadActionsAsync()
     {
         Actions.Clear();
+        SecondaryActions.Clear();
         HasMultipleActions = false;
+        HasSecondaryActions = false;
 
         if (!IsInstalled || string.IsNullOrEmpty(InstallDirectory))
             return;
@@ -240,14 +252,14 @@ public partial class GameActionBarViewModel : ViewModelBase
             var actions = await gameClient.GetActionsAsync(InstallDirectory, GameId);
             if (actions != null && actions.Any())
             {
-                var primaryActions = actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder).ToList();
-
-                foreach (var action in primaryActions)
-                {
+                foreach (var action in actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
                     Actions.Add(new GameActionViewModel(action, RunActionAsync));
-                }
+
+                foreach (var action in actions.Where(a => !a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+                    SecondaryActions.Add(new GameActionViewModel(action, RunActionAsync));
 
                 HasMultipleActions = Actions.Count > 1;
+                HasSecondaryActions = SecondaryActions.Count > 0;
             }
         }
         catch (Exception ex)
@@ -424,15 +436,62 @@ public partial class GameActionBarViewModel : ViewModelBase
     {
         if (!IsInstalled || IsStarting || IsRunning) return;
 
-        // If we have actions loaded, run the first one
+        // If we have actions loaded, either pick directly or show a chooser
         if (Actions.Any())
         {
-            await RunActionAsync(Actions.First().Action);
+            SDK.Models.Manifest.Action? chosen;
+
+            if (HasMultipleActions)
+            {
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<SDK.Models.Manifest.Action?>();
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var overlayVm = new GameActionsOverlayViewModel(Title, Actions);
+                    var overlay = new Views.GameActionsOverlay
+                    {
+                        DataContext = overlayVm,
+                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                        VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                    };
+
+                    overlay.ActionSelected += (_, action) => tcs.TrySetResult(action);
+
+                    var mainWindow = (Application.Current?.ApplicationLifetime
+                        as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                    var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                    if (layer is not null)
+                    {
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty,
+                            new Binding("Bounds.Width") { Source = layer });
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty,
+                            new Binding("Bounds.Height") { Source = layer });
+                        layer.Children.Add(overlay);
+                    }
+                    else
+                    {
+                        // No overlay layer available — fall back to first action
+                        tcs.TrySetResult(Actions.First().Action);
+                    }
+                });
+
+                chosen = await tcs.Task;
+            }
+            else
+            {
+                chosen = Actions.First().Action;
+            }
+
+            if (chosen != null)
+                await RunActionAsync(chosen);
+
+            return;
         }
-        else
+
+        // Fallback: load actions on demand and run the first primary one
+        IsStarting = true;
         {
-            // Fallback: load actions and run first
-            IsStarting = true;
             StatusMessage = "Starting...";
 
             try
@@ -1066,5 +1125,21 @@ public partial class ManualViewModel : ViewModelBase
     private void Open()
     {
         _openManual(this);
+    }
+}
+
+/// <summary>
+/// ViewModel for the "choose a primary action" overlay shown when a game
+/// has more than one primary action configured.
+/// </summary>
+public class GameActionsOverlayViewModel
+{
+    public string GameTitle { get; }
+    public IReadOnlyList<GameActionViewModel> Actions { get; }
+
+    public GameActionsOverlayViewModel(string gameTitle, IEnumerable<GameActionViewModel> actions)
+    {
+        GameTitle = gameTitle;
+        Actions = actions.ToList();
     }
 }

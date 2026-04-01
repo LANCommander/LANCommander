@@ -1,0 +1,113 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+
+    <!-- ── App ─────────────────────────────────────────────────────────── -->
+    <sys:String x:Key="AppTitle">LANCommander</sys:String>
+
+    <!-- ── Common ───────────────────────────────────────────────────────── -->
+    <sys:String x:Key="Back">← Back</sys:String>
+    <sys:String x:Key="Save">Save</sys:String>
+    <sys:String x:Key="Saving">Saving…</sys:String>
+    <sys:String x:Key="Cancel">Cancel</sys:String>
+    <sys:String x:Key="Clear">Clear</sys:String>
+    <sys:String x:Key="Loading">Loading…</sys:String>
+    <sys:String x:Key="Any">Any</sys:String>
+
+    <!-- ── Server Selection ──────────────────────────────────────────────── -->
+    <sys:String x:Key="ConnectToServer">Connect to Server</sys:String>
+    <sys:String x:Key="ServerAddress">Server Address</sys:String>
+    <sys:String x:Key="ServerAddressPlaceholder">e.g., 192.168.1.100:5000 or lancommander.local</sys:String>
+    <sys:String x:Key="Connect">Connect</sys:String>
+    <sys:String x:Key="Connecting">Connecting…</sys:String>
+    <sys:String x:Key="NoServerConfigured">No server configured</sys:String>
+    <sys:String x:Key="MissingServerAddress">Please enter a server address</sys:String>
+    <sys:String x:Key="TestingConnection">Testing connection…</sys:String>
+    <sys:String x:Key="Connected">Connected!</sys:String>
+    <sys:String x:Key="ConnectionFailed">Could not connect to server. Please check the address and try again.</sys:String>
+
+    <!-- ── Login ─────────────────────────────────────────────────────────── -->
+    <sys:String x:Key="SignIn">Sign In</sys:String>
+    <sys:String x:Key="SigningIn">Signing in…</sys:String>
+    <sys:String x:Key="ConnectedTo">Connected to:</sys:String>
+    <sys:String x:Key="ChangeServer">Change</sys:String>
+    <sys:String x:Key="Username">Username</sys:String>
+    <sys:String x:Key="UsernameWatermark">Enter your username</sys:String>
+    <sys:String x:Key="Password">Password</sys:String>
+    <sys:String x:Key="PasswordWatermark">Enter your password</sys:String>
+    <sys:String x:Key="LoggingIn">Logging in…</sys:String>
+    <sys:String x:Key="LoginSuccess">Login successful!</sys:String>
+    <sys:String x:Key="MissingCredentials">Please enter username and password</sys:String>
+    <sys:String x:Key="ServerOffline">Server is offline. Please try again later or change server.</sys:String>
+
+    <!-- ── Main Window ───────────────────────────────────────────────────── -->
+    <sys:String x:Key="Settings">Settings</sys:String>
+    <sys:String x:Key="SwitchToOfflineMode">Switch to Offline Mode</sys:String>
+    <sys:String x:Key="GoOnline">Go Online</sys:String>
+    <sys:String x:Key="Logout">Logout</sys:String>
+
+    <!-- ── Settings ──────────────────────────────────────────────────────── -->
+    <sys:String x:Key="SettingsSaved">Settings saved!</sys:String>
+    <sys:String x:Key="Games">Games</sys:String>
+    <sys:String x:Key="InstallDirectories">Install Directories</sys:String>
+    <sys:String x:Key="InstallDirectoryPathWatermark">Enter install directory path…</sys:String>
+    <sys:String x:Key="AddDirectory">+ Add Directory</sys:String>
+    <sys:String x:Key="Media">Media</sys:String>
+    <sys:String x:Key="StoragePath">Storage Path</sys:String>
+    <sys:String x:Key="MediaStoragePathWatermark">Path to store media files…</sys:String>
+    <sys:String x:Key="UserInterface">User Interface</sys:String>
+    <sys:String x:Key="Language">Language</sys:String>
+    <sys:String x:Key="Debug">Debug</sys:String>
+    <sys:String x:Key="EnableScriptDebugging">Enable Script Debugging</sys:String>
+    <sys:String x:Key="LoggingPath">Logging Path</sys:String>
+    <sys:String x:Key="LoggingPathWatermark">Path for log files…</sys:String>
+    <sys:String x:Key="LogLevel">Log Level</sys:String>
+
+    <!-- ── Game Library ──────────────────────────────────────────────────── -->
+    <sys:String x:Key="SearchGamesWatermark">Search games…</sys:String>
+    <sys:String x:Key="Sort">Sort</sys:String>
+    <sys:String x:Key="GroupBy">Group By</sys:String>
+    <sys:String x:Key="Genre">Genre</sys:String>
+    <sys:String x:Key="Tag">Tag</sys:String>
+    <sys:String x:Key="Developer">Developer</sys:String>
+    <sys:String x:Key="Publisher">Publisher</sys:String>
+    <sys:String x:Key="Multiplayer">Multiplayer</sys:String>
+    <sys:String x:Key="Ownership">Ownership</sys:String>
+    <sys:String x:Key="InLibraryOnly">In Library Only</sys:String>
+    <sys:String x:Key="GridViewTooltip">Grid view</sys:String>
+    <sys:String x:Key="ListViewTooltip">List view</sys:String>
+    <sys:String x:Key="HorizontalViewTooltip">Horizontal view</sys:String>
+    <sys:String x:Key="AdvancedFiltersTooltip">Advanced filters</sys:String>
+    <sys:String x:Key="Uncategorized">Uncategorized</sys:String>
+    <sys:String x:Key="MultiplayerLocal">Local</sys:String>
+    <sys:String x:Key="MultiplayerLan">LAN</sys:String>
+    <sys:String x:Key="MultiplayerOnline">Online</sys:String>
+
+    <!-- ── Formatted strings — use {0}, {1} … as positional placeholders ── -->
+    <sys:String x:Key="GameReadyToPlay">{0} is ready to play!</sys:String>
+    <sys:String x:Key="GameInstallFailed">{0} failed to install</sys:String>
+    <sys:String x:Key="LoginFailed">Login failed: {0}</sys:String>
+    <sys:String x:Key="SettingsSaveFailed">Failed to save: {0}</sys:String>
+    <sys:String x:Key="ConnectionFailedDetail">Connection failed: {0}</sys:String>
+
+    <!-- ── Notifications ─────────────────────────────────────────────────── -->
+    <sys:String x:Key="InstallComplete">Installation Complete!</sys:String>
+    <sys:String x:Key="InstallationFailed">Installation Failed!</sys:String>
+    <sys:String x:Key="ViewInLibrary">View in Library</sys:String>
+    <sys:String x:Key="Play">Play</sys:String>
+
+    <!-- ── Game Detail ───────────────────────────────────────────────────── -->
+    <sys:String x:Key="Singleplayer">Singleplayer</sys:String>
+    <sys:String x:Key="Genres">Genres</sys:String>
+    <sys:String x:Key="Platforms">Platforms</sys:String>
+    <sys:String x:Key="Tags">Tags</sys:String>
+    <sys:String x:Key="Description">Description</sys:String>
+
+    <!-- ── Install Options ───────────────────────────────────────────────── -->
+    <sys:String x:Key="InstallLocation">Install Location</sys:String>
+    <sys:String x:Key="OptionalAddons">Optional Add-ons</sys:String>
+    <sys:String x:Key="SelectAll">All</sys:String>
+    <sys:String x:Key="DeselectAll">None</sys:String>
+    <sys:String x:Key="Install">Install</sys:String>
+
+</ResourceDictionary>

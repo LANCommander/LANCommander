@@ -1,5 +1,4 @@
 ﻿import { Chunk } from './Chunk';
-import { UploadInitResponse } from './UploadInitResponse';
 import { UploadInitRequest } from './UploadInitRequest';
 import axios, { AxiosProgressEvent } from 'axios';
 

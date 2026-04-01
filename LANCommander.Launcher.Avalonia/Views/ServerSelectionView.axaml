@@ -1,53 +1,56 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+            xmlns:svg="using:Avalonia.Svg.Skia"
             x:Class="LANCommander.Launcher.Avalonia.Views.ServerSelectionView"
             x:DataType="vm:ServerSelectionViewModel">
+    <Grid>
+        <Image x:Name="BackgroundImage" Stretch="UniformToFill" />
+        
+        <Border Background="#AA000000" />
+        
+        <Border Padding="40" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Spacing="20" Width="400" VerticalAlignment="Center">
+                <svg:Svg Path="/Assets/logo.svg"
+                         Width="350"
+                         HorizontalAlignment="Center" />
+                
+                <StackPanel Spacing="8" Margin="0,20,0,20">
+                    <TextBlock Text="Server Address" FontWeight="SemiBold" />
+                    <TextBox x:Name="ServerAddressTextBox"
+                             Classes="Glass"
+                             Watermark="e.g., 192.168.1.100:5000 or lancommander.local"
+                             Text="{Binding ServerAddress}"
+                             IsEnabled="{Binding !IsLoading}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Return" Command="{Binding ConnectCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                </StackPanel>
 
-    <Border Padding="40" VerticalAlignment="Center" HorizontalAlignment="Center">
-        <StackPanel Spacing="20" Width="400">
-            <TextBlock Text="LANCommander"
-                       FontSize="32"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center" />
-
-            <TextBlock Text="Connect to Server"
-                       FontSize="18"
-                       HorizontalAlignment="Center"
-                       Opacity="0.7" />
-
-            <StackPanel Spacing="8" Margin="0,20,0,0">
-                <TextBlock Text="Server Address" FontWeight="SemiBold" />
-                <TextBox x:Name="ServerAddressTextBox"
-                         Watermark="e.g., 192.168.1.100:5000 or lancommander.local"
-                         Text="{Binding ServerAddress}"
-                         IsEnabled="{Binding !IsLoading}">
-                    <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Return" Command="{Binding ConnectCommand}" />
-                    </TextBox.KeyBindings>
-                </TextBox>
+                <Button Command="{Binding ConnectCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Classes="Primary"
+                        Padding="12"
+                        IsEnabled="{Binding !IsLoading}">
+                    <Panel>
+                        <TextBlock Text="Connect" IsVisible="{Binding !IsLoading}" />
+                        <TextBlock Text="Connecting..." IsVisible="{Binding IsLoading}" />
+                    </Panel>
+                </Button>
+                
+                <StackPanel HorizontalAlignment="Center" Spacing="12" IsVisible="{Binding IsLoading}">
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="200"
+                                 Height="4" />
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="White"
+                               Opacity="0.75"
+                               FontSize="12"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
             </StackPanel>
-
-            <Button Command="{Binding ConnectCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Classes="accent"
-                    Padding="12"
-                    IsEnabled="{Binding !IsLoading}">
-                <Panel>
-                    <TextBlock Text="Connect" IsVisible="{Binding !IsLoading}" />
-                    <TextBlock Text="Connecting..." IsVisible="{Binding IsLoading}" />
-                </Panel>
-            </Button>
-
-            <Border IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                    Padding="12"
-                    CornerRadius="4"
-                    Background="{DynamicResource SystemControlErrorTextForegroundBrush}">
-                <TextBlock Text="{Binding StatusMessage}"
-                           TextWrapping="Wrap"
-                           HorizontalAlignment="Center" />
-            </Border>
-        </StackPanel>
-    </Border>
+        </Border>
+    </Grid>
 </UserControl>

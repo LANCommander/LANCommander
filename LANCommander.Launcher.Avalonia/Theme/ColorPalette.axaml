@@ -107,8 +107,8 @@
   <SolidColorBrush x:Key="Gray3Brush" Color="{StaticResource Gray3}" />
   
   <!-- Button - Primary -->
-  <Color x:Key="ButtonPrimaryBg">#1677FF</Color>
-  <Color x:Key="ButtonPrimaryHover">#4096FF</Color>
+  <Color x:Key="ButtonPrimaryBg">#177ddc</Color>
+  <Color x:Key="ButtonPrimaryHover">#095cb5</Color>
   <Color x:Key="ButtonPrimaryActive">#0958D9</Color>
   <Color x:Key="ButtonPrimaryText">#FFFFFF</Color>
 
@@ -146,7 +146,7 @@
   <Color x:Key="InputBorder">#424242</Color>
   <Color x:Key="InputHoverBorder">#4096FF</Color>
   <Color x:Key="InputFocusBorder">#1677FF</Color>
-  <Color x:Key="InputText">#FFFFFFD9</Color>
+  <Color x:Key="InputText">#D9FFFFFF</Color>
   <Color x:Key="InputPlaceholder">#40FFFFFF</Color>
 
   <!-- Toast -->

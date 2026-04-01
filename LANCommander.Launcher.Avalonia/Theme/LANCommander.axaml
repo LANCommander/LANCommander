@@ -527,5 +527,19 @@
   <Style Selector="controls|ContentControl.toast.warning">
     <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
   </Style>
+  
+  <!-- ===================================================== -->
+  <!-- TOAST (CUSTOM CONTROL STYLE)                          -->
+  <!-- ===================================================== -->
+  
+  <Style Selector="TextBox">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="TextBox.Glass /template/ Border">
+    <Setter Property="Background" Value="#88000000" />
+  </Style>
+  
 
 </Styles>

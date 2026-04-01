@@ -65,7 +65,8 @@ export class ChunkUploader {
 
             dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
         } catch (ex) {
-            dotNetObject.invokeMethodAsync('JSOnUploadError', ex.message);
+            const message = ex instanceof Error ? ex.message : String(ex);
+            dotNetObject.invokeMethodAsync('JSOnUploadError', message);
             console.error(`Could not chunk upload: ${ex}`);
         }
     }

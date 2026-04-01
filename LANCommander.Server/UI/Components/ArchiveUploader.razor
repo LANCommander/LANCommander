@@ -77,7 +77,14 @@
     private async Task Start()
     {
         Uploading = true;
-        await ChunkUploader.Start();
+        try
+        {
+            await ChunkUploader.Start();
+        }
+        finally
+        {
+            Uploading = false;
+        }
     }
 
     private async Task Clear()

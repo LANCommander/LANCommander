@@ -15,5 +15,7 @@ namespace LANCommander.SDK.Models
         public ICollection<Genre> Genres { get; set; }
         public ICollection<Platform> Platforms { get; set; }
         public ICollection<Tag> Tags { get; set; }
+        public ICollection<Guid> Popular { get; set; }
+        public ICollection<Guid> Backlog { get; set; }
     }
 }

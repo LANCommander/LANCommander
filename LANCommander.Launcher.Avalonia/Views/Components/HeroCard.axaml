@@ -85,9 +85,10 @@
 
             <!-- In-library badge -->
             <Border Background="#CC000000" CornerRadius="4"
-                    Padding="5,2" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Height="16" Width="16"
                     Margin="6" IsVisible="{Binding ShowInLibraryBadge}">
-                <controls:Icon Type="Regular" Value="Check" Width="9" Height="9" />
+                <controls:Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Border>
         </Panel>
     </Button>

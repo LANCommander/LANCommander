@@ -64,18 +64,18 @@
             </controls:CarouselControl>
             
             <!-- ══ SEARCH ════════════════════════════════════════════════════════ -->
-            <Grid>
+            <Grid RowDefinitions="Auto,Auto">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="1"
+                <TextBlock Grid.Row="0" Grid.Column="1"
                            Text="Search"
                            FontSize="18" FontWeight="SemiBold"
                            VerticalAlignment="Center"
                            Margin="0,0,0,10" />
-                <TextBox Grid.Column="1"
+                <TextBox Grid.Row="1" Grid.Column="1"
                          Watermark="Search games…"
                          Text="{Binding SearchText}"
                          FontSize="16"

@@ -72,6 +72,7 @@ public class Icon : PathIcon
     {
         base.OnAttachedToVisualTree(e);
         UpdateGeometry();
+        UpdateColor();
     }
 
     private void UpdateGeometry()

@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.App"
              RequestedThemeVariant="Dark">
 
@@ -22,6 +23,37 @@
         <Style Selector="Button.Large, SplitButton.Large">
             <Setter Property="Padding" Value="24, 14" />
             <Setter Property="FontSize" Value="16" />
+        </Style>
+
+        <!-- Icon control template (PathIcon ControlTheme is not inherited by subclasses in Avalonia 11) -->
+        <!-- Default: stroke-based rendering for Regular, Light, Thin, DuoTone, Bold variants -->
+        <Style Selector="controls|Icon">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Path Fill="Transparent"
+                          Stroke="{TemplateBinding Foreground}"
+                          StrokeThickness="1"
+                          Data="{TemplateBinding Data}"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <!-- Fill variant: fill-based rendering (closed shapes, no stroke needed) -->
+        <Style Selector="controls|Icon[Type=Fill]">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Path Fill="{TemplateBinding Foreground}"
+                          Stroke="Transparent"
+                          Data="{TemplateBinding Data}"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                </ControlTemplate>
+            </Setter>
         </Style>
     </Application.Styles>
     

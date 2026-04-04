@@ -1,0 +1,180 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
+             x:Class="LANCommander.Launcher.Avalonia.Views.DepotView"
+             x:DataType="vm:DepotViewModel">
+
+    <UserControl.Styles>
+        <!-- Browse chip buttons -->
+        <Style Selector="Button.browse-chip">
+            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.browse-chip:pointerover">
+            <Setter Property="Background" Value="#44FFFFFF" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
+
+            <!-- ══ Loading ══════════════════════════════════════════════════════ -->
+            <StackPanel Orientation="Horizontal" Spacing="10"
+                        HorizontalAlignment="Center"
+                        IsVisible="{Binding IsLoading}">
+                <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
+            </StackPanel>
+
+            <!-- ══ Error ═════════════════════════════════════════════════════════ -->
+            <Border IsVisible="{Binding HasError}"
+                    Background="#22FF4D4F"
+                    CornerRadius="4"
+                    Padding="12">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#FF4D4F" TextWrapping="Wrap" />
+            </Border>
+
+            <!-- ══ POPULAR ════════════════════════════════════════════════════════
+                 Hero + logo cards in 16:9 boxes.
+            ═══════════════════════════════════════════════════════════════════════ -->
+            <controls:CarouselControl Title="Popular"
+                                      WrapItems="True"
+                                      ItemsSource="{Binding PopularGames}"
+                                      ItemWidth="460"
+                                      VisibleItems="4"
+                                      Gap="16"
+                                      SeeAllCommand="{Binding BrowseAllCommand}"
+                                      IsVisible="{Binding HasPopularGames}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                        <components:HeroCard Width="460" Height="215"
+                                             Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                             CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+            
+            <!-- ══ SEARCH ════════════════════════════════════════════════════════ -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1"
+                           Text="Search"
+                           FontSize="18" FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,10" />
+                <TextBox Grid.Column="1"
+                         Watermark="Search games…"
+                         Text="{Binding SearchText}"
+                         FontSize="16"
+                         Padding="14,10">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Return" Command="{Binding SearchCommand}" />
+                    </TextBox.KeyBindings>
+                </TextBox>
+            </Grid>
+
+            <controls:CarouselControl Title="Genres"
+                                      WrapItems="True"
+                                      ItemsSource="{Binding BrowseGenres}"
+                                      ItemWidth="200"
+                                      VisibleItems="4"
+                                      IsVisible="{Binding HasBrowseGenres}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
+                        <components:GenreCarouselButton
+                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByGenreCommand}"
+                            CommandParameter="{Binding Name}"
+                            Width="200" Height="150" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+
+            <!-- ══ NEW RELEASES ═══════════════════════════════════════════════════
+                 Games sorted by release date, newest first.
+            ═══════════════════════════════════════════════════════════════════════ -->
+            <controls:CarouselControl Title="New Releases"
+                                      ItemsSource="{Binding NewReleases}"
+                                      ItemWidth="160"
+                                      VisibleItems="6"
+                                      Gap="16"
+                                      ItemOverflow="8"
+                                      SeeAllCommand="{Binding BrowseAllCommand}"
+                                      IsVisible="{Binding HasNewReleases}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                        <components:CoverButton Width="160" Height="240"
+                                                Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                                CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+            
+            <controls:CarouselControl Title="Collections"
+                                      WrapItems="True"
+                                      ItemsSource="{Binding BrowseCollections}"
+                                      ItemWidth="200"
+                                      VisibleItems="4"
+                                      IsVisible="{Binding HasBrowseCollections}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
+                        <components:GenreCarouselButton
+                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByCollectionCommand}"
+                            CommandParameter="{Binding Name}"
+                            Width="200" Height="150" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+
+            <!-- ══ BACKLOG ════════════════════════════════════════════════════════
+                 Games already in the user's library.
+            ═══════════════════════════════════════════════════════════════════════ -->
+            <controls:CarouselControl Title="Your Backlog"
+                                      ItemsSource="{Binding BacklogGames}"
+                                      ItemWidth="160"
+                                      VisibleItems="6"
+                                      Gap="16"
+                                      ItemOverflow="8"
+                                      IsVisible="{Binding HasBacklogGames}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                        <components:CoverButton Width="160" Height="240"
+                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                            CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+
+            <!-- ══ PLAY TOGETHER ══════════════════════════════════════════════════
+                 Games that support multiplayer modes (LAN, local, online).
+            ═══════════════════════════════════════════════════════════════════════ -->
+            <controls:CarouselControl Title="Play Together"
+                                      ItemsSource="{Binding MultiplayerGames}"
+                                      ItemWidth="160"
+                                      VisibleItems="6"
+                                      SeeAllCommand="{Binding BrowseAllCommand}"
+                                      IsVisible="{Binding HasMultiplayerGames}">
+                <controls:CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                        <components:CoverButton Width="160" Height="240"
+                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                            CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </controls:CarouselControl.ItemTemplate>
+            </controls:CarouselControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.GenreCarouselButton"            
+             x:DataType="vmComponents:GenreCarouselButtomViewModel"
+             ClipToBounds="False">
+    
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+    
+    <UserControl.Styles>
+        <Style Selector="Button.GenreCarouselButton">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        
+        <Style Selector="Button.GenreCarouselButton Border.GlassOverlay">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.GenreCarouselButton:pointerover Border.GlassOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+    
+    <Button Classes="GenreCarouselButton"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            ClipToBounds="False"
+            Command="{Binding $parent[local:GenreCarouselButton].Command}"
+            CommandParameter="{Binding $parent[local:GenreCarouselButton].CommandParameter}">
+        <Panel>
+            <!-- Fallback background when no hero image -->
+            <Border IsVisible="{Binding !HasBackground}">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#3D1A6B" Offset="0" />
+                        <GradientStop Color="#0F3460" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- Hero background image -->
+            <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=h150}"
+                   Stretch="UniformToFill"
+                   IsVisible="{Binding HasBackground}" />
+
+            <!-- Always-visible colored gradient overlay -->
+            <Border IsHitTestVisible="False">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#881A0A3B" Offset="0" />
+                        <GradientStop Color="#EE1A0A3B" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- Always-visible genre name -->
+            <TextBlock Text="{Binding Name}"
+                       FontSize="20" FontWeight="SemiBold"
+                       TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Margin="10" Foreground="White" />
+
+            <!-- Hover glass overlay -->
+            <Border Classes="GlassOverlay" IsHitTestVisible="False" CornerRadius="0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                        <GradientStop Color="#45FFFFFF" Offset="0" />
+                        <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                        <GradientStop Color="#00FFFFFF" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+        </Panel>
+    </Button>
+</UserControl>

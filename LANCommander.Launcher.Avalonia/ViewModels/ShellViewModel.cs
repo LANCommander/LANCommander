@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,15 +35,17 @@ public partial class ShellViewModel : ViewModelBase
 
     public string ContentViewTitle => ContentView switch
     {
-        GamesListViewModel _ => "Depot",
-        LibraryViewModel _ => "My Library",
+        DepotViewModel _      => "Depot",
+        GamesListViewModel _  => "Depot",
+        LibraryViewModel _    => "My Library",
         GameDetailViewModel gd => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
-        SettingsViewModel _ => "Settings",
+        SettingsViewModel _   => "Settings",
         DownloadQueueViewModel _ => "Downloads",
         _ => string.Empty
     };
 
-    public bool IsRefreshVisible => ContentView is GamesCollectionViewModel && !IsOfflineMode;
+    public bool IsRefreshVisible =>
+        (ContentView is GamesCollectionViewModel || ContentView is DepotViewModel) && !IsOfflineMode;
     public bool IsTitlebarTinted => true;
 
     partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -70,12 +73,16 @@ public partial class ShellViewModel : ViewModelBase
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
 
     // Child view models
+    public DepotViewModel     DepotViewModel      { get; private set; } = null!;
     public GamesListViewModel GamesListViewModel  { get; private set; } = null!;
     public LibraryViewModel   LibraryViewModel    { get; private set; } = null!;
     public GameDetailViewModel GameDetailViewModel { get; private set; } = null!;
     public DownloadQueueViewModel DownloadQueue   { get; private set; } = null!;
     public SettingsViewModel  SettingsViewModel   { get; private set; } = null!;
     public ProfileViewModel   Profile             { get; private set; } = null!;
+
+    // Tracks previous view within the depot context for back navigation
+    private ViewModelBase? _depotReturnView;
 
     public event EventHandler? LogoutRequested;
 
@@ -98,6 +105,7 @@ public partial class ShellViewModel : ViewModelBase
     {
         _logger.LogInformation("ShellViewModel initializing... (Offline: {IsOffline})", IsOfflineMode);
 
+        DepotViewModel      = new DepotViewModel(_serviceProvider);
         GamesListViewModel  = new GamesListViewModel(_serviceProvider);
         LibraryViewModel    = new LibraryViewModel(_serviceProvider);
         GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
@@ -105,9 +113,17 @@ public partial class ShellViewModel : ViewModelBase
         SettingsViewModel   = new SettingsViewModel(_serviceProvider);
         // Profile is already created in the constructor; reuse it here
 
+        DepotViewModel.IsOfflineMode      = IsOfflineMode;
         GamesListViewModel.IsOfflineMode  = IsOfflineMode;
         LibraryViewModel.IsOfflineMode    = IsOfflineMode;
         GameDetailViewModel.IsOfflineMode = IsOfflineMode;
+
+        DepotViewModel.GameSelected              += OnGameSelected;
+        DepotViewModel.SearchRequested           += OnSearchRequested;
+        DepotViewModel.BrowseByGenreRequested    += OnDepotBrowseByGenre;
+        DepotViewModel.BrowseByTagRequested      += OnDepotBrowseByTag;
+        DepotViewModel.BrowseByCollectionRequested += OnDepotBrowseByCollection;
+        DepotViewModel.BrowseAllRequested        += OnDepotBrowseAll;
 
         GamesListViewModel.GameSelected  += OnGameSelected;
         LibraryViewModel.GameSelected    += OnGameSelected;
@@ -152,6 +168,7 @@ public partial class ShellViewModel : ViewModelBase
         {
             await GamesListViewModel.LoadGamesAsync();
             await LibraryViewModel.LoadGamesAsync();
+            await DepotViewModel.LoadAsync();
         }
         catch (Exception ex)
         {
@@ -190,6 +207,7 @@ public partial class ShellViewModel : ViewModelBase
                 if (connectionClient.IsConnected())
                 {
                     IsOfflineMode = false;
+                    DepotViewModel.IsOfflineMode      = false;
                     GamesListViewModel.IsOfflineMode  = false;
                     LibraryViewModel.IsOfflineMode    = false;
                     GameDetailViewModel.IsOfflineMode = false;
@@ -217,6 +235,7 @@ public partial class ShellViewModel : ViewModelBase
         if (IsOfflineMode) return;
 
         IsOfflineMode = true;
+        DepotViewModel.IsOfflineMode      = true;
         GamesListViewModel.IsOfflineMode  = true;
         LibraryViewModel.IsOfflineMode    = true;
         GameDetailViewModel.IsOfflineMode = true;
@@ -238,7 +257,8 @@ public partial class ShellViewModel : ViewModelBase
     private void ShowDepot()
     {
         IsDepotActive = true;
-        ContentView = GamesListViewModel;
+        _depotReturnView = null;
+        ContentView = DepotViewModel;
     }
 
     [RelayCommand]
@@ -296,31 +316,88 @@ public partial class ShellViewModel : ViewModelBase
 
     private void OnSearchRequested(object? sender, string term)
     {
-        var collection = IsDepotActive ? (GamesCollectionViewModel)GamesListViewModel : LibraryViewModel;
-
-        // If the term matches a known genre, select it in the dropdown instead of searching
-        var matchedGenre = collection.AvailableGenres
-            .FirstOrDefault(g => string.Equals(g.Name, term, StringComparison.OrdinalIgnoreCase));
-
-        if (matchedGenre != null)
+        if (IsDepotActive)
         {
-            collection.SearchText = string.Empty;
-            collection.SelectedGenre = matchedGenre;
+            var matchedGenre = GamesListViewModel.AvailableGenres
+                .FirstOrDefault(g => string.Equals(g.Name, term, StringComparison.OrdinalIgnoreCase));
+
+            if (matchedGenre != null)
+            {
+                GamesListViewModel.SearchText = string.Empty;
+                GamesListViewModel.SelectedGenre = matchedGenre;
+            }
+            else
+            {
+                GamesListViewModel.SelectedGenre = null;
+                GamesListViewModel.SearchText = term;
+            }
+
+            NavigateToGamesListFromDepot();
         }
         else
         {
-            collection.SelectedGenre = null;
-            collection.SearchText = term;
-        }
+            var matchedGenre = LibraryViewModel.AvailableGenres
+                .FirstOrDefault(g => string.Equals(g.Name, term, StringComparison.OrdinalIgnoreCase));
 
-        if (IsDepotActive) ShowDepot();
-        else ShowLibrary();
+            if (matchedGenre != null)
+            {
+                LibraryViewModel.SearchText = string.Empty;
+                LibraryViewModel.SelectedGenre = matchedGenre;
+            }
+            else
+            {
+                LibraryViewModel.SelectedGenre = null;
+                LibraryViewModel.SearchText = term;
+            }
+
+            ShowLibrary();
+        }
+    }
+
+    private void OnDepotBrowseByGenre(object? sender, string genreName)
+    {
+        GamesListViewModel.ClearFiltersCommand.Execute(null);
+        var genre = GamesListViewModel.AvailableGenres
+            .FirstOrDefault(g => string.Equals(g.Name, genreName, StringComparison.OrdinalIgnoreCase));
+        if (genre != null)
+            GamesListViewModel.SelectedGenre = genre;
+        NavigateToGamesListFromDepot();
+    }
+
+    private void OnDepotBrowseByTag(object? sender, string tagName)
+    {
+        GamesListViewModel.ClearFiltersCommand.Execute(null);
+        GamesListViewModel.SelectedTag = GamesListViewModel.AvailableTags
+            .FirstOrDefault(t => string.Equals(t, tagName, StringComparison.OrdinalIgnoreCase));
+        NavigateToGamesListFromDepot();
+    }
+
+    private void OnDepotBrowseByCollection(object? sender, string collectionName)
+    {
+        GamesListViewModel.ClearFiltersCommand.Execute(null);
+        // Group by collection so the user sees games sorted into that collection
+        GamesListViewModel.SelectedGroupBy = LANCommander.Launcher.Settings.Enums.GroupBy.Collection;
+        NavigateToGamesListFromDepot();
+    }
+
+    private void OnDepotBrowseAll(object? sender, EventArgs e)
+    {
+        GamesListViewModel.ClearFiltersCommand.Execute(null);
+        NavigateToGamesListFromDepot();
+    }
+
+    /// <summary>Navigate to the full games list while staying in depot context.</summary>
+    private void NavigateToGamesListFromDepot()
+    {
+        IsDepotActive = true;
+        _depotReturnView = DepotViewModel;
+        ContentView = GamesListViewModel;
     }
 
     private void OnBackFromGameDetail(object? sender, EventArgs e)
     {
         if (IsDepotActive)
-            ShowDepot();
+            ContentView = _depotReturnView ?? DepotViewModel;
         else
             ShowLibrary();
     }
@@ -329,6 +406,7 @@ public partial class ShellViewModel : ViewModelBase
     {
         await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
+        await DepotViewModel.LoadAsync();
     }
 
     private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
@@ -337,6 +415,7 @@ public partial class ShellViewModel : ViewModelBase
     {
         await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
+        await DepotViewModel.LoadAsync();
 
         if (GameDetailViewModel.Id == gameId)
             await GameDetailViewModel.RefreshInstallStatusAsync();

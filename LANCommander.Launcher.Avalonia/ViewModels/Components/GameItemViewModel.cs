@@ -57,6 +57,12 @@ public partial class GameItemViewModel : ViewModelBase
     private string? _coverPath;
 
     [ObservableProperty]
+    private string? _heroPath;
+
+    [ObservableProperty]
+    private string? _logoPath;
+
+    [ObservableProperty]
     private bool _hasCover;
 
     [ObservableProperty]

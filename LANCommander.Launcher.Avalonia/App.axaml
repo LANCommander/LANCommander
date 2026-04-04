@@ -8,6 +8,7 @@
         <FluentTheme />
 
         <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/LANCommander.axaml" />
+        <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/Carousel.axaml" />
         
         <!-- Global control defaults -->
         <Style Selector="Button">

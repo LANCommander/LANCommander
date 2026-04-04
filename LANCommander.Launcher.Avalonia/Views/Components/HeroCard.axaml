@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.HeroCard"
+             x:DataType="vmComponents:GameItemViewModel"
+             ClipToBounds="False">
+
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Button.HeroCard">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.hero-card:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.03)" />
+        </Style>
+    </UserControl.Styles>
+
+    <Button Classes="HeroCard"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            Command="{Binding $parent[local:HeroCard].Command}"
+            CommandParameter="{Binding $parent[local:HeroCard].CommandParameter}">
+        <Panel>
+            <!-- Background: hero image -->
+            <Image Source="{Binding HeroPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                   Stretch="UniformToFill"
+                   IsVisible="{Binding HeroPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- Fallback: cover blurred as background when no hero -->
+            <Panel IsVisible="{Binding HeroPath, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+                <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                       Stretch="UniformToFill">
+                    <Image.Effect>
+                        <BlurEffect Radius="20" />
+                    </Image.Effect>
+                </Image>
+                <Border Background="#55000000" />
+            </Panel>
+
+            <!-- Bottom gradient -->
+            <Border VerticalAlignment="Bottom" Height="100" IsHitTestVisible="False">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#00000000" Offset="0" />
+                        <GradientStop Color="#EE000000" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- Logo (bottom-left) -->
+            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                   HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                   MaxWidth="190" MaxHeight="72"
+                   Margin="14,0,0,14"
+                   Stretch="Uniform"
+                   IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- Title fallback when no logo -->
+            <TextBlock Text="{Binding Title}"
+                       HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                       Margin="14,0,14,14"
+                       FontSize="15" FontWeight="Bold" Foreground="White"
+                       TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+
+            <!-- In-library badge -->
+            <Border Background="#CC000000" CornerRadius="4"
+                    Padding="5,2" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="6" IsVisible="{Binding ShowInLibraryBadge}">
+                <controls:Icon Type="Regular" Value="Check" Width="9" Height="9" />
+            </Border>
+        </Panel>
+    </Button>
+
+</UserControl>

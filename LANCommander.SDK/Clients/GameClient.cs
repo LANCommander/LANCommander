@@ -209,9 +209,9 @@ namespace LANCommander.SDK.Services
                     .ToList();
             }
 
-            if (manifests.Any(m => m.MultiplayerModes.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby)))
+            if (manifests.Any(m => m.MultiplayerModes?.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
             {
-                var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
+                var primaryAction = actions.First(a => a.IsPrimaryAction);
 
                 try
                 {

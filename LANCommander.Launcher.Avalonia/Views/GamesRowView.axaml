@@ -12,12 +12,12 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <Style Selector="ListBox.games-list">
+        <Style Selector="ListBox.GamesList">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
         </Style>
-        <Style Selector="ListBox.games-list ListBoxItem">
+        <Style Selector="ListBox.GamesList ListBoxItem">
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0" />
             <Setter Property="Background" Value="Transparent" />
@@ -33,22 +33,22 @@
                 </ControlTemplate>
             </Setter>
         </Style>
-        <Style Selector="ListBox.games-list ListBoxItem">
+        <Style Selector="ListBox.GamesList ListBoxItem">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="Margin" Value="8,2" />
         </Style>
-        <Style Selector="ListBox.games-list ListBoxItem:pointerover Border.list-row-inner">
+        <Style Selector="ListBox.GamesList ListBoxItem:pointerover Border.ListRowInner">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
         </Style>
-        <Style Selector="ListBox.games-list ListBoxItem:selected Border.list-row-inner">
+        <Style Selector="ListBox.GamesList ListBoxItem:selected Border.ListRowInner">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
             <Setter Property="BorderThickness" Value="2" />
         </Style>
     </UserControl.Styles>
 
-    <ListBox Classes="games-list"
+    <ListBox Classes="GamesList"
              ItemsSource="{Binding Games}"
              SelectedItem="{Binding SelectedGame}"
              Padding="0,56,0,0"
@@ -67,7 +67,7 @@
         </ListBox.ItemsPanel>
         <ListBox.ItemTemplate>
             <DataTemplate DataType="vmComponents:GameItemViewModel">
-                <Border Classes="list-row-inner" Padding="8,6" CornerRadius="0"
+                <Border Classes="ListRowInner" Padding="8,6" CornerRadius="0"
                         Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"

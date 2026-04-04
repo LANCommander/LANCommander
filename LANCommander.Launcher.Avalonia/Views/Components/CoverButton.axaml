@@ -12,7 +12,7 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <Style Selector="Button.cover-button">
+        <Style Selector="Button.CoverButton">
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -26,10 +26,10 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="Button.cover-button:pointerover">
+        <Style Selector="Button.CoverButton:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.1)" />
         </Style>
-        <Style Selector="Button.cover-button Border.cover-shadow">
+        <Style Selector="Button.CoverButton Border.CoverShadow">
             <Setter Property="BoxShadow" Value="0 0 64 32 #FF000000" />
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
@@ -40,10 +40,10 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="Button.cover-button:pointerover Border.cover-shadow">
+        <Style Selector="Button.CoverButton:pointerover Border.CoverShadow">
             <Setter Property="Opacity" Value="1" />
         </Style>
-        <Style Selector="Button.cover-button Border.glass-overlay">
+        <Style Selector="Button.CoverButton Border.GlassOverlay">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
                 <Setter.Value>
@@ -53,12 +53,12 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="Button.cover-button:pointerover Border.glass-overlay">
+        <Style Selector="Button.CoverButton:pointerover Border.GlassOverlay">
             <Setter Property="Opacity" Value="1" />
         </Style>
     </UserControl.Styles>
 
-    <Button Classes="cover-button"
+    <Button Classes="CoverButton"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             HorizontalContentAlignment="Stretch"
@@ -67,12 +67,12 @@
             Command="{Binding $parent[local:CoverButton].Command}"
             CommandParameter="{Binding $parent[local:CoverButton].CommandParameter}">
         <Panel>
-            <Border Classes="cover-shadow"
+            <Border Classes="CoverShadow"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Background="Transparent"
                     IsHitTestVisible="False" />
-            <Border Classes="cover-inner"
+            <Border Classes="CoverInner"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     CornerRadius="0" ClipToBounds="True">
@@ -92,7 +92,7 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Margin="10" Foreground="White" />
                     </Border>
-                    <Border Classes="glass-overlay" IsHitTestVisible="False" CornerRadius="0">
+                    <Border Classes="GlassOverlay" IsHitTestVisible="False" CornerRadius="0">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
                                 <GradientStop Color="#45FFFFFF" Offset="0" />

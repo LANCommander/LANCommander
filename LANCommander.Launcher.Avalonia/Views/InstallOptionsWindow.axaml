@@ -91,7 +91,7 @@
                         Click="Cancel_Click" />
                 <Button Content="Install"
                         Width="90"
-                        Classes="accent"
+                        Classes="Primary"
                         Click="Confirm_Click" />
             </StackPanel>
         </Border>

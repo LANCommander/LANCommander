@@ -59,10 +59,7 @@ public partial class ServerSelectionViewModel : ViewModelBase
             
             if (canConnect)
             {
-                _settingsProvider.Update(s =>
-                {
-                    s.Authentication.ServerAddress = new Uri(ServerAddress);
-                });
+                ServerAddress = _connectionClient.GetServerAddress().ToString();
                 
                 StatusMessage = "Connected!";
                 ServerConnected?.Invoke(this, EventArgs.Empty);

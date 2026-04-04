@@ -1067,6 +1067,9 @@ namespace LANCommander.SDK.Services
 
                 _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
 
+                _installProgress.Status = InstallStatus.VerifyingFiles;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
+
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
@@ -1080,8 +1083,11 @@ namespace LANCommander.SDK.Services
 
                         if (File.Exists(localFile))
                         {
-                            using (FileStream fs = File.Open(localFile, FileMode.Open))
+                            crc = await Task.Run(async () =>
                             {
+                                uint localCrc = 0;
+
+                                using var fs = File.Open(localFile, FileMode.Open, FileAccess.Read, FileShare.Read);
                                 var buffer = new byte[65536];
 
                                 while (true)
@@ -1091,9 +1097,11 @@ namespace LANCommander.SDK.Services
                                     if (count == 0)
                                         break;
 
-                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                                    localCrc = Crc32Algorithm.Append(localCrc, buffer, 0, count);
                                 }
-                            }
+
+                                return localCrc;
+                            }, cancellationToken);
                         }
 
                         fileManifest.AppendLine($"{_reader.Entry.Key} | {_reader.Entry.Crc.ToString("X")}");

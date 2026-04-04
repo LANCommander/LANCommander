@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
         xmlns:local="clr-namespace:LANCommander.Launcher.Avalonia.Controls">
 
     <Style Selector="local|CarouselControl">
@@ -20,7 +21,7 @@
                                VerticalAlignment="Center"
                                Margin="0,0,0,10"
                                IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <Button Grid.Row="0" Grid.Column="2"
+                    <Button Grid.Row="0" Grid.Column="1"
                             Content="See all →"
                             Classes="Text"
                             Command="{TemplateBinding SeeAllCommand}"
@@ -28,16 +29,18 @@
                             Padding="8,4"
                             FontSize="12"
                             Opacity="0.6"
+                            HorizontalAlignment="Right"
                             Margin="0,0,0,10" />
 
                     <!-- Row 1: left button | clipped items | right button -->
                     <Button x:Name="PART_LeftButton"
                             Grid.Row="1" Grid.Column="0"
                             Classes="Text"
-                            Content="◀"
                             HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Padding="8,6" />
+                            VerticalAlignment="Stretch"
+                            Padding="8,6">
+                        <controls:Icon Type="Regular" Value="CaretLeft" Width="16" Height="16" />
+                    </Button>
 
                     <Panel x:Name="PART_ClipPanel" Grid.Row="1" Grid.Column="1" ClipToBounds="False">
                         <Border x:Name="PART_ItemsContainer">
@@ -58,10 +61,11 @@
                     <Button x:Name="PART_RightButton"
                             Grid.Row="1" Grid.Column="2"
                             Classes="Text"
-                            Content="▶"
                             HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Padding="8,6" />
+                            VerticalAlignment="Stretch"
+                            Padding="8,6">
+                        <controls:Icon Type="Regular" Value="CaretRight" Width="16" Height="16" Color="White" />
+                    </Button>
 
                 </Grid>
             </ControlTemplate>

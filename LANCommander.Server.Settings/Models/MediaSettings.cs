@@ -79,6 +79,35 @@ namespace LANCommander.Server.Settings.Models;
                     MaxSize = new ThumbnailSize(1920, 1920),
                 }
             },
+            new()
+            {
+                Type = MediaType.Grid,
+                MaxFileSize = 6 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    MinSize = new ThumbnailSize(460, 215),
+                    MaxSize = new ThumbnailSize(920, 430),
+                }
+            },
+            new()
+            {
+                Type = MediaType.Screenshot,
+                MaxFileSize = 8 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    MinSize = new ThumbnailSize(480, 270),
+                    MaxSize = new ThumbnailSize(1920, 1080),
+                }
+            },
+            new()
+            {
+                Type = MediaType.Video,
+                MaxFileSize = 500 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    Enabled = false
+                }
+            },
         ];
         
         public MediaTypeSettings? GetMediaTypeConfig(MediaType type) => MediaTypes.FirstOrDefault(x => x.Type == type);

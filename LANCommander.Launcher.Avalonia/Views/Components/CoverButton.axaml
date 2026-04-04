@@ -105,7 +105,7 @@
                             Padding="4,2" HorizontalAlignment="Right"
                             VerticalAlignment="Top" Margin="4"
                             IsVisible="{Binding ShowInLibraryBadge}">
-                        <PathIcon Data="{StaticResource PhosphorCheck}" Width="10" Height="10" Foreground="White" />
+                        <PathIcon Data="{StaticResource Regular_Check}" Width="10" Height="10" Foreground="White" />
                     </Border>
                 </Panel>
             </Border>

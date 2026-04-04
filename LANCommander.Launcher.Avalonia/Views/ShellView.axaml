@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
              x:DataType="vm:ShellViewModel">
 
@@ -17,6 +18,9 @@
         <!-- ── Main Content ──────────────────────────────────────────── -->
         <ContentControl Grid.Row="0" Content="{Binding ContentView}">
             <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:DepotViewModel">
+                    <views:DepotView />
+                </DataTemplate>
                 <DataTemplate DataType="vm:GamesListViewModel">
                     <views:GamesListView />
                 </DataTemplate>
@@ -51,9 +55,7 @@
                             Classes="Text"
                             IsVisible="{Binding !IsDepotActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="{StaticResource PhosphorStorefront}"
-                                      Width="14" Height="14"
-                                      VerticalAlignment="Center" />
+                            <controls:Icon Type="Regular" Value="Storefront" Width="14" Height="14" VerticalAlignment="Center" />
                             <TextBlock Text="Depot" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -61,9 +63,7 @@
                             Classes="Text"
                             IsVisible="{Binding !IsLibraryActive}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="{StaticResource PhosphorBooks}"
-                                      Width="14" Height="14"
-                                      VerticalAlignment="Center" />
+                            <controls:Icon Type="Regular" Value="Books" Width="14" Height="14" VerticalAlignment="Center" />
                             <TextBlock Text="Library" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -88,10 +88,7 @@
                                     Background="{DynamicResource SystemAccentColor}"
                                     Margin="0,0,10,0"
                                     VerticalAlignment="Center">
-                                <PathIcon Data="{StaticResource PhosphorArrowCircleDown}"
-                                          Width="16" Height="16"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" />
+                                <controls:Icon Type="Regular" Value="ArrowCircleDown" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
 
                             <!-- Title + time remaining -->
@@ -134,9 +131,7 @@
                         <Button Command="{Binding ShowDownloadQueueCommand}"
                                 Classes="Text">
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <PathIcon Data="{StaticResource PhosphorDownloadSimple}"
-                                          Width="13" Height="13"
-                                          VerticalAlignment="Center" />
+                                <controls:Icon Type="Regular" Value="DownloadSimple" Width="13" Height="13" VerticalAlignment="Center" />
                                 <TextBlock Text="Downloads" FontSize="13" VerticalAlignment="Center" />
                                 <Border Background="{DynamicResource SystemAccentColor}"
                                         CornerRadius="8"

@@ -87,7 +87,7 @@
                                 <TextBlock Classes="StoppingState" IsVisible="{Binding IsStopping}" Text="Stopping" />
                                 <!-- Hidden by default; fades in on hover via CSS -->
                                 <StackPanel Classes="Stop" Orientation="Horizontal" Spacing="8">
-                                    <PathIcon Data="{StaticResource PhosphorStop}"
+                                    <PathIcon Data="{StaticResource Regular_Stop}"
                                               Width="14" Height="14" />
                                     <TextBlock Text="Stop" FontWeight="SemiBold" />
                                 </StackPanel>

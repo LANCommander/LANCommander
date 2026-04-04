@@ -4,6 +4,7 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
              xmlns:converters="clr-namespace:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesGroupedView"
              x:DataType="vm:GamesCollectionViewModel">
     
@@ -87,7 +88,7 @@
                                                                 Spacing="8" VerticalAlignment="Center">
                                                         <Border Background="#CC000000" CornerRadius="0" Padding="4,2"
                                                                 IsVisible="{Binding ShowInLibraryBadge}">
-                                                            <PathIcon Data="{StaticResource PhosphorCheck}" Width="10" Height="10" Foreground="White" />
+                                                            <controls:Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
                                                         </Border>
                                                         <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
                                                                    FontSize="12" Opacity="0.55" VerticalAlignment="Center" />

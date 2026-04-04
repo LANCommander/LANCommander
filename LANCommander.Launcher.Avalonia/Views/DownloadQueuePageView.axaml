@@ -47,7 +47,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     IsVisible="{Binding !HasItems}">
-            <PathIcon Data="{StaticResource PhosphorArrowCircleDown}"
+            <PathIcon Data="{StaticResource Regular_ArrowCircleDown}"
                       Width="48" Height="48"
                       HorizontalAlignment="Center"
                       Opacity="0.3" />

@@ -23,102 +23,22 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
     </Application.Styles>
-
-    <!-- Phosphor Icons (https://phosphoricons.com) — Regular weight, 256×256 viewBox -->
+    
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Bold.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/DuoTone.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Fill.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Light.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Regular.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Thin.axaml" />
                 <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Localization/en-US.axaml" />
                 <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/ColorPalette.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <converters:MultiplyConverter x:Key="MultiplyConverter" />
             <converters:StringFormatConverter x:Key="StringFormatConverter" />
-
-        <!-- ArrowClockwise — single refresh arrow -->
-        <StreamGeometry x:Key="PhosphorArrowClockwise">
-            M213.66,101.66l-32-32a8,8,0,0,0-11.32,11.32L189.41,89.9A88.14,88.14,0,1,0,216,128a8,8,0,0,0-16,0,72.09,72.09,0,1,1-20.54-50.34l-18.68,18.68a8,8,0,0,0,5.66,13.65,8,8,0,0,0,5.66-2.34l32-32A8,8,0,0,0,213.66,101.66Z
-        </StreamGeometry>
-
-        <!-- ArrowsClockwise — two-arrow sync / reload -->
-        <StreamGeometry x:Key="PhosphorArrowsClockwise">
-            M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43C91,49.88,57.23,69.6,40.36,101.27a8,8,0,0,1-14-7.54C45.63,58.84,84.5,33.93,125.93,34A95.43,95.43,0,0,1,193.65,61.4L208,75.31V48a8,8,0,0,1,16,0ZM216,154.73a8,8,0,0,0-10.63,3.27,79.59,79.59,0,0,0-56.3,39.3,80.44,80.44,0,0,0-69.07-23.43L65.31,160H96a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V172.69l14.35,13.91A96.44,96.44,0,0,0,130,222c1.3,0,2.61,0,3.91-.1a95.59,95.59,0,0,0,85.36-57.54A8,8,0,0,0,216,154.73Z
-        </StreamGeometry>
-
-        <!-- SquaresFour — grid view -->
-        <StreamGeometry x:Key="PhosphorSquaresFour">
-            M104,44H60A16,16,0,0,0,44,60v44a16,16,0,0,0,16,16h44a16,16,0,0,0,16-16V60A16,16,0,0,0,104,44Zm0,60H60V60h44ZM196,44H152a16,16,0,0,0-16,16v44a16,16,0,0,0,16,16h44a16,16,0,0,0,16-16V60A16,16,0,0,0,196,44Zm0,60H152V60h44Zm-92,48H60a16,16,0,0,0-16,16v44a16,16,0,0,0,16,16h44a16,16,0,0,0,16-16V168A16,16,0,0,0,104,152Zm0,60H60V168h44Zm92-60H152a16,16,0,0,0-16,16v44a16,16,0,0,0,16,16h44a16,16,0,0,0,16-16V168A16,16,0,0,0,196,152Zm0,60H152V168h44Z
-        </StreamGeometry>
-
-        <!-- Rows — list view -->
-        <StreamGeometry x:Key="PhosphorRows">
-            M228,96a16,16,0,0,1-16,16H44A16,16,0,0,1,44,80H212A16,16,0,0,1,228,96Zm-16,48H44a16,16,0,0,0,0,32H212a16,16,0,0,0,0-32Z
-        </StreamGeometry>
-
-        <!-- ArrowsHorizontal — horizontal / shelf view -->
-        <StreamGeometry x:Key="PhosphorArrowsHorizontal">
-            M201.66,133.66l-32,32a8,8,0,0,1-11.32-11.32L174.69,138H81.31l16.35,16.34A8,8,0,0,1,86.34,165.66l-32-32a8,8,0,0,1,0-11.32l32-32A8,8,0,1,1,97.66,101.66L81.31,118H174.69l-16.35-16.34A8,8,0,1,1,169.66,90.34l32,32A8,8,0,0,1,201.66,133.66Z
-        </StreamGeometry>
-
-        <!-- ArrowUp — sort ascending -->
-        <StreamGeometry x:Key="PhosphorArrowUp">
-            M207.39,123.06A8,8,0,0,1,200,128H56a8,8,0,0,1-5.66-13.66l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,207.39,123.06Z
-        </StreamGeometry>
-
-        <!-- ArrowDown — sort descending -->
-        <StreamGeometry x:Key="PhosphorArrowDown">
-            M213.66,141.66l-72,72a8,8,0,0,1-11.32,0l-72-72A8,8,0,0,1,64,128H200a8,8,0,0,1,5.66,13.66Z
-        </StreamGeometry>
-
-        <!-- DownloadSimple — downloads -->
-        <StreamGeometry x:Key="PhosphorDownloadSimple">
-            M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H80a8,8,0,0,1,0,16H32v64H224V136H176a8,8,0,0,1,0-16h48A16,16,0,0,1,240,136Zm-117.66-2.34a8,8,0,0,0,11.32,0l48-48a8,8,0,0,0-11.32-11.32L136,108.69V24a8,8,0,0,0-16,0v84.69L85.66,74.34A8,8,0,0,0,74.34,85.66Z
-        </StreamGeometry>
-
-        <!-- User — profile / avatar fallback (fill weight) -->
-        <StreamGeometry x:Key="PhosphorUser">
-            M172,120a44,44,0,1,1-44-44A44.05,44.05,0,0,1,172,120Zm60,72a8,8,0,0,1-8,8H32a8,8,0,0,1-6.34-12.9C40.87,166.47,63.1,149.3,90.36,141a72,72,0,0,0,75.28,0C192.9,149.3,215.13,166.47,230.34,187.1A8,8,0,0,1,232,192Z
-        </StreamGeometry>
-
-        <!-- ArrowCircleDown — download queue indicator (fill weight) -->
-        <StreamGeometry x:Key="PhosphorArrowCircleDown">
-            M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm40,114.34-34.34,34.34a8,8,0,0,1-11.32,0L88,138.34A8,8,0,0,1,99.32,127l20.68,20.69V88a8,8,0,0,1,16,0v59.72l20.68-20.69A8,8,0,0,1,168,138.34Z
-        </StreamGeometry>
-
-        <!-- Storefront — depot navigation -->
-        <StreamGeometry x:Key="PhosphorStorefront">
-            M232,96a7.89,7.89,0,0,0-.3-2.2L217.35,43.6A16.07,16.07,0,0,0,202,32H54A16.07,16.07,0,0,0,38.65,43.6L24.31,93.8A7.89,7.89,0,0,0,24,96v16a40,40,0,0,0,16,32v64a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V144a40,40,0,0,0,16-32ZM54,48H202l11.42,40H42.58ZM216,112a24,24,0,0,1-48,0,8,8,0,0,0-16,0,24,24,0,0,1-48,0,8,8,0,0,0-16,0,24,24,0,0,1-48,0V104H216ZM152,208H104V176a4,4,0,0,1,4-4h40a4,4,0,0,1,4,4Zm48,0H168V176a20,20,0,0,0-20-20H108a20,20,0,0,0-20,20v32H56V151.43c2.61.38,5.29.57,8,.57a40.29,40.29,0,0,0,24-8,40,40,0,0,0,48,0,40,40,0,0,0,48,0,40.29,40.29,0,0,0,24-8,39.47,39.47,0,0,0,8-.57Z
-        </StreamGeometry>
-
-        <!-- Books — library navigation -->
-        <StreamGeometry x:Key="PhosphorBooks">
-            M239.12,174.86l-32-112A16,16,0,0,0,188.63,52L176,55.58V48a16,16,0,0,0-16-16H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H160a16,16,0,0,0,16-16v-7.58l12.63,3.59.37.09A16,16,0,0,0,204.2,187.5l34.92-12.64ZM160,208H48V48H160V208Zm56.37-25.71L176,194.42V176l16-4.56,22.57,6.41Z
-        </StreamGeometry>
-
-        <!-- X — close / clear -->
-        <StreamGeometry x:Key="PhosphorX">
-            M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z
-        </StreamGeometry>
-
-        <!-- FunnelSimple — filter / clear filters -->
-        <StreamGeometry x:Key="PhosphorFunnelSimple">
-            M232,72a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16H224A8,8,0,0,1,232,72Zm-56,56a8,8,0,0,0-8-8H88a8,8,0,0,0,0,16h80A8,8,0,0,0,176,128Zm-24,56a8,8,0,0,0-8-8H112a8,8,0,0,0,0,16h32A8,8,0,0,0,152,184Z
-        </StreamGeometry>
-
-        <!-- Check — "in library" badge indicator -->
-        <StreamGeometry x:Key="PhosphorCheck">
-            M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z
-        </StreamGeometry>
-
-        <!-- Stop (fill) — stop game -->
-        <StreamGeometry x:Key="PhosphorStop">
-            M208,48H48A16,16,0,0,0,32,64V192a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V64A16,16,0,0,0,208,48Z
-        </StreamGeometry>
-
-        <!-- Circle (fill) — running indicator dot -->
-        <StreamGeometry x:Key="PhosphorCircle">
-            M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Z
-        </StreamGeometry>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

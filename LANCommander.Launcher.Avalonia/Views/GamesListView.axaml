@@ -3,6 +3,7 @@
             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
             xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
             xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
+            xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
             x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
             x:DataType="vm:GamesCollectionViewModel">
 
@@ -41,8 +42,8 @@
                                     Command="{Binding ToggleSortDirectionCommand}"
                                     Padding="8,6" Margin="4,0,0,0">
                                 <Panel>
-                                    <PathIcon Data="{StaticResource PhosphorArrowUp}"   Width="12" Height="12" IsVisible="{Binding SortAscending}" />
-                                    <PathIcon Data="{StaticResource PhosphorArrowDown}" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
+                                    <controls:Icon Type="Regular" Value="ArrowUp" Width="12" Height="12" IsVisible="{Binding SortAscending}" />
+                                    <controls:Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
                                 </Panel>
                             </Button>
                         </Grid>
@@ -139,19 +140,19 @@
                                     ToolTip.Tip="Grid view"
                                     Classes.active="{Binding IsGridView}"
                                     Click="GridViewButton_Click">
-                                <PathIcon Data="{StaticResource PhosphorSquaresFour}" Width="14" Height="14" />
+                                <controls:Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
                             </Button>
                             <Button Background="Transparent" BorderThickness="0" Padding="8,6"
                                     ToolTip.Tip="List view"
                                     Classes.active="{Binding IsListView}"
                                     Click="ListViewButton_Click">
-                                <PathIcon Data="{StaticResource PhosphorRows}" Width="14" Height="14" />
+                                <controls:Icon Type="Regular" Value="Rows" Width="14" Height="14" />
                             </Button>
                             <Button Background="Transparent" BorderThickness="0" Padding="8,6"
                                     ToolTip.Tip="Horizontal view"
                                     Classes.active="{Binding IsHorizontalView}"
                                     Click="HorizontalViewButton_Click">
-                                <PathIcon Data="{StaticResource PhosphorArrowsHorizontal}" Width="14" Height="14" />
+                                <controls:Icon Type="Regular" Value="ArrowsHorizontal" Width="14" Height="14" />
                             </Button>
                         </StackPanel>
                     </Border>
@@ -163,7 +164,7 @@
                                   Padding="8,6"
                                   Margin="0,0,8,0"
                                   ToolTip.Tip="Advanced filters">
-                        <PathIcon Data="{StaticResource PhosphorFunnelSimple}" Width="14" Height="14" />
+                        <controls:Icon Type="Regular" Value="FunnelSimple" Width="14" Height="14" />
                     </ToggleButton>
 
                     <Button Grid.Column="3"

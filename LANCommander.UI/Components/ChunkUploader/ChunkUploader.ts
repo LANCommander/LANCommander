@@ -1,5 +1,4 @@
 ﻿import { Chunk } from './Chunk';
-import { UploadInitResponse } from './UploadInitResponse';
 import { UploadInitRequest } from './UploadInitRequest';
 import axios, { AxiosProgressEvent } from 'axios';
 
@@ -31,27 +30,20 @@ export class ChunkUploader {
 
     async Init(fileInputId: string, storageLocationId: string, objectKey: string)
     {
-        debugger;
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
         this.ProgressRate = document.querySelector('.uploader-progress-rate');
 
         if (objectKey == undefined || objectKey == "") {
-            try {
-                var request = new UploadInitRequest();
+            const request = new UploadInitRequest();
 
-                request.storageLocationId = storageLocationId;
-                request.key = objectKey;
+            request.storageLocationId = storageLocationId;
+            request.key = objectKey;
 
-                var response = await axios.post<string>(this.InitRoute, request);
+            const response = await axios.post<string>(this.InitRoute, request);
 
-                this.Key = response.data;
-            }
-            catch (ex) {
-                this.Key = null;
-                console.error(`Could not init upload: ${ex}`);
-            }
+            this.Key = response.data;
         }
         else
             this.Key = objectKey;
@@ -72,13 +64,14 @@ export class ChunkUploader {
 
             dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
         } catch (ex) {
-            dotNetObject.invokeMethodAsync('JSOnUploadError', ex.message);
+            const message = ex instanceof Error ? ex.message : String(ex);
+            dotNetObject.invokeMethodAsync('JSOnUploadError', message);
             console.error(`Could not chunk upload: ${ex}`);
         }
     }
 
     async UploadChunk(chunk: Chunk) {
-        let formData = new FormData();
+        const formData = new FormData();
 
         formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
         formData.append('start', chunk.Start.toString());
@@ -89,7 +82,7 @@ export class ChunkUploader {
         console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
 
         try {
-            let chunkResponse = await axios({
+            await axios({
                 method: "post",
                 url: this.ChunkRoute,
                 data: formData,
@@ -110,7 +103,7 @@ export class ChunkUploader {
 
     GetChunks() {
         for (let currentChunk = 1; currentChunk <= this.TotalChunks; currentChunk++) {
-            let start = (currentChunk - 1) * this.MaxChunkSize;
+            const start = (currentChunk - 1) * this.MaxChunkSize;
             let end = (currentChunk * this.MaxChunkSize) - 1;
 
             if (currentChunk == this.TotalChunks)
@@ -121,12 +114,15 @@ export class ChunkUploader {
     }
 
     UpdateProgressBar(chunkIndex: number, progressEvent: AxiosProgressEvent) {
-        var percent = ((1 / this.TotalChunks) * progressEvent.progress) + ((chunkIndex - 1) / this.TotalChunks);
+        const percent = ((1 / this.TotalChunks) * progressEvent.progress) + ((chunkIndex - 1) / this.TotalChunks);
 
-        this.ProgressBar.style.strokeDasharray = percent * 295.31 + 'px, 295.31px';
-        this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
+        if (this.ProgressBar)
+            this.ProgressBar.style.strokeDasharray = percent * 295.31 + 'px, 295.31px';
 
-        if (progressEvent.rate > 0)
+        if (this.ProgressText)
+            this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
+
+        if (this.ProgressRate && progressEvent.rate > 0)
             this.ProgressRate.innerText = this.GetHumanFileSize(progressEvent.rate, false, 1) + '/s';
     }
 

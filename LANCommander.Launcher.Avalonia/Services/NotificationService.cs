@@ -23,7 +23,7 @@ public class NotificationService(
     ILogger<NotificationService> logger,
     IServiceProvider serviceProvider)
 {
-    public void NotifyInstallComplete(string gameTitle, string? coverImagePath, Guid gameId)
+    public void NotifyInstallComplete(string gameTitle, string? iconImagePath, string? gridImagePath, Guid gameId)
     {
         if (!notificationService.IsSupported)
         {
@@ -33,9 +33,15 @@ public class NotificationService(
 
         try
         {
-            var request = NotificationBuilder.Create(Localize("InstallComplete"))
-                .WithBody(Localize("GameReadyToPlay", gameTitle))
-                .WithImage(coverImagePath)
+            var builder = NotificationBuilder.Create(Localize("InstallComplete"))
+                .WithBody(Localize("GameReadyToPlay", gameTitle));
+
+            if (gridImagePath != null)
+                builder = builder.WithHeroImage(gridImagePath);
+            else if (iconImagePath != null)
+                builder = builder.WithImage(iconImagePath);
+
+            var request = builder
                 .AddButton(Localize("Play"), _ => Dispatcher.UIThread.InvokeAsync(() => NavigateAndPlayAsync(gameId)))
                 .AddButton(Localize("ViewInLibrary"), _ => Dispatcher.UIThread.InvokeAsync(() => NavigateToGameAsync(gameId)))
                 .Build();

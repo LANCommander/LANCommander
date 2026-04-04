@@ -165,24 +165,28 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         _taskbarProgressService.ClearProgress();
 
-        // Resolve cover art path for the notification
-        string? coverPath = null;
+        // Resolve icon and grid art paths for the notification
+        string? iconPath = null;
+        string? gridPath = null;
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
-            
-            var cover = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Cover);
-            
-            if (cover != null && mediaService.FileExists(cover))
-                coverPath = mediaService.GetImagePath(cover);
+
+            var icon = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Icon);
+            if (icon != null && mediaService.FileExists(icon))
+                iconPath = mediaService.GetImagePath(icon);
+
+            var grid = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Grid);
+            if (grid != null && mediaService.FileExists(grid))
+                gridPath = mediaService.GetImagePath(grid);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to resolve cover for notification");
+            _logger.LogWarning(ex, "Failed to resolve media for notification");
         }
 
-        _notificationService.NotifyInstallComplete(game.Title ?? "Game", coverPath, game.Id);
+        _notificationService.NotifyInstallComplete(game.Title ?? "Game", iconPath, gridPath, game.Id);
 
         Dispatcher.UIThread.Post(() =>
         {

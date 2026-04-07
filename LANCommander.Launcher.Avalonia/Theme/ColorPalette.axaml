@@ -137,6 +137,11 @@
   <Color x:Key="ButtonGlassHoverBg">#1AFFFFFF</Color>
   <Color x:Key="ButtonGlassPressedBg">#2AFFFFFF</Color>
 
+  <!-- Button - Glass-Back -->
+  <Color x:Key="ButtonGlassBackBg">#CC111111</Color>
+  <Color x:Key="ButtonGlassBackHoverBg">#EE111111</Color>
+  <Color x:Key="ButtonGlassBackPressedBg">#FF111111</Color>
+
   <!-- Button - Shared -->
   <Color x:Key="ButtonDisabledBg">#14FFFFFF</Color>
   <Color x:Key="ButtonDisabledText">#40FFFFFF</Color>

@@ -462,14 +462,27 @@
 
   <Style Selector="Button.Glass">
     <Setter Property="Background" Value="{DynamicResource ButtonGlassBgBrush}" />
-    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.Glass:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource ButtonGlassHoverBgBrush}" />
   </Style>
   <Style Selector="Button.Glass:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource ButtonGlassPressedBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.Glass-Back">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassBackBg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4"/>
+  </Style>
+  <Style Selector="Button.Glass-Back:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassBackHoverBg}"/>
+  </Style>
+  <Style Selector="Button.Glass-Back:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassBackPressedBg}"/>
   </Style>
 
   <!-- ===================================================== -->

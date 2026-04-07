@@ -70,12 +70,14 @@
                         </Border>
 
                         <!-- Back button (overlaid at top-left, below title bar) -->
-                        <Button HorizontalAlignment="Left"
+                        <Button Classes="Glass-Back" 
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Margin="16,48,0,0"
                                 Content="{Binding BackLabel}"
                                 Command="{Binding GoBackCommand}"
-                                Classes="Glass" />
+                                ZIndex="2"
+                                IsHitTestVisible="True"/>
 
                         <!-- Logo (bottom-left) -->
                         <Border HorizontalAlignment="Stretch"

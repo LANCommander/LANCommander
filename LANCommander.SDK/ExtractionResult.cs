@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
-    internal class ExtractionResult
+    public class ExtractionResult
     {
         public bool Success { get; set; }
         public bool Canceled { get; set; }

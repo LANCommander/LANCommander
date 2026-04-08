@@ -20,6 +20,14 @@
                 <DataTemplate DataType="vm:DepotViewModel">
                     <views:DepotView />
                 </DataTemplate>
+                <DataTemplate DataType="vm:DepotBrowseViewModel">
+                    <views:DepotBrowseView />
+                </DataTemplate>
+                <!-- DepotGameDetailViewModel must appear before GameDetailViewModel
+                     so the more-specific type is matched first. -->
+                <DataTemplate DataType="vm:DepotGameDetailViewModel">
+                    <views:GameDetailView />
+                </DataTemplate>
                 <DataTemplate DataType="vm:GamesListViewModel">
                     <views:GamesListView />
                 </DataTemplate>

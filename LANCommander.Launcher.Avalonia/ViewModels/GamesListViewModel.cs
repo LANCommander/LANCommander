@@ -33,6 +33,9 @@ public partial class GamesListViewModel : GamesCollectionViewModel
 
     public override Task LoadGamesAsync() => LoadGamesInternalAsync();
 
+    /// <summary>Returns a snapshot of all loaded games for use by depot browse views.</summary>
+    public IEnumerable<GameItemViewModel> GetAllGames() => _allGames;
+
     [RelayCommand]
     private async Task LoadGamesInternalAsync()
     {

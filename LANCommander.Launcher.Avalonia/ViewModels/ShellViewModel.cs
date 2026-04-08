@@ -35,11 +35,13 @@ public partial class ShellViewModel : ViewModelBase
 
     public string ContentViewTitle => ContentView switch
     {
-        DepotViewModel _      => "Depot",
-        GamesListViewModel _  => "Depot",
-        LibraryViewModel _    => "My Library",
-        GameDetailViewModel gd => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
-        SettingsViewModel _   => "Settings",
+        DepotViewModel _         => "Depot",
+        DepotBrowseViewModel db  => db.BrowseTitle,
+        GamesListViewModel _     => "Depot",
+        LibraryViewModel _       => "My Library",
+        DepotGameDetailViewModel gd => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
+        GameDetailViewModel gd   => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
+        SettingsViewModel _      => "Settings",
         DownloadQueueViewModel _ => "Downloads",
         _ => string.Empty
     };
@@ -54,11 +56,22 @@ public partial class ShellViewModel : ViewModelBase
             oldDetail.PropertyChanged -= OnGameDetailPropertyChanged;
         if (newValue is GameDetailViewModel newDetail)
             newDetail.PropertyChanged += OnGameDetailPropertyChanged;
+
+        if (oldValue is DepotBrowseViewModel oldBrowse)
+            oldBrowse.PropertyChanged -= OnDepotBrowsePropertyChanged;
+        if (newValue is DepotBrowseViewModel newBrowse)
+            newBrowse.PropertyChanged += OnDepotBrowsePropertyChanged;
     }
 
     private void OnGameDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(GameDetailViewModel.Title))
+            OnPropertyChanged(nameof(ContentViewTitle));
+    }
+
+    private void OnDepotBrowsePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DepotBrowseViewModel.BrowseTitle))
             OnPropertyChanged(nameof(ContentViewTitle));
     }
 
@@ -73,16 +86,28 @@ public partial class ShellViewModel : ViewModelBase
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
 
     // Child view models
-    public DepotViewModel     DepotViewModel      { get; private set; } = null!;
-    public GamesListViewModel GamesListViewModel  { get; private set; } = null!;
-    public LibraryViewModel   LibraryViewModel    { get; private set; } = null!;
-    public GameDetailViewModel GameDetailViewModel { get; private set; } = null!;
-    public DownloadQueueViewModel DownloadQueue   { get; private set; } = null!;
-    public SettingsViewModel  SettingsViewModel   { get; private set; } = null!;
-    public ProfileViewModel   Profile             { get; private set; } = null!;
+    public DepotViewModel           DepotViewModel           { get; private set; } = null!;
+    public DepotBrowseViewModel     DepotBrowseViewModel     { get; private set; } = null!;
+    public DepotGameDetailViewModel DepotGameDetailViewModel { get; private set; } = null!;
+    public GamesListViewModel       GamesListViewModel       { get; private set; } = null!;
+    public LibraryViewModel         LibraryViewModel         { get; private set; } = null!;
+    public GameDetailViewModel      GameDetailViewModel      { get; private set; } = null!;
+    public DownloadQueueViewModel   DownloadQueue            { get; private set; } = null!;
+    public SettingsViewModel        SettingsViewModel        { get; private set; } = null!;
+    public ProfileViewModel         Profile                  { get; private set; } = null!;
+    public ChatWindowViewModel      Chat                     { get; private set; } = null!;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnreadChat))]
+    private int _chatUnreadCount;
+
+    public bool HasUnreadChat => ChatUnreadCount > 0;
 
     // Tracks previous view within the depot context for back navigation
     private ViewModelBase? _depotReturnView;
+
+    // Tracks the most recent depot browse filter so the view can be refreshed after library changes
+    private (string? Genre, string? Tag, string? Collection, string? Search) _lastDepotBrowseFilter;
 
     public event EventHandler? LogoutRequested;
 
@@ -105,28 +130,49 @@ public partial class ShellViewModel : ViewModelBase
     {
         _logger.LogInformation("ShellViewModel initializing... (Offline: {IsOffline})", IsOfflineMode);
 
-        DepotViewModel      = new DepotViewModel(_serviceProvider);
-        GamesListViewModel  = new GamesListViewModel(_serviceProvider);
-        LibraryViewModel    = new LibraryViewModel(_serviceProvider);
-        GameDetailViewModel = new GameDetailViewModel(_serviceProvider);
-        DownloadQueue       = new DownloadQueueViewModel(_serviceProvider);
-        SettingsViewModel   = new SettingsViewModel(_serviceProvider);
+        DepotViewModel           = new DepotViewModel(_serviceProvider);
+        DepotBrowseViewModel     = new DepotBrowseViewModel(_serviceProvider);
+        DepotGameDetailViewModel = new DepotGameDetailViewModel(_serviceProvider);
+        GamesListViewModel       = new GamesListViewModel(_serviceProvider);
+        LibraryViewModel         = new LibraryViewModel(_serviceProvider);
+        GameDetailViewModel      = new GameDetailViewModel(_serviceProvider);
+        DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
+        SettingsViewModel        = new SettingsViewModel(_serviceProvider);
         // Profile is already created in the constructor; reuse it here
 
-        DepotViewModel.IsOfflineMode      = IsOfflineMode;
-        GamesListViewModel.IsOfflineMode  = IsOfflineMode;
-        LibraryViewModel.IsOfflineMode    = IsOfflineMode;
-        GameDetailViewModel.IsOfflineMode = IsOfflineMode;
+        Chat = new ChatWindowViewModel(_serviceProvider);
+        await Chat.InitializeAsync();
+        Chat.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ChatWindowViewModel.TotalUnreadCount))
+                ChatUnreadCount = Chat.TotalUnreadCount;
+        };
 
-        DepotViewModel.GameSelected              += OnGameSelected;
-        DepotViewModel.SearchRequested           += OnSearchRequested;
-        DepotViewModel.BrowseByGenreRequested    += OnDepotBrowseByGenre;
-        DepotViewModel.BrowseByTagRequested      += OnDepotBrowseByTag;
+        DepotViewModel.IsOfflineMode           = IsOfflineMode;
+        DepotBrowseViewModel.IsOfflineMode     = IsOfflineMode;
+        DepotGameDetailViewModel.IsOfflineMode = IsOfflineMode;
+        GamesListViewModel.IsOfflineMode       = IsOfflineMode;
+        LibraryViewModel.IsOfflineMode         = IsOfflineMode;
+        GameDetailViewModel.IsOfflineMode      = IsOfflineMode;
+
+        DepotViewModel.GameSelected                += OnDepotGameSelected;
+        DepotViewModel.SearchRequested             += OnSearchRequested;
+        DepotViewModel.BrowseByGenreRequested      += OnDepotBrowseByGenre;
+        DepotViewModel.BrowseByTagRequested        += OnDepotBrowseByTag;
         DepotViewModel.BrowseByCollectionRequested += OnDepotBrowseByCollection;
-        DepotViewModel.BrowseAllRequested        += OnDepotBrowseAll;
+        DepotViewModel.BrowseAllRequested          += OnDepotBrowseAll;
+
+        DepotBrowseViewModel.GameSelected        += OnDepotGameSelected;
+        DepotBrowseViewModel.BackToDepotRequested += OnBackFromDepotBrowse;
 
         GamesListViewModel.GameSelected  += OnGameSelected;
         LibraryViewModel.GameSelected    += OnGameSelected;
+
+        DepotGameDetailViewModel.BackRequested    += OnBackFromGameDetail;
+        DepotGameDetailViewModel.LibraryChanged   += OnLibraryChanged;
+        DepotGameDetailViewModel.InstallRequested += OnInstallRequested;
+        DepotGameDetailViewModel.SearchRequested  += OnSearchRequested;
+
         GameDetailViewModel.BackRequested    += OnBackFromGameDetail;
         GameDetailViewModel.LibraryChanged   += OnLibraryChanged;
         GameDetailViewModel.InstallRequested += OnInstallRequested;
@@ -207,10 +253,12 @@ public partial class ShellViewModel : ViewModelBase
                 if (connectionClient.IsConnected())
                 {
                     IsOfflineMode = false;
-                    DepotViewModel.IsOfflineMode      = false;
-                    GamesListViewModel.IsOfflineMode  = false;
-                    LibraryViewModel.IsOfflineMode    = false;
-                    GameDetailViewModel.IsOfflineMode = false;
+                    DepotViewModel.IsOfflineMode           = false;
+                    DepotBrowseViewModel.IsOfflineMode     = false;
+                    DepotGameDetailViewModel.IsOfflineMode = false;
+                    GamesListViewModel.IsOfflineMode       = false;
+                    LibraryViewModel.IsOfflineMode         = false;
+                    GameDetailViewModel.IsOfflineMode      = false;
 
                     await ImportAndLoadAsync();
                     return;
@@ -235,10 +283,12 @@ public partial class ShellViewModel : ViewModelBase
         if (IsOfflineMode) return;
 
         IsOfflineMode = true;
-        DepotViewModel.IsOfflineMode      = true;
-        GamesListViewModel.IsOfflineMode  = true;
-        LibraryViewModel.IsOfflineMode    = true;
-        GameDetailViewModel.IsOfflineMode = true;
+        DepotViewModel.IsOfflineMode           = true;
+        DepotBrowseViewModel.IsOfflineMode     = true;
+        DepotGameDetailViewModel.IsOfflineMode = true;
+        GamesListViewModel.IsOfflineMode       = true;
+        LibraryViewModel.IsOfflineMode         = true;
+        GameDetailViewModel.IsOfflineMode      = true;
     }
 
     [RelayCommand]
@@ -268,6 +318,15 @@ public partial class ShellViewModel : ViewModelBase
         ContentView = LibraryViewModel;
     }
 
+    /// <summary>Game selected from the depot context (DepotView or DepotBrowseView).</summary>
+    private void OnDepotGameSelected(object? sender, SDK.Models.Game game)
+    {
+        _depotReturnView = sender is DepotBrowseViewModel ? DepotBrowseViewModel : DepotViewModel;
+        ContentView = DepotGameDetailViewModel;
+        _ = DepotGameDetailViewModel.LoadGameAsync(game);
+    }
+
+    /// <summary>Game selected from the library context.</summary>
     private void OnGameSelected(object? sender, SDK.Models.Game game)
     {
         GameDetailViewModel.FromLibrary = !IsDepotActive;
@@ -322,17 +381,9 @@ public partial class ShellViewModel : ViewModelBase
                 .FirstOrDefault(g => string.Equals(g.Name, term, StringComparison.OrdinalIgnoreCase));
 
             if (matchedGenre != null)
-            {
-                GamesListViewModel.SearchText = string.Empty;
-                GamesListViewModel.SelectedGenre = matchedGenre;
-            }
+                NavigateToDepotBrowse(genre: matchedGenre.Name);
             else
-            {
-                GamesListViewModel.SelectedGenre = null;
-                GamesListViewModel.SearchText = term;
-            }
-
-            NavigateToGamesListFromDepot();
+                NavigateToDepotBrowse(search: term);
         }
         else
         {
@@ -356,47 +407,44 @@ public partial class ShellViewModel : ViewModelBase
 
     private void OnDepotBrowseByGenre(object? sender, string genreName)
     {
-        GamesListViewModel.ClearFiltersCommand.Execute(null);
-        var genre = GamesListViewModel.AvailableGenres
-            .FirstOrDefault(g => string.Equals(g.Name, genreName, StringComparison.OrdinalIgnoreCase));
-        if (genre != null)
-            GamesListViewModel.SelectedGenre = genre;
-        NavigateToGamesListFromDepot();
+        NavigateToDepotBrowse(genre: genreName);
     }
 
     private void OnDepotBrowseByTag(object? sender, string tagName)
     {
-        GamesListViewModel.ClearFiltersCommand.Execute(null);
-        GamesListViewModel.SelectedTag = GamesListViewModel.AvailableTags
-            .FirstOrDefault(t => string.Equals(t, tagName, StringComparison.OrdinalIgnoreCase));
-        NavigateToGamesListFromDepot();
+        NavigateToDepotBrowse(tag: tagName);
     }
 
     private void OnDepotBrowseByCollection(object? sender, string collectionName)
     {
-        GamesListViewModel.ClearFiltersCommand.Execute(null);
-        // Group by collection so the user sees games sorted into that collection
-        GamesListViewModel.SelectedGroupBy = LANCommander.Launcher.Settings.Enums.GroupBy.Collection;
-        NavigateToGamesListFromDepot();
+        NavigateToDepotBrowse(collection: collectionName);
     }
 
     private void OnDepotBrowseAll(object? sender, EventArgs e)
     {
-        GamesListViewModel.ClearFiltersCommand.Execute(null);
-        NavigateToGamesListFromDepot();
+        NavigateToDepotBrowse();
     }
 
-    /// <summary>Navigate to the full games list while staying in depot context.</summary>
-    private void NavigateToGamesListFromDepot()
+    private void OnBackFromDepotBrowse(object? sender, EventArgs e)
     {
         IsDepotActive = true;
-        _depotReturnView = DepotViewModel;
-        ContentView = GamesListViewModel;
+        _depotReturnView = null;
+        ContentView = DepotViewModel;
+    }
+
+    /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
+    private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null)
+    {
+        _lastDepotBrowseFilter = (genre, tag, collection, search);
+        DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search);
+        IsDepotActive = true;
+        _depotReturnView = DepotBrowseViewModel;
+        ContentView = DepotBrowseViewModel;
     }
 
     private void OnBackFromGameDetail(object? sender, EventArgs e)
     {
-        if (IsDepotActive)
+        if (sender is DepotGameDetailViewModel || IsDepotActive)
             ContentView = _depotReturnView ?? DepotViewModel;
         else
             ShowLibrary();
@@ -407,6 +455,14 @@ public partial class ShellViewModel : ViewModelBase
         await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
         await DepotViewModel.LoadAsync();
+        // Re-initialize the browse view with fresh data so "in library" badges update
+        if (ContentView == DepotBrowseViewModel)
+            DepotBrowseViewModel.Initialize(
+                GamesListViewModel.GetAllGames(),
+                _lastDepotBrowseFilter.Genre,
+                _lastDepotBrowseFilter.Tag,
+                _lastDepotBrowseFilter.Collection,
+                _lastDepotBrowseFilter.Search);
     }
 
     private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
@@ -416,6 +472,9 @@ public partial class ShellViewModel : ViewModelBase
         await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
         await DepotViewModel.LoadAsync();
+
+        if (DepotGameDetailViewModel.Id == gameId)
+            await DepotGameDetailViewModel.RefreshInstallStatusAsync();
 
         if (GameDetailViewModel.Id == gameId)
             await GameDetailViewModel.RefreshInstallStatusAsync();
@@ -427,6 +486,20 @@ public partial class ShellViewModel : ViewModelBase
         SettingsViewModel.Load();
         ContentView = SettingsViewModel;
     }
+
+    [RelayCommand]
+    private async Task OpenChatAsync()
+    {
+        if (Chat == null) return;
+
+        // Lazy-load threads on first open
+        await Chat.LoadThreadsAsync();
+
+        // Raise event so the view layer can show the window
+        OpenChatRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public event EventHandler? OpenChatRequested;
 
     private void OnBackFromSettings(object? sender, EventArgs e)
     {

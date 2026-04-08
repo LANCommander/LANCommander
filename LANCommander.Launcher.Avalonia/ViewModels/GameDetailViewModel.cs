@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -69,19 +70,57 @@ public partial class GameDetailViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TagList))]
+    [NotifyPropertyChangedFor(nameof(VisibleTagList))]
+    [NotifyPropertyChangedFor(nameof(HasMoreTags))]
+    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
+    [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
     private string _tags = string.Empty;
+
+    // ── Tags expand/collapse ─────────────���────────────────────────────────────
+
+    private const int TagsVisibleLimit = 5;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleTagList))]
+    [NotifyPropertyChangedFor(nameof(HasMoreTags))]
+    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
+    [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
+    private bool _tagsExpanded;
+
+    public IEnumerable<string> VisibleTagList =>
+        TagsExpanded ? TagList : TagList.Take(TagsVisibleLimit);
+
+    public bool HasMoreTags    => TagList.Count() > TagsVisibleLimit;
+    public int  ExtraTagCount  => Math.Max(0, TagList.Count() - TagsVisibleLimit);
+    public string ShowMoreTagsLabel =>
+        TagsExpanded ? "Show less" : $"+{ExtraTagCount} more";
+
+    [RelayCommand]
+    private void ToggleTagsExpanded() => TagsExpanded = !TagsExpanded;
+
+    // ── Screenshots / videos ──────────────────────���────────────────────────���──
+
+    public ObservableCollection<GameMediaItemViewModel> MediaItems { get; } = new();
+
+    public bool HasMedia => MediaItems.Count > 0;
+
+    // ── Multiplayer modes ─────────────────────────────────────────────────────
+
+    public ObservableCollection<string> MultiplayerModeDetails { get; } = new();
+
+    // ── Other ─────────────────────────���───────────────────────────────────────
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BackLabel))]
     private bool _fromLibrary;
 
-    public string BackLabel => FromLibrary ? "← Back to Library" : "← Back to Depot";
+    public string BackLabel => FromLibrary ? "Back to Library" : "Back to Depot";
 
     // Split list properties for chip rendering
-    public IEnumerable<string> GenreList       => SplitCsv(Genres);
-    public IEnumerable<string> DeveloperList   => SplitCsv(Developers);
-    public IEnumerable<string> PublisherList   => SplitCsv(Publishers);
-    public IEnumerable<string> TagList         => SplitCsv(Tags);
+    public IEnumerable<string> GenreList     => SplitCsv(Genres);
+    public IEnumerable<string> DeveloperList => SplitCsv(Developers);
+    public IEnumerable<string> PublisherList => SplitCsv(Publishers);
+    public IEnumerable<string> TagList       => SplitCsv(Tags);
 
     private static IEnumerable<string> SplitCsv(string csv) =>
         csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
@@ -179,17 +218,40 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Multiplayer info
         HasMultiplayer = game.MultiplayerModes != null && game.MultiplayerModes.Any();
+        MultiplayerModeDetails.Clear();
         if (HasMultiplayer)
         {
             var modes = game.MultiplayerModes!
                 .Select(m => m.Type.ToString())
                 .Distinct();
             MultiplayerModes = string.Join(", ", modes);
+            foreach (var mode in game.MultiplayerModes!)
+                MultiplayerModeDetails.Add(FormatMultiplayerMode(mode));
         }
         else
         {
             MultiplayerModes = string.Empty;
         }
+
+        // Media items (screenshots / videos from local cache)
+        MediaItems.Clear();
+        TagsExpanded = false;
+        if (game.Media != null)
+        {
+            foreach (var m in game.Media.Where(m =>
+                m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
+            {
+                var path = mediaService.FileExists(m) ? mediaService.GetImagePath(m) : null;
+                if (path != null)
+                    MediaItems.Add(new GameMediaItemViewModel
+                    {
+                        Path     = path,
+                        IsVideo  = m.Type == MediaType.Video,
+                        MimeType = string.Empty
+                    });
+            }
+        }
+        OnPropertyChanged(nameof(HasMedia));
 
         // Load action bar state
         await ActionBar.LoadFromLocalGameAsync(game);
@@ -237,17 +299,25 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Multiplayer info
         HasMultiplayer = game.MultiplayerModes != null && game.MultiplayerModes.Any();
+        MultiplayerModeDetails.Clear();
         if (HasMultiplayer)
         {
             var modes = game.MultiplayerModes!
                 .Select(m => m.Type.ToString())
                 .Distinct();
             MultiplayerModes = string.Join(", ", modes);
+            foreach (var mode in game.MultiplayerModes!)
+                MultiplayerModeDetails.Add(FormatMultiplayerMode(mode));
         }
         else
         {
             MultiplayerModes = string.Empty;
         }
+
+        // Reset media items and tags state while we re-load
+        MediaItems.Clear();
+        TagsExpanded = false;
+        OnPropertyChanged(nameof(HasMedia));
 
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
@@ -261,10 +331,25 @@ public partial class GameDetailViewModel : ViewModelBase
                 using var scope = _serviceProvider.CreateScope();
                 var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
-                CoverPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover, mediaClient);
-                LogoPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Logo, mediaClient);
-                BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background, mediaClient);
-                IconPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon, mediaClient);
+                CoverPath      = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover,       mediaClient);
+                LogoPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Logo,        mediaClient);
+                BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background,  mediaClient);
+                IconPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon,        mediaClient);
+
+                // Screenshots and videos
+                foreach (var media in game.Media.Where(m =>
+                    m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
+                {
+                    var path = await GetOrDownloadSingleMediaAsync(media, mediaClient);
+                    if (path != null)
+                        MediaItems.Add(new GameMediaItemViewModel
+                        {
+                            Path     = path,
+                            IsVideo  = media.Type == MediaType.Video,
+                            MimeType = media.MimeType ?? string.Empty
+                        });
+                }
+                OnPropertyChanged(nameof(HasMedia));
             }
             catch (Exception ex)
             {
@@ -274,6 +359,49 @@ public partial class GameDetailViewModel : ViewModelBase
             {
                 IsLoadingMedia = false;
             }
+        }
+    }
+
+    private static string FormatMultiplayerMode(Data.Models.MultiplayerMode mode) =>
+        FormatMultiplayerMode(mode.Type, mode.MinPlayers, mode.MaxPlayers);
+
+    private static string FormatMultiplayerMode(SDK.Models.MultiplayerMode mode) =>
+        FormatMultiplayerMode(mode.Type, mode.MinPlayers, mode.MaxPlayers);
+
+    private static string FormatMultiplayerMode(SDK.Enums.MultiplayerType type, int minPlayers, int maxPlayers)
+    {
+        var typeLabel = type switch
+        {
+            SDK.Enums.MultiplayerType.Local  => "Local Multiplayer",
+            SDK.Enums.MultiplayerType.LAN    => "LAN Multiplayer",
+            SDK.Enums.MultiplayerType.Online => "Online Multiplayer",
+            _                                => type.ToString()
+        };
+
+        if (maxPlayers > 0)
+        {
+            var range = minPlayers > 1 && minPlayers < maxPlayers
+                ? $"{minPlayers}–{maxPlayers} players"
+                : $"Up to {maxPlayers} players";
+            return $"{typeLabel} · {range}";
+        }
+
+        return typeLabel;
+    }
+
+    private async Task<string?> GetOrDownloadSingleMediaAsync(SDK.Models.Media media, MediaClient mediaClient)
+    {
+        try
+        {
+            var localPath = mediaClient.GetLocalPath(media);
+            if (File.Exists(localPath)) return localPath;
+            var fileInfo = await mediaClient.DownloadAsync(media, localPath);
+            return fileInfo.Exists ? fileInfo.FullName : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download media {MediaId}", media.Id);
+            return null;
         }
     }
 

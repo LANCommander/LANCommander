@@ -187,7 +187,11 @@ public partial class ShellViewModel : ViewModelBase
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
 
-        ShowDepot();
+        // Open to library if the user has games, otherwise show the depot
+        if (LibraryViewModel.Games.Count > 0)
+            ShowLibrary();
+        else
+            ShowDepot();
 
         _logger.LogInformation("ShellViewModel initialization complete");
     }

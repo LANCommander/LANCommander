@@ -57,19 +57,19 @@
                 <!-- Left: Depot / Library toggle -->
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal">
+                    <IconButton Command="{Binding ShowLibraryCommand}"
+                                Text="Library"
+                                Classes="Text"
+                                IconType="Regular"
+                                IconValue="Books"
+                                Size="16"
+                                IsVisible="{Binding IsDepotActive}" />
+
                     <IconButton Command="{Binding ShowDepotCommand}"
                                 Text="Depot"
                                 Classes="Text"
                                 IconType="Regular"
                                 IconValue="Storefront"
-                                Size="16"
-                                IsVisible="{Binding !IsLibraryActive}" />
-                    
-                    <IconButton Command="{Binding ShowDepotCommand}"
-                                Text="Library"
-                                Classes="Text"
-                                IconType="Regular"
-                                IconValue="Books"
                                 Size="16"
                                 IsVisible="{Binding IsLibraryActive}" />
                 </StackPanel>

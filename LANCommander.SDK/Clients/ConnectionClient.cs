@@ -132,15 +132,15 @@ public class ConnectionClient(
         {
             var pingId = Guid.NewGuid().ToString();
 
+            var address = serverAddress ?? GetServerAddress();
+
             var pingHttpClient = new HttpClient();
 
-            pingHttpClient.BaseAddress = serverAddress ?? GetServerAddress();
-            pingHttpClient.Timeout = TimeSpan.FromSeconds(1);
+            pingHttpClient.Timeout = TimeSpan.FromSeconds(5);
 
-            var httpRequest = new HttpRequestMessage();
+            var httpRequest = new HttpRequestMessage(HttpMethod.Head, address);
 
             httpRequest.Headers.Add("X-Ping", pingId);
-            httpRequest.Method = HttpMethod.Head;
 
             var response = await pingHttpClient.SendAsync(httpRequest);
 

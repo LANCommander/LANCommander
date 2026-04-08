@@ -46,10 +46,13 @@ namespace LANCommander.Server.Services
 
                 if (thread.Participants == null)
                     thread.Participants = new List<User>();
-                
+
                 thread.Participants.Add(user);
-                
+
                 await chatThreadService.UpdateAsync(thread);
+
+                // Invalidate the user's cached thread list so it includes the new thread
+                await cache.RemoveAsync(UserThreadCacheKey(userId));
             }
         }
         
@@ -182,10 +185,15 @@ namespace LANCommander.Server.Services
                         .AsNoTracking()
                         .AsSplitQuery()
                         .Where(t => t.Participants.Any(p => p.Id == userId))
-                        .Include(t => t.Participants);
+                        .Include(t => t.Participants)
+                        .Include(t => t.Messages);
                 }).GetAsync();
-                
-                return dbThreads.OrderByDescending(t => t.CreatedOn).ToList();
+
+                return dbThreads
+                    .OrderByDescending(t => t.Messages != null && t.Messages.Count > 0
+                        ? t.Messages.Max(m => m.CreatedOn)
+                        : t.CreatedOn)
+                    .ToList();
             });
 
             return threads;

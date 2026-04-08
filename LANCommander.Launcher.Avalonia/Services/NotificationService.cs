@@ -71,6 +71,32 @@ public class NotificationService(
         }
     }
 
+    public void NotifyChatMessage(string threadTitle, string senderName, string messageContent, Action? onActivated = null)
+    {
+        if (!notificationService.IsSupported)
+            return;
+
+        try
+        {
+            // Truncate long messages for the notification body
+            var body = messageContent.Length > 120
+                ? messageContent[..117] + "…"
+                : messageContent;
+
+            var builder = NotificationBuilder.Create($"{senderName} in {threadTitle}")
+                .WithBody(body);
+
+            if (onActivated != null)
+                builder = builder.AddButton(Localize("OpenChat"), _ => Dispatcher.UIThread.InvokeAsync(onActivated));
+
+            notificationService.ShowAsync(builder.Build());
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to send chat notification for thread {Thread}", threadTitle);
+        }
+    }
+
     // ── Navigation helpers ───────────────────────────────────────────────────
 
     private async Task NavigateToGameAsync(Guid gameId)

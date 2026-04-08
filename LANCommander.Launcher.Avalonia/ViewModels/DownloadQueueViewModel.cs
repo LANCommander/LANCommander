@@ -98,7 +98,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private Task OnQueueChanged()
     {
-        Dispatcher.UIThread.Post(RefreshQueue);
+        Dispatcher.UIThread.Post(async () => await RefreshQueueAsync());
         return Task.CompletedTask;
     }
 
@@ -206,15 +206,38 @@ public partial class DownloadQueueViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    private void RefreshQueue()
+    private void RefreshQueue() => _ = RefreshQueueAsync();
+
+    private async Task RefreshQueueAsync()
     {
         if (_installService == null) return;
 
         QueueItems.Clear();
-        
+
         foreach (var item in _installService.Queue)
         {
-            QueueItems.Add(new InstallQueueItemViewModel(item));
+            var vm = new InstallQueueItemViewModel(item);
+
+            // Resolve icon path from the media database
+            if (vm.IconId != Guid.Empty)
+            {
+                try
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+                    if (await mediaService.FileExists(vm.IconId))
+                    {
+                        vm.IconPath = await mediaService.GetImagePath(vm.IconId);
+                        vm.HasIcon = !string.IsNullOrEmpty(vm.IconPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to resolve icon for queue item {Title}", vm.Title);
+                }
+            }
+
+            QueueItems.Add(vm);
         }
 
         // Update state flags
@@ -226,7 +249,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         HasPendingItems = ActiveCount > 0;
 
         CurrentItem = QueueItems.FirstOrDefault(i => i.IsActive);
-        
+
         // Auto-expand when there's an active download
         if (HasActiveDownload && !IsExpanded)
         {
@@ -321,6 +344,15 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     private Guid _coverId;
 
     [ObservableProperty]
+    private Guid _iconId;
+
+    [ObservableProperty]
+    private string? _iconPath;
+
+    [ObservableProperty]
+    private bool _hasIcon;
+
+    [ObservableProperty]
     private bool _isUpdate;
 
     public bool IsActive => Status != InstallStatus.Queued && 
@@ -347,6 +379,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         BytesDownloaded = item.BytesDownloaded;
         TotalBytes = item.TotalBytes;
         CoverId = item.CoverId;
+        IconId = item.IconId;
         IsUpdate = item.IsUpdate;
     }
 

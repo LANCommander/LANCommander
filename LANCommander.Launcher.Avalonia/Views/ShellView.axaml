@@ -6,6 +6,10 @@
              x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
              x:DataType="vm:ShellViewModel">
 
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <Style Selector="Button.active">
             <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
@@ -52,7 +56,7 @@
                 BorderBrush="#22FFFFFF"
                 BorderThickness="0,1,0,0"
                 Padding="8, 0">
-            <Grid ColumnDefinitions="20*,60*,20*" Height="52">
+            <Grid ColumnDefinitions="Auto,*,Auto" Height="52">
 
                 <!-- Left: Depot / Library toggle -->
                 <StackPanel Grid.Column="0"
@@ -75,25 +79,34 @@
                 </StackPanel>
 
                 <!-- Center: active download OR idle downloads button -->
-                <Panel Grid.Column="1" HorizontalAlignment="Center">
+                <Panel Grid.Column="1" HorizontalAlignment="Stretch" Margin="16,0">
 
                     <!-- Active download progress -->
                     <Button Classes="Text"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
                             VerticalAlignment="Stretch"
+                            MaxWidth="900"
                             Command="{Binding ShowDownloadQueueCommand}"
                             IsVisible="{Binding DownloadQueue.HasActiveDownload}">
 
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
-                            <!-- Queue icon -->
+                            <!-- Queue icon: game icon or fallback -->
                             <Border Grid.Column="0" Grid.RowSpan="2"
                                     Width="32" Height="32"
                                     CornerRadius="4"
-                                    Background="{DynamicResource SystemAccentColor}"
+                                    ClipToBounds="True"
                                     Margin="0,0,10,0"
                                     VerticalAlignment="Center">
-                                <Icon Type="Regular" Value="ArrowCircleDown" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Panel>
+                                    <Border Background="{DynamicResource SystemAccentColor}"
+                                            IsVisible="{Binding !DownloadQueue.CurrentItem.HasIcon}">
+                                        <Icon Type="Regular" Value="ArrowCircleDown" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <Image Source="{Binding DownloadQueue.CurrentItem.IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                           Stretch="UniformToFill"
+                                           IsVisible="{Binding DownloadQueue.CurrentItem.HasIcon}" />
+                                </Panel>
                             </Border>
 
                             <!-- Title + time remaining -->

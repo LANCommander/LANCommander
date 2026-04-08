@@ -3,7 +3,6 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
-             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.CoverButton"
              x:DataType="vmComponents:GameItemViewModel"
              ClipToBounds="False">
@@ -107,7 +106,7 @@
                             Width="16" Height="16"
                             Margin="6"
                             IsVisible="{Binding ShowInLibraryBadge}">
-                        <controls:Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        <Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
                     </Border>
                 </Panel>
             </Border>

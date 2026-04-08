@@ -3,7 +3,6 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
-             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.HeroCard"
              x:DataType="vmComponents:GameItemViewModel"
              ClipToBounds="False">
@@ -88,7 +87,7 @@
                     HorizontalAlignment="Right" VerticalAlignment="Top"
                     Height="16" Width="16"
                     Margin="6" IsVisible="{Binding ShowInLibraryBadge}">
-                <controls:Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Border>
         </Panel>
     </Button>

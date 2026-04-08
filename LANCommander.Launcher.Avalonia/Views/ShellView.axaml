@@ -3,7 +3,6 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
-             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
              x:DataType="vm:ShellViewModel">
 

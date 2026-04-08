@@ -4,7 +4,6 @@
        xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
        xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
        xmlns:svg="using:Avalonia.Svg.Skia"
-       xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
        x:Class="LANCommander.Launcher.Avalonia.Views.MainWindow"
        x:DataType="vm:MainWindowViewModel"
        Title="{Binding Title}"
@@ -102,7 +101,7 @@
                 <Button Classes="Text"
                         Padding="8,6"
                         Command="{Binding ShellViewModel.RefreshCommand}">
-                    <controls:Icon Type="Regular" Value="ArrowsClockwise" Width="16" Height="16" />
+                    <Icon Type="Regular" Value="ArrowsClockwise" Width="16" Height="16" />
                 </Button>
             </Border>
 
@@ -134,7 +133,7 @@
                             <Border CornerRadius="2"
                                     Background="#1A7AC4"
                                     IsVisible="{Binding !ShellViewModel.Profile.HasAvatar}">
-                                <controls:Icon Type="Regular" Value="User" Width="13" Height="13" Color="White" />
+                                <Icon Type="Regular" Value="User" Width="13" Height="13" Color="White" />
                             </Border>
                             <!-- Avatar image: 2px rounded rectangle (not a circle) -->
                             <Border CornerRadius="2"

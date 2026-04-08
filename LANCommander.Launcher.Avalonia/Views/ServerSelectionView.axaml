@@ -50,6 +50,13 @@
                                FontSize="12"
                                HorizontalAlignment="Center" />
                 </StackPanel>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasError}"
+                           Foreground="#FF6B6B"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center" />
             </StackPanel>
         </Border>
     </Grid>

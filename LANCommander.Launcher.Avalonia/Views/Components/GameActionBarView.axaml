@@ -137,7 +137,9 @@
                                 IsEnabled="{Binding !IsAddingToLibrary}"
                                 Classes="Text"
                                 IconType="Regular"
-                                IconValue="Plus" />
+                                IconValue="Plus"
+                                Padding="12"
+                                ToolTip.Tip="Add to Library" />
 
                     </StackPanel>
 

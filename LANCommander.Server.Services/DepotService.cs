@@ -33,6 +33,7 @@ public class DepotService(
             .Include(g => g.Genres)
             .Include(g => g.Publishers)
             .Include(g => g.Engine)
+            .Include(g => g.MultiplayerModes)
             .GetAsync();
 
         var depotResults = new SDK.Models.DepotResults

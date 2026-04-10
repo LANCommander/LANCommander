@@ -48,6 +48,7 @@ public partial class GameDetailViewModel : ViewModelBase
     private string _releaseYear = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPlayerInfo))]
     private bool _singleplayer;
 
     [ObservableProperty]
@@ -126,7 +127,10 @@ public partial class GameDetailViewModel : ViewModelBase
         csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPlayerInfo))]
     private bool _hasMultiplayer;
+
+    public bool HasPlayerInfo => Singleplayer || HasMultiplayer;
 
     [ObservableProperty]
     private bool _isLoadingMedia;

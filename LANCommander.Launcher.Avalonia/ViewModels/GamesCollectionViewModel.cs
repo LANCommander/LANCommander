@@ -58,6 +58,9 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     /// <summary>Whether to show the "In Library" filter toggle (depot only).</summary>
     public abstract bool ShowInLibraryFilter { get; }
 
+    /// <summary>Whether to show the "Installed" filter toggle (library only).</summary>
+    public abstract bool ShowInstalledFilter { get; }
+
     // ── View type ─────────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -139,9 +142,17 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     private string? _selectedMultiplayerType;
 
     [ObservableProperty]
+    private bool _showInstalledOnly;
+
+    [ObservableProperty]
+    private string? _selectedMinPlayers;
+
+    [ObservableProperty]
     private bool _isAdvancedFilterOpen;
 
-    public static readonly IReadOnlyList<string> AvailableMultiplayerTypes = ["Local", "LAN", "Online"];
+    public static readonly IReadOnlyList<string> AvailableMultiplayerTypes = ["Singleplayer", "Local", "LAN", "Online"];
+
+    public static readonly IReadOnlyList<string> AvailablePlayerCounts = ["2+", "4+", "8+", "16+", "32+"];
 
     // ── Sorting ───────────────────────────────────────────────────────────────
 
@@ -172,7 +183,9 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
         SelectedDeveloper     = null;
         SelectedPublisher     = null;
         SelectedMultiplayerType = null;
+        SelectedMinPlayers    = null;
         ShowInLibraryOnly     = false;
+        ShowInstalledOnly     = false;
         SelectedSortBy        = SortBy.Title;
         SortAscending         = true;
         SelectedGroupBy       = IsHorizontalView ? GroupBy.FirstLetter : GroupBy.None;
@@ -222,14 +235,21 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
                 !string.IsNullOrEmpty(g.Publishers) &&
                 g.Publishers.Contains(SelectedPublisher, StringComparison.OrdinalIgnoreCase));
 
+        if (ShowInstalledOnly)
+            filtered = filtered.Where(g => g.IsInstalled);
+
         if (!string.IsNullOrEmpty(SelectedMultiplayerType))
             filtered = SelectedMultiplayerType switch
             {
+                "Singleplayer" => filtered.Where(g => g.Singleplayer),
                 "Local"  => filtered.Where(g => g.HasLocalMultiplayer),
                 "LAN"    => filtered.Where(g => g.HasLanMultiplayer),
                 "Online" => filtered.Where(g => g.HasOnlineMultiplayer),
                 _        => filtered
             };
+
+        if (!string.IsNullOrEmpty(SelectedMinPlayers) && int.TryParse(SelectedMinPlayers.TrimEnd('+'), out var minPlayers))
+            filtered = filtered.Where(g => g.MaxPlayers >= minPlayers);
 
         filtered = SelectedSortBy switch
         {
@@ -329,6 +349,8 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     partial void OnSelectedDeveloperChanged(string? value)       => ApplyFilters();
     partial void OnSelectedPublisherChanged(string? value)       => ApplyFilters();
     partial void OnSelectedMultiplayerTypeChanged(string? value) => ApplyFilters();
+    partial void OnShowInstalledOnlyChanged(bool value)          => ApplyFilters();
+    partial void OnSelectedMinPlayersChanged(string? value)       => ApplyFilters();
 
     // ── Helpers for subclasses ────────────────────────────────────────────────
 

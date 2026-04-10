@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -108,7 +110,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         Dispatcher.UIThread.Post(() =>
         {
-            CurrentStatus = progress.Status.ToString();
+            CurrentStatus = GetDisplayName(progress.Status);
             CurrentProgress = progress.Progress;
             CurrentTransferSpeed = progress.TransferSpeed;
 
@@ -298,18 +300,25 @@ public partial class DownloadQueueViewModel : ViewModelBase
         _installService.Remove(item.Id);
     }
 
+    private static string GetDisplayName(InstallStatus status)
+    {
+        var member = typeof(InstallStatus).GetField(status.ToString());
+        var display = member?.GetCustomAttribute<DisplayAttribute>();
+        return display?.Name ?? status.ToString();
+    }
+
     private static string FormatBytes(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB", "TB" };
         int order = 0;
         double size = bytes;
-        
+
         while (size >= 1024 && order < sizes.Length - 1)
         {
             order++;
             size /= 1024;
         }
-        
+
         return $"{size:0.##} {sizes[order]}";
     }
 }

@@ -66,6 +66,12 @@ public partial class GameItemViewModel : ViewModelBase
     private bool _hasCover;
 
     [ObservableProperty]
+    private bool _isInstalled;
+
+    [ObservableProperty]
+    private int _maxPlayers;
+
+    [ObservableProperty]
     private bool _inLibrary;
 
     [ObservableProperty]
@@ -89,6 +95,7 @@ public partial class GameItemViewModel : ViewModelBase
         HasLocalMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Local) ?? false;
         HasLanMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.LAN) ?? false;
         HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
+        MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
         CoverPath = coverPath;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
@@ -107,6 +114,12 @@ public partial class GameItemViewModel : ViewModelBase
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
         Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
         Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
+        Tags = game.Tags != null ? string.Join(", ", game.Tags.Select(t => t.Name)) : string.Empty;
+        HasLocalMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Local) ?? false;
+        HasLanMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.LAN) ?? false;
+        HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
+        MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
+        IsInstalled = game.Installed;
         CoverPath = coverPath;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;

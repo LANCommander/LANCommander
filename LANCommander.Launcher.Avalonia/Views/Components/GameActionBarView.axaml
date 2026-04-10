@@ -43,11 +43,6 @@
         <Border Padding="0,0,0,8"
                 Background="Transparent">
             <StackPanel Spacing="16">
-                <!-- Status message -->
-                <TextBlock Text="{Binding StatusMessage}" 
-                           Foreground="{DynamicResource SystemAccentColor}"
-                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                
                 <!-- Primary Action Row + Stats -->
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Buttons (left side) -->

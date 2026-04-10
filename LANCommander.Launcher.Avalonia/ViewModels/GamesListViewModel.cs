@@ -24,6 +24,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
 
     public override string ViewTitle => "Depot — All Games";
     public override bool ShowInLibraryFilter => true;
+    public override bool ShowInstalledFilter => false;
 
     public GamesListViewModel(IServiceProvider serviceProvider)
     {
@@ -132,17 +133,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
             if (coverMedia != null && mediaService.FileExists(coverMedia))
                 coverPath = mediaService.GetImagePath(coverMedia);
 
-            _allGames.Add(new GameItemViewModel(
-                new SDK.Models.DepotGame
-                {
-                    Id        = game.Id,
-                    Title     = game.Title ?? "Unknown",
-                    SortTitle = game.SortTitle ?? game.Title ?? "",
-                    Description = game.Description,
-                    ReleasedOn = game.ReleasedOn ?? DateTime.MinValue
-                },
-                coverPath,
-                inLibrary: true));
+            _allGames.Add(new GameItemViewModel(game, coverPath, inLibrary: true));
         }
     }
 

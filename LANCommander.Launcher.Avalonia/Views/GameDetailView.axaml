@@ -116,51 +116,10 @@
                     <components:GameActionBarView DataContext="{Binding ActionBar}" />
 
                     <!-- Description -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Description" Classes="Header" />
-                        <TextBlock Text="{Binding Description}"
-                                   TextWrapping="Wrap"
-                                   LineHeight="24" />
-                    </StackPanel>
-
-                    <!-- Quick Info Cards: singleplayer, multiplayer -->
-                    <WrapPanel Orientation="Horizontal">
-                        <!-- Singleplayer badge -->
-                        <Border Margin="0,0,6,6" Padding="10,6" CornerRadius="4" Background="#22FFFFFF"
-                                IsVisible="{Binding Singleplayer}">
-                            <TextBlock Text="Singleplayer" FontSize="13" />
-                        </Border>
-
-                        <!-- Legacy multiplayer summary badge (shown when no mode details) -->
-                        <Border Margin="0,0,6,6" Padding="10,6" CornerRadius="4" Background="#22FFFFFF"
-                                IsVisible="{Binding HasMultiplayer}">
-                            <TextBlock Text="{Binding MultiplayerModes}" FontSize="13" />
-                        </Border>
-                    </WrapPanel>
-
-                    <!-- Multiplayer Modes (detailed, one chip per mode) -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding HasMultiplayer}">
-                        <TextBlock Text="Multiplayer" Classes="Header" />
-                        <ItemsControl ItemsSource="{Binding MultiplayerModeDetails}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:String">
-                                    <Border Margin="0,0,6,6"
-                                            Padding="10,5"
-                                            CornerRadius="4"
-                                            Background="#22FFFFFF">
-                                        <TextBlock Text="{Binding}" FontSize="12" />
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                    <TextBlock Text="{Binding Description}"
+                               TextWrapping="Wrap"
+                               LineHeight="24"
+                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                     <!-- Screenshots / Videos carousel -->
                     <StackPanel Spacing="8" IsVisible="{Binding HasMedia}">
@@ -222,6 +181,35 @@
                         <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
                                Stretch="Uniform" />
                     </Border>
+
+                    <!-- Players -->
+                    <StackPanel Classes="Badges"
+                                IsVisible="{Binding HasPlayerInfo}">
+                        <TextBlock Text="Players" Classes="Header" />
+                        <WrapPanel Orientation="Horizontal">
+                            <Border Margin="0,0,6,6" Padding="10,5" CornerRadius="4" Background="#22FFFFFF"
+                                    IsVisible="{Binding Singleplayer}">
+                                <TextBlock Text="Singleplayer" FontSize="12" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding MultiplayerModeDetails}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <Border Margin="0,0,6,6"
+                                                Padding="10,5"
+                                                CornerRadius="4"
+                                                Background="#22FFFFFF">
+                                            <TextBlock Text="{Binding}" FontSize="12" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </WrapPanel>
+                    </StackPanel>
 
                     <!-- Developers -->
                     <StackPanel Classes="Badges"

@@ -107,12 +107,30 @@
                                   HorizontalAlignment="Stretch" />
                     </StackPanel>
 
+                    <!-- Player Count -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Min Players" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailablePlayerCounts}"
+                                  SelectedItem="{Binding SelectedMinPlayers}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
                     <!-- In Library (depot only) -->
                     <StackPanel Spacing="4" Margin="0,0,12,8"
                                 IsVisible="{Binding ShowInLibraryFilter}">
                         <TextBlock Text="Ownership" FontSize="11" Opacity="0.6" />
                         <ToggleButton IsChecked="{Binding ShowInLibraryOnly}"
                                       Content="In Library Only"
+                                      HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Installed (library only) -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding ShowInstalledFilter}">
+                        <TextBlock Text="Status" FontSize="11" Opacity="0.6" />
+                        <ToggleButton IsChecked="{Binding ShowInstalledOnly}"
+                                      Content="Installed Only"
                                       HorizontalAlignment="Stretch" />
                     </StackPanel>
 

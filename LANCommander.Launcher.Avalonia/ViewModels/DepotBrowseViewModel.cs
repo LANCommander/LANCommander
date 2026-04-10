@@ -55,6 +55,7 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
 
     public override string ViewTitle => BrowseTitle;
     public override bool ShowInLibraryFilter => true;
+    public override bool ShowInstalledFilter => false;
 
     // ── Events ────────────────────────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         SelectedDeveloper       = null;
         SelectedPublisher       = null;
         SelectedMultiplayerType = null;
+        SelectedMinPlayers      = null;
         ShowInLibraryOnly       = false;
         SelectedSortBy          = SortBy.Title;
         SortAscending           = true;

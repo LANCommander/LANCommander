@@ -69,7 +69,7 @@
                     <!-- Back button (overlaid at top-left, below title bar) -->
                     <IconButton Command="{Binding GoBackCommand}"
                                 Text="{Binding BackLabel}"
-                                Classes="Glass-Back"
+                                Classes="Glass Dark"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Margin="16, 48, 0, 0"

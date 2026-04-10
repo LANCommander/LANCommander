@@ -33,7 +33,12 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Tag, SDK.Models.Tag>().ReverseMap();
             CreateMap<Data.Models.User, SDK.Models.User>();
             CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
-            CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>().ReverseMap();
+            CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>()
+                .ForMember(dest => dest.LastActivityOn, opt => opt.MapFrom(src =>
+                    src.Messages != null && src.Messages.Count > 0
+                        ? src.Messages.Max(m => m.CreatedOn)
+                        : src.UpdatedOn));
+            CreateMap<SDK.Models.ChatThread, Data.Models.ChatThread>();
 
             CreateMap<Data.Models.ChatMessage, SDK.Models.ChatMessage>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.CreatedBy.Id))

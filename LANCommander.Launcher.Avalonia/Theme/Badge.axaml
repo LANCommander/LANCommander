@@ -1,0 +1,29 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:LANCommander.Launcher.Avalonia.Controls">
+
+        <Style Selector="Button.Badge">
+                <Setter Property="Padding" Value="10, 5" />
+                <Setter Property="CornerRadius" Value="2" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        
+        <Style Selector="Button.Badge TextBlock">
+                <Setter Property="FontSize" Value="12" />
+        </Style>
+        
+        <Style Selector="StackPanel.Badges">
+                <Setter Property="Spacing" Value="8" />
+        </Style>
+        
+        <Style Selector="StackPanel.Badges Button.Badge">
+                <Setter Property="Margin" Value="0, 0, 6, 6" />
+        </Style>
+        
+        <Style Selector="StackPanel.Badges TextBlock.Header">
+                <Setter Property="FontSize" Value="14" />
+        </Style>
+
+</Styles>

@@ -17,7 +17,8 @@ public partial class LibraryViewModel : GamesCollectionViewModel
     private readonly ILogger<LibraryViewModel> _logger;
 
     public override string ViewTitle => "My Library";
-    public override bool ShowInLibraryFilter => false; // library is always filtered to owned games
+    public override bool ShowInLibraryFilter => false;
+    public override bool ShowInstalledFilter => true;
 
     public LibraryViewModel(IServiceProvider serviceProvider)
     {

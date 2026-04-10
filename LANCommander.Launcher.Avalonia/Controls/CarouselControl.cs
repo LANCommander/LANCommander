@@ -126,7 +126,7 @@ public class CarouselControl : TemplatedControl
     static CarouselControl()
     {
         ItemsSourceProperty.Changed.AddClassHandler<CarouselControl>((c, _) => c.RebuildInternalSource());
-        WrapItemsProperty.Changed.AddClassHandler<CarouselControl>((c, _) => c.RebuildInternalSource());
+        WrapItemsProperty.Changed.AddClassHandler<CarouselControl>((c, _) => { c.RebuildInternalSource(); c.UpdateClipGeometry(); });
         ItemOverflowProperty.Changed.AddClassHandler<CarouselControl>((c, _) => c.ApplyItemOverflow());
     }
 
@@ -270,11 +270,14 @@ public class CarouselControl : TemplatedControl
     {
         if (_clipPanel == null) return;
 
-        if (ItemOverflow > 0)
+        if (ItemOverflow > 0 || WrapItems)
         {
             _clipGeometry ??= new RectangleGeometry();
             var b = _clipPanel.Bounds;
-            _clipGeometry.Rect = new Rect(-ItemOverflow, -ItemOverflow * 2, b.Width + 2 * ItemOverflow, b.Height + 4 * ItemOverflow);
+            // Extend clip vertically by ItemOverflow to allow hover-scale effects, but
+            // keep left/right tight so scrolled-off items don't bleed behind the nav buttons.
+            var vPad = ItemOverflow * 2;
+            _clipGeometry.Rect = new Rect(-ItemOverflow, -vPad, b.Width + 2 * ItemOverflow, b.Height + 2 * vPad);
             _clipPanel.Clip = _clipGeometry;
         }
         else

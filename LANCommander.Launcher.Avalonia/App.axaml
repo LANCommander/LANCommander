@@ -1,7 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
-             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.App"
              RequestedThemeVariant="Dark">
 
@@ -10,9 +9,10 @@
 
         <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/LANCommander.axaml" />
         <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/Carousel.axaml" />
+        <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/Badge.axaml" />
         
         <!-- Global control defaults -->
-        <Style Selector="Button">
+        <Style Selector="Button,IconButton">
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
@@ -27,9 +27,10 @@
 
         <!-- Icon control template (PathIcon ControlTheme is not inherited by subclasses in Avalonia 11) -->
         <!-- Default: stroke-based rendering for Regular, Light, Thin, DuoTone, Bold variants -->
-        <Style Selector="controls|Icon">
+        <Style Selector="Icon">
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ClipToBounds" Value="False" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <Path Fill="Transparent"
@@ -43,7 +44,7 @@
             </Setter>
         </Style>
         <!-- Fill variant: fill-based rendering (closed shapes, no stroke needed) -->
-        <Style Selector="controls|Icon[Type=Fill]">
+        <Style Selector="Icon[Type=Fill]">
             <Setter Property="Template">
                 <ControlTemplate>
                     <Path Fill="{TemplateBinding Foreground}"

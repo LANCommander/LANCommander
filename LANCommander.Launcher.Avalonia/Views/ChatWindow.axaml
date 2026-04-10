@@ -1,0 +1,446 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+        xmlns:models="using:LANCommander.SDK.Models"
+        xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+        x:Class="LANCommander.Launcher.Avalonia.Views.ChatWindow"
+        x:DataType="vm:ChatWindowViewModel"
+        Title="Chat"
+        Width="760"
+        Height="540"
+        MinWidth="520"
+        MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Window.Resources>
+        <converters:StringToInitialsConverter x:Key="InitialsConverter" />
+        <converters:BoolToFontWeightConverter x:Key="BoldIfTrue" />
+        <converters:DateTimeOffsetToTimeStringConverter x:Key="TimeString" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+    </Window.Styles>
+
+    <Grid>
+
+        <!-- ── Resize grips (ZIndex=15) ─────────────────────────────────── -->
+        <Grid ZIndex="15"
+              ColumnDefinitions="6,*,6"
+              RowDefinitions="6,*,6">
+            <Border x:Name="ResizeNW" Grid.Row="0" Grid.Column="0" Cursor="TopLeftCorner"     Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeN"  Grid.Row="0" Grid.Column="1" Cursor="SizeNorthSouth"   Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeNE" Grid.Row="0" Grid.Column="2" Cursor="TopRightCorner"   Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeW"  Grid.Row="1" Grid.Column="0" Cursor="SizeWestEast"     Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeE"  Grid.Row="1" Grid.Column="2" Cursor="SizeWestEast"     Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeSW" Grid.Row="2" Grid.Column="0" Cursor="BottomLeftCorner" Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeS"  Grid.Row="2" Grid.Column="1" Cursor="SizeNorthSouth"   Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeSE" Grid.Row="2" Grid.Column="2" Cursor="BottomRightCorner" Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+        </Grid>
+
+        <!-- ── Window content (ZIndex=0) ────────────────────────────────── -->
+        <Grid ZIndex="0" RowDefinitions="36,*">
+
+            <!-- ── Custom titlebar ──────────────────────────────────────── -->
+            <Grid Grid.Row="0"
+                  Background="#1A1A1A"
+                  ColumnDefinitions="Auto,*,Auto">
+
+                <Border Grid.Column="0" Padding="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="Chat"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <Border Grid.Column="1"
+                        Background="Transparent"
+                        PointerPressed="TitleBarDragRegion_PointerPressed"
+                        DoubleTapped="TitleBarDragRegion_DoubleTapped" />
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="MinimizeButton"
+                            Width="40" Height="36"
+                            Background="Transparent" BorderThickness="0"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            Click="MinimizeButton_Click">
+                        <TextBlock Text="—" FontSize="11" />
+                    </Button>
+                    <Button x:Name="MaximizeButton"
+                            Width="40" Height="36"
+                            Background="Transparent" BorderThickness="0"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            Click="MaximizeButton_Click">
+                        <TextBlock Text="□" FontSize="11" />
+                    </Button>
+                    <Button x:Name="CloseButton"
+                            Width="40" Height="36"
+                            Background="Transparent" BorderThickness="0"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            Click="CloseButton_Click">
+                        <Button.Styles>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#C42B1C" />
+                            </Style>
+                        </Button.Styles>
+                        <TextBlock Text="✕" FontSize="11" />
+                    </Button>
+                </StackPanel>
+
+            </Grid>
+
+            <!-- ── Main content (below titlebar) ────────────────────────── -->
+            <Border Grid.Row="1"
+                    BorderBrush="#22FFFFFF"
+                    BorderThickness="0,1,0,0">
+                <Grid ColumnDefinitions="210,*">
+
+                    <!-- ── Thread / new-chat column ───────────────────────── -->
+                    <Border Grid.Column="0"
+                            Background="#111111"
+                            BorderBrush="#22FFFFFF"
+                            BorderThickness="0,0,1,0">
+                        <Panel>
+
+                            <!-- Normal: thread list ─────────────────────── -->
+                            <Grid RowDefinitions="Auto,*"
+                                  IsVisible="{Binding !IsCreatingThread}">
+
+                                <!-- Header with "New chat" button -->
+                                <Border Grid.Row="0"
+                                        Padding="12,8,8,8"
+                                        BorderBrush="#22FFFFFF"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Chats"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1"
+                                                Classes="Text"
+                                                Padding="6"
+                                                ToolTip.Tip="New Chat"
+                                                Command="{Binding OpenNewThreadCommand}">
+                                            <Icon Type="Regular" Value="PencilSimpleLine" Width="14" Height="14" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <ListBox Grid.Row="1"
+                                         ItemsSource="{Binding Threads}"
+                                         SelectedItem="{Binding SelectedThread}"
+                                         IsVisible="{Binding HasThreads}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:ChatThreadViewModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <!-- Participant avatars (stacked) -->
+                                                <ItemsControl Grid.Column="0"
+                                                              ItemsSource="{Binding OtherParticipants}"
+                                                              VerticalAlignment="Center"
+                                                              Margin="0,0,8,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="-6" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="models:User">
+                                                            <Border Width="24" Height="24"
+                                                                    CornerRadius="12"
+                                                                    Background="#1A7AC4"
+                                                                    BorderBrush="#111111"
+                                                                    BorderThickness="2">
+                                                                <TextBlock Text="{Binding Name, Converter={StaticResource InitialsConverter}}"
+                                                                           FontSize="9" FontWeight="SemiBold"
+                                                                           Foreground="White"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding OtherParticipantNames}"
+                                                           FontSize="13"
+                                                           FontWeight="{Binding HasUnread, Converter={StaticResource BoldIfTrue}}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center" />
+                                                <Border Grid.Column="2"
+                                                        Background="{DynamicResource SystemAccentColor}"
+                                                        CornerRadius="8" Padding="5,1"
+                                                        IsVisible="{Binding HasUnread}"
+                                                        VerticalAlignment="Center"
+                                                        Margin="6,0,0,0">
+                                                    <TextBlock Text="{Binding UnreadCount}"
+                                                               FontSize="10"
+                                                               Foreground="White" />
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Empty threads placeholder -->
+                                <StackPanel Grid.Row="1"
+                                            IsVisible="{Binding !HasThreads}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center"
+                                            Spacing="8"
+                                            Margin="12">
+                                    <Icon Type="Regular" Value="ChatCircleDots"
+                                                   Width="32" Height="32"
+                                                   Opacity="0.25"
+                                                   HorizontalAlignment="Center" />
+                                    <TextBlock Text="No conversations yet"
+                                               FontSize="12"
+                                               Opacity="0.4"
+                                               TextAlignment="Center"
+                                               HorizontalAlignment="Center" />
+                                    <TextBlock Text="Start a new chat using the button above"
+                                               FontSize="11"
+                                               Opacity="0.3"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+
+                            </Grid>
+
+                            <!-- New chat: user picker ────────────────────── -->
+                            <Grid RowDefinitions="Auto,Auto,*,Auto"
+                                  IsVisible="{Binding IsCreatingThread}">
+
+                                <!-- Header with cancel button -->
+                                <Border Grid.Row="0"
+                                        Padding="12,8,8,8"
+                                        BorderBrush="#22FFFFFF"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="New Chat"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1"
+                                                Classes="Text"
+                                                Padding="6"
+                                                ToolTip.Tip="Cancel"
+                                                Command="{Binding CancelNewThreadCommand}">
+                                            <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Search box -->
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding UserSearchText}"
+                                         Watermark="Search users…"
+                                         FontSize="12"
+                                         Margin="8,6" Padding="8,5" />
+
+                                <!-- User checkboxes -->
+                                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding FilteredUsers}" Margin="4">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:UserSelectionViewModel">
+                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                          Padding="8,6">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="13"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <!-- Start Chat button -->
+                                <Button Grid.Row="3"
+                                        Classes="Primary"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Margin="8,6" Padding="0,8"
+                                        Command="{Binding StartNewThreadCommand}"
+                                        IsEnabled="{Binding HasSelectedUsers}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Icon Type="Regular" Value="ChatCircleDots" Width="14" Height="14" />
+                                        <TextBlock Text="Start Chat" FontSize="13" />
+                                    </StackPanel>
+                                </Button>
+
+                            </Grid>
+
+                        </Panel>
+                    </Border>
+
+                    <!-- ── Message area ──────────────────────────────────── -->
+                    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+
+                        <!-- Empty state -->
+                        <StackPanel Grid.Row="1"
+                                    IsVisible="{Binding !HasSelectedThread}"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    Spacing="10">
+                            <Icon Type="Regular" Value="ChatCircle"
+                                           Width="44" Height="44"
+                                           Opacity="0.25"
+                                           HorizontalAlignment="Center" />
+                            <TextBlock Text="Select a conversation"
+                                       FontSize="14"
+                                       Opacity="0.4"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Participant header -->
+                        <Border Grid.Row="0"
+                                BorderBrush="#22FFFFFF"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,8"
+                                IsVisible="{Binding HasSelectedThread}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <!-- Participant avatars -->
+                                <ItemsControl ItemsSource="{Binding SelectedThread.OtherParticipants}"
+                                              x:DataType="vm:ChatWindowViewModel"
+                                              VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="-6" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="models:User">
+                                            <Border Width="28" Height="28"
+                                                    CornerRadius="14"
+                                                    Background="#1A7AC4"
+                                                    BorderBrush="#1A1A1A"
+                                                    BorderThickness="2">
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource InitialsConverter}}"
+                                                           FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Participant names -->
+                                <TextBlock Text="{Binding SelectedThread.OtherParticipantNames}"
+                                           x:DataType="vm:ChatWindowViewModel"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Messages -->
+                        <ScrollViewer Grid.Row="1"
+                                      x:Name="MessageScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      IsVisible="{Binding HasSelectedThread}"
+                                      Padding="0,8,0,4">
+
+                            <ItemsControl ItemsSource="{Binding SelectedThread.MessageGroups}"
+                                          x:DataType="vm:ChatWindowViewModel">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="models:ChatMessageGroup">
+                                        <StackPanel Margin="12,4,12,8" Spacing="2">
+
+                                            <Grid ColumnDefinitions="32,*">
+                                                <Border Grid.Column="0"
+                                                        Width="28" Height="28"
+                                                        CornerRadius="4"
+                                                        Background="#1A7AC4"
+                                                        VerticalAlignment="Top">
+                                                    <TextBlock Text="{Binding UserName, Converter={StaticResource InitialsConverter}}"
+                                                               FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" />
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal" Spacing="8"
+                                                            Margin="8,0,0,2"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding UserName}"
+                                                               FontSize="13" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding StartedOn, Converter={StaticResource TimeString}}"
+                                                               FontSize="11" Opacity="0.45"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <ItemsControl ItemsSource="{Binding Messages}"
+                                                          Margin="36,0,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="models:ChatMessage">
+                                                        <MarkdownTextBlock Text="{Binding Content}"
+                                                                                    FontSize="13"
+                                                                                    Margin="0,1" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                        </ScrollViewer>
+
+                        <!-- Input bar -->
+                        <Border Grid.Row="2"
+                                BorderBrush="#22FFFFFF"
+                                BorderThickness="0,1,0,0"
+                                Padding="10,8"
+                                IsVisible="{Binding HasSelectedThread}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0"
+                                         x:Name="MessageInputBox"
+                                         Text="{Binding MessageInput}"
+                                         Watermark="Type a message…"
+                                         FontSize="13"
+                                         AcceptsReturn="False"
+                                         MaxHeight="80"
+                                         VerticalAlignment="Center"
+                                         KeyDown="MessageInputBox_KeyDown" />
+                                <Button Grid.Column="1"
+                                        Classes="Primary"
+                                        Padding="12,8" Margin="8,0,0,0"
+                                        Command="{Binding SendMessageCommand}"
+                                        VerticalAlignment="Center">
+                                    <Icon Type="Regular" Value="PaperPlaneTilt" Width="16" Height="16" />
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                    </Grid>
+
+                </Grid>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+</Window>

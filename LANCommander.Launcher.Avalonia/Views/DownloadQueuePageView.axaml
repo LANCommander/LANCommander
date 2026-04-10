@@ -43,15 +43,13 @@
         <Panel Grid.Row="1">
 
         <!-- Empty state (centered) -->
-        <StackPanel Spacing="8"
+        <StackPanel Spacing="12"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     IsVisible="{Binding !HasItems}">
-            <PathIcon Data="{StaticResource Regular_ArrowCircleDown}"
-                      Width="48" Height="48"
-                      HorizontalAlignment="Center"
-                      Opacity="0.3" />
-            <TextBlock Text="No downloads" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+            
+            <Icon Type="Regular" Value="DownloadSimple" Width="32" Height="32" HorizontalAlignment="Center" />
+            <TextBlock Text="Empty Queue" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
             <TextBlock Text="Install a game from the Depot to see it here."
                        FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
         </StackPanel>

@@ -306,7 +306,7 @@ namespace LANCommander.Launcher.Services
 
                         UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
                         await _gameService.UpdateAsync(localGame);
-                        
+
                         queueItem.Status = InstallStatus.Complete;
                         OnQueueChanged?.Invoke();
                         OnInstallComplete?.Invoke(localGame);
@@ -315,6 +315,8 @@ namespace LANCommander.Launcher.Services
                     {
                         await Move(queueItem, localGame, remoteGame);
                     }
+
+                    await Next();
                 }
                 else
                 {

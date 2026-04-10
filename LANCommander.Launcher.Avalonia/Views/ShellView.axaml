@@ -3,9 +3,12 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
-             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.ShellView"
              x:DataType="vm:ShellViewModel">
+
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="Button.active">
@@ -20,6 +23,14 @@
             <ContentControl.DataTemplates>
                 <DataTemplate DataType="vm:DepotViewModel">
                     <views:DepotView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:DepotBrowseViewModel">
+                    <views:DepotBrowseView />
+                </DataTemplate>
+                <!-- DepotGameDetailViewModel must appear before GameDetailViewModel
+                     so the more-specific type is matched first. -->
+                <DataTemplate DataType="vm:DepotGameDetailViewModel">
+                    <views:GameDetailView />
                 </DataTemplate>
                 <DataTemplate DataType="vm:GamesListViewModel">
                     <views:GamesListView />
@@ -43,55 +54,62 @@
         <Border Grid.Row="1"
                 Background="Black"
                 BorderBrush="#22FFFFFF"
-                BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto,*" Height="52">
+                BorderThickness="0,1,0,0"
+                Padding="8, 0">
+            <Grid ColumnDefinitions="Auto,*,Auto" Height="52">
 
                 <!-- Left: Depot / Library toggle -->
                 <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            Spacing="4"
-                            Margin="12,0">
-                    <Button Command="{Binding ShowDepotCommand}"
-                            Classes="Text"
-                            IsVisible="{Binding !IsDepotActive}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <controls:Icon Type="Regular" Value="Storefront" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Depot" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding ShowLibraryCommand}"
-                            Classes="Text"
-                            IsVisible="{Binding !IsLibraryActive}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <controls:Icon Type="Regular" Value="Books" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Library" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
+                            Orientation="Horizontal">
+                    <IconButton Command="{Binding ShowLibraryCommand}"
+                                Text="Library"
+                                Classes="Text"
+                                IconType="Regular"
+                                IconValue="Books"
+                                Size="16"
+                                IsVisible="{Binding IsDepotActive}" />
+
+                    <IconButton Command="{Binding ShowDepotCommand}"
+                                Text="Depot"
+                                Classes="Text"
+                                IconType="Regular"
+                                IconValue="Storefront"
+                                Size="16"
+                                IsVisible="{Binding IsLibraryActive}" />
                 </StackPanel>
 
                 <!-- Center: active download OR idle downloads button -->
-                <Panel Grid.Column="1">
+                <Panel Grid.Column="1" HorizontalAlignment="Stretch" Margin="16,0">
 
                     <!-- Active download progress -->
                     <Button Classes="Text"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
                             VerticalAlignment="Stretch"
+                            MaxWidth="900"
                             Command="{Binding ShowDownloadQueueCommand}"
                             IsVisible="{Binding DownloadQueue.HasActiveDownload}">
 
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
-                            <!-- Queue icon -->
+                            <!-- Queue icon: game icon or fallback -->
                             <Border Grid.Column="0" Grid.RowSpan="2"
                                     Width="32" Height="32"
                                     CornerRadius="4"
-                                    Background="{DynamicResource SystemAccentColor}"
+                                    ClipToBounds="True"
                                     Margin="0,0,10,0"
                                     VerticalAlignment="Center">
-                                <controls:Icon Type="Regular" Value="ArrowCircleDown" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Panel>
+                                    <Border Background="{DynamicResource SystemAccentColor}"
+                                            IsVisible="{Binding !DownloadQueue.CurrentItem.HasIcon}">
+                                        <Icon Type="Regular" Value="ArrowCircleDown" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <Image Source="{Binding DownloadQueue.CurrentItem.IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                           Stretch="UniformToFill"
+                                           IsVisible="{Binding DownloadQueue.CurrentItem.HasIcon}" />
+                                </Panel>
                             </Border>
 
-                            <!-- Title + time remaining -->
+                            <!-- Title · Status | Speed | Time remaining -->
                             <DockPanel Grid.Column="1" Grid.Row="0">
                                 <TextBlock DockPanel.Dock="Right"
                                            Text="{Binding DownloadQueue.TimeRemainingText}"
@@ -99,25 +117,30 @@
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"
                                            IsVisible="{Binding DownloadQueue.TimeRemainingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock DockPanel.Dock="Right"
+                                           Text="{Binding DownloadQueue.TransferSpeedText}"
+                                           FontSize="11" Opacity="0.6"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0" />
                                 <TextBlock Text="{Binding DownloadQueue.CurrentItem.Title}"
                                            FontSize="13" FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                             </DockPanel>
 
-                            <!-- Speed + progress bar row -->
-                            <Grid Grid.Column="1" Grid.Row="1" ColumnDefinitions="*,Auto">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding DownloadQueue.TransferSpeedText}"
-                                           FontSize="11" Opacity="0.6"
-                                           VerticalAlignment="Center" />
-                                <ProgressBar Grid.Column="0" Grid.ColumnSpan="2"
-                                             Value="{Binding DownloadQueue.CurrentProgress}"
+                            <!-- Status + progress bar -->
+                            <DockPanel Grid.Column="1" Grid.Row="1" Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="{Binding DownloadQueue.CurrentStatus}"
+                                           FontSize="11" Opacity="0.5"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"
+                                           IsVisible="{Binding DownloadQueue.CurrentStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <ProgressBar Value="{Binding DownloadQueue.CurrentProgress}"
                                              Minimum="0" Maximum="1"
                                              Height="3"
-                                             Margin="0,2,0,0"
-                                             VerticalAlignment="Bottom" />
-                            </Grid>
+                                             VerticalAlignment="Center" />
+                            </DockPanel>
                         </Grid>
                     </Button>
 
@@ -130,9 +153,9 @@
 
                         <Button Command="{Binding ShowDownloadQueueCommand}"
                                 Classes="Text">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <controls:Icon Type="Regular" Value="DownloadSimple" Width="13" Height="13" VerticalAlignment="Center" />
-                                <TextBlock Text="Downloads" FontSize="13" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <Icon Type="Regular" Value="DownloadSimple" Width="16" Height="16" VerticalAlignment="Center" />
+                                <TextBlock Text="Downloads" FontSize="16" VerticalAlignment="Center" />
                                 <Border Background="{DynamicResource SystemAccentColor}"
                                         CornerRadius="8"
                                         Padding="5,1"
@@ -161,7 +184,24 @@
                         </Border>
 
                     </StackPanel>
-
+                </Panel>
+                
+                <Panel Grid.Column="2" HorizontalAlignment="Right">
+                    <!-- Chat button -->
+                    <Button Command="{Binding OpenChatCommand}"
+                            Classes="Text">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Icon Type="Regular" Value="ChatCircle" Width="16" Height="16" VerticalAlignment="Center" />
+                            <TextBlock Text="Chat" FontSize="16" VerticalAlignment="Center" />
+                            <Border Background="{DynamicResource SystemAccentColor}"
+                                    CornerRadius="8"
+                                    Padding="5,1"
+                                    IsVisible="{Binding HasUnreadChat}">
+                                <TextBlock Text="{Binding ChatUnreadCount}"
+                                           FontSize="11" Foreground="White" />
+                            </Border>
+                        </StackPanel>
+                    </Button>
                 </Panel>
 
             </Grid>

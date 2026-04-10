@@ -3,7 +3,6 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
-             xmlns:controls="clr-namespace:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesRowView"
              x:DataType="vm:GamesCollectionViewModel">
 
@@ -74,7 +73,7 @@
                                     Spacing="8" VerticalAlignment="Center">
                             <Border Background="#CC000000" CornerRadius="0"
                                     Padding="4,2" IsVisible="{Binding ShowInLibraryBadge}">
-                                <controls:Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
+                                <Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
                             </Border>
                             <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
                                        FontSize="12" Opacity="0.55" VerticalAlignment="Center" />

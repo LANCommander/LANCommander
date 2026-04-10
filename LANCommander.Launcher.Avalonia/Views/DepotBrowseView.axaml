@@ -1,14 +1,20 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-            xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
-            xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
-            xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
-            x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
-            x:DataType="vm:GamesCollectionViewModel">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
+             x:Class="LANCommander.Launcher.Avalonia.Views.DepotBrowseView"
+             x:DataType="vm:DepotBrowseViewModel">
 
     <UserControl.Styles>
         <Style Selector="Button.active">
             <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+        </Style>
+        <!-- Locked filter chip: looks like an active tag but non-interactive (no hover change) -->
+        <Style Selector="Border.locked-chip">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,4" />
         </Style>
     </UserControl.Styles>
 
@@ -41,23 +47,25 @@
                                     Command="{Binding ToggleSortDirectionCommand}"
                                     Padding="8,6" Margin="4,0,0,0">
                                 <Panel>
-                                    <Icon Type="Regular" Value="ArrowUp" Width="12" Height="12" IsVisible="{Binding SortAscending}" />
+                                    <Icon Type="Regular" Value="ArrowUp"   Width="12" Height="12" IsVisible="{Binding SortAscending}" />
                                     <Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
                                 </Panel>
                             </Button>
                         </Grid>
                     </StackPanel>
 
-                    <!-- Group by -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                    <!-- Group by (hidden when collection is locked — grouping is implicit) -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding !IsCollectionLocked}">
                         <TextBlock Text="Group By" FontSize="11" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableGroupByOptions}"
                                   SelectedItem="{Binding SelectedGroupBy}"
                                   HorizontalAlignment="Stretch" />
                     </StackPanel>
 
-                    <!-- Genre -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                    <!-- Genre — hidden when genre is locked -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding !IsGenreLocked}">
                         <TextBlock Text="Genre" FontSize="11" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableGenres}"
                                   SelectedItem="{Binding SelectedGenre}"
@@ -71,8 +79,9 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <!-- Tags -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                    <!-- Tags — hidden when tag is locked -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding !IsTagLocked}">
                         <TextBlock Text="Tag" FontSize="11" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableTags}"
                                   SelectedItem="{Binding SelectedTag}"
@@ -125,29 +134,52 @@
                                       HorizontalAlignment="Stretch" />
                     </StackPanel>
 
-                    <!-- Installed (library only) -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8"
-                                IsVisible="{Binding ShowInstalledFilter}">
-                        <TextBlock Text="Status" FontSize="11" Opacity="0.6" />
-                        <ToggleButton IsChecked="{Binding ShowInstalledOnly}"
-                                      Content="Installed Only"
-                                      HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
                 </WrapPanel>
             </Border>
 
             <!-- Quick row -->
             <Border Padding="12,8">
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 
-                    <TextBox Grid.Column="0"
+                    <!-- Back to Depot button (always visible on solid bar background) -->
+                    <Button Grid.Column="0"
+                            Command="{Binding GoBackCommand}"
+                            Classes="Text"
+                            Padding="8,6"
+                            Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Icon Type="Regular" Value="ArrowLeft" Width="13" Height="13" VerticalAlignment="Center" />
+                            <TextBlock Text="Depot" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Locked filter chip — shown when navigated from genre/tag/collection -->
+                    <Border Grid.Column="1"
+                            Classes="locked-chip"
+                            Margin="0,0,8,0"
+                            IsVisible="{Binding HasLockedFilter}"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="{Binding LockedFilterLabel}"
+                                       FontSize="11"
+                                       Opacity="0.7"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding LockedFilterValue}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <Icon Type="Regular" Value="Lock" Width="10" Height="10"
+                                           Opacity="0.7" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBox Grid.Column="2"
                              Watermark="Search games..."
                              Text="{Binding SearchText}"
                              Margin="0,0,8,0" />
 
                     <!-- View type toggle -->
-                    <Border Grid.Column="1"
+                    <Border Grid.Column="3"
                             CornerRadius="2"
                             Margin="0,0,8,0"
                             Padding="4"
@@ -175,7 +207,7 @@
                     </Border>
 
                     <!-- Advanced toggle -->
-                    <ToggleButton Grid.Column="2"
+                    <ToggleButton Grid.Column="4"
                                   Classes="Text"
                                   IsChecked="{Binding IsAdvancedFilterOpen}"
                                   Padding="8,6"
@@ -184,8 +216,9 @@
                         <Icon Type="Regular" Value="FunnelSimple" Width="14" Height="14" />
                     </ToggleButton>
 
-                    <Button Grid.Column="3"
-                            Command="{Binding ClearFiltersCommand}"
+                    <!-- Clear button — uses ClearAdditionalFiltersCommand to preserve locked filter -->
+                    <Button Grid.Column="5"
+                            Command="{Binding ClearAdditionalFiltersCommand}"
                             Content="✕"
                             Classes="Text Error"
                             Padding="8,6" />
@@ -224,4 +257,5 @@
         </Grid>
 
     </DockPanel>
+
 </UserControl>

@@ -54,21 +54,14 @@ public partial class ServerSelectionViewModel : ViewModelBase
 
         try
         {
+            // UpdateServerAddressAsync discovers and validates the server internally
+            // (pings candidate URIs). If it returns without throwing, the server is reachable.
             await _connectionClient.UpdateServerAddressAsync(ServerAddress);
-            var canConnect = await _connectionClient.PingAsync();
-            
-            if (canConnect)
-            {
-                ServerAddress = _connectionClient.GetServerAddress().ToString();
-                
-                StatusMessage = "Connected!";
-                ServerConnected?.Invoke(this, EventArgs.Empty);
-            }
-            else
-            {
-                StatusMessage = "Could not connect to server. Please check the address and try again.";
-                HasError = true;
-            }
+
+            ServerAddress = _connectionClient.GetServerAddress().ToString();
+
+            StatusMessage = "Connected!";
+            ServerConnected?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {

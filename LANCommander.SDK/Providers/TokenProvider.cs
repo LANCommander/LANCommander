@@ -5,8 +5,12 @@ namespace LANCommander.SDK.Providers;
 
 public class TokenProvider(ISettingsProvider settingsProvider) : ITokenProvider
 {
+    private AuthToken? _cachedToken;
+
     public void SetToken(AuthToken token)
     {
+        _cachedToken = token;
+
         settingsProvider.Update(s =>
         {
             s.Authentication.Token = token;
@@ -14,5 +18,5 @@ public class TokenProvider(ISettingsProvider settingsProvider) : ITokenProvider
         });
     }
 
-    AuthToken ITokenProvider.GetToken() => settingsProvider.CurrentValue.Authentication.Token;
+    AuthToken ITokenProvider.GetToken() => _cachedToken ?? settingsProvider.CurrentValue.Authentication?.Token;
 }

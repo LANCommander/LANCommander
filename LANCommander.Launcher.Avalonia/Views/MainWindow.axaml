@@ -1,0 +1,202 @@
+<Window xmlns="https://github.com/avaloniaui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+       xmlns:views="using:LANCommander.Launcher.Avalonia.Views"
+       xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+       xmlns:svg="using:Avalonia.Svg.Skia"
+       x:Class="LANCommander.Launcher.Avalonia.Views.MainWindow"
+       x:DataType="vm:MainWindowViewModel"
+       Title="{Binding Title}"
+       Width="1200"
+       Height="800"
+       MinWidth="900"
+       MinHeight="600"
+       WindowStartupLocation="CenterScreen"
+       SystemDecorations="None"
+       ExtendClientAreaToDecorationsHint="True"
+       ExtendClientAreaChromeHints="NoChrome"
+       ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Window.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </Window.Resources>
+
+    <Grid>
+        <!-- Window resize handles — thin transparent strips on each edge + corner.
+             ZIndex=15 puts them above the floating titlebar (ZIndex=10) so they're
+             always reachable; the center cell is empty so content is not blocked. -->
+        <Grid ZIndex="15"
+              ColumnDefinitions="6,*,6"
+              RowDefinitions="6,*,6">
+            <Border x:Name="ResizeNW" Grid.Row="0" Grid.Column="0" Cursor="TopLeftCorner"    Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeN"  Grid.Row="0" Grid.Column="1" Cursor="SizeNorthSouth"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeNE" Grid.Row="0" Grid.Column="2" Cursor="TopRightCorner"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeW"  Grid.Row="1" Grid.Column="0" Cursor="SizeWestEast"    Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <!-- Center cell intentionally empty: content stays fully interactive -->
+            <Border x:Name="ResizeE"  Grid.Row="1" Grid.Column="2" Cursor="SizeWestEast"    Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeSW" Grid.Row="2" Grid.Column="0" Cursor="BottomLeftCorner"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeS"  Grid.Row="2" Grid.Column="1" Cursor="SizeNorthSouth"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border x:Name="ResizeSE" Grid.Row="2" Grid.Column="2" Cursor="BottomRightCorner" Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
+        </Grid>
+
+        <!-- Main Content (fills full window height) -->
+        <ContentControl Content="{Binding CurrentView}" ZIndex="0">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="vm:SplashViewModel">
+                    <views:SplashView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ServerSelectionViewModel">
+                    <views:ServerSelectionView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:LoginViewModel">
+                    <views:LoginView />
+                </DataTemplate>
+                <DataTemplate DataType="vm:ShellViewModel">
+                    <views:ShellView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- Floating Title Bar (overlays content) -->
+        <Grid VerticalAlignment="Top"
+              Height="40"
+              ZIndex="10"
+              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+
+            <!-- Translucent tint — hidden on depot/library so covers show through -->
+            <Border Grid.ColumnSpan="6"
+                    IsHitTestVisible="False"
+                    Background="#80000000"
+                    IsVisible="{Binding ShowTitlebarTint}" />
+
+            <!-- Logo -->
+            <Border Grid.Column="0" Padding="8,0" VerticalAlignment="Center"
+                    IsVisible="{Binding IsLogoVisible}">
+                <Image Width="24" Height="24" Source="avares://LANCommander.Launcher.Avalonia/Assets/icon.ico" />
+            </Border>
+
+            <!-- View title (shown when shell is active) -->
+            <Border Grid.Column="1"
+                    IsVisible="{Binding IsShellActive}"
+                    VerticalAlignment="Center"
+                    Padding="4,0,12,0">
+                <TextBlock Text="{Binding ShellViewModel.ContentViewTitle}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+            </Border>
+
+            <!-- Drag Region -->
+            <Border Grid.Column="2"
+                    x:Name="TitleBarDragRegion"
+                    Background="Transparent"
+                    PointerPressed="TitleBarDragRegion_PointerPressed"
+                    DoubleTapped="TitleBarDragRegion_DoubleTapped" />
+
+            <!-- Refresh button (visible when a games collection is active) -->
+            <Border Grid.Column="3"
+                    IsVisible="{Binding ShellViewModel.IsRefreshVisible}"
+                    Padding="0,0,2,0"
+                    VerticalAlignment="Center">
+                <Button Classes="Text"
+                        Padding="8,6"
+                        Command="{Binding ShellViewModel.RefreshCommand}">
+                    <Icon Type="Regular" Value="ArrowsClockwise" Width="16" Height="16" />
+                </Button>
+            </Border>
+
+            <!-- Profile button (visible only when shell is active) -->
+            <Border Grid.Column="4"
+                    IsVisible="{Binding IsShellActive}"
+                    Padding="0,0,4,0"
+                    VerticalAlignment="Center">
+                <Button Classes="Primary"
+                        Padding="8,4">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="Settings"
+                                      Command="{Binding ShellViewModel.ShowSettingsCommand}" />
+                            <MenuItem Header="Switch to Offline Mode"
+                                      Command="{Binding ShellViewModel.GoOfflineCommand}"
+                                      IsVisible="{Binding !ShellViewModel.IsOfflineMode}" />
+                            <MenuItem Header="Go Online"
+                                      Command="{Binding ShellViewModel.TryGoOnlineCommand}"
+                                      IsVisible="{Binding ShellViewModel.CanGoOnline}" />
+                            <MenuItem Header="Logout"
+                                      Command="{Binding ShellViewModel.LogoutCommand}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!-- Avatar: 2px rounded rectangle, with User icon fallback -->
+                        <Panel Width="22" Height="22">
+                            <!-- Fallback: shown when no avatar is available -->
+                            <Border CornerRadius="2"
+                                    Background="#1A7AC4"
+                                    IsVisible="{Binding !ShellViewModel.Profile.HasAvatar}">
+                                <Icon Type="Regular" Value="User" Width="13" Height="13" Color="White" />
+                            </Border>
+                            <!-- Avatar image: 2px rounded rectangle (not a circle) -->
+                            <Border CornerRadius="2"
+                                    ClipToBounds="True"
+                                    IsVisible="{Binding ShellViewModel.Profile.HasAvatar}">
+                                <Image Source="{Binding ShellViewModel.Profile.AvatarPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Panel>
+                        <!-- Username -->
+                        <TextBlock Text="{Binding ShellViewModel.Profile.Alias}"
+                                   VerticalAlignment="Center"
+                                   Foreground="White"
+                                   FontSize="13" />
+                    </StackPanel>
+                </Button>
+            </Border>
+
+            <!-- Window Controls -->
+            <StackPanel Grid.Column="5" Orientation="Horizontal">
+                <Button x:Name="MinimizeButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="MinimizeButton_Click">
+                    <TextBlock Text="—" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+                <Button x:Name="MaximizeButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="MaximizeButton_Click">
+                    <TextBlock Text="□" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+                <Button x:Name="CloseButton"
+                        Width="46"
+                        Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="CloseButton_Click">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#C42B1C" />
+                        </Style>
+                    </Button.Styles>
+                    <TextBlock Text="✕" FontSize="12"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Window>

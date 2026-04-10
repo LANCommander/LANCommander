@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+            xmlns:svg="using:Avalonia.Svg.Skia"
+            x:Class="LANCommander.Launcher.Avalonia.Views.LoginView"
+            x:DataType="vm:LoginViewModel">
+
+    <Grid>
+        <!-- Background image (set from code-behind) -->
+        <Image x:Name="BackgroundImage" Stretch="UniformToFill" />
+
+        <!-- Dark overlay for readability -->
+        <Border Background="#AA000000" />
+
+        <!-- Login panel -->
+        <Border Padding="40" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Spacing="20" Width="400" VerticalAlignment="Center">
+                <svg:Svg Path="/Assets/logo.svg"
+                         Width="350"
+                         HorizontalAlignment="Center" />
+                
+                <Grid x:Name="ServerAddress">
+                    <Grid.Styles>
+                        <!-- When NOT hovered -->
+                        <Style Selector="Grid#ServerAddress Border#TextView">
+                            <Setter Property="Opacity" Value="1"/>
+                        </Style>
+
+                        <Style Selector="Grid#ServerAddress Border#ButtonView">
+                            <Setter Property="Opacity" Value="0"/>
+                        </Style>
+
+                        <!-- When hovered -->
+                        <Style Selector="Grid#ServerAddress:pointerover Border#TextView">
+                            <Setter Property="Opacity" Value="0"/>
+                        </Style>
+
+                        <Style Selector="Grid#ServerAddress:pointerover Border#ButtonView">
+                            <Setter Property="Opacity" Value="1"/>
+                        </Style>
+                    </Grid.Styles>
+
+                    <!-- Text -->
+                    <Border x:Name="TextView">
+                        <Border.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.1"/>
+                            </Transitions>
+                        </Border.Transitions>
+                        
+                        <TextBlock Text="{Binding ServerAddress}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Button -->
+                    <Border x:Name="ButtonView">
+                        <Border.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.1"/>
+                            </Transitions>
+                        </Border.Transitions>
+                        
+                        <Button Content="Change"
+                                Classes="Glass"
+                                Command="{Binding ChangeServerCommand}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Username" FontWeight="SemiBold" Foreground="White" />
+                    <TextBox x:Name="UsernameTextBox"
+                             Watermark="Enter your username"
+                             Classes="Glass"
+                             Text="{Binding Username}"
+                             IsEnabled="{Binding !IsLoading}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Return" Command="{Binding LoginCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Password" FontWeight="SemiBold" Foreground="White" />
+                    <TextBox Watermark="Enter your password"
+                             Classes="Glass"
+                             PasswordChar="•"
+                             Text="{Binding Password}"
+                             IsEnabled="{Binding !IsLoading}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Return" Command="{Binding LoginCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                </StackPanel>
+
+                <Button Command="{Binding LoginCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Classes="Primary Large"
+                        IsVisible="{Binding !IsLoading}"
+                        IsEnabled="{Binding !IsLoading}">
+                    <Panel>
+                        <TextBlock Text="Sign In" />
+                    </Panel>
+                </Button>
+                
+                <StackPanel HorizontalAlignment="Center" Spacing="12" IsVisible="{Binding IsLoading}">
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="200"
+                                 Height="4" />
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="White"
+                               Opacity="0.75"
+                               FontSize="12"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

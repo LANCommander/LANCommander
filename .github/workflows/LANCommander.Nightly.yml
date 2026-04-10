@@ -255,6 +255,84 @@ jobs:
       build_platform: Windows
       build_configuration: Debug
 
+  build_launcher_avalonia_linux_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_launcher_avalonia_linux_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_launcher_avalonia_osx_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_launcher_avalonia_osx_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_launcher_avalonia_win_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
+      build_configuration: Debug
+
+  build_launcher_avalonia_win_x64:
+    needs: [prep]
+    if: needs.prep.outputs.changed == 'true' && github.repository_owner == 'LANCommander'
+    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    with:
+      build_dotnet_version: '10.0.100'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
+
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly
   # --------------------------------------------------------------------------
@@ -365,6 +443,12 @@ jobs:
     needs:
       - prep
       - publish_docker_image
+      - build_launcher_avalonia_linux_arm64
+      - build_launcher_avalonia_linux_x64
+      - build_launcher_avalonia_osx_arm64
+      - build_launcher_avalonia_osx_x64
+      - build_launcher_avalonia_win_arm64
+      - build_launcher_avalonia_win_x64
     steps:
       - name: Create Temp Directory
         run: mkdir -p artifacts
@@ -440,7 +524,43 @@ jobs:
         with:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
-          
+
+      - name: Download Launcher Avalonia Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Avalonia Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Avalonia macOS ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Avalonia macOS x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Avalonia Windows ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Avalonia Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
       - name: Delete existing release assets
         uses: dev-drprasad/delete-tag-and-release@v1.1
         with:
@@ -468,5 +588,11 @@ jobs:
             artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

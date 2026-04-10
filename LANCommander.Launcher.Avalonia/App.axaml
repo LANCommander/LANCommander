@@ -1,0 +1,78 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             x:Class="LANCommander.Launcher.Avalonia.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/LANCommander.axaml" />
+        <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/Carousel.axaml" />
+        <StyleInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/Badge.axaml" />
+        
+        <!-- Global control defaults -->
+        <Style Selector="Button,IconButton">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="ToggleButton">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        
+        <Style Selector="Button.Large, SplitButton.Large">
+            <Setter Property="Padding" Value="24, 14" />
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+
+        <!-- Icon control template (PathIcon ControlTheme is not inherited by subclasses in Avalonia 11) -->
+        <!-- Default: stroke-based rendering for Regular, Light, Thin, DuoTone, Bold variants -->
+        <Style Selector="Icon">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ClipToBounds" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Path Fill="Transparent"
+                          Stroke="{TemplateBinding Foreground}"
+                          StrokeThickness="1"
+                          Data="{TemplateBinding Data}"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <!-- Fill variant: fill-based rendering (closed shapes, no stroke needed) -->
+        <Style Selector="Icon[Type=Fill]">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Path Fill="{TemplateBinding Foreground}"
+                          Stroke="Transparent"
+                          Data="{TemplateBinding Data}"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </Application.Styles>
+    
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Bold.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/DuoTone.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Fill.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Light.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Regular.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Icons/Thin.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Assets/Localization/en-US.axaml" />
+                <ResourceInclude Source="avares://LANCommander.Launcher.Avalonia/Theme/ColorPalette.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:MultiplyConverter x:Key="MultiplyConverter" />
+            <converters:StringFormatConverter x:Key="StringFormatConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

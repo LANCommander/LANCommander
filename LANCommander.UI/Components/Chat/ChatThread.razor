@@ -231,7 +231,7 @@
                     Id = message.Id, // Use first message ID as group ID for stability
                     UserId = message.UserId,
                     UserName = message.UserName,
-                    Messages = new List<SDK.Models.ChatMessage> { message }
+                    Messages = new System.Collections.ObjectModel.ObservableCollection<SDK.Models.ChatMessage> { message }
                 };
             }
             else

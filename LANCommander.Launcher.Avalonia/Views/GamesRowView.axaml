@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GamesRowView"
+             x:DataType="vm:GamesCollectionViewModel">
+
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.GamesList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.GamesList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Padding="{TemplateBinding Padding}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.GamesList ListBoxItem">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Margin" Value="8,2" />
+        </Style>
+        <Style Selector="ListBox.GamesList ListBoxItem:pointerover Border.ListRowInner">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+        </Style>
+        <Style Selector="ListBox.GamesList ListBoxItem:selected Border.ListRowInner">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </UserControl.Styles>
+
+    <ListBox Classes="GamesList"
+             ItemsSource="{Binding Games}"
+             SelectedItem="{Binding SelectedGame}"
+             Padding="0,56,0,0"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             Tapped="OnGameTapped">
+        <ListBox.KeyBindings>
+            <KeyBinding Gesture="Return"
+                        Command="{Binding ViewGameDetailsCommand}"
+                        CommandParameter="{Binding SelectedGame}" />
+        </ListBox.KeyBindings>
+        <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+            <DataTemplate DataType="vmComponents:GameItemViewModel">
+                <Border Classes="ListRowInner" Padding="8,6" CornerRadius="0"
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                    Spacing="8" VerticalAlignment="Center">
+                            <Border Background="#CC000000" CornerRadius="0"
+                                    Padding="4,2" IsVisible="{Binding ShowInLibraryBadge}">
+                                <Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
+                            </Border>
+                            <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
+                                       FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Border Width="40" Height="55" CornerRadius="0"
+                                ClipToBounds="True" Margin="0,0,12,0">
+                            <Panel>
+                                <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                       Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
+                                <Border IsVisible="{Binding !HasCover}">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                            <GradientStop Color="#3D1A6B" Offset="0" />
+                                            <GradientStop Color="#0F3460" Offset="1" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </Panel>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="14" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Genres}" FontSize="12" Opacity="0.6"
+                                       TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+
+</UserControl>

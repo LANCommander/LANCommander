@@ -58,6 +58,7 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Issue> Issues { get; set; }
         public ICollection<Page>? Pages { get; set; }
         public ICollection<Library> Libraries { get; set; }
+        public ICollection<Rating>? Ratings { get; set; }
         public ICollection<GameCustomField>? CustomFields { get; set; }
         
         [NotMapped]

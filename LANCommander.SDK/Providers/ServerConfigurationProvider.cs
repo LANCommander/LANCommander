@@ -69,12 +69,13 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
                 request.Headers.Add("Authorization", $"Bearer {settings.Authentication.Token.AccessToken}");
             }
             
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            // Use ConfigureAwait(false) to prevent deadlocks when called from UI threads
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var payload = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken) ?? new JsonObject();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            var payload = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false) ?? new JsonObject();
 
             var prefix = "";
             var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);

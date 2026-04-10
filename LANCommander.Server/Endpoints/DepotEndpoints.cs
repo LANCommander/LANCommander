@@ -22,15 +22,9 @@ public static class DepotEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] IMapper mapper,
         [FromServices] IFusionCache cache,
-        [FromServices] GameService gameService,
-        [FromServices] CollectionService collectionService,
-        [FromServices] CompanyService companyService,
-        [FromServices] EngineService engineService,
-        [FromServices] GenreService genreService,
-        [FromServices] PlatformService platformService,
-        [FromServices] TagService tagService,
-        [FromServices] LibraryService libraryService,
+        [FromServices] DepotService depotService,
         [FromServices] UserService userService,
+        [FromServices] LibraryService libraryService,
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] ILoggerFactory loggerFactory)
     {
@@ -54,33 +48,10 @@ public static class DepotEndpoints
 
         var library = await libraryService.GetByUserIdAsync(user.Id);
 
-        var results = await cache.GetOrSetAsync("Depot/Results", async _ =>
-        {
-            var games = await gameService
-                .AsNoTracking()
-                .Include(g => g.Media)
-                .Include(g => g.Collections)
-                .Include(g => g.Platforms)
-                .Include(g => g.Tags)
-                .Include(g => g.Developers)
-                .Include(g => g.Genres)
-                .Include(g => g.Publishers)
-                .Include(g => g.Engine)
-                .GetAsync();
+        var results = await cache.GetOrSetAsync("Depot/Results", async _ => await depotService.GetResults(), TimeSpan.MaxValue, tags: ["Depot"]);
 
-            var depotResults = new SDK.Models.DepotResults
-            {
-                Games = mapper.Map<ICollection<SDK.Models.DepotGame>>(games),
-                Collections = mapper.Map<ICollection<SDK.Models.Collection>>(await collectionService.AsNoTracking().GetAsync()),
-                Companies = mapper.Map<ICollection<SDK.Models.Company>>(await companyService.AsNoTracking().GetAsync()),
-                Engines = mapper.Map<ICollection<SDK.Models.Engine>>(await engineService.AsNoTracking().GetAsync()),
-                Genres = mapper.Map<ICollection<SDK.Models.Genre>>(await genreService.AsNoTracking().GetAsync()),
-                Platforms = mapper.Map<ICollection<SDK.Models.Platform>>(await platformService.AsNoTracking().GetAsync()),
-                Tags = mapper.Map<ICollection<SDK.Models.Tag>>(await tagService.AsNoTracking().GetAsync()),
-            };
-
-            return depotResults;
-        }, TimeSpan.MaxValue, tags: ["Depot"]);
+        results.Popular = await cache.GetOrSetAsync("Depot/Popular", async _ => await depotService.GetPopularGameIds(), TimeSpan.MaxValue, tags: ["Depot", "PlaySessions"]);
+        results.Backlog = await cache.GetOrSetAsync("Depot/Backlog", async _ => await depotService.GetBacklogGameIds(), TimeSpan.MaxValue, tags: ["Depot", "PlaySessions", "Ratings"]);
 
         if (settingsProvider.CurrentValue.Server.Roles.RestrictGamesByCollection)
         {
@@ -121,6 +92,7 @@ public static class DepotEndpoints
         [FromServices] IMapper mapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
+        [FromServices] DepotService depotService,
         [FromServices] LibraryService libraryService,
         [FromServices] UserService userService)
     {
@@ -129,31 +101,7 @@ public static class DepotEndpoints
         if (user == null)
             return TypedResults.Unauthorized();
 
-        var game = await cache.GetOrSetAsync($"Depot/Games/{id}", async _ =>
-        {
-            return await gameService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                })
-                .Include(g => g.Actions)
-                .Include(g => g.Archives)
-                .Include(g => g.BaseGame)
-                .Include(g => g.Categories)
-                .Include(g => g.Collections)
-                .Include(g => g.DependentGames)
-                .Include(g => g.Developers)
-                .Include(g => g.Engine)
-                .Include(g => g.Genres)
-                .Include(g => g.Media)
-                .Include(g => g.MultiplayerModes)
-                .Include(g => g.Platforms)
-                .Include(g => g.Publishers)
-                .Include(g => g.Redistributables)
-                .Include(g => g.SavePaths)
-                .Include(g => g.Scripts)
-                .Include(g => g.Tags)
-                .GetAsync(id);
-        }, tags: ["Depot", "Depot/Games", "Games", $"Games/{id}"]);
+        var game = await cache.GetOrSetAsync($"Depot/Games/{id}", async _ => await depotService.GetGameAsync(id), tags: ["Depot", "Depot/Games", "Games", $"Games/{id}"]);
 
         if (game == null)
             return TypedResults.NotFound();
@@ -170,6 +118,8 @@ public static class DepotEndpoints
 
         return TypedResults.Ok(result);
     }
+
+
 }
 
 

@@ -1,0 +1,78 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:LANCommander.Launcher.Avalonia.Controls">
+
+    <Style Selector="local|CarouselControl">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <!-- Single grid so title column aligns with the clip-panel column -->
+                <Grid RowDefinitions="Auto,Auto">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Row 0: header — title in col 1, "See all" in col 2 (both align with items/right-button) -->
+                    <TextBlock Grid.Row="0" Grid.Column="1"
+                               Text="{TemplateBinding Title}"
+                               FontSize="18" FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,0,10"
+                               IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    
+                    <IconButton Grid.Row="0" Grid.Column="1"
+                                Text="See all"
+                                Classes="Text"
+                                Command="{TemplateBinding SeeAllCommand}"
+                                IsVisible="{TemplateBinding SeeAllCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                Padding="8,4"
+                                Margin="0, 0, 0, 10"
+                                Size="12"
+                                Opacity="0.6"
+                                HorizontalAlignment="Right"
+                                IconType="Regular"
+                                IconValue="CaretRight"
+                                IconPlacement="Right" />
+
+                    <!-- Row 1: left button | clipped items | right button -->
+                    <Button x:Name="PART_LeftButton"
+                            Grid.Row="1" Grid.Column="0"
+                            Classes="Text"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Stretch"
+                            Padding="8,6">
+                        <Icon Type="Regular" Value="CaretLeft" Width="16" Height="16" />
+                    </Button>
+
+                    <Panel x:Name="PART_ClipPanel" Grid.Row="1" Grid.Column="1" ClipToBounds="False">
+                        <Border x:Name="PART_ItemsContainer">
+                            <ItemsControl x:Name="PART_ItemsControl"
+                                          ItemsSource="{TemplateBinding ItemsSource}"
+                                          ItemTemplate="{TemplateBinding ItemTemplate}"
+                                          ClipToBounds="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="{Binding Gap, RelativeSource={RelativeSource AncestorType=local:CarouselControl}}" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </Border>
+                    </Panel>
+
+                    <Button x:Name="PART_RightButton"
+                            Grid.Row="1" Grid.Column="2"
+                            Classes="Text"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Stretch"
+                            Padding="8,6">
+                        <Icon Type="Regular" Value="CaretRight" Width="16" Height="16" Color="White" />
+                    </Button>
+
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+</Styles>

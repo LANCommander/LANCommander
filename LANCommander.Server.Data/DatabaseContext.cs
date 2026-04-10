@@ -85,6 +85,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
             builder.ConfigureBaseRelationships<Page>();
+            builder.ConfigureBaseRelationships<Rating>();
             builder.ConfigureBaseRelationships<Role>();
             builder.ConfigureBaseRelationships<User>();
             builder.ConfigureBaseRelationships<UserCustomField>();
@@ -237,6 +238,12 @@ namespace LANCommander.Server.Data
             builder.Entity<Game>()
                 .HasOne(g => g.Engine)
                 .WithMany(e => e.Games)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Ratings)
+                .WithOne(g => g.Game)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
             #endregion

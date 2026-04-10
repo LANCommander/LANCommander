@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+        xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+        x:Class="LANCommander.Launcher.Avalonia.Views.PowerShellConsoleWindow"
+        x:DataType="vm:PowerShellConsoleViewModel"
+        Title="{Binding Title}"
+        Width="1000"
+        Height="650"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E">
+    
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Padding="12,8" 
+                Background="#2D2D2D">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Foreground="White" />
+                    <TextBlock Text="{Binding WorkingDirectory}" 
+                               FontSize="11" 
+                               Foreground="#888888"
+                               IsVisible="{Binding WorkingDirectory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+                <Button Grid.Column="1" 
+                        Content="✕ Close" 
+                        Command="{Binding CloseCommand}"
+                        Padding="12,6"
+                        Background="#3C3C3C"
+                        Foreground="#CCCCCC" />
+            </Grid>
+        </Border>
+        
+        <!-- Script Console -->
+        <components:ScriptConsoleControl Grid.Row="1" 
+                                         x:Name="Console" />
+    </Grid>
+</Window>

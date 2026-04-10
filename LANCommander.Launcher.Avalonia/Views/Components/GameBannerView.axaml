@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.GameBannerView">
+    
+    <Border Height="300" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+        <Panel>
+            <!-- Background image (if available) -->
+            <Image x:Name="BackgroundImage"
+                   Stretch="UniformToFill"
+                   Opacity="0.3" />
+            
+            <!-- Cover/Banner overlay -->
+            <Border HorizontalAlignment="Center" 
+                    VerticalAlignment="Center"
+                    CornerRadius="8"
+                    ClipToBounds="True"
+                    MaxHeight="280"
+                    BoxShadow="0 4 16 0 #40000000">
+                <Image x:Name="BannerImage"
+                       Stretch="Uniform"
+                       MaxHeight="280" />
+            </Border>
+            
+            <!-- Fallback when no banner -->
+            <Border x:Name="FallbackBanner"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource SystemAccentColor}"
+                    CornerRadius="8"
+                    Padding="40,20"
+                    IsVisible="False">
+                <StackPanel>
+                    <TextBlock Text="🎮" FontSize="48" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="FallbackTitle" 
+                               FontSize="24" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"
+                               Foreground="White" />
+                </StackPanel>
+            </Border>
+        </Panel>
+    </Border>
+</UserControl>

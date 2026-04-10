@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GamesShelfView"
+             x:DataType="vm:GamesCollectionViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled">
+        <ItemsRepeater ItemsSource="{Binding Games}" Margin="12,52,12,8" ClipToBounds="False">
+            <ItemsRepeater.Layout>
+                <StackLayout Orientation="Horizontal" Spacing="8" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
+                <DataTemplate DataType="vmComponents:GameItemViewModel">
+                    <components:CoverButton
+                        Width="120" Height="180"
+                        Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                        CommandParameter="{Binding}" />
+                </DataTemplate>
+            </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
+    </ScrollViewer>
+
+</UserControl>

@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.GamesGridView"
+             x:DataType="vm:GamesCollectionViewModel">
+
+    <ScrollViewer x:Name="FlatGridScrollViewer"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  SizeChanged="FlatGridScrollViewer_SizeChanged">
+        <ItemsRepeater x:Name="FlatGridItemsRepeater" ItemsSource="{Binding Games}" Margin="24,56,24,8" ClipToBounds="False">
+            <ItemsRepeater.Layout>
+                <UniformGridLayout MinItemWidth="140" MinItemHeight="210"
+                                   MinColumnSpacing="12" MinRowSpacing="12"
+                                   ItemsStretch="None"
+                                   ItemsJustification="Start" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
+                <DataTemplate DataType="vmComponents:GameItemViewModel">
+                    <components:CoverButton
+                        Width="{Binding $parent[local:GamesGridView].CoverWidth}"
+                        Height="{Binding $parent[local:GamesGridView].CoverHeight}"
+                        Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                        CommandParameter="{Binding}" />
+                </DataTemplate>
+            </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
+    </ScrollViewer>
+
+</UserControl>

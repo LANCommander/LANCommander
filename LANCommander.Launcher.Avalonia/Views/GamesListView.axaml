@@ -1,0 +1,227 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+            xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
+            xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
+            x:Class="LANCommander.Launcher.Avalonia.Views.GamesListView"
+            x:DataType="vm:GamesCollectionViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.active">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- ── Filter Bar ──────────────────────────────────────────────────── -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+
+            <!-- Advanced panel — expands upward above the quick row -->
+            <Border IsVisible="{Binding IsAdvancedFilterOpen}"
+                    Padding="12,10,12,4"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="0,0,0,1">
+                <WrapPanel Orientation="Horizontal" ItemWidth="180">
+
+                    <!-- Sort -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Sort" FontSize="11" Opacity="0.6" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ComboBox Grid.Column="0"
+                                      SelectedItem="{Binding SelectedSortBy}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.Items>
+                                    <enums:SortBy>Title</enums:SortBy>
+                                    <enums:SortBy>DateReleased</enums:SortBy>
+                                </ComboBox.Items>
+                            </ComboBox>
+                            <Button Grid.Column="1"
+                                    Command="{Binding ToggleSortDirectionCommand}"
+                                    Padding="8,6" Margin="4,0,0,0">
+                                <Panel>
+                                    <Icon Type="Regular" Value="ArrowUp" Width="12" Height="12" IsVisible="{Binding SortAscending}" />
+                                    <Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
+                                </Panel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Group by -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Group By" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailableGroupByOptions}"
+                                  SelectedItem="{Binding SelectedGroupBy}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Genre -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Genre" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailableGenres}"
+                                  SelectedItem="{Binding SelectedGenre}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Tags -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Tag" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailableTags}"
+                                  SelectedItem="{Binding SelectedTag}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Developer -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Developer" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailableDevelopers}"
+                                  SelectedItem="{Binding SelectedDeveloper}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Publisher -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Publisher" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailablePublishers}"
+                                  SelectedItem="{Binding SelectedPublisher}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Multiplayer -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Multiplayer" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailableMultiplayerTypes}"
+                                  SelectedItem="{Binding SelectedMultiplayerType}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Player Count -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Min Players" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailablePlayerCounts}"
+                                  SelectedItem="{Binding SelectedMinPlayers}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- In Library (depot only) -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding ShowInLibraryFilter}">
+                        <TextBlock Text="Ownership" FontSize="11" Opacity="0.6" />
+                        <ToggleButton IsChecked="{Binding ShowInLibraryOnly}"
+                                      Content="In Library Only"
+                                      HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                    <!-- Installed (library only) -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8"
+                                IsVisible="{Binding ShowInstalledFilter}">
+                        <TextBlock Text="Status" FontSize="11" Opacity="0.6" />
+                        <ToggleButton IsChecked="{Binding ShowInstalledOnly}"
+                                      Content="Installed Only"
+                                      HorizontalAlignment="Stretch" />
+                    </StackPanel>
+
+                </WrapPanel>
+            </Border>
+
+            <!-- Quick row -->
+            <Border Padding="12,8">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+
+                    <TextBox Grid.Column="0"
+                             Watermark="Search games..."
+                             Text="{Binding SearchText}"
+                             Margin="0,0,8,0" />
+
+                    <!-- View type toggle -->
+                    <Border Grid.Column="1"
+                            CornerRadius="2"
+                            Margin="0,0,8,0"
+                            Padding="4"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                                    ToolTip.Tip="Grid view"
+                                    Classes.active="{Binding IsGridView}"
+                                    Click="GridViewButton_Click">
+                                <Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
+                            </Button>
+                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                                    ToolTip.Tip="List view"
+                                    Classes.active="{Binding IsListView}"
+                                    Click="ListViewButton_Click">
+                                <Icon Type="Regular" Value="Rows" Width="14" Height="14" />
+                            </Button>
+                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                                    ToolTip.Tip="Horizontal view"
+                                    Classes.active="{Binding IsHorizontalView}"
+                                    Click="HorizontalViewButton_Click">
+                                <Icon Type="Regular" Value="ArrowsHorizontal" Width="14" Height="14" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Advanced toggle -->
+                    <ToggleButton Grid.Column="2"
+                                  Classes="Text"
+                                  IsChecked="{Binding IsAdvancedFilterOpen}"
+                                  Padding="8,6"
+                                  Margin="0,0,8,0"
+                                  ToolTip.Tip="Advanced filters">
+                        <Icon Type="Regular" Value="FunnelSimple" Width="14" Height="14" />
+                    </ToggleButton>
+
+                    <Button Grid.Column="3"
+                            Command="{Binding ClearFiltersCommand}"
+                            Content="✕"
+                            Classes="Text Error"
+                            Padding="8,6" />
+
+                </Grid>
+            </Border>
+
+        </StackPanel>
+
+        <!-- ── Loading ─────────────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding IsLoading}"
+                Padding="16,54,16,10"
+                HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
+            </StackPanel>
+        </Border>
+
+        <!-- ── Error ──────────────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding HasError}"
+                Padding="12"
+                Margin="16,44,16,0"
+                CornerRadius="0">
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
+        </Border>
+
+        <!-- ── Sub-views ──────────────────────────────────────────────────── -->
+        <Grid>
+            <local:GamesGridView    IsVisible="{Binding IsGridViewFlat}" />
+            <local:GamesRowView     IsVisible="{Binding IsListViewFlat}" />
+            <local:GamesShelfView   IsVisible="{Binding IsHorizontalViewFlat}" />
+            <local:GamesGroupedView IsVisible="{Binding IsGrouped}" />
+        </Grid>
+
+    </DockPanel>
+</UserControl>

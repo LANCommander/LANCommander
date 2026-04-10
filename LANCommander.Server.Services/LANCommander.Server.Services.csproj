@@ -10,6 +10,7 @@
     <PackageReference Include="AutoMapper" />
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" />
+    <PackageReference Include="YoutubeExplode" />
     <PackageReference Include="Docker.DotNet.Enhanced" />
     <PackageReference Include="IGDB" />
     <PackageReference Include="IPXRelayDotNet" />

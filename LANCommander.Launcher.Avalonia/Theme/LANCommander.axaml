@@ -484,13 +484,13 @@
   </Style>
 
   <!-- ===================================================== -->
-  <!-- BUTTONS — Glass variant                              -->
+  <!-- BUTTONS — Glass variants                              -->
   <!-- ===================================================== -->
 
   <Style Selector="Button.Glass, local|IconButton.Glass">
     <Setter Property="Background" Value="{DynamicResource ButtonGlassBgBrush}" />
-    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.Glass:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Glass:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -499,6 +499,21 @@
   <Style Selector="Button.Glass:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Glass:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource ButtonGlassPressedBgBrush}" />
+  </Style>
+
+  <Style Selector="Button.Glass.Dark, local|IconButton.Glass.Dark">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassDarkBgBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="Button.Glass.Dark:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Glass.Dark:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassDarkHoverBgBrush}" />
+  </Style>
+  <Style Selector="Button.Glass.Dark:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Glass.Dark:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ButtonGlassDarkPressedBgBrush}" />
   </Style>
 
   <!-- ===================================================== -->

@@ -69,13 +69,15 @@
                     <!-- Back button (overlaid at top-left, below title bar) -->
                     <IconButton Command="{Binding GoBackCommand}"
                                 Text="{Binding BackLabel}"
-                                Classes="Glass"
+                                Classes="Glass Dark"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
                                 Margin="16, 48, 0, 0"
                                 IconType="Regular"
                                 IconValue="CaretLeft"
-                                Size="16" />
+                                Size="16"
+                                ZIndex="2"
+                                IsHitTestVisible="True" />
 
                     <!-- Logo (bottom-left) -->
                     <Border HorizontalAlignment="Stretch"

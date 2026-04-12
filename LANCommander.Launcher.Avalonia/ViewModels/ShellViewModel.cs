@@ -477,6 +477,15 @@ public partial class ShellViewModel : ViewModelBase
         await GamesListViewModel.LoadGamesAsync();
         await DepotViewModel.LoadAsync();
 
+        // Re-initialize the browse view with fresh data so install status updates
+        if (ContentView == DepotBrowseViewModel)
+            DepotBrowseViewModel.Initialize(
+                GamesListViewModel.GetAllGames(),
+                _lastDepotBrowseFilter.Genre,
+                _lastDepotBrowseFilter.Tag,
+                _lastDepotBrowseFilter.Collection,
+                _lastDepotBrowseFilter.Search);
+
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();
 

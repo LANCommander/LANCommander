@@ -289,6 +289,8 @@ public partial class GameActionBarViewModel : ViewModelBase
                 InstallDirectory = localGame.InstallDirectory;
                 IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
                 LoadPlayStats(localGame);
+                LoadManuals(localGame);
+                await LoadActionsAsync();
                 StatusMessage = IsInstalled ? "Installation complete!" : null;
                 _logger.LogInformation("Refreshed action bar for {Title}: Installed={Installed}", Title, IsInstalled);
             }

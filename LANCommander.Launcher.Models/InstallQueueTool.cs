@@ -28,6 +28,7 @@ public class InstallQueueTool : IInstallQueueItem
                 case InstallStatus.InstallingMods:
                 case InstallStatus.InstallingExpansions:
                 case InstallStatus.InstallingAddons:
+                case InstallStatus.VerifyingFiles:
                 case InstallStatus.RunningScripts:
                 case InstallStatus.DownloadingSaves:
                     return true;

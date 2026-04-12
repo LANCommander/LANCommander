@@ -1067,7 +1067,7 @@ namespace LANCommander.SDK.Services
 
                 _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
 
-                _installProgress.Status = InstallStatus.VerifyingFiles;
+                _installProgress.Status = InstallStatus.Downloading;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))

@@ -126,7 +126,7 @@ jobs:
     - name: Bundle and Clean
       shell: pwsh
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/
         
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(
@@ -147,7 +147,7 @@ jobs:
           'Libraries/locales'
         )
         
-        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
         foreach ($path in $PathsToRemove) {
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
@@ -156,7 +156,7 @@ jobs:
       shell: pwsh
       run: |
         $compress = @{
-          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/*"
           DestinationPath = "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }

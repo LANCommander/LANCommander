@@ -83,6 +83,11 @@ public class ServerChatClient(
         return mappedThreads;
     }
 
+    public async Task<IEnumerable<ChatThread>> LoadThreadsAsync()
+    {
+        return await GetThreadsAsync();
+    }
+
     public async Task<IEnumerable<User>> GetUsersAsync()
     {
         var users = await chatService.GetUsersAsync();

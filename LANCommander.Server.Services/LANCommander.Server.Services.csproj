@@ -22,7 +22,6 @@
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-    <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="ZiggyCreatures.FusionCache" />

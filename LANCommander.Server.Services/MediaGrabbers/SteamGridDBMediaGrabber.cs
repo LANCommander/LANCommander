@@ -309,7 +309,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             var youtube = new YoutubeClient();
             var results = new List<MediaGrabberResult>();
 
-            await foreach (var video in youtube.Search.GetVideosAsync(keywords + " trailer gameplay").Take(20))
+            foreach (var video in (await youtube.Search.GetVideosAsync(keywords + "trailer gameplay")).Take(20))
             {
                 var thumbnail = video.Thumbnails.GetWithHighestResolution();
 

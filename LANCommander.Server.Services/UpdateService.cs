@@ -30,9 +30,7 @@ namespace LANCommander.Server.Services
             List<LauncherArtifact> launchers = [];
 
             if (_settingsProvider.CurrentValue.Server.Launcher.HostUpdates)
-            {
                 launchers.AddRange(GetLauncherArtifactsFromLocalFiles());
-            }
 
             if (launchers.Count == 0 || _settingsProvider.CurrentValue.Server.Launcher.IncludeOnlineUpdates)
             {

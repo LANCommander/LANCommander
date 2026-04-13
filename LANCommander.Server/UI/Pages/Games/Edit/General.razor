@@ -180,7 +180,7 @@
 
     private async Task LoadData()
     {
-        var allowedTypes = new[] { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
+        var allowedTypes = new List<GameType> { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
 
         Engines = await EngineService.SortBy(g => g.Name).GetAsync();
         Games = (await GameService

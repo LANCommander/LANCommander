@@ -137,6 +137,11 @@
   <Color x:Key="ButtonGlassHoverBg">#1AFFFFFF</Color>
   <Color x:Key="ButtonGlassPressedBg">#2AFFFFFF</Color>
 
+  <!-- Button - Glass.Dark -->
+  <Color x:Key="ButtonGlassDarkBg">#80000000</Color>
+  <Color x:Key="ButtonGlassDarkHoverBg">#EE111111</Color>
+  <Color x:Key="ButtonGlassDarkPressedBg">#FF111111</Color>
+
   <!-- Button - Shared -->
   <Color x:Key="ButtonDisabledBg">#14FFFFFF</Color>
   <Color x:Key="ButtonDisabledText">#40FFFFFF</Color>
@@ -179,9 +184,14 @@
 
   <SolidColorBrush x:Key="ButtonTextHoverBgBrush" Color="{StaticResource ButtonTextHoverBg}" />
   <SolidColorBrush x:Key="ButtonTextPressedBgBrush" Color="{StaticResource ButtonTextPressedBg}" />
+
   <SolidColorBrush x:Key="ButtonGlassBgBrush" Color="{StaticResource ButtonGlassBg}" />
   <SolidColorBrush x:Key="ButtonGlassHoverBgBrush" Color="{StaticResource ButtonGlassHoverBg}" />
   <SolidColorBrush x:Key="ButtonGlassPressedBgBrush" Color="{StaticResource ButtonGlassPressedBg}" />
+
+  <SolidColorBrush x:Key="ButtonGlassDarkBgBrush" Color="{StaticResource ButtonGlassDarkBg}" />
+  <SolidColorBrush x:Key="ButtonGlassDarkHoverBgBrush" Color="{StaticResource ButtonGlassDarkHoverBg}" />
+  <SolidColorBrush x:Key="ButtonGlassDarkPressedBgBrush" Color="{StaticResource ButtonGlassDarkPressedBg}" />
 
   <SolidColorBrush x:Key="ButtonDisabledBgBrush" Color="{StaticResource ButtonDisabledBg}" />
   <SolidColorBrush x:Key="ButtonDisabledTextBrush" Color="{StaticResource ButtonDisabledText}" />

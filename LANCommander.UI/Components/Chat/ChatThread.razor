@@ -1,3 +1,4 @@
+@using System.Collections.ObjectModel
 @using System.Collections.Specialized
 @using LANCommander.SDK.Models
 @using LANCommander.SDK.Services
@@ -99,7 +100,7 @@
                     Id = lastGroup.Id, // Keep the same group ID
                     UserId = lastGroup.UserId,
                     UserName = lastGroup.UserName,
-                    Messages = new List<SDK.Models.ChatMessage>(lastGroup.Messages) { message }
+                    Messages = new ObservableCollection<SDK.Models.ChatMessage>(lastGroup.Messages) { message }
                 };
                 
                 await _infiniteLoader.UpdateLastItemAsync(updatedGroup);

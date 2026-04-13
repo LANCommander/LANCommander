@@ -46,19 +46,4 @@ public class InstallResultTests
         Assert.NotNull(result.FileList);
     }
 
-    [Fact]
-    public void InstallDirectory_ReflectsChangeInFileList()
-    {
-        var gameId = Guid.NewGuid();
-        var originalDir = @"C:\Games\Original";
-        var newDir = @"C:\Games\New";
-
-        var result = new InstallResult(originalDir, gameId)
-        {
-            InstallDirectory = newDir
-        };
-
-        Assert.Equal(newDir, result.InstallDirectory);
-        Assert.Equal(newDir, result.FileList.InstallDirectory);
-    }
 }

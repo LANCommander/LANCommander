@@ -1,0 +1,53 @@
+name: LANCommander SDK Tests
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - 'LANCommander.SDK/**'
+            - 'LANCommander.SDK.Tests/**'
+            - 'LANCommander.Steam/**'
+    pull_request:
+        paths:
+            - 'LANCommander.SDK/**'
+            - 'LANCommander.SDK.Tests/**'
+            - 'LANCommander.Steam/**'
+    workflow_dispatch:
+
+jobs:
+    test:
+        name: Run SDK Tests
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: '10.0.x'
+
+            - name: Restore dependencies
+              run: dotnet restore LANCommander.SDK.Tests/LANCommander.SDK.Tests.csproj
+
+            - name: Build
+              run: dotnet build --no-restore --configuration Release LANCommander.SDK.Tests/LANCommander.SDK.Tests.csproj
+
+            - name: Run tests
+              run: >
+                  dotnet test
+                  --no-build
+                  --configuration Release
+                  --verbosity normal
+                  --logger "trx;LogFileName=sdk-tests.trx"
+                  LANCommander.SDK.Tests/LANCommander.SDK.Tests.csproj
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: sdk-test-results
+                  path: '**/*.trx'
+                  retention-days: 30

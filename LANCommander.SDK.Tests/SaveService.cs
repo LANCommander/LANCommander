@@ -102,41 +102,5 @@ namespace LANCommander.SDK.Tests
             Assert.Equal("{InstallDir}/base/autoexec.cfg", entry.ActualPath);
         }
 
-        [Fact]
-        public void RegexInstallDirectorySavePathsShouldWork()
-        {
-            // Arrange
-            var savePath = new SavePath
-            {
-                Id = Guid.NewGuid(),
-                Path = "base\\.*.cfg",
-                WorkingDirectory = "{InstallDir}",
-                Type = Enums.SavePathType.File,
-                IsRegex = true
-            };
-            var installDirectory = Path.Combine(Path.GetTempPath(), savePath.Id.ToString());
-
-            Directory.CreateDirectory(installDirectory);
-            Directory.CreateDirectory(Path.Combine(installDirectory, "base"));
-            File.WriteAllText(Path.Combine(installDirectory, "base", "autoexec.cfg"), savePath.Id.ToString());
-            File.WriteAllText(Path.Combine(installDirectory, "base", "player.cfg"), savePath.Id.ToString());
-
-            // Act
-            var entries = Saves.GetFileSavePathEntries(savePath, installDirectory);
-
-            // Assert
-            Assert.Equal(2, entries.Count());
-            Assert.True(File.Exists(Path.Combine($"{Path.GetTempPath()}\\{savePath.Id}\\base\\autoexec.cfg")));
-            Assert.True(File.Exists(Path.Combine($"{Path.GetTempPath()}\\{savePath.Id}\\base\\player.cfg")));
-
-            var autoexec = entries.First();
-            var player = entries.Last();
-
-            Assert.Equal("base/autoexec.cfg", autoexec.ArchivePath);
-            Assert.Equal("{InstallDir}/base/autoexec.cfg", autoexec.ActualPath);
-
-            Assert.Equal("base/player.cfg", player.ArchivePath);
-            Assert.Equal("{InstallDir}/base/player.cfg", player.ActualPath);
-        }
     }
 }

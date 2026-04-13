@@ -15,7 +15,7 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Keys")]
         public Game Game { get; set; }
-        public KeyAllocationMethod AllocationMethod { get; set; }
+        public KeyAllocationMethod? AllocationMethod { get; set; }
         [MaxLength(17)]
         public string? ClaimedByMacAddress { get; set; }
         [MaxLength(15)]
@@ -33,7 +33,12 @@ namespace LANCommander.Server.Data.Models
             if (AllocationMethod == KeyAllocationMethod.UserAccount && ClaimedByUser != null)
                 return true;
 
-            return false; 
+            return false;
+        }
+
+        public bool IsAvailable()
+        {
+            return AllocationMethod == null;
         }
     }
 }

@@ -69,18 +69,10 @@ namespace LANCommander.Server.Services
 
         public async Task<Key> ReleaseAsync(Key key)
         {
-            switch (key.AllocationMethod)
-            {
-                case KeyAllocationMethod.UserAccount:
-                    key.ClaimedByUser = null;
-                    key.ClaimedOn = null;
-                    break;
-
-                case KeyAllocationMethod.MacAddress:
-                    key.ClaimedByMacAddress = "";
-                    key.ClaimedOn = null;
-                    break;
-            }
+            key.ClaimedByUser = null;
+            key.ClaimedByMacAddress = null;
+            key.ClaimedOn = null;
+            key.AllocationMethod = null;
 
             return await UpdateAsync(key);
         }

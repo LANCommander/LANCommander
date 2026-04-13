@@ -1,0 +1,102 @@
+@inherits FeedbackComponent<Guid, bool>
+@inject KeyService KeyService
+@inject UserService UserService
+@inject IMessageService MessageService
+@inject ILogger<AssignKeyDialog> Logger
+
+<Form Model="_model" Layout="FormLayout.Vertical">
+    <FormItem Label="Allocation Method">
+        <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="context.KeyAllocationMethod" />
+    </FormItem>
+
+    @if (context.KeyAllocationMethod == KeyAllocationMethod.MacAddress)
+    {
+        <FormItem Label="MAC Address">
+            <Input @bind-Value="context.MacAddress" Placeholder="00:00:00:00:00:00" />
+        </FormItem>
+    }
+    else if (context.KeyAllocationMethod == KeyAllocationMethod.UserAccount)
+    {
+        <FormItem Label="User">
+            <Select TItem="User"
+                    TItemValue="Guid"
+                    DataSource="_users"
+                    @bind-Value="context.SelectedUserId"
+                    LabelName="@nameof(User.UserName)"
+                    ValueName="@nameof(User.Id)"
+                    Placeholder="Select a user"
+                    EnableSearch />
+        </FormItem>
+    }
+</Form>
+
+@code {
+    AssignKeyDialogViewModel _model = new();
+    
+    IEnumerable<User> _users = new List<User>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _users = await UserService.GetAsync();
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        try
+        {
+            var key = await KeyService.GetAsync(Options);
+
+            if (key == null)
+            {
+                MessageService.Error("Key not found!");
+                args.Reject();
+                return;
+            }
+
+            switch (_model.KeyAllocationMethod)
+            {
+                case KeyAllocationMethod.MacAddress:
+                    if (string.IsNullOrWhiteSpace(_model.MacAddress))
+                    {
+                        MessageService.Warning("Please enter a MAC address.");
+                        args.Reject();
+                        return;
+                    }
+
+                    await KeyService.AllocateAsync(key, _model.MacAddress);
+                    break;
+
+                case KeyAllocationMethod.UserAccount:
+                    if (_model.SelectedUserId == Guid.Empty)
+                    {
+                        MessageService.Warning("Please select a user.");
+                        args.Reject();
+                        return;
+                    }
+
+                    var user = await UserService.GetAsync(_model.SelectedUserId);
+
+                    if (user == null)
+                    {
+                        MessageService.Error("User not found!");
+                        args.Reject();
+                        return;
+                    }
+
+                    await KeyService.AllocateAsync(key, user);
+                    break;
+            }
+
+            MessageService.Success("Key assigned!");
+            
+            await base.OkCancelRefWithResult!.OnOk(true);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not assign key!");
+            Logger.LogError(ex, "Could not assign key!");
+            
+            args.Reject();
+        }
+    }
+}

@@ -186,6 +186,8 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Debug);
+            builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+            builder.AddFilter("System.Net.Http", LogLevel.Warning);
             builder.AddConsole();
             builder.AddSimpleConsole(options =>
             {

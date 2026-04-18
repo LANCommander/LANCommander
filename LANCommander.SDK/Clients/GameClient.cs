@@ -85,6 +85,9 @@ namespace LANCommander.SDK.Services
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
+        public delegate void OnTaskProgressHandler(InstallTaskProgress progress);
+        public event OnTaskProgressHandler OnTaskProgress;
+
         private const string PlayerAliasFilename = "PlayerAlias";
         private const string KeyFilename = "Key";
 
@@ -667,6 +670,482 @@ namespace LANCommander.SDK.Services
 
             await RunPostInstallScripts(addon);
             return installResult;
+        }
+
+        /// <summary>
+        /// Generates an install plan for a game, producing a list of queue items and their tasks
+        /// without executing anything.
+        /// </summary>
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null)
+        {
+            var plan = new InstallPlan();
+            var game = await GetAsync(gameId);
+
+            if (string.IsNullOrWhiteSpace(installDirectory))
+                installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
+
+            var destination = await GetInstallDirectory(game, installDirectory);
+
+            // Handle standalone mods — need base game first
+            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
+            {
+                var baseGame = await GetAsync(game.BaseGameId);
+                var baseDestination = await GetInstallDirectory(baseGame, installDirectory);
+
+                if (!Directory.Exists(baseDestination))
+                {
+                    var basePlan = await GenerateInstallPlanAsync(game.BaseGameId, installDirectory);
+                    plan.Items.AddRange(basePlan.Items);
+                }
+
+                destination = baseDestination;
+            }
+
+            // Base game item
+            var gameItem = new InstallPlanItem
+            {
+                EntityId = game.Id,
+                Title = game.Title,
+                Type = InstallPlanItemType.Game,
+                InstallDirectory = destination,
+                Order = plan.Items.Count,
+            };
+
+            int taskOrder = 0;
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadAndExtract,
+                Title = $"Download {game.Title}",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = true,
+                ReportsProgress = true,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteManifest,
+                Title = "Write manifest",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = true,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteScripts,
+                Title = "Save scripts",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadSaves,
+                Title = "Download saves",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+                ReportsProgress = true,
+            });
+
+            if (game.Scripts != null && game.Scripts.Any())
+            {
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunInstallScript,
+                    Title = "Run install script",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunKeyChangeScript,
+                    Title = "Apply key",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunNameChangeScript,
+                    Title = "Apply player name",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+            }
+
+            if (game.Media != null)
+            {
+                foreach (var manual in game.Media.Where(m => m.Type == MediaType.Manual))
+                {
+                    gameItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadManual,
+                        Title = $"Download manual",
+                        Order = taskOrder++,
+                        TargetId = manual.Id,
+                        TargetName = game.Title,
+                        IsCritical = false,
+                    });
+                }
+            }
+
+            plan.Items.Add(gameItem);
+
+            // Redistributable items
+            if (game.Redistributables != null)
+            {
+                foreach (var redist in game.Redistributables)
+                {
+                    var redistItem = new InstallPlanItem
+                    {
+                        EntityId = redist.Id,
+                        Title = redist.Name,
+                        Type = InstallPlanItemType.Redistributable,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {redist.Name}",
+                        Order = 0,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.RunRedistributableInstallScript,
+                        Title = $"Install {redist.Name}",
+                        Order = 1,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = false,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    plan.Items.Add(redistItem);
+                }
+            }
+
+            // Addon items
+            if (addonIds != null)
+            {
+                foreach (var addonId in addonIds)
+                {
+                    var addon = await GetAsync(addonId);
+
+                    var addonItem = new InstallPlanItem
+                    {
+                        EntityId = addon.Id,
+                        Title = addon.Title,
+                        Type = InstallPlanItemType.Addon,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    int addonTaskOrder = 0;
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {addon.Title}",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                    });
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.WriteManifest,
+                        Title = "Write manifest",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = true,
+                    });
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.WriteScripts,
+                        Title = "Save scripts",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = false,
+                    });
+
+                    if (addon.Scripts != null && addon.Scripts.Any())
+                    {
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunInstallScript,
+                            Title = "Run install script",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunKeyChangeScript,
+                            Title = "Apply key",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunNameChangeScript,
+                            Title = "Apply player name",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+                    }
+
+                    plan.Items.Add(addonItem);
+                }
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// Executes a single install plan item's tasks in order, firing OnTaskProgress events for each.
+        /// </summary>
+        public async Task<InstallResult> ExecuteInstallPlanItemAsync(InstallPlanItem planItem, CancellationToken cancellationToken = default)
+        {
+            var installResult = new InstallResult(planItem.InstallDirectory, planItem.EntityId);
+
+            switch (planItem.Type)
+            {
+                case InstallPlanItemType.Game:
+                case InstallPlanItemType.Addon:
+                    await ExecuteGamePlanItemAsync(planItem, installResult, cancellationToken);
+                    break;
+
+                case InstallPlanItemType.Redistributable:
+                    await ExecuteRedistributablePlanItemAsync(planItem, installResult, cancellationToken);
+                    break;
+
+                case InstallPlanItemType.Tool:
+                    var toolResult = await toolClient.ExecuteInstallPlanItemAsync(planItem, cancellationToken);
+                    installResult.InstallDirectory = toolResult.InstallDirectory;
+                    break;
+            }
+
+            return installResult;
+        }
+
+        private async Task ExecuteGamePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
+        {
+            var game = await GetAsync(planItem.EntityId);
+            var gameFileList = installResult.FileList;
+            SDK.Models.Manifest.Game manifest = null;
+
+            foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var taskProgress = new InstallTaskProgress
+                {
+                    QueueItemId = planItem.EntityId,
+                    TaskId = taskDef.Id,
+                    TaskType = taskDef.Type,
+                    TaskTitle = taskDef.Title,
+                    TaskStatus = InstallTaskStatus.Running,
+                };
+
+                OnTaskProgress?.Invoke(taskProgress);
+
+                try
+                {
+                    switch (taskDef.Type)
+                    {
+                        case InstallTaskType.DownloadAndExtract:
+                            var result = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
+                            {
+                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken));
+                            });
+
+                            if (!result.Success && !result.Canceled)
+                                throw new InstallException("Could not extract the installer. Retry the install or check your connection");
+                            else if (result.Canceled)
+                                throw new InstallCanceledException("Game install was canceled");
+
+                            game.InstallDirectory = result.Directory;
+                            installResult.InstallDirectory = result.Directory;
+                            planItem.InstallDirectory = result.Directory;
+
+                            gameFileList.BaseGame.AddFiles(result.Files?
+                                .Where(x => !x.EntryPath.EndsWith("/"))
+                                .Select(x => new GameInstallationFileListEntry.FileEntry
+                                {
+                                    EntryPath = x.EntryPath,
+                                    LocalPath = x.LocalPath,
+                                }) ?? []);
+                            break;
+
+                        case InstallTaskType.WriteManifest:
+                            manifest = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), (SDK.Models.Manifest.Game)null, async () =>
+                            {
+                                return await WriteManifestAsync(planItem.InstallDirectory, game);
+                            });
+
+                            if (manifest == null)
+                                throw new InstallException("Could not grab the manifest file. Retry the install or check your connection");
+
+                            gameFileList.BaseGame.Manifest = manifest;
+                            break;
+
+                        case InstallTaskType.WriteScripts:
+                            await WriteScriptsAsync(planItem.InstallDirectory, game);
+                            break;
+
+                        case InstallTaskType.DownloadSaves:
+                            await saveClient.DownloadAsync(planItem.InstallDirectory, game.Id);
+                            break;
+
+                        case InstallTaskType.RunInstallScript:
+                            await scriptClient.Game_RunInstallScriptAsync(planItem.InstallDirectory, game.Id);
+                            break;
+
+                        case InstallTaskType.RunKeyChangeScript:
+                            var allocatedKey = await GetAllocatedKeyAsync(game.Id);
+                            await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            break;
+
+                        case InstallTaskType.RunNameChangeScript:
+                            var alias = await profileClient.GetAliasAsync();
+                            await scriptClient.Game_RunNameChangeScriptAsync(planItem.InstallDirectory, game.Id, alias);
+                            break;
+
+                        case InstallTaskType.DownloadManual:
+                            // Manual download handled by caller (InstallService) since it needs MediaClient
+                            break;
+                    }
+
+                    taskProgress.TaskStatus = InstallTaskStatus.Completed;
+                    taskProgress.Progress = 1.0f;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+                catch (InstallCanceledException)
+                {
+                    taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                    OnTaskProgress?.Invoke(taskProgress);
+                    throw;
+                }
+                catch (Exception ex) when (!taskDef.IsCritical)
+                {
+                    logger?.LogError(ex, "Non-critical task {TaskTitle} failed for {GameTitle} ({GameId})", taskDef.Title, game.Title, game.Id);
+                    taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                    taskProgress.ErrorMessage = ex.Message;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+            }
+        }
+
+        private async Task ExecuteRedistributablePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
+        {
+            // RedistributableClient.InstallAsync bundles download + install into one operation.
+            // We fire task progress for both tasks but execute them as one call.
+            var firstTask = planItem.Tasks.OrderBy(t => t.Order).FirstOrDefault();
+            if (firstTask == null)
+                return;
+
+            // Get parent game context from task parameters
+            Guid parentGameId = Guid.Empty;
+            if (firstTask.Parameters.TryGetValue("ParentGameId", out var parentGameIdStr))
+                Guid.TryParse(parentGameIdStr, out parentGameId);
+
+            var taskProgress = new InstallTaskProgress
+            {
+                QueueItemId = planItem.EntityId,
+                TaskId = firstTask.Id,
+                TaskType = firstTask.Type,
+                TaskTitle = firstTask.Title,
+                TaskStatus = InstallTaskStatus.Running,
+            };
+
+            OnTaskProgress?.Invoke(taskProgress);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var game = parentGameId != Guid.Empty ? await GetAsync(parentGameId) : null;
+
+                if (game != null)
+                {
+                    game.InstallDirectory = planItem.InstallDirectory;
+
+                    var redist = game.Redistributables?.FirstOrDefault(r => r.Id == planItem.EntityId);
+
+                    if (redist != null)
+                        await redistributableClient.InstallAsync(redist, game);
+                }
+
+                // Mark all tasks as completed
+                foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+                {
+                    OnTaskProgress?.Invoke(new InstallTaskProgress
+                    {
+                        QueueItemId = planItem.EntityId,
+                        TaskId = taskDef.Id,
+                        TaskType = taskDef.Type,
+                        TaskTitle = taskDef.Title,
+                        TaskStatus = InstallTaskStatus.Completed,
+                        Progress = 1.0f,
+                    });
+                }
+            }
+            catch (InstallCanceledException)
+            {
+                taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                OnTaskProgress?.Invoke(taskProgress);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Redistributable {RedistName} failed to install", planItem.Title);
+                taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                taskProgress.ErrorMessage = ex.Message;
+                OnTaskProgress?.Invoke(taskProgress);
+            }
         }
 
         public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)

@@ -11,6 +11,7 @@ using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -92,6 +93,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         _installService.OnQueueChanged += OnQueueChanged;
         _installService.OnProgress += OnProgress;
+        _installService.OnTaskProgressUpdate += OnTaskProgressUpdate;
         _installService.OnInstallComplete += OnInstallComplete;
         _installService.OnInstallFail += OnInstallFail;
 
@@ -101,6 +103,37 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private Task OnQueueChanged()
     {
         Dispatcher.UIThread.Post(async () => await RefreshQueueAsync());
+        return Task.CompletedTask;
+    }
+
+    private Task OnTaskProgressUpdate(InstallTaskProgress taskProgress)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var item = QueueItems.FirstOrDefault(i => i.Id == taskProgress.QueueItemId);
+            if (item == null)
+                return;
+
+            var task = item.Tasks.FirstOrDefault(t => t.Id == taskProgress.TaskId);
+            if (task == null)
+                return;
+
+            task.Status = taskProgress.TaskStatus;
+            task.Progress = taskProgress.Progress;
+            task.BytesTransferred = taskProgress.BytesTransferred;
+            task.TotalBytes = taskProgress.TotalBytes;
+            task.TransferSpeed = taskProgress.TransferSpeed;
+            task.ErrorMessage = taskProgress.ErrorMessage;
+
+            item.CurrentTask = task;
+
+            // Update current status from task
+            if (item == CurrentItem)
+            {
+                CurrentStatus = taskProgress.TaskTitle;
+            }
+        });
+
         return Task.CompletedTask;
     }
 
@@ -364,9 +397,18 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isUpdate;
 
-    public bool IsActive => Status != InstallStatus.Queued && 
-                           Status != InstallStatus.Complete && 
-                           Status != InstallStatus.Failed && 
+    [ObservableProperty]
+    private ObservableCollection<InstallTaskItemViewModel> _tasks = new();
+
+    [ObservableProperty]
+    private InstallTaskItemViewModel? _currentTask;
+
+    [ObservableProperty]
+    private bool _hasTasks;
+
+    public bool IsActive => Status != InstallStatus.Queued &&
+                           Status != InstallStatus.Complete &&
+                           Status != InstallStatus.Failed &&
                            Status != InstallStatus.Canceled;
 
     public bool IsQueued => Status == InstallStatus.Queued;
@@ -390,6 +432,15 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         CoverId = item.CoverId;
         IconId = item.IconId;
         IsUpdate = item.IsUpdate;
+
+        if (item.Tasks != null && item.Tasks.Count > 0)
+        {
+            foreach (var taskDef in item.Tasks.OrderBy(t => t.Order))
+            {
+                Tasks.Add(new InstallTaskItemViewModel(taskDef));
+            }
+            HasTasks = true;
+        }
     }
 
     private static string FormatBytes(long bytes)

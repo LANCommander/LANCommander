@@ -1,17 +1,11 @@
 ﻿using LANCommander.SDK.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Launcher.Models
 {
     public class DownloadQueueRedistributable : IInstallQueueItem
     {
         public Guid Id { get; set; }
-        public Guid[] AddonIds { get; set; }
-        public Dictionary<Guid, string?> AddonVersions { get; set; }
         public string Title { get; set; }
         public string Version { get; set; }
         public string InstallDirectory { get; set; }
@@ -26,12 +20,10 @@ namespace LANCommander.Launcher.Models
             {
                 switch (Status)
                 {
+                    case InstallStatus.Starting:
                     case InstallStatus.Downloading:
                     case InstallStatus.InstallingRedistributables:
-                    case InstallStatus.InstallingMods:
-                    case InstallStatus.InstallingExpansions:
                     case InstallStatus.RunningScripts:
-                    case InstallStatus.DownloadingSaves:
                         return true;
 
                     default:
@@ -41,10 +33,18 @@ namespace LANCommander.Launcher.Models
         }
         public InstallStatus Status { get; set; }
         public SDK.Models.Redistributable Redistributable { get; set; }
-        public float Progress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public double TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long BytesDownloaded { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long TotalBytes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public InstallPlanItemType ItemType => InstallPlanItemType.Redistributable;
+        public Guid? DependsOnId { get; set; }
+        public List<InstallTaskDefinition> Tasks { get; set; } = new();
+        public Guid? CurrentTaskId { get; set; }
+        public float Progress
+        {
+            get => BytesDownloaded / (float)Math.Max(TotalBytes, 1);
+            set { }
+        }
+        public double TransferSpeed { get; set; }
+        public long BytesDownloaded { get; set; }
+        public long TotalBytes { get; set; }
         public CancellationTokenSource CancellationToken { get; set; } = new();
 
         public DownloadQueueRedistributable(SDK.Models.Redistributable redistributable)
@@ -52,7 +52,16 @@ namespace LANCommander.Launcher.Models
             Redistributable = redistributable;
             Id = redistributable.Id;
             Title = redistributable.Name;
-            Version = redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
+            Version = redistributable.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
+            QueuedOn = DateTime.Now;
+            Status = InstallStatus.Queued;
+        }
+
+        public DownloadQueueRedistributable(InstallPlanItem planItem, SDK.Models.Redistributable redistributable) : this(redistributable)
+        {
+            InstallDirectory = planItem.InstallDirectory;
+            DependsOnId = planItem.DependsOnId;
+            Tasks = planItem.Tasks;
         }
     }
 }

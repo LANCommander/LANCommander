@@ -15,6 +15,7 @@ using Force.Crc32;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Factories;
+using Action = System.Action;
 
 namespace LANCommander.SDK.Services
 {
@@ -88,6 +89,117 @@ namespace LANCommander.SDK.Services
                 .UseVersioning()
                 .UseRoute($"/api/Tool/{id}/Download")
                 .StreamAsync();
+        }
+
+        public delegate void OnTaskProgressHandler(InstallTaskProgress progress);
+        public event OnTaskProgressHandler OnTaskProgress;
+
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Tool tool, string installDirectory)
+        {
+            var plan = new InstallPlan();
+
+            var toolItem = new InstallPlanItem
+            {
+                EntityId = tool.Id,
+                Title = tool.Name,
+                Type = InstallPlanItemType.Tool,
+                InstallDirectory = installDirectory,
+                Order = 0,
+            };
+
+            int taskOrder = 0;
+
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadAndExtract,
+                Title = $"Download {tool.Name}",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = true,
+                ReportsProgress = true,
+            });
+
+            if (tool.Scripts != null && tool.Scripts.Any())
+            {
+                toolItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunInstallScript,
+                    Title = "Run install script",
+                    Order = taskOrder++,
+                    TargetId = tool.Id,
+                    TargetName = tool.Name,
+                    IsCritical = false,
+                });
+            }
+
+            plan.Items.Add(toolItem);
+
+            return plan;
+        }
+
+        public async Task<InstallResult> ExecuteInstallPlanItemAsync(InstallPlanItem planItem, CancellationToken cancellationToken = default)
+        {
+            var tool = await GetAsync(planItem.EntityId);
+            var installResult = new InstallResult();
+
+            foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var taskProgress = new InstallTaskProgress
+                {
+                    QueueItemId = planItem.EntityId,
+                    TaskId = taskDef.Id,
+                    TaskType = taskDef.Type,
+                    TaskTitle = taskDef.Title,
+                    TaskStatus = InstallTaskStatus.Running,
+                };
+
+                OnTaskProgress?.Invoke(taskProgress);
+
+                try
+                {
+                    switch (taskDef.Type)
+                    {
+                        case InstallTaskType.DownloadAndExtract:
+                            var result = await RetryHelper.RetryOnExceptionAsync(10,
+                                TimeSpan.FromMilliseconds(500), new ExtractionResult(),
+                                async () => await Task.Run(async () => await DownloadAndExtractAsync(tool, planItem.InstallDirectory, cancellationToken)));
+
+                            if (!result.Success && !result.Canceled)
+                                throw new InstallException("Could not extract the tool. Retry the install or check your connection");
+                            else if (result.Canceled)
+                                throw new InstallCanceledException("Tool install was canceled");
+
+                            installResult.InstallDirectory = result.Directory;
+                            break;
+
+                        case InstallTaskType.RunInstallScript:
+                            await scriptClient.Tool_RunInstallScriptAsync(planItem.InstallDirectory, tool.Id);
+                            break;
+                    }
+
+                    taskProgress.TaskStatus = InstallTaskStatus.Completed;
+                    taskProgress.Progress = 1.0f;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+                catch (InstallCanceledException)
+                {
+                    taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                    OnTaskProgress?.Invoke(taskProgress);
+                    throw;
+                }
+                catch (Exception ex) when (!taskDef.IsCritical)
+                {
+                    logger?.LogError(ex, "Non-critical task {TaskTitle} failed for tool {ToolName}", taskDef.Title, tool.Name);
+                    taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                    taskProgress.ErrorMessage = ex.Message;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+            }
+
+            return installResult;
         }
 
         public async Task InstallAsync(Game game)

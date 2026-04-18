@@ -1,12 +1,11 @@
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Launcher.Models;
 
 public class InstallQueueTool : IInstallQueueItem
 {
     public Guid Id { get; set; }
-    public Guid[] AddonIds { get; set; }
-    public Dictionary<Guid, string?> AddonVersions { get; set; }
     public string Title { get; set; }
     public string Version { get; set; }
     public string InstallDirectory { get; set; }
@@ -38,14 +37,18 @@ public class InstallQueueTool : IInstallQueueItem
             }
         }
     }
-    
+
     public InstallStatus Status { get; set; }
     public SDK.Models.Tool Tool { get; set; }
-    
+    public InstallPlanItemType ItemType => InstallPlanItemType.Tool;
+    public Guid? DependsOnId { get; set; }
+    public List<InstallTaskDefinition> Tasks { get; set; } = new();
+    public Guid? CurrentTaskId { get; set; }
+
     public float Progress {
         get
         {
-            return BytesDownloaded / (float)TotalBytes;
+            return BytesDownloaded / (float)Math.Max(TotalBytes, 1);
         }
         set { }
     }
@@ -59,8 +62,15 @@ public class InstallQueueTool : IInstallQueueItem
         Tool = tool;
         Id = tool.Id;
         Title = tool.Name;
-        Version = tool.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version ?? "";
+        Version = tool.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version ?? "";
         QueuedOn = DateTime.Now;
         Status = InstallStatus.Queued;
+    }
+
+    public InstallQueueTool(InstallPlanItem planItem, SDK.Models.Tool tool) : this(tool)
+    {
+        InstallDirectory = planItem.InstallDirectory;
+        DependsOnId = planItem.DependsOnId;
+        Tasks = planItem.Tasks;
     }
 }

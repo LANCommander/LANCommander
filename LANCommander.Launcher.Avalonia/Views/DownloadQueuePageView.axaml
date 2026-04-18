@@ -114,6 +114,51 @@
                                            IsVisible="{Binding TimeRemainingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                             </Grid>
 
+                            <!-- Task list -->
+                            <ItemsControl Grid.Row="3"
+                                          ItemsSource="{Binding CurrentItem.Tasks}"
+                                          IsVisible="{Binding CurrentItem.HasTasks}"
+                                          Margin="0,12,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallTaskItemViewModel">
+                                        <Grid ColumnDefinitions="20,*,Auto"
+                                              Margin="0,2">
+                                            <!-- Status icon -->
+                                            <Panel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="&#x2713;" Foreground="#4CAF50" FontSize="11"
+                                                           IsVisible="{Binding IsCompleted}" />
+                                                <TextBlock Text="&#x25CF;" Foreground="#2196F3" FontSize="8"
+                                                           IsVisible="{Binding IsRunning}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                                <TextBlock Text="&#x2715;" Foreground="IndianRed" FontSize="11"
+                                                           IsVisible="{Binding IsFailed}" />
+                                                <TextBlock Text="&#x2015;" Opacity="0.3" FontSize="11"
+                                                           IsVisible="{Binding IsQueued}" />
+                                            </Panel>
+
+                                            <!-- Task title -->
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Title}"
+                                                       FontSize="12"
+                                                       Opacity="0.8"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+
+                                            <!-- Error message for failed tasks -->
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding ErrorMessage}"
+                                                       FontSize="10"
+                                                       Foreground="IndianRed"
+                                                       Opacity="0.8"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding IsFailed}"
+                                                       MaxWidth="200"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
                         </Grid>
                     </Border>
                 </Border>

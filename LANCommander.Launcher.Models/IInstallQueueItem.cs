@@ -1,9 +1,5 @@
 ﻿using LANCommander.SDK.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Launcher.Models
 {
@@ -25,5 +21,9 @@ namespace LANCommander.Launcher.Models
         long BytesDownloaded { get; set; }
         long TotalBytes { get; set; }
         CancellationTokenSource CancellationToken { get; set; }
+        InstallPlanItemType ItemType { get; }
+        Guid? DependsOnId { get; set; }
+        List<InstallTaskDefinition> Tasks { get; set; }
+        Guid? CurrentTaskId { get; set; }
     }
 }

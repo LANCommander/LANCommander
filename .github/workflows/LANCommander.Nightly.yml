@@ -561,38 +561,27 @@ jobs:
           name: LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      - name: Delete existing release assets
-        uses: dev-drprasad/delete-tag-and-release@v1.1
-        with:
-          tag_name: nightly
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create nightly release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nightly
-          name: Nightly Build v${{ needs.prep.outputs.version_tag }}
-          draft: false
-          prerelease: true
-          generate_release_notes: true
-          body: This is the latest nightly build. These builds are generated automatically and should be considered unstable.
-          files: |
-            artifacts/LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+      - name: Create or update nightly release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create the release if it doesn't exist, otherwise update its metadata
+          if gh release view nightly > /dev/null 2>&1; then
+            # Remove all existing assets so only this nightly's files remain
+            gh release view nightly --json assets -q '.assets[].name' | while read -r asset; do
+              gh release delete-asset nightly "$asset" -y
+            done
+
+            gh release edit nightly \
+              --prerelease \
+              --title "Nightly Build v${{ needs.prep.outputs.version_tag }}" \
+              --notes "This is the latest nightly build. These builds are generated automatically and should be considered unstable."
+          else
+            gh release create nightly \
+              --prerelease \
+              --title "Nightly Build v${{ needs.prep.outputs.version_tag }}" \
+              --notes "This is the latest nightly build. These builds are generated automatically and should be considered unstable."
+          fi
+
+          # Upload new artifacts
+          gh release upload nightly artifacts/*

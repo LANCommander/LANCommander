@@ -96,7 +96,12 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Collection, SDK.Models.Manifest.Collection>().ReverseMap();
             CreateMap<Data.Models.Company, SDK.Models.Manifest.Company>().ReverseMap();
             CreateMap<Data.Models.Engine, SDK.Models.Manifest.Engine>().ReverseMap();
-            CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>().ReverseMap();
+            CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>()
+                .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
+                .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))
+                .ReverseMap()
+                .ForMember(dest => dest.BaseGameId, opt => opt.Ignore())
+                .ForMember(dest => dest.BaseGame, opt => opt.Ignore());
             CreateMap<Data.Models.GameCustomField, SDK.Models.Manifest.GameCustomField>().ReverseMap();
             CreateMap<Data.Models.Genre, SDK.Models.Manifest.Genre>().ReverseMap();
             CreateMap<Data.Models.Issue, SDK.Models.Manifest.Issue>().ReverseMap();

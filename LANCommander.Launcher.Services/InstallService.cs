@@ -70,20 +70,38 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
             };
 
-            // Legacy progress forwarding for backward compatibility
+            // Legacy progress forwarding — also update the service queue item
+            // so that RefreshQueueAsync reads current values
             _gameClient.OnInstallProgressUpdate += (e) =>
             {
+                UpdateQueueItemFromProgress(e);
                 OnProgress?.Invoke(e);
             };
 
             _redistributableClient.OnInstallProgressUpdate += (e) =>
             {
+                UpdateQueueItemFromProgress(e);
                 OnProgress?.Invoke(e);
             };
 
             // New task-level progress forwarding
             _gameClient.OnTaskProgress += OnSdkTaskProgress;
             _toolClient.OnTaskProgress += OnSdkTaskProgress;
+        }
+
+        private void UpdateQueueItemFromProgress(InstallProgress progress)
+        {
+            if (progress.Game == null)
+                return;
+
+            var queueItem = Queue.FirstOrDefault(i => i.Id == progress.Game.Id);
+
+            if (queueItem != null)
+            {
+                queueItem.BytesDownloaded = progress.BytesTransferred;
+                queueItem.TotalBytes = progress.TotalBytes;
+                queueItem.TransferSpeed = progress.TransferSpeed;
+            }
         }
 
         private void OnSdkTaskProgress(InstallTaskProgress taskProgress)

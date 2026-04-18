@@ -45,6 +45,17 @@ public partial class InstallTaskItemViewModel : ViewModelBase
     public bool IsFailed => Status == InstallTaskStatus.Failed;
     public bool IsQueued => Status == InstallTaskStatus.Queued;
     public bool IsSkipped => Status == InstallTaskStatus.Skipped;
+    public bool IsChecked => Status == InstallTaskStatus.Completed;
+
+    partial void OnStatusChanged(InstallTaskStatus value)
+    {
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(IsQueued));
+        OnPropertyChanged(nameof(IsSkipped));
+        OnPropertyChanged(nameof(IsChecked));
+    }
 
     public InstallTaskItemViewModel() { }
 

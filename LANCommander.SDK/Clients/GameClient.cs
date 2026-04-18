@@ -723,6 +723,16 @@ namespace LANCommander.SDK.Services
 
             gameItem.Tasks.Add(new InstallTaskDefinition
             {
+                Type = InstallTaskType.VerifyFiles,
+                Title = "Verify local files",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
                 Type = InstallTaskType.DownloadAndExtract,
                 Title = $"Download {game.Title}",
                 Order = taskOrder++,
@@ -992,8 +1002,15 @@ namespace LANCommander.SDK.Services
                 throw new InstallException($"Could not fetch game info for {planItem.Title}");
             }
 
+            // Set the progress context so OnInstallProgressUpdate events carry the game reference
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+
             var gameFileList = installResult.FileList;
             SDK.Models.Manifest.Game manifest = null;
+
+            // Files confirmed to exist locally and match FileList.txt — skip during extraction
+            HashSet<string> verifiedFiles = null;
 
             foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
             {
@@ -1017,10 +1034,16 @@ namespace LANCommander.SDK.Services
                 {
                     switch (taskDef.Type)
                     {
+                        case InstallTaskType.VerifyFiles:
+                            verifiedFiles = await VerifyLocalFilesAsync(planItem.InstallDirectory, game.Id, cancellationToken);
+                            logger?.LogInformation("[InstallQueue] VerifyFiles: {Count} files verified as present", verifiedFiles?.Count ?? 0);
+                            break;
+
                         case InstallTaskType.DownloadAndExtract:
+                            var skipFiles = verifiedFiles;
                             var result = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
                             {
-                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken));
+                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken, skipFiles));
                             });
 
                             if (!result.Success && !result.Canceled)
@@ -1499,7 +1522,45 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Reads the existing FileList.txt and checks which files are present on disk.
+        /// Returns a set of entry paths (relative) that exist locally and can be skipped during extraction.
+        /// </summary>
+        private async Task<HashSet<string>> VerifyLocalFilesAsync(string installDirectory, Guid gameId, CancellationToken cancellationToken)
+        {
+            var verified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var fileListPath = GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
+
+            if (!File.Exists(fileListPath))
+                return verified;
+
+            var lines = await File.ReadAllLinesAsync(fileListPath, cancellationToken);
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                // Format: "path/to/file | CRC32HEX"
+                var separatorIndex = line.IndexOf('|');
+                var entryPath = separatorIndex >= 0
+                    ? line.Substring(0, separatorIndex).Trim()
+                    : line.Trim();
+
+                if (string.IsNullOrEmpty(entryPath) || entryPath.EndsWith("/"))
+                    continue;
+
+                var localPath = Path.Combine(installDirectory, entryPath);
+
+                if (File.Exists(localPath))
+                    verified.Add(entryPath);
+            }
+
+            return verified;
+        }
+
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default, HashSet<string> skipFiles = null)
         {
             if (game == null)
             {
@@ -1577,41 +1638,20 @@ namespace LANCommander.SDK.Services
 
                     try
                     {
-                        var localFile = Path.Combine(destination, _reader.Entry.Key);
+                        var entryKey = _reader.Entry.Key;
+                        var localFile = Path.Combine(destination, entryKey);
 
-                        uint crc = 0;
-
-                        if (File.Exists(localFile))
-                        {
-                            crc = await Task.Run(async () =>
-                            {
-                                uint localCrc = 0;
-
-                                using var fs = File.Open(localFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-                                var buffer = new byte[65536];
-
-                                while (true)
-                                {
-                                    var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-
-                                    if (count == 0)
-                                        break;
-
-                                    localCrc = Crc32Algorithm.Append(localCrc, buffer, 0, count);
-                                }
-
-                                return localCrc;
-                            }, cancellationToken);
-                        }
-
-                        fileManifest.AppendLine($"{_reader.Entry.Key} | {_reader.Entry.Crc.ToString("X")}");
+                        fileManifest.AppendLine($"{entryKey} | {_reader.Entry.Crc.ToString("X")}");
                         files.Add(new ExtractionResult.FileEntry
                         {
-                            EntryPath = _reader.Entry.Key,
+                            EntryPath = entryKey,
                             LocalPath = localFile,
                         });
 
-                        if (crc == 0 || crc != _reader.Entry.Crc)
+                        // If pre-flight verification confirmed this file exists locally, skip it
+                        bool shouldSkip = skipFiles != null && skipFiles.Contains(entryKey);
+
+                        if (!shouldSkip)
                             await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
@@ -1625,7 +1665,7 @@ namespace LANCommander.SDK.Services
                             }
                             catch
                             {
-                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", _reader.Entry.Key);
+                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", entryKey);
                             }
                     }
                     catch (IOException ex)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -176,11 +177,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
             if (item != null)
             {
-                item.Status = progress.Status;
-                item.Progress = progress.Progress;
-                item.TransferSpeed = progress.TransferSpeed;
-                item.BytesDownloaded = progress.BytesTransferred;
-                item.TotalBytes = progress.TotalBytes;
+                item.UpdateProgress(progress.Status, progress.Progress, progress.TransferSpeed, progress.BytesTransferred, progress.TotalBytes);
 
                 // Ensure footer visibility and CurrentItem are up-to-date
                 // without waiting for the next OnQueueChanged cycle
@@ -247,32 +244,41 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         if (_installService == null) return;
 
-        QueueItems.Clear();
+        var sourceIds = _installService.Queue.Select(i => i.Id).ToHashSet();
 
-        foreach (var item in _installService.Queue)
+        // Remove items no longer in the service queue
+        for (int i = QueueItems.Count - 1; i >= 0; i--)
         {
-            var vm = new InstallQueueItemViewModel(item);
+            if (!sourceIds.Contains(QueueItems[i].Id))
+                QueueItems.RemoveAt(i);
+        }
 
-            // Resolve icon path from the media database
-            if (vm.IconId != Guid.Empty)
+        // Add or update items
+        for (int i = 0; i < _installService.Queue.Count; i++)
+        {
+            var source = _installService.Queue[i];
+            var existing = QueueItems.FirstOrDefault(vm => vm.Id == source.Id);
+
+            if (existing != null)
             {
-                try
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
-                    if (await mediaService.FileExists(vm.IconId))
-                    {
-                        vm.IconPath = await mediaService.GetImagePath(vm.IconId);
-                        vm.HasIcon = !string.IsNullOrEmpty(vm.IconPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to resolve icon for queue item {Title}", vm.Title);
-                }
-            }
+                // Update in place — preserves IsExpanded
+                existing.UpdateFrom(source);
 
-            QueueItems.Add(vm);
+                // Ensure correct position
+                var currentIndex = QueueItems.IndexOf(existing);
+                if (currentIndex != i && i < QueueItems.Count)
+                    QueueItems.Move(currentIndex, i);
+            }
+            else
+            {
+                var vm = new InstallQueueItemViewModel(source);
+                await ResolveCoverArt(vm);
+
+                if (i < QueueItems.Count)
+                    QueueItems.Insert(i, vm);
+                else
+                    QueueItems.Add(vm);
+            }
         }
 
         // Update state flags
@@ -292,6 +298,48 @@ public partial class DownloadQueueViewModel : ViewModelBase
         }
     }
 
+    private async Task ResolveCoverArt(InstallQueueItemViewModel vm)
+    {
+        if (vm.CoverMedia == null)
+        {
+            _logger.LogInformation("[InstallQueue] ResolveCoverArt: CoverMedia is null for {Title} (CoverId={CoverId})", vm.Title, vm.CoverId);
+            return;
+        }
+
+        try
+        {
+            var mediaClient = _serviceProvider.GetRequiredService<MediaClient>();
+            var localPath = mediaClient.GetLocalPath(vm.CoverMedia);
+
+            _logger.LogInformation("[InstallQueue] ResolveCoverArt: {Title} — mediaId={MediaId}, fileId={FileId}, localPath={Path}, exists={Exists}",
+                vm.Title, vm.CoverMedia.Id, vm.CoverMedia.FileId, localPath, File.Exists(localPath));
+
+            if (!File.Exists(localPath))
+            {
+                var dir = Path.GetDirectoryName(localPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                var file = await mediaClient.DownloadAsync(vm.CoverMedia, localPath);
+
+                _logger.LogInformation("[InstallQueue] ResolveCoverArt: Downloaded {Title} cover to {Path}, exists={Exists}",
+                    vm.Title, file.FullName, file.Exists);
+
+                if (file.Exists)
+                    localPath = file.FullName;
+                else
+                    return;
+            }
+
+            vm.CoverPath = localPath;
+            vm.HasCover = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[InstallQueue] ResolveCoverArt: Failed for {Title}", vm.Title);
+        }
+    }
+
     [RelayCommand]
     private void Back() => BackRequested?.Invoke(this, EventArgs.Empty);
 
@@ -305,6 +353,13 @@ public partial class DownloadQueueViewModel : ViewModelBase
     public void Show()
     {
         IsExpanded = true;
+    }
+
+    [RelayCommand]
+    private void ToggleItemExpanded(InstallQueueItemViewModel? item)
+    {
+        if (item == null || !item.HasTasks) return;
+        item.IsExpanded = !item.IsExpanded;
     }
 
     [RelayCommand]
@@ -389,6 +444,12 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     private Guid _iconId;
 
     [ObservableProperty]
+    private string? _coverPath;
+
+    [ObservableProperty]
+    private bool _hasCover;
+
+    [ObservableProperty]
     private string? _iconPath;
 
     [ObservableProperty]
@@ -406,6 +467,29 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasTasks;
 
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    [ObservableProperty]
+    private string _progressText = string.Empty;
+
+    [ObservableProperty]
+    private string _speedText = string.Empty;
+
+    [ObservableProperty]
+    private string _percentText = string.Empty;
+
+    [ObservableProperty]
+    private string _statusText = string.Empty;
+
+    [ObservableProperty]
+    private string? _completedOnText;
+
+    /// <summary>
+    /// The SDK Media object for the cover — used by ResolveCoverArt to get the local file path.
+    /// </summary>
+    public Media? CoverMedia { get; set; }
+
     public bool IsActive => Status != InstallStatus.Queued &&
                            Status != InstallStatus.Complete &&
                            Status != InstallStatus.Failed &&
@@ -415,23 +499,19 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     public bool IsCompleted => Status == InstallStatus.Complete;
     public bool IsFailed => Status == InstallStatus.Failed;
 
-    public string ProgressText => $"{FormatBytes(BytesDownloaded)} / {FormatBytes(TotalBytes)}";
-    public string SpeedText => $"{FormatBytes(TransferSpeed)}/s";
-
     public InstallQueueItemViewModel() { }
 
     public InstallQueueItemViewModel(IInstallQueueItem item)
     {
         Id = item.Id;
         Title = item.Title;
-        Status = item.Status;
-        Progress = item.Progress;
-        TransferSpeed = (long)item.TransferSpeed;
-        BytesDownloaded = item.BytesDownloaded;
-        TotalBytes = item.TotalBytes;
         CoverId = item.CoverId;
         IconId = item.IconId;
         IsUpdate = item.IsUpdate;
+
+        // Resolve cover media from the underlying game/redist model
+        if (item is InstallQueueGame gameItem)
+            CoverMedia = gameItem.Game?.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
 
         if (item.Tasks != null && item.Tasks.Count > 0)
         {
@@ -441,6 +521,96 @@ public partial class InstallQueueItemViewModel : ViewModelBase
             }
             HasTasks = true;
         }
+
+        ApplyMetrics(item);
+    }
+
+    /// <summary>
+    /// Updates mutable state from the service model without recreating the VM.
+    /// Preserves IsExpanded and Tasks collection identity.
+    /// </summary>
+    public void UpdateFrom(IInstallQueueItem item)
+    {
+        Title = item.Title;
+        ApplyMetrics(item);
+    }
+
+    /// <summary>
+    /// Updates progress from the live InstallProgress event.
+    /// Recalculates formatted text properties.
+    /// </summary>
+    public void UpdateProgress(InstallStatus status, float progress, long transferSpeed, long bytesTransferred, long totalBytes)
+    {
+        Status = status;
+        Progress = progress;
+        TransferSpeed = transferSpeed;
+        BytesDownloaded = bytesTransferred;
+        TotalBytes = totalBytes;
+
+        ProgressText = totalBytes > 0
+            ? $"{FormatBytes(bytesTransferred)} / {FormatBytes(totalBytes)}"
+            : string.Empty;
+        SpeedText = transferSpeed > 0 ? $"{FormatBytes(transferSpeed)}/s" : string.Empty;
+        PercentText = totalBytes > 0 ? $"{progress:P0}" : string.Empty;
+        StatusText = GetDisplayName(status);
+
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsQueued));
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsFailed));
+    }
+
+    private void ApplyMetrics(IInstallQueueItem item)
+    {
+        Status = item.Status;
+        Progress = item.Progress;
+        TransferSpeed = (long)item.TransferSpeed;
+        BytesDownloaded = item.BytesDownloaded;
+        TotalBytes = item.TotalBytes;
+
+        if (Status == InstallStatus.Complete)
+        {
+            ProgressText = "Complete";
+            SpeedText = string.Empty;
+            PercentText = string.Empty;
+            StatusText = "Complete";
+            CompletedOnText = item.CompletedOn?.ToString("g");
+        }
+        else if (Status == InstallStatus.Failed)
+        {
+            ProgressText = "Failed";
+            SpeedText = string.Empty;
+            PercentText = string.Empty;
+            StatusText = "Failed";
+        }
+        else if (Status == InstallStatus.Queued)
+        {
+            ProgressText = "Queued";
+            SpeedText = string.Empty;
+            PercentText = string.Empty;
+            StatusText = "Queued";
+        }
+        else
+        {
+            ProgressText = TotalBytes > 0
+                ? $"{FormatBytes(BytesDownloaded)} / {FormatBytes(TotalBytes)}"
+                : string.Empty;
+            SpeedText = TransferSpeed > 0 ? $"{FormatBytes(TransferSpeed)}/s" : string.Empty;
+            PercentText = TotalBytes > 0 ? $"{Progress:P0}" : string.Empty;
+            StatusText = GetDisplayName(Status);
+        }
+
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(IsQueued));
+        OnPropertyChanged(nameof(IsCompleted));
+        OnPropertyChanged(nameof(IsFailed));
+    }
+
+    private static string GetDisplayName(InstallStatus status)
+    {
+        var member = typeof(InstallStatus).GetField(status.ToString());
+        var display = member?.GetCustomAttribute<DisplayAttribute>();
+        return display?.Name ?? status.ToString();
     }
 
     private static string FormatBytes(long bytes)
@@ -448,13 +618,13 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         string[] sizes = { "B", "KB", "MB", "GB", "TB" };
         int order = 0;
         double size = bytes;
-        
+
         while (size >= 1024 && order < sizes.Length - 1)
         {
             order++;
             size /= 1024;
         }
-        
+
         return $"{size:0.##} {sizes[order]}";
     }
 }

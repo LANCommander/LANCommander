@@ -678,13 +678,21 @@ namespace LANCommander.SDK.Services
         /// </summary>
         public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null)
         {
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: gameId={GameId}, installDir={InstallDir}, addonIds={AddonIds}",
+                gameId, installDirectory, addonIds != null ? string.Join(",", addonIds) : "none");
+
             var plan = new InstallPlan();
             var game = await GetAsync(gameId);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Fetched game {Title} ({Id}), type={Type}, baseGameId={BaseGameId}, redistCount={RedistCount}, scriptCount={ScriptCount}",
+                game?.Title, game?.Id, game?.Type, game?.BaseGameId, game?.Redistributables?.Count() ?? 0, game?.Scripts?.Count() ?? 0);
 
             if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
 
             var destination = await GetInstallDirectory(game, installDirectory);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
 
             // Handle standalone mods — need base game first
             if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
@@ -973,13 +981,26 @@ namespace LANCommander.SDK.Services
 
         private async Task ExecuteGamePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
         {
+            logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: Starting for {Title} ({EntityId}), type={Type}, installDir={InstallDir}, taskCount={TaskCount}",
+                planItem.Title, planItem.EntityId, planItem.Type, planItem.InstallDirectory, planItem.Tasks?.Count ?? 0);
+
             var game = await GetAsync(planItem.EntityId);
+
+            if (game == null)
+            {
+                logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: ERROR - Could not fetch game {EntityId} from server", planItem.EntityId);
+                throw new InstallException($"Could not fetch game info for {planItem.Title}");
+            }
+
             var gameFileList = installResult.FileList;
             SDK.Models.Manifest.Game manifest = null;
 
             foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: Running task [{Order}] {Type}: {Title} (critical={IsCritical})",
+                    taskDef.Order, taskDef.Type, taskDef.Title, taskDef.IsCritical);
 
                 var taskProgress = new InstallTaskProgress
                 {

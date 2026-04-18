@@ -122,16 +122,23 @@ namespace LANCommander.Launcher.Services
             // TODO: Throw exception (and gracefully handle) when gameInfo == null
             // Game probably couldn't be found or deserialized from server
 
-            Logger?.LogTrace("Adding game {GameTitle} to the queue", gameInfo.Title);
+            Logger?.LogInformation("[InstallQueue] Add: Adding game {GameTitle} ({GameId}) to the queue, installDirectory={InstallDirectory}, addonCount={AddonCount}",
+                gameInfo.Title, gameInfo.Id, installDirectory, addons?.Length ?? 0);
 
             // Check to see if we need to install the base game (this game is probably a mod or expansion)
             if (gameInfo.BaseGameId != Guid.Empty)
             {
+                Logger?.LogInformation("[InstallQueue] Add: Game {GameTitle} has BaseGameId={BaseGameId}, checking if base game needs install", gameInfo.Title, gameInfo.BaseGameId);
                 var baseGame = await _gameService.GetAsync(gameInfo.BaseGameId);
 
                 if (baseGame != null && !baseGame.Installed)
                 {
+                    Logger?.LogInformation("[InstallQueue] Add: Base game {BaseGameTitle} ({BaseGameId}) is not installed, adding it first", baseGame.Title, baseGame.Id);
                     await Add(baseGame, installDirectory);
+                }
+                else
+                {
+                    Logger?.LogInformation("[InstallQueue] Add: Base game is {Status}", baseGame == null ? "not found in local DB" : "already installed");
                 }
             }
 
@@ -149,21 +156,34 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
+                Logger?.LogWarning(ex, "[InstallQueue] Add: Error clearing completed queue items for {GameId}", game.Id);
             }
 
             if (Queue.Any(i => i.Id == game.Id && i.Status == InstallStatus.Queued))
+            {
+                Logger?.LogInformation("[InstallQueue] Add: Game {GameTitle} ({GameId}) already queued, skipping", gameInfo.Title, game.Id);
                 return;
+            }
 
             // Generate install plan from SDK
             var addonIds = addons?.Select(x => x.Id).ToArray();
+            Logger?.LogInformation("[InstallQueue] Add: Generating install plan for {GameTitle} ({GameId}) with {AddonCount} addons",
+                gameInfo.Title, game.Id, addonIds?.Length ?? 0);
             var plan = await _gameClient.GenerateInstallPlanAsync(game.Id, installDirectory, addonIds);
+
+            Logger?.LogInformation("[InstallQueue] Add: Plan generated with {ItemCount} items: {Items}",
+                plan.Items.Count,
+                string.Join(", ", plan.Items.OrderBy(i => i.Order).Select(i => $"[{i.Order}] {i.Type}:{i.Title} (id={i.EntityId}, depends={i.DependsOnId})")));
 
             // Add each plan item to the queue
             foreach (var planItem in plan.Items.OrderBy(i => i.Order))
             {
                 // Skip if already queued
                 if (Queue.Any(i => i.Id == planItem.EntityId && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading)))
+                {
+                    Logger?.LogInformation("[InstallQueue] Add: Skipping plan item {Title} ({EntityId}), already in queue", planItem.Title, planItem.EntityId);
                     continue;
+                }
 
                 IInstallQueueItem queueItem;
 
@@ -189,7 +209,10 @@ namespace LANCommander.Launcher.Services
                     case InstallPlanItemType.Redistributable:
                         var redist = gameInfo.Redistributables?.FirstOrDefault(r => r.Id == planItem.EntityId);
                         if (redist == null)
+                        {
+                            Logger?.LogInformation("[InstallQueue] Add: Redistributable {EntityId} not found in game redistributables, skipping", planItem.EntityId);
                             continue;
+                        }
                         queueItem = new DownloadQueueRedistributable(planItem, redist);
                         break;
 
@@ -202,8 +225,14 @@ namespace LANCommander.Launcher.Services
                         continue;
                 }
 
+                Logger?.LogInformation("[InstallQueue] Add: Enqueuing {Type} {Title} ({Id}), dependsOn={DependsOn}, taskCount={TaskCount}",
+                    queueItem.ItemType, queueItem.Title, queueItem.Id, queueItem.DependsOnId, queueItem.Tasks?.Count ?? 0);
                 Queue.Add(queueItem);
             }
+
+            Logger?.LogInformation("[InstallQueue] Add: Queue now has {Count} items: {Items}",
+                Queue.Count,
+                string.Join(", ", Queue.Select(i => $"{i.Title}({i.Status}, depends={i.DependsOnId})")));
 
             // Start processing if nothing active
             if (!Queue.Any(i => i.State))
@@ -211,9 +240,18 @@ namespace LANCommander.Launcher.Services
                 var firstItem = Queue.FirstOrDefault(i => i.Status == InstallStatus.Queued);
                 if (firstItem != null)
                 {
+                    Logger?.LogInformation("[InstallQueue] Add: No active items, starting first queued item: {Title} ({Id})", firstItem.Title, firstItem.Id);
                     firstItem.Status = InstallStatus.Starting;
                     await Next();
                 }
+                else
+                {
+                    Logger?.LogInformation("[InstallQueue] Add: No active items and no queued items to start");
+                }
+            }
+            else
+            {
+                Logger?.LogInformation("[InstallQueue] Add: Queue already has active items, not auto-starting");
             }
 
             OnQueueChanged?.Invoke();
@@ -308,7 +346,13 @@ namespace LANCommander.Launcher.Services
 
         public async Task Next()
         {
-            var pendingItems = Queue.Where(i => i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting));
+            Logger?.LogInformation("[InstallQueue] Next: Evaluating queue. Total items: {Count}, statuses: {Statuses}",
+                Queue.Count,
+                string.Join(", ", Queue.Select(i => $"{i.Title}({i.Status}, type={i.ItemType}, depends={i.DependsOnId})")));
+
+            var pendingItems = Queue.Where(i => i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting)).ToList();
+
+            Logger?.LogInformation("[InstallQueue] Next: Found {Count} pending items", pendingItems.Count);
 
             foreach (var candidate in pendingItems)
             {
@@ -318,8 +362,21 @@ namespace LANCommander.Launcher.Services
                     var dependency = Queue.FirstOrDefault(i => i.Id == candidate.DependsOnId.Value);
 
                     if (dependency != null && dependency.Status != InstallStatus.Complete)
+                    {
+                        Logger?.LogInformation("[InstallQueue] Next: Skipping {Title} ({Id}) — dependency {DepTitle} ({DepId}) is {DepStatus}",
+                            candidate.Title, candidate.Id, dependency.Title, dependency.Id, dependency.Status);
                         continue;
+                    }
+
+                    if (dependency == null)
+                    {
+                        Logger?.LogInformation("[InstallQueue] Next: {Title} ({Id}) depends on {DependsOnId} but dependency not in queue (assumed complete)",
+                            candidate.Title, candidate.Id, candidate.DependsOnId.Value);
+                    }
                 }
+
+                Logger?.LogInformation("[InstallQueue] Next: Processing eligible item: {Title} ({Id}), type={Type}, clrType={ClrType}",
+                    candidate.Title, candidate.Id, candidate.ItemType, candidate.GetType().Name);
 
                 // Found an eligible item — process it
                 switch (candidate)
@@ -336,11 +393,18 @@ namespace LANCommander.Launcher.Services
                         await Next(redistQueueItem);
                         return;
                 }
+
+                Logger?.LogInformation("[InstallQueue] Next: Item {Title} ({Id}) did not match any known type: {ClrType}", candidate.Title, candidate.Id, candidate.GetType().Name);
             }
+
+            Logger?.LogInformation("[InstallQueue] Next: No eligible items found to process");
         }
 
         private async Task Next(InstallQueueGame queueItem)
         {
+            Logger?.LogInformation("[InstallQueue] Next(Game): Processing game queue item {Title} ({Id}), itemType={ItemType}, installDir={InstallDir}, taskCount={TaskCount}",
+                queueItem.Title, queueItem.Id, queueItem.ItemType, queueItem.InstallDirectory, queueItem.Tasks?.Count ?? 0);
+
             Game localGame = null;
             SDK.Models.Game remoteGame = null;
 
@@ -349,9 +413,12 @@ namespace LANCommander.Launcher.Services
                 localGame = await _gameService.GetAsync(queueItem.Id);
                 remoteGame = await _gameClient.GetAsync(queueItem.Id);
 
+                Logger?.LogInformation("[InstallQueue] Next(Game): localGame={LocalFound}, remoteGame={RemoteFound}, localInstalled={Installed}",
+                    localGame != null, remoteGame != null, localGame?.Installed);
+
                 if (localGame == null)
                 {
-                    Logger?.LogError("Game does not exist in local database, skipping");
+                    Logger?.LogInformation("[InstallQueue] Next(Game): Game {Id} does not exist in local database, skipping", queueItem.Id);
                     Remove(queueItem);
                     OnQueueChanged?.Invoke();
                     return;
@@ -359,7 +426,7 @@ namespace LANCommander.Launcher.Services
 
                 if (remoteGame == null)
                 {
-                    Logger?.LogError("Game info could not be retrieved from the server");
+                    Logger?.LogInformation("[InstallQueue] Next(Game): Game {Id} info could not be retrieved from the server", queueItem.Id);
 
                     queueItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
@@ -467,6 +534,11 @@ namespace LANCommander.Launcher.Services
         {
             using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
             {
+                Logger?.LogInformation("[InstallQueue] Install(Game): Starting install of {Title} ({Id}), itemType={ItemType}, installDir={InstallDir}, taskCount={TaskCount}, tasks={Tasks}",
+                    currentItem.Title, currentItem.Id, currentItem.ItemType, currentItem.InstallDirectory,
+                    currentItem.Tasks?.Count ?? 0,
+                    string.Join(", ", (currentItem.Tasks ?? []).Select(t => $"{t.Type}:{t.Title}")));
+
                 currentItem.Status = InstallStatus.Downloading;
                 OnQueueChanged?.Invoke();
 
@@ -482,7 +554,11 @@ namespace LANCommander.Launcher.Services
                         Tasks = currentItem.Tasks,
                     };
 
+                    Logger?.LogInformation("[InstallQueue] Install(Game): Executing plan item with {TaskCount} tasks, type={Type}", planItem.Tasks?.Count ?? 0, planItem.Type);
+
                     var result = await _gameClient.ExecuteInstallPlanItemAsync(planItem, currentItem.CancellationToken.Token);
+
+                    Logger?.LogInformation("[InstallQueue] Install(Game): ExecuteInstallPlanItemAsync completed, installDir={InstallDir}", result.InstallDirectory);
 
                     UpdateGameState(currentItem, localGame, result.InstallDirectory);
                 }

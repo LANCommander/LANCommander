@@ -64,6 +64,9 @@ public partial class GameActionBarViewModel : ViewModelBase
     private bool _isUninstalling;
 
     [ObservableProperty]
+    private bool _isVerifyingFiles;
+
+    [ObservableProperty]
     private string? _installDirectory;
 
     // Play state
@@ -774,6 +777,49 @@ public partial class GameActionBarViewModel : ViewModelBase
         finally
         {
             IsUninstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task VerifyFilesAsync()
+    {
+        if (!IsInstalled || IsVerifyingFiles || string.IsNullOrEmpty(InstallDirectory)) return;
+
+        IsVerifyingFiles = true;
+        StatusMessage = "Verifying files...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            var conflicts = await gameClient.ValidateFilesAsync(InstallDirectory, GameId);
+            var conflictList = conflicts?.ToList() ?? new();
+
+            if (conflictList.Count == 0)
+            {
+                StatusMessage = "All files verified successfully";
+                _logger.LogInformation("File verification passed for game {GameId} ({Title})", GameId, Title);
+            }
+            else
+            {
+                StatusMessage = $"{conflictList.Count} file(s) need repair, restoring...";
+                _logger.LogInformation("File verification found {Count} conflict(s) for game {GameId} ({Title}), restoring", conflictList.Count, GameId, Title);
+
+                await gameClient.RestoreFilesAsync(InstallDirectory, GameId, conflictList.Select(c => c.FullName));
+
+                StatusMessage = $"{conflictList.Count} file(s) restored";
+                _logger.LogInformation("File restoration complete for game {GameId} ({Title})", GameId, Title);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify files for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Verification failed: {ex.Message}";
+        }
+        finally
+        {
+            IsVerifyingFiles = false;
         }
     }
 

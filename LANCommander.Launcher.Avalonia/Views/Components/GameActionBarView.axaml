@@ -97,6 +97,9 @@
                                           Command="{Binding OpenFirstManualCommand}"
                                           IsVisible="{Binding HasManuals}" />
                                 <Separator />
+                                <MenuItem Header="Verify Files"
+                                          Command="{Binding VerifyFilesCommand}"
+                                          IsEnabled="{Binding !IsVerifyingFiles}" />
                                 <MenuItem Header="Uninstall"
                                           Command="{Binding UninstallCommand}"
                                           IsEnabled="{Binding !IsUninstalling}" />

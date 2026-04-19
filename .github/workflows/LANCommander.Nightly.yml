@@ -450,6 +450,9 @@ jobs:
       - build_launcher_avalonia_win_arm64
       - build_launcher_avalonia_win_x64
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
       - name: Create Temp Directory
         run: mkdir -p artifacts
 

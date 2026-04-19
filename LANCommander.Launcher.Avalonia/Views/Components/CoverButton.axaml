@@ -1,15 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
-             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.CoverButton"
              x:DataType="vmComponents:GameItemViewModel"
              ClipToBounds="False">
-
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="Button.CoverButton">
@@ -72,44 +67,34 @@
                     VerticalAlignment="Stretch"
                     Background="Transparent"
                     IsHitTestVisible="False" />
-            <Border Classes="CoverInner"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    CornerRadius="0" ClipToBounds="True">
-                <Panel>
-                    <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                           Stretch="UniformToFill" IsVisible="{Binding HasCover}" />
-                    <Border IsVisible="{Binding !HasCover}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                <GradientStop Color="#3D1A6B" Offset="0" />
-                                <GradientStop Color="#0F3460" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <TextBlock Text="{Binding Title}"
-                                   FontSize="12" FontWeight="SemiBold"
-                                   TextWrapping="Wrap" TextAlignment="Center"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Margin="10" Foreground="White" />
-                    </Border>
-                    <Border Classes="GlassOverlay" IsHitTestVisible="False" CornerRadius="0">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
-                                <GradientStop Color="#45FFFFFF" Offset="0" />
-                                <GradientStop Color="#10FFFFFF" Offset="0.45" />
-                                <GradientStop Color="#00FFFFFF" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Border Background="#CC000000" CornerRadius="0"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Width="16" Height="16"
-                            Margin="6"
-                            IsVisible="{Binding ShowInLibraryBadge}">
-                        <Icon Type="Regular" Value="Check" Width="9" Height="9" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Border>
-                </Panel>
-            </Border>
+
+            <local:Cover Source="{Binding CoverPath}"
+                         Title="{Binding Title}"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch">
+                <local:Cover.Overlay>
+                    <Panel>
+                        <Border Classes="GlassOverlay" IsHitTestVisible="False" CornerRadius="0">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <Border Background="#CC000000" CornerRadius="0"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Width="16" Height="16"
+                                Margin="6"
+                                IsVisible="{Binding ShowInLibraryBadge}">
+                            <Icon Type="Regular" Value="Check" Width="9" Height="9"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                    </Panel>
+                </local:Cover.Overlay>
+            </local:Cover>
         </Panel>
     </Button>
 

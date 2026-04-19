@@ -32,6 +32,7 @@
         <PackageReference Include="NetEscapades.Configuration.Yaml" />
         <PackageReference Include="PeanutButter.INI" />
         <PackageReference Include="Semver" />
+        <PackageReference Include="Superpower" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="System.Management.Automation" />
         <PackageReference Include="YamlDotNet" />

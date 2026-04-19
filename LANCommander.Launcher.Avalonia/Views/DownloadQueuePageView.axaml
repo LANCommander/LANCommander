@@ -1,13 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
-             xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
              x:Class="LANCommander.Launcher.Avalonia.Views.DownloadQueuePageView"
              x:DataType="vm:DownloadQueueViewModel">
-
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*">
 
@@ -76,114 +72,10 @@
                                   IsVisible="{Binding HasActiveDownload}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <Border Margin="0,0,0,6"
-                                        CornerRadius="8"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                        ClipToBounds="True"
-                                        IsVisible="{Binding IsActive}">
-                                    <StackPanel>
-                                        <!-- Item header -->
-                                        <Button Background="Transparent"
-                                                BorderThickness="0"
-                                                Padding="0"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                                CommandParameter="{Binding}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                                <!-- Cover art -->
-                                                <Border Grid.Column="0" Width="64" Height="86"
-                                                        CornerRadius="8,0,0,8" ClipToBounds="True">
-                                                    <Panel>
-                                                        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                                                IsVisible="{Binding !HasCover}">
-                                                            <Icon Type="Regular" Value="GameController"
-                                                                  Width="24" Height="24"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center" />
-                                                        </Border>
-                                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                               Stretch="UniformToFill"
-                                                               IsVisible="{Binding HasCover}" />
-                                                    </Panel>
-                                                </Border>
-
-                                                <!-- Info -->
-                                                <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center" Spacing="4">
-                                                    <TextBlock Text="{Binding Title}"
-                                                               FontSize="14" FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}">
-                                                        <TextBlock.Text>
-                                                            <MultiBinding StringFormat="{}{0}  {1}">
-                                                                <Binding Path="ProgressText" />
-                                                                <Binding Path="PercentText" />
-                                                            </MultiBinding>
-                                                        </TextBlock.Text>
-                                                    </TextBlock>
-                                                    <ProgressBar Value="{Binding Progress}"
-                                                                 Minimum="0" Maximum="1"
-                                                                 Height="4" CornerRadius="2" />
-                                                    <TextBlock Text="{Binding SpeedText}"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource TextDisabledBrush}" />
-                                                </StackPanel>
-
-                                                <!-- Cancel -->
-                                                <Button Grid.Column="2"
-                                                        Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).CancelCommand}"
-                                                        CommandParameter="{Binding}"
-                                                        Background="Transparent"
-                                                        BorderThickness="0"
-                                                        Foreground="{DynamicResource ErrorBrush}"
-                                                        Width="32" Height="32"
-                                                        Padding="0"
-                                                        VerticalAlignment="Center"
-                                                        Margin="0,0,8,0"
-                                                        VerticalContentAlignment="Center"
-                                                        HorizontalContentAlignment="Center">
-                                                    <TextBlock Text="&#x2715;" FontSize="12" />
-                                                </Button>
-                                            </Grid>
-                                        </Button>
-
-                                        <!-- Expanded task list -->
-                                        <Border IsVisible="{Binding IsExpanded}"
-                                                Padding="16,8,16,12"
-                                                BorderThickness="0,1,0,0"
-                                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                                            <ItemsControl ItemsSource="{Binding Tasks}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="vm:InstallTaskItemViewModel">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
-                                                            <CheckBox Grid.Column="0"
-                                                                      IsChecked="{Binding IsChecked, Mode=OneWay}"
-                                                                      IsEnabled="False"
-                                                                      IsThreeState="False"
-                                                                      MinWidth="0"
-                                                                      Margin="0,0,8,0"
-                                                                      VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding Title}"
-                                                                       FontSize="12"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="2"
-                                                                       Text="{Binding ErrorMessage}"
-                                                                       FontSize="10"
-                                                                       Foreground="{DynamicResource ErrorBrush}"
-                                                                       VerticalAlignment="Center"
-                                                                       IsVisible="{Binding IsFailed}"
-                                                                       MaxWidth="200"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
+                                <components:DownloadQueueItemView
+                                    IsVisible="{Binding IsActive}"
+                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
+                                    CancelCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).CancelCommand}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -200,88 +92,10 @@
                                   IsVisible="{Binding HasQueuedItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <Border Margin="0,0,0,6"
-                                        CornerRadius="8"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                        ClipToBounds="True"
-                                        IsVisible="{Binding IsQueued}">
-                                    <StackPanel>
-                                        <Button Background="Transparent"
-                                                BorderThickness="0"
-                                                Padding="0"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                                CommandParameter="{Binding}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                                <Border Grid.Column="0" Width="64" Height="86"
-                                                        CornerRadius="8,0,0,8" ClipToBounds="True">
-                                                    <Panel>
-                                                        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                                                IsVisible="{Binding !HasCover}">
-                                                            <Icon Type="Regular" Value="GameController"
-                                                                  Width="24" Height="24"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center" />
-                                                        </Border>
-                                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                               Stretch="UniformToFill"
-                                                               IsVisible="{Binding HasCover}" />
-                                                    </Panel>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center" Spacing="4">
-                                                    <TextBlock Text="{Binding Title}"
-                                                               FontSize="14" FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="Queued"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource TextDisabledBrush}" />
-                                                </StackPanel>
-                                                <Button Grid.Column="2"
-                                                        Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}"
-                                                        CommandParameter="{Binding}"
-                                                        Background="Transparent"
-                                                        BorderThickness="0"
-                                                        Foreground="{DynamicResource ErrorBrush}"
-                                                        Width="32" Height="32"
-                                                        Padding="0"
-                                                        VerticalAlignment="Center"
-                                                        Margin="0,0,8,0"
-                                                        VerticalContentAlignment="Center"
-                                                        HorizontalContentAlignment="Center">
-                                                    <TextBlock Text="&#x2715;" FontSize="12" />
-                                                </Button>
-                                            </Grid>
-                                        </Button>
-
-                                        <Border IsVisible="{Binding IsExpanded}"
-                                                Padding="16,8,16,12"
-                                                BorderThickness="0,1,0,0"
-                                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                                            <ItemsControl ItemsSource="{Binding Tasks}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="vm:InstallTaskItemViewModel">
-                                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                                            <CheckBox Grid.Column="0"
-                                                                      IsChecked="{Binding IsChecked, Mode=OneWay}"
-                                                                      IsEnabled="False"
-                                                                      IsThreeState="False"
-                                                                      MinWidth="0"
-                                                                      Margin="0,0,8,0"
-                                                                      VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding Title}"
-                                                                       FontSize="12"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
+                                <components:DownloadQueueItemView
+                                    IsVisible="{Binding IsQueued}"
+                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
+                                    RemoveCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -298,87 +112,9 @@
                                   IsVisible="{Binding HasCompletedItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <Border Margin="0,0,0,6"
-                                        CornerRadius="8"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                        ClipToBounds="True"
-                                        IsVisible="{Binding IsCompleted}">
-                                    <StackPanel>
-                                        <Button Background="Transparent"
-                                                BorderThickness="0"
-                                                Padding="0"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                                CommandParameter="{Binding}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                                <Border Grid.Column="0" Width="64" Height="86"
-                                                        CornerRadius="8,0,0,8" ClipToBounds="True">
-                                                    <Panel>
-                                                        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                                                IsVisible="{Binding !HasCover}">
-                                                            <Icon Type="Regular" Value="GameController"
-                                                                  Width="24" Height="24"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center" />
-                                                        </Border>
-                                                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                                                               Stretch="UniformToFill"
-                                                               IsVisible="{Binding HasCover}" />
-                                                    </Panel>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center" Spacing="4">
-                                                    <TextBlock Text="{Binding Title}"
-                                                               FontSize="14" FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBlock Text="&#x2713;"
-                                                                   FontSize="12"
-                                                                   Foreground="{DynamicResource SuccessBrush}"
-                                                                   VerticalAlignment="Center" />
-                                                        <TextBlock Text="Complete"
-                                                                   FontSize="11"
-                                                                   Foreground="{DynamicResource SuccessBrush}"
-                                                                   VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding CompletedOnText}"
-                                                               FontSize="10"
-                                                               Foreground="{DynamicResource TextDisabledBrush}"
-                                                               IsVisible="{Binding CompletedOnText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                                </StackPanel>
-                                                <!-- No cancel button for completed items -->
-                                                <Panel Grid.Column="2" Width="32" />
-                                            </Grid>
-                                        </Button>
-
-                                        <Border IsVisible="{Binding IsExpanded}"
-                                                Padding="16,8,16,12"
-                                                BorderThickness="0,1,0,0"
-                                                BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                                            <ItemsControl ItemsSource="{Binding Tasks}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="vm:InstallTaskItemViewModel">
-                                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                                            <CheckBox Grid.Column="0"
-                                                                      IsChecked="{Binding IsChecked, Mode=OneWay}"
-                                                                      IsEnabled="False"
-                                                                      IsThreeState="False"
-                                                                      MinWidth="0"
-                                                                      Margin="0,0,8,0"
-                                                                      VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding Title}"
-                                                                       FontSize="12"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
+                                <components:DownloadQueueItemView
+                                    IsVisible="{Binding IsCompleted}"
+                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

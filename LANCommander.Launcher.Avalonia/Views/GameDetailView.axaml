@@ -176,13 +176,8 @@
                             ZIndex="1">
 
                     <!-- Cover Image -->
-                    <Border CornerRadius="0"
-                            ClipToBounds="True"
-                            BoxShadow="0 16 48 8 #A0000000, 0 4 12 0 #60000000"
-                            IsVisible="{Binding CoverPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
-                               Stretch="Uniform" />
-                    </Border>
+                    <components:Cover Source="{Binding CoverPath}"
+                                      Title="{Binding Title}" />
 
                     <!-- Players -->
                     <StackPanel Classes="Badges"

@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
+             mc:Ignorable="d" d:DesignWidth="160" d:DesignHeight="240"
+             x:Class="LANCommander.Launcher.Avalonia.Views.Components.Cover">
+
+    <Border HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            CornerRadius="0"
+            ClipToBounds="True">
+        <Panel>
+            <Image x:Name="CoverImage"
+                   Stretch="UniformToFill"
+                   IsVisible="{Binding HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}" />
+
+            <Border IsVisible="{Binding !HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#3D1A6B" Offset="0" />
+                        <GradientStop Color="#0F3460" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=local:Cover}}"
+                           FontSize="{Binding FallbackFontSize, RelativeSource={RelativeSource AncestorType=local:Cover}}"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="10"
+                           Foreground="White" />
+            </Border>
+
+            <ContentPresenter Content="{Binding Overlay, RelativeSource={RelativeSource AncestorType=local:Cover}}" />
+        </Panel>
+    </Border>
+</UserControl>

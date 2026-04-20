@@ -111,9 +111,23 @@
                         <TextBlock Text="&#x2715;" FontSize="12" />
                     </Button>
 
-                    <!-- Spacer for completed items -->
-                    <Panel Grid.Column="2" Width="32"
-                           IsVisible="{Binding IsCompleted}" />
+                    <!-- Action buttons for completed items -->
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="4"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                IsVisible="{Binding IsCompleted}">
+                        <IconButton Command="{Binding $parent[local:DownloadQueueItemView].PlayCommand}"
+                                    CommandParameter="{Binding}"
+                                    Text="Play"
+                                    Classes="Primary"
+                                    IconType="Fill"
+                                    IconValue="Play" />
+                        <IconButton Command="{Binding $parent[local:DownloadQueueItemView].ViewInLibraryCommand}"
+                                    CommandParameter="{Binding}"
+                                    IconValue="Books" />
+                    </StackPanel>
                 </Grid>
             </Button>
 

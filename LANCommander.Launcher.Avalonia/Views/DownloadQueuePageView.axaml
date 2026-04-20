@@ -114,7 +114,9 @@
                             <DataTemplate DataType="vm:InstallQueueItemViewModel">
                                 <components:DownloadQueueItemView
                                     IsVisible="{Binding IsCompleted}"
-                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}" />
+                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
+                                    ViewInLibraryCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ViewInLibraryCommand}"
+                                    PlayCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).PlayCommand}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -15,6 +15,12 @@ public partial class DownloadQueueItemView : UserControl
     public static readonly StyledProperty<ICommand?> RemoveCommandProperty =
         AvaloniaProperty.Register<DownloadQueueItemView, ICommand?>(nameof(RemoveCommand));
 
+    public static readonly StyledProperty<ICommand?> ViewInLibraryCommandProperty =
+        AvaloniaProperty.Register<DownloadQueueItemView, ICommand?>(nameof(ViewInLibraryCommand));
+
+    public static readonly StyledProperty<ICommand?> PlayCommandProperty =
+        AvaloniaProperty.Register<DownloadQueueItemView, ICommand?>(nameof(PlayCommand));
+
     public ICommand? ToggleExpandedCommand
     {
         get => GetValue(ToggleExpandedCommandProperty);
@@ -31,6 +37,18 @@ public partial class DownloadQueueItemView : UserControl
     {
         get => GetValue(RemoveCommandProperty);
         set => SetValue(RemoveCommandProperty, value);
+    }
+
+    public ICommand? ViewInLibraryCommand
+    {
+        get => GetValue(ViewInLibraryCommandProperty);
+        set => SetValue(ViewInLibraryCommandProperty, value);
+    }
+
+    public ICommand? PlayCommand
+    {
+        get => GetValue(PlayCommandProperty);
+        set => SetValue(PlayCommandProperty, value);
     }
 
     public DownloadQueueItemView()

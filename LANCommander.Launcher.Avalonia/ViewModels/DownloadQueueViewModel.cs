@@ -383,9 +383,28 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private void Remove(InstallQueueItemViewModel? item)
     {
         if (item == null || _installService == null) return;
-        
+
         _logger.LogInformation("Removing {Title} from queue", item.Title);
         _installService.Remove(item.Id);
+    }
+
+    [RelayCommand]
+    private async Task ViewInLibraryAsync(InstallQueueItemViewModel? item)
+    {
+        if (item == null) return;
+
+        var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
+        await shell.NavigateToGameByIdAsync(item.Id);
+    }
+
+    [RelayCommand]
+    private async Task PlayAsync(InstallQueueItemViewModel? item)
+    {
+        if (item == null) return;
+
+        var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
+        await shell.NavigateToGameByIdAsync(item.Id);
+        await shell.GameDetailViewModel.ActionBar.PlayCommand.ExecuteAsync(null);
     }
 
     private static string GetDisplayName(InstallStatus status)

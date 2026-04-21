@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Settings;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,22 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<CultureItem> _availableCultures = new();
+
+    // Notification Settings
+    [ObservableProperty]
+    private bool _notifyOnInstallComplete = true;
+
+    [ObservableProperty]
+    private bool _notifyOnInstallFailed = true;
+
+    [ObservableProperty]
+    private bool _notifyOnChatMessage = true;
+
+    [ObservableProperty]
+    private NotificationSoundTheme _selectedSoundTheme = NotificationSoundTheme.SystemDefault;
+
+    [ObservableProperty]
+    private ObservableCollection<NotificationSoundTheme> _availableSoundThemes = new();
 
     // Debug Settings
     [ObservableProperty]
@@ -78,6 +95,12 @@ public partial class SettingsViewModel : ViewModelBase
             }
         }
 
+        // Initialize sound themes
+        foreach (var theme in Enum.GetValues<NotificationSoundTheme>())
+        {
+            AvailableSoundThemes.Add(theme);
+        }
+
         // Initialize log levels
         foreach (var level in Enum.GetValues<LogLevel>())
         {
@@ -115,6 +138,12 @@ public partial class SettingsViewModel : ViewModelBase
         SelectedCultureItem = AvailableCultures.FirstOrDefault(c => c.Code == cultureCode) 
                               ?? AvailableCultures.First();
 
+        // Notification settings
+        NotifyOnInstallComplete = settings.Notifications.NotifyOnInstallComplete;
+        NotifyOnInstallFailed = settings.Notifications.NotifyOnInstallFailed;
+        NotifyOnChatMessage = settings.Notifications.NotifyOnChatMessage;
+        SelectedSoundTheme = settings.Notifications.SoundTheme;
+
         // Debug settings
         EnableScriptDebugging = settings.Debug.EnableScriptDebugging;
         LoggingPath = settings.Debug.LoggingPath ?? "Logs";
@@ -150,6 +179,12 @@ public partial class SettingsViewModel : ViewModelBase
 
                 // UI settings
                 s.Culture = SelectedCultureItem?.Code ?? "en-US";
+
+                // Notification settings
+                s.Notifications.NotifyOnInstallComplete = NotifyOnInstallComplete;
+                s.Notifications.NotifyOnInstallFailed = NotifyOnInstallFailed;
+                s.Notifications.NotifyOnChatMessage = NotifyOnChatMessage;
+                s.Notifications.SoundTheme = SelectedSoundTheme;
 
                 // Debug settings
                 s.Debug.EnableScriptDebugging = EnableScriptDebugging;

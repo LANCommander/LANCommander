@@ -111,6 +111,30 @@
                     </StackPanel>
                 </Border>
                 
+                <!-- Notifications Section -->
+                <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Notifications" FontWeight="SemiBold" FontSize="16" />
+
+                        <StackPanel Spacing="4">
+                            <CheckBox IsChecked="{Binding NotifyOnInstallComplete}"
+                                      Content="Game Installed" />
+                            <CheckBox IsChecked="{Binding NotifyOnInstallFailed}"
+                                      Content="Game Install Failed" />
+                            <CheckBox IsChecked="{Binding NotifyOnChatMessage}"
+                                      Content="Chat Message Received" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Sound Theme" Opacity="0.7" />
+                            <ComboBox ItemsSource="{Binding AvailableSoundThemes}"
+                                      SelectedItem="{Binding SelectedSoundTheme}"
+                                      HorizontalAlignment="Stretch"
+                                      MinWidth="200" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Debug Section -->
                 <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                     <StackPanel Spacing="12">

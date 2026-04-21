@@ -4,6 +4,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using LANCommander.Launcher.Settings;
+using LANCommander.SDK.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Notify.NET.Abstractions;
@@ -23,6 +25,22 @@ public class NotificationService(
     ILogger<NotificationService> logger,
     IServiceProvider serviceProvider)
 {
+    private NotificationSettings GetNotificationSettings()
+    {
+        using var scope = serviceProvider.CreateScope();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
+        return settingsProvider.CurrentValue.Notifications;
+    }
+
+    private static NotificationBuilder ApplySoundTheme(NotificationBuilder builder, NotificationSoundTheme theme)
+    {
+        return theme switch
+        {
+            NotificationSoundTheme.Silent => builder.WithAudio(NotificationAudio.Silent),
+            _ => builder
+        };
+    }
+
     public void NotifyInstallComplete(string gameTitle, string? iconImagePath, string? gridImagePath, Guid gameId)
     {
         if (!notificationService.IsSupported)
@@ -30,6 +48,10 @@ public class NotificationService(
             logger.LogWarning("The notification service is not supported on this platform.");
             return;
         }
+
+        var settings = GetNotificationSettings();
+        if (!settings.NotifyOnInstallComplete)
+            return;
 
         try
         {
@@ -40,6 +62,8 @@ public class NotificationService(
                 builder = builder.WithHeroImage(gridImagePath);
             else if (iconImagePath != null)
                 builder = builder.WithImage(iconImagePath);
+
+            builder = ApplySoundTheme(builder, settings.SoundTheme);
 
             var request = builder
                 .AddButton(Localize("Play"), _ => Dispatcher.UIThread.InvokeAsync(() => NavigateAndPlayAsync(gameId)))
@@ -56,14 +80,19 @@ public class NotificationService(
 
     public void NotifyInstallFailed(string gameTitle, Guid gameId)
     {
+        var settings = GetNotificationSettings();
+        if (!settings.NotifyOnInstallFailed)
+            return;
+
         try
         {
-            var request = NotificationBuilder.Create(Localize("InstallFailed"))
+            var builder = NotificationBuilder.Create(Localize("InstallFailed"))
                 .WithBody(Localize("GameInstallFailed", gameTitle))
-                .AddButton(Localize("ViewInLibrary"), _ => Dispatcher.UIThread.InvokeAsync(() => NavigateToGameAsync(gameId)))
-                .Build();
-            
-            notificationService.ShowAsync(request);
+                .AddButton(Localize("ViewInLibrary"), _ => Dispatcher.UIThread.InvokeAsync(() => NavigateToGameAsync(gameId)));
+
+            builder = ApplySoundTheme(builder, settings.SoundTheme);
+
+            notificationService.ShowAsync(builder.Build());
         }
         catch (Exception ex)
         {
@@ -74,6 +103,10 @@ public class NotificationService(
     public void NotifyChatMessage(string threadTitle, string senderName, string messageContent, Action? onActivated = null)
     {
         if (!notificationService.IsSupported)
+            return;
+
+        var settings = GetNotificationSettings();
+        if (!settings.NotifyOnChatMessage)
             return;
 
         try
@@ -88,6 +121,8 @@ public class NotificationService(
 
             if (onActivated != null)
                 builder = builder.AddButton(Localize("OpenChat"), _ => Dispatcher.UIThread.InvokeAsync(onActivated));
+
+            builder = ApplySoundTheme(builder, settings.SoundTheme);
 
             notificationService.ShowAsync(builder.Build());
         }

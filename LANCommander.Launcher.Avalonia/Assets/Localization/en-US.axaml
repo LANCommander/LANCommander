@@ -96,6 +96,25 @@
     <sys:String x:Key="ViewInLibrary">View in Library</sys:String>
     <sys:String x:Key="Play">Play</sys:String>
 
+    <!-- ── Download Queue ────────────────────────────────────────────────── -->
+    <sys:String x:Key="Queued">Queued</sys:String>
+    <sys:String x:Key="Complete">Complete</sys:String>
+    <sys:String x:Key="TransferSpeed">Transfer Speed (MB/s)</sys:String>
+    <sys:String x:Key="TransferSpeedHistory">Transfer Speed History (MB/s)</sys:String>
+
+    <!-- ── Install Tasks ─────────────────────────────────────────────────── -->
+    <sys:String x:Key="TaskVerifyFiles">Verify local files</sys:String>
+    <sys:String x:Key="TaskDownloadGame">Download {0}</sys:String>
+    <sys:String x:Key="TaskWriteManifest">Write manifest</sys:String>
+    <sys:String x:Key="TaskSaveScripts">Save scripts</sys:String>
+    <sys:String x:Key="TaskDownloadSaves">Download saves</sys:String>
+    <sys:String x:Key="TaskRunInstallScript">Run install script</sys:String>
+    <sys:String x:Key="TaskApplyKey">Apply key</sys:String>
+    <sys:String x:Key="TaskApplyPlayerName">Apply player name</sys:String>
+    <sys:String x:Key="TaskDownloadManuals">Download manuals</sys:String>
+    <sys:String x:Key="TaskDownloadRedist">Download {0}</sys:String>
+    <sys:String x:Key="TaskInstallRedist">Install {0}</sys:String>
+
     <!-- ── Game Detail ───────────────────────────────────────────────────── -->
     <sys:String x:Key="Singleplayer">Singleplayer</sys:String>
     <sys:String x:Key="Genres">Genres</sys:String>

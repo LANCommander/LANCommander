@@ -2,19 +2,32 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              x:Class="LANCommander.Launcher.Avalonia.Views.Components.DownloadQueueItemView"
              x:DataType="vm:InstallQueueItemViewModel">
 
+    <UserControl.Styles>
+        <Style Selector="Border.QueueItem">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.QueueItem.Expanded">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Color="#FF181818" Offset="0" />
+                    <GradientStop Color="#FF0D0D0D" Offset="1" />
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
 
-    <Border Margin="0,0,0,6"
-            CornerRadius="8"
-            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+    <Border Classes="QueueItem"
+            Classes.Expanded="{Binding IsExpanded}"
             ClipToBounds="True">
         <StackPanel>
             <!-- Item header (clickable) -->
             <Button Background="Transparent"
                     BorderThickness="0"
-                    Padding="0"
+                    Padding="8"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     Command="{Binding $parent[local:DownloadQueueItemView].ToggleExpandedCommand}"
@@ -22,7 +35,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Cover art -->
                     <Border Grid.Column="0" Width="64" Height="86"
-                            CornerRadius="8,0,0,8" ClipToBounds="True">
+                            CornerRadius="0" ClipToBounds="True">
                         <local:Cover Source="{Binding CoverPath}"
                                      Title="{Binding Title}" />
                     </Border>
@@ -54,7 +67,7 @@
                                    IsVisible="{Binding IsActive}" />
 
                         <!-- Queued state -->
-                        <TextBlock Text="Queued"
+                        <TextBlock Text="{DynamicResource Queued}"
                                    FontSize="11"
                                    Foreground="{DynamicResource TextDisabledBrush}"
                                    IsVisible="{Binding IsQueued}" />
@@ -66,7 +79,7 @@
                                        FontSize="12"
                                        Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" />
-                            <TextBlock Text="Complete"
+                            <TextBlock Text="{DynamicResource Complete}"
                                        FontSize="11"
                                        Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" />
@@ -120,51 +133,134 @@
                                 IsVisible="{Binding IsCompleted}">
                         <IconButton Command="{Binding $parent[local:DownloadQueueItemView].PlayCommand}"
                                     CommandParameter="{Binding}"
-                                    Text="Play"
+                                    Text="{DynamicResource Play}"
                                     Classes="Primary"
                                     IconType="Fill"
-                                    IconValue="Play" />
+                                    IconValue="Play"
+                                    Height="32"
+                                    VerticalContentAlignment="Center" />
                         <IconButton Command="{Binding $parent[local:DownloadQueueItemView].ViewInLibraryCommand}"
                                     CommandParameter="{Binding}"
-                                    IconValue="Books" />
+                                    Classes="Glass"
+                                    IconValue="Books"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center" />
                     </StackPanel>
                 </Grid>
             </Button>
 
-            <!-- Expanded task list -->
+            <!-- Expanded detail panel -->
             <Border IsVisible="{Binding IsExpanded}"
                     Padding="16,8,16,12"
-                    BorderThickness="0,1,0,0"
+                    Background="Transparent"
                     BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                <ItemsControl ItemsSource="{Binding Tasks}">
+                <Grid ColumnDefinitions="2*,3*">
+                    <!-- Task timeline -->
+                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Tasks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:InstallTaskItemViewModel">
-                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
-                                <CheckBox Grid.Column="0"
-                                          IsChecked="{Binding IsChecked, Mode=OneWay}"
-                                          IsEnabled="False"
-                                          IsThreeState="False"
-                                          MinWidth="0"
-                                          Margin="0,0,8,0"
-                                          VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Title}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding ErrorMessage}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource ErrorBrush}"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsFailed}"
-                                           MaxWidth="200"
-                                           TextTrimming="CharacterEllipsis" />
+                            <Grid ColumnDefinitions="20,*" Height="24">
+                                <!-- Top half of connecting line (hidden for first item) -->
+                                <Border Grid.Column="0"
+                                        Width="2" Height="12"
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Top"
+                                        IsVisible="{Binding ShowTopLine}" />
+
+                                <!-- Bottom half of connecting line (hidden for last item) -->
+                                <Border Grid.Column="0"
+                                        Width="2" Height="12"
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom"
+                                        IsVisible="{Binding ShowBottomLine}" />
+
+                                <!-- Filled dot (completed) -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10" Height="10"
+                                         Fill="{DynamicResource SystemAccentColor}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsCompleted}" />
+
+                                <!-- Running dot -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10" Height="10"
+                                         Fill="{DynamicResource SystemAccentColor}"
+                                         Opacity="0.6"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsRunning}" />
+
+                                <!-- Outlined circle (queued) -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10" Height="10"
+                                         Fill="Transparent"
+                                         Stroke="{DynamicResource SystemAccentColor}"
+                                         StrokeThickness="1.5"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsQueued}" />
+
+                                <!-- Failed dot -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10" Height="10"
+                                         Fill="{DynamicResource ErrorBrush}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsFailed}" />
+
+                                <!-- Skipped dot -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10" Height="10"
+                                         Fill="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsSkipped}" />
+
+                                <!-- Task label -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                            VerticalAlignment="Center" Margin="8,0,0,0">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding ErrorMessage}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource ErrorBrush}"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding IsFailed}"
+                                               MaxWidth="200"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ItemsControl>
+
+                    <!-- Transfer speed chart -->
+                    <DockPanel Grid.Column="1"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Stretch"
+                               IsVisible="{Binding HasSpeedData}">
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="{Binding SpeedChartLabel}"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource TextDisabledBrush}"
+                                   Margin="0,0,0,2" />
+                        <lvc:CartesianChart MinHeight="80"
+                                            Series="{Binding SpeedSeries}"
+                                            XAxes="{Binding SpeedXAxes}"
+                                            YAxes="{Binding SpeedYAxes}"
+                                            TooltipPosition="Auto"
+                                            ZoomMode="None" />
+                    </DockPanel>
+                </Grid>
             </Border>
         </StackPanel>
     </Border>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
@@ -6,16 +7,22 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using ByteSizeLib;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Helpers;
 using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace LANCommander.Launcher.Avalonia.ViewModels;
 
@@ -509,6 +516,51 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     /// </summary>
     public Media? CoverMedia { get; set; }
 
+    private const int MaxSpeedSamples = 60;
+
+    private readonly ObservableCollection<double> _speedValues = new(new double[MaxSpeedSamples]);
+
+    [ObservableProperty]
+    private ISeries[] _speedSeries = Array.Empty<ISeries>();
+
+    [ObservableProperty]
+    private Axis[] _speedXAxes = { new Axis { IsVisible = false } };
+
+    [ObservableProperty]
+    private Axis[] _speedYAxes = { new Axis {
+        IsVisible = true,
+        MinLimit = 0,
+        LabelsPaint = new SolidColorPaint(SKColors.Gray),
+        TextSize = 10,
+        SeparatorsPaint = null,
+        Labeler = v => $"{ByteSize.FromBytes(v).MegaBytes:0.#}",
+    } };
+
+    private void InitSpeedChart()
+    {
+        SpeedSeries = new ISeries[]
+        {
+            new LineSeries<double>
+            {
+                Values = _speedValues,
+                GeometrySize = 0,
+                Stroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
+                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(40)),
+                LineSmoothness = 0.3,
+                AnimationsSpeed = TimeSpan.FromMilliseconds(150),
+                YToolTipLabelFormatter = point => $"{ByteSize.FromBytes(point.Coordinate.PrimaryValue).MegaBytes:0.##} MB/s",
+            }
+        };
+    }
+
+    private void RecordSpeed(long bytesPerSecond)
+    {
+        _speedValues.Add(bytesPerSecond);
+
+        while (_speedValues.Count > MaxSpeedSamples)
+            _speedValues.RemoveAt(0);
+    }
+
     public bool IsActive => Status != InstallStatus.Queued &&
                            Status != InstallStatus.Complete &&
                            Status != InstallStatus.Failed &&
@@ -518,10 +570,19 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     public bool IsCompleted => Status == InstallStatus.Complete;
     public bool IsFailed => Status == InstallStatus.Failed;
 
-    public InstallQueueItemViewModel() { }
+    public bool HasSpeedData => true;
+    public string SpeedChartLabel => IsActive
+        ? Localization.Localize("TransferSpeed")
+        : Localization.Localize("TransferSpeedHistory");
+
+    public InstallQueueItemViewModel()
+    {
+        InitSpeedChart();
+    }
 
     public InstallQueueItemViewModel(IInstallQueueItem item)
     {
+        InitSpeedChart();
         Id = item.Id;
         Title = item.Title;
         CoverId = item.CoverId;
@@ -534,9 +595,15 @@ public partial class InstallQueueItemViewModel : ViewModelBase
 
         if (item.Tasks != null && item.Tasks.Count > 0)
         {
-            foreach (var taskDef in item.Tasks.OrderBy(t => t.Order))
+            var ordered = item.Tasks.OrderBy(t => t.Order).ToList();
+            for (int i = 0; i < ordered.Count; i++)
             {
-                Tasks.Add(new InstallTaskItemViewModel(taskDef));
+                var vm = new InstallTaskItemViewModel(ordered[i])
+                {
+                    IsFirst = i == 0,
+                    IsLast = i == ordered.Count - 1,
+                };
+                Tasks.Add(vm);
             }
             HasTasks = true;
         }
@@ -573,10 +640,13 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         PercentText = totalBytes > 0 ? $"{progress:P0}" : string.Empty;
         StatusText = GetDisplayName(status);
 
+        RecordSpeed(transferSpeed);
+
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(IsQueued));
         OnPropertyChanged(nameof(IsCompleted));
         OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(SpeedChartLabel));
     }
 
     private void ApplyMetrics(IInstallQueueItem item)
@@ -623,6 +693,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsQueued));
         OnPropertyChanged(nameof(IsCompleted));
         OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(SpeedChartLabel));
     }
 
     private static string GetDisplayName(InstallStatus status)

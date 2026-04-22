@@ -7,6 +7,9 @@
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.1" />
     <PackageVersion Include="EasyMDE.Blazor" Version="1.0.5" />
     <PackageVersion Include="HotAvalonia" Version="3.1.0" />
+    <PackageVersion Include="LiveChartsCore" Version="2.0.0-rc5.4" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView" Version="2.0.0-rc5.4" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
     <PackageVersion Include="Markdig" Version="0.44.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="9.0.8" />
     <PackageVersion Include="Notify.NET" Version="1.0.2" />

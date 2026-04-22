@@ -40,12 +40,20 @@ public partial class InstallTaskItemViewModel : ViewModelBase
     [ObservableProperty]
     private long _transferSpeed;
 
+    [ObservableProperty]
+    private bool _isFirst;
+
+    [ObservableProperty]
+    private bool _isLast;
+
     public bool IsCompleted => Status == InstallTaskStatus.Completed;
     public bool IsRunning => Status == InstallTaskStatus.Running;
     public bool IsFailed => Status == InstallTaskStatus.Failed;
     public bool IsQueued => Status == InstallTaskStatus.Queued;
     public bool IsSkipped => Status == InstallTaskStatus.Skipped;
     public bool IsChecked => Status == InstallTaskStatus.Completed;
+    public bool ShowTopLine => !IsFirst;
+    public bool ShowBottomLine => !IsLast;
 
     partial void OnStatusChanged(InstallTaskStatus value)
     {

@@ -806,20 +806,25 @@ namespace LANCommander.SDK.Services
                 });
             }
 
-            if (game.Media != null)
+            if (game.Media != null && game.Media.Any(m => m.Type == MediaType.Manual))
             {
-                foreach (var manual in game.Media.Where(m => m.Type == MediaType.Manual))
+                var manualIds = game.Media
+                    .Where(m => m.Type == MediaType.Manual)
+                    .Select(m => m.Id.ToString());
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
                 {
-                    gameItem.Tasks.Add(new InstallTaskDefinition
+                    Type = InstallTaskType.DownloadManual,
+                    Title = "Download manuals",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                    Parameters = new Dictionary<string, string>
                     {
-                        Type = InstallTaskType.DownloadManual,
-                        Title = $"Download manual",
-                        Order = taskOrder++,
-                        TargetId = manual.Id,
-                        TargetName = game.Title,
-                        IsCritical = false,
-                    });
-                }
+                        ["ManualIds"] = string.Join(",", manualIds),
+                    },
+                });
             }
 
             plan.Items.Add(gameItem);

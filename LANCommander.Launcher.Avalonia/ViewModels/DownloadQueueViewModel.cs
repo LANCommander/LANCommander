@@ -281,6 +281,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             {
                 var vm = new InstallQueueItemViewModel(source);
                 await ResolveCoverArt(vm);
+                await ResolveIcon(vm);
 
                 if (i < QueueItems.Count)
                     QueueItems.Insert(i, vm);
@@ -345,6 +346,39 @@ public partial class DownloadQueueViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[InstallQueue] ResolveCoverArt: Failed for {Title}", vm.Title);
+        }
+    }
+
+    private async Task ResolveIcon(InstallQueueItemViewModel vm)
+    {
+        if (vm.IconMedia == null)
+            return;
+
+        try
+        {
+            var mediaClient = _serviceProvider.GetRequiredService<MediaClient>();
+            var localPath = mediaClient.GetLocalPath(vm.IconMedia);
+
+            if (!File.Exists(localPath))
+            {
+                var dir = Path.GetDirectoryName(localPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                var file = await mediaClient.DownloadAsync(vm.IconMedia, localPath);
+
+                if (file.Exists)
+                    localPath = file.FullName;
+                else
+                    return;
+            }
+
+            vm.IconPath = localPath;
+            vm.HasIcon = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[InstallQueue] ResolveIcon: Failed for {Title}", vm.Title);
         }
     }
 
@@ -517,6 +551,11 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     /// </summary>
     public Media? CoverMedia { get; set; }
 
+    /// <summary>
+    /// The SDK Media object for the icon — used by ResolveIcon to get the local file path.
+    /// </summary>
+    public Media? IconMedia { get; set; }
+
     private const int MaxSpeedSamples = 60;
 
     private readonly ObservableCollection<double> _speedValues = new(new double[MaxSpeedSamples]);
@@ -590,9 +629,12 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         IconId = item.IconId;
         IsUpdate = item.IsUpdate;
 
-        // Resolve cover media from the underlying game/redist model
+        // Resolve cover and icon media from the underlying game/redist model
         if (item is InstallQueueGame gameItem)
+        {
             CoverMedia = gameItem.Game?.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+            IconMedia = gameItem.Game?.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+        }
 
         if (item.Tasks != null && item.Tasks.Count > 0)
         {

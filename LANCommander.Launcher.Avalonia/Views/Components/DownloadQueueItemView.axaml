@@ -75,13 +75,8 @@
                         <!-- Completed state -->
                         <StackPanel Orientation="Horizontal" Spacing="6"
                                     IsVisible="{Binding IsCompleted}">
-                            <TextBlock Text="&#x2713;"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource SuccessBrush}"
-                                       VerticalAlignment="Center" />
                             <TextBlock Text="{DynamicResource Complete}"
                                        FontSize="11"
-                                       Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Text="{Binding CompletedOnText}"
@@ -91,38 +86,23 @@
                     </StackPanel>
 
                     <!-- Cancel button (active) -->
-                    <Button Grid.Column="2"
-                            Command="{Binding $parent[local:DownloadQueueItemView].CancelCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Foreground="{DynamicResource ErrorBrush}"
-                            Width="32" Height="32"
-                            Padding="0"
-                            VerticalAlignment="Center"
-                            Margin="0,0,8,0"
-                            VerticalContentAlignment="Center"
-                            HorizontalContentAlignment="Center"
-                            IsVisible="{Binding IsActive}">
-                        <TextBlock Text="&#x2715;" FontSize="12" />
-                    </Button>
-
-                    <!-- Remove button (queued) -->
-                    <Button Grid.Column="2"
-                            Command="{Binding $parent[local:DownloadQueueItemView].RemoveCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Foreground="{DynamicResource ErrorBrush}"
-                            Width="32" Height="32"
-                            Padding="0"
-                            VerticalAlignment="Center"
-                            Margin="0,0,8,0"
-                            VerticalContentAlignment="Center"
-                            HorizontalContentAlignment="Center"
-                            IsVisible="{Binding IsQueued}">
-                        <TextBlock Text="&#x2715;" FontSize="12" />
-                    </Button>
+                    <IconButton Grid.Column="2"
+                                Command="{Binding $parent[local:DownloadQueueItemView].CancelCommand}"
+                                CommandParameter="{Binding}"
+                                Classes="Text Error"
+                                Width="32" Height="32"
+                                IconType="Regular"
+                                IconValue="X"
+                                IsVisible="{Binding IsActive}" />
+                    
+                    <IconButton Grid.Column="2"
+                                Command="{Binding $parent[local:DownloadQueueItemView].RemoveCommand}"
+                                CommandParameter="{Binding}"
+                                Classes="Text Error"
+                                Width="32" Height="32"
+                                IconType="Regular"
+                                IconValue="X"
+                                IsVisible="{Binding IsQueued}" />
 
                     <!-- Action buttons for completed items -->
                     <StackPanel Grid.Column="2"

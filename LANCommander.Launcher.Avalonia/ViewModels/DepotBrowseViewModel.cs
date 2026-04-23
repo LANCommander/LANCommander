@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Settings.Enums;
@@ -20,6 +21,7 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DepotBrowseViewModel> _logger;
+    private readonly INavigationService _navigationService;
 
     // ── Locked filter ─────────────────────────────────────────────────────────
 
@@ -57,16 +59,13 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
     public override bool ShowInLibraryFilter => true;
     public override bool ShowInstalledFilter => false;
 
-    // ── Events ────────────────────────────────────────────────────────────────
-
-    public event EventHandler? BackToDepotRequested;
-
     // ─────────────────────────────────────────────────────────────────────────
 
     public DepotBrowseViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<DepotBrowseViewModel>>();
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
     }
 
     /// <summary>
@@ -142,7 +141,7 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
     public override Task LoadGamesAsync() => Task.CompletedTask;
 
     [RelayCommand]
-    private void GoBack() => BackToDepotRequested?.Invoke(this, EventArgs.Empty);
+    private void GoBack() => _navigationService.GoBack();
 
     /// <summary>
     /// Clears user-added filters while preserving the locked initial filter.

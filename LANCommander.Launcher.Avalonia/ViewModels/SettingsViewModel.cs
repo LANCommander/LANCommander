@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Settings;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
@@ -17,6 +18,7 @@ public partial class SettingsViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<SettingsViewModel> _logger;
+    private readonly INavigationService _navigationService;
 
     // Game Settings
     [ObservableProperty]
@@ -68,13 +70,13 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSaving;
 
-    public event EventHandler? BackRequested;
     public event EventHandler? SettingsSaved;
 
     public SettingsViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<SettingsViewModel>>();
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
 
         // Initialize available cultures
         var cultures = new[]
@@ -224,7 +226,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void GoBack()
     {
-        BackRequested?.Invoke(this, EventArgs.Empty);
+        _navigationService.GoBack();
     }
 }
 

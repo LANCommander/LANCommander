@@ -234,6 +234,7 @@ public partial class App : Application
         services.AddSingleton<NotificationService>();
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<SingleInstanceService>();
+        services.AddSingleton<INavigationService, NavigationService>();
     }
     
     private static OSPlatform GetOSPlatform()

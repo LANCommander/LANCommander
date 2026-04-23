@@ -4,12 +4,14 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesGridView"
              x:DataType="vm:GamesCollectionViewModel">
 
     <ScrollViewer x:Name="FlatGridScrollViewer"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto"
+                  controls:ScrollPersistence.ViewModel="{Binding}"
                   SizeChanged="FlatGridScrollViewer_SizeChanged">
         <ItemsRepeater x:Name="FlatGridItemsRepeater" ItemsSource="{Binding Games}" Margin="24,56,24,8" ClipToBounds="False">
             <ItemsRepeater.Layout>

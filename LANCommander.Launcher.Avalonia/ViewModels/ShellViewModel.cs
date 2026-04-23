@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
@@ -18,6 +19,7 @@ public partial class ShellViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ShellViewModel> _logger;
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContentViewTitle))]
@@ -103,8 +105,8 @@ public partial class ShellViewModel : ViewModelBase
 
     public bool HasUnreadChat => ChatUnreadCount > 0;
 
-    // Tracks previous view within the depot context for back navigation
-    private ViewModelBase? _depotReturnView;
+    [ObservableProperty]
+    private bool _isNavigating;
 
     // Tracks the most recent depot browse filter so the view can be refreshed after library changes
     private (string? Genre, string? Tag, string? Collection, string? Search) _lastDepotBrowseFilter;
@@ -115,9 +117,20 @@ public partial class ShellViewModel : ViewModelBase
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<ShellViewModel>>();
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
+
+        _navigationService.PropertyChanged += OnNavigationPropertyChanged;
 
         // Initialize Profile early so titlebar bindings never hit null
         Profile = new ProfileViewModel(serviceProvider);
+    }
+
+    private void OnNavigationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(INavigationService.CurrentView))
+            ContentView = _navigationService.CurrentView;
+        else if (e.PropertyName == nameof(INavigationService.IsNavigating))
+            IsNavigating = _navigationService.IsNavigating;
     }
 
     public void SetOfflineMode(bool offline)
@@ -162,26 +175,20 @@ public partial class ShellViewModel : ViewModelBase
         DepotViewModel.BrowseByCollectionRequested += OnDepotBrowseByCollection;
         DepotViewModel.BrowseAllRequested          += OnDepotBrowseAll;
 
-        DepotBrowseViewModel.GameSelected        += OnDepotGameSelected;
-        DepotBrowseViewModel.BackToDepotRequested += OnBackFromDepotBrowse;
+        DepotBrowseViewModel.GameSelected += OnDepotGameSelected;
 
         GamesListViewModel.GameSelected  += OnGameSelected;
         LibraryViewModel.GameSelected    += OnGameSelected;
 
-        DepotGameDetailViewModel.BackRequested    += OnBackFromGameDetail;
         DepotGameDetailViewModel.LibraryChanged   += OnLibraryChanged;
         DepotGameDetailViewModel.InstallRequested += OnInstallRequested;
         DepotGameDetailViewModel.SearchRequested  += OnSearchRequested;
 
-        GameDetailViewModel.BackRequested    += OnBackFromGameDetail;
         GameDetailViewModel.LibraryChanged   += OnLibraryChanged;
         GameDetailViewModel.InstallRequested += OnInstallRequested;
         GameDetailViewModel.SearchRequested  += OnSearchRequested;
 
-        SettingsViewModel.BackRequested += OnBackFromSettings;
-
         DownloadQueue.InstallCompleted += OnInstallCompleted;
-        DownloadQueue.BackRequested    += OnBackFromDownloadQueue;
         DownloadQueue.Initialize();
 
         await ImportAndLoadAsync();
@@ -305,37 +312,35 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ShowDownloadQueue() => ContentView = DownloadQueue;
+    private void ShowDownloadQueue() => _navigationService.NavigateTo(DownloadQueue);
 
     [RelayCommand]
     private void ShowDepot()
     {
         IsDepotActive = true;
-        _depotReturnView = null;
-        ContentView = DepotViewModel;
+        _navigationService.NavigateTo(DepotViewModel, clearHistory: true);
     }
 
     [RelayCommand]
     private void ShowLibrary()
     {
         IsDepotActive = false;
-        ContentView = LibraryViewModel;
+        _navigationService.NavigateTo(LibraryViewModel, clearHistory: true);
     }
 
     /// <summary>Game selected from the depot context (DepotView or DepotBrowseView).</summary>
     private void OnDepotGameSelected(object? sender, SDK.Models.Game game)
     {
-        _depotReturnView = sender is DepotBrowseViewModel ? DepotBrowseViewModel : DepotViewModel;
-        ContentView = DepotGameDetailViewModel;
-        _ = DepotGameDetailViewModel.LoadGameAsync(game);
+        _navigationService.NavigateTo(DepotGameDetailViewModel,
+            initializeAsync: () => DepotGameDetailViewModel.LoadGameAsync(game));
     }
 
     /// <summary>Game selected from the library context.</summary>
     private void OnGameSelected(object? sender, SDK.Models.Game game)
     {
         GameDetailViewModel.FromLibrary = !IsDepotActive;
-        ContentView = GameDetailViewModel;
-        _ = GameDetailViewModel.LoadGameAsync(game);
+        _navigationService.NavigateTo(GameDetailViewModel,
+            initializeAsync: () => GameDetailViewModel.LoadGameAsync(game));
     }
 
     public async Task NavigateToGameByIdAsync(Guid gameId)
@@ -429,29 +434,13 @@ public partial class ShellViewModel : ViewModelBase
         NavigateToDepotBrowse();
     }
 
-    private void OnBackFromDepotBrowse(object? sender, EventArgs e)
-    {
-        IsDepotActive = true;
-        _depotReturnView = null;
-        ContentView = DepotViewModel;
-    }
-
     /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
     private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null)
     {
         _lastDepotBrowseFilter = (genre, tag, collection, search);
         DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search);
         IsDepotActive = true;
-        _depotReturnView = DepotBrowseViewModel;
-        ContentView = DepotBrowseViewModel;
-    }
-
-    private void OnBackFromGameDetail(object? sender, EventArgs e)
-    {
-        if (sender is DepotGameDetailViewModel || IsDepotActive)
-            ContentView = _depotReturnView ?? DepotViewModel;
-        else
-            ShowLibrary();
+        _navigationService.NavigateTo(DepotBrowseViewModel);
     }
 
     private async void OnLibraryChanged(object? sender, EventArgs e)
@@ -460,7 +449,7 @@ public partial class ShellViewModel : ViewModelBase
         await GamesListViewModel.LoadGamesAsync();
         await DepotViewModel.LoadAsync();
         // Re-initialize the browse view with fresh data so "in library" badges update
-        if (ContentView == DepotBrowseViewModel)
+        if (_navigationService.CurrentView == DepotBrowseViewModel)
             DepotBrowseViewModel.Initialize(
                 GamesListViewModel.GetAllGames(),
                 _lastDepotBrowseFilter.Genre,
@@ -478,7 +467,7 @@ public partial class ShellViewModel : ViewModelBase
         await DepotViewModel.LoadAsync();
 
         // Re-initialize the browse view with fresh data so install status updates
-        if (ContentView == DepotBrowseViewModel)
+        if (_navigationService.CurrentView == DepotBrowseViewModel)
             DepotBrowseViewModel.Initialize(
                 GamesListViewModel.GetAllGames(),
                 _lastDepotBrowseFilter.Genre,
@@ -497,7 +486,7 @@ public partial class ShellViewModel : ViewModelBase
     private void ShowSettings()
     {
         SettingsViewModel.Load();
-        ContentView = SettingsViewModel;
+        _navigationService.NavigateTo(SettingsViewModel);
     }
 
     [RelayCommand]
@@ -513,16 +502,4 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     public event EventHandler? OpenChatRequested;
-
-    private void OnBackFromSettings(object? sender, EventArgs e)
-    {
-        if (IsDepotActive) ShowDepot();
-        else ShowLibrary();
-    }
-
-    private void OnBackFromDownloadQueue(object? sender, EventArgs e)
-    {
-        if (IsDepotActive) ShowDepot();
-        else ShowLibrary();
-    }
 }

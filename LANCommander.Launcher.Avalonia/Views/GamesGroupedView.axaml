@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesGroupedView"
              x:DataType="vm:GamesCollectionViewModel">
     
@@ -15,7 +16,8 @@
         <ScrollViewer x:Name="GroupedScrollViewer"
                       Grid.Column="0"
                       HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
+                      VerticalScrollBarVisibility="Auto"
+                      controls:ScrollPersistence.ViewModel="{Binding}">
             <ItemsControl x:Name="GroupedItemsControl"
                           ItemsSource="{Binding GroupedGames}"
                           Margin="16,56,16,8">

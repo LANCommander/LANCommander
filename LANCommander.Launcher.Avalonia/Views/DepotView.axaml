@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              xmlns:local="using:LANCommander.Launcher.Avalonia.Views"
              x:Class="LANCommander.Launcher.Avalonia.Views.DepotView"
              x:DataType="vm:DepotViewModel">
@@ -23,7 +24,8 @@
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  controls:ScrollPersistence.ViewModel="{Binding}">
         <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
 
             <!-- ══ Loading ══════════════════════════════════════════════════════ -->

@@ -43,7 +43,8 @@
         </Style>
     </UserControl.Styles>
 
-    <ListBox Classes="GamesList"
+    <ListBox x:Name="GamesListBox"
+             Classes="GamesList"
              ItemsSource="{Binding Games}"
              SelectedItem="{Binding SelectedGame}"
              Padding="0,56,0,0"

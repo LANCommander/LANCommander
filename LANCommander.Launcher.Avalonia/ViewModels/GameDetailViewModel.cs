@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
@@ -18,6 +19,7 @@ namespace LANCommander.Launcher.Avalonia.ViewModels;
 public partial class GameDetailViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly INavigationService _navigationService;
     private readonly ILogger<GameDetailViewModel> _logger;
 
     [ObservableProperty]
@@ -151,7 +153,6 @@ public partial class GameDetailViewModel : ViewModelBase
     // Action bar component
     public GameActionBarViewModel ActionBar { get; }
 
-    public event EventHandler? BackRequested;
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
     public event EventHandler<string>? SearchRequested;
@@ -160,6 +161,7 @@ public partial class GameDetailViewModel : ViewModelBase
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<GameDetailViewModel>>();
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
         
         // Create action bar and wire up events
         ActionBar = new GameActionBarViewModel(serviceProvider);
@@ -454,7 +456,7 @@ public partial class GameDetailViewModel : ViewModelBase
     private void GoBack()
     {
         ActionBar.StopRunningCheck();
-        BackRequested?.Invoke(this, EventArgs.Empty);
+        _navigationService.GoBack();
     }
 
     [RelayCommand]

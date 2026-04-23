@@ -3,11 +3,13 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesShelfView"
              x:DataType="vm:GamesCollectionViewModel">
 
     <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled">
+                  VerticalScrollBarVisibility="Disabled"
+                  controls:ScrollPersistence.ViewModel="{Binding}">
         <ItemsRepeater ItemsSource="{Binding Games}" Margin="12,52,12,8" ClipToBounds="False">
             <ItemsRepeater.Layout>
                 <StackLayout Orientation="Horizontal" Spacing="8" />

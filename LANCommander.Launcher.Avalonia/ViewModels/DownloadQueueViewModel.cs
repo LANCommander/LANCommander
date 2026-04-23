@@ -33,6 +33,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DownloadQueueViewModel> _logger;
+    private readonly INavigationService _navigationService;
     private readonly NotificationService _notificationService;
     private readonly TaskbarProgressService _taskbarProgressService;
     private InstallService? _installService;
@@ -83,12 +84,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private int _activeCount;
 
     public event EventHandler<Guid>? InstallCompleted;
-    public event EventHandler? BackRequested;
 
     public DownloadQueueViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<DownloadQueueViewModel>>();
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
         _notificationService = serviceProvider.GetRequiredService<NotificationService>();
         _taskbarProgressService = serviceProvider.GetRequiredService<TaskbarProgressService>();
     }
@@ -348,7 +349,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void Back() => BackRequested?.Invoke(this, EventArgs.Empty);
+    private void Back() => _navigationService.GoBack();
 
     [RelayCommand]
     public void ToggleExpanded()

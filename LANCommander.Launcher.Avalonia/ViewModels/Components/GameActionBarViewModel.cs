@@ -672,8 +672,22 @@ public partial class GameActionBarViewModel : ViewModelBase
                 optionsVm.InstallDirectories.Add(dir);
 
             optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+            optionsVm.GameTitle = Title ?? "Game";
 
-            foreach (var addon in availableAddons)
+            // Fetch base game archive sizes
+            try
+            {
+                var game = await gameClient.GetAsync(GameId);
+                var archives = game?.Archives?.ToArray() ?? [];
+                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
+                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+            }
+            catch { /* sizes will show as 0 */ }
+
+            // Add addons sorted by type, then name
+            foreach (var addon in availableAddons
+                         .OrderBy(a => a.Type)
+                         .ThenBy(a => a.Title ?? string.Empty))
                 optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: false));
 
             // ── Show dialog if needed ──────────────────────────────────────────

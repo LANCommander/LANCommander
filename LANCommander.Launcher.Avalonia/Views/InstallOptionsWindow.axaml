@@ -11,18 +11,52 @@
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
+    <Window.Styles>
+        <Style Selector="ToggleButton.AddonItem">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ToggleButton.AddonItem:checked">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+        </Style>
+    </Window.Styles>
+
     <StackPanel Spacing="0">
 
-        <!-- ── Install directory ────────────────────────────────────────── -->
-        <Border IsVisible="{Binding HasMultipleDirectories}"
-                Padding="20,16,20,0">
-            <StackPanel Spacing="8">
-                <TextBlock Text="Install Location"
-                           FontSize="13" FontWeight="SemiBold" />
-                <ComboBox ItemsSource="{Binding InstallDirectories}"
-                          SelectedItem="{Binding SelectedInstallDirectory}"
-                          HorizontalAlignment="Stretch" />
-            </StackPanel>
+        <!-- ── Header ───────────────────────────────────────────────────── -->
+        <Border Padding="20,16,20,0">
+            <TextBlock FontSize="18" FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       TextTrimming="CharacterEllipsis">
+                <Run Text="Install " /><Run Text="{Binding GameTitle}" />
+            </TextBlock>
+        </Border>
+
+        <!-- ── Size info ────────────────────────────────────────────────── -->
+        <Border IsVisible="{Binding HasAddons}"
+                Padding="20,24,20,8">
+            <UniformGrid Columns="2">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="Download Size"
+                               FontSize="11" Opacity="0.55"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding DownloadSizeText}"
+                               FontSize="18" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="Space Required"
+                               FontSize="11" Opacity="0.55"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding SpaceRequiredText}"
+                               FontSize="18" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </UniformGrid>
         </Border>
 
         <!-- ── Addons ───────────────────────────────────────────────────── -->
@@ -54,15 +88,16 @@
                     <ItemsControl ItemsSource="{Binding Addons}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:InstallAddonItemViewModel">
-                                <Border Padding="10,8"
-                                        Margin="0,0,0,3"
-                                        CornerRadius="6"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                <ToggleButton Classes="AddonItem"
+                                              IsChecked="{Binding IsSelected}"
+                                              Margin="0,0,0,3">
                                     <DockPanel>
-                                        <CheckBox DockPanel.Dock="Left"
-                                                  IsChecked="{Binding IsSelected}"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,10,0" />
+                                        <Icon DockPanel.Dock="Left"
+                                              Type="Regular" Value="Check"
+                                              Width="12" Height="12"
+                                              IsVisible="{Binding IsSelected}"
+                                              Margin="0,0,10,0"
+                                              VerticalAlignment="Center" />
                                         <TextBlock DockPanel.Dock="Right"
                                                    Text="{Binding TypeLabel}"
                                                    FontSize="11"
@@ -73,11 +108,23 @@
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" />
                                     </DockPanel>
-                                </Border>
+                                </ToggleButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Install directory ────────────────────────────────────────── -->
+        <Border IsVisible="{Binding HasMultipleDirectories}"
+                Padding="20,16,20,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Install Location"
+                           FontSize="13" FontWeight="SemiBold" />
+                <ComboBox ItemsSource="{Binding InstallDirectories}"
+                          SelectedItem="{Binding SelectedInstallDirectory}"
+                          HorizontalAlignment="Stretch" />
             </StackPanel>
         </Border>
 
@@ -88,9 +135,11 @@
                         Spacing="8">
                 <Button Content="Cancel"
                         Width="90"
+                        HorizontalContentAlignment="Center"
                         Click="Cancel_Click" />
                 <Button Content="Install"
                         Width="90"
+                        HorizontalContentAlignment="Center"
                         Classes="Primary"
                         Click="Confirm_Click" />
             </StackPanel>

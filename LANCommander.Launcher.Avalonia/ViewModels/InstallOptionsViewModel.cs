@@ -1,5 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
+using ByteSizeLib;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LANCommander.SDK.Enums;
 
@@ -16,6 +19,9 @@ public partial class InstallOptionsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(HasMultipleDirectories))]
     private string _selectedInstallDirectory = string.Empty;
 
+    [ObservableProperty]
+    private string _gameTitle = string.Empty;
+
     public bool HasMultipleDirectories => InstallDirectories.Count > 1;
 
     // ── Addons ────────────────────────────────────────────────────────────────
@@ -25,6 +31,29 @@ public partial class InstallOptionsViewModel : ViewModelBase
     private ObservableCollection<InstallAddonItemViewModel> _addons = new();
 
     public bool HasAddons => Addons.Count > 0;
+
+    // ── Size info ────────────────────────────────────────────────────────────
+
+    /// <summary>Base game compressed archive size in bytes.</summary>
+    public long BaseDownloadSize { get; set; }
+
+    /// <summary>Base game uncompressed archive size in bytes.</summary>
+    public long BaseSpaceRequired { get; set; }
+
+    public string DownloadSizeText => ByteSize.FromBytes(TotalDownloadSize).ToString("0.##");
+    public string SpaceRequiredText => ByteSize.FromBytes(TotalSpaceRequired).ToString("0.##");
+
+    private long TotalDownloadSize =>
+        BaseDownloadSize + Addons.Where(a => a.IsSelected).Sum(a => a.DownloadSize);
+
+    private long TotalSpaceRequired =>
+        BaseSpaceRequired + Addons.Where(a => a.IsSelected).Sum(a => a.SpaceRequired);
+
+    public void RefreshSizes()
+    {
+        OnPropertyChanged(nameof(DownloadSizeText));
+        OnPropertyChanged(nameof(SpaceRequiredText));
+    }
 
     // ── Result ────────────────────────────────────────────────────────────────
 
@@ -46,6 +75,16 @@ public partial class InstallAddonItemViewModel : ViewModelBase
         _                  => Game.Type.ToString()
     };
 
+    public int TypeSortOrder => Game.Type switch
+    {
+        GameType.Expansion => 0,
+        GameType.Mod       => 1,
+        _                  => 2
+    };
+
+    public long DownloadSize { get; }
+    public long SpaceRequired { get; }
+
     [ObservableProperty]
     private bool _isSelected;
 
@@ -53,5 +92,9 @@ public partial class InstallAddonItemViewModel : ViewModelBase
     {
         Game       = game;
         IsSelected = selectedByDefault;
+
+        var archives = game.Archives?.ToArray() ?? [];
+        DownloadSize  = archives.Sum(a => a.CompressedSize);
+        SpaceRequired = archives.Sum(a => a.UncompressedSize);
     }
 }

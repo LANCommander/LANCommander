@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
@@ -13,6 +14,22 @@ public partial class InstallOptionsOverlay : UserControl
     public InstallOptionsOverlay()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is InstallOptionsViewModel vm)
+        {
+            foreach (var addon in vm.Addons)
+                addon.PropertyChanged += OnAddonSelectionChanged;
+        }
+    }
+
+    private void OnAddonSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(InstallAddonItemViewModel.IsSelected) && DataContext is InstallOptionsViewModel vm)
+            vm.RefreshSizes();
     }
 
     private void Confirm_Click(object? sender, RoutedEventArgs e) => Close(true);
@@ -20,6 +37,12 @@ public partial class InstallOptionsOverlay : UserControl
 
     private void Close(bool? result)
     {
+        if (DataContext is InstallOptionsViewModel vm)
+        {
+            foreach (var addon in vm.Addons)
+                addon.PropertyChanged -= OnAddonSelectionChanged;
+        }
+
         var layer = OverlayLayer.GetOverlayLayer(this);
         DialogClosed?.Invoke(this, result);
         layer?.Children.Remove(this);

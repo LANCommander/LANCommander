@@ -22,7 +22,21 @@ public partial class InstallOptionsViewModel : ViewModelBase
     [ObservableProperty]
     private string _gameTitle = string.Empty;
 
+    /// <summary>Title shown at the top of the dialog (e.g. "Install GameTitle" or "Modify GameTitle").</summary>
+    [ObservableProperty]
+    private string _dialogTitle = string.Empty;
+
+    /// <summary>Label for the confirm button (e.g. "Install" or "Apply").</summary>
+    [ObservableProperty]
+    private string _confirmButtonText = "Install";
+
+    /// <summary>When true, always show the install directory picker (e.g. for Modify).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowInstallDirectory))]
+    private bool _alwaysShowDirectory;
+
     public bool HasMultipleDirectories => InstallDirectories.Count > 1;
+    public bool ShowInstallDirectory => AlwaysShowDirectory || HasMultipleDirectories;
 
     // ── Addons ────────────────────────────────────────────────────────────────
 

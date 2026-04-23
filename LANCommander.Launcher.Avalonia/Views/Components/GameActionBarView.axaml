@@ -96,6 +96,8 @@
                                 <MenuItem Header="View Manual"
                                           Command="{Binding OpenFirstManualCommand}"
                                           IsVisible="{Binding HasManuals}" />
+                                <MenuItem Header="Modify"
+                                          Command="{Binding ModifyCommand}" />
                                 <Separator />
                                 <MenuItem Header="Verify Files"
                                           Command="{Binding VerifyFilesCommand}"

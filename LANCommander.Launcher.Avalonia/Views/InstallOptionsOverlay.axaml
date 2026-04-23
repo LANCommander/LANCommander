@@ -36,9 +36,8 @@
                 <Border Padding="20,16,20,0">
                     <TextBlock FontSize="18" FontWeight="Bold"
                                HorizontalAlignment="Center"
-                               TextTrimming="CharacterEllipsis">
-                        <Run Text="Install " /><Run Text="{Binding GameTitle}" />
-                    </TextBlock>
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding DialogTitle}" />
                 </Border>
 
                 <!-- ── Size info ─────────────────────────────────────────── -->
@@ -122,7 +121,7 @@
                 </Border>
 
                 <!-- ── Install directory ──────────────────────────────────── -->
-                <Border IsVisible="{Binding HasMultipleDirectories}"
+                <Border IsVisible="{Binding ShowInstallDirectory}"
                         Padding="20,16,20,0">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Install Location"
@@ -142,7 +141,7 @@
                                 Width="90"
                                 HorizontalContentAlignment="Center"
                                 Click="Cancel_Click" />
-                        <Button Content="Install"
+                        <Button Content="{Binding ConfirmButtonText}"
                                 Width="90"
                                 HorizontalContentAlignment="Center"
                                 Classes="Primary"

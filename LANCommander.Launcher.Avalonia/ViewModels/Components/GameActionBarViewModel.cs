@@ -17,6 +17,7 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.PowerShell;
 using LANCommander.SDK.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Services;
@@ -673,6 +674,8 @@ public partial class GameActionBarViewModel : ViewModelBase
 
             optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
             optionsVm.GameTitle = Title ?? "Game";
+            optionsVm.DialogTitle = $"Install {optionsVm.GameTitle}";
+            optionsVm.ConfirmButtonText = "Install";
 
             // Fetch base game archive sizes
             try
@@ -749,6 +752,142 @@ public partial class GameActionBarViewModel : ViewModelBase
         finally
         {
             IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ModifyAsync()
+    {
+        if (!IsInstalled) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+            var localGame = await dbContext.Set<Data.Models.Game>()
+                .Include(g => g.DependentGames)
+                .FirstOrDefaultAsync(g => g.Id == GameId);
+
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            // ── Gather options ─────────────────────────────────────────────────
+            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+            var availableAddons    = Array.Empty<SDK.Models.Game>();
+
+            try
+            {
+                var addons = await gameClient.GetAddonsAsync(GameId);
+                availableAddons = addons?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
+            }
+
+            // Build set of currently installed addon IDs
+            var installedAddonIds = new HashSet<Guid>(
+                (localGame.DependentGames ?? [])
+                    .Where(a => a.Installed)
+                    .Select(a => a.Id));
+
+            // ── Build options VM ───────────────────────────────────────────────
+            var optionsVm = new InstallOptionsViewModel();
+
+            foreach (var dir in installDirectories)
+                optionsVm.InstallDirectories.Add(dir);
+
+            // If current install directory isn't in the list, add it
+            if (!string.IsNullOrEmpty(localGame.InstallDirectory))
+            {
+                var currentDir = System.IO.Path.GetDirectoryName(localGame.InstallDirectory) ?? localGame.InstallDirectory;
+
+                if (!optionsVm.InstallDirectories.Contains(currentDir))
+                    optionsVm.InstallDirectories.Insert(0, currentDir);
+
+                optionsVm.SelectedInstallDirectory = currentDir;
+            }
+            else
+            {
+                optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+            }
+
+            optionsVm.GameTitle = Title ?? "Game";
+            optionsVm.DialogTitle = $"Modify {optionsVm.GameTitle}";
+            optionsVm.ConfirmButtonText = "Apply";
+            optionsVm.AlwaysShowDirectory = true;
+
+            // Fetch base game archive sizes
+            try
+            {
+                var game = await gameClient.GetAsync(GameId);
+                var archives = game?.Archives?.ToArray() ?? [];
+                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
+                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+            }
+            catch { /* sizes will show as 0 */ }
+
+            // Add addons sorted by type, then name; pre-select currently installed ones
+            foreach (var addon in availableAddons
+                         .OrderBy(a => a.Type)
+                         .ThenBy(a => a.Title ?? string.Empty))
+                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: installedAddonIds.Contains(addon.Id)));
+
+            // ── Show dialog ───────────────────────────────────────────────────
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.InstallOptionsOverlay
+                {
+                    DataContext = optionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+            });
+
+            var confirmed = await tcs.Task;
+
+            if (confirmed != true)
+                return;
+
+            // ── Queue the modification ────────────────────────────────────────
+            _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}",
+                GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length);
+
+            await installService.Add(
+                localGame,
+                optionsVm.SelectedInstallDirectory,
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to modify game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to modify: {ex.Message}";
         }
     }
 

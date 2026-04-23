@@ -143,6 +143,11 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
   </ItemGroup>
+  <ItemGroup Label="LibVLC">
+    <PackageVersion Include="LibVLCSharp" Version="3.8.5" />
+    <PackageVersion Include="LibVLCSharp.Avalonia" Version="3.8.5" />
+    <PackageVersion Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
+  </ItemGroup>
   <ItemGroup Label="Photino">
     <PackageVersion Include="AsyncImageLoader.Avalonia" Version="3.3.0" />
     <PackageVersion Include="Avalonia" Version="11.2.3" />

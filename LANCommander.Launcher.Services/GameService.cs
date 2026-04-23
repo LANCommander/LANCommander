@@ -37,6 +37,9 @@ namespace LANCommander.Launcher.Services
                 {
                     OnUninstall?.Invoke(game);
 
+                    var installService = serviceProvider.GetService<InstallService>();
+                    installService?.ClearCompleted(game.Id);
+
                     await gameClient.UninstallAsync(game.InstallDirectory, game.Id);
 
                     if (game.BaseGameId.HasValue)

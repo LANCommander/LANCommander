@@ -3,6 +3,7 @@ using LANCommander.Launcher.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -160,23 +161,6 @@ namespace LANCommander.Launcher.Services
                 }
             }
 
-            // Clear completed items for this game
-            try
-            {
-                var gameCompletedQueueItems = Queue.Where(i => i.Status == InstallStatus.Complete && i.Id == game.Id).ToList();
-
-                foreach (var queueItem in gameCompletedQueueItems)
-                {
-                    Queue.Remove(queueItem);
-                }
-
-                OnQueueChanged?.Invoke();
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogWarning(ex, "[InstallQueue] Add: Error clearing completed queue items for {GameId}", game.Id);
-            }
-
             if (Queue.Any(i => i.Id == game.Id && i.Status == InstallStatus.Queued))
             {
                 Logger?.LogInformation("[InstallQueue] Add: Game {GameTitle} ({GameId}) already queued, skipping", gameInfo.Title, game.Id);
@@ -188,6 +172,26 @@ namespace LANCommander.Launcher.Services
             Logger?.LogInformation("[InstallQueue] Add: Generating install plan for {GameTitle} ({GameId}) with {AddonCount} addons",
                 gameInfo.Title, game.Id, addonIds?.Length ?? 0);
             var plan = await _gameClient.GenerateInstallPlanAsync(game.Id, installDirectory, addonIds);
+
+            // Clear all non-active items for entities in the plan to avoid stale history
+            try
+            {
+                var planEntityIds = plan.Items.Select(i => i.EntityId).ToHashSet();
+                planEntityIds.Add(game.Id);
+
+                var staleItems = Queue.Where(i => !i.State && planEntityIds.Contains(i.Id)).ToList();
+
+                foreach (var queueItem in staleItems)
+                {
+                    Queue.Remove(queueItem);
+                }
+
+                OnQueueChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "[InstallQueue] Add: Error clearing stale queue items for {GameId}", game.Id);
+            }
 
             Logger?.LogInformation("[InstallQueue] Add: Plan generated with {ItemCount} items: {Items}",
                 plan.Items.Count,
@@ -346,6 +350,20 @@ namespace LANCommander.Launcher.Services
             }
         }
 
+        public void ClearCompleted(Guid gameId)
+        {
+            var staleItems = Queue.Where(i => !i.State && (i.Id == gameId || i.DependsOnId == gameId)).ToList();
+
+            foreach (var item in staleItems)
+            {
+                Logger?.LogTrace("Clearing stale queue item {Title} ({Id}) for game {GameId}", item.Title, item.Id, gameId);
+                Queue.Remove(item);
+            }
+
+            if (staleItems.Count > 0)
+                OnQueueChanged?.Invoke();
+        }
+
         public async Task CancelInstallAsync(Guid queueItemId)
         {
             var queueItem = Queue.FirstOrDefault(i => i.Id == queueItemId);
@@ -436,10 +454,18 @@ namespace LANCommander.Launcher.Services
 
                 if (localGame == null)
                 {
-                    Logger?.LogInformation("[InstallQueue] Next(Game): Game {Id} does not exist in local database, skipping", queueItem.Id);
-                    Remove(queueItem);
-                    OnQueueChanged?.Invoke();
-                    return;
+                    Logger?.LogInformation("[InstallQueue] Next(Game): Game {Id} does not exist in local database, importing", queueItem.Id);
+
+                    await _importService.ImportGameAsync(queueItem.Id);
+                    localGame = await _gameService.GetAsync(queueItem.Id);
+
+                    if (localGame == null)
+                    {
+                        Logger?.LogError("[InstallQueue] Next(Game): Game {Id} could not be imported, skipping", queueItem.Id);
+                        Remove(queueItem);
+                        OnQueueChanged?.Invoke();
+                        return;
+                    }
                 }
 
                 if (remoteGame == null)
@@ -451,7 +477,9 @@ namespace LANCommander.Launcher.Services
                     return;
                 }
 
-                if (localGame.Installed)
+                if (localGame.Installed && !queueItem.DependsOnId.HasValue
+                    && !string.IsNullOrEmpty(localGame.InstallDirectory)
+                    && ManifestHelper.Exists(localGame.InstallDirectory, localGame.Id))
                 {
                     // update current local installed game first, might be moved afterwards
                     await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
@@ -468,6 +496,7 @@ namespace LANCommander.Launcher.Services
                         await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
 
                         UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
+                        UpdateAddonStates(queueItem, localGame);
                         await _gameService.UpdateAsync(localGame);
 
                         queueItem.Status = InstallStatus.Complete;
@@ -488,7 +517,12 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "An unknown error occured while trying to retrieve game info from the server");
+                Logger?.LogError(ex, "An unknown error occured while trying to process game {GameTitle} ({GameId})", queueItem.Title, queueItem.Id);
+
+                queueItem.Status = InstallStatus.Failed;
+                OnQueueChanged?.Invoke();
+
+                await Next();
             }
         }
 
@@ -775,21 +809,23 @@ namespace LANCommander.Launcher.Services
             localGame.Installed = true;
             localGame.InstalledVersion = currentItem.Version;
             localGame.InstalledOn ??= DateTime.Now;
+        }
 
+        private static void UpdateAddonStates(InstallQueueGame currentItem, Game localGame)
+        {
             foreach (var localAddon in (localGame.DependentGames ?? []))
             {
                 bool isInstalled = currentItem.AddonIds?.Contains(localAddon.Id) ?? false;
 
                 if (isInstalled)
                 {
-                    localAddon.InstallDirectory = installDirectory;
+                    localAddon.InstallDirectory = localGame.InstallDirectory;
                     localAddon.Installed = true;
                     localAddon.InstalledVersion = (currentItem.AddonVersions ?? []).TryGetValue(localAddon.Id, out var addonVersion) ? addonVersion : null;
                     localAddon.InstalledOn ??= DateTime.Now;
                 }
                 else
                 {
-
                     localAddon.InstallDirectory = null;
                     localAddon.Installed = false;
                     localAddon.InstalledVersion = null;

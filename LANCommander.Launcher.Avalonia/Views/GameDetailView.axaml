@@ -139,25 +139,13 @@
                                             <Image Source="{Binding Path, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
                                                    Stretch="UniformToFill" />
                                         </Border>
-                                        <!-- Video placeholder -->
+                                        <!-- Video: muted autoplay, click to open overlay -->
                                         <Border CornerRadius="4" ClipToBounds="True"
-                                                Background="#22FFFFFF"
-                                                IsVisible="{Binding IsVideo}">
-                                            <Panel>
-                                                <Image Source="{Binding Path, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
-                                                       Stretch="UniformToFill"
-                                                       Opacity="0.6" />
-                                                <Border HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Width="56" Height="56"
-                                                        CornerRadius="28"
-                                                        Background="#CC000000">
-                                                    <Icon Type="Fill" Value="Play"
-                                                                   Width="24" Height="24"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center" />
-                                                </Border>
-                                            </Panel>
+                                                Background="Black"
+                                                IsVisible="{Binding IsVideo}"
+                                                Cursor="Hand"
+                                                Tapped="VideoItem_Tapped">
+                                            <InlineVideoPlayer VideoPath="{Binding Path}" />
                                         </Border>
                                     </Panel>
                                 </DataTemplate>

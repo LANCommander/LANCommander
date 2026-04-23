@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Avalonia.Views.VideoPlayerOverlay"
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="OnKeyDown">
+
+    <Grid Background="#EE000000">
+        <!-- Backdrop: click outside video to close -->
+        <Border Background="Transparent" PointerPressed="Backdrop_PointerPressed" />
+
+        <Grid RowDefinitions="*,Auto"
+              Margin="48"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+
+            <!-- Close button (floating top-right above video) -->
+            <IconButton Grid.Row="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Classes="Glass Dark"
+                        IconType="Regular"
+                        IconValue="X"
+                        Size="16"
+                        Click="Close_Click"
+                        ZIndex="1"
+                        Margin="0,0,0,8" />
+
+            <!-- Video area — child set programmatically -->
+            <Border Grid.Row="0"
+                    x:Name="VideoBorder"
+                    Background="Black"
+                    ClipToBounds="True"
+                    CornerRadius="4"
+                    PointerPressed="Video_PointerPressed" />
+
+            <!-- Transport controls -->
+            <Border Grid.Row="1"
+                    Padding="4,8"
+                    Margin="0,8,0,0">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="32">
+
+                    <!-- Play / Pause -->
+                    <Button Grid.Column="0"
+                            x:Name="PlayPauseButton"
+                            Classes="Text"
+                            Click="PlayPause_Click"
+                            Padding="6"
+                            VerticalAlignment="Center">
+                        <Icon x:Name="PlayPauseIcon" Type="Fill" Value="Pause" Width="18" Height="18" />
+                    </Button>
+
+                    <!-- Seek slider -->
+                    <Slider Grid.Column="1"
+                            x:Name="SeekSlider"
+                            Minimum="0" Maximum="1"
+                            IsSnapToTickEnabled="False"
+                            VerticalAlignment="Center"
+                            Margin="8,0" />
+
+                    <!-- Time label -->
+                    <TextBlock Grid.Column="2"
+                               x:Name="TimeLabel"
+                               Text="0:00 / 0:00"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Opacity="0.7"
+                               Margin="8,0" />
+
+                    <!-- Volume toggle -->
+                    <Button Grid.Column="3"
+                            x:Name="VolumeButton"
+                            Classes="Text"
+                            Click="Volume_Click"
+                            Padding="6"
+                            VerticalAlignment="Center">
+                        <Icon x:Name="VolumeIcon" Type="Fill" Value="SpeakerHigh" Width="16" Height="16" />
+                    </Button>
+
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Grid>
+</UserControl>

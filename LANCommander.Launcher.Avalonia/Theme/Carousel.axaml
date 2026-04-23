@@ -41,7 +41,8 @@
                             Classes="Text"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
-                            Padding="8,6">
+                            Padding="8,6"
+                            ZIndex="1">
                         <Icon Type="Regular" Value="CaretLeft" Width="16" Height="16" />
                     </Button>
 
@@ -66,7 +67,8 @@
                             Classes="Text"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
-                            Padding="8,6">
+                            Padding="8,6"
+                            ZIndex="1">
                         <Icon Type="Regular" Value="CaretRight" Width="16" Height="16" Color="White" />
                     </Button>
 

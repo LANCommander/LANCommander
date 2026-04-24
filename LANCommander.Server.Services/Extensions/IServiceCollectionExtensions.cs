@@ -52,6 +52,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<SteamGridDBMediaGrabber>();
         services.AddScoped<YouTubeMediaGrabber>();
         services.AddScoped<IMediaGrabberService, CompositeMediaGrabberService>();
+        services.AddScoped<MediaToolService>();
         services.AddScoped<UpdateService>();
         services.AddScoped<IssueService>();
         services.AddScoped<PageService>();

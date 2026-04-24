@@ -9,6 +9,7 @@
 
             @if (Id != Guid.Empty)
             {
+                <MenuItem RouterLink="@($"/Games/{Id}/Preview")">Preview</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Media")">Media</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Archives")">Archives</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Actions")">Actions</MenuItem>

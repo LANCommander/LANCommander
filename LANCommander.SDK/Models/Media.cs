@@ -13,5 +13,6 @@ namespace LANCommander.SDK.Models
         public string SourceUrl { get; set; }
         public string MimeType { get; set; }
         public string Crc32 { get; set; }
+        public int SortOrder { get; set; }
     }
 }

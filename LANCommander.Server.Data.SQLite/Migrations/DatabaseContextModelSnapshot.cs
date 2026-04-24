@@ -875,6 +875,9 @@ namespace LANCommander.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("TEXT");
 

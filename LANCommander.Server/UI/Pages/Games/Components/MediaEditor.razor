@@ -1,9 +1,11 @@
 ﻿@using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
+@using LANCommander.Server.Services.Abstractions
 @using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
 @inject MediaService MediaService
 @inject GameService GameService
+@inject IMediaGrabberService MediaGrabberService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -207,20 +209,20 @@
         {
             modalRef.Config.ConfirmLoading = true;
 
+            using var download = await MediaGrabberService.DownloadAsync(result);
+
             media.SourceUrl = result.SourceUrl;
-            media.MimeType = result.MimeType;
+            media.MimeType = download.MimeType;
 
             if (media.Id == Guid.Empty)
             {
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
-
-                await MediaService.AddAsync(media);
+                media = await MediaService.WriteToFileAsync(media, download.Stream);
             }
             else
             {
                 MediaService.DeleteLocalMediaFile(media);
 
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
+                media = await MediaService.WriteToFileAsync(media, download.Stream);
             }
 
             _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();

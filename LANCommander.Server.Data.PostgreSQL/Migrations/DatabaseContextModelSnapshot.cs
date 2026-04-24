@@ -752,6 +752,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("uuid");
 

@@ -2,6 +2,10 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
+function clickElement(id) {
+    document.getElementById(id)?.click();
+}
+
 function humanFileSize(bytes, si = false, dp = 1) {
     const thresh = si ? 1000 : 1024;
 

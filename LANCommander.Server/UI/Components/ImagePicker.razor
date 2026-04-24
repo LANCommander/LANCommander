@@ -1,12 +1,12 @@
-﻿<div class="image-picker">
-    <div class="image-picker-images">
+<div class="media-picker">
+    <div class="media-picker-items">
         @foreach (var image in Images)
         {
             var id = Guid.NewGuid();
 
-            <div class="image-picker-image" style="width: @(Size)px; max-height: @(Size)px">
-                <input type="radio" id="image-picker-image-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
-                <label for="image-picker-image-@id" @ondblclick="@(() => Pick(image.Key))"></label>
+            <div class="media-picker-item" style="width: @(Size)px; max-height: @(Size)px">
+                <input type="radio" id="media-picker-item-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
+                <label for="media-picker-item-@id" @ondblclick="@(() => Pick(image.Key))"></label>
                 <img src="@image.Value" />
             </div>
         }

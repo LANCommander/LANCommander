@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 using LANCommander.SDK;
-using System.Diagnostics;
 
 namespace LANCommander.Server.Services
 {
@@ -279,69 +278,11 @@ namespace LANCommander.Server.Services
 
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)
         {
-            if (IsYouTubeUrl(sourceUrl))
-                return await DownloadYouTubeVideoAsync(sourceUrl, media);
-
             using (var http = new HttpClient())
             {
                 var response = await http.GetStreamAsync(sourceUrl);
 
                 return await WriteToFileAsync(media, response);
-            }
-        }
-
-        private static bool IsYouTubeUrl(string url) =>
-            url.Contains("youtube.com/") || url.Contains("youtu.be/");
-
-        private async Task<Media> DownloadYouTubeVideoAsync(string url, Media media)
-        {
-            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempDir);
-
-            try
-            {
-                var outputTemplate = Path.Combine(tempDir, "video.%(ext)s");
-
-                using var process = new Process();
-                process.StartInfo = new ProcessStartInfo
-                {
-                    FileName = "yt-dlp",
-                    Arguments = $"--no-playlist -f \"bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best\" --merge-output-format mp4 -o \"{outputTemplate}\" \"{url}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                process.Start();
-                await process.WaitForExitAsync();
-
-                if (process.ExitCode != 0)
-                {
-                    var error = await process.StandardError.ReadToEndAsync();
-                    throw new Exception($"yt-dlp failed with exit code {process.ExitCode}: {error}");
-                }
-
-                var outputFile = Directory.GetFiles(tempDir).FirstOrDefault();
-                if (outputFile == null)
-                    throw new Exception("yt-dlp did not produce an output file");
-
-                var ext = Path.GetExtension(outputFile).TrimStart('.').ToLowerInvariant();
-                media.MimeType = ext switch
-                {
-                    "mp4" => "video/mp4",
-                    "webm" => "video/webm",
-                    "mkv" => "video/x-matroska",
-                    _ => "video/mp4"
-                };
-
-                using var stream = new FileStream(outputFile, FileMode.Open, FileAccess.Read);
-                return await WriteToFileAsync(media, stream);
-            }
-            finally
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
             }
         }
 

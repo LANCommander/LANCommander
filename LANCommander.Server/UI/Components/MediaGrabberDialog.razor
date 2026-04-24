@@ -1,4 +1,4 @@
-﻿@inherits FeedbackComponent<MediaGrabberOptions, MediaGrabberResult>
+@inherits FeedbackComponent<MediaGrabberOptions, MediaGrabberResult>
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.SDK.Enums
 @inject IMediaGrabberService MediaGrabberService
@@ -15,33 +15,93 @@
     </GridCol>
 </GridRow>
 
-<Spin Spinning="Loading">
-    @foreach (var group in Results)
-    {
-        <div class="media-grabber-group">
-            <h2>@group.First().Group</h2>
-
-            <ImagePicker Size="Size" Images="@group.DistinctBy(g => g.Id).ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
+@if (_preview != null)
+{
+    <div class="media-grabber-preview">
+        <div class="media-grabber-preview__player">
+            @if (IsYouTubeUrl(_preview.SourceUrl))
+            {
+                <iframe src="@GetYouTubeEmbedUrl(_preview.SourceUrl)"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen />
+            }
+            else
+            {
+                <video src="@_preview.SourceUrl" controls autoplay />
+            }
         </div>
-    }
+        <button class="media-grabber-preview__close" @onclick="() => _preview = null" title="Close preview">
+            <Icon Type="@IconType.Outline.Close" />
+        </button>
+    </div>
+}
 
-    @if (Results.Count() == 0 && !Loading)
-    {
-        <Empty Description="@($"No results for \"{Search}\"")" />
-    }
-</Spin>
+@if (Loading && !_groupedResults.Any())
+{
+    <Spin Spinning="true">
+        <div style="min-height: 120px"></div>
+    </Spin>
+}
+
+@foreach (var grabberGroup in _groupedResults)
+{
+    <div class="media-grabber-group">
+        <div class="media-grabber-group-header">
+            <h2>@grabberGroup.Group</h2>
+            <span class="media-grabber-group-source">via @grabberGroup.GrabberName</span>
+        </div>
+
+        @if (Type == MediaType.Video)
+        {
+            <div class="media-picker">
+                <div class="media-picker-items">
+                    @foreach (var result in grabberGroup.Results)
+                    {
+                        var id = Guid.NewGuid();
+
+                        <div class="media-picker-item" data-type="video" style="width: @(Size)px">
+                            <input type="radio" id="media-picker-item-@id" checked="@(Media == result)" name="SelectedResult" @onchange="() => OnResultSelected(result)" />
+                            <label for="media-picker-item-@id" @ondblclick="() => OnResultPicked(result)"></label>
+                            <img src="@result.ThumbnailUrl" />
+                            <button class="media-picker-play" @onclick="() => PreviewVideo(result)" @onclick:stopPropagation="true" title="Preview"></button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <ImagePicker Size="Size" Images="@grabberGroup.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
+        }
+    </div>
+}
+
+@if (Loading && _groupedResults.Any())
+{
+    <div class="media-grabber-loading-more">
+        <Spin Spinning="true" Size="SpinSize.Small" />
+    </div>
+}
+
+@if (!_groupedResults.Any() && !Loading)
+{
+    <Empty Description="@($"No results for \"{Search}\"")" />
+}
 
 @code {
     [Parameter] public string Search { get; set; }
     [Parameter] public MediaType Type { get; set; }
 
     MediaGrabberResult Media { get; set; }
+    MediaGrabberResult _preview { get; set; }
 
     double Size { get; set; } = 200;
     bool Loading { get; set; } = true;
 
-    IEnumerable<IEnumerable<MediaGrabberResult>> Results = new List<List<MediaGrabberResult>>();
-    Dictionary<string, string> Images { get; set; } = new Dictionary<string, string>();
+    CancellationTokenSource _searchCts;
+    List<MediaGrabberResult> _allResults = new();
+    List<GroupedResults> _groupedResults = new();
 
     protected override async Task OnFirstAfterRenderAsync()
     {
@@ -53,19 +113,38 @@
 
     private async Task GetResults(MediaType type, string search)
     {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
         try
         {
             Loading = true;
+            _preview = null;
+            _allResults.Clear();
+            _groupedResults.Clear();
+            await InvokeAsync(StateHasChanged);
 
-            if (!String.IsNullOrWhiteSpace(search))
+            if (String.IsNullOrWhiteSpace(search))
+                return;
+
+            await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, token))
             {
-                Results = (await MediaGrabberService.SearchAsync(type, search)).GroupBy(r => r.Group);
+                if (token.IsCancellationRequested)
+                    break;
 
-                Loading = false;
+                foreach (var result in batch)
+                    result.UniqueKey = $"{result.GrabberName}:{result.Id}";
 
+                _allResults.AddRange(batch);
+                RebuildGroups();
                 await InvokeAsync(StateHasChanged);
             }
+
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred when trying to get media results");
@@ -75,22 +154,71 @@
         }
     }
 
-    private void OnImageSelected(string key)
+    private void RebuildGroups()
     {
-        Media = Results.SelectMany(g => g).FirstOrDefault(r => r.Id == key);
+        _groupedResults = _allResults
+            .GroupBy(r => new { r.GrabberName, r.Group })
+            .Select(g => new GroupedResults
+            {
+                GrabberName = g.Key.GrabberName,
+                Group = g.Key.Group,
+                Results = g.DistinctBy(r => r.Id).ToList()
+            })
+            .ToList();
     }
 
-    private async Task OnImagePicked(string key)
+    private void OnResultSelected(MediaGrabberResult result)
     {
-        OnImageSelected(key);
+        Media = result;
+    }
+
+    private async Task OnResultPicked(MediaGrabberResult result)
+    {
+        Media = result;
 
         await base.OkCancelRefWithResult!.OnOk(Media);
         await CloseFeedbackAsync();
+    }
+
+    private void OnImageSelected(string uniqueKey)
+    {
+        Media = _allResults.FirstOrDefault(r => r.UniqueKey == uniqueKey);
+    }
+
+    private async Task OnImagePicked(string uniqueKey)
+    {
+        OnImageSelected(uniqueKey);
+
+        await base.OkCancelRefWithResult!.OnOk(Media);
+        await CloseFeedbackAsync();
+    }
+
+    private void PreviewVideo(MediaGrabberResult result)
+    {
+        _preview = _preview?.Id == result.Id ? null : result;
+    }
+
+    private static bool IsYouTubeUrl(string url) =>
+        url.Contains("youtube.com/") || url.Contains("youtu.be/");
+
+    private static string GetYouTubeEmbedUrl(string url)
+    {
+        var uri = new Uri(url);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var videoId = query["v"] ?? uri.Segments.LastOrDefault();
+        return $"https://www.youtube.com/embed/{videoId}?autoplay=1";
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         await base.OkCancelRefWithResult!.OnOk(Media);
         await CloseFeedbackAsync();
+    }
+
+    private class GroupedResults
+    {
+        public string GrabberName { get; set; }
+        public string Group { get; set; }
+        public List<MediaGrabberResult> Results { get; set; }
     }
 }

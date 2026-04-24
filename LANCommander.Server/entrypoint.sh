@@ -56,6 +56,22 @@ apt_install() {
   apt-get install -y --no-install-recommends "$@"
 }
 
+# ---------- yt-dlp + ffmpeg ----------
+install_ytdlp() {
+  echo "Installing yt-dlp and ffmpeg..."
+
+  apt_install ffmpeg curl ca-certificates
+
+  if [[ -x "/usr/local/bin/yt-dlp" ]]; then
+    echo "yt-dlp already installed. Skipping download."
+  else
+    echo "Downloading yt-dlp..."
+    curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" -o /usr/local/bin/yt-dlp
+    chmod +x /usr/local/bin/yt-dlp
+    echo "yt-dlp installed."
+  fi
+}
+
 # ---------- SteamCMD ----------
 install_steamcmd() {
   echo "Installing SteamCMD..."
@@ -115,6 +131,8 @@ install_wine() {
 
 # ---------- Conditional execution (only if first run or explicitly requested again) ----------
 if [[ ! -f "$MARKER_FILE" ]]; then
+  install_ytdlp
+
   if [[ "${STEAMCMD:-0}" == "1" ]]; then
     echo "STEAMCMD=1 detected, installing SteamCMD..."
     install_steamcmd
@@ -136,6 +154,7 @@ else
   # Even if previously completed, allow user to force re-run parts by setting REINSTALL=1
   if [[ "${REINSTALL:-0}" == "1" ]]; then
     echo "REINSTALL=1 set — re-running requested installers if toggled."
+    install_ytdlp
     if [[ "${STEAMCMD:-0}" == "1" ]]; then install_steamcmd; fi
     if [[ "${WINE:-0}" == "1" ]]; then install_wine; fi
     date -Is > "$MARKER_FILE"

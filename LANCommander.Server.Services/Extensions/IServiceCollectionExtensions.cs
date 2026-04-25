@@ -65,6 +65,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ChatThreadService>();
         services.AddScoped<ChatThreadReadStatusService>();
         services.AddScoped<DepotService>();
+        services.AddScoped<RatingService>();
         services.AddTransient<SetupService>();
         
         // Register metadata providers

@@ -18,10 +18,15 @@
             <IconButton Grid.Row="0"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Classes="Glass Dark"
+                        Classes="Glass"
                         IconType="Regular"
                         IconValue="X"
                         Size="16"
+                        Width="32"
+                        Height="32"
+                        Padding="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
                         Click="Close_Click"
                         ZIndex="1"
                         Margin="0,0,0,8" />
@@ -29,10 +34,17 @@
             <!-- Video area — child set programmatically -->
             <Border Grid.Row="0"
                     x:Name="VideoBorder"
-                    Background="Black"
                     ClipToBounds="True"
-                    CornerRadius="4"
                     PointerPressed="Video_PointerPressed" />
+
+            <!-- Loading indicator — hidden once the first frame arrives -->
+            <ProgressBar Grid.Row="0"
+                         x:Name="LoadingIndicator"
+                         IsIndeterminate="True"
+                         Width="200"
+                         Height="4"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
 
             <!-- Transport controls -->
             <Border Grid.Row="1"
@@ -56,7 +68,15 @@
                             Minimum="0" Maximum="1"
                             IsSnapToTickEnabled="False"
                             VerticalAlignment="Center"
-                            Margin="8,0" />
+                            Margin="8,0">
+                        <Slider.Resources>
+                            <!-- Collapse the Fluent template's 15px tick-bar rows
+                                 above and below the track so it centres properly. -->
+                            <GridLength x:Key="SliderPreContentMargin">0</GridLength>
+                            <GridLength x:Key="SliderPostContentMargin">0</GridLength>
+                            <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+                        </Slider.Resources>
+                    </Slider>
 
                     <!-- Time label -->
                     <TextBlock Grid.Column="2"

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.Services;
@@ -248,13 +250,30 @@ public partial class GameDetailViewModel : ViewModelBase
                 m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
             {
                 var path = mediaService.FileExists(m) ? mediaService.GetImagePath(m) : null;
-                if (path != null)
-                    MediaItems.Add(new GameMediaItemViewModel
+                if (path == null) continue;
+
+                var item = new GameMediaItemViewModel
+                {
+                    Path     = path,
+                    IsVideo  = m.Type == MediaType.Video,
+                    MimeType = string.Empty
+                };
+
+                // Pre-load bitmap for screenshots so the AXAML can bind to ImageSource
+                if (!item.IsVideo)
+                {
+                    try
                     {
-                        Path     = path,
-                        IsVideo  = m.Type == MediaType.Video,
-                        MimeType = string.Empty
-                    });
+                        item.ImageSource = new Bitmap(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to load local screenshot {Path}", path);
+                        continue;
+                    }
+                }
+
+                MediaItems.Add(item);
             }
         }
         OnPropertyChanged(nameof(HasMedia));
@@ -328,7 +347,7 @@ public partial class GameDetailViewModel : ViewModelBase
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
 
-        // Load media asynchronously
+        // Load media asynchronously — stream from server, don't save to disk
         if (game.Media != null && game.Media.Any())
         {
             IsLoadingMedia = true;
@@ -342,18 +361,39 @@ public partial class GameDetailViewModel : ViewModelBase
                 BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background,  mediaClient);
                 IconPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon,        mediaClient);
 
-                // Screenshots and videos
+                // Screenshots and videos — load from server without saving to disk
+                using var httpClient = new HttpClient();
                 foreach (var media in game.Media.Where(m =>
                     m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
                 {
-                    var path = await GetOrDownloadSingleMediaAsync(media, mediaClient);
-                    if (path != null)
-                        MediaItems.Add(new GameMediaItemViewModel
+                    try
+                    {
+                        var url = mediaClient.GetAbsoluteUrl(media);
+                        var item = new GameMediaItemViewModel
                         {
-                            Path     = path,
                             IsVideo  = media.Type == MediaType.Video,
                             MimeType = media.MimeType ?? string.Empty
-                        });
+                        };
+
+                        if (media.Type == MediaType.Video)
+                        {
+                            // Videos: use streaming endpoint with range request support
+                            item.Path = mediaClient.GetAbsoluteStreamUrl(media);
+                        }
+                        else
+                        {
+                            // Screenshots: fetch bytes into memory and create Bitmap
+                            var bytes = await httpClient.GetByteArrayAsync(url);
+                            using var ms = new MemoryStream(bytes);
+                            item.ImageSource = new Bitmap(ms);
+                        }
+
+                        MediaItems.Add(item);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load media {MediaId} from server", media.Id);
+                    }
                 }
                 OnPropertyChanged(nameof(HasMedia));
             }
@@ -393,22 +433,6 @@ public partial class GameDetailViewModel : ViewModelBase
         }
 
         return typeLabel;
-    }
-
-    private async Task<string?> GetOrDownloadSingleMediaAsync(SDK.Models.Media media, MediaClient mediaClient)
-    {
-        try
-        {
-            var localPath = mediaClient.GetLocalPath(media);
-            if (File.Exists(localPath)) return localPath;
-            var fileInfo = await mediaClient.DownloadAsync(media, localPath);
-            return fileInfo.Exists ? fileInfo.FullName : null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to download media {MediaId}", media.Id);
-            return null;
-        }
     }
 
     private string? GetLocalMediaPath(System.Collections.Generic.ICollection<Data.Models.Media>? mediaCollection, MediaType type, MediaService mediaService)

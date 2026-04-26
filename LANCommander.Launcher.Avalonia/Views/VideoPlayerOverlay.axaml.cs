@@ -55,7 +55,12 @@ public partial class VideoPlayerOverlay : UserControl
             _canvas.Bitmap = _renderer?.Bitmap;
             _canvas.InvalidateVisual();
         };
-        _renderer.FrameReady += () => _canvas?.InvalidateVisual();
+        _renderer.FrameReady += () =>
+        {
+            if (LoadingIndicator.IsVisible)
+                LoadingIndicator.IsVisible = false;
+            _canvas?.InvalidateVisual();
+        };
 
         _renderer.Player!.EndReached += (_, _) =>
             Dispatcher.UIThread.Post(() => PlayPauseIcon.Value = "Play");

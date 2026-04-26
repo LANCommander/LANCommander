@@ -58,13 +58,18 @@ internal sealed class VideoFrameRenderer : IDisposable
         _player.SetVideoFormatCallbacks(OnVideoFormat, OnVideoCleanup);
     }
 
-    public void Play(string path, bool muted, bool loop, long startTimeMs = 0)
+    public void Play(string pathOrUrl, bool muted, bool loop, long startTimeMs = 0)
     {
         if (_player == null || _disposed) return;
 
-        _player.Volume = muted ? 0 : 100;
+        var isUrl = pathOrUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                 || pathOrUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-        using var media = new Media(SharedLibVLC, path, FromType.FromPath);
+        using var media = new Media(SharedLibVLC, pathOrUrl,
+            isUrl ? FromType.FromLocation : FromType.FromPath);
+
+        if (muted)
+            media.AddOption(":no-audio");
 
         if (loop)
             media.AddOption(":input-repeat=65535");

@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media.Imaging;
@@ -17,9 +19,77 @@ namespace LANCommander.Launcher.Avalonia.Helpers;
 internal sealed class VideoFrameRenderer : IDisposable
 {
     private static LibVLC? s_libVLC;
+    private static bool s_initAttempted;
+    private static bool s_available;
 
-    internal static LibVLC SharedLibVLC =>
-        s_libVLC ??= new LibVLC("--quiet", "--no-video-title-show");
+    /// <summary>
+    /// Returns <c>true</c> if libvlc native libraries were loaded successfully.
+    /// On Linux and macOS this requires VLC to be installed on the system.
+    /// </summary>
+    public static bool IsAvailable
+    {
+        get
+        {
+            if (!s_initAttempted)
+            {
+                s_initAttempted = true;
+                try
+                {
+                    _ = SharedLibVLC;
+                    s_available = true;
+                }
+                catch
+                {
+                    s_available = false;
+                }
+            }
+
+            return s_available;
+        }
+    }
+
+    /// <summary>
+    /// Returns the directory containing bundled libvlc native libraries for the
+    /// current OS/architecture, or <c>null</c> if no bundled copy exists.
+    /// Convention: &lt;AppDir&gt;/libvlc/&lt;rid&gt;/ (e.g. libvlc/linux-x64/).
+    /// </summary>
+    private static string? GetBundledLibVlcPath()
+    {
+        var appDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
+                     ?? AppContext.BaseDirectory;
+
+        string rid;
+        if (OperatingSystem.IsLinux())
+            rid = RuntimeInformation.OSArchitecture == Architecture.Arm64
+                ? "linux-arm64"
+                : "linux-x64";
+        else if (OperatingSystem.IsMacOS())
+            rid = RuntimeInformation.OSArchitecture == Architecture.Arm64
+                ? "osx-arm64"
+                : "osx-x64";
+        else
+            return null; // Windows package handled by VideoLAN.LibVLC.Windows NuGet targets
+
+        var candidate = Path.Combine(appDir, "libvlc", rid);
+        return Directory.Exists(candidate) ? candidate : null;
+    }
+
+    internal static LibVLC SharedLibVLC
+    {
+        get
+        {
+            if (s_libVLC == null)
+            {
+                var bundledPath = GetBundledLibVlcPath();
+                if (bundledPath != null)
+                    Core.Initialize(bundledPath);
+
+                s_libVLC = new LibVLC("--quiet", "--no-video-title-show");
+            }
+
+            return s_libVLC;
+        }
+    }
 
     private readonly uint _maxWidth;
     private readonly uint _maxHeight;

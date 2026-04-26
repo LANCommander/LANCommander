@@ -31,7 +31,8 @@
     <PackageReference Include="PDFtoImage" />
     <PackageReference Include="LibVLCSharp" />
     <PackageReference Include="LibVLCSharp.Avalonia" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <PackageReference Include="VideoLAN.LibVLC.Mac" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
   </ItemGroup>
 
   <ItemGroup>

@@ -92,6 +92,59 @@ jobs:
           -p:EnableCompressionInSingleFile=true \
           -p:DebugType=embedded
 
+    - name: Bundle libvlc (Linux)
+      if: inputs.build_platform == 'Linux'
+      shell: bash
+      run: |
+        PUBLISH_DIR="LANCommander.Launcher.Avalonia/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        VLC_DIR="$PUBLISH_DIR/libvlc/${{ inputs.build_runtime }}"
+        mkdir -p "$VLC_DIR"
+
+        if [ "${{ inputs.build_arch }}" = "arm64" ]; then
+          # Enable arm64 multiarch and add Ubuntu Ports repository so apt can
+          # download arm64 packages on this x64 runner.
+          sudo dpkg --add-architecture arm64
+          CODENAME=$(lsb_release -cs)
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME} main restricted universe" \
+            | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-updates main restricted universe" \
+            | sudo tee -a /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
+          sudo apt-get update -qq
+
+          sudo apt-get download libvlc5:arm64 libvlccore9:arm64 vlc-plugin-base:arm64
+
+          mkdir -p vlc-extracted
+          for deb in libvlc5_*arm64.deb libvlccore9_*arm64.deb vlc-plugin-base_*arm64.deb; do
+            dpkg -x "$deb" vlc-extracted/
+          done
+
+          LIB_DIR="vlc-extracted/usr/lib/aarch64-linux-gnu"
+          PLUGINS_SRC="$LIB_DIR/vlc/plugins"
+        else
+          sudo apt-get install -y --no-install-recommends libvlc5 libvlccore9 vlc-plugin-base
+          LIB_DIR="/usr/lib/x86_64-linux-gnu"
+          PLUGINS_SRC="$LIB_DIR/vlc/plugins"
+        fi
+
+        # Copy the two core shared libraries, dereferencing symlinks so their
+        # content is preserved correctly when zipped.
+        for lib in libvlc.so.5 libvlccore.so.9; do
+          src=$(find "$LIB_DIR" -maxdepth 1 -name "${lib}*" | sort | head -1)
+          if [ -n "$src" ]; then
+            cp -L "$src" "$VLC_DIR/$lib"
+            echo "Bundled: $lib"
+          else
+            echo "WARNING: $lib not found in $LIB_DIR" >&2
+          fi
+        done
+
+        # Copy VLC plugins (vlc-plugin-base covers common codecs and demuxers)
+        if [ -d "$PLUGINS_SRC" ]; then
+          mkdir -p "$VLC_DIR/plugins"
+          cp -rL "$PLUGINS_SRC/." "$VLC_DIR/plugins/"
+          echo "Bundled $(find "$VLC_DIR/plugins" -name "*.so" | wc -l) plugin(s)"
+        fi
+
     - name: Bundle and Clean
       shell: pwsh
       run: |

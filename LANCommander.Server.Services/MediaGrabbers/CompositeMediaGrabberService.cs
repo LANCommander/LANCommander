@@ -67,10 +67,15 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
         {
+            return await DownloadAsync(result, null);
+        }
+
+        public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result, IProgress<MediaDownloadProgress>? progress)
+        {
             var grabber = _grabbers.FirstOrDefault(g => g.Name == result.GrabberName)
                           ?? _grabbers.First();
 
-            return await grabber.DownloadAsync(result);
+            return await grabber.DownloadAsync(result, progress);
         }
     }
 }

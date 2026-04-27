@@ -5,3 +5,4 @@ export { ChunkUploader } from "./Components/ChunkUploader/ChunkUploader";
 export { SplitPane } from "./Components/SplitPane/SplitPane";
 export { TimeProvider } from "./Components/LocalTime/TimeProvider";
 export { Terminal } from "./Components/Terminal/Terminal";
+export { DomHelper } from "./Components/DomHelper/DomHelper";

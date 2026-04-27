@@ -1,6 +1,7 @@
 ﻿@using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
 @inject MediaService MediaService
@@ -203,15 +204,13 @@
             Search = _game.Title
         };
 
-        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
+        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
 
-        modalRef.OnOk = async (result) =>
+        modalRef.OnOk = async (downloadResult) =>
         {
-            modalRef.Config.ConfirmLoading = true;
+            using var download = downloadResult.Download;
 
-            using var download = await MediaGrabberService.DownloadAsync(result);
-
-            media.SourceUrl = result.SourceUrl;
+            media.SourceUrl = downloadResult.Result.SourceUrl;
             media.MimeType = download.MimeType;
 
             if (media.Id == Guid.Empty)
@@ -221,7 +220,6 @@
             else
             {
                 MediaService.DeleteLocalMediaFile(media);
-
                 media = await MediaService.WriteToFileAsync(media, download.Stream);
             }
 

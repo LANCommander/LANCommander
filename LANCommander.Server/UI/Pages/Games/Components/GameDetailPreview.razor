@@ -1,8 +1,10 @@
 @using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
+@using LANCommander.UI.Providers
 @inject MediaService MediaService
 @inject GameService GameService
 @inject IMediaGrabberService MediaGrabberService
@@ -10,7 +12,7 @@
 @inject IMessageService MessageService
 @inject IOptions<Settings> Settings
 @inject ILogger<GameDetailPreview> Logger
-@inject IJSRuntime JS
+@inject ScriptProvider ScriptProvider
 
 <div class="game-detail-preview">
     <!-- ══ Hero Section ═══════════════════════════════════════════ -->
@@ -322,6 +324,7 @@
 
     List<Media> _media = new();
     Game _game;
+    IJSObjectReference _domHelper;
 
     protected override async Task OnInitializedAsync()
     {
@@ -341,8 +344,14 @@
         _media = _game.Media?.ToList() ?? new();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            _domHelper = await ScriptProvider.ImportModuleAsync("DomHelper");
+    }
+
     async Task ClickFileInput(string inputId) =>
-        await JS.InvokeVoidAsync("clickElement", inputId);
+        await _domHelper.InvokeVoidAsync("ClickElement", inputId);
 
     Media? GetMedia(MediaType type) =>
         _media.FirstOrDefault(m => m.Type == type);
@@ -431,13 +440,11 @@
             Search = _game.Title
         };
 
-        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
+        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
 
-        modalRef.OnOk = async (result) =>
+        modalRef.OnOk = async (downloadResult) =>
         {
-            modalRef.Config.ConfirmLoading = true;
-
-            using var download = await MediaGrabberService.DownloadAsync(result);
+            using var download = downloadResult.Download;
 
             var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
             var existing = isSingular ? GetMedia(type) : null;
@@ -447,7 +454,7 @@
             if (existing != null)
             {
                 media = existing;
-                media.SourceUrl = result.SourceUrl;
+                media.SourceUrl = downloadResult.Result.SourceUrl;
                 media.MimeType = download.MimeType;
 
                 MediaService.DeleteLocalMediaFile(media);
@@ -459,7 +466,7 @@
                 {
                     GameId = GameId,
                     Type = type,
-                    SourceUrl = result.SourceUrl,
+                    SourceUrl = downloadResult.Result.SourceUrl,
                     MimeType = download.MimeType,
                     StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
                     Crc32 = string.Empty,
@@ -470,7 +477,6 @@
             }
 
             await RefreshMedia();
-            await InvokeAsync(StateHasChanged);
         };
     }
 

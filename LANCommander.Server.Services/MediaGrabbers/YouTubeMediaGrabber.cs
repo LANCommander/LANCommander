@@ -9,7 +9,7 @@ using YoutubeExplode.Common;
 
 namespace LANCommander.Server.Services.MediaGrabbers
 {
-    public class YouTubeMediaGrabber(ILogger<YouTubeMediaGrabber> logger) : IMediaGrabberService
+    public partial class YouTubeMediaGrabber(ILogger<YouTubeMediaGrabber> logger) : IMediaGrabberService
     {
         public string Name => "YouTube";
 
@@ -39,12 +39,21 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
+        public Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
+            => DownloadAsync(result, null);
+
+        public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result, IProgress<MediaDownloadProgress>? progress)
         {
             if (!IsYouTubeUrl(result.SourceUrl))
             {
-                var http = new HttpClient();
-                var stream = await http.GetStreamAsync(result.SourceUrl);
+                using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+
+                using var response = await http.GetAsync(result.SourceUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength;
+                var stream = await ProgressStream.CopyToTempFileAsync(
+                    await response.Content.ReadAsStreamAsync(), totalBytes, progress);
 
                 return new MediaGrabberDownload
                 {
@@ -60,11 +69,13 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
             var outputTemplate = Path.Combine(tempDir, "video.%(ext)s");
 
+            progress?.Report(new MediaDownloadProgress { Status = "Starting yt-dlp..." });
+
             using var process = new Process();
             process.StartInfo = new ProcessStartInfo
             {
                 FileName = ytdlpPath,
-                Arguments = $"--no-playlist -f \"bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best\" --merge-output-format mp4 -o \"{outputTemplate}\" \"{result.SourceUrl}\"",
+                Arguments = $"--no-playlist --newline -f \"bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best\" --merge-output-format mp4 -o \"{outputTemplate}\" \"{result.SourceUrl}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -72,16 +83,49 @@ namespace LANCommander.Server.Services.MediaGrabbers
             };
 
             process.Start();
+
+            // Parse yt-dlp stdout for progress lines like "[download]  45.2% of 120.00MiB ..."
+            var stdoutTask = Task.Run(async () =>
+            {
+                while (await process.StandardOutput.ReadLineAsync() is { } line)
+                {
+                    if (progress == null)
+                        continue;
+
+                    var match = YtDlpProgressRegex().Match(line);
+                    if (match.Success && double.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                    {
+                        progress.Report(new MediaDownloadProgress
+                        {
+                            BytesTransferred = (long)pct,
+                            TotalBytes = 100,
+                            Status = $"Downloading video... {pct:F1}%"
+                        });
+                    }
+                    else if (line.Contains("[Merger]") || line.Contains("Merging"))
+                    {
+                        progress.Report(new MediaDownloadProgress
+                        {
+                            BytesTransferred = 100,
+                            TotalBytes = 100,
+                            Status = "Merging audio and video..."
+                        });
+                    }
+                }
+            });
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
             await process.WaitForExitAsync();
+            await stdoutTask;
+            var stderr = await stderrTask;
 
             if (process.ExitCode != 0)
             {
-                var error = await process.StandardError.ReadToEndAsync();
-
                 if (Directory.Exists(tempDir))
                     Directory.Delete(tempDir, true);
 
-                throw new Exception($"yt-dlp failed with exit code {process.ExitCode}: {error}");
+                throw new Exception($"yt-dlp failed with exit code {process.ExitCode}: {stderr}");
             }
 
             var outputFile = Directory.GetFiles(tempDir).FirstOrDefault();
@@ -110,6 +154,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 MimeType = mimeType
             };
         }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\[download\]\s+([\d.]+)%")]
+        private static partial System.Text.RegularExpressions.Regex YtDlpProgressRegex();
 
         private static bool IsYouTubeUrl(string url) =>
             url.Contains("youtube.com/") || url.Contains("youtu.be/");

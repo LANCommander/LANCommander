@@ -11,6 +11,9 @@ namespace LANCommander.Server.Services.Abstractions
         Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords);
         Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result);
 
+        Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result, IProgress<MediaDownloadProgress>? progress)
+            => DownloadAsync(result);
+
         async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
             MediaType type, string keywords,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)

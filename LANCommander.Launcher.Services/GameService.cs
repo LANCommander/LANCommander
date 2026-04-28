@@ -4,6 +4,7 @@ using LANCommander.Launcher.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -22,6 +23,16 @@ namespace LANCommander.Launcher.Services
         IServiceProvider serviceProvider) : BaseDatabaseService<Game>(dbContext, logger)
     {
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
+
+        public async Task<Dictionary<Guid, DateTime>> GetImportedOnMapAsync(IEnumerable<Guid> ids)
+        {
+            var idSet = ids.ToHashSet();
+
+            return await Context.Set<Game>()
+                .Where(g => idSet.Contains(g.Id))
+                .Select(g => new { g.Id, g.ImportedOn })
+                .ToDictionaryAsync(g => g.Id, g => g.ImportedOn);
+        }
 
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;

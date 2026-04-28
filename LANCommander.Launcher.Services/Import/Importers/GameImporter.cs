@@ -72,7 +72,8 @@ public class GameImporter(
 
     public override async Task<bool> UpdateAsync(ImportItemInfo<Game> importItemInfo)
     {
-        var existing = await gameService.GetAsync(importItemInfo.Record.Id);
+        var existing = importItemInfo.ExistingEntity as Data.Models.Game
+            ?? await gameService.GetAsync(importItemInfo.Record.Id);
 
         try
         {
@@ -87,10 +88,10 @@ public class GameImporter(
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
-            
+
             await gameService.UpdateAsync(existing);
-            await UpdateRelationships(importItemInfo.Record);
-            
+            await UpdateRelationships(importItemInfo.Record, existing);
+
             if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
                 await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
@@ -102,9 +103,9 @@ public class GameImporter(
         }
     }
 
-    private async Task UpdateRelationships(Game manifest)
+    private async Task UpdateRelationships(Game manifest, Data.Models.Game? cachedGame = null)
     {
-        var game = await gameService.GetAsync(manifest.Id);
+        var game = cachedGame ?? await gameService.GetAsync(manifest.Id);
 
         await gameService.SyncRelatedCollectionAsync(
             game,
@@ -143,5 +144,14 @@ public class GameImporter(
             r => t => t.Name == r.Name);
     }
 
-    public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo) => await gameService.ExistsAsync(importItemInfo.Record.Id);
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo)
+    {
+        var existing = await gameService.GetAsync(importItemInfo.Record.Id);
+        if (existing != null)
+        {
+            importItemInfo.ExistingEntity = existing;
+            return true;
+        }
+        return false;
+    }
 }

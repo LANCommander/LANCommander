@@ -8,6 +8,8 @@ namespace LANCommander.Launcher.Services.Import;
 
 public class ImportContext
 {
+    private const int MaxDeferCount = 3;
+
     private int Processed;
     private int Total;
 
@@ -15,8 +17,10 @@ public class ImportContext
     public AsyncEventHandler<ImportStatusUpdate> OnImportComplete { get; set; } = new();
     public AsyncEventHandler<ImportStatusUpdate> OnImportError { get; set; } = new();
     public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; set; } = new();
-    
+
     private Queue<IImportItemInfo> Queue { get; } = new();
+    public List<IImportItemInfo> FailedItems { get; } = new();
+    internal List<PendingMediaDownload> PendingMediaDownloads { get; } = new();
     
     private readonly CollectionImporter _collections;
     private readonly DeveloperImporter _developers;
@@ -31,6 +35,7 @@ public class ImportContext
     private readonly ToolImporter _tools;
 
     private readonly ILogger<ImportContext> _logger;
+    private readonly MediaService _mediaService;
 
     public ImportContext(IServiceProvider serviceProvider)
     {
@@ -45,37 +50,40 @@ public class ImportContext
         _publishers = serviceProvider.GetRequiredService<PublisherImporter>();
         _tags = serviceProvider.GetRequiredService<TagImporter>();
         _logger = serviceProvider.GetRequiredService<ILogger<ImportContext>>();
+        _mediaService = serviceProvider.GetRequiredService<MediaService>();
 
         SetupContextOnImporters();
     }
 
     public async Task AddAsync(Game game)
     {
-        await AddAsync(game, game.Collections, _collections);
-        await AddAsync(game, game.Developers, _developers);
-        await AddAsync(game, game.Engine, _engines);
-        await AddAsync(game, game.Genres, _genres);
-        await AddAsync(game, game.Media, _media);
-        await AddAsync(game, game.MultiplayerModes, _multiplayerModes);
-        await AddAsync(game, game.Platforms, _platforms);
-        await AddAsync(game, game.Publishers, _publishers);
-        await AddAsync(game, game.Tags, _tags);
-        await AddAsync(game, game, _games);
+        var gameId = game.Id;
+
+        await AddAsync(game, game.Collections, _collections, gameId);
+        await AddAsync(game, game.Developers, _developers, gameId);
+        await AddAsync(game, game.Engine, _engines, gameId);
+        await AddAsync(game, game.Genres, _genres, gameId);
+        await AddAsync(game, game.Media, _media, gameId);
+        await AddAsync(game, game.MultiplayerModes, _multiplayerModes, gameId);
+        await AddAsync(game, game.Platforms, _platforms, gameId);
+        await AddAsync(game, game.Publishers, _publishers, gameId);
+        await AddAsync(game, game.Tags, _tags, gameId);
+        await AddAsync(game, game, _games, gameId);
     }
 
     public async Task AddAsync(Tool tool)
     {
-        await AddAsync(tool, tool, _tools);
+        await AddAsync(tool, tool, _tools, null);
     }
 
-    private async Task AddAsync<TRecord>(BaseManifest manifest, IEnumerable<TRecord> records, BaseImporter<TRecord> importer)
+    private async Task AddAsync<TRecord>(BaseManifest manifest, IEnumerable<TRecord> records, BaseImporter<TRecord> importer, Guid? gameId)
         where TRecord : class
     {
         foreach (var record in records)
-            await AddAsync(manifest, record, importer);
+            await AddAsync(manifest, record, importer, gameId);
     }
 
-    private async Task AddAsync<TRecord>(BaseManifest manifest, TRecord? record, BaseImporter<TRecord> importer)
+    private async Task AddAsync<TRecord>(BaseManifest manifest, TRecord? record, BaseImporter<TRecord> importer, Guid? gameId)
         where TRecord : class
     {
         if (record != null && !InQueue(record, importer) && await importer.CanImportAsync(record))
@@ -83,6 +91,7 @@ public class ImportContext
             var importInfo = await importer.GetImportInfoAsync(record, manifest);
 
             importInfo.Key = importer.GetKey(record);
+            importInfo.GameId = gameId;
 
             _logger.LogInformation("Queuing item {ItemName} for import with key {Key}", importInfo.Name, importInfo.Key);
 
@@ -105,7 +114,7 @@ public class ImportContext
             Total = Total,
         })!;
 
-        int deferred = 0;
+        int consecutiveDefers = 0;
 
         while (Queue.Count > 0)
         {
@@ -119,29 +128,91 @@ public class ImportContext
                 Total = Total,
             })!;
 
-            var success = await TryImportAsync(queueItem);
+            var result = await TryImportAsync(queueItem);
 
-            if (success)
+            switch (result)
             {
-                _logger.LogInformation("Successfully imported item {ItemName}", queueItem.Name);
-                Processed++;
-                deferred = 0;
-                continue;
+                case ImportResult.Success:
+                    _logger.LogInformation("Successfully imported item {ItemName}", queueItem.Name);
+                    Processed++;
+                    consecutiveDefers = 0;
+                    break;
+
+                case ImportResult.Deferred:
+                    queueItem.DeferCount++;
+
+                    if (queueItem.DeferCount >= MaxDeferCount)
+                    {
+                        _logger.LogWarning("Item {ItemName} exceeded max defer count, marking as failed", queueItem.Name);
+                        FailedItems.Add(queueItem);
+                        Processed++;
+                        consecutiveDefers = 0;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Deferring item {ItemName} for later import (attempt {Count})", queueItem.Name, queueItem.DeferCount);
+                        Queue.Enqueue(queueItem);
+                        consecutiveDefers++;
+
+                        if (consecutiveDefers >= Queue.Count)
+                        {
+                            _logger.LogWarning("Import deadlocked: moving all remaining {Count} items to failed", Queue.Count);
+                            while (Queue.Count > 0)
+                                FailedItems.Add(Queue.Dequeue());
+                        }
+                    }
+                    break;
+
+                case ImportResult.Failed:
+                    _logger.LogWarning("Item {ItemName} failed permanently, skipping", queueItem.Name);
+                    FailedItems.Add(queueItem);
+                    Processed++;
+                    consecutiveDefers = 0;
+                    break;
             }
-
-            _logger.LogInformation("Deferring item {ItemName} for later import", queueItem.Name);
-            Queue.Enqueue(queueItem);
-            deferred++;
-
-            if (deferred >= Queue.Count)
-                throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
         }
+
+        if (FailedItems.Count > 0)
+            _logger.LogWarning("Import completed with {FailedCount} failed items: {Items}",
+                FailedItems.Count, string.Join(", ", FailedItems.Select(f => f.Name)));
 
         await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
         {
             Index = Total,
             Total = Total,
         })!;
+    }
+
+    public async Task DownloadPendingMediaAsync(int maxConcurrency = 4)
+    {
+        if (PendingMediaDownloads.Count == 0)
+            return;
+
+        _logger.LogInformation("Downloading {Count} media files with concurrency {Concurrency}",
+            PendingMediaDownloads.Count, maxConcurrency);
+
+        var semaphore = new SemaphoreSlim(maxConcurrency);
+
+        var tasks = PendingMediaDownloads.Select(async pending =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                await _mediaService.DownloadAsync(pending.Media);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download media {MediaId}", pending.Media.Id);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
+
+        _logger.LogInformation("Media download complete");
     }
 
     private void SetupContextOnImporters()
@@ -158,11 +229,11 @@ public class ImportContext
         _tags.UseContext(this);
     }
 
-    private async Task<bool> TryImportAsync(IImportItemInfo queueItem)
+    private async Task<ImportResult> TryImportAsync(IImportItemInfo queueItem)
     {
         try
         {
-            return queueItem.Type switch
+            var success = queueItem.Type switch
             {
                 nameof(Collection) => await _collections.ImportAsync(queueItem),
                 "Developer" => await _developers.ImportAsync(queueItem),
@@ -176,6 +247,8 @@ public class ImportContext
                 nameof(Tag) => await _tags.ImportAsync(queueItem),
                 _ => throw new InvalidOperationException($"No importer found for type {queueItem.Type}"),
             };
+
+            return success ? ImportResult.Success : ImportResult.Deferred;
         }
         catch (Exception ex)
         {
@@ -188,8 +261,15 @@ public class ImportContext
                 Total = Total,
                 Error = ex.Message,
             })!;
-        }
 
-        return false;
+            return ImportResult.Failed;
+        }
+    }
+
+    private enum ImportResult
+    {
+        Success,
+        Deferred,
+        Failed,
     }
 }

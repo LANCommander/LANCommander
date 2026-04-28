@@ -119,6 +119,7 @@ class Program
             }
 
             await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
+            await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
 
             await commandLineService.ParseCommandLineAsync(args);
         }
@@ -187,6 +188,7 @@ internal class ScriptDebugApp : Application
             }
 
             await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
+            await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
 
             await commandLineService.ParseCommandLineAsync(args).ConfigureAwait(false);
         }

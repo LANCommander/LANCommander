@@ -93,16 +93,28 @@
                     PointerPressed="TitleBarDragRegion_PointerPressed"
                     DoubleTapped="TitleBarDragRegion_DoubleTapped" />
 
-            <!-- Refresh button (visible when a games collection is active) -->
+            <!-- Refresh button (visible when a games collection is active and not syncing) -->
             <Border Grid.Column="3"
                     IsVisible="{Binding ShellViewModel.IsRefreshVisible}"
                     Padding="0,0,2,0"
                     VerticalAlignment="Center">
-                <Button Classes="Text"
-                        Padding="8,6"
-                        Command="{Binding ShellViewModel.RefreshCommand}">
-                    <Icon Type="Regular" Value="ArrowsClockwise" Width="16" Height="16" />
-                </Button>
+                <IconButton Classes="Text"
+                            Command="{Binding ShellViewModel.RefreshCommand}"
+                            IconType="Regular"
+                            IconValue="ArrowsClockwise"
+                            Width="40" Height="40" />
+            </Border>
+
+            <!-- Import progress bar (replaces refresh button while syncing) -->
+            <Border Grid.Column="3"
+                    IsVisible="{Binding ShellViewModel.IsSyncing}"
+                    Padding="4,0,4,0"
+                    VerticalAlignment="Center">
+                <ProgressBar Value="{Binding ShellViewModel.ImportProgress}"
+                             IsIndeterminate="{Binding ShellViewModel.IsImportIndeterminate}"
+                             Minimum="0" Maximum="1"
+                             Width="100" Height="4"
+                             VerticalAlignment="Center" />
             </Border>
 
             <!-- Profile button (visible only when shell is active) -->

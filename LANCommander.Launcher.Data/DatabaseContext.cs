@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data.Interceptors;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.SDK;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -22,9 +23,27 @@ namespace LANCommander.Launcher.Data
         {
             var dbPath = AppPaths.GetConfigPath("LANCommander.db");
 
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Cache = SqliteCacheMode.Shared,
+            }.ToString();
+
             optionsBuilder.AddInterceptors(new AuditingInterceptor());
             optionsBuilder.UseLoggerFactory(LoggerFactory);
-            optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
+            optionsBuilder.UseSqlite(connectionString, options =>
+            {
+                options.CommandTimeout(30);
+            });
+        }
+
+        /// <summary>
+        /// Enables WAL mode for concurrent reads during background writes.
+        /// Should be called once after the database is created/migrated.
+        /// </summary>
+        public async Task EnableWalModeAsync()
+        {
+            await Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

@@ -15,6 +15,8 @@ namespace LANCommander.Launcher.Services
         LibraryClient libraryClient,
         GameService gameService) : BaseService(logger)
     {
+        private const int MaxConcurrentManifestFetches = 8;
+
         private ImportProgress _importProgress = new();
         public ImportProgress Progress => _importProgress;
 
@@ -41,29 +43,54 @@ namespace LANCommander.Launcher.Services
             importContext.OnImportError = OnImportError;
             importContext.OnImportStatusUpdate = OnImportStatusUpdate;
 
-            foreach (var game in remoteLibrary)
+            // Pre-fetch all local import timestamps in a single query
+            var gameIds = remoteLibrary.Select(g => g.Id);
+            var importedOnMap = await gameService.GetImportedOnMapAsync(gameIds);
+
+            // Filter to only games that need importing
+            var gamesToImport = remoteLibrary.Where(game =>
             {
+                if (importedOnMap.TryGetValue(game.Id, out var importedOn) && game.UpdatedOn <= importedOn)
+                {
+                    Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
+                    return false;
+                }
+                return true;
+            }).ToList();
+
+            Logger?.LogInformation("Importing {Count} games ({Skipped} skipped as unchanged)",
+                gamesToImport.Count, remoteLibrary.Count() - gamesToImport.Count);
+
+            // Fetch manifests concurrently
+            var semaphore = new SemaphoreSlim(MaxConcurrentManifestFetches);
+            var addLock = new object();
+
+            var tasks = gamesToImport.Select(async game =>
+            {
+                await semaphore.WaitAsync();
                 try
                 {
-                    var existing = await gameService.GetAsync(game.Id);
-
-                    if (existing != null && game.UpdatedOn <= existing.ImportedOn)
-                    {
-                        Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
-                        continue;
-                    }
-
                     var manifest = await gameClient.GetManifestAsync(game.Id);
 
-                    await importContext.AddAsync(manifest);
+                    lock (addLock)
+                    {
+                        importContext.AddAsync(manifest).GetAwaiter().GetResult();
+                    }
                 }
                 catch (Exception ex)
                 {
                     Logger?.LogError(ex, "Could not add game with ID {GameId} to import queue", game.Id);
                 }
-            }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
 
             await importContext.ImportQueueAsync();
+            await importContext.DownloadPendingMediaAsync();
         }
 
         public async Task ImportGameAsync(Guid gameId)

@@ -160,6 +160,7 @@ public partial class App : Application
                 // Run database migrations
                 _logger?.LogInformation("Running database migrations...");
                 await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
+                await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
                 _logger?.LogInformation("Database migrations complete");
             }
 

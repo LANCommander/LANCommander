@@ -2,12 +2,14 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +51,7 @@ public partial class ShellViewModel : ViewModelBase
     };
 
     public bool IsRefreshVisible =>
-        (ContentView is GamesCollectionViewModel || ContentView is DepotViewModel) && !IsOfflineMode;
+        (ContentView is GamesCollectionViewModel || ContentView is DepotViewModel) && !IsOfflineMode && !IsSyncing;
     public bool IsTitlebarTinted => true;
 
     partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -76,6 +78,29 @@ public partial class ShellViewModel : ViewModelBase
         if (e.PropertyName == nameof(DepotBrowseViewModel.BrowseTitle))
             OnPropertyChanged(nameof(ContentViewTitle));
     }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSyncing))]
+    [NotifyPropertyChangedFor(nameof(IsImportIndeterminate))]
+    [NotifyPropertyChangedFor(nameof(ImportProgress))]
+    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
+    private bool _isImportRunning;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsImportIndeterminate))]
+    [NotifyPropertyChangedFor(nameof(ImportProgress))]
+    private int _importIndex;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsImportIndeterminate))]
+    [NotifyPropertyChangedFor(nameof(ImportProgress))]
+    private int _importTotal;
+
+    public bool IsSyncing => IsImportRunning;
+
+    public bool IsImportIndeterminate => IsImportRunning && ImportTotal == 0;
+
+    public double ImportProgress => ImportTotal > 0 ? (double)ImportIndex / ImportTotal : 0;
 
     [ObservableProperty]
     private bool _isCheckingConnection;
@@ -207,41 +232,117 @@ public partial class ShellViewModel : ViewModelBase
     {
         IsLoading = true;
 
-        if (!IsOfflineMode)
-        {
-            try
-            {
-                using var scope = _serviceProvider.CreateScope();
-                var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
-                await importService.ImportLibraryAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Import failed");
-            }
-        }
-
+        // Load cached data from local DB first so the user sees games immediately
         try
         {
-            await GamesListViewModel.LoadGamesAsync();
-            await LibraryViewModel.LoadGamesAsync();
-            await DepotViewModel.LoadAsync();
+            await LoadViewModelsAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load library data");
+            _logger.LogError(ex, "Failed to load cached library data");
         }
         finally
         {
             IsLoading = false;
         }
+
+        // Import in the background, then refresh
+        if (!IsOfflineMode)
+        {
+            _ = ImportInBackgroundAsync();
+        }
+    }
+
+    private async Task ImportInBackgroundAsync()
+    {
+        IsImportRunning = true;
+
+        try
+        {
+            await Task.Run(async () =>
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+
+                // Track progress on the UI thread
+                importService.OnImportStarted.EventRaised += OnImportStarted;
+                importService.OnImportStatusUpdate.EventRaised += OnImportStatusUpdated;
+                importService.OnImportComplete.EventRaised += OnImportCompleted;
+
+                await importService.ImportLibraryAsync();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Background import failed");
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ImportIndex = 0;
+                ImportTotal = 0;
+                IsImportRunning = false;
+            });
+        }
+    }
+
+    private async Task OnImportStarted(ImportStatusUpdate update)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            ImportIndex = 0;
+            ImportTotal = update.Total;
+        });
+    }
+
+    private async Task OnImportStatusUpdated(ImportStatusUpdate update)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            ImportIndex = update.Index;
+        });
+
+        // Refresh the library after each game's items finish importing
+        if (update.CurrentItem?.Type == nameof(SDK.Models.Manifest.Game))
+        {
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                try
+                {
+                    await LibraryViewModel.LoadGamesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to refresh library during import");
+                }
+            });
+        }
+    }
+
+    private async Task OnImportCompleted(ImportStatusUpdate update)
+    {
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            ImportIndex = update.Total;
+            await LoadViewModelsAsync();
+            ImportIndex = 0;
+            ImportTotal = 0;
+        });
+    }
+
+    private async Task LoadViewModelsAsync()
+    {
+        await GamesListViewModel.LoadGamesAsync();
+        await LibraryViewModel.LoadGamesAsync();
+        await DepotViewModel.LoadAsync();
     }
 
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        if (IsOfflineMode) return;
-        await ImportAndLoadAsync();
+        if (IsOfflineMode || IsSyncing) return;
+        _ = ImportInBackgroundAsync();
     }
 
     [RelayCommand]

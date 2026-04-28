@@ -69,10 +69,19 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
+        public Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
+            => DownloadAsync(result, null);
+
+        public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result, IProgress<MediaDownloadProgress>? progress)
         {
-            var http = new HttpClient();
-            var stream = await http.GetStreamAsync(result.SourceUrl);
+            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+
+            using var response = await http.GetAsync(result.SourceUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength;
+            var stream = await ProgressStream.CopyToTempFileAsync(
+                await response.Content.ReadAsStreamAsync(), totalBytes, progress);
 
             return new MediaGrabberDownload
             {

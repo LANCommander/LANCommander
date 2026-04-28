@@ -61,7 +61,8 @@ public class MediaImporter(
 
             media = await mediaService.AddAsync(media);
 
-            await mediaService.DownloadAsync(media);
+            // Defer download to parallel batch after queue processing
+            ImportContext.PendingMediaDownloads.Add(new PendingMediaDownload { Media = media });
 
             return true;
         }
@@ -86,9 +87,10 @@ public class MediaImporter(
 
         if (ImportContext.InQueue(game, gameImporter))
             return false;
-        
-        var existing = await mediaService.GetAsync(importItemInfo.Record.Id);
-        
+
+        var existing = importItemInfo.ExistingEntity as Data.Models.Media
+            ?? await mediaService.GetAsync(importItemInfo.Record.Id);
+
         existing.FileId = importItemInfo.Record.FileId;
         existing.Game = await gameService.GetAsync(game.Id);
         existing.CreatedOn = importItemInfo.Record.CreatedOn;
@@ -99,11 +101,21 @@ public class MediaImporter(
         existing.Crc32 = importItemInfo.Record.Crc32 ?? string.Empty;
 
         await mediaService.UpdateAsync(existing);
-        await mediaService.DownloadAsync(existing);
+
+        // Defer download to parallel batch after queue processing
+        ImportContext.PendingMediaDownloads.Add(new PendingMediaDownload { Media = existing });
 
         return true;
     }
 
-    public override async Task<bool> ExistsAsync(ImportItemInfo<Media> importItemInfo) =>
-        await mediaService.GetAsync(importItemInfo.Record.Id) != null;
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Media> importItemInfo)
+    {
+        var existing = await mediaService.GetAsync(importItemInfo.Record.Id);
+        if (existing != null)
+        {
+            importItemInfo.ExistingEntity = existing;
+            return true;
+        }
+        return false;
+    }
 }

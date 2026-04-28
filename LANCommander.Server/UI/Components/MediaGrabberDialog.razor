@@ -1,5 +1,6 @@
-@inherits FeedbackComponent<MediaGrabberOptions, MediaGrabberResult>
+@inherits FeedbackComponent<MediaGrabberOptions, MediaGrabberDownloadResult>
 @using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Models
 @using LANCommander.SDK.Enums
 @inject IMediaGrabberService MediaGrabberService
 @inject IMessageService MessageService
@@ -89,6 +90,17 @@
     <Empty Description="@($"No results for \"{Search}\"")" />
 }
 
+@if (_isDownloading)
+{
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.75); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; gap: 12px; border-radius: 8px;">
+        <Spin Spinning="true" />
+        <span>@_downloadStatus</span>
+        <div style="width: 60%;">
+            <Progress Percent="_downloadPercent" Size="ProgressSize.Small" Status="@ProgressStatus.Active" />
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public string Search { get; set; }
     [Parameter] public MediaType Type { get; set; }
@@ -98,6 +110,9 @@
 
     double Size { get; set; } = 200;
     bool Loading { get; set; } = true;
+    bool _isDownloading;
+    double _downloadPercent;
+    string _downloadStatus = "Downloading...";
 
     CancellationTokenSource _searchCts;
     List<MediaGrabberResult> _allResults = new();
@@ -175,9 +190,7 @@
     private async Task OnResultPicked(MediaGrabberResult result)
     {
         Media = result;
-
-        await base.OkCancelRefWithResult!.OnOk(Media);
-        await CloseFeedbackAsync();
+        await DownloadAndClose();
     }
 
     private void OnImageSelected(string uniqueKey)
@@ -188,9 +201,7 @@
     private async Task OnImagePicked(string uniqueKey)
     {
         OnImageSelected(uniqueKey);
-
-        await base.OkCancelRefWithResult!.OnOk(Media);
-        await CloseFeedbackAsync();
+        await DownloadAndClose();
     }
 
     private void PreviewVideo(MediaGrabberResult result)
@@ -211,8 +222,54 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        await base.OkCancelRefWithResult!.OnOk(Media);
-        await CloseFeedbackAsync();
+        args.Cancel = true;
+        await DownloadAndClose();
+    }
+
+    public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
+    {
+        _preview = null;
+        await base.OnFeedbackCancelAsync(args);
+    }
+
+    private async Task DownloadAndClose()
+    {
+        if (Media == null)
+            return;
+
+        _preview = null;
+        _isDownloading = true;
+        _downloadPercent = 0;
+        _downloadStatus = "Downloading...";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var progress = new Progress<MediaDownloadProgress>(p =>
+            {
+                _downloadPercent = p.Percent ?? 0;
+                _downloadStatus = p.Status ?? "Downloading...";
+                InvokeAsync(StateHasChanged);
+            });
+
+            var download = await MediaGrabberService.DownloadAsync(Media, progress);
+
+            var result = new MediaGrabberDownloadResult
+            {
+                Result = Media,
+                Download = download
+            };
+
+            await base.OkCancelRefWithResult!.OnOk(result);
+            await CloseFeedbackAsync();
+        }
+        catch (Exception ex)
+        {
+            _isDownloading = false;
+            await InvokeAsync(StateHasChanged);
+            MessageService.Error("Download failed. Please try again.");
+            Logger.LogError(ex, "Failed to download media");
+        }
     }
 
     private class GroupedResults

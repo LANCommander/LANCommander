@@ -132,19 +132,18 @@
                                                   Gap="12">
                             <CarouselControl.ItemTemplate>
                                 <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
-                                    <Panel Width="384" Height="216">
+                                    <Panel Width="384" Height="216" Cursor="Hand"
+                                           Tapped="MediaItem_Tapped">
                                         <!-- Screenshot image -->
                                         <Border CornerRadius="4" ClipToBounds="True"
                                                 IsVisible="{Binding !IsVideo}">
                                             <Image Source="{Binding ImageSource}"
                                                    Stretch="UniformToFill" />
                                         </Border>
-                                        <!-- Video: muted autoplay, click to open overlay -->
+                                        <!-- Video: muted autoplay, click to open lightbox -->
                                         <Border CornerRadius="4" ClipToBounds="True"
                                                 Background="Black"
-                                                IsVisible="{Binding IsVideo}"
-                                                Cursor="Hand"
-                                                Tapped="VideoItem_Tapped">
+                                                IsVisible="{Binding IsVideo}">
                                             <InlineVideoPlayer VideoPath="{Binding Path}" />
                                         </Border>
                                     </Panel>

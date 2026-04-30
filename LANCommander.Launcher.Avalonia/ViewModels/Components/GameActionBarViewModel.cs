@@ -1102,14 +1102,23 @@ public partial class GameActionBarViewModel : ViewModelBase
     {
         try
         {
-            var viewModel = new ManualViewerViewModel(manual.Title, manual.FilePath);
-            var window = new Views.ManualViewerWindow
-            {
-                DataContext = viewModel
-            };
+            var items = new List<LightboxItem>();
+            int startIndex = 0;
 
-            viewModel.CloseAction = () => window.Close();
-            window.Show();
+            for (int i = 0; i < Manuals.Count; i++)
+            {
+                items.Add(new LightboxItem
+                {
+                    Type = LightboxItemType.Pdf,
+                    Path = Manuals[i].FilePath,
+                    Title = Manuals[i].Title,
+                });
+
+                if (Manuals[i] == manual)
+                    startIndex = i;
+            }
+
+            LightboxOverlay.ShowOverlay(items, startIndex);
         }
         catch (Exception ex)
         {

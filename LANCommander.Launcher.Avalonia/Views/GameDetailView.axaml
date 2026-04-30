@@ -5,6 +5,7 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
              x:DataType="vm:GameDetailViewModel">
 
@@ -118,10 +119,8 @@
                     <components:GameActionBarView DataContext="{Binding ActionBar}" />
 
                     <!-- Description -->
-                    <TextBlock Text="{Binding Description}"
-                               TextWrapping="Wrap"
-                               LineHeight="24"
-                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <controls:MarkdownTextBlock Text="{Binding Description}"
+                                                 IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                     <!-- Screenshots / Videos carousel -->
                     <StackPanel Spacing="8" IsVisible="{Binding HasMedia}">

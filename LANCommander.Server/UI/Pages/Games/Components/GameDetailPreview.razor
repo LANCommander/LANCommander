@@ -425,6 +425,8 @@
 
     async Task SearchMediaByType(MediaType type)
     {
+        var multiSelect = type == MediaType.Screenshot;
+
         var modalOptions = new ModalOptions
         {
             Title = $"Download {type}",
@@ -437,43 +439,68 @@
         var grabberOptions = new MediaGrabberOptions
         {
             Type = type,
-            Search = _game.Title
+            Search = _game.Title,
+            MultiSelect = multiSelect
         };
 
         var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
 
         modalRef.OnOk = async (downloadResult) =>
         {
-            using var download = downloadResult.Download;
+            if (multiSelect && downloadResult.Results.Any())
+            {
+                foreach (var entry in downloadResult.Results)
+                {
+                    using var download = entry.Download;
+
+                    var media = new Media
+                    {
+                        GameId = GameId,
+                        Type = type,
+                        SourceUrl = entry.Result.SourceUrl,
+                        MimeType = download.MimeType,
+                        StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
+                        Crc32 = string.Empty,
+                        SortOrder = GetNextSortOrder(type)
+                    };
+
+                    await MediaService.WriteToFileAsync(media, download.Stream);
+                }
+
+                await RefreshMedia();
+                return;
+            }
+
+            using var singleDownload = downloadResult.Download;
 
             var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
             var existing = isSingular ? GetMedia(type) : null;
 
-            Media media;
+            Media singleMedia;
 
             if (existing != null)
             {
-                media = existing;
-                media.SourceUrl = downloadResult.Result.SourceUrl;
-                media.MimeType = download.MimeType;
+                singleMedia = existing;
+                singleMedia.SourceUrl = downloadResult.Result.SourceUrl;
+                singleMedia.MimeType = singleDownload.MimeType;
 
-                MediaService.DeleteLocalMediaFile(media);
-                media = await MediaService.WriteToFileAsync(media, download.Stream);
+                MediaService.DeleteLocalMediaFile(singleMedia);
+                singleMedia = await MediaService.WriteToFileAsync(singleMedia, singleDownload.Stream);
             }
             else
             {
-                media = new Media
+                singleMedia = new Media
                 {
                     GameId = GameId,
                     Type = type,
                     SourceUrl = downloadResult.Result.SourceUrl,
-                    MimeType = download.MimeType,
+                    MimeType = singleDownload.MimeType,
                     StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
                     Crc32 = string.Empty,
                     SortOrder = GetNextSortOrder(type)
                 };
 
-                media = await MediaService.WriteToFileAsync(media, download.Stream);
+                singleMedia = await MediaService.WriteToFileAsync(singleMedia, singleDownload.Stream);
             }
 
             await RefreshMedia();

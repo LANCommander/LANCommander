@@ -5,7 +5,14 @@
             var id = Guid.NewGuid();
 
             <div class="media-picker-item" style="width: @(Size)px; max-height: @(Size)px">
-                <input type="radio" id="media-picker-item-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
+                @if (MultiSelect)
+                {
+                    <input type="checkbox" id="media-picker-item-@id" checked="@(SelectedValues.Contains(image.Key))" name="SelectedResult" @onchange="@(() => ToggleSelection(image.Key))" />
+                }
+                else
+                {
+                    <input type="radio" id="media-picker-item-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
+                }
                 <label for="media-picker-item-@id" @ondblclick="@(() => Pick(image.Key))"></label>
                 <img src="@image.Value" />
             </div>
@@ -19,6 +26,9 @@
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<string> OnPicked { get; set; }
     [Parameter] public Dictionary<string, string> Images { get; set; }
+    [Parameter] public bool MultiSelect { get; set; }
+    [Parameter] public HashSet<string> SelectedValues { get; set; } = new();
+    [Parameter] public EventCallback<HashSet<string>> SelectedValuesChanged { get; set; }
 
     async Task SelectionChanged(string key)
     {
@@ -26,6 +36,15 @@
 
         if (ValueChanged.HasDelegate)
             await ValueChanged.InvokeAsync(key);
+    }
+
+    async Task ToggleSelection(string key)
+    {
+        if (!SelectedValues.Add(key))
+            SelectedValues.Remove(key);
+
+        if (SelectedValuesChanged.HasDelegate)
+            await SelectedValuesChanged.InvokeAsync(SelectedValues);
     }
 
     async Task Pick(string key)

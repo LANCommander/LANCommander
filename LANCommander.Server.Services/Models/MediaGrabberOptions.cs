@@ -6,5 +6,6 @@ namespace LANCommander.Server.Services.Models
     {
         public MediaType Type { get; set; }
         public string Search { get; set; }
+        public bool MultiSelect { get; set; }
     }
 }

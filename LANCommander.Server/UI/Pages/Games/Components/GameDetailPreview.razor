@@ -106,8 +106,8 @@
                 <div class="game-detail-preview__media-section-header">
                     <span class="game-detail-preview__media-section-title">Media</span>
                     <div class="game-detail-preview__media-section-actions">
-                        <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif" />
-                        <InputFile id="@_vidInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Video)" hidden accept=".mp4,.webm,.mkv" />
+                        <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif" multiple />
+                        <InputFile id="@_vidInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Video)" hidden accept=".mp4,.webm,.mkv" multiple />
 
                         <Dropdown>
                             <Overlay>
@@ -189,7 +189,11 @@
                     var coverUrl = GetMediaUrl(coverMedia);
                 }
 
-                @if (coverUrl != null)
+                @if (coverUrl != null && coverMedia?.MimeType?.StartsWith("video/") == true)
+                {
+                    <video class="game-detail-preview__cover-img" src="@coverUrl" autoplay muted loop />
+                }
+                else if (coverUrl != null)
                 {
                     <img class="game-detail-preview__cover-img" src="@coverUrl" />
                 }
@@ -204,7 +208,7 @@
                 <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--cover">
                     <div class="game-detail-preview__media-overlay-actions">
                         @{ var coverInputId = "cover-upload-" + Guid.NewGuid(); }
-                        <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif" />
+                        <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.apng,.mp4,.webm,.mkv" />
                         <label class="game-detail-preview__overlay-btn" for="@coverInputId" title="Upload Cover">
                             <Icon Type="@IconType.Outline.Upload" />
                         </label>
@@ -314,9 +318,20 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
+        "image/apng",
     ];
 
     string[] ValidVideoMimeTypes = [
+        "video/mp4",
+        "video/webm",
+        "video/x-matroska"
+    ];
+
+    string[] ValidCoverMimeTypes = [
+        MediaTypeNames.Image.Png,
+        MediaTypeNames.Image.Jpeg,
+        MediaTypeNames.Image.Gif,
+        "image/apng",
         "video/mp4",
         "video/webm",
         "video/x-matroska"
@@ -371,52 +386,59 @@
 
     async Task UploadMediaByType(InputFileChangeEventArgs e, MediaType type)
     {
-        var validTypes = type == MediaType.Video ? ValidVideoMimeTypes : ValidImageMimeTypes;
-
-        if (!validTypes.Contains(e.File.ContentType))
+        var validTypes = type switch
         {
-            MessageService.Error("Unsupported file type");
-            return;
-        }
-
+            MediaType.Video => ValidVideoMimeTypes,
+            MediaType.Cover => ValidCoverMimeTypes,
+            _ => ValidImageMimeTypes
+        };
         var config = Settings.Value.Server.Media.GetMediaTypeConfig(type);
-
-        if (e.File.Size > config.MaxFileSize)
-        {
-            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
-            return;
-        }
-
-        // For singular types (Background, Logo, Cover), replace existing
         var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
-        var existing = isSingular ? GetMedia(type) : null;
 
-        Media media;
-
-        if (existing != null)
+        foreach (var file in e.GetMultipleFiles())
         {
-            media = existing;
-            media.MimeType = e.File.ContentType;
-            media.SourceUrl = "";
-
-            MediaService.DeleteLocalMediaFile(media);
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
-            await MediaService.UpdateAsync(media);
-        }
-        else
-        {
-            media = new Media
+            if (!validTypes.Contains(file.ContentType))
             {
-                GameId = GameId,
-                Type = type,
-                MimeType = e.File.ContentType,
-                SourceUrl = "",
-                StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
-                Crc32 = string.Empty,
-                SortOrder = GetNextSortOrder(type)
-            };
+                MessageService.Error($"Unsupported file type: {file.Name}");
+                continue;
+            }
 
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+            if (file.Size > config.MaxFileSize)
+            {
+                MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}: {file.Name}");
+                continue;
+            }
+
+            // For singular types (Background, Logo, Cover), replace existing
+            var existing = isSingular ? GetMedia(type) : null;
+
+            Media media;
+
+            if (existing != null)
+            {
+                media = existing;
+                media.MimeType = file.ContentType;
+                media.SourceUrl = "";
+
+                MediaService.DeleteLocalMediaFile(media);
+                media = await MediaService.WriteToFileAsync(media, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+                await MediaService.UpdateAsync(media);
+            }
+            else
+            {
+                media = new Media
+                {
+                    GameId = GameId,
+                    Type = type,
+                    MimeType = file.ContentType,
+                    SourceUrl = "",
+                    StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
+                    Crc32 = string.Empty,
+                    SortOrder = GetNextSortOrder(type)
+                };
+
+                media = await MediaService.WriteToFileAsync(media, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+            }
         }
 
         await RefreshMedia();
@@ -425,7 +447,7 @@
 
     async Task SearchMediaByType(MediaType type)
     {
-        var multiSelect = type == MediaType.Screenshot;
+        var multiSelect = type == MediaType.Screenshot || type == MediaType.Video;
 
         var modalOptions = new ModalOptions
         {

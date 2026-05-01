@@ -163,7 +163,9 @@
 
                     <!-- Cover Image -->
                     <components:Cover Source="{Binding CoverPath}"
-                                      Title="{Binding Title}" />
+                                      MimeType="{Binding CoverMimeType}"
+                                      Title="{Binding Title}"
+                                      AlwaysAnimate="True" />
 
                     <!-- Players -->
                     <StackPanel Classes="Badges"

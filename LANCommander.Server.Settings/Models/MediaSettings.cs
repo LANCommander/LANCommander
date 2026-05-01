@@ -22,7 +22,7 @@ namespace LANCommander.Server.Settings.Models;
             new()
             {
                 Type = MediaType.Cover,
-                MaxFileSize = 6 * ByteSize.BytesInMegabyte,
+                MaxFileSize = 50 * ByteSize.BytesInMegabyte,
                 Thumbnails = new MediaTypeThumbnailSettings
                 {
                     MinSize = new ThumbnailSize(240, 360),

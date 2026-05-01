@@ -83,7 +83,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
                             var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);
                             var coverPath = await GetOrDownloadCoverAsync(depotGame.Cover, mediaClient);
 
-                            items.Add(new GameItemViewModel(depotGame, coverPath, inLibrary));
+                            items.Add(new GameItemViewModel(depotGame, coverPath, depotGame.Cover?.MimeType, inLibrary));
 
                             if (depotGame.Genres != null)
                                 foreach (var genre in depotGame.Genres)
@@ -133,7 +133,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
             if (coverMedia != null && mediaService.FileExists(coverMedia))
                 coverPath = mediaService.GetImagePath(coverMedia);
 
-            _allGames.Add(new GameItemViewModel(game, coverPath, inLibrary: true));
+            _allGames.Add(new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true));
         }
     }
 

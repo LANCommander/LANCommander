@@ -37,6 +37,9 @@ public partial class GameDetailViewModel : ViewModelBase
     private string? _coverPath;
 
     [ObservableProperty]
+    private string? _coverMimeType;
+
+    [ObservableProperty]
     private string? _logoPath;
 
     [ObservableProperty]
@@ -199,6 +202,7 @@ public partial class GameDetailViewModel : ViewModelBase
         var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
         
         CoverPath = GetLocalMediaPath(game.Media, MediaType.Cover, mediaService);
+        CoverMimeType = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover)?.MimeType;
         LogoPath = GetLocalMediaPath(game.Media, MediaType.Logo, mediaService);
         BackgroundPath = GetLocalMediaPath(game.Media, MediaType.Background, mediaService);
         IconPath = GetLocalMediaPath(game.Media, MediaType.Icon, mediaService);
@@ -297,6 +301,7 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Reset media paths while loading
         CoverPath = null;
+        CoverMimeType = null;
         LogoPath = null;
         BackgroundPath = null;
         IconPath = null;
@@ -357,6 +362,7 @@ public partial class GameDetailViewModel : ViewModelBase
                 var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
                 CoverPath      = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover,       mediaClient);
+                CoverMimeType  = game.Media.FirstOrDefault(m => m.Type == MediaType.Cover)?.MimeType;
                 LogoPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Logo,        mediaClient);
                 BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background,  mediaClient);
                 IconPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon,        mediaClient);

@@ -119,8 +119,9 @@ public partial class DepotViewModel : ViewModelBase
             }
 
             // Parallel: download covers + resolve library membership
-            var coverCache  = new Dictionary<Guid, string?>();
-            var librarySet  = new HashSet<Guid>();
+            var coverCache     = new Dictionary<Guid, string?>();
+            var coverMimeCache = new Dictionary<Guid, string?>();
+            var librarySet     = new HashSet<Guid>();
 
             await Task.Run(async () =>
             {
@@ -130,7 +131,10 @@ public partial class DepotViewModel : ViewModelBase
                         librarySet.Add(game.Id);
 
                     if (game.Cover != null)
+                    {
                         coverCache[game.Id] = await GetOrDownloadMediaAsync(game.Cover, mediaClient);
+                        coverMimeCache[game.Id] = game.Cover.MimeType;
+                    }
                 }
             });
 
@@ -150,7 +154,7 @@ public partial class DepotViewModel : ViewModelBase
             // ── New Releases: top 20 by ReleasedOn desc ──────────────────────────────────────
 
             foreach (var game in allGames.OrderByDescending(g => g.ReleasedOn).Take(20))
-                NewReleases.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), librarySet.Contains(game.Id)));
+                NewReleases.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), coverMimeCache.GetValueOrDefault(game.Id), librarySet.Contains(game.Id)));
 
             // ── Multiplayer: games with any multiplayer mode ──────────────────────────────────
 
@@ -158,7 +162,7 @@ public partial class DepotViewModel : ViewModelBase
                 .Where(g => g.MultiplayerModes?.Any() == true)
                 .OrderBy(g => g.SortTitle ?? g.Title)
                 .Take(20))
-                MultiplayerGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), librarySet.Contains(game.Id)));
+                MultiplayerGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), coverMimeCache.GetValueOrDefault(game.Id), librarySet.Contains(game.Id)));
 
             // ── Backlog: library games ────────────────────────────────────────────────────────
 
@@ -166,7 +170,7 @@ public partial class DepotViewModel : ViewModelBase
                 .Where(g => librarySet.Contains(g.Id))
                 .OrderBy(g => g.SortTitle ?? g.Title)
                 .Take(20))
-                BacklogGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), inLibrary: true, showInLibraryBadge: false));
+                BacklogGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), coverMimeCache.GetValueOrDefault(game.Id), inLibrary: true, showInLibraryBadge: false));
 
             // ── Browse data ───────────────────────────────────────────────────────────────────
 
@@ -289,7 +293,8 @@ public partial class DepotViewModel : ViewModelBase
                     ? mediaService.GetImagePath(media) : null;
             }
 
-            var vm = new GameItemViewModel(game, GetLocalPath(MediaType.Cover), inLibrary: true, showInLibraryBadge: false);
+            var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+            var vm = new GameItemViewModel(game, GetLocalPath(MediaType.Cover), coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false);
             vm.HeroPath = GetLocalPath(MediaType.Background);
             vm.LogoPath = GetLocalPath(MediaType.Logo);
 
@@ -376,11 +381,12 @@ public partial class DepotViewModel : ViewModelBase
             if (game == null) return null;
 
             var inLibrary  = librarySet.Contains(game.Id);
-            var coverPath  = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover), mediaClient);
+            var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+            var coverPath  = await GetOrDownloadMediaAsync(coverMedia, mediaClient);
             var heroPath   = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
             var logoPath   = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Logo), mediaClient);
 
-            var vm = new GameItemViewModel(depotGame, coverPath, inLibrary);
+            var vm = new GameItemViewModel(depotGame, coverPath, coverMedia?.MimeType, inLibrary);
             vm.HeroPath = heroPath;
             vm.LogoPath = logoPath;
             return vm;
@@ -388,7 +394,7 @@ public partial class DepotViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to fetch full game data for {Id}", depotGame.Id);
-            return new GameItemViewModel(depotGame, null, librarySet.Contains(depotGame.Id));
+            return new GameItemViewModel(depotGame, null, null, librarySet.Contains(depotGame.Id));
         }
     }
 

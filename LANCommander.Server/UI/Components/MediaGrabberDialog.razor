@@ -62,7 +62,14 @@
                         var id = Guid.NewGuid();
 
                         <div class="media-picker-item" data-type="video" style="width: @(Size)px">
-                            <input type="radio" id="media-picker-item-@id" checked="@(Media == result)" name="SelectedResult" @onchange="() => OnResultSelected(result)" />
+                            @if (MultiSelect)
+                            {
+                                <input type="checkbox" id="media-picker-item-@id" checked="@(_selectedKeys.Contains(result.UniqueKey))" @onchange="() => OnResultSelected(result)" />
+                            }
+                            else
+                            {
+                                <input type="radio" id="media-picker-item-@id" checked="@(Media == result)" name="SelectedResult" @onchange="() => OnResultSelected(result)" />
+                            }
                             <label for="media-picker-item-@id" @ondblclick="() => OnResultPicked(result)"></label>
                             <img src="@result.ThumbnailUrl" />
                             <button class="media-picker-play" @onclick="() => PreviewVideo(result)" @onclick:stopPropagation="true" title="Preview"></button>
@@ -190,6 +197,12 @@
     private void OnResultSelected(MediaGrabberResult result)
     {
         Media = result;
+
+        if (MultiSelect)
+        {
+            if (!_selectedKeys.Add(result.UniqueKey))
+                _selectedKeys.Remove(result.UniqueKey);
+        }
     }
 
     private async Task OnResultPicked(MediaGrabberResult result)

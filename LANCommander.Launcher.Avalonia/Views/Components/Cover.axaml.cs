@@ -45,7 +45,8 @@ public partial class Cover : UserControl
     private double _fallbackFontSize = 12;
     private CancellationTokenSource? _loadCts;
     private VideoFrameRenderer? _videoRenderer;
-    private bool _isVideoCover;
+    private bool _isAnimatedCover;
+    private bool _receivedFirstFrame;
 
     public string? Source
     {
@@ -152,12 +153,13 @@ public partial class Cover : UserControl
         FallbackFontSize = Math.Max(8, minDimension * 0.09);
     }
 
-    private static bool IsVideoMimeType(string? mimeType) =>
-        mimeType != null && mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsAnimatedImageMimeType(string? mimeType) =>
-        string.Equals(mimeType, "image/apng", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(mimeType, "image/gif", StringComparison.OrdinalIgnoreCase);
+    private static bool IsAnimatedMimeType(string? mimeType)
+    {
+        if (string.IsNullOrEmpty(mimeType)) return false;
+        return mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(mimeType, "image/apng", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(mimeType, "image/gif", StringComparison.OrdinalIgnoreCase);
+    }
 
     private void LoadCover(string? source, string? mimeType)
     {
@@ -166,7 +168,7 @@ public partial class Cover : UserControl
         _loadCts = null;
         StopVideo();
 
-        _isVideoCover = IsVideoMimeType(mimeType);
+        _isAnimatedCover = IsAnimatedMimeType(mimeType);
 
         if (string.IsNullOrEmpty(source))
         {
@@ -174,9 +176,10 @@ public partial class Cover : UserControl
             return;
         }
 
-        if (_isVideoCover)
+        // Route all animated covers (video, APNG, GIF) through LibVLC
+        if (_isAnimatedCover)
         {
-            LoadVideoCover(source);
+            LoadAnimatedCover(source);
             return;
         }
 
@@ -225,16 +228,15 @@ public partial class Cover : UserControl
         }
     }
 
-    // ── Video cover support ─────────────────────────────────────────────
+    // ── Animated cover support (video, APNG, GIF via LibVLC) ────────────
 
-    private void LoadVideoCover(string source)
+    private void LoadAnimatedCover(string source)
     {
         try
         {
-            // Create renderer to extract first frame as a static thumbnail
+            _receivedFirstFrame = false;
             _videoRenderer = new VideoFrameRenderer(maxWidth: 320, maxHeight: 480);
-            _videoRenderer.BitmapReady += OnVideoBitmapReady;
-            _videoRenderer.FrameReady += OnVideoFirstFrame;
+            _videoRenderer.FrameReady += OnVideoFrameReady;
             _videoRenderer.Play(source, muted: true, loop: true);
 
             HasCover = true;
@@ -245,39 +247,34 @@ public partial class Cover : UserControl
         }
     }
 
-    private void OnVideoBitmapReady()
-    {
-        // Video format is known, bitmap allocated
-    }
-
-    private void OnVideoFirstFrame()
+    private void OnVideoFrameReady()
     {
         if (_videoRenderer == null) return;
 
-        // Capture the first frame as a static bitmap for the Image control
-        if (_videoRenderer.Bitmap is { } bmp)
+        if (!_receivedFirstFrame)
         {
-            // Show the first frame in the Image control
-            CoverImage.Source = _videoRenderer.Bitmap;
+            _receivedFirstFrame = true;
+
+            // Hide the Image control — we render directly via Render()
+            CoverImage.IsVisible = false;
             HasCover = true;
-            InvalidateVisual();
+
+            // Pause immediately if we shouldn't be animating yet
+            if (!AlwaysAnimate && !IsPlayingAnimation)
+            {
+                _videoRenderer.Player?.SetPause(true);
+            }
         }
 
-        // Pause immediately if we're not supposed to be animating
-        if (!AlwaysAnimate && !IsPlayingAnimation)
-        {
-            _videoRenderer.Player?.SetPause(true);
-        }
-
+        // Redraw with the latest video frame
+        InvalidateVisual();
     }
 
     private void UpdateAnimationState()
     {
-        if (!_isVideoCover || _videoRenderer?.Player == null) return;
+        if (!_isAnimatedCover || _videoRenderer?.Player == null) return;
 
-        var shouldAnimate = AlwaysAnimate || IsPlayingAnimation;
-
-        if (shouldAnimate)
+        if (AlwaysAnimate || IsPlayingAnimation)
         {
             _videoRenderer.Player.SetPause(false);
         }
@@ -291,12 +288,12 @@ public partial class Cover : UserControl
     {
         if (_videoRenderer != null)
         {
-            _videoRenderer.BitmapReady -= OnVideoBitmapReady;
-            _videoRenderer.FrameReady -= OnVideoFirstFrame;
+            _videoRenderer.FrameReady -= OnVideoFrameReady;
             _videoRenderer.Dispose();
             _videoRenderer = null;
         }
-        _isVideoCover = false;
+        _isAnimatedCover = false;
+        _receivedFirstFrame = false;
     }
 
     // ── Rendering ────────────────────────────────────────────────────────
@@ -305,8 +302,8 @@ public partial class Cover : UserControl
     {
         base.Render(context);
 
-        // For video covers, render the current video frame over the Image control
-        if (_isVideoCover && _videoRenderer?.Bitmap is { } bmp)
+        // For animated covers, render the current video frame
+        if (_isAnimatedCover && _videoRenderer?.Bitmap is { } bmp)
         {
             var srcW = (double)bmp.PixelSize.Width;
             var srcH = (double)bmp.PixelSize.Height;
@@ -335,6 +332,9 @@ public partial class Cover : UserControl
         HasCover = bitmap != null;
 
         if (CoverImage != null)
+        {
+            CoverImage.IsVisible = bitmap != null;
             CoverImage.Source = bitmap;
+        }
     }
 }

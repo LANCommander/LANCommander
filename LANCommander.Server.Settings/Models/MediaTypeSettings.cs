@@ -7,4 +7,5 @@ public class MediaTypeSettings
     public MediaType Type { get; set; }
     public long MaxFileSize { get; set; }
     public MediaTypeThumbnailSettings Thumbnails { get; set; } = new();
+    public AnimatedImageSettings AnimatedImage { get; set; } = new();
 }

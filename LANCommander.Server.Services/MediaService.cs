@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 using LANCommander.SDK;
+using System.Diagnostics;
 
 namespace LANCommander.Server.Services
 {
@@ -26,7 +27,8 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        StorageLocationService storageLocationService,
+        MediaToolService mediaToolService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Media> AddAsync(Media entity)
         {
@@ -143,6 +145,8 @@ namespace LANCommander.Server.Services
             {
                 await stream.CopyToAsync(fs);
             }
+
+            await ConvertAnimatedImageAsync(media, path);
 
             media.Crc32 = await SDK.Services.MediaClient.CalculateChecksumAsync(path);
 
@@ -283,6 +287,71 @@ namespace LANCommander.Server.Services
                 var response = await http.GetStreamAsync(sourceUrl);
 
                 return await WriteToFileAsync(media, response);
+            }
+        }
+
+        private async Task ConvertAnimatedImageAsync(Media media, string path)
+        {
+            if (!string.Equals(media.MimeType, "image/apng", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
+
+            if (config == null || !config.AnimatedImage.ConvertToVideo)
+                return;
+
+            var ffmpegPath = mediaToolService.FindExecutable("ffmpeg");
+
+            if (ffmpegPath == null)
+            {
+                _logger?.LogWarning("FFmpeg not found — skipping APNG to video conversion for media {MediaId}", media.Id);
+                return;
+            }
+
+            var crf = config.AnimatedImage.Quality;
+            var tempOutput = path + ".mp4";
+
+            try
+            {
+                using var process = new Process();
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = ffmpegPath,
+                    Arguments = $"-y -i \"{path}\" -c:v libx264 -pix_fmt yuv420p -crf {crf} -movflags +faststart -an \"{tempOutput}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                process.Start();
+
+                var stderr = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0)
+                {
+                    _logger?.LogError("FFmpeg APNG conversion failed (exit {ExitCode}): {Error}", process.ExitCode, stderr);
+
+                    if (File.Exists(tempOutput))
+                        File.Delete(tempOutput);
+
+                    return;
+                }
+
+                File.Delete(path);
+                File.Move(tempOutput, path);
+
+                media.MimeType = "video/mp4";
+
+                _logger?.LogInformation("Converted animated image to MP4 for media {MediaId}", media.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to convert APNG cover to video for media {MediaId}", media.Id);
+
+                if (File.Exists(tempOutput))
+                    File.Delete(tempOutput);
             }
         }
 

@@ -17,20 +17,23 @@ public sealed class AppInfo
     public long? Size { get; set; }
     
     [JsonPropertyName("appid")]
-    public long? AppId { get; set; }
-    
+    public string? AppId { get; set; }
+
     [JsonPropertyName("common")]
     public AppCommon? Common { get; set; }
-    
+
     [JsonPropertyName("config")]
     public AppConfig? Config { get; set; }
-    
+
+    [JsonPropertyName("depots")]
+    public DepotSection? Depots { get; set; }
+
     [JsonPropertyName("extended")]
     public AppExtended? Extended { get; set; }
-    
+
     [JsonPropertyName("install")]
     public AppInstall? Install { get; set; }
-    
+
     [JsonPropertyName("ufs")]
     public AppUfs? UFS { get; set; }
 }

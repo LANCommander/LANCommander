@@ -132,7 +132,7 @@ public class AppCommon
     public Dictionary<string, string>? StoreTags { get; set; }
     
     [JsonPropertyName("supported_languages")]
-    public Dictionary<string, string>? SupportedLanguages { get; set; }
+    public Dictionary<string, SupportedLanguage>? SupportedLanguages { get; set; }
     
     [JsonPropertyName("timeline_marker_svg")]
     public string? TimelineMarkerSvg { get; set; }

@@ -12,6 +12,15 @@
         @<Template>
             <Flex Gap="FlexGap.Small">
                 <Select Value="_selectedProvider" ValueChanged="OnProviderChanged" DataSource="_availableProviders" TItem="string" TItemValue="string"/>
+                @if (_availableSubProviders?.Any() == true)
+                {
+                    <Select Value="_selectedSubProvider" ValueChanged="OnSubProviderChanged" TItem="string" TItemValue="string">
+                        @foreach (var sp in _availableSubProviders)
+                        {
+                            <SelectOption Value="@sp.Slug" Label="@sp.Name" TItemValue="string" TItem="string" />
+                        }
+                    </Select>
+                }
                 <Button OnClick="BeginMerge" Disabled="@(_loading || SelectedResults == null || !SelectedResults.Any() || !(_results?.Results?.Any() ?? false))" Type="ButtonType.Primary">Select</Button>
                 <Button OnClick="Close" Style="margin-left: 0;">Cancel</Button>
             </Flex>
@@ -198,6 +207,9 @@
     string _selectedProvider = string.Empty;
     IEnumerable<string> _availableProviders = [];
 
+    string? _selectedSubProvider;
+    IEnumerable<(string Slug, string Name)>? _availableSubProviders;
+
     ModalStage _stage = ModalStage.Search;
     string? _errorMessage = null;
     LANCommander.SDK.Models.Manifest.Game? _fetchedManifest = null;
@@ -217,19 +229,46 @@
     bool _importMultiplayerModes = true;
     bool _importSavePaths = true;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _availableProviders = MetadataService.GetProviderNames();
         _selectedProvider = _availableProviders.FirstOrDefault() ?? string.Empty;
+        await UpdateSubProvidersAsync();
     }
 
     private async Task OnProviderChanged(string provider)
     {
         _selectedProvider = provider;
         _errorMessage = null;
+        await UpdateSubProvidersAsync();
 
         if (!string.IsNullOrWhiteSpace(Value))
             await SearchForGame(Value);
+    }
+
+    private async Task OnSubProviderChanged(string subProvider)
+    {
+        _selectedSubProvider = subProvider;
+        _errorMessage = null;
+
+        if (!string.IsNullOrWhiteSpace(Value))
+            await SearchForGame(Value);
+    }
+
+    private async Task UpdateSubProvidersAsync()
+    {
+        var provider = MetadataService.GetProvider(_selectedProvider);
+
+        if (provider is not null)
+        {
+            _availableSubProviders = await provider.GetSubProvidersAsync();
+            _selectedSubProvider = _availableSubProviders?.FirstOrDefault().Slug;
+        }
+        else
+        {
+            _availableSubProviders = null;
+            _selectedSubProvider = null;
+        }
     }
 
     private void OnRowClicked(RowData<MetadataSearchResult<SDK.Models.Manifest.Game>> row)
@@ -265,7 +304,9 @@
                 _offset = 0;
             }
 
-            _results = await provider.SearchGamesAsync(title, _limit, _offset);
+            _results = _availableSubProviders?.Any() == true
+                ? await provider.SearchGamesAsync(title, _selectedSubProvider, _limit, _offset)
+                : await provider.SearchGamesAsync(title, _limit, _offset);
             
             _loading = false;
         }

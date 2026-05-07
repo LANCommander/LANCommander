@@ -7,6 +7,7 @@ public class ServerSettings
     public BackupSettings Backups { get; set; } = new();
     public BeaconSettings Beacon { get; set; } = new();
     public DatabaseSettings Database { get; set; } = new();
+    public HQSettings HQ { get; set; } = new();
     public HttpSettings Http { get; set; } = new();
     public IGDBSettings IGDB { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();

@@ -117,7 +117,7 @@ public class AppCommon
     public LocalizedImageMap? SmallCapsule { get; set; }
     
     [JsonPropertyName("steam_deck_compatibility")]
-    public string? SteamDeckCompatibility { get; set; }
+    public SteamDeckCompatibility? SteamDeckCompatibility { get; set; }
     
     [JsonPropertyName("steam_release_date")]
     public string? SteamReleaseDate { get; set; }

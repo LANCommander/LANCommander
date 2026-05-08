@@ -1,5 +1,7 @@
 @using BlazorMonaco.Editor
+@using Microsoft.JSInterop
 @namespace LANCommander.UI.Components
+@inject IJSRuntime JSRuntime
 
 <StandaloneCodeEditor
     @ref="_editor"
@@ -14,6 +16,7 @@
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
 
+    static bool _completionsRegistered;
     bool _isEditorInitialized = false;
     string? _previousValue;
 
@@ -41,12 +44,21 @@
     async Task OnInit()
     {
         _isEditorInitialized = true;
-        
+
         await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
         {
             if (OnSave.HasDelegate)
                 await OnSave.InvokeAsync();
         }, null);
+
+        if (!_completionsRegistered)
+        {
+            _completionsRegistered = true;
+
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/LANCommander.UI/bundle.js");
+            await module.InvokeVoidAsync("registerPowerShellCompletions");
+        }
     }
 
     public async Task InsertText(string text)

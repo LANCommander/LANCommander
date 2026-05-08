@@ -10,10 +10,10 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [Cmdlet(VerbsCommon.Set, "SteamCmdProfile")]
 public class SetSteamCmdProfileCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam account username for the profile.")]
     public string Username { get; set; } = string.Empty;
 
-    [Parameter(Mandatory = true, Position = 1)]
+    [Parameter(Mandatory = true, Position = 1, HelpMessage = "The default installation directory for this Steam profile.")]
     public string InstallDirectory { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

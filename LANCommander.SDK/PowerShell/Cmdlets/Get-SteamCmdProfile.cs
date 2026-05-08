@@ -11,7 +11,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(SteamCmdProfile))]
 public class GetSteamCmdProfileCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam account username to retrieve the profile for.")]
     public string Username { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

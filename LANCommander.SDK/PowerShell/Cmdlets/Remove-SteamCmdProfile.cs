@@ -9,7 +9,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [Cmdlet(VerbsCommon.Remove, "SteamCmdProfile")]
 public class RemoveSteamCmdProfileCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam account username whose profile should be deleted.")]
     public string Username { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

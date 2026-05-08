@@ -9,10 +9,10 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
     [OutputType(typeof(SDK.Models.Manifest.Game))]
     public class GetGameManifestCmdlet : Cmdlet
     {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The directory path where the game manifest file is located.")]
         public string Path { get; set; }
 
-        [Parameter(Mandatory = true)]
+        [Parameter(Mandatory = true, HelpMessage = "The unique identifier (GUID) of the game.")]
         public Guid Id { get; set; }
 
         protected override void ProcessRecord()

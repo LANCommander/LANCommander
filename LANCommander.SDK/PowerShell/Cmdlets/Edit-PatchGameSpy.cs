@@ -20,19 +20,19 @@ public class EditPatchGameSpy : Cmdlet
     private const string OPENSPY_HOSTNAME = "openspy.net";
     private const string OPENSPY_PUBLICKEY = "afb5818995b3708d0656a5bdd20760aee76537907625f6d23f40bf17029e56808d36966c0804e1d797e310fedd8c06e6c4121d963863d765811fc9baeb2315c9a6eaeb125fad694d9ea4d4a928f223d9f4514533f18a5432dd0435c5c6ac8e276cf29489cb5ac880f16b0d7832ee927d4e27d622d6a450cd1560d7fa882c6c13";
     
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The root directory containing the game files to patch.")]
     public string Path { get; set; }
 
-    [Parameter(Mandatory = false, Position = 1)]
+    [Parameter(Mandatory = false, Position = 1, HelpMessage = "The replacement master server hostname. Must be exactly 12 characters. Defaults to 'openspy.net'.")]
     public string Hostname { get; set; } = OPENSPY_HOSTNAME;
 
-    [Parameter(Mandatory = false, Position = 2)]
+    [Parameter(Mandatory = false, Position = 2, HelpMessage = "The replacement public key for server authentication. Must match the original key length. Defaults to the OpenSpy public key.")]
     public string PublicKey { get; set; } = OPENSPY_PUBLICKEY;
-    
-    [Parameter(Mandatory = false, Position = 3)]
+
+    [Parameter(Mandatory = false, Position = 3, HelpMessage = "Glob patterns for binary files to scan and patch. Defaults to '*.dll', '*.exe', '*.ini'.")]
     public string[] BinariesToPatch { get; set; } = { "*.dll", "*.exe", "*.ini" };
-    
-    [Parameter(Mandatory = false, Position = 4)]
+
+    [Parameter(Mandatory = false, Position = 4, HelpMessage = "Glob patterns for text files to scan and patch (e.g. Unreal Engine INI configs). Defaults to '*.ini'.")]
     public string[] TextFilesToPatch { get; set; } = { "*.ini" };
 
     protected override void ProcessRecord()

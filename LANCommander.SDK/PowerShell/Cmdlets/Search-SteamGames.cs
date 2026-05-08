@@ -11,7 +11,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(GameSearchResult))]
 public class SearchSteamGamesCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The search term to look for in the Steam store.")]
     public string Keyword { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

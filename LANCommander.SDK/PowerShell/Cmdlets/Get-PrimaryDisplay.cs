@@ -7,7 +7,7 @@ using System.Management.Automation;
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsCommon.Get, "PrimaryDisplay")]
-    [OutputType(typeof(string))]
+    [OutputType(typeof(Screen))]
     public class GetPrimaryDisplayCmdlet : Cmdlet
     {
         protected override void ProcessRecord()

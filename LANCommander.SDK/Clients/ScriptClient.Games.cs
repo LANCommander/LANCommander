@@ -43,6 +43,7 @@ public partial class ScriptClient
                         }
                     }
                     
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     try
@@ -110,6 +111,7 @@ public partial class ScriptClient
                         }
                     }
                     
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     try
@@ -179,6 +181,7 @@ public partial class ScriptClient
                         }
                     }
                     
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     try
@@ -248,6 +251,7 @@ public partial class ScriptClient
                         }
                     }
                     
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     try
@@ -343,6 +347,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
 
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     GameClient.UpdatePlayerAlias(installDirectory, gameId, newName);
@@ -402,6 +407,7 @@ public partial class ScriptClient
                         }
                     }
                     
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     try

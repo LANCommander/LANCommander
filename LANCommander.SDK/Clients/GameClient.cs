@@ -2005,7 +2005,9 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
+                    _running.Remove(gameId);
                     logger?.LogError(ex, "Game failed to run");
+                    throw;
                 }
 
                 foreach (var manifest in manifests)

@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Avalonia.Views.AlertOverlay">
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="#AA000000">
+
+        <!-- Centered card -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Width="420"
+                MaxHeight="300"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BoxShadow="0 8 40 8 #88000000">
+
+            <StackPanel Spacing="0">
+
+                <!-- Header -->
+                <Border Padding="20,16,20,8">
+                    <TextBlock x:Name="TitleText"
+                               Text="Error"
+                               FontSize="15" FontWeight="SemiBold" />
+                </Border>
+
+                <!-- Message -->
+                <Border Padding="20,4,20,0">
+                    <ScrollViewer MaxHeight="160"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="MessageText"
+                                   TextWrapping="Wrap"
+                                   FontSize="13"
+                                   Opacity="0.85" />
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Footer -->
+                <Border Padding="20,16,20,16">
+                    <Button Content="OK"
+                            Classes="Primary"
+                            HorizontalAlignment="Right"
+                            Click="OK_Click" />
+                </Border>
+
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

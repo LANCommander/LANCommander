@@ -533,6 +533,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             {
                 _logger.LogError(ex, "Failed to play game {GameId}", GameId);
                 StatusMessage = $"Failed to start: {ex.Message}";
+                await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
             }
             finally
             {
@@ -573,6 +574,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to run action {ActionName} for game {GameId}", action.Name, GameId);
             StatusMessage = $"Failed to start: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
         }
         finally
         {

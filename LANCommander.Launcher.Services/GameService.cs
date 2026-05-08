@@ -108,6 +108,7 @@ namespace LANCommander.Launcher.Services
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Game failed to run");
+                throw;
             }
             finally
             {

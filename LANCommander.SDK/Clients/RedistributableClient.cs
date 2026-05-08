@@ -87,8 +87,6 @@ namespace LANCommander.SDK.Services
 
         public async Task InstallAsync(Redistributable redistributable, Game game, int maxAttempts = 10)
         {
-            string extractTempPath = null;
-            
             _installProgress = new InstallProgress();
             
             _installProgress.Status = InstallStatus.Downloading;
@@ -139,9 +137,7 @@ namespace LANCommander.SDK.Services
                         else if (result.Canceled)
                             throw new InstallCanceledException("Redistributable install canceled");
 
-                        extractTempPath = result.Directory;
-                        
-                        logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
+                        logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", result.Directory);
                         logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
                         await RunPostInstallScripts(game, redistributable);
@@ -157,11 +153,6 @@ namespace LANCommander.SDK.Services
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Redistributable {Redistributable} failed to install", redistributable.Name);
-            }
-            finally
-            {
-                if (Directory.Exists(extractTempPath))
-                    Directory.Delete(extractTempPath, true);
             }
         }
         

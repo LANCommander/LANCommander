@@ -107,6 +107,7 @@ public static class GameEndpoints
                 .Include(g => g.Platforms)
                 .Include(g => g.Publishers)
                 .Query(q => q.Include(d => d.Redistributables).ThenInclude(r => r.Scripts))
+                .Query(q => q.Include(d => d.Redistributables).ThenInclude(r => r.Archives))
                 .Include(g => g.Scripts)
                 .Include(g => g.Tags)
                 .AsNoTracking()

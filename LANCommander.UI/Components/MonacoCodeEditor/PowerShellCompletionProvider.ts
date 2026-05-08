@@ -1,35 +1,46 @@
-import { cmdlets, CmdletDefinition } from "./powershell-completions.generated";
+import { cmdlets, CmdletDefinition, variableTypes, scriptTypeValues } from "./PowerShellCompletions.g";
 
 declare const monaco: any;
 
+// Build a lookup from type name to its properties
+const typeMap = new Map(variableTypes.map((t) => [t.name, t]));
+
 interface VariableDefinition {
     name: string;
+    type: string;
     description: string;
 }
 
 const variables: VariableDefinition[] = [
-    { name: "$InstallDirectory", description: "Root install directory for the game" },
-    { name: "$WorkingDirectory", description: "Current working directory for the script" },
-    { name: "$ServerAddress", description: "Address of the LANCommander server" },
-    { name: "$DefaultInstallDirectory", description: "Default installation directory" },
-    { name: "$GameManifest", description: "The game's manifest object" },
-    { name: "$PlayerAlias", description: "Current player's alias/display name" },
-    { name: "$NewPlayerAlias", description: "New player alias (name change scripts)" },
-    { name: "$OldPlayerAlias", description: "Previous player alias (name change scripts)" },
-    { name: "$ScriptType", description: "Type of the script being executed (Install, Uninstall, BeforeStart, AfterStop, etc.)" },
-    { name: "$Server", description: "Server object (server scripts)" },
-    { name: "$Game", description: "Game object (server scripts)" },
-    { name: "$User", description: "User object (server scripts)" },
-    { name: "$ToolManifest", description: "Tool manifest object (tool scripts)" },
-    { name: "$Tool", description: "Tool object (package scripts)" },
-    { name: "$RedistributableManifest", description: "Redistributable manifest object (redistributable scripts)" },
-    { name: "$Redistributable", description: "Redistributable object (package scripts)" },
-    { name: "$ServerId", description: "Server GUID identifier (server process variables)" },
-    { name: "$ServerName", description: "Server display name (server process variables)" },
-    { name: "$ServerHost", description: "Server hostname (server process variables)" },
-    { name: "$ServerPort", description: "Server port number (server process variables)" },
-    { name: "$GameTitle", description: "Game title (server process variables)" },
-    { name: "$GameId", description: "Game GUID identifier (server process variables)" },
+    { name: "$InstallDirectory", type: "string", description: "Root install directory for the game" },
+    { name: "$WorkingDirectory", type: "string", description: "Current working directory for the script" },
+    { name: "$ServerAddress", type: "string", description: "Address of the LANCommander server" },
+    { name: "$DefaultInstallDirectory", type: "string", description: "Default installation directory" },
+    { name: "$GameManifest", type: "GameManifest", description: "The game's manifest object containing metadata such as title, ID, sort title, description, notes, and related collections" },
+    { name: "$PlayerAlias", type: "string", description: "Current player's alias/display name" },
+    { name: "$NewPlayerAlias", type: "string", description: "New player alias (name change scripts)" },
+    { name: "$OldPlayerAlias", type: "string", description: "Previous player alias (name change scripts)" },
+    { name: "$AllocatedKey", type: "string", description: "The product/serial key allocated to the current player for this game (key allocation scripts)" },
+    { name: "$ScriptType", type: "ScriptType", description: "Type of the script being executed (Install, Uninstall, BeforeStart, AfterStop, NameChange, KeyChange, etc.)" },
+    { name: "$Server", type: "Server", description: "Server model object with properties: Id, Name, Host, Port, Game, and WorkingDirectory (server scripts)" },
+    { name: "$Game", type: "Game", description: "Game model object with properties: Id, Title, SortTitle, Description, and Notes (server scripts)" },
+    { name: "$User", type: "User", description: "User model object with properties: Id, UserName, and Alias (server scripts)" },
+    { name: "$ToolManifest", type: "ToolManifest", description: "Tool manifest object containing metadata for the current tool" },
+    { name: "$Tool", type: "Tool", description: "Tool model object with properties: Id, Name, and Description (package scripts)" },
+    { name: "$RedistributableManifest", type: "RedistributableManifest", description: "Redistributable manifest object containing metadata for the current redistributable" },
+    { name: "$Redistributable", type: "Redistributable", description: "Redistributable model object with properties: Id, Name, and Description (package scripts)" },
+    { name: "$DisplayWidth", type: "string", description: "Primary display width in pixels" },
+    { name: "$DisplayHeight", type: "string", description: "Primary display height in pixels" },
+    { name: "$DisplayRefreshRate", type: "string", description: "Primary display refresh rate in Hz" },
+    { name: "$DisplayBitDepth", type: "string", description: "Primary display bit depth (bits per pixel)" },
+    { name: "$IPXRelayHost", type: "string", description: "IPX relay server hostname (when IPX relay is configured)" },
+    { name: "$IPXRelayPort", type: "string", description: "IPX relay server port (when IPX relay is configured)" },
+    { name: "$ServerId", type: "string", description: "Server GUID identifier (server process variables)" },
+    { name: "$ServerName", type: "string", description: "Server display name (server process variables)" },
+    { name: "$ServerHost", type: "string", description: "Server hostname (server process variables)" },
+    { name: "$ServerPort", type: "string", description: "Server port number (server process variables)" },
+    { name: "$GameTitle", type: "string", description: "Game title (server process variables)" },
+    { name: "$GameId", type: "string", description: "Game GUID identifier (server process variables)" },
 ];
 
 let registered = false;
@@ -44,7 +55,7 @@ export function registerPowerShellCompletions(): void {
 
 function registerCompletionProvider(): void {
     monaco.languages.registerCompletionItemProvider("powershell", {
-        triggerCharacters: ["-", "$"],
+        triggerCharacters: ["-", "$", "."],
         provideCompletionItems(model: any, position: any) {
             const word = model.getWordUntilPosition(position);
             const range = {
@@ -59,6 +70,29 @@ function registerCompletionProvider(): void {
 
             const suggestions: any[] = [];
 
+            // Member access completions: triggered by . after a variable
+            const memberMatch = textBefore.match(/\$(\w+)\.(\w*)$/);
+            if (memberMatch) {
+                const varName = "$" + memberMatch[1];
+                const variable = variables.find((v) => v.name === varName);
+                if (variable) {
+                    const typeDef = typeMap.get(variable.type);
+                    if (typeDef) {
+                        for (const prop of typeDef.properties) {
+                            suggestions.push({
+                                label: prop.name,
+                                kind: monaco.languages.CompletionItemKind.Field,
+                                insertText: prop.name,
+                                detail: `[${prop.type}]`,
+                                documentation: `Property of ${variable.type}`,
+                                range,
+                            });
+                        }
+                        return { suggestions };
+                    }
+                }
+            }
+
             // Variable completions: triggered by $
             if (/\$\w*$/.test(textBefore)) {
                 const varRange = {
@@ -71,7 +105,7 @@ function registerCompletionProvider(): void {
                         label: v.name,
                         kind: monaco.languages.CompletionItemKind.Variable,
                         insertText: v.name.substring(1),
-                        detail: "Variable",
+                        detail: `[${v.type}]`,
                         documentation: v.description,
                         range: varRange,
                     });
@@ -117,7 +151,7 @@ function registerCompletionProvider(): void {
             }
 
             // Cmdlet name completions
-            if (!paramMatch) {
+            if (!paramMatch && !memberMatch) {
                 for (const c of cmdlets) {
                     suggestions.push({
                         label: c.name,
@@ -168,6 +202,38 @@ function registerHoverProvider(): void {
                 }
             }
 
+            // Check for variable property hover ($Var.Property)
+            const varPropPattern = /\$(\w+)\.(\w+)/g;
+            while ((match = varPropPattern.exec(lineContent)) !== null) {
+                const fullStart = match.index + 1;
+                const fullEnd = fullStart + match[0].length;
+                if (position.column >= fullStart && position.column <= fullEnd) {
+                    const varName = "$" + match[1];
+                    const propName = match[2];
+                    const variable = variables.find((v) => v.name === varName);
+                    if (variable) {
+                        const typeDef = typeMap.get(variable.type);
+                        if (typeDef) {
+                            const prop = typeDef.properties.find((p) => p.name === propName);
+                            if (prop) {
+                                return {
+                                    range: {
+                                        startLineNumber: position.lineNumber,
+                                        endLineNumber: position.lineNumber,
+                                        startColumn: fullStart,
+                                        endColumn: fullEnd,
+                                    },
+                                    contents: [
+                                        { value: `**${varName}.${prop.name}** [${prop.type}]` },
+                                        { value: `Property of ${variable.type}` },
+                                    ],
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+
             // Check for variable hover
             const varPattern = /\$[\w]+/g;
             while ((match = varPattern.exec(lineContent)) !== null) {
@@ -176,6 +242,17 @@ function registerHoverProvider(): void {
                 if (position.column >= start && position.column <= end) {
                     const variable = variables.find((v) => v.name === match![0]);
                     if (variable) {
+                        const typeDef = typeMap.get(variable.type);
+                        const contents: { value: string }[] = [
+                            { value: `**${variable.name}** [${variable.type}]` },
+                            { value: variable.description },
+                        ];
+                        if (typeDef) {
+                            const propList = typeDef.properties
+                                .map((p) => `- \`${p.name}\` [${p.type}]`)
+                                .join("\n");
+                            contents.push({ value: `**Properties:**\n${propList}` });
+                        }
                         return {
                             range: {
                                 startLineNumber: position.lineNumber,
@@ -183,10 +260,7 @@ function registerHoverProvider(): void {
                                 startColumn: start,
                                 endColumn: end,
                             },
-                            contents: [
-                                { value: `**${variable.name}**` },
-                                { value: variable.description },
-                            ],
+                            contents,
                         };
                     }
                 }

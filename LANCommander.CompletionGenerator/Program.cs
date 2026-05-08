@@ -95,6 +95,65 @@ foreach (var type in cmdletTypes)
 }
 
 sb.AppendLine("];");
+sb.AppendLine();
+
+// Generate type definitions for complex objects used as script variables
+var variableTypes = new Dictionary<string, Type>
+{
+    ["GameManifest"] = typeof(LANCommander.SDK.Models.Manifest.Game),
+    ["ToolManifest"] = typeof(LANCommander.SDK.Models.Manifest.Tool),
+    ["RedistributableManifest"] = typeof(LANCommander.SDK.Models.Manifest.Redistributable),
+    ["Server"] = typeof(LANCommander.SDK.Models.Server),
+    ["Game"] = typeof(LANCommander.SDK.Models.Game),
+    ["User"] = typeof(LANCommander.SDK.Models.User),
+    ["Tool"] = typeof(LANCommander.SDK.Models.Tool),
+    ["Redistributable"] = typeof(LANCommander.SDK.Models.Redistributable),
+};
+
+sb.AppendLine("export interface TypeProperty {");
+sb.AppendLine("    name: string;");
+sb.AppendLine("    type: string;");
+sb.AppendLine("}");
+sb.AppendLine();
+sb.AppendLine("export interface TypeDefinition {");
+sb.AppendLine("    name: string;");
+sb.AppendLine("    properties: TypeProperty[];");
+sb.AppendLine("}");
+sb.AppendLine();
+sb.AppendLine("export const variableTypes: TypeDefinition[] = [");
+
+foreach (var (typeName, clrType) in variableTypes.OrderBy(kv => kv.Key))
+{
+    sb.AppendLine("    {");
+    sb.AppendLine($"        name: {JsonEncode(typeName)},");
+    sb.AppendLine("        properties: [");
+
+    var props = clrType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .Where(p => p.CanRead)
+        .OrderBy(p => p.Name);
+
+    foreach (var prop in props)
+    {
+        sb.AppendLine("            {");
+        sb.AppendLine($"                name: {JsonEncode(prop.Name)},");
+        sb.AppendLine($"                type: {JsonEncode(GetPropertyTypeName(prop.PropertyType))},");
+        sb.AppendLine("            },");
+    }
+
+    sb.AppendLine("        ],");
+    sb.AppendLine("    },");
+}
+
+sb.AppendLine("];");
+sb.AppendLine();
+
+// Generate ScriptType enum values
+sb.AppendLine("export const scriptTypeValues: string[] = [");
+foreach (var value in Enum.GetNames<LANCommander.SDK.Enums.ScriptType>())
+{
+    sb.AppendLine($"    {JsonEncode(value)},");
+}
+sb.AppendLine("];");
 
 var directory = Path.GetDirectoryName(outputPath);
 if (!string.IsNullOrEmpty(directory))
@@ -102,13 +161,56 @@ if (!string.IsNullOrEmpty(directory))
 
 File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
 
-Console.WriteLine($"Generated completions for {cmdletTypes.Count()} cmdlets -> {outputPath}");
+Console.WriteLine($"Generated completions for {cmdletTypes.Count()} cmdlets and {variableTypes.Count} variable types -> {outputPath}");
 return 0;
 
 static string JsonEncode(string? value)
 {
     if (value == null) return "null";
     return JsonSerializer.Serialize(value);
+}
+
+static string GetPropertyTypeName(Type type)
+{
+    var underlying = Nullable.GetUnderlyingType(type);
+    if (underlying != null)
+        return GetPropertyTypeName(underlying) + "?";
+
+    if (type.IsArray)
+        return GetPropertyTypeName(type.GetElementType()!) + "[]";
+
+    if (type.IsGenericType)
+    {
+        var genericDef = type.GetGenericTypeDefinition();
+        if (genericDef == typeof(IEnumerable<>) || genericDef == typeof(ICollection<>) ||
+            genericDef == typeof(List<>) || genericDef == typeof(IList<>))
+        {
+            var elementType = type.GetGenericArguments()[0];
+            return GetPropertyTypeName(elementType) + "[]";
+        }
+    }
+
+    // Check non-generic IEnumerable
+    if (type != typeof(string) && type.GetInterfaces().Any(i =>
+        i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
+    {
+        var elementType = type.GetInterfaces()
+            .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            .GetGenericArguments()[0];
+        return GetPropertyTypeName(elementType) + "[]";
+    }
+
+    if (type == typeof(string)) return "string";
+    if (type == typeof(int) || type == typeof(long)) return "int";
+    if (type == typeof(uint)) return "uint";
+    if (type == typeof(double) || type == typeof(float)) return "double";
+    if (type == typeof(bool)) return "bool";
+    if (type == typeof(Guid)) return "Guid";
+    if (type == typeof(DateTime)) return "DateTime";
+    if (type == typeof(Uri)) return "Uri";
+    if (type.IsEnum) return type.Name;
+
+    return type.Name;
 }
 
 static string GetFriendlyTypeName(Type? type)

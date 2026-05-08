@@ -370,7 +370,7 @@ LANCommander.Server/wwwroot/css/main.js
 .aspire
 LANCommander.Server/config/
 LANCommander.UI/wwwroot/
-LANCommander.UI/Components/MonacoCodeEditor/powershell-completions.generated.ts
+LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 LANCommander.Server/Data/
 
 LANCommander.Launcher.Avalonia/Data/

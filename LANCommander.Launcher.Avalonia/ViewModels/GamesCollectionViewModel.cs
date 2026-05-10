@@ -330,6 +330,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     partial void OnSearchTextChanged(string value)
     {
         _searchDebounce?.Cancel();
+        _searchDebounce?.Dispose();
         _searchDebounce = new CancellationTokenSource();
         var token = _searchDebounce.Token;
 

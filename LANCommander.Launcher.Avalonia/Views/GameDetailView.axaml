@@ -131,8 +131,13 @@
                                                   Gap="12">
                             <CarouselControl.ItemTemplate>
                                 <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
-                                    <Panel Width="384" Height="216" Cursor="Hand"
-                                           Tapped="MediaItem_Tapped">
+                                    <Panel Width="384" Height="216"
+                                           Tapped="MediaItem_Tapped"
+                                           Cursor="Hand">
+                                        <!-- Skeleton placeholder -->
+                                        <Border CornerRadius="4"
+                                                Background="#15FFFFFF"
+                                                IsVisible="{Binding IsSkeleton}" />
                                         <!-- Screenshot image -->
                                         <Border CornerRadius="4" ClipToBounds="True"
                                                 IsVisible="{Binding !IsVideo}">

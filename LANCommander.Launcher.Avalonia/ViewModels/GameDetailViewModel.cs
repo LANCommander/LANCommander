@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -20,6 +21,14 @@ namespace LANCommander.Launcher.Avalonia.ViewModels;
 
 public partial class GameDetailViewModel : ViewModelBase
 {
+    /// <summary>
+    /// In-memory cache of carousel media metadata per game, so skeletons can be shown
+    /// immediately on repeat visits without waiting for the API.
+    /// </summary>
+    private static readonly ConcurrentDictionary<Guid, List<CachedMediaEntry>> _mediaCache = new();
+
+    private record CachedMediaEntry(MediaType Type, string? MimeType);
+
     private readonly IServiceProvider _serviceProvider;
     private readonly INavigationService _navigationService;
     private readonly ILogger<GameDetailViewModel> _logger;
@@ -246,11 +255,11 @@ public partial class GameDetailViewModel : ViewModelBase
         }
 
         // Media items (screenshots / videos from local cache)
-        // Collect paths first, then lazy-load bitmaps off the UI thread
+        // Collect paths first, add skeletons for screenshots, then lazy-load bitmaps off the UI thread
         MediaItems.Clear();
         TagsExpanded = false;
 
-        var mediaEntries = new List<(string path, bool isVideo)>();
+        var mediaEntries = new List<(string path, int index)>();
         if (game.Media != null)
         {
             foreach (var m in game.Media.Where(m =>
@@ -270,7 +279,9 @@ public partial class GameDetailViewModel : ViewModelBase
                 }
                 else
                 {
-                    mediaEntries.Add((path, false));
+                    var index = MediaItems.Count;
+                    MediaItems.Add(new GameMediaItemViewModel { IsSkeleton = true });
+                    mediaEntries.Add((path, index));
                 }
             }
         }
@@ -279,26 +290,40 @@ public partial class GameDetailViewModel : ViewModelBase
         // Load action bar state
         await ActionBar.LoadFromLocalGameAsync(game);
 
-        // Load screenshot bitmaps on background thread and add as they complete
+        // Load screenshot bitmaps on background thread, replacing skeletons as they complete
+        if (mediaEntries.Count > 0)
+            IsLoadingMedia = true;
+
         foreach (var entry in mediaEntries)
         {
             try
             {
                 var bitmap = await Task.Run(() => new Bitmap(entry.path));
-                MediaItems.Add(new GameMediaItemViewModel
+                MediaItems[entry.index] = new GameMediaItemViewModel
                 {
                     Path = entry.path,
                     IsVideo = false,
                     MimeType = string.Empty,
                     ImageSource = bitmap
-                });
-                OnPropertyChanged(nameof(HasMedia));
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to load local screenshot {Path}", entry.path);
             }
         }
+
+        // Remove any skeletons that failed to load
+        for (var i = MediaItems.Count - 1; i >= 0; i--)
+        {
+            if (MediaItems[i].IsSkeleton)
+                MediaItems.RemoveAt(i);
+        }
+
+        OnPropertyChanged(nameof(HasMedia));
+
+        if (mediaEntries.Count > 0)
+            IsLoadingMedia = false;
     }
 
     /// <summary>
@@ -364,6 +389,34 @@ public partial class GameDetailViewModel : ViewModelBase
         // Reset media items and tags state while we re-load
         MediaItems.Clear();
         TagsExpanded = false;
+
+        // Determine carousel media entries and populate skeletons immediately.
+        // Use the game's media list if available, otherwise fall back to cache.
+        var carouselMediaEntries = game.Media?
+            .Where(m => m.Type == MediaType.Screenshot || m.Type == MediaType.Video)
+            .ToList();
+
+        if (carouselMediaEntries == null || carouselMediaEntries.Count == 0)
+        {
+            // Try cached metadata from a previous visit
+            if (_mediaCache.TryGetValue(game.Id, out var cached))
+            {
+                foreach (var _ in cached)
+                    MediaItems.Add(new GameMediaItemViewModel { IsSkeleton = true });
+            }
+        }
+        else
+        {
+            // Cache the media metadata for future visits
+            _mediaCache[game.Id] = carouselMediaEntries
+                .Select(m => new CachedMediaEntry(m.Type, m.MimeType))
+                .ToList();
+
+            // Add skeleton placeholders so the carousel renders immediately
+            foreach (var _ in carouselMediaEntries)
+                MediaItems.Add(new GameMediaItemViewModel { IsSkeleton = true });
+        }
+
         OnPropertyChanged(nameof(HasMedia));
 
         // Load action bar state
@@ -395,7 +448,7 @@ public partial class GameDetailViewModel : ViewModelBase
 
     /// <summary>
     /// Loads screenshots and videos into the media carousel in the background.
-    /// Items appear incrementally as they load.
+    /// Replaces skeleton placeholders with real items as they load.
     /// </summary>
     private async Task LoadCarouselMediaAsync(SDK.Models.Game game)
     {
@@ -415,8 +468,9 @@ public partial class GameDetailViewModel : ViewModelBase
             var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
             using var httpClient = new HttpClient();
 
-            foreach (var media in carouselMedia)
+            for (var i = 0; i < carouselMedia.Count; i++)
             {
+                var media = carouselMedia[i];
                 try
                 {
                     var item = new GameMediaItemViewModel
@@ -437,7 +491,12 @@ public partial class GameDetailViewModel : ViewModelBase
                         item.ImageSource = new Bitmap(ms);
                     }
 
-                    MediaItems.Add(item);
+                    // Replace skeleton at the same position, or append if index is out of range
+                    if (i < MediaItems.Count && MediaItems[i].IsSkeleton)
+                        MediaItems[i] = item;
+                    else
+                        MediaItems.Add(item);
+
                     OnPropertyChanged(nameof(HasMedia));
                 }
                 catch (Exception ex)
@@ -445,6 +504,15 @@ public partial class GameDetailViewModel : ViewModelBase
                     _logger.LogError(ex, "Failed to load media {MediaId} from server", media.Id);
                 }
             }
+
+            // Remove any remaining skeletons (e.g. if some items failed to load)
+            for (var i = MediaItems.Count - 1; i >= 0; i--)
+            {
+                if (MediaItems[i].IsSkeleton)
+                    MediaItems.RemoveAt(i);
+            }
+
+            OnPropertyChanged(nameof(HasMedia));
         }
         catch (Exception ex)
         {

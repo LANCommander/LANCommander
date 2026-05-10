@@ -20,13 +20,13 @@ public partial class GameDetailView : UserControl
         if (sender is not Panel panel)
             return;
 
-        if (panel.DataContext is not GameMediaItemViewModel tappedVm)
+        if (panel.DataContext is not GameMediaItemViewModel tappedVm || tappedVm.IsSkeleton)
             return;
 
         if (DataContext is not GameDetailViewModel detailVm)
             return;
 
-        // Build lightbox items from all media
+        // Build lightbox items from all loaded (non-skeleton) media
         var mediaItems = detailVm.MediaItems;
         var lightboxItems = new List<LightboxItem>();
         int tappedIndex = 0;
@@ -34,15 +34,17 @@ public partial class GameDetailView : UserControl
         for (int i = 0; i < mediaItems.Count; i++)
         {
             var m = mediaItems[i];
+            if (m.IsSkeleton) continue;
+
+            if (m == tappedVm)
+                tappedIndex = lightboxItems.Count;
+
             lightboxItems.Add(new LightboxItem
             {
                 Type = m.IsVideo ? LightboxItemType.Video : LightboxItemType.Image,
                 Path = m.Path,
                 ImageSource = m.ImageSource,
             });
-
-            if (m == tappedVm)
-                tappedIndex = i;
         }
 
         // For video items, capture timestamp and pause the inline player

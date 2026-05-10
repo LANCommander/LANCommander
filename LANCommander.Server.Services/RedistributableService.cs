@@ -89,11 +89,18 @@ namespace LANCommander.Server.Services
                 {
                     var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable));
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
+                    {
+                        logger?.LogError("Could not package redistributable {RedistributableName}, the package script did not return a result", redistributable.Name);
+                        continue;
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
                         logger?.LogError(
                             "Could not package redistributable {RedistributableName}, the path {Path} could not be found",
                             redistributable.Name, package.Path);
+                        continue;
                     }
 
                     var archive = new Archive

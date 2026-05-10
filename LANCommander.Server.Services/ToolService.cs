@@ -89,11 +89,18 @@ namespace LANCommander.Server.Services
                 {
                     var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
+                    {
+                        logger?.LogError("Could not package tool {ToolName}, the package script did not return a result", tool.Name);
+                        continue;
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
                         logger?.LogError(
                             "Could not package tool {ToolName}, the path {Path} could not be found",
                             tool.Name, package.Path);
+                        continue;
                     }
 
                     var archive = new Archive

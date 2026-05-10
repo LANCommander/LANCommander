@@ -225,7 +225,13 @@ namespace LANCommander.Server.Services
                 {
                     var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
+                    {
+                        logger?.LogError("Could not package game {GameTitle}, the package script did not return a result", game.Title);
+                        continue;
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
                         logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
                         continue;

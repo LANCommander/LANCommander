@@ -60,17 +60,19 @@ public static class SteamServicesProvider
     /// <summary>
     /// Gets or creates the Steam Store service for the current session.
     /// </summary>
+    private static readonly HttpClient _steamHttpClient = new();
+
     public static ISteamWebApiService GetSteamWebApiService(SessionState sessionState)
     {
         var existing = sessionState.PSVariable.GetValue(SteamWebApiServiceKey) as SteamWebApiService;
-        
+
         if (existing != null)
             return existing;
 
-        var service = new SteamWebApiService(new HttpClient());
-        
+        var service = new SteamWebApiService(_steamHttpClient);
+
         sessionState.PSVariable.Set(SteamWebApiServiceKey, service);
-        
+
         return service;
     }
     

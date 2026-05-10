@@ -2000,12 +2000,17 @@ namespace LANCommander.SDK.Services
                     await task;
 
                     _running.Remove(gameId);
+                    cancellationTokenSource.Dispose();
 
                     await UploadSavesAsync(manifests, installDirectory);
                 }
                 catch (Exception ex)
                 {
-                    _running.Remove(gameId);
+                    if (_running.TryGetValue(gameId, out var cts))
+                    {
+                        _running.Remove(gameId);
+                        cts.Dispose();
+                    }
                     logger?.LogError(ex, "Game failed to run");
                     throw;
                 }

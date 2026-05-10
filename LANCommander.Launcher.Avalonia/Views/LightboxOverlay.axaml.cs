@@ -37,6 +37,7 @@ public partial class LightboxOverlay : UserControl
     private bool _isUpdatingSlider;
     private bool _isMuted;
     private long _videoStartTimeMs;
+    private EventHandler<EventArgs>? _endReachedHandler;
 
     public LightboxOverlay()
     {
@@ -179,8 +180,9 @@ public partial class LightboxOverlay : UserControl
             _canvas?.InvalidateVisual();
         };
 
-        _renderer.Player!.EndReached += (_, _) =>
+        _endReachedHandler = (_, _) =>
             Dispatcher.UIThread.Post(() => PlayPauseIcon.Value = "Play");
+        _renderer.Player!.EndReached += _endReachedHandler;
 
         _renderer.Play(item.Path, muted: false, loop: false, startTimeMs: _videoStartTimeMs);
 
@@ -195,11 +197,18 @@ public partial class LightboxOverlay : UserControl
 
     private void StopVideo()
     {
-        _timer?.Stop();
-        _timer = null;
+        if (_timer != null)
+        {
+            _timer.Tick -= UpdateTransportControls;
+            _timer.Stop();
+            _timer = null;
+        }
 
         if (_renderer != null)
         {
+            if (_endReachedHandler != null && _renderer.Player != null)
+                _renderer.Player.EndReached -= _endReachedHandler;
+            _endReachedHandler = null;
             _renderer.FrameReady = null;
             _renderer.BitmapReady = null;
             var renderer = _renderer;

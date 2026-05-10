@@ -22,6 +22,7 @@ public static class InitialSessionStateExtensions
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-IniValue", typeof(UpdateIniValueCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-UserCustomField", typeof(UpdateUserCustomFieldCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
+        initialSessionState.Commands.Add(new SessionStateCmdletEntry("New-Package", typeof(NewPackageCmdlet), null));
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
         
         initialSessionState.Commands.Add(new SessionStateCmdletEntry("Connect-SteamCmd", typeof(ConnectSteamCmdCmdlet), null));

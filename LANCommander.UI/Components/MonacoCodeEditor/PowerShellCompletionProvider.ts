@@ -1,4 +1,7 @@
-import { cmdlets, CmdletDefinition, variableTypes, scriptTypeValues } from "./PowerShellCompletions.g";
+import { cmdlets, builtinCmdlets, CmdletDefinition, variableTypes, scriptTypeValues } from "./PowerShellCompletions.g";
+
+// Merge LANCommander cmdlets (shown first) with built-in PowerShell cmdlets
+const allCmdlets: CmdletDefinition[] = [...cmdlets, ...builtinCmdlets];
 
 declare const monaco: any;
 
@@ -172,14 +175,17 @@ function registerCompletionProvider(): void {
 
             // Cmdlet name completions
             if (!paramMatch && !memberMatch) {
-                for (const c of cmdlets) {
+                for (let i = 0; i < allCmdlets.length; i++) {
+                    const c = allCmdlets[i];
+                    const isBuiltin = i >= cmdlets.length;
                     suggestions.push({
                         label: c.name,
                         kind: monaco.languages.CompletionItemKind.Function,
                         insertText: c.name,
-                        detail: c.outputType ? `-> ${c.outputType}` : "Cmdlet",
+                        detail: c.outputType ? `-> ${c.outputType}` : isBuiltin ? "PowerShell Cmdlet" : "Cmdlet",
                         documentation: buildCmdletDocumentation(c),
                         range,
+                        sortText: isBuiltin ? `1_${c.name}` : `0_${c.name}`,
                     });
                 }
             }
@@ -205,7 +211,7 @@ function registerHoverProvider(): void {
                 const start = match.index + 1;
                 const end = start + match[0].length;
                 if (position.column >= start && position.column <= end) {
-                    const cmdlet = cmdlets.find((c) => c.name === match![0]);
+                    const cmdlet = allCmdlets.find((c) => c.name === match![0]);
                     if (cmdlet) {
                         return {
                             range: {
@@ -340,7 +346,7 @@ function findCmdletOnLine(text: string): CmdletDefinition | null {
 
     // Return the last cmdlet found on the line (closest to cursor)
     for (let i = matches.length - 1; i >= 0; i--) {
-        const cmdlet = cmdlets.find((c) => c.name === matches[i]);
+        const cmdlet = allCmdlets.find((c) => c.name === matches[i]);
         if (cmdlet) return cmdlet;
     }
 

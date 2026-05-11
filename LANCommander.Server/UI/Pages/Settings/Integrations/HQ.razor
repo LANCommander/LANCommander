@@ -97,7 +97,7 @@
     {
         try
         {
-            if (!Settings.Value.Server.HQ.IsAuthenticated)
+            if (!SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
             {
                 _connected = false;
                 return;
@@ -131,7 +131,7 @@
 
         _pollTimer = new Timer(async _ =>
         {
-            if (Settings.Value.Server.HQ.IsAuthenticated)
+            if (SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
             {
                 await InvokeAsync(async () =>
                 {

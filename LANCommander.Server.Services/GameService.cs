@@ -23,6 +23,7 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
         MediaService mediaService,
+        StorageLocationService storageLocationService,
         SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
@@ -217,7 +218,7 @@ namespace LANCommander.Server.Services
             logger?.LogInformation("Packaging game {GameTitle}", game.Title);
 
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-            var storageLocationId = latestArchive?.StorageLocationId;
+            var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
             if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
@@ -243,7 +244,7 @@ namespace LANCommander.Server.Services
                         GameId = game.Id,
                         ObjectKey = Guid.NewGuid().ToString(),
                         LastVersion = latestArchive,
-                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                        StorageLocationId = storageLocation.Id,
                     };
 
                     archive = await archiveService.AddAsync(archive);

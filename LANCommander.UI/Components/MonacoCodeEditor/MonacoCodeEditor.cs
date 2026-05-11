@@ -7,6 +7,8 @@ namespace LANCommander.UI.Components;
 public class MonacoCodeEditor : StandaloneCodeEditor
 {
     private static bool _completionsRegistered;
+    private IJSObjectReference? _module;
+    private string? _previousScriptType;
 
     [Inject]
     private IJSRuntime JSRuntime { get; set; } = default!;
@@ -20,12 +22,27 @@ public class MonacoCodeEditor : StandaloneCodeEditor
     [Parameter]
     public EventCallback OnSave { get; set; }
 
+    [Parameter]
+    public string? ScriptType { get; set; }
+
     protected override void OnInitialized()
     {
         OnDidChangeModelContent = Microsoft.AspNetCore.Components.EventCallback.Factory.Create<ModelContentChangedEvent>(this, OnChanged);
         OnDidInit = Microsoft.AspNetCore.Components.EventCallback.Factory.Create(this, OnInit);
 
         base.OnInitialized();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_module != null && ScriptType != _previousScriptType)
+        {
+            _previousScriptType = ScriptType;
+            await _module.InvokeVoidAsync("setScriptType", ScriptType);
+            await RunValidationAsync();
+        }
+
+        await base.OnParametersSetAsync();
     }
 
     private async Task OnInit()
@@ -36,13 +53,19 @@ public class MonacoCodeEditor : StandaloneCodeEditor
                 await OnSave.InvokeAsync();
         }, null);
 
+        _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/LANCommander.UI/bundle.js");
+
         if (!_completionsRegistered)
         {
             _completionsRegistered = true;
+            await _module.InvokeVoidAsync("registerPowerShellCompletions");
+        }
 
-            var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/LANCommander.UI/bundle.js");
-            await module.InvokeVoidAsync("registerPowerShellCompletions");
+        if (ScriptType != null)
+        {
+            _previousScriptType = ScriptType;
+            await _module.InvokeVoidAsync("setScriptType", ScriptType);
         }
     }
 
@@ -52,5 +75,21 @@ public class MonacoCodeEditor : StandaloneCodeEditor
 
         if (ValueChanged.HasDelegate)
             await ValueChanged.InvokeAsync(Value);
+
+        await RunValidationAsync();
+    }
+
+    public async Task InsertSnippetAsync(string snippetText)
+    {
+        if (_module != null)
+            await _module.InvokeVoidAsync("insertSnippet", snippetText);
+    }
+
+    private async Task RunValidationAsync()
+    {
+        if (_module == null)
+            return;
+
+        await _module.InvokeVoidAsync("validateScript");
     }
 }

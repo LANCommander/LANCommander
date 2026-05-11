@@ -1,4 +1,5 @@
-﻿@using LANCommander.SDK.Enums
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Extensions
 @inherits FeedbackComponent<ScriptEditorOptions, Script>
 @inject ScriptService ScriptService
 @inject ArchiveService ArchiveService
@@ -7,8 +8,8 @@
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
 
-<Form @ref="@_form" Model="@_script" Layout="@FormLayout.Vertical">
-    <FormItem>
+<Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center" Style="margin-bottom: 16px;">
+    <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap" Align="FlexAlign.Center">
         @foreach (var group in Snippets.Select(s => s.Group).Distinct())
         {
             <Dropdown>
@@ -29,60 +30,72 @@
             </Dropdown>
         }
 
+        @if (_variables.Any())
+        {
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        @foreach (var variable in _variables)
+                        {
+                            <MenuItem OnClick="() => InsertText(variable)">
+                                @variable
+                            </MenuItem>
+                        }
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary">Variables</Button>
+                </ChildContent>
+            </Dropdown>
+        }
+
         @if (_archive != null)
         {
             <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
         }
 
         <Button Icon="@IconType.Outline.Build" OnClick="() => _regToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
-        
-        @if (Options.GameId.HasValue && Options.GameId != Guid.Empty && IsDebuggable)
+
+        @if (IsDebuggable && HasDebugTarget)
         {
             <Tooltip Title="Debug">
                 <Button Icon="@IconType.Outline.CaretRight" Type="@ButtonType.Text" OnClick="Debug" Disabled="@_debugging" />
             </Tooltip>
         }
-    </FormItem>
+    </Flex>
 
-    <FormItem>
-        <CodeInput @ref="_codeInput" @bind-Value="context.Contents" Language="Languages.PowerShell" OnSave="Save" />
+    <Checkbox @bind-Checked="_script.RequiresAdmin">Requires Admin</Checkbox>
+</Flex>
 
-        <PowerShellConsole @ref="_console" Id="_id" @bind-Active="_debugging"/>
-    </FormItem>
+<CodeInput @ref="_codeInput" @bind-Value="_script.Contents" Language="Languages.PowerShell" OnSave="Save" ScriptType="@_script.Type.ToString()" OnReady="OnEditorReady" />
 
+<PowerShellConsole @ref="_console" Id="_id" @bind-Active="_debugging"/>
+
+<Form @ref="@_form" Model="@_script" Layout="@FormLayout.Vertical">
     <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
         <Input @bind-Value="@context.Name" />
-    </FormItem>
-
-    <FormItem Label="Type">
-        <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>().Where(st => Options.AllowedTypes == null || Options.AllowedTypes.Contains(st))">
-            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-        </Select>
-    </FormItem>
-
-    <FormItem>
-        <Checkbox @bind-Checked="context.RequiresAdmin">Requires Admin</Checkbox>
     </FormItem>
 
     <FormItem Label="Description">
         <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
     </FormItem>
-    
 </Form>
 
 <RegToPowerShell @ref="_regToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
     Guid _id = Guid.NewGuid();
-    
+
     Form<Script>? _form;
     CodeInput? _codeInput;
     RegToPowerShell? _regToPowerShell;
     PowerShellConsole? _console;
     IEnumerable<Snippet> Snippets { get; set; } = [];
+    List<string> _variables = new();
 
     bool _debugging;
+    bool _isNewScript;
 
     Archive? _archive;
 
@@ -91,50 +104,91 @@
     bool IsDebuggable =>
         _script.Type == ScriptType.Package;
 
+    bool HasDebugTarget =>
+        (Options.GameId.HasValue && Options.GameId != Guid.Empty) ||
+        (Options.ToolId.HasValue && Options.ToolId != Guid.Empty) ||
+        (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty);
+
+    static readonly string[] GameClientScriptTypes = ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall"];
+
+    static readonly Dictionary<string, string[]> VariablesByScriptType = new()
+    {
+        ["Install"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$ToolManifest", "$RedistributableManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["Uninstall"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["BeforeStart"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$PlayerAlias", "$Server", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId", "$ToolManifest", "$RedistributableManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["AfterStop"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$PlayerAlias", "$Server", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId", "$ToolManifest", "$RedistributableManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["NameChange"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$OldPlayerAlias", "$NewPlayerAlias", "$RedistributableManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["KeyChange"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$AllocatedKey", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["DetectInstall"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$ToolManifest", "$RedistributableManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["SaveUpload"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["SaveDownload"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"],
+        ["Package"] = ["$WorkingDirectory", "$Game", "$Tool", "$Redistributable"],
+        ["GameStarted"] = ["$WorkingDirectory", "$Server", "$Game", "$User", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId"],
+        ["GameStopped"] = ["$WorkingDirectory", "$Server", "$Game", "$User", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId"],
+        ["UserRegistration"] = ["$WorkingDirectory", "$User"],
+        ["UserLogin"] = ["$WorkingDirectory", "$User"],
+    };
+
+    void UpdateVariables()
+    {
+        var key = _script.Type.ToString();
+
+        if (VariablesByScriptType.TryGetValue(key, out var vars))
+            _variables = vars.ToList();
+        else
+            _variables = ["$WorkingDirectory"];
+    }
+
     protected override async Task OnInitializedAsync()
     {
         if (Options.ScriptId != Guid.Empty)
-            _script = await ScriptService.GetAsync(Options.ScriptId);
-        else if (Options.GameId.HasValue && Options.GameId != Guid.Empty)
         {
+            _script = await ScriptService.GetAsync(Options.ScriptId);
+        }
+        else
+        {
+            _isNewScript = true;
+            var scriptType = Options.ScriptType ?? ScriptType.Install;
+
             _script = new Script
             {
-                GameId = Options.GameId
+                Type = scriptType,
+                Name = scriptType.GetDisplayName(),
             };
 
-            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == Options.GameId);
-        }
-        else if (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty)
-        {
-            _script = new Script()
+            if (Options.GameId.HasValue && Options.GameId != Guid.Empty)
             {
-                RedistributableId = Options.RedistributableId
-            };
-
-            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == Options.RedistributableId);
-        }
-        else if (Options.ServerId.HasValue && Options.ServerId != Guid.Empty)
-        {
-            _script = new Script()
+                _script.GameId = Options.GameId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == Options.GameId);
+            }
+            else if (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty)
             {
-                ServerId = Options.ServerId
-            };
-
-            var server = await ServerService.GetAsync(Options.ServerId.Value);
-
-            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
-        }
-        else if (Options.ToolId.HasValue && Options.ToolId != Guid.Empty)
-        {
-            _script = new Script()
+                _script.RedistributableId = Options.RedistributableId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == Options.RedistributableId);
+            }
+            else if (Options.ServerId.HasValue && Options.ServerId != Guid.Empty)
             {
-                ToolId = Options.ToolId
-            };
-
-            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == Options.ToolId);
+                _script.ServerId = Options.ServerId;
+                var server = await ServerService.GetAsync(Options.ServerId.Value);
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
+            }
+            else if (Options.ToolId.HasValue && Options.ToolId != Guid.Empty)
+            {
+                _script.ToolId = Options.ToolId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == Options.ToolId);
+            }
         }
-        
+
+        UpdateVariables();
         Snippets = ScriptService.GetSnippets();
+    }
+
+    async Task OnEditorReady()
+    {
+        if (_isNewScript && _codeInput != null && Options.ScriptType.HasValue)
+        {
+            await _codeInput.InsertTemplateAsync(Options.ScriptType.Value.ToString());
+        }
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
@@ -162,7 +216,7 @@
 
                 return true;
             }
-            
+
             return false;
         }
         catch (Exception ex)
@@ -178,16 +232,20 @@
     {
         if (!IsDebuggable)
             return;
-        
+
         var saved = await Save();
 
         if (!saved)
             return;
 
-        if (Options.GameId.HasValue)
+        if (Options.GameId.HasValue && Options.GameId != Guid.Empty)
             await _console.DebugPackagingScript(Options.GameId.Value);
+        else if (Options.ToolId.HasValue && Options.ToolId != Guid.Empty)
+            await _console.DebugToolPackagingScript(Options.ToolId.Value);
+        else if (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty)
+            await _console.DebugRedistributablePackagingScript(Options.RedistributableId.Value);
     }
-    
+
     async Task BrowseForPath()
     {
         var modalOptions = new ModalOptions()
@@ -227,6 +285,7 @@
 
     async Task InsertSnippet(Snippet snippet)
     {
-        await InsertText(snippet.Content);
+        if (_codeInput != null)
+            await _codeInput.InsertSnippet(snippet.Content);
     }
 }

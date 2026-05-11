@@ -35,7 +35,7 @@
     </FormItem>
 
     <FormItem>
-        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="OnSave" />
+        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="OnSave" ScriptType="@context.Type.ToString()" />
     </FormItem>
 
     <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
@@ -81,6 +81,9 @@
             Language = "powershell",
             Value = Script.Contents,
             Theme = "vs-dark",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+            WordWrap = "on",
         };
     }
 
@@ -122,10 +125,10 @@
 
     async Task InsertText(string text)
     {
-        var line = await Editor.GetPosition();
-        var range = new BlazorMonaco.Range(line.LineNumber, 1, line.LineNumber, 1);
-
-        var currentSelections = await Editor.GetSelections();
+        var selection = await Editor.GetSelection();
+        var range = new BlazorMonaco.Range(
+            selection.StartLineNumber, selection.StartColumn,
+            selection.EndLineNumber, selection.EndColumn);
 
         await Editor.ExecuteEdits("ScriptEditor", new List<IdentifiedSingleEditOperation>()
         {
@@ -135,11 +138,12 @@
                 Text = text,
                 ForceMoveMarkers = true
             }
-        }, currentSelections);
+        }, (List<BlazorMonaco.Selection>)null);
     }
 
     async Task InsertSnippet(Snippet snippet)
     {
-        await InsertText(snippet.Content);
+        if (Editor != null)
+            await Editor.InsertSnippetAsync(snippet.Content);
     }
 }

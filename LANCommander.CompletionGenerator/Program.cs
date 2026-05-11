@@ -97,6 +97,237 @@ foreach (var type in cmdletTypes)
 sb.AppendLine("];");
 sb.AppendLine();
 
+// Generate built-in PowerShell cmdlet completions from core modules
+var builtinCmdletNames = new HashSet<string>(cmdletTypes.Select(t =>
+{
+    var a = t.GetCustomAttribute<CmdletAttribute>()!;
+    return $"{a.VerbName}-{a.NounName}";
+}));
+
+Console.WriteLine("Enumerating built-in PowerShell cmdlets...");
+
+sb.AppendLine("export const builtinCmdlets: CmdletDefinition[] = [");
+
+var builtinCount = 0;
+
+try
+{
+    // Use external pwsh process for full module metadata and help access
+    var psScript = @"
+$commonParams = @(
+    'Verbose','Debug','ErrorAction','WarningAction','InformationAction',
+    'ErrorVariable','WarningVariable','InformationVariable','OutVariable',
+    'OutBuffer','PipelineVariable','ProgressAction','Confirm','WhatIf'
+)
+
+$modules = @(
+    'Microsoft.PowerShell.Management',
+    'Microsoft.PowerShell.Utility',
+    'Microsoft.PowerShell.Security',
+    'Microsoft.PowerShell.Archive'
+)
+
+$results = @()
+
+# Get command names from core modules, then resolve each individually for full metadata
+$commandNames = Get-Command -CommandType Cmdlet,Function -Module $modules -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name -Unique
+
+foreach ($cmdName in $commandNames) {
+    $cmd = Get-Command $cmdName -ErrorAction SilentlyContinue
+    if (-not $cmd) { continue }
+
+    $synopsis = $null
+    try {
+        $h = Get-Help $cmdName -ErrorAction SilentlyContinue
+        if ($h -and $h.Synopsis) {
+            $s = $h.Synopsis.Trim()
+            # Skip if synopsis is just the cmdlet name, or looks like syntax (contains parameter notation)
+            if ($s -ne $cmdName -and $s -notmatch '\[[-<]' -and $s -notmatch '-\w+\s+<') {
+                $synopsis = $s
+            }
+        }
+    } catch {}
+
+    $outputType = $null
+    if ($cmd.OutputType -and $cmd.OutputType.Count -gt 0 -and $cmd.OutputType[0].Type) {
+        $outputType = $cmd.OutputType[0].Type.Name
+    }
+
+    $params = @()
+    if ($cmd.Parameters) {
+        foreach ($key in $cmd.Parameters.Keys) {
+            if ($key -in $commonParams) { continue }
+
+            $p = $cmd.Parameters[$key]
+            $pAttr = $p.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } | Select-Object -First 1
+            $mandatory = $false
+            $position = $null
+            $helpMsg = $null
+
+            if ($pAttr) {
+                $mandatory = [bool]$pAttr.Mandatory
+                if ($pAttr.Position -ne [int]::MinValue) {
+                    $position = $pAttr.Position
+                }
+                if ($pAttr.HelpMessage) {
+                    $helpMsg = $pAttr.HelpMessage
+                }
+            }
+
+            $aliases = @($p.Aliases)
+
+            $params += @{
+                n = $key
+                t = $p.ParameterType.Name
+                m = $mandatory
+                pos = $position
+                h = $helpMsg
+                a = $aliases
+            }
+        }
+    }
+
+    $results += @{
+        name = $cmdName
+        desc = $synopsis
+        out = $outputType
+        params = $params
+    }
+}
+
+$results | ConvertTo-Json -Depth 4 -Compress
+";
+
+    // Write the script to a temp file to avoid stdin encoding issues
+    var tempScript = Path.GetTempFileName() + ".ps1";
+    File.WriteAllText(tempScript, psScript, new UTF8Encoding(false));
+
+    var psi = new System.Diagnostics.ProcessStartInfo
+    {
+        FileName = "pwsh",
+        Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{tempScript}\"",
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true,
+    };
+
+    // Clear .NET SDK environment variables that can interfere with pwsh's module loading
+    foreach (var key in Environment.GetEnvironmentVariables().Keys.Cast<string>()
+        .Where(k => k.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase) ||
+                     k.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase)))
+    {
+        psi.Environment[key] = null;
+    }
+
+    using var process = System.Diagnostics.Process.Start(psi)!;
+
+    var json = process.StandardOutput.ReadToEnd();
+    var stderr = process.StandardError.ReadToEnd();
+    process.WaitForExit(120_000);
+
+
+    if (!string.IsNullOrWhiteSpace(stderr))
+        Console.Error.WriteLine($"  pwsh stderr: {stderr.Trim()}");
+
+    try { File.Delete(tempScript); } catch { }
+
+    if (process.ExitCode != 0)
+        throw new Exception($"pwsh exited with code {process.ExitCode}");
+
+    using var doc = JsonDocument.Parse(json);
+    var root = doc.RootElement;
+
+    // Handle both array and single-object responses
+    var elements = root.ValueKind == JsonValueKind.Array
+        ? root.EnumerateArray().ToList()
+        : new List<JsonElement> { root };
+
+    foreach (var cmd in elements.OrderBy(e => e.GetProperty("name").GetString()))
+    {
+        var name = cmd.GetProperty("name").GetString()!;
+        if (builtinCmdletNames.Contains(name))
+            continue;
+
+        string? description = null;
+        if (cmd.TryGetProperty("desc", out var descEl) && descEl.ValueKind == JsonValueKind.String)
+            description = descEl.GetString();
+
+        string? outputTypeName = null;
+        if (cmd.TryGetProperty("out", out var outEl) && outEl.ValueKind == JsonValueKind.String)
+            outputTypeName = MapTypeName(outEl.GetString()!);
+
+        sb.AppendLine("    {");
+        sb.AppendLine($"        name: {JsonEncode(name)},");
+        sb.AppendLine($"        description: {JsonEncode(description)},");
+        sb.AppendLine($"        outputType: {JsonEncode(outputTypeName)},");
+        sb.AppendLine("        parameters: [");
+
+        if (cmd.TryGetProperty("params", out var paramsEl) && paramsEl.ValueKind == JsonValueKind.Array)
+        {
+            // Sort: positional first, then alphabetical
+            var paramList = paramsEl.EnumerateArray().ToList();
+            paramList.Sort((a, b) =>
+            {
+                var posA = a.TryGetProperty("pos", out var pa) && pa.ValueKind == JsonValueKind.Number ? pa.GetInt32() : int.MaxValue;
+                var posB = b.TryGetProperty("pos", out var pb) && pb.ValueKind == JsonValueKind.Number ? pb.GetInt32() : int.MaxValue;
+                var cmp = posA.CompareTo(posB);
+                if (cmp != 0) return cmp;
+                return string.Compare(
+                    a.GetProperty("n").GetString(),
+                    b.GetProperty("n").GetString(),
+                    StringComparison.Ordinal);
+            });
+
+            foreach (var param in paramList)
+            {
+                var paramName = param.GetProperty("n").GetString()!;
+                var typeName = MapTypeName(param.GetProperty("t").GetString() ?? "object");
+                var mandatory = param.TryGetProperty("m", out var mEl) && mEl.ValueKind == JsonValueKind.True;
+
+                string? posStr = "null";
+                if (param.TryGetProperty("pos", out var posEl) && posEl.ValueKind == JsonValueKind.Number)
+                    posStr = posEl.GetInt32().ToString();
+
+                string? helpMessage = null;
+                if (param.TryGetProperty("h", out var hEl) && hEl.ValueKind == JsonValueKind.String)
+                    helpMessage = hEl.GetString();
+
+                var aliases = new List<string>();
+                if (param.TryGetProperty("a", out var aEl) && aEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var alias in aEl.EnumerateArray())
+                    {
+                        if (alias.ValueKind == JsonValueKind.String)
+                            aliases.Add(alias.GetString()!);
+                    }
+                }
+
+                sb.AppendLine("            {");
+                sb.AppendLine($"                name: {JsonEncode(paramName)},");
+                sb.AppendLine($"                type: {JsonEncode(typeName)},");
+                sb.AppendLine($"                mandatory: {(mandatory ? "true" : "false")},");
+                sb.AppendLine($"                position: {posStr},");
+                sb.AppendLine($"                helpMessage: {JsonEncode(helpMessage)},");
+                sb.AppendLine($"                aliases: [{string.Join(", ", aliases.Select(a => JsonEncode(a)))}],");
+                sb.AppendLine("            },");
+            }
+        }
+
+        sb.AppendLine("        ],");
+        sb.AppendLine("    },");
+        builtinCount++;
+    }
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"Warning: Failed to enumerate built-in cmdlets: {ex.Message}");
+    Console.Error.WriteLine("Ensure 'pwsh' (PowerShell 7+) is installed and on PATH.");
+}
+
+sb.AppendLine("];");
+sb.AppendLine();
+
 // Generate type definitions for complex objects used as script variables
 var variableTypes = new Dictionary<string, Type>
 {
@@ -161,7 +392,7 @@ if (!string.IsNullOrEmpty(directory))
 
 File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
 
-Console.WriteLine($"Generated completions for {cmdletTypes.Count()} cmdlets and {variableTypes.Count} variable types -> {outputPath}");
+Console.WriteLine($"Generated completions for {cmdletTypes.Count()} LANCommander cmdlets, {builtinCount} built-in cmdlets, and {variableTypes.Count} variable types -> {outputPath}");
 return 0;
 
 static string JsonEncode(string? value)
@@ -212,6 +443,35 @@ static string GetPropertyTypeName(Type type)
 
     return type.Name;
 }
+
+static string MapTypeName(string typeName) => typeName switch
+{
+    "String" => "string",
+    "Int32" => "int",
+    "Int64" => "long",
+    "UInt32" => "uint",
+    "Double" => "double",
+    "Single" => "float",
+    "Boolean" => "bool",
+    "Byte" => "byte",
+    "Guid" => "Guid",
+    "Uri" => "Uri",
+    "DateTime" => "DateTime",
+    "Object" => "object",
+    "SwitchParameter" => "SwitchParameter",
+    "SecureString" => "SecureString",
+    "String[]" => "string[]",
+    "Int32[]" => "int[]",
+    "Object[]" => "object[]",
+    "Byte[]" => "byte[]",
+    "PSObject" => "object",
+    "PSObject[]" => "object[]",
+    "Hashtable" => "Hashtable",
+    "ScriptBlock" => "ScriptBlock",
+    "TimeSpan" => "TimeSpan",
+    "PSCredential" => "PSCredential",
+    _ => typeName,
+};
 
 static string GetFriendlyTypeName(Type? type)
 {

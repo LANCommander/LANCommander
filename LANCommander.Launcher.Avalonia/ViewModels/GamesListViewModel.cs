@@ -60,9 +60,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
             var mediaClient    = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
             if (IsOfflineMode)
-            {
                 await LoadFromLocalLibraryAsync(scope, libraryService);
-            }
             else
             {
                 _depotItems = await depotService.GetItemsAsync();
@@ -196,6 +194,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
             if (!IsOfflineMode)
             {
                 var fileInfo = await mediaClient.DownloadAsync(cover, localPath);
+                
                 if (fileInfo.Exists)
                     return fileInfo.FullName;
             }

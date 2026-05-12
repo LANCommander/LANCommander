@@ -104,6 +104,7 @@ public partial class LoginViewModel : ViewModelBase
         try
         {
             var serverAddress = _connectionClient.GetServerAddress();
+            
             if (serverAddress == null)
             {
                 StatusMessage = "No server configured";

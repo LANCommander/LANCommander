@@ -265,6 +265,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
         var materialised = filtered.ToList();
 
         Games.Clear();
+        
         foreach (var g in materialised)
             Games.Add(g);
 
@@ -313,6 +314,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         var title = (string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle).TrimStart();
         var first = title.FirstOrDefault();
+        
         return char.IsLetter(first) ? char.ToUpper(first).ToString() : "#";
     }
 
@@ -320,6 +322,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(value))
             return [fallback];
+        
         return value.Split(", ", StringSplitOptions.RemoveEmptyEntries);
     }
 
@@ -332,6 +335,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
         _searchDebounce?.Cancel();
         _searchDebounce?.Dispose();
         _searchDebounce = new CancellationTokenSource();
+        
         var token = _searchDebounce.Token;
 
         _ = Task.Delay(250, token).ContinueWith(
@@ -361,11 +365,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void PopulateTags()
     {
         AvailableTags.Clear();
+        
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
         foreach (var g in _allGames)
             if (!string.IsNullOrEmpty(g.Tags))
                 foreach (var t in g.Tags.Split(", ", StringSplitOptions.RemoveEmptyEntries))
                     seen.Add(t);
+        
         foreach (var t in seen.OrderBy(x => x))
             AvailableTags.Add(t);
     }
@@ -373,11 +380,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void PopulateDevelopers()
     {
         AvailableDevelopers.Clear();
+        
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
         foreach (var g in _allGames)
             if (!string.IsNullOrEmpty(g.Developers))
                 foreach (var d in g.Developers.Split(", ", StringSplitOptions.RemoveEmptyEntries))
                     seen.Add(d);
+        
         foreach (var d in seen.OrderBy(x => x))
             AvailableDevelopers.Add(d);
     }
@@ -385,11 +395,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void PopulatePublishers()
     {
         AvailablePublishers.Clear();
+        
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
         foreach (var g in _allGames)
             if (!string.IsNullOrEmpty(g.Publishers))
                 foreach (var p in g.Publishers.Split(", ", StringSplitOptions.RemoveEmptyEntries))
                     seen.Add(p);
+        
         foreach (var p in seen.OrderBy(x => x))
             AvailablePublishers.Add(p);
     }
@@ -397,13 +410,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void PopulateGenres()
     {
         AvailableGenres.Clear();
+        
         var genres = new HashSet<Genre>(new GenreComparer());
+        
         foreach (var g in _allGames)
-        {
             if (!string.IsNullOrEmpty(g.Genres))
                 foreach (var name in g.Genres.Split(", ", StringSplitOptions.RemoveEmptyEntries))
                     genres.Add(new Genre { Name = name });
-        }
+        
         foreach (var genre in genres.OrderBy(g => g.Name))
             AvailableGenres.Add(genre);
     }

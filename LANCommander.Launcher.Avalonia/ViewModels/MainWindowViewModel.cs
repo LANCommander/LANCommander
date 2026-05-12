@@ -133,8 +133,10 @@ public partial class MainWindowViewModel : ViewModelBase
             // If server is offline and no credentials, user stays on login (can't proceed)
             LoginViewModel.ServerAddress = settings.Authentication.ServerAddress.ToString();
             LoginViewModel.IsServerOffline = !serverOnline;
+            
             if (serverOnline)
                 await LoginViewModel.LoadAuthenticationProvidersAsync();
+            
             CurrentView = LoginViewModel;
             return;
         }

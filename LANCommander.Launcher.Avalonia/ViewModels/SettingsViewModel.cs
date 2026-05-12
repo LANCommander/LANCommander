@@ -99,15 +99,11 @@ public partial class SettingsViewModel : ViewModelBase
 
         // Initialize sound themes
         foreach (var theme in Enum.GetValues<NotificationSoundTheme>())
-        {
             AvailableSoundThemes.Add(theme);
-        }
 
         // Initialize log levels
         foreach (var level in Enum.GetValues<LogLevel>())
-        {
             AvailableLogLevels.Add(level);
-        }
     }
 
     public void Load()
@@ -120,23 +116,19 @@ public partial class SettingsViewModel : ViewModelBase
 
         // Game settings
         InstallDirectories.Clear();
+        
         if (settings.Games.InstallDirectories?.Length > 0)
-        {
             foreach (var dir in settings.Games.InstallDirectories)
-            {
                 InstallDirectories.Add(new InstallDirectoryItem(dir));
-            }
-        }
         else
-        {
             InstallDirectories.Add(new InstallDirectoryItem(string.Empty));
-        }
 
         // Media settings
         MediaStoragePath = settings.Media.StoragePath ?? string.Empty;
 
         // UI settings
         var cultureCode = settings.Culture ?? "en-US";
+        
         SelectedCultureItem = AvailableCultures.FirstOrDefault(c => c.Code == cultureCode) 
                               ?? AvailableCultures.First();
 
@@ -152,13 +144,15 @@ public partial class SettingsViewModel : ViewModelBase
         SelectedLogLevel = settings.Debug.LogLevel;
 
         StatusMessage = null;
+        
         _logger.LogInformation("Settings loaded");
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (IsSaving) return;
+        if (IsSaving) 
+            return;
 
         IsSaving = true;
         StatusMessage = "Saving...";
@@ -219,7 +213,9 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private void RemoveInstallDirectory(InstallDirectoryItem? item)
     {
-        if (item == null || InstallDirectories.Count <= 1) return;
+        if (item == null || InstallDirectories.Count <= 1)
+            return;
+        
         InstallDirectories.Remove(item);
     }
 

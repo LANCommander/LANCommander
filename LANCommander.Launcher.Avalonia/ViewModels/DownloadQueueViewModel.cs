@@ -120,10 +120,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
         Dispatcher.UIThread.Post(() =>
         {
             var item = QueueItems.FirstOrDefault(i => i.Id == taskProgress.QueueItemId);
+            
             if (item == null)
                 return;
 
             var task = item.Tasks.FirstOrDefault(t => t.Id == taskProgress.TaskId);
+            
             if (task == null)
                 return;
 
@@ -138,9 +140,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
             // Update current status from task
             if (item == CurrentItem)
-            {
                 CurrentStatus = taskProgress.TaskTitle;
-            }
         });
 
         return Task.CompletedTask;
@@ -157,15 +157,17 @@ public partial class DownloadQueueViewModel : ViewModelBase
             CurrentTransferSpeed = progress.TransferSpeed;
 
             // Format progress text
-            var bytesDownloaded = FormatBytes(progress.BytesTransferred);
-            var totalBytes = FormatBytes(progress.TotalBytes);
+            var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred);
+            var totalBytes = ByteSize.FromBytes(progress.TotalBytes);
+            
             CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({progress.Progress:P0})";
 
             // Format transfer speed
-            TransferSpeedText = $"{FormatBytes(progress.TransferSpeed)}/s";
+            TransferSpeedText = $"{ByteSize.FromBytes(progress.TransferSpeed)}/s";
 
             // Format time remaining
             var bytesRemaining = progress.TotalBytes - progress.BytesTransferred;
+            
             if (progress.TransferSpeed > 0 && bytesRemaining > 0)
             {
                 var seconds = (double)bytesRemaining / progress.TransferSpeed;
@@ -214,10 +216,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
 
             var icon = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Icon);
+            
             if (icon != null && mediaService.FileExists(icon))
                 iconPath = mediaService.GetImagePath(icon);
 
             var grid = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Grid);
+            
             if (grid != null && mediaService.FileExists(grid))
                 gridPath = mediaService.GetImagePath(grid);
         }
@@ -243,6 +247,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         _notificationService.NotifyInstallFailed(game.Title ?? "Game", game.Id);
 
         Dispatcher.UIThread.Post(RefreshQueue);
+        
         return Task.CompletedTask;
     }
 
@@ -250,7 +255,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private async Task RefreshQueueAsync()
     {
-        if (_installService == null) return;
+        if (_installService == null)
+            return;
 
         var sourceIds = _installService.Queue.Select(i => i.Id).ToHashSet();
 
@@ -274,12 +280,14 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
                 // Ensure correct position
                 var currentIndex = QueueItems.IndexOf(existing);
+                
                 if (currentIndex != i && i < QueueItems.Count)
                     QueueItems.Move(currentIndex, i);
             }
             else
             {
                 var vm = new InstallQueueItemViewModel(source);
+                
                 await ResolveCoverArt(vm);
                 await ResolveIcon(vm);
 
@@ -302,9 +310,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         // Auto-expand when there's an active download
         if (HasActiveDownload && !IsExpanded)
-        {
             IsExpanded = true;
-        }
     }
 
     private async Task ResolveCoverArt(InstallQueueItemViewModel vm)
@@ -326,6 +332,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             if (!File.Exists(localPath))
             {
                 var dir = Path.GetDirectoryName(localPath);
+                
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
@@ -362,6 +369,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             if (!File.Exists(localPath))
             {
                 var dir = Path.GetDirectoryName(localPath);
+                
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
@@ -436,6 +444,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         if (item == null) return;
 
         var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
+        
         await shell.NavigateToGameByIdAsync(item.Id);
     }
 
@@ -445,6 +454,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         if (item == null) return;
 
         var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
+        
         await shell.NavigateToGameByIdAsync(item.Id);
         await shell.GameDetailViewModel.ActionBar.PlayCommand.ExecuteAsync(null);
     }
@@ -453,22 +463,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         var member = typeof(InstallStatus).GetField(status.ToString());
         var display = member?.GetCustomAttribute<DisplayAttribute>();
+        
         return display?.Name ?? status.ToString();
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-        int order = 0;
-        double size = bytes;
-
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {sizes[order]}";
     }
 }
 
@@ -639,6 +635,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         if (item.Tasks != null && item.Tasks.Count > 0)
         {
             var ordered = item.Tasks.OrderBy(t => t.Order).ToList();
+            
             for (int i = 0; i < ordered.Count; i++)
             {
                 var vm = new InstallTaskItemViewModel(ordered[i])
@@ -646,6 +643,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
                     IsFirst = i == 0,
                     IsLast = i == ordered.Count - 1,
                 };
+                
                 Tasks.Add(vm);
             }
             HasTasks = true;
@@ -677,9 +675,9 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         TotalBytes = totalBytes;
 
         ProgressText = totalBytes > 0
-            ? $"{FormatBytes(bytesTransferred)} / {FormatBytes(totalBytes)}"
+            ? $"{ByteSize.FromBytes(bytesTransferred)} / {ByteSize.FromBytes(totalBytes)}"
             : string.Empty;
-        SpeedText = transferSpeed > 0 ? $"{FormatBytes(transferSpeed)}/s" : string.Empty;
+        SpeedText = transferSpeed > 0 ? $"{ByteSize.FromBytes(transferSpeed)}/s" : string.Empty;
         PercentText = totalBytes > 0 ? $"{progress:P0}" : string.Empty;
         StatusText = GetDisplayName(status);
 
@@ -725,9 +723,9 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         else
         {
             ProgressText = TotalBytes > 0
-                ? $"{FormatBytes(BytesDownloaded)} / {FormatBytes(TotalBytes)}"
+                ? $"{ByteSize.FromBytes(BytesDownloaded)} / {ByteSize.FromBytes(TotalBytes)}"
                 : string.Empty;
-            SpeedText = TransferSpeed > 0 ? $"{FormatBytes(TransferSpeed)}/s" : string.Empty;
+            SpeedText = TransferSpeed > 0 ? $"{ByteSize.FromBytes(TransferSpeed)}/s" : string.Empty;
             PercentText = TotalBytes > 0 ? $"{Progress:P0}" : string.Empty;
             StatusText = GetDisplayName(Status);
         }
@@ -744,20 +742,5 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         var member = typeof(InstallStatus).GetField(status.ToString());
         var display = member?.GetCustomAttribute<DisplayAttribute>();
         return display?.Name ?? status.ToString();
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-        int order = 0;
-        double size = bytes;
-
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {sizes[order]}";
     }
 }

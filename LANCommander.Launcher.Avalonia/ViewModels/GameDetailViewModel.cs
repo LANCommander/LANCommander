@@ -189,7 +189,9 @@ public partial class GameDetailViewModel : ViewModelBase
     /// </summary>
     public async Task RefreshInstallStatusAsync()
     {
-        if (Id == Guid.Empty) return;
+        if (Id == Guid.Empty)
+            return;
+        
         await ActionBar.RefreshAsync();
     }
 
@@ -250,9 +252,7 @@ public partial class GameDetailViewModel : ViewModelBase
                 MultiplayerModeDetails.Add(FormatMultiplayerMode(mode));
         }
         else
-        {
             MultiplayerModes = string.Empty;
-        }
 
         // Media items (screenshots / videos from local cache)
         // Collect paths first, add skeletons for screenshots, then lazy-load bitmaps off the UI thread
@@ -260,13 +260,16 @@ public partial class GameDetailViewModel : ViewModelBase
         TagsExpanded = false;
 
         var mediaEntries = new List<(string path, int index)>();
+        
         if (game.Media != null)
         {
             foreach (var m in game.Media.Where(m =>
                 m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
             {
                 var path = mediaService.FileExists(m) ? mediaService.GetImagePath(m) : null;
-                if (path == null) continue;
+                
+                if (path == null)
+                    continue;
 
                 if (m.Type == MediaType.Video)
                 {
@@ -299,6 +302,7 @@ public partial class GameDetailViewModel : ViewModelBase
             try
             {
                 var bitmap = await Task.Run(() => new Bitmap(entry.path));
+                
                 MediaItems[entry.index] = new GameMediaItemViewModel
                 {
                     Path = entry.path,
@@ -372,19 +376,19 @@ public partial class GameDetailViewModel : ViewModelBase
         // Multiplayer info
         HasMultiplayer = game.MultiplayerModes != null && game.MultiplayerModes.Any();
         MultiplayerModeDetails.Clear();
+        
         if (HasMultiplayer)
         {
             var modes = game.MultiplayerModes!
                 .Select(m => m.Type.ToString())
                 .Distinct();
             MultiplayerModes = string.Join(", ", modes);
+            
             foreach (var mode in game.MultiplayerModes!)
                 MultiplayerModeDetails.Add(FormatMultiplayerMode(mode));
         }
         else
-        {
             MultiplayerModes = string.Empty;
-        }
 
         // Reset media items and tags state while we re-load
         MediaItems.Clear();
@@ -400,10 +404,8 @@ public partial class GameDetailViewModel : ViewModelBase
         {
             // Try cached metadata from a previous visit
             if (_mediaCache.TryGetValue(game.Id, out var cached))
-            {
                 foreach (var _ in cached)
                     MediaItems.Add(new GameMediaItemViewModel { IsSkeleton = true });
-            }
         }
         else
         {
@@ -480,9 +482,7 @@ public partial class GameDetailViewModel : ViewModelBase
                     };
 
                     if (media.Type == MediaType.Video)
-                    {
                         item.Path = mediaClient.GetAbsoluteStreamUrl(media);
-                    }
                     else
                     {
                         var url = mediaClient.GetAbsoluteUrl(media);
@@ -554,16 +554,21 @@ public partial class GameDetailViewModel : ViewModelBase
     private string? GetLocalMediaPath(System.Collections.Generic.ICollection<Data.Models.Media>? mediaCollection, MediaType type, MediaService mediaService)
     {
         var media = mediaCollection?.FirstOrDefault(m => m.Type == type);
-        if (media == null) return null;
+        
+        if (media == null)
+            return null;
         
         var path = mediaService.GetImagePath(media);
+        
         return mediaService.FileExists(media) ? path : null;
     }
 
     private async Task<string?> GetOrDownloadMediaPathAsync(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)
     {
         var media = mediaCollection.FirstOrDefault(m => m.Type == type);
-        if (media == null) return null;
+        
+        if (media == null)
+            return null;
 
         try
         {
@@ -571,18 +576,15 @@ public partial class GameDetailViewModel : ViewModelBase
             
             // Check if file exists locally
             if (File.Exists(localPath))
-            {
                 return localPath;
-            }
 
             // Download the media
             _logger.LogDebug("Downloading media {MediaId} of type {Type}", media.Id, type);
+            
             var fileInfo = await mediaClient.DownloadAsync(media, localPath);
             
             if (fileInfo.Exists)
-            {
                 return fileInfo.FullName;
-            }
         }
         catch (Exception ex)
         {
@@ -596,6 +598,7 @@ public partial class GameDetailViewModel : ViewModelBase
     private void GoBack()
     {
         ActionBar.StopRunningCheck();
+        
         _navigationService.GoBack();
     }
 

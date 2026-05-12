@@ -110,6 +110,7 @@ public partial class DepotViewModel : ViewModelBase
 
             // Collect base game list
             var allGames = new List<DepotGame>();
+            
             foreach (var item in depotItems ?? [])
             {
                 if (item.DataItem is DepotGame dg &&
@@ -186,6 +187,7 @@ public partial class DepotViewModel : ViewModelBase
                         {
                             if (!genreGamesMap.TryGetValue(g.Name, out var list))
                                 genreGamesMap[g.Name] = list = new List<DepotGame>();
+                            
                             list.Add(game);
                         }
 
@@ -195,6 +197,7 @@ public partial class DepotViewModel : ViewModelBase
                         {
                             if (!collectionGamesMap.TryGetValue(c.Name, out var list))
                                 collectionGamesMap[c.Name] = list = new List<DepotGame>();
+                            
                             list.Add(game);
                         }
 
@@ -216,11 +219,13 @@ public partial class DepotViewModel : ViewModelBase
                 .Select(async kv =>
                 {
                     var popularRep = kv.Value.FirstOrDefault(g => popularHeroMap.ContainsKey(g.Id));
+                    
                     if (popularRep != null)
                         return (Name: kv.Key, HeroPath: popularHeroMap[popularRep.Id]);
 
                     var rep = kv.Value[rng.Next(kv.Value.Count)];
                     var heroPath = await FetchGameHeroAsync(rep, mediaClient, gameClient);
+                    
                     return (Name: kv.Key, HeroPath: heroPath);
                 })
                 .ToList();
@@ -235,11 +240,13 @@ public partial class DepotViewModel : ViewModelBase
                 .Select(async kv =>
                 {
                     var popularRep = kv.Value.FirstOrDefault(g => popularHeroMap.ContainsKey(g.Id));
+                    
                     if (popularRep != null)
                         return (Name: kv.Key, HeroPath: popularHeroMap[popularRep.Id]);
 
                     var rep = kv.Value[rng.Next(kv.Value.Count)];
                     var heroPath = await FetchGameHeroAsync(rep, mediaClient, gameClient);
+                    
                     return (Name: kv.Key, HeroPath: heroPath);
                 })
                 .ToList();
@@ -289,12 +296,14 @@ public partial class DepotViewModel : ViewModelBase
             string? GetLocalPath(MediaType type)
             {
                 var media = game.Media?.FirstOrDefault(m => m.Type == type);
+                
                 return (media != null && mediaService.FileExists(media))
                     ? mediaService.GetImagePath(media) : null;
             }
 
             var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
             var vm = new GameItemViewModel(game, GetLocalPath(MediaType.Cover), coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false);
+            
             vm.HeroPath = GetLocalPath(MediaType.Background);
             vm.LogoPath = GetLocalPath(MediaType.Logo);
 
@@ -315,7 +324,8 @@ public partial class DepotViewModel : ViewModelBase
     [RelayCommand]
     private async Task ViewGameAsync(GameItemViewModel? item)
     {
-        if (item == null) return;
+        if (item == null)
+            return;
 
         try
         {
@@ -324,7 +334,9 @@ public partial class DepotViewModel : ViewModelBase
             if (IsOfflineMode)
             {
                 var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+                
                 var local = await gameService.GetAsync(item.Id);
+                
                 if (local != null)
                     GameSelected?.Invoke(this, new SDK.Models.Game
                     {
@@ -338,8 +350,11 @@ public partial class DepotViewModel : ViewModelBase
             else
             {
                 var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+                
                 var game = await gameClient.GetAsync(item.Id);
-                if (game != null) GameSelected?.Invoke(this, game);
+                
+                if (game != null)
+                    GameSelected?.Invoke(this, game);
             }
         }
         catch (Exception ex)
@@ -356,16 +371,20 @@ public partial class DepotViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void BrowseByGenre(string name) => BrowseByGenreRequested?.Invoke(this, name);
+    private void BrowseByGenre(string name)
+        => BrowseByGenreRequested?.Invoke(this, name);
 
     [RelayCommand]
-    private void BrowseByTag(string name) => BrowseByTagRequested?.Invoke(this, name);
+    private void BrowseByTag(string name)
+        => BrowseByTagRequested?.Invoke(this, name);
 
     [RelayCommand]
-    private void BrowseByCollection(string name) => BrowseByCollectionRequested?.Invoke(this, name);
+    private void BrowseByCollection(string name)
+        => BrowseByCollectionRequested?.Invoke(this, name);
 
     [RelayCommand]
-    private void BrowseAll() => BrowseAllRequested?.Invoke(this, EventArgs.Empty);
+    private void BrowseAll()
+        => BrowseAllRequested?.Invoke(this, EventArgs.Empty);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -378,7 +397,9 @@ public partial class DepotViewModel : ViewModelBase
         try
         {
             var game = await gameClient.GetAsync(depotGame.Id);
-            if (game == null) return null;
+            
+            if (game == null)
+                return null;
 
             var inLibrary  = librarySet.Contains(game.Id);
             var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
@@ -387,8 +408,10 @@ public partial class DepotViewModel : ViewModelBase
             var logoPath   = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Logo), mediaClient);
 
             var vm = new GameItemViewModel(depotGame, coverPath, coverMedia?.MimeType, inLibrary);
+            
             vm.HeroPath = heroPath;
             vm.LogoPath = logoPath;
+            
             return vm;
         }
         catch (Exception ex)
@@ -403,6 +426,7 @@ public partial class DepotViewModel : ViewModelBase
         try
         {
             var game = await gameClient.GetAsync(depotGame.Id);
+            
             return await GetOrDownloadMediaAsync(game?.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
         }
         catch
@@ -413,12 +437,17 @@ public partial class DepotViewModel : ViewModelBase
 
     private static async Task<string?> GetOrDownloadMediaAsync(Media? media, MediaClient mediaClient)
     {
-        if (media == null) return null;
+        if (media == null)
+            return null;
         try
         {
             var localPath = mediaClient.GetLocalPath(media);
-            if (File.Exists(localPath)) return localPath;
+            
+            if (File.Exists(localPath))
+                return localPath;
+            
             var file = await mediaClient.DownloadAsync(media, localPath);
+            
             return file.Exists ? file.FullName : null;
         }
         catch

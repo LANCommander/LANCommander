@@ -110,20 +110,19 @@ public static class Authentication
 
             options.Events.OnRemoteFailure = async context =>
             {
-                context.Response.Redirect("/Login");
-                
                 Console.WriteLine($"Error: OIDC authentication failed: {context.Failure?.Message}");
 
-                await context.Response.CompleteAsync();
+                context.HandleResponse();
+                context.Response.Redirect("/Login");
             };
 
-            options.Events.OnTokenValidated = async context =>
+            options.Events.OnTicketReceived = async context =>
             {
                 var identity = new ClaimsIdentity(context.Principal.Claims, IdentityConstants.ApplicationScheme);
-                
+
                 await ProcessLogin(context.HttpContext, context.Response, identity, authenticationProvider, context.Properties);
-                
-                await context.Response.CompleteAsync();
+
+                context.HandleResponse();
             };
         });
     }
@@ -159,11 +158,10 @@ public static class Authentication
 
             options.Events.OnRemoteFailure = async context =>
             {
-                context.Response.Redirect("/Login");
-                
                 Console.WriteLine($"Error: OAuth authentication failed: {context.Failure?.Message}");
-                
-                await context.Response.CompleteAsync();
+
+                context.HandleResponse();
+                context.Response.Redirect("/Login");
             };
 
             options.Events.OnCreatingTicket = async context =>
@@ -183,12 +181,15 @@ public static class Authentication
                 context.Identity.AddClaim(new Claim("Provider", authenticationProvider.Name));
 
                 context.RunClaimActions(oauthUser.RootElement);
+            };
 
-                var identity = new ClaimsIdentity(context.Identity.Claims, IdentityConstants.ApplicationScheme);
-                
+            options.Events.OnTicketReceived = async context =>
+            {
+                var identity = new ClaimsIdentity(context.Principal.Claims, IdentityConstants.ApplicationScheme);
+
                 await ProcessLogin(context.HttpContext, context.Response, identity, authenticationProvider, context.Properties);
-                
-                await context.Response.CompleteAsync();
+
+                context.HandleResponse();
             };
         });
     }

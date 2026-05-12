@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
+            xmlns:sdk="using:LANCommander.SDK.Models"
             xmlns:svg="using:Avalonia.Svg.Skia"
             x:Class="LANCommander.Launcher.Avalonia.Views.LoginView"
             x:DataType="vm:LoginViewModel">
@@ -105,7 +106,7 @@
                         <TextBlock Text="Sign In" />
                     </Panel>
                 </Button>
-                
+
                 <StackPanel HorizontalAlignment="Center" Spacing="12" IsVisible="{Binding IsLoading}">
                     <ProgressBar IsIndeterminate="True"
                                  Width="200"
@@ -115,6 +116,32 @@
                                Opacity="0.75"
                                FontSize="12"
                                HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding AuthenticationProviders.Count}" Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto,*" Margin="0,4">
+                        <Separator Grid.Column="0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="or" Foreground="White" Opacity="0.5" Margin="12,0" FontSize="12" />
+                        <Separator Grid.Column="2" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding AuthenticationProviders}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="sdk:AuthenticationProvider">
+                                <Button Command="{Binding $parent[ItemsControl].((vm:LoginViewModel)DataContext).LoginWithProviderCommand}"
+                                        CommandParameter="{Binding}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Classes="Glass Large"
+                                        Margin="0,0,0,4"
+                                        IsEnabled="{Binding $parent[ItemsControl].((vm:LoginViewModel)DataContext).IsLoading, Converter={x:Static BoolConverters.Not}}">
+                                    <TextBlock>
+                                        <Run Text="Sign in with " /><Run Text="{Binding Name}" />
+                                    </TextBlock>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </StackPanel>
         </Border>

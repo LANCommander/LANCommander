@@ -196,6 +196,32 @@ public class AuthenticationClient(
     {
         return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");
     }
+
+    public Uri GetAuthenticationProviderLoginUrl(string provider, string requestId)
+    {
+        return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}&requestId={requestId}");
+    }
+
+    public async Task<AuthToken?> RedeemTokenAsync(string code)
+    {
+        try
+        {
+            var result = await apiRequestFactory
+                .Create()
+                .UseRoute($"/api/Auth/Token/{code}")
+                .UseMethod(HttpMethod.Get)
+                .SendAsync<AuthToken>();
+
+            if (result.Response.IsSuccessStatusCode)
+                return result.Data;
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
     
     internal async Task<ErrorResponse> ParseErrorResponseAsync(HttpResponseMessage response, bool defaultToGenericResponse = false)
     {

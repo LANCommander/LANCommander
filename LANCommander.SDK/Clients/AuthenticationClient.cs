@@ -187,7 +187,7 @@ public class AuthenticationClient(
     {
         return await apiRequestFactory
             .Create()
-            .UseRoute("/api/Auth/GetAuthenticationProviders")
+            .UseRoute("/api/Auth/AuthenticationProviders")
             .UseVersioning()
             .GetAsync<IEnumerable<AuthenticationProvider>>();
     }

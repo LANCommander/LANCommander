@@ -113,11 +113,13 @@ public static class Authentication
                 Console.WriteLine($"Error: OIDC authentication failed: {context.Failure?.Message}");
 
                 context.HandleResponse();
-                context.Response.Redirect("/Login");
+                context.Response.Redirect($"/Login?error={Uri.EscapeDataString(context.Failure?.Message ?? "Unknown authentication error")}");
             };
 
             options.Events.OnTicketReceived = async context =>
             {
+                context.Properties.RedirectUri ??= context.ReturnUri;
+
                 var identity = new ClaimsIdentity(context.Principal.Claims, IdentityConstants.ApplicationScheme);
 
                 await ProcessLogin(context.HttpContext, context.Response, identity, authenticationProvider, context.Properties);
@@ -161,7 +163,7 @@ public static class Authentication
                 Console.WriteLine($"Error: OAuth authentication failed: {context.Failure?.Message}");
 
                 context.HandleResponse();
-                context.Response.Redirect("/Login");
+                context.Response.Redirect($"/Login?error={Uri.EscapeDataString(context.Failure?.Message ?? "Unknown authentication error")}");
             };
 
             options.Events.OnCreatingTicket = async context =>
@@ -185,6 +187,8 @@ public static class Authentication
 
             options.Events.OnTicketReceived = async context =>
             {
+                context.Properties.RedirectUri ??= context.ReturnUri;
+
                 var identity = new ClaimsIdentity(context.Principal.Claims, IdentityConstants.ApplicationScheme);
 
                 await ProcessLogin(context.HttpContext, context.Response, identity, authenticationProvider, context.Properties);

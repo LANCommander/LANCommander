@@ -676,7 +676,7 @@ namespace LANCommander.SDK.Services
         /// Generates an install plan for a game, producing a list of queue items and their tasks
         /// without executing anything.
         /// </summary>
-        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null)
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null, Guid[] toolIds = null)
         {
             logger?.LogInformation("[InstallQueue] GenerateInstallPlan: gameId={GameId}, installDir={InstallDir}, addonIds={AddonIds}",
                 gameId, installDirectory, addonIds != null ? string.Join(",", addonIds) : "none");
@@ -874,6 +874,23 @@ namespace LANCommander.SDK.Services
                     });
 
                     plan.Items.Add(redistItem);
+                }
+            }
+
+            // Tool items
+            if (toolIds != null)
+            {
+                foreach (var toolId in toolIds)
+                {
+                    var tool = await toolClient.GetAsync(toolId);
+                    var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, settingsProvider.CurrentValue.Tools.InstallDirectory);
+
+                    foreach (var toolPlanItem in toolPlan.Items)
+                    {
+                        toolPlanItem.Order = plan.Items.Count;
+                        toolPlanItem.DependsOnId = game.Id;
+                        plan.Items.Add(toolPlanItem);
+                    }
                 }
             }
 
@@ -2000,12 +2017,19 @@ namespace LANCommander.SDK.Services
                     await task;
 
                     _running.Remove(gameId);
+                    cancellationTokenSource.Dispose();
 
                     await UploadSavesAsync(manifests, installDirectory);
                 }
                 catch (Exception ex)
                 {
+                    if (_running.TryGetValue(gameId, out var cts))
+                    {
+                        _running.Remove(gameId);
+                        cts.Dispose();
+                    }
                     logger?.LogError(ex, "Game failed to run");
+                    throw;
                 }
 
                 foreach (var manifest in manifests)

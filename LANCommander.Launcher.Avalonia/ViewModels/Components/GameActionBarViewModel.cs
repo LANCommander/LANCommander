@@ -533,6 +533,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             {
                 _logger.LogError(ex, "Failed to play game {GameId}", GameId);
                 StatusMessage = $"Failed to start: {ex.Message}";
+                await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
             }
             finally
             {
@@ -573,6 +574,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to run action {ActionName} for game {GameId}", action.Name, GameId);
             StatusMessage = $"Failed to start: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
         }
         finally
         {
@@ -653,6 +655,7 @@ public partial class GameActionBarViewModel : ViewModelBase
 
             var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
             var availableAddons    = Array.Empty<SDK.Models.Game>();
+            var availableTools     = Array.Empty<SDK.Models.Tool>();
 
             try
             {
@@ -664,7 +667,17 @@ public partial class GameActionBarViewModel : ViewModelBase
                 _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
             }
 
-            var needsDialog = availableAddons.Length > 0 || installDirectories.Length > 1;
+            try
+            {
+                var tools = await gameClient.GetToolsAsync(GameId);
+                availableTools = tools?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+            }
+
+            var needsDialog = availableAddons.Length > 0 || availableTools.Length > 0 || installDirectories.Length > 1;
 
             // ── Build options VM ───────────────────────────────────────────────
             var optionsVm = new InstallOptionsViewModel();
@@ -692,6 +705,10 @@ public partial class GameActionBarViewModel : ViewModelBase
                          .OrderBy(a => a.Type)
                          .ThenBy(a => a.Title ?? string.Empty))
                 optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: false));
+
+            // Add tools sorted by name
+            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: false));
 
             // ── Show dialog if needed ──────────────────────────────────────────
             if (needsDialog)
@@ -739,7 +756,8 @@ public partial class GameActionBarViewModel : ViewModelBase
             await installService.Add(
                 localGame,
                 optionsVm.SelectedInstallDirectory,
-                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null);
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
@@ -772,6 +790,7 @@ public partial class GameActionBarViewModel : ViewModelBase
 
             var localGame = await dbContext.Set<Data.Models.Game>()
                 .Include(g => g.DependentGames)
+                .Include(g => g.Tools)
                 .FirstOrDefaultAsync(g => g.Id == GameId);
 
             if (localGame == null)
@@ -780,6 +799,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             // ── Gather options ─────────────────────────────────────────────────
             var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
             var availableAddons    = Array.Empty<SDK.Models.Game>();
+            var availableTools     = Array.Empty<SDK.Models.Tool>();
 
             try
             {
@@ -791,11 +811,27 @@ public partial class GameActionBarViewModel : ViewModelBase
                 _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
             }
 
+            try
+            {
+                var tools = await gameClient.GetToolsAsync(GameId);
+                availableTools = tools?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+            }
+
             // Build set of currently installed addon IDs
             var installedAddonIds = new HashSet<Guid>(
                 (localGame.DependentGames ?? [])
                     .Where(a => a.Installed)
                     .Select(a => a.Id));
+
+            // Build set of currently installed tool IDs
+            var installedToolIds = new HashSet<Guid>(
+                (localGame.Tools ?? [])
+                    .Where(t => t.Installed)
+                    .Select(t => t.Id));
 
             // ── Build options VM ───────────────────────────────────────────────
             var optionsVm = new InstallOptionsViewModel();
@@ -839,6 +875,10 @@ public partial class GameActionBarViewModel : ViewModelBase
                          .ThenBy(a => a.Title ?? string.Empty))
                 optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: installedAddonIds.Contains(addon.Id)));
 
+            // Add tools sorted by name; pre-select currently installed ones
+            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: installedToolIds.Contains(tool.Id)));
+
             // ── Show dialog ───────────────────────────────────────────────────
             var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
 
@@ -873,13 +913,14 @@ public partial class GameActionBarViewModel : ViewModelBase
                 return;
 
             // ── Queue the modification ────────────────────────────────────────
-            _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}",
-                GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length);
+            _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}, tools={ToolCount}",
+                GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length, optionsVm.SelectedTools.Length);
 
             await installService.Add(
                 localGame,
                 optionsVm.SelectedInstallDirectory,
-                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null);
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
@@ -1102,14 +1143,23 @@ public partial class GameActionBarViewModel : ViewModelBase
     {
         try
         {
-            var viewModel = new ManualViewerViewModel(manual.Title, manual.FilePath);
-            var window = new Views.ManualViewerWindow
-            {
-                DataContext = viewModel
-            };
+            var items = new List<LightboxItem>();
+            int startIndex = 0;
 
-            viewModel.CloseAction = () => window.Close();
-            window.Show();
+            for (int i = 0; i < Manuals.Count; i++)
+            {
+                items.Add(new LightboxItem
+                {
+                    Type = LightboxItemType.Pdf,
+                    Path = Manuals[i].FilePath,
+                    Title = Manuals[i].Title,
+                });
+
+                if (Manuals[i] == manual)
+                    startIndex = i;
+            }
+
+            LightboxOverlay.ShowOverlay(items, startIndex);
         }
         catch (Exception ex)
         {

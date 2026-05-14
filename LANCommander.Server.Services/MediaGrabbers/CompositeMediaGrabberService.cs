@@ -14,11 +14,12 @@ namespace LANCommander.Server.Services.MediaGrabbers
         public MediaType[] SupportedMediaTypes => _grabbers.SelectMany(g => g.SupportedMediaTypes).Distinct().ToArray();
 
         public CompositeMediaGrabberService(
+            HqMediaGrabber hq,
             SteamMediaGrabber steam,
             SteamGridDBMediaGrabber steamGridDb,
             YouTubeMediaGrabber youtube)
         {
-            _grabbers = new List<IMediaGrabberService> { steam, steamGridDb, youtube };
+            _grabbers = new List<IMediaGrabberService> { hq, steam, steamGridDb, youtube };
         }
 
         public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)

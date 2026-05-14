@@ -55,7 +55,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         SplashViewModel = new SplashViewModel();
         ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider);
-        LoginViewModel = new LoginViewModel(connectionClient, authenticationService, settingsProvider);
+        LoginViewModel = new LoginViewModel(connectionClient, authenticationService, serviceProvider.GetRequiredService<AuthenticationClient>(), settingsProvider);
         ShellViewModel = new ShellViewModel(serviceProvider);
 
         // Propagate shell titlebar tint changes
@@ -133,6 +133,10 @@ public partial class MainWindowViewModel : ViewModelBase
             // If server is offline and no credentials, user stays on login (can't proceed)
             LoginViewModel.ServerAddress = settings.Authentication.ServerAddress.ToString();
             LoginViewModel.IsServerOffline = !serverOnline;
+            
+            if (serverOnline)
+                await LoginViewModel.LoadAuthenticationProvidersAsync();
+            
             CurrentView = LoginViewModel;
             return;
         }
@@ -141,10 +145,11 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentView = ServerSelectionViewModel;
     }
 
-    private void OnServerConnected(object? sender, EventArgs e)
+    private async void OnServerConnected(object? sender, EventArgs e)
     {
         LoginViewModel.ServerAddress = _connectionClient.GetServerAddress()?.ToString() ?? string.Empty;
         LoginViewModel.IsServerOffline = false;
+        await LoginViewModel.LoadAuthenticationProvidersAsync();
         CurrentView = LoginViewModel;
     }
 

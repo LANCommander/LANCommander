@@ -15,6 +15,7 @@ namespace LANCommander.Server.Services
     public sealed class RedistributableService(
         ILogger<SDK.Services.RedistributableClient> logger,
         ArchiveService archiveService,
+        StorageLocationService storageLocationService,
         SettingsProvider<Settings.Settings> settingsProvider,
         ScriptClient scriptClient,
         IFusionCache cache,
@@ -81,7 +82,7 @@ namespace LANCommander.Server.Services
             logger?.LogInformation("Packaging redistributable {RedistributableName}", redistributable.Name);
 
             var latestArchive = redistributable.Archives?.OrderByDescending(r => r.CreatedOn).FirstOrDefault();
-            var storageLocationId = latestArchive?.StorageLocationId;
+            var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
             if (redistributable.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
@@ -89,11 +90,18 @@ namespace LANCommander.Server.Services
                 {
                     var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable));
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
+                    {
+                        logger?.LogError("Could not package redistributable {RedistributableName}, the package script did not return a result", redistributable.Name);
+                        continue;
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
                         logger?.LogError(
                             "Could not package redistributable {RedistributableName}, the path {Path} could not be found",
                             redistributable.Name, package.Path);
+                        continue;
                     }
 
                     var archive = new Archive
@@ -102,7 +110,7 @@ namespace LANCommander.Server.Services
                         RedistributableId = redistributable.Id,
                         ObjectKey = Guid.NewGuid().ToString(),
                         LastVersion = latestArchive,
-                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                        StorageLocationId = storageLocation.Id,
                     };
 
                     archive = await archiveService.AddAsync(archive);

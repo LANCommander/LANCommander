@@ -25,7 +25,7 @@ public sealed class ServerConfigurationSource : IConfigurationSource
     public IConfigurationProvider Build(IConfigurationBuilder builder) => Provider = new ServerConfigurationProvider(this); 
 }
 
-public sealed class ServerConfigurationProvider : ConfigurationProvider
+public sealed class ServerConfigurationProvider : ConfigurationProvider, IDisposable
 {
     private readonly ServerConfigurationSource _source;
     private readonly HttpClient _httpClient;
@@ -33,7 +33,7 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
     public ServerConfigurationProvider(ServerConfigurationSource source)
     {
         var settings = new Settings();
-        
+
         _source = source;
         _source.Configuration.Bind(settings);
 
@@ -41,6 +41,11 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
         {
             BaseAddress = settings.Authentication.ServerAddress
         };
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
     }
 
     public override void Load() => RefreshAsync().GetAwaiter().GetResult();

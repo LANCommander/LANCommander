@@ -19,4 +19,8 @@ public partial class GameMediaItemViewModel : ObservableObject
     /// <summary>Pre-loaded bitmap for screenshot display (loaded from local file or remote URL).</summary>
     [ObservableProperty]
     private Bitmap? _imageSource;
+
+    /// <summary>When true, this item is a loading placeholder that will be replaced with real content.</summary>
+    [ObservableProperty]
+    private bool _isSkeleton;
 }

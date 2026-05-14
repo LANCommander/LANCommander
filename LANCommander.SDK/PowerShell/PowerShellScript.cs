@@ -235,11 +235,21 @@ namespace LANCommander.SDK.PowerShell
                     {
                         await dbg.BreakAsync(DebugContext);
                     });
-                    
+
+                    if (Context.HadErrors)
+                    {
+                        foreach (var error in Context.Streams.Error)
+                        {
+                            Logger.LogError("Script error: {InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+                        }
+                    }
+
                     var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
 
                     if (returnValue != null)
                         result = (T)returnValue;
+                    else
+                        Logger.LogWarning("Script did not set $Return variable");
                 }
                 catch (Exception ex)
                 {

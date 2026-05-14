@@ -1,0 +1,193 @@
+@page "/Settings/Integrations/HQ"
+@using LANCommander.Server.Settings
+@using LANCommander.HQ.SDK
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
+@inject HQClient HqClient
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject IJSRuntime JS
+@inject ILogger<HQ> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="LANCommander HQ">
+    <PageHeaderExtra>
+        <a class="ant-btn ant-btn-text ant-btn-icon-only" href="https://lancommander.app/HQ">
+            <Icon Type="question" Theme="IconThemeType.Outline"/>
+        </a>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent>
+    @if (_connected)
+    {
+        @if (_isPremium)
+        {
+            <Result Status="ResultStatus.Success" Title="Premium Account" SubTitle="Thank you for supporting LANCommander!">
+                <Extra>
+                    <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Account</a>
+                    <Button Danger OnClick="Disconnect">Unlink</Button>
+                </Extra>
+            </Result>
+        }
+        else
+        {
+            <Result Status="ResultStatus.Success" Title="Basic Account">
+                <ChildContent>
+                    <Text>Your server is linked to a basic account. Upgrade your account to access the following features:</Text>
+                    <ul>
+                        <li>Access premium metadata providers</li>
+                        <li>Curated/enhanced metadata</li>
+                        <li>Support future LANCommander development!</li>
+                    </ul>
+                </ChildContent>
+                <Extra>
+                    <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Upgrade</a>
+                    <Button Danger OnClick="Disconnect">Unlink</Button>
+                </Extra>
+            </Result>
+        }
+    }
+    else
+    {
+        <h3>Account Connection</h3>
+        <Text>Connect your server to LANCommander HQ for enhanced metadata and media.</Text>
+        <h4>Basic Features</h4>
+        <ul>
+            <li>Access more metadata providers</li>
+            <li>Faster metadata access</li>
+            <li>One-time authentication</li>
+            <li>No additional server setup required</li>
+        </ul>
+        <h4>Premium Features</h4>
+        <ul>
+            <li>Access premium metadata providers</li>
+            <li>Curated/enhanced metadata</li>
+            <li>Support future LANCommander development!</li>
+        </ul>
+
+        <Button Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth">Connect</Button>
+    }
+
+    <Divider Text="Advanced" />
+
+    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <FormItem Label="Base URL">
+            <Input @bind-Value="context.Server.HQ.BaseUrl" />
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    bool _connected;
+    bool _isPremium;
+    bool _awaitingAuth;
+
+    Timer? _pollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckStatus();
+    }
+
+    async Task CheckStatus()
+    {
+        try
+        {
+            if (!SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            {
+                _connected = false;
+                return;
+            }
+
+            var profile = await HqClient.Auth.GetCurrentUserAsync();
+
+            if (profile is not null)
+            {
+                _connected = true;
+                _isPremium = profile.IsPremium;
+            }
+            else
+                _connected = false;
+        }
+        catch
+        {
+            _connected = false;
+        }
+    }
+
+    async Task Connect()
+    {
+        var baseUrl = Settings.Value.Server.HQ.BaseUrl.TrimEnd('/');
+        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/hq/callback";
+        var loginUrl = $"{baseUrl}/auth/login?returnUrl={Uri.EscapeDataString(callbackUrl)}";
+
+        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
+
+        _awaitingAuth = true;
+
+        _pollTimer = new Timer(async _ =>
+        {
+            if (SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            {
+                await InvokeAsync(async () =>
+                {
+                    _awaitingAuth = false;
+                    StopPolling();
+                    await CheckStatus();
+
+                    if (_connected)
+                        MessageService.Success("Successfully connected to LANCommander HQ!");
+
+                    StateHasChanged();
+                });
+            }
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    async Task Disconnect()
+    {
+        SettingsProvider.Update(s =>
+        {
+            s.Server.HQ.AccessToken = string.Empty;
+            s.Server.HQ.TokenExpiresAt = null;
+        });
+
+        _connected = false;
+        _isPremium = false;
+
+        MessageService.Success("Disconnected from LANCommander HQ.");
+    }
+
+    void Save()
+    {
+        try
+        {
+            SettingsProvider.Update(s =>
+            {
+                s.Server.HQ.BaseUrl = Settings.Value.Server.HQ.BaseUrl;
+            });
+
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+
+    void StopPolling()
+    {
+        _pollTimer?.Dispose();
+        _pollTimer = null;
+    }
+
+    public void Dispose()
+    {
+        StopPolling();
+    }
+}

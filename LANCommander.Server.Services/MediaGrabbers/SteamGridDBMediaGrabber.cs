@@ -92,9 +92,11 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         private async Task<IEnumerable<MediaGrabberResult>> GetIconsAsync(SteamGridDbGame game)
         {
-            var icons = await SteamGridDb.GetIconsByGameIdAsync(game.Id);
+            var results = new List<MediaGrabberResult>();
 
-            return icons.Where(i => SupportedFormats.Contains(i.Format)).Select(i => new MediaGrabberResult()
+            var icons = await SteamGridDb.GetIconsByGameIdAsync(game.Id, types: SteamGridDbTypes.Static);
+
+            results.AddRange(icons.Where(i => SupportedFormats.Contains(i.Format)).Select(i => new MediaGrabberResult()
             {
                 Id = i.Id.ToString(),
                 Type = MediaType.Icon,
@@ -102,14 +104,30 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 ThumbnailUrl = i.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(i.Format)
-            });
+            }));
+
+            var animatedIcons = await SteamGridDb.GetIconsByGameIdAsync(game.Id, types: SteamGridDbTypes.Animated);
+
+            results.AddRange(animatedIcons.Where(i => i.Format == SteamGridDbFormats.Png).Select(i => new MediaGrabberResult()
+            {
+                Id = i.Id.ToString(),
+                Type = MediaType.Icon,
+                SourceUrl = i.FullImageUrl,
+                ThumbnailUrl = i.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = "image/apng"
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetCoversAsync(SteamGridDbGame game)
         {
-            var covers = await SteamGridDb.GetGridsByGameIdAsync(game.Id);
+            var results = new List<MediaGrabberResult>();
 
-            return covers.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            var covers = await SteamGridDb.GetGridsByGameIdAsync(game.Id, types: SteamGridDbTypes.Static);
+
+            results.AddRange(covers.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Cover,
@@ -117,14 +135,30 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
-            });
+            }));
+
+            var animatedCovers = await SteamGridDb.GetGridsByGameIdAsync(game.Id, types: SteamGridDbTypes.Animated);
+
+            results.AddRange(animatedCovers.Where(b => b.Format == SteamGridDbFormats.Png).Select(b => new MediaGrabberResult()
+            {
+                Id = b.Id.ToString(),
+                Type = MediaType.Cover,
+                SourceUrl = b.FullImageUrl,
+                ThumbnailUrl = b.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = "image/apng"
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetBackgroundsAsync(SteamGridDbGame game)
         {
-            var backgrounds = await SteamGridDb.GetHeroesByGameIdAsync(game.Id);
+            var results = new List<MediaGrabberResult>();
 
-            return backgrounds.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            var backgrounds = await SteamGridDb.GetHeroesByGameIdAsync(game.Id, types: SteamGridDbTypes.Static);
+
+            results.AddRange(backgrounds.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Background,
@@ -132,14 +166,30 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
-            });
+            }));
+
+            var animatedBackgrounds = await SteamGridDb.GetHeroesByGameIdAsync(game.Id, types: SteamGridDbTypes.Animated);
+
+            results.AddRange(animatedBackgrounds.Where(b => b.Format == SteamGridDbFormats.Png).Select(b => new MediaGrabberResult()
+            {
+                Id = b.Id.ToString(),
+                Type = MediaType.Background,
+                SourceUrl = b.FullImageUrl,
+                ThumbnailUrl = b.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = "image/apng"
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetLogosAsync(SteamGridDbGame game)
         {
-            var logos = await SteamGridDb.GetLogosByGameIdAsync(game.Id);
+            var results = new List<MediaGrabberResult>();
 
-            return logos.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            var logos = await SteamGridDb.GetLogosByGameIdAsync(game.Id, types: SteamGridDbTypes.Static);
+
+            results.AddRange(logos.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Logo,
@@ -147,16 +197,33 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
-            });
+            }));
+
+            var animatedLogos = await SteamGridDb.GetLogosByGameIdAsync(game.Id, types: SteamGridDbTypes.Animated);
+
+            results.AddRange(animatedLogos.Where(b => b.Format == SteamGridDbFormats.Png).Select(b => new MediaGrabberResult()
+            {
+                Id = b.Id.ToString(),
+                Type = MediaType.Logo,
+                SourceUrl = b.FullImageUrl,
+                ThumbnailUrl = b.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = "image/apng"
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetGridsAsync(SteamGridDbGame game)
         {
+            var results = new List<MediaGrabberResult>();
+
             var grids = await SteamGridDb.GetGridsByGameIdAsync(
                 game.Id,
-                dimensions: SteamGridDbDimensions.W460H215 | SteamGridDbDimensions.W920H430);
+                dimensions: SteamGridDbDimensions.W460H215 | SteamGridDbDimensions.W920H430,
+                types: SteamGridDbTypes.Static);
 
-            return grids.Where(g => SupportedFormats.Contains(g.Format)).Select(g => new MediaGrabberResult()
+            results.AddRange(grids.Where(g => SupportedFormats.Contains(g.Format)).Select(g => new MediaGrabberResult()
             {
                 Id = g.Id.ToString(),
                 Type = MediaType.Grid,
@@ -164,7 +231,24 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 ThumbnailUrl = g.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(g.Format)
-            });
+            }));
+
+            var animatedGrids = await SteamGridDb.GetGridsByGameIdAsync(
+                game.Id,
+                dimensions: SteamGridDbDimensions.W460H215 | SteamGridDbDimensions.W920H430,
+                types: SteamGridDbTypes.Animated);
+
+            results.AddRange(animatedGrids.Where(g => g.Format == SteamGridDbFormats.Png).Select(g => new MediaGrabberResult()
+            {
+                Id = g.Id.ToString(),
+                Type = MediaType.Grid,
+                SourceUrl = g.FullImageUrl,
+                ThumbnailUrl = g.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = "image/apng"
+            }));
+
+            return results;
         }
 
         private string GetMimeType(SteamGridDbFormats format)

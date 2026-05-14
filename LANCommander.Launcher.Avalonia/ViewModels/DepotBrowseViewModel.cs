@@ -112,14 +112,14 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         {
             var genre = AvailableGenres.FirstOrDefault(g =>
                 string.Equals(g.Name, preFilterGenre, StringComparison.OrdinalIgnoreCase));
+            
             if (genre != null)
                 SelectedGenre = genre;
         }
 
         if (!string.IsNullOrEmpty(preFilterTag))
         {
-            SelectedTag = AvailableTags.FirstOrDefault(t =>
-                string.Equals(t, preFilterTag, StringComparison.OrdinalIgnoreCase));
+            SelectedTag = AvailableTags.FirstOrDefault(t => string.Equals(t, preFilterTag, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrEmpty(preFilterCollection))
@@ -178,7 +178,8 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
             if (IsOfflineMode)
             {
                 var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-                var localGame   = await gameService.GetAsync(gameItem.Id);
+                var localGame = await gameService.GetAsync(gameItem.Id);
+                
                 if (localGame != null)
                     RaiseGameSelected(new SDK.Models.Game
                     {
@@ -192,8 +193,11 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
             else
             {
                 var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-                var game       = await gameClient.GetAsync(gameItem.Id);
-                if (game != null) RaiseGameSelected(game);
+                
+                var game = await gameClient.GetAsync(gameItem.Id);
+                
+                if (game != null)
+                    RaiseGameSelected(game);
             }
         }
         catch (Exception ex)

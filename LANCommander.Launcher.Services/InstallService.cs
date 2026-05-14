@@ -134,7 +134,7 @@ namespace LANCommander.Launcher.Services
             await Add(game, installDirectory, selectedAddons);
         }
 
-        public async Task Add(Game game, string installDirectory = "", SDK.Models.Game[]? addons = null)
+        public async Task Add(Game game, string installDirectory = "", SDK.Models.Game[]? addons = null, SDK.Models.Tool[]? tools = null)
         {
             var gameInfo = await _gameClient.GetAsync(game.Id);
 
@@ -169,9 +169,10 @@ namespace LANCommander.Launcher.Services
 
             // Generate install plan from SDK
             var addonIds = addons?.Select(x => x.Id).ToArray();
-            Logger?.LogInformation("[InstallQueue] Add: Generating install plan for {GameTitle} ({GameId}) with {AddonCount} addons",
-                gameInfo.Title, game.Id, addonIds?.Length ?? 0);
-            var plan = await _gameClient.GenerateInstallPlanAsync(game.Id, installDirectory, addonIds);
+            var toolIds = tools?.Select(x => x.Id).ToArray();
+            Logger?.LogInformation("[InstallQueue] Add: Generating install plan for {GameTitle} ({GameId}) with {AddonCount} addons and {ToolCount} tools",
+                gameInfo.Title, game.Id, addonIds?.Length ?? 0, toolIds?.Length ?? 0);
+            var plan = await _gameClient.GenerateInstallPlanAsync(game.Id, installDirectory, addonIds, toolIds);
 
             // Clear all non-active items for entities in the plan to avoid stale history
             try

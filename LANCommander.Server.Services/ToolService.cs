@@ -15,6 +15,7 @@ namespace LANCommander.Server.Services
     public sealed class ToolService(
         ILogger<SDK.Services.ToolClient> logger,
         ArchiveService archiveService,
+        StorageLocationService storageLocationService,
         SettingsProvider<Settings.Settings> settingsProvider,
         ScriptClient scriptClient,
         IFusionCache cache,
@@ -81,7 +82,7 @@ namespace LANCommander.Server.Services
             logger?.LogInformation("Packaging tool {ToolName}", tool.Name);
 
             var latestArchive = tool.Archives?.OrderByDescending(r => r.CreatedOn).FirstOrDefault();
-            var storageLocationId = latestArchive?.StorageLocationId;
+            var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
             if (tool.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
@@ -89,11 +90,18 @@ namespace LANCommander.Server.Services
                 {
                     var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
+                    {
+                        logger?.LogError("Could not package tool {ToolName}, the package script did not return a result", tool.Name);
+                        continue;
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
                         logger?.LogError(
                             "Could not package tool {ToolName}, the path {Path} could not be found",
                             tool.Name, package.Path);
+                        continue;
                     }
 
                     var archive = new Archive
@@ -102,7 +110,7 @@ namespace LANCommander.Server.Services
                         ToolId = tool.Id,
                         ObjectKey = Guid.NewGuid().ToString(),
                         LastVersion = latestArchive,
-                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                        StorageLocationId = storageLocation.Id,
                     };
 
                     archive = await archiveService.AddAsync(archive);

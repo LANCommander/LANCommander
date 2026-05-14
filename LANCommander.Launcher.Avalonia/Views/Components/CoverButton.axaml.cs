@@ -34,11 +34,17 @@ public partial class CoverButton : UserControl
     {
         base.OnPointerEntered(e);
         ZIndex = 100;
+
+        if (CoverControl != null)
+            CoverControl.IsPlayingAnimation = true;
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
         ZIndex = 0;
+
+        if (CoverControl != null)
+            CoverControl.IsPlayingAnimation = false;
     }
 }

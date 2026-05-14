@@ -176,6 +176,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     partial void OnSelectedThreadChanged(ChatThreadViewModel? oldValue, ChatThreadViewModel? newValue)
     {
         SendMessageCommand.NotifyCanExecuteChanged();
+        
         if (newValue != null)
         {
             _ = MarkThreadReadAsync(newValue);
@@ -197,9 +198,7 @@ public partial class ChatWindowViewModel : ViewModelBase
             var response = await _chatClient.GetMessagesAsync(threadVm.Thread.Id, null, 50);
 
             if (response.Items != null && response.Items.Any())
-            {
                 await threadVm.Thread.MessagesReceivedAsync(response.Items);
-            }
         }
         catch (Exception ex)
         {
@@ -215,7 +214,9 @@ public partial class ChatWindowViewModel : ViewModelBase
         try
         {
             threadVm.UnreadCount = 0;
+            
             UpdateTotalUnreadCount();
+            
             await _chatClient.UpdatedReadStatus(threadVm.Thread.Id);
         }
         catch (Exception ex)
@@ -230,6 +231,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     private void MoveThreadToTop(ChatThreadViewModel threadVm)
     {
         var index = Threads.IndexOf(threadVm);
+        
         if (index > 0)
             Threads.Move(index, 0);
     }
@@ -243,6 +245,7 @@ public partial class ChatWindowViewModel : ViewModelBase
             return;
 
         var text = MessageInput.Trim();
+        
         MessageInput = string.Empty;
 
         try
@@ -252,6 +255,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send chat message");
+            
             MessageInput = text;
         }
     }
@@ -285,11 +289,13 @@ public partial class ChatWindowViewModel : ViewModelBase
                 foreach (var user in users.Where(u => u.Id != currentUserId))
                 {
                     var vm = new UserSelectionViewModel(user);
+                    
                     vm.PropertyChanged += (_, e) =>
                     {
                         if (e.PropertyName == nameof(UserSelectionViewModel.IsSelected))
                             OnPropertyChanged(nameof(HasSelectedUsers));
                     };
+                    
                     AvailableUsers.Add(vm);
                 }
 
@@ -308,6 +314,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     {
         IsCreatingThread = false;
         UserSearchText = string.Empty;
+        
         foreach (var u in AvailableUsers)
             u.IsSelected = false;
     }
@@ -319,6 +326,7 @@ public partial class ChatWindowViewModel : ViewModelBase
             return;
 
         var selected = AvailableUsers.Where(u => u.IsSelected).ToList();
+        
         if (selected.Count == 0)
             return;
 
@@ -343,6 +351,7 @@ public partial class ChatWindowViewModel : ViewModelBase
                 {
                     // Select the newly created thread
                     var newThread = Threads.FirstOrDefault(t => t.Thread.Id == threadId);
+                    
                     if (newThread != null)
                         SelectedThread = newThread;
 
@@ -370,11 +379,8 @@ public partial class ChatWindowViewModel : ViewModelBase
 
         foreach (var user in AvailableUsers)
         {
-            if (string.IsNullOrEmpty(query) ||
-                user.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            {
+            if (string.IsNullOrEmpty(query) || user.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
                 FilteredUsers.Add(user);
-            }
         }
     }
 }

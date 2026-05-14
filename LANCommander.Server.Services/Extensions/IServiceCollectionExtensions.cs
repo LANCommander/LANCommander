@@ -9,6 +9,7 @@ using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
+using LANCommander.HQ.SDK;
 using LANCommander.Server.Services.Providers;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
@@ -48,6 +49,17 @@ public static class IServiceCollectionExtensions
         services.AddScoped<MediaService>();
         services.AddScoped<RedistributableService>();
         services.AddScoped<ToolService>();
+        services.AddScoped(sp =>
+        {
+            var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var hqSettings = settings.CurrentValue.Server.HQ;
+            return new HQClient(new HQClientOptions
+            {
+                BaseAddress = new Uri(hqSettings.BaseUrl),
+                Token = hqSettings.IsAuthenticated ? hqSettings.AccessToken : null,
+            });
+        });
+        services.AddScoped<HqMediaGrabber>();
         services.AddScoped<SteamMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();
         services.AddScoped<YouTubeMediaGrabber>();
@@ -70,6 +82,7 @@ public static class IServiceCollectionExtensions
         
         // Register metadata providers
         services.AddScoped<MetadataService>();
+        services.AddScoped<IMetadataProvider, HqMetadataProvider>();
         services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
         services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
         

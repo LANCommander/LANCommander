@@ -41,7 +41,7 @@
                 </Border>
 
                 <!-- ── Size info ─────────────────────────────────────────── -->
-                <Border IsVisible="{Binding HasAddons}"
+                <Border IsVisible="{Binding HasSizeInfo}"
                         Padding="20,24,20,8">
                     <UniformGrid Columns="2">
                         <StackPanel HorizontalAlignment="Center">
@@ -107,6 +107,58 @@
                                                            FontSize="11"
                                                            Opacity="0.55"
                                                            VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+                                        </ToggleButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Tools ──────────────────────────────────────────────── -->
+                <Border IsVisible="{Binding HasTools}"
+                        Padding="20,16,20,0">
+                    <StackPanel Spacing="8">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Content="None"
+                                    Background="Transparent"
+                                    Padding="8,2"
+                                    FontSize="12"
+                                    Click="DeselectAllTools_Click" />
+                            <Button DockPanel.Dock="Right"
+                                    Content="All"
+                                    Background="Transparent"
+                                    Padding="8,2"
+                                    FontSize="12"
+                                    Margin="0,0,4,0"
+                                    Click="SelectAllTools_Click" />
+                            <TextBlock Text="Optional Tools"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <ScrollViewer MaxHeight="280"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Tools}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallToolItemViewModel">
+                                        <ToggleButton Classes="AddonItem"
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Margin="0,0,0,3">
+                                            <DockPanel>
+                                                <Icon DockPanel.Dock="Left"
+                                                      Type="Regular" Value="Check"
+                                                      Width="12" Height="12"
+                                                      IsVisible="{Binding IsSelected}"
+                                                      Margin="0,0,10,0"
+                                                      VerticalAlignment="Center" />
                                                 <TextBlock Text="{Binding Title}"
                                                            FontSize="13"
                                                            VerticalAlignment="Center"

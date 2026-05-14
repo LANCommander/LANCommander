@@ -104,30 +104,6 @@ public sealed class AppConfig
     [JsonPropertyName("verifyupdates")]
     public string? VerifyUpdates { get; set; }
 
-    [JsonPropertyName("depots")]
-    public Dictionary<string, Depot>? Depots { get; set; }
-
     [JsonPropertyName("appmanagesdlc")]
     public string? AppManagesDlc { get; set; }
-
-    [JsonPropertyName("baselanguages")]
-    public string? BaseLanguages { get; set; }
-
-    [JsonPropertyName("branches")]
-    public Dictionary<string, Branch>? Branches { get; set; }
-
-    [JsonPropertyName("depotdeltapatches")]
-    public string? DepotDeltaPatches { get; set; }
-
-    [JsonPropertyName("hasdepotsindlc")]
-    public string? HasDepotsInDlc { get; set; }
-
-    [JsonPropertyName("overridescddb")]
-    public string? OverridesCddb { get; set; }
-
-    [JsonPropertyName("privatebranches")]
-    public string? PrivateBranches { get; set; }
-
-    [JsonPropertyName("workshopdepot")]
-    public string? WorkshopDepot { get; set; }
 }

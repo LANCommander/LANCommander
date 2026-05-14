@@ -16,7 +16,7 @@ public class ToolImporter(
         {
             Key = GetKey(record),
             Name = record.Name,
-            Type = nameof(Game),
+            Type = nameof(Tool),
             Record = record,
         };
 

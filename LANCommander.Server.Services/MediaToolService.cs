@@ -278,7 +278,7 @@ public class MediaToolService(ILogger<MediaToolService> logger)
         logger.LogInformation("ffmpeg installed to {Path}", toolsDir);
     }
 
-    private string? FindExecutable(string name)
+    public string? FindExecutable(string name)
     {
         try
         {

@@ -28,6 +28,7 @@ public partial class VideoPlayerOverlay : UserControl
     private bool _isUpdatingSlider;
     private bool _isMuted;
     private bool _closing;
+    private EventHandler<EventArgs>? _endReachedHandler;
 
     public VideoPlayerOverlay()
     {
@@ -62,8 +63,9 @@ public partial class VideoPlayerOverlay : UserControl
             _canvas?.InvalidateVisual();
         };
 
-        _renderer.Player!.EndReached += (_, _) =>
+        _endReachedHandler = (_, _) =>
             Dispatcher.UIThread.Post(() => PlayPauseIcon.Value = "Play");
+        _renderer.Player!.EndReached += _endReachedHandler;
 
         // Use VLC's :start-time option so decoding begins at the right
         // position immediately, avoiding a seek-after-play black flash.
@@ -157,13 +159,20 @@ public partial class VideoPlayerOverlay : UserControl
         if (_closing) return;
         _closing = true;
 
-        _timer?.Stop();
-        _timer = null;
+        if (_timer != null)
+        {
+            _timer.Tick -= UpdateTransportControls;
+            _timer.Stop();
+            _timer = null;
+        }
 
         var timeMs = _renderer?.Player?.Time ?? 0;
 
         if (_renderer != null)
         {
+            if (_endReachedHandler != null && _renderer.Player != null)
+                _renderer.Player.EndReached -= _endReachedHandler;
+            _endReachedHandler = null;
             _renderer.FrameReady = null;
             _renderer.BitmapReady = null;
             var renderer = _renderer;

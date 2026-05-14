@@ -179,7 +179,9 @@ public partial class ShellViewModel : ViewModelBase
         // Profile is already created in the constructor; reuse it here
 
         Chat = new ChatWindowViewModel(_serviceProvider);
+        
         await Chat.InitializeAsync();
+        
         Chat.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ChatWindowViewModel.TotalUnreadCount))
@@ -248,9 +250,7 @@ public partial class ShellViewModel : ViewModelBase
 
         // Import in the background, then refresh
         if (!IsOfflineMode)
-        {
             _ = ImportInBackgroundAsync();
-        }
     }
 
     private async Task ImportInBackgroundAsync()
@@ -453,7 +453,9 @@ public partial class ShellViewModel : ViewModelBase
             if (!IsOfflineMode)
             {
                 var client = scope.ServiceProvider.GetRequiredService<GameClient>();
+                
                 var game = await client.GetAsync(gameId);
+                
                 if (game != null)
                 {
                     OnGameSelected(this, game);
@@ -593,7 +595,8 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenChatAsync()
     {
-        if (Chat == null) return;
+        if (Chat == null)
+            return;
 
         // Lazy-load threads on first open
         await Chat.LoadThreadsAsync();

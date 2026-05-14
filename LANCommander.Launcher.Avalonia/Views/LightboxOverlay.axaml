@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             x:Class="LANCommander.Launcher.Avalonia.Views.LightboxOverlay"
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="OnKeyDown">
+
+    <Grid Background="#EE000000">
+        <!-- Backdrop: click outside content to close -->
+        <Border Background="Transparent" PointerPressed="Backdrop_PointerPressed" />
+
+        <Grid RowDefinitions="*,Auto"
+              Margin="48"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+
+            <!-- Close button (floating top-right) -->
+            <IconButton Grid.Row="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Classes="Glass"
+                        IconType="Regular"
+                        IconValue="X"
+                        Size="16"
+                        Width="32"
+                        Height="32"
+                        Padding="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="Close_Click"
+                        ZIndex="2"
+                        Margin="0,0,0,8" />
+
+            <!-- Navigation: Previous -->
+            <IconButton Grid.Row="0"
+                        x:Name="PrevButton"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Classes="Glass"
+                        IconType="Regular"
+                        IconValue="CaretLeft"
+                        Size="20"
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="Prev_Click"
+                        ZIndex="2"
+                        Margin="-36,0,0,0" />
+
+            <!-- Navigation: Next -->
+            <IconButton Grid.Row="0"
+                        x:Name="NextButton"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Classes="Glass"
+                        IconType="Regular"
+                        IconValue="CaretRight"
+                        Size="20"
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="Next_Click"
+                        ZIndex="2"
+                        Margin="0,0,-36,0" />
+
+            <!-- Content area -->
+            <Panel Grid.Row="0" x:Name="ContentPanel">
+                <!-- Image display -->
+                <Border x:Name="ImageBorder"
+                        ClipToBounds="True"
+                        IsVisible="False"
+                        PointerPressed="Content_PointerPressed">
+                    <Image x:Name="LightboxImage"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                </Border>
+
+                <!-- Video display -->
+                <Border x:Name="VideoBorder"
+                        ClipToBounds="True"
+                        IsVisible="False"
+                        PointerPressed="Content_PointerPressed" />
+
+                <!-- PDF display -->
+                <Border x:Name="PdfBorder"
+                        ClipToBounds="True"
+                        IsVisible="False"
+                        PointerPressed="Content_PointerPressed">
+                    <components:PdfViewerControl x:Name="PdfViewer" />
+                </Border>
+
+                <!-- Loading indicator -->
+                <ProgressBar x:Name="LoadingIndicator"
+                             IsIndeterminate="True"
+                             Width="200"
+                             Height="4"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             IsVisible="False" />
+            </Panel>
+
+            <!-- Video transport controls (only visible for video items) -->
+            <Border Grid.Row="1"
+                    x:Name="TransportControls"
+                    Padding="4,8"
+                    Margin="0,8,0,0"
+                    IsVisible="False">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="32">
+
+                    <!-- Play / Pause -->
+                    <Button Grid.Column="0"
+                            x:Name="PlayPauseButton"
+                            Classes="Text"
+                            Click="PlayPause_Click"
+                            Padding="6"
+                            VerticalAlignment="Center">
+                        <Icon x:Name="PlayPauseIcon" Type="Fill" Value="Pause" Width="18" Height="18" />
+                    </Button>
+
+                    <!-- Seek slider -->
+                    <Slider Grid.Column="1"
+                            x:Name="SeekSlider"
+                            Minimum="0" Maximum="1"
+                            IsSnapToTickEnabled="False"
+                            VerticalAlignment="Center"
+                            Margin="8,0">
+                        <Slider.Resources>
+                            <GridLength x:Key="SliderPreContentMargin">0</GridLength>
+                            <GridLength x:Key="SliderPostContentMargin">0</GridLength>
+                            <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+                        </Slider.Resources>
+                    </Slider>
+
+                    <!-- Time label -->
+                    <TextBlock Grid.Column="2"
+                               x:Name="TimeLabel"
+                               Text="0:00 / 0:00"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Opacity="0.7"
+                               Margin="8,0" />
+
+                    <!-- Volume toggle -->
+                    <Button Grid.Column="3"
+                            x:Name="VolumeButton"
+                            Classes="Text"
+                            Click="Volume_Click"
+                            Padding="6"
+                            VerticalAlignment="Center">
+                        <Icon x:Name="VolumeIcon" Type="Fill" Value="SpeakerHigh" Width="16" Height="16" />
+                    </Button>
+
+                </Grid>
+            </Border>
+
+            <!-- Item counter -->
+            <TextBlock Grid.Row="1"
+                       x:Name="ItemCounter"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom"
+                       FontSize="12"
+                       Opacity="0.5"
+                       Margin="0,8,0,0" />
+
+        </Grid>
+    </Grid>
+</UserControl>

@@ -126,6 +126,11 @@ public class ConnectionClient(
         OnOfflineModeEnabled?.Invoke(this, EventArgs.Empty);
     }
 
+    private static readonly HttpClient _pingHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(5)
+    };
+
     public async Task<bool> PingAsync(Uri serverAddress = null)
     {
         try
@@ -134,15 +139,11 @@ public class ConnectionClient(
 
             var address = serverAddress ?? GetServerAddress();
 
-            var pingHttpClient = new HttpClient();
-
-            pingHttpClient.Timeout = TimeSpan.FromSeconds(5);
-
             var httpRequest = new HttpRequestMessage(HttpMethod.Head, address);
 
             httpRequest.Headers.Add("X-Ping", pingId);
 
-            var response = await pingHttpClient.SendAsync(httpRequest);
+            var response = await _pingHttpClient.SendAsync(httpRequest);
 
             return response.IsSuccessStatusCode
                    &&

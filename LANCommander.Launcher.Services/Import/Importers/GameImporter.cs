@@ -51,7 +51,11 @@ public class GameImporter(
                 ReleasedOn = importItemInfo.Record.ReleasedOn,
                 Singleplayer = importItemInfo.Record.Singleplayer,
                 Type = importItemInfo.Record.Type,
-                IGDBId = importItemInfo.Record.IGDBId,
+                ExternalIds = importItemInfo.Record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+                {
+                    Provider = e.Provider,
+                    ExternalId = e.ExternalId,
+                }).ToList(),
                 CreatedOn = importItemInfo.Record.CreatedOn,
                 UpdatedOn = importItemInfo.Record.UpdatedOn,
                 ImportedOn = DateTime.UtcNow,
@@ -84,7 +88,6 @@ public class GameImporter(
             existing.ReleasedOn = importItemInfo.Record.ReleasedOn;
             existing.Singleplayer = importItemInfo.Record.Singleplayer;
             existing.Type = importItemInfo.Record.Type;
-            existing.IGDBId = importItemInfo.Record.IGDBId;
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
@@ -142,6 +145,17 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        await gameService.SyncOwnedCollectionAsync(
+            game,
+            g => g.ExternalIds,
+            manifest.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }) ?? [],
+            (existing, incoming) => existing.Provider == incoming.Provider,
+            (existing, incoming) => existing.ExternalId = incoming.ExternalId);
     }
 
     public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo)

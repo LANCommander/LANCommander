@@ -117,7 +117,7 @@ public class AppCommon
     public LocalizedImageMap? SmallCapsule { get; set; }
     
     [JsonPropertyName("steam_deck_compatibility")]
-    public string? SteamDeckCompatibility { get; set; }
+    public SteamDeckCompatibility? SteamDeckCompatibility { get; set; }
     
     [JsonPropertyName("steam_release_date")]
     public string? SteamReleaseDate { get; set; }
@@ -132,7 +132,7 @@ public class AppCommon
     public Dictionary<string, string>? StoreTags { get; set; }
     
     [JsonPropertyName("supported_languages")]
-    public Dictionary<string, string>? SupportedLanguages { get; set; }
+    public Dictionary<string, SupportedLanguage>? SupportedLanguages { get; set; }
     
     [JsonPropertyName("timeline_marker_svg")]
     public string? TimelineMarkerSvg { get; set; }

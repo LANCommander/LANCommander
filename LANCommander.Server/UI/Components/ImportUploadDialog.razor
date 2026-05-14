@@ -157,6 +157,7 @@ else if (_stage == ImportStage.Failed)
     ChunkUploader ChunkUploader;
     StorageLocation StorageLocation = new();
     ImportContext ImportContext;
+    string _uploadObjectKey;
 
     IEnumerable<IImportItemInfo> ImportItems = new List<IImportItemInfo>();
     
@@ -200,10 +201,11 @@ else if (_stage == ImportStage.Failed)
     {
         _stage = ImportStage.Complete;
         _importProgress = 100;
-        
+
         await Clear();
         ImportContext.Dispose();
-        
+        await CleanupUploadArchiveAsync();
+
         await Task.Yield();
         await InvokeStateHasChangedAsync();
     }
@@ -255,6 +257,7 @@ else if (_stage == ImportStage.Failed)
             _stage = ImportStage.Failed;
             Logger?.LogError(ex, "An unknown error occurred while trying to import");
             ImportContext.Dispose();
+            await CleanupUploadArchiveAsync();
         }
     }
 
@@ -274,6 +277,7 @@ else if (_stage == ImportStage.Failed)
         await Clear();
 
         ImportContext.Dispose();
+        await CleanupUploadArchiveAsync();
 
         await base.OnFeedbackCancelAsync(args);
     }
@@ -281,8 +285,9 @@ else if (_stage == ImportStage.Failed)
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         await ChunkUploader.Clear();
-        
+
         ImportContext.Dispose();
+        await CleanupUploadArchiveAsync();
 
         await base.OnFeedbackOkAsync(args);
     }
@@ -293,7 +298,9 @@ else if (_stage == ImportStage.Failed)
         {
             try
             {
-                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+                _uploadObjectKey = objectKey.ToString();
+
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(_uploadObjectKey);
 
                 ImportContext.TrackUploadedArchive(archivePath);
 
@@ -333,6 +340,26 @@ else if (_stage == ImportStage.Failed)
         Logger?.LogError($"An error occurred while trying to import: {message}");
 
         await CloseFeedbackAsync();
+    }
+
+    async Task CleanupUploadArchiveAsync()
+    {
+        if (!string.IsNullOrEmpty(_uploadObjectKey))
+        {
+            try
+            {
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == _uploadObjectKey);
+
+                if (archive != null)
+                    await ArchiveService.DeleteAsync(archive);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Could not clean up upload archive record for {ObjectKey}", _uploadObjectKey);
+            }
+
+            _uploadObjectKey = null;
+        }
     }
 
     public async Task OnLocalFileSelected(string path)

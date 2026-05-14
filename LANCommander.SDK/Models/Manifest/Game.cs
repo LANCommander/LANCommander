@@ -7,7 +7,7 @@ namespace LANCommander.SDK.Models.Manifest
     public class Game : BaseManifest, IKeyedModel
     {
         public Guid Id { get; set; }
-        public long? IGDBId { get; set; }
+        public virtual ICollection<GameExternalId> ExternalIds { get; set; } = new List<GameExternalId>();
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string Version { get; set; }
@@ -39,6 +39,7 @@ namespace LANCommander.SDK.Models.Manifest
         public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
         
         public virtual ICollection<Redistributable> Redistributables { get; set; } = new List<Redistributable>();
+        public virtual ICollection<Tool> Tools { get; set; } = new List<Tool>();
         public virtual ICollection<Game> Addons { get; set; } = new List<Game>();
 
         public bool IsAddon

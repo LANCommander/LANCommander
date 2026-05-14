@@ -23,6 +23,7 @@
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="HtmlAgilityPack" />
+    <PackageReference Include="LANCommander.HQ.SDK" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="ZiggyCreatures.FusionCache" />
   </ItemGroup>

@@ -46,6 +46,14 @@ public partial class InstallOptionsViewModel : ViewModelBase
 
     public bool HasAddons => Addons.Count > 0;
 
+    // ── Tools ─────────────────────────────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTools))]
+    private ObservableCollection<InstallToolItemViewModel> _tools = new();
+
+    public bool HasTools => Tools.Count > 0;
+
     // ── Size info ────────────────────────────────────────────────────────────
 
     /// <summary>Base game compressed archive size in bytes.</summary>
@@ -57,11 +65,17 @@ public partial class InstallOptionsViewModel : ViewModelBase
     public string DownloadSizeText => ByteSize.FromBytes(TotalDownloadSize).ToString("0.##");
     public string SpaceRequiredText => ByteSize.FromBytes(TotalSpaceRequired).ToString("0.##");
 
+    public bool HasSizeInfo => HasAddons || HasTools;
+
     private long TotalDownloadSize =>
-        BaseDownloadSize + Addons.Where(a => a.IsSelected).Sum(a => a.DownloadSize);
+        BaseDownloadSize
+        + Addons.Where(a => a.IsSelected).Sum(a => a.DownloadSize)
+        + Tools.Where(t => t.IsSelected).Sum(t => t.DownloadSize);
 
     private long TotalSpaceRequired =>
-        BaseSpaceRequired + Addons.Where(a => a.IsSelected).Sum(a => a.SpaceRequired);
+        BaseSpaceRequired
+        + Addons.Where(a => a.IsSelected).Sum(a => a.SpaceRequired)
+        + Tools.Where(t => t.IsSelected).Sum(t => t.SpaceRequired);
 
     public void RefreshSizes()
     {
@@ -74,6 +88,33 @@ public partial class InstallOptionsViewModel : ViewModelBase
     /// <summary>The addons the user chose to install.</summary>
     public SDK.Models.Game[] SelectedAddons =>
         Addons.Where(a => a.IsSelected).Select(a => a.Game).ToArray();
+
+    /// <summary>The tools the user chose to install.</summary>
+    public SDK.Models.Tool[] SelectedTools =>
+        Tools.Where(t => t.IsSelected).Select(t => t.Tool).ToArray();
+}
+
+public partial class InstallToolItemViewModel : ViewModelBase
+{
+    public SDK.Models.Tool Tool { get; }
+
+    public string Title => Tool.Name ?? "Unknown";
+
+    public long DownloadSize { get; }
+    public long SpaceRequired { get; }
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public InstallToolItemViewModel(SDK.Models.Tool tool, bool selectedByDefault = false)
+    {
+        Tool = tool;
+        IsSelected = selectedByDefault;
+
+        var archives = tool.Archives?.ToArray() ?? [];
+        DownloadSize = archives.Sum(a => a.CompressedSize);
+        SpaceRequired = archives.Sum(a => a.UncompressedSize);
+    }
 }
 
 public partial class InstallAddonItemViewModel : ViewModelBase

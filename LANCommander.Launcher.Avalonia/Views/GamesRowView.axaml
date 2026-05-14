@@ -76,6 +76,7 @@
                                        FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
                         </StackPanel>
                         <components:Cover Source="{Binding CoverPath}"
+                                          MimeType="{Binding CoverMimeType}"
                                           Title="{Binding Title}"
                                           Width="40" Height="55"
                                           Margin="0,0,12,0" />

@@ -5,6 +5,7 @@
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:converters="using:LANCommander.Launcher.Avalonia.Converters"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
              x:DataType="vm:GameDetailViewModel">
 
@@ -118,10 +119,8 @@
                     <components:GameActionBarView DataContext="{Binding ActionBar}" />
 
                     <!-- Description -->
-                    <TextBlock Text="{Binding Description}"
-                               TextWrapping="Wrap"
-                               LineHeight="24"
-                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <controls:MarkdownTextBlock Text="{Binding Description}"
+                                                 IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                     <!-- Screenshots / Videos carousel -->
                     <StackPanel Spacing="8" IsVisible="{Binding HasMedia}">
@@ -132,19 +131,23 @@
                                                   Gap="12">
                             <CarouselControl.ItemTemplate>
                                 <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
-                                    <Panel Width="384" Height="216">
+                                    <Panel Width="384" Height="216"
+                                           Tapped="MediaItem_Tapped"
+                                           Cursor="Hand">
+                                        <!-- Skeleton placeholder -->
+                                        <Border CornerRadius="4"
+                                                Background="#15FFFFFF"
+                                                IsVisible="{Binding IsSkeleton}" />
                                         <!-- Screenshot image -->
                                         <Border CornerRadius="4" ClipToBounds="True"
                                                 IsVisible="{Binding !IsVideo}">
                                             <Image Source="{Binding ImageSource}"
                                                    Stretch="UniformToFill" />
                                         </Border>
-                                        <!-- Video: muted autoplay, click to open overlay -->
+                                        <!-- Video: muted autoplay, click to open lightbox -->
                                         <Border CornerRadius="4" ClipToBounds="True"
                                                 Background="Black"
-                                                IsVisible="{Binding IsVideo}"
-                                                Cursor="Hand"
-                                                Tapped="VideoItem_Tapped">
+                                                IsVisible="{Binding IsVideo}">
                                             <InlineVideoPlayer VideoPath="{Binding Path}" />
                                         </Border>
                                     </Panel>
@@ -165,7 +168,9 @@
 
                     <!-- Cover Image -->
                     <components:Cover Source="{Binding CoverPath}"
-                                      Title="{Binding Title}" />
+                                      MimeType="{Binding CoverMimeType}"
+                                      Title="{Binding Title}"
+                                      AlwaysAnimate="True" />
 
                     <!-- Players -->
                     <StackPanel Classes="Badges"
@@ -290,6 +295,35 @@
                                 <TextBlock Text="{Binding ShowMoreTagsLabel}" />
                             </Button>
                         </WrapPanel>
+                    </StackPanel>
+
+                    <!-- Tools -->
+                    <StackPanel Classes="Badges"
+                                IsVisible="{Binding HasTools}">
+                        <TextBlock Text="Tools" Classes="Header" />
+                        <ItemsControl ItemsSource="{Binding Tools}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ToolItemViewModel">
+                                    <Border Margin="0,0,0,6"
+                                            Padding="10,5"
+                                            CornerRadius="4"
+                                            Background="#22FFFFFF">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontSize="12"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Installed"
+                                                       FontSize="11"
+                                                       Opacity="0.6"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding IsInstalled}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
 
                 </StackPanel>

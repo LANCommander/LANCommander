@@ -68,7 +68,9 @@
                     Background="Transparent"
                     IsHitTestVisible="False" />
 
-            <local:Cover Source="{Binding CoverPath}"
+            <local:Cover x:Name="CoverControl"
+                         Source="{Binding CoverPath}"
+                         MimeType="{Binding CoverMimeType}"
                          Title="{Binding Title}"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch">

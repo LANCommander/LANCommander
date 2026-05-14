@@ -26,6 +26,7 @@ public static class AuthApiEndpoints
         group.MapPost("/Refresh", RefreshAsync);
         group.MapPost("/Register", RegisterAsync);
         group.MapGet("/AuthenticationProviders", GetAuthenticationProvidersAsync);
+        group.MapGet("/Token/{code:guid}", RedeemTokenAsync);
     }
 
     internal static async Task<IResult> LoginAsync(
@@ -74,18 +75,24 @@ public static class AuthApiEndpoints
         HttpContext httpContext,
         [FromServices] AuthenticationService authenticationService,
         [FromServices] IFusionCache cache,
-        string provider = "")
+        string provider = "",
+        string requestId = "")
     {
         var user = httpContext.User;
 
         if (!string.IsNullOrWhiteSpace(provider) && !(user?.Identity?.IsAuthenticated ?? false))
         {
+            var redirectUri = $"/api/Auth/Login?provider={Uri.EscapeDataString(provider)}";
+
+            if (!string.IsNullOrWhiteSpace(requestId))
+                redirectUri += $"&requestId={Uri.EscapeDataString(requestId)}";
+
             var properties = new AuthenticationProperties(new Dictionary<string, string>
             {
                 { "Action", AuthenticationProviderActionType.Login }
             })
             {
-                RedirectUri = $"/api/Auth/Login?provider={Uri.EscapeDataString(provider)}"
+                RedirectUri = redirectUri
             };
 
             return TypedResults.Challenge(properties, [provider]);
@@ -93,7 +100,7 @@ public static class AuthApiEndpoints
 
         if (!string.IsNullOrWhiteSpace(provider) && (user?.Identity?.IsAuthenticated ?? false))
         {
-            var code = Guid.NewGuid().ToString();
+            var code = !string.IsNullOrWhiteSpace(requestId) ? requestId : Guid.NewGuid().ToString();
             var token = await authenticationService.LoginAsync(user!.Identity!.Name);
 
             await cache.SetAsync($"AuthToken/{code}", token, TimeSpan.FromMinutes(5));
@@ -191,6 +198,20 @@ public static class AuthApiEndpoints
             settings.Value.Server.Authentication.AuthenticationProviders);
 
         return TypedResults.Ok(providers);
+    }
+
+    internal static async Task<IResult> RedeemTokenAsync(
+        Guid code,
+        [FromServices] IFusionCache cache)
+    {
+        var token = await cache.GetOrDefaultAsync<AuthToken>($"AuthToken/{code}", null);
+
+        if (token == null)
+            return TypedResults.NotFound();
+
+        await cache.RemoveAsync($"AuthToken/{code}");
+
+        return TypedResults.Ok(token);
     }
 
     private static ErrorResponse.ErrorInfo FromIdentityResult(IdentityError error)

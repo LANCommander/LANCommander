@@ -62,7 +62,14 @@
                         var id = Guid.NewGuid();
 
                         <div class="media-picker-item" data-type="video" style="width: @(Size)px">
-                            <input type="radio" id="media-picker-item-@id" checked="@(Media == result)" name="SelectedResult" @onchange="() => OnResultSelected(result)" />
+                            @if (MultiSelect)
+                            {
+                                <input type="checkbox" id="media-picker-item-@id" checked="@(_selectedKeys.Contains(result.UniqueKey))" @onchange="() => OnResultSelected(result)" />
+                            }
+                            else
+                            {
+                                <input type="radio" id="media-picker-item-@id" checked="@(Media == result)" name="SelectedResult" @onchange="() => OnResultSelected(result)" />
+                            }
                             <label for="media-picker-item-@id" @ondblclick="() => OnResultPicked(result)"></label>
                             <img src="@result.ThumbnailUrl" />
                             <button class="media-picker-play" @onclick="() => PreviewVideo(result)" @onclick:stopPropagation="true" title="Preview"></button>
@@ -73,7 +80,7 @@
         }
         else
         {
-            <ImagePicker Size="Size" Images="@grabberGroup.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
+            <ImagePicker Size="Size" MultiSelect="MultiSelect" SelectedValues="_selectedKeys" SelectedValuesChanged="OnMultiImageSelectionChanged" Images="@grabberGroup.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
         }
     </div>
 }
@@ -108,6 +115,9 @@
     MediaGrabberResult Media { get; set; }
     MediaGrabberResult _preview { get; set; }
 
+    bool MultiSelect { get; set; }
+    HashSet<string> _selectedKeys = new();
+
     double Size { get; set; } = 200;
     bool Loading { get; set; } = true;
     bool _isDownloading;
@@ -122,6 +132,7 @@
     {
         Type = Options.Type;
         Search = Options.Search;
+        MultiSelect = Options.MultiSelect;
 
         await GetResults(Type, Search);
     }
@@ -138,6 +149,7 @@
             _preview = null;
             _allResults.Clear();
             _groupedResults.Clear();
+            _selectedKeys.Clear();
             await InvokeAsync(StateHasChanged);
 
             if (String.IsNullOrWhiteSpace(search))
@@ -185,6 +197,12 @@
     private void OnResultSelected(MediaGrabberResult result)
     {
         Media = result;
+
+        if (MultiSelect)
+        {
+            if (!_selectedKeys.Add(result.UniqueKey))
+                _selectedKeys.Remove(result.UniqueKey);
+        }
     }
 
     private async Task OnResultPicked(MediaGrabberResult result)
@@ -198,10 +216,25 @@
         Media = _allResults.FirstOrDefault(r => r.UniqueKey == uniqueKey);
     }
 
+    private void OnMultiImageSelectionChanged(HashSet<string> selectedKeys)
+    {
+        _selectedKeys = selectedKeys;
+    }
+
     private async Task OnImagePicked(string uniqueKey)
     {
-        OnImageSelected(uniqueKey);
-        await DownloadAndClose();
+        if (MultiSelect)
+        {
+            if (!_selectedKeys.Add(uniqueKey))
+                _selectedKeys.Remove(uniqueKey);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            OnImageSelected(uniqueKey);
+            await DownloadAndClose();
+        }
     }
 
     private void PreviewVideo(MediaGrabberResult result)
@@ -234,6 +267,12 @@
 
     private async Task DownloadAndClose()
     {
+        if (MultiSelect)
+        {
+            await DownloadMultipleAndClose();
+            return;
+        }
+
         if (Media == null)
             return;
 
@@ -261,6 +300,56 @@
             };
 
             await base.OkCancelRefWithResult!.OnOk(result);
+            await CloseFeedbackAsync();
+        }
+        catch (Exception ex)
+        {
+            _isDownloading = false;
+            await InvokeAsync(StateHasChanged);
+            MessageService.Error("Download failed. Please try again.");
+            Logger.LogError(ex, "Failed to download media");
+        }
+    }
+
+    private async Task DownloadMultipleAndClose()
+    {
+        var selectedResults = _allResults.Where(r => _selectedKeys.Contains(r.UniqueKey)).ToList();
+
+        if (!selectedResults.Any())
+            return;
+
+        _preview = null;
+        _isDownloading = true;
+        _downloadPercent = 0;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var downloadResult = new MediaGrabberDownloadResult();
+
+            for (int i = 0; i < selectedResults.Count; i++)
+            {
+                var selected = selectedResults[i];
+                _downloadStatus = $"Downloading {i + 1} of {selectedResults.Count}...";
+                _downloadPercent = 0;
+                await InvokeAsync(StateHasChanged);
+
+                var progress = new Progress<MediaDownloadProgress>(p =>
+                {
+                    _downloadPercent = p.Percent ?? 0;
+                    InvokeAsync(StateHasChanged);
+                });
+
+                var download = await MediaGrabberService.DownloadAsync(selected, progress);
+
+                downloadResult.Results.Add(new MediaGrabberDownloadResultEntry
+                {
+                    Result = selected,
+                    Download = download
+                });
+            }
+
+            await base.OkCancelRefWithResult!.OnOk(downloadResult);
             await CloseFeedbackAsync();
         }
         catch (Exception ex)

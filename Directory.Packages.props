@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup Label="External">
     <PackageVersion Include="CoreRCON" Version="5.0.5" />
+    <PackageVersion Include="LANCommander.HQ.SDK" Version="1.0.0" />
     <PackageVersion Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageVersion Include="YoutubeExplode" Version="6.4.3" />
     <PackageVersion Include="Docker.DotNet.Enhanced" Version="3.129.0" />

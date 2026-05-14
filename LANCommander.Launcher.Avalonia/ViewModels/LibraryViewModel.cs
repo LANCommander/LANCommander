@@ -58,11 +58,13 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                     continue;
 
                 string? coverPath = null;
+                
                 var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+                
                 if (coverMedia != null && mediaService.FileExists(coverMedia))
                     coverPath = mediaService.GetImagePath(coverMedia);
 
-                _allGames.Add(new GameItemViewModel(game, coverPath, inLibrary: true, showInLibraryBadge: false));
+                _allGames.Add(new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false));
             }
 
             PopulateGenres();
@@ -70,6 +72,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
             PopulateDevelopers();
             PopulatePublishers();
             ApplyFilters();
+            
             _logger.LogInformation("Loaded {Count} library games", _allGames.Count);
         }
         catch (Exception ex)
@@ -107,13 +110,14 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                         Description = localGame.Description,
                         ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue
                     };
+                    
                     RaiseGameSelected(sdkGame);
                 }
             }
             else
             {
                 var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-                var game       = await gameClient.GetAsync(gameItem.Id);
+                var game = await gameClient.GetAsync(gameItem.Id);
 
                 if (game != null)
                     RaiseGameSelected(game);

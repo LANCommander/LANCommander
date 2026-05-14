@@ -1,0 +1,9 @@
+*.o
+*.obj
+*.exe
+*.res
+*.ilk
+*.pdb
+build/
+Debug/
+Release/

@@ -57,6 +57,9 @@ public partial class GameItemViewModel : ViewModelBase
     private string? _coverPath;
 
     [ObservableProperty]
+    private string? _coverMimeType;
+
+    [ObservableProperty]
     private string? _heroPath;
 
     [ObservableProperty]
@@ -79,7 +82,7 @@ public partial class GameItemViewModel : ViewModelBase
 
     public GameItemViewModel() { }
 
-    public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, bool inLibrary = false, bool showInLibraryBadge = true)
+    public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -97,12 +100,13 @@ public partial class GameItemViewModel : ViewModelBase
         HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
         MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
         CoverPath = coverPath;
+        CoverMimeType = coverMimeType;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
         ShowInLibraryBadge = inLibrary && showInLibraryBadge;
     }
 
-    public GameItemViewModel(Game game, string? coverPath = null, bool inLibrary = false, bool showInLibraryBadge = true)
+    public GameItemViewModel(Game game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
     {
         Id = game.Id;
         Title = game.Title ?? "Unknown";
@@ -121,6 +125,7 @@ public partial class GameItemViewModel : ViewModelBase
         MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
         IsInstalled = game.Installed;
         CoverPath = coverPath;
+        CoverMimeType = coverMimeType;
         HasCover = !string.IsNullOrEmpty(coverPath);
         InLibrary = inLibrary;
         ShowInLibraryBadge = inLibrary && showInLibraryBadge;

@@ -7,13 +7,18 @@ using System.Management.Automation;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
-    [Cmdlet(VerbsCommon.Get, "VerticalFov")]
-    [OutputType(typeof(string))]
+    [Cmdlet(VerbsCommon.Get, "HorizontalFov")]
+    [OutputType(typeof(int))]
     public class GetHorizontalFovCmdlet : Cmdlet
     {
-        [Parameter] public int Width { get; set; } = 0;
-        [Parameter] public int Height { get; set; } = 0;
-        [Parameter] public int BaseFov { get; set; } = 90;
+        [Parameter(HelpMessage = "The display width in pixels. Defaults to the primary display width.")]
+        public int Width { get; set; } = 0;
+
+        [Parameter(HelpMessage = "The display height in pixels. Defaults to the primary display height.")]
+        public int Height { get; set; } = 0;
+
+        [Parameter(HelpMessage = "The base horizontal field of view in degrees at 4:3 aspect ratio. Defaults to 90.")]
+        public int BaseFov { get; set; } = 90;
         
         protected override void ProcessRecord()
         {

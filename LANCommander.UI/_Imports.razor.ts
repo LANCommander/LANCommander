@@ -6,3 +6,4 @@ export { SplitPane } from "./Components/SplitPane/SplitPane";
 export { TimeProvider } from "./Components/LocalTime/TimeProvider";
 export { Terminal } from "./Components/Terminal/Terminal";
 export { DomHelper } from "./Components/DomHelper/DomHelper";
+export { registerPowerShellCompletions, setScriptType, validateScript, insertSnippet, getScriptTemplate } from "./Components/MonacoCodeEditor/PowerShellCompletionProvider";

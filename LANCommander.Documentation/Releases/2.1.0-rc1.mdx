@@ -1,0 +1,76 @@
+---
+title: 2.1.0-rc1
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+
+# LANCommander 2.1.0 Release Candidate 1 Release Notes
+
+## Launching Into the Future
+To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
+
+Unfortunately, over time limitations of the platform made it apparent that a change had to be made. As such, community member [slace]() kicked off a proof of concept for a launcher built using Avalonia, an open-source native UI framework for .NET. While rough at first, it was immediately apparent that this could be the way forward. The decision was made and the next few months would see a refocus of the project to built out a new launcher with a major focus on performance, design, and feature parity.
+
+The result is, well, a project that went off a little off the rails in the best possible fashion:
+<image carousel>
+
+I think the screenshots speak for themselves. Okay, not quite, there's a lot of fun stuff in this build so let's dive right in!
+
+### User Library
+Previous versions of the launcher attempted to bring the art of a game to the forefront. These views are where most players spend their time interacting with the application. However, everyone's tastes are different. As such the library now contains three main views; cover grid, list, and shelf.
+
+### Game Details
+Browsing the user library is great and all, but the detail views is where a game really gets to shine. Metadata has shifted to the right-hand side, descriptions now support more complex formatting with Markdown rendering support, and _finally_ videos and screenshots are displayed in a carousel.
+
+<screenshots>
+
+This is really just the start of something new. Expect this part of the launcher to be built out more in the future with better publishing tools and metadata expansion.
+
+### Depot
+The depot has been overhauled too, probably more than any other part of the launcher. Previous iterations have been _fine_, but with large game sets it was hard to find just what you needed. The new depot puts a focus on categorization while maintaining granular filtering tools to get you exactly where you need to go.
+
+As you can see, this section more than any other benefits from high quality metadata. We'll get into that later, but first let's talk about game installation.
+
+### Download Queue
+Game installation and downloading has been the hardest component to develop in the entire LANCommander platform. And rightly so! Without game installation, all you get is a fancy web UI and a pretty launcher that can't launch any games.
+
+The LANCommander launcher is essentially a UI wrapper for the LANCommander SDK. The SDK is a .NET library that provides all of the useful bits of communicating with a LANCommander server install. Authentication, script execution, save management, game installation and so much more are provided through this library. In previous iterations, the SDK had a very strict execution plan for installing games. Often times this would lead to deadlocks and outright failures.
+
+To resolve this in 2.1.0, the game install process has moved to a two-layer queuing system. The first layer of the queue manages what actually enters the download queue. This could be a game, redistributable, tool, or addon. The second layer handles any subprocessing step such as executing the different script types, save downloading, existing file verification, etc. The result is a system that is more transparent and reliable.
+
+This queuing system has been exposed somewhat in the download queue:
+<screenshot>
+
+Each entry in the download queue will now report each step of the process during a game installation. In addition to looking a bit less mystical, this should give users an idea of what _exactly_ is happening during a game installation.
+
+### Chat
+As with the last version, the chat functionality remains pretty barebones. This is an area that will get more attention in the future, but it _is_ currently available in the new launcher.
+
+## Server Improvements
+This release should also be pretty exciting for server admins. With a new launcher with shiny new features brings a set of tools to manage them.
+
+<more information if possible>
+
+## Changelog
+
+**Launcher**
+- Added: Brand new launcher built on Avalonia
+- Added: Screenshots and videos to game Details
+- Added: Redesigned depot with focus on categorization
+- Added: Tools!
+- Added: Download transfer speed graph
+- Added: OS notifications upon game installation
+- Changed: Refactored game/redistributable/tool install process
+- Changed: Imports should be faster and should execute in the background without causing too many UI hiccups
+- Fixed: Installing games that already have files on disk will show the verification process during install
+- Fixed: Logging in and logging out should no longer cause a hung UI
+
+**Server**
+- Added: LANCommander HQ metadata provider support
+- Added: New launcher-inspired "Preview" tool for managing art
+- Fixed: Media uploads should now behave as expected
+- Fixed:
+
+## Downloads
+
+<ReleaseDownloads release="v2.0.2" />

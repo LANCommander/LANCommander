@@ -9,6 +9,7 @@ namespace LANCommander.Server.Models
         public Guid? RedistributableId { get; set; }
         public Guid? ServerId { get; set; }
         public Guid? ToolId { get; set; }
+        public ScriptType? ScriptType { get; set; }
         public IEnumerable<ScriptType> AllowedTypes { get; set; }
     }
 }

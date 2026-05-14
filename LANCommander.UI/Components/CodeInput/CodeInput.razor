@@ -1,5 +1,7 @@
 @using BlazorMonaco.Editor
+@using Microsoft.JSInterop
 @namespace LANCommander.UI.Components
+@inject IJSRuntime JSRuntime
 
 <StandaloneCodeEditor
     @ref="_editor"
@@ -9,13 +11,18 @@
 
 @code {
     [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback OnReady { get; set; }
     [Parameter] public Language Language { get; set; }
     [Parameter] public int Height { get; set; } = 450;
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string? ScriptType { get; set; }
 
+    static bool _completionsRegistered;
     bool _isEditorInitialized = false;
     string? _previousValue;
+    string? _previousScriptType;
+    IJSObjectReference? _module;
 
     StandaloneCodeEditor _editor;
 
@@ -25,6 +32,10 @@
         Language = Language.Id,
         Theme = "vs-dark",
         Value = Value,
+        Minimap = new EditorMinimapOptions { Enabled = false },
+        BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+        WordWrap = "on",
+        FixedOverflowWidgets = true,
     };
 
     protected override async Task OnParametersSetAsync()
@@ -35,25 +46,51 @@
             await _editor.SetValue(Value);
         }
 
+        if (_isEditorInitialized && _module != null && ScriptType != _previousScriptType)
+        {
+            _previousScriptType = ScriptType;
+            await _module.InvokeVoidAsync("setScriptType", ScriptType);
+            await RunValidationAsync();
+        }
+
         await base.OnParametersSetAsync();
     }
 
     async Task OnInit()
     {
         _isEditorInitialized = true;
-        
+
         await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
         {
             if (OnSave.HasDelegate)
                 await OnSave.InvokeAsync();
         }, null);
+
+        _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/LANCommander.UI/bundle.js");
+
+        if (!_completionsRegistered)
+        {
+            _completionsRegistered = true;
+            await _module.InvokeVoidAsync("registerPowerShellCompletions");
+        }
+
+        if (ScriptType != null)
+        {
+            _previousScriptType = ScriptType;
+            await _module.InvokeVoidAsync("setScriptType", ScriptType);
+        }
+
+        if (OnReady.HasDelegate)
+            await OnReady.InvokeAsync();
     }
 
     public async Task InsertText(string text)
     {
-        var position = await _editor.GetPosition();
-        var range = new BlazorMonaco.Range(position.LineNumber, 1, position.LineNumber, 1);
-        var selections = await _editor.GetSelections();
+        var selection = await _editor.GetSelection();
+        var range = new BlazorMonaco.Range(
+            selection.StartLineNumber, selection.StartColumn,
+            selection.EndLineNumber, selection.EndColumn);
 
         await _editor.ExecuteEdits("CodeInput", new List<IdentifiedSingleEditOperation>
         {
@@ -63,7 +100,32 @@
                 Text = text,
                 ForceMoveMarkers = true
             }
-        }, selections);
+        }, (List<BlazorMonaco.Selection>)null);
+    }
+
+    public async Task InsertSnippet(string snippetText)
+    {
+        if (_module == null)
+        {
+            await InsertText(snippetText);
+            return;
+        }
+
+        await _module.InvokeVoidAsync("insertSnippet", snippetText);
+    }
+
+    public async Task<bool> InsertTemplateAsync(string scriptType)
+    {
+        if (_module == null)
+            return false;
+
+        var template = await _module.InvokeAsync<string?>("getScriptTemplate", scriptType);
+
+        if (template == null)
+            return false;
+
+        await _editor.SetValue(template);
+        return true;
     }
 
     async Task OnChangedContent(ModelContentChangedEvent e)
@@ -74,5 +136,15 @@
 
             await ValueChanged.InvokeAsync(_previousValue);
         }
+
+        await RunValidationAsync();
+    }
+
+    async Task RunValidationAsync()
+    {
+        if (_module == null || Language.Id != "powershell")
+            return;
+
+        await _module.InvokeVoidAsync("validateScript");
     }
 }

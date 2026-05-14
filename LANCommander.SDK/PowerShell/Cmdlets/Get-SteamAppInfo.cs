@@ -10,7 +10,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(AppInfo))]
 public class GetSteamAppInfoCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+    [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The Steam application ID to retrieve information for.")]
     [ValidateRange(1u, uint.MaxValue)]
     public uint AppId { get; set; }
 

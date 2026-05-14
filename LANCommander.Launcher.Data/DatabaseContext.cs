@@ -145,6 +145,12 @@ namespace LANCommander.Launcher.Data
                 .WithMany(e => e.Games)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.ExternalIds)
+                .WithOne(e => e.Game)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Collection Relationships

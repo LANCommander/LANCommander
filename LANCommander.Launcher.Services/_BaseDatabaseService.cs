@@ -162,6 +162,68 @@ namespace LANCommander.Launcher.Services
             await Context.SaveChangesAsync();
         }
 
+        public virtual async Task SyncOwnedCollectionAsync<TEntity, TChild>(
+            TEntity entity,
+            Expression<Func<TEntity, ICollection<TChild>>> navigationProperty,
+            IEnumerable<TChild> incomingRecords,
+            Func<TChild, TChild, bool> matchFunc,
+            Action<TChild, TChild> updateAction) where TChild : BaseModel where TEntity : class
+        {
+            Context.Attach(entity);
+
+            var entry = Context.Entry(entity);
+
+            var enumerableExpr = Expression.Lambda<Func<TEntity, IEnumerable<TChild>>>(
+                navigationProperty.Body,
+                navigationProperty.Parameters);
+
+            var collectionEntry = entry.Collection(enumerableExpr);
+
+            if (!collectionEntry.IsLoaded)
+                await collectionEntry.LoadAsync();
+
+            var collection = navigationProperty.Compile().Invoke(entity);
+
+            if (collection == null)
+            {
+                collection = new List<TChild>();
+
+                if (navigationProperty.Body is not MemberExpression memberExpression ||
+                    memberExpression.Member is not PropertyInfo propertyInfo)
+                    throw new InvalidOperationException($"Navigation expression '{navigationProperty}' must point to a property.");
+
+                propertyInfo.SetValue(entity, collection);
+            }
+
+            var matched = new HashSet<TChild>();
+
+            foreach (var incoming in incomingRecords)
+            {
+                var existing = collection.FirstOrDefault(c => matchFunc(c, incoming));
+
+                if (existing != null)
+                {
+                    updateAction(existing, incoming);
+                    matched.Add(existing);
+                }
+                else
+                {
+                    collection.Add(incoming);
+                    matched.Add(incoming);
+                }
+            }
+
+            var toRemove = collection.Where(c => !matched.Contains(c)).ToList();
+
+            foreach (var child in toRemove)
+            {
+                collection.Remove(child);
+                Context.Set<TChild>().Remove(child);
+            }
+
+            await Context.SaveChangesAsync();
+        }
+
         public virtual async Task DeleteAsync(T entity)
         {
             Context.Set<T>().Remove(entity);

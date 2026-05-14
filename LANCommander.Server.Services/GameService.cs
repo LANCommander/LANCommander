@@ -50,6 +50,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.SavePaths);
                 await context.UpdateRelationshipAsync(g => g.Scripts);
                 await context.UpdateRelationshipAsync(g => g.Tags);
+                await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
         }
 
@@ -90,6 +91,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.SavePaths);
                 await context.UpdateRelationshipAsync(g => g.Scripts);
                 await context.UpdateRelationshipAsync(g => g.Tags);
+                await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
 
             return update;
@@ -144,7 +146,8 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Tools)
                     .Include(g => g.SavePaths)
                     .Include(g => g.Scripts)
-                    .Include(g => g.Tags);
+                    .Include(g => g.Tags)
+                    .Include(g => g.ExternalIds);
             }).GetAsync(id);
 
             return GetManifest(game);

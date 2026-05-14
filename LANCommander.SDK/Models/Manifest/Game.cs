@@ -7,7 +7,7 @@ namespace LANCommander.SDK.Models.Manifest
     public class Game : BaseManifest, IKeyedModel
     {
         public Guid Id { get; set; }
-        public long? IGDBId { get; set; }
+        public virtual ICollection<GameExternalId> ExternalIds { get; set; } = new List<GameExternalId>();
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string Version { get; set; }

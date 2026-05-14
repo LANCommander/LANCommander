@@ -7,7 +7,7 @@ namespace LANCommander.Launcher.Data.Models
     [Table("Games")]
     public class Game : BaseModel
     {
-        public long? IGDBId { get; set; }
+        public virtual ICollection<GameExternalId>? ExternalIds { get; set; } = new List<GameExternalId>();
         public string Title { get; set; }
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }

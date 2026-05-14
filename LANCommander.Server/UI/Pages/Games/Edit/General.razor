@@ -124,6 +124,26 @@
             <FormItem Label="Singleplayer">
                 <Checkbox @bind-Checked="@context.Singleplayer" />
             </FormItem>
+            <FormItem Label="External IDs">
+                <Space Direction="SpaceDirection.Vertical" Style="width: 100%">
+                    @if (context.ExternalIds != null)
+                    {
+                        @foreach (var externalId in context.ExternalIds.ToList())
+                        {
+                            <SpaceItem>
+                                <Flex Gap="FlexGap.Small">
+                                    <Input @bind-Value="@externalId.Provider" Placeholder="Provider (e.g. Steam, GOG, IGDB)" Style="width: 200px" />
+                                    <Input @bind-Value="@externalId.ExternalId" Placeholder="ID" Style="flex: 1" />
+                                    <Button Danger OnClick="() => RemoveExternalId(context, externalId)" Icon="@IconType.Outline.Delete" />
+                                </Flex>
+                            </SpaceItem>
+                        }
+                    }
+                    <SpaceItem>
+                        <Button Type="ButtonType.Dashed" OnClick="() => AddExternalId(context)" Block Icon="@IconType.Outline.Plus">Add External ID</Button>
+                    </SpaceItem>
+                </Space>
+            </FormItem>
             <FormItem Label="Developers">
                 <TaxonomyInput DataService="CompanyService" @bind-Values="context.Developers" />
             </FormItem>
@@ -246,6 +266,17 @@
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
         else
             return "/favicon.ico";
+    }
+
+    private void AddExternalId(Game game)
+    {
+        game.ExternalIds ??= new List<GameExternalId>();
+        game.ExternalIds.Add(new GameExternalId());
+    }
+
+    private void RemoveExternalId(Game game, GameExternalId externalId)
+    {
+        game.ExternalIds?.Remove(externalId);
     }
 
     private async Task Delete(Game game)

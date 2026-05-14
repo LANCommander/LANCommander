@@ -79,10 +79,13 @@ public class IgdbMetadataProvider(
     {
         var game = new Game
         {
-            IGDBId = (long?)igdbGame.Id,
             Title = igdbGame.Name,
             Description = igdbGame.Summary,
             ReleasedOn = igdbGame.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
+            ExternalIds = new List<GameExternalId>
+            {
+                new GameExternalId { Provider = "IGDB", ExternalId = igdbGame.Id?.ToString() ?? string.Empty }
+            },
         };
         
         if (igdbGame.GameModes?.Values?.Any() ?? false)

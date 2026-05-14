@@ -10,7 +10,6 @@ public static class HqGameMapper
         var game = new Game
         {
             Id = dto.Id,
-            IGDBId = dto.IGDBId,
             Title = dto.Title,
             SortTitle = dto.SortTitle ?? dto.Title,
             Description = dto.Description,
@@ -18,6 +17,12 @@ public static class HqGameMapper
             Singleplayer = dto.Singleplayer,
             Type = MapGameType(dto.Type),
         };
+
+        if (dto.IGDBId.HasValue)
+            game.ExternalIds = new List<GameExternalId>
+            {
+                new GameExternalId { Provider = "IGDB", ExternalId = dto.IGDBId.Value.ToString() }
+            };
 
         if (dto.Engine is not null)
             game.Engine = new Engine { Name = dto.Engine.Name };

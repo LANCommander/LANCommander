@@ -170,6 +170,16 @@
                                     <td class="ant-table-cell">Save Paths</td>
                                     <td class="ant-table-cell">@(_fetchedManifest?.SavePaths?.Count ?? 0) path(s)</td>
                                 </tr>
+                                <tr class="ant-table-row">
+                                    <td class="ant-table-cell"><Checkbox @bind-Checked="_importExternalIds" /></td>
+                                    <td class="ant-table-cell">External IDs</td>
+                                    <td class="ant-table-cell">
+                                        @foreach (var item in _fetchedManifest?.ExternalIds ?? [])
+                                        {
+                                            <Tag>@item.Provider: @item.ExternalId</Tag>
+                                        }
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -228,6 +238,7 @@
     bool _importTags = true;
     bool _importMultiplayerModes = true;
     bool _importSavePaths = true;
+    bool _importExternalIds = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -356,6 +367,7 @@
             _importTags = manifest.Tags?.Any() == true;
             _importMultiplayerModes = manifest.MultiplayerModes?.Any() == true;
             _importSavePaths = manifest.SavePaths?.Any() == true;
+            _importExternalIds = manifest.ExternalIds?.Any() == true;
 
             _stage = ModalStage.Merge;
         }
@@ -423,6 +435,9 @@
 
             if (!_importSavePaths)
                 manifest.SavePaths = new List<LANCommander.SDK.Models.Manifest.SavePath>();
+
+            if (!_importExternalIds)
+                manifest.ExternalIds = new List<LANCommander.SDK.Models.Manifest.GameExternalId>();
 
             using var context = ImportContextFactory.Create();
             await context.InitializeMetadataUpdateAsync(manifest);

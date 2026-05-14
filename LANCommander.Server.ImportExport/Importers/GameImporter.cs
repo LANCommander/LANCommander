@@ -38,7 +38,11 @@ public class GameImporter(
             ReleasedOn = record.ReleasedOn,
             Singleplayer = record.Singleplayer,
             Type = record.Type,
-            IGDBId = record.IGDBId,
+            ExternalIds = record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }).ToList(),
             CreatedOn = record.CreatedOn,
             UpdatedOn = record.UpdatedOn,
             DirectoryName = record.DirectoryName,
@@ -77,7 +81,11 @@ public class GameImporter(
             existing.ReleasedOn = record.ReleasedOn;
             existing.Singleplayer = record.Singleplayer;
             existing.Type = record.Type;
-            existing.IGDBId = record.IGDBId;
+            existing.ExternalIds = record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }).ToList();
             existing.CreatedOn = record.CreatedOn;
             existing.DirectoryName = record.DirectoryName;
             

@@ -121,6 +121,12 @@ public partial class GameDetailViewModel : ViewModelBase
 
     public bool HasMedia => MediaItems.Count > 0;
 
+    // ── Tools ─────────────────────────────────────────────────────────────────
+
+    public ObservableCollection<ToolItemViewModel> Tools { get; } = new();
+
+    public bool HasTools => Tools.Count > 0;
+
     // ── Multiplayer modes ─────────────────────────────────────────────────────
 
     public ObservableCollection<string> MultiplayerModeDetails { get; } = new();
@@ -290,6 +296,15 @@ public partial class GameDetailViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(HasMedia));
 
+        // Tools
+        Tools.Clear();
+        if (game.Tools != null)
+        {
+            foreach (var tool in game.Tools)
+                Tools.Add(new ToolItemViewModel(tool));
+        }
+        OnPropertyChanged(nameof(HasTools));
+
         // Load action bar state
         await ActionBar.LoadFromLocalGameAsync(game);
 
@@ -389,6 +404,11 @@ public partial class GameDetailViewModel : ViewModelBase
         }
         else
             MultiplayerModes = string.Empty;
+
+        // Tools
+        Tools.Clear();
+        await LoadToolsAsync(game);
+        OnPropertyChanged(nameof(HasTools));
 
         // Reset media items and tags state while we re-load
         MediaItems.Clear();
@@ -594,11 +614,41 @@ public partial class GameDetailViewModel : ViewModelBase
         return null;
     }
 
+    private async Task LoadToolsAsync(SDK.Models.Game game)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var toolService = scope.ServiceProvider.GetRequiredService<LANCommander.Launcher.Services.ToolService>();
+
+            var tools = game.Tools;
+
+            if (tools == null || !tools.Any())
+            {
+                tools = await gameClient.GetToolsAsync(game.Id);
+            }
+
+            if (tools != null)
+            {
+                foreach (var tool in tools)
+                {
+                    var localTool = await toolService.GetAsync(tool.Id);
+                    Tools.Add(new ToolItemViewModel(tool, localTool));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load tools for game {GameId}", game.Id);
+        }
+    }
+
     [RelayCommand]
     private void GoBack()
     {
         ActionBar.StopRunningCheck();
-        
+
         _navigationService.GoBack();
     }
 
@@ -607,5 +657,29 @@ public partial class GameDetailViewModel : ViewModelBase
     {
         if (!string.IsNullOrWhiteSpace(term))
             SearchRequested?.Invoke(this, term);
+    }
+}
+
+/// <summary>
+/// ViewModel for a tool associated with a game.
+/// </summary>
+public partial class ToolItemViewModel : ViewModelBase
+{
+    public Guid Id { get; }
+    public string Name { get; }
+    public bool IsInstalled { get; }
+
+    public ToolItemViewModel(SDK.Models.Tool tool, Data.Models.Tool? localTool)
+    {
+        Id = tool.Id;
+        Name = tool.Name ?? "Unknown Tool";
+        IsInstalled = localTool?.Installed ?? false;
+    }
+
+    public ToolItemViewModel(Data.Models.Tool tool)
+    {
+        Id = tool.Id;
+        Name = tool.Name ?? "Unknown Tool";
+        IsInstalled = tool.Installed;
     }
 }

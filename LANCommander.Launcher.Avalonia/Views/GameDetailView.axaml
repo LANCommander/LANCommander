@@ -297,6 +297,35 @@
                         </WrapPanel>
                     </StackPanel>
 
+                    <!-- Tools -->
+                    <StackPanel Classes="Badges"
+                                IsVisible="{Binding HasTools}">
+                        <TextBlock Text="Tools" Classes="Header" />
+                        <ItemsControl ItemsSource="{Binding Tools}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ToolItemViewModel">
+                                    <Border Margin="0,0,0,6"
+                                            Padding="10,5"
+                                            CornerRadius="4"
+                                            Background="#22FFFFFF">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontSize="12"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Installed"
+                                                       FontSize="11"
+                                                       Opacity="0.6"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding IsInstalled}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                 </StackPanel>
 
             </Grid>

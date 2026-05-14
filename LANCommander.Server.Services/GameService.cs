@@ -141,6 +141,7 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Platforms)
                     .Include(g => g.Publishers)
                     .Include(g => g.Redistributables)
+                    .Include(g => g.Tools)
                     .Include(g => g.SavePaths)
                     .Include(g => g.Scripts)
                     .Include(g => g.Tags);

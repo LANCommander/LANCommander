@@ -49,6 +49,7 @@ public class ImportContext
         _platforms = serviceProvider.GetRequiredService<PlatformImporter>();
         _publishers = serviceProvider.GetRequiredService<PublisherImporter>();
         _tags = serviceProvider.GetRequiredService<TagImporter>();
+        _tools = serviceProvider.GetRequiredService<ToolImporter>();
         _logger = serviceProvider.GetRequiredService<ILogger<ImportContext>>();
         _mediaService = serviceProvider.GetRequiredService<MediaService>();
 
@@ -69,6 +70,12 @@ public class ImportContext
         await AddAsync(game, game.Publishers, _publishers, gameId);
         await AddAsync(game, game.Tags, _tags, gameId);
         await AddAsync(game, game, _games, gameId);
+
+        if (game.Tools != null)
+        {
+            foreach (var tool in game.Tools)
+                await AddAsync(tool);
+        }
     }
 
     public async Task AddAsync(Tool tool)
@@ -227,6 +234,7 @@ public class ImportContext
         _platforms.UseContext(this);
         _publishers.UseContext(this);
         _tags.UseContext(this);
+        _tools.UseContext(this);
     }
 
     private async Task<ImportResult> TryImportAsync(IImportItemInfo queueItem)
@@ -245,6 +253,7 @@ public class ImportContext
                 nameof(Platform) => await _platforms.ImportAsync(queueItem),
                 "Publisher" => await _publishers.ImportAsync(queueItem),
                 nameof(Tag) => await _tags.ImportAsync(queueItem),
+                nameof(Tool) => await _tools.ImportAsync(queueItem),
                 _ => throw new InvalidOperationException($"No importer found for type {queueItem.Type}"),
             };
 

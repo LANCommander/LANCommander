@@ -21,6 +21,11 @@ namespace LANCommander.Launcher.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            // Skip the SQLite default when the caller has already chosen a provider
+            // (e.g. tests using EF InMemory) — EF errors out if two providers are registered.
+            if (optionsBuilder.IsConfigured)
+                return;
+
             var dbPath = AppPaths.GetConfigPath("LANCommander.db");
 
             var connectionString = new SqliteConnectionStringBuilder

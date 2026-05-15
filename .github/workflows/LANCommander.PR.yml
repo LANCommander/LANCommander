@@ -223,3 +223,19 @@ jobs:
             build_arch: x64
             build_platform: Windows
             build_configuration: Debug
+
+    launcher_tests:
+        needs: [prep]
+        uses: ./.github/workflows/LANCommander.Launcher.Tests.yml
+        with:
+            build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+
+    launcher_tests_pr_comment:
+        # Always run after the test job — even on failure — so visual regressions
+        # show up as a PR comment instead of being buried in the artifact.
+        needs: [launcher_tests]
+        if: always() && needs.launcher_tests.result != 'cancelled' && github.event.pull_request.number != null
+        uses: ./.github/workflows/LANCommander.Launcher.Tests.PRComment.yml
+        with:
+            pr_number:       ${{ github.event.pull_request.number }}
+            artifact_run_id: ${{ github.run_id }}

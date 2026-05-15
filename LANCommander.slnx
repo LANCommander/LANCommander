@@ -24,6 +24,9 @@
     <Project Path="LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Tests/">
+    <Project Path="LANCommander.Launcher.Avalonia.IntegrationTests\LANCommander.Launcher.Avalonia.IntegrationTests.csproj" />
+    <Project Path="LANCommander.Launcher.Avalonia.Tests\LANCommander.Launcher.Avalonia.Tests.csproj" />
+    <Project Path="LANCommander.Launcher.Services.Tests\LANCommander.Launcher.Services.Tests.csproj" />
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
     <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="Classic C#" />
   </Folder>

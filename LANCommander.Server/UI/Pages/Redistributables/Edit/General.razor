@@ -50,6 +50,11 @@
                     <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
                 </FormItem>
 
+                <FormItem Label="Option Schema">
+                    <TextArea @bind-Value="@context.OptionSchema" Rows="12" Placeholder="@_optionSchemaPlaceholder" />
+                    <p style="color: rgba(0,0,0,0.45); margin-top: 4px;">YAML schema defining compatibility options. Leave empty if this redistributable is not a compatibility shim.</p>
+                </FormItem>
+
                 <FormItem Label="Games">
                     <TransferInput
                         Style="height: 350px"
@@ -67,7 +72,26 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
+
+    const string _optionSchemaPlaceholder = @"CommandTemplate: umu-run {exe} {args}
+Options:
+  Game:
+    Description: Game identification
+    Options:
+      GAMEID:
+        Type: string
+        IsEnvironmentVariable: true
+        Default: umu-default
+        Description: Game ID for protonfixes lookup
+  Proton:
+    Description: Proton configuration
+    Options:
+      PROTONPATH:
+        Type: string
+        IsEnvironmentVariable: true
+        Default: GE-Proton
+        Description: Proton version or path";
+
     ICollection<Game> Games;
     RedistributableEditView EditView;
 

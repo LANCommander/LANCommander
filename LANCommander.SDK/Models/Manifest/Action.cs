@@ -10,6 +10,7 @@ namespace LANCommander.SDK.Models.Manifest
         public string WorkingDirectory { get; set; }
         public bool IsPrimaryAction { get; set; }
         public int SortOrder { get; set; }
+        public string OptionOverrides { get; set; }
         public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
     }
 }

@@ -13,6 +13,9 @@
 @inject IMessageService MessageService
 @inject ModalService ModalService
 @inject NavigationManager NavigationManager
+@using System.Text.Json
+@using YamlDotNet.Serialization
+@using YamlDotNet.Serialization.NamingConventions
 @inject ILogger<General> Logger
 
 <GameEditView Id="Id">
@@ -172,6 +175,51 @@
                     TitleSelector="r => r.Name"
                     @bind-Values="context.Redistributables" />
             </FormItem>
+
+            @if (context.Id != Guid.Empty && context.Redistributables != null)
+            {
+                @foreach (var redist in context.Redistributables.Where(r => !string.IsNullOrWhiteSpace(r.OptionSchema)))
+                {
+                    var schema = ParseOptionSchema(redist.OptionSchema);
+                    if (schema?.Options != null && schema.Options.Any())
+                    {
+                        <Divider>@redist.Name Options</Divider>
+                        var flatOptions = schema.GetFlattenedOptions();
+                        var redistId = redist.Id;
+                        @foreach (var kvp in flatOptions)
+                        {
+                            var optionName = kvp.Key;
+                            var option = kvp.Value;
+                            var label = optionName;
+                            if (!string.IsNullOrWhiteSpace(option.Description))
+                                label += $" — {option.Description}";
+
+                            <FormItem Label="@label">
+                                @if (option.Type == "bool")
+                                {
+                                    var isChecked = GetOptionValue(redistId, optionName) == "true";
+                                    <Checkbox Checked="@isChecked" CheckedChanged="(bool v) => SetOptionBoolValue(redistId, optionName, v)" />
+                                }
+                                else if (option.Type == "enum" && option.Choices != null)
+                                {
+                                    <Select TItem="string"
+                                            TItemValue="string"
+                                            DataSource="option.Choices"
+                                            Value="@GetOptionValue(redistId, optionName, option.Default)"
+                                            ValueChanged="(string v) => SetOptionValue(redistId, optionName, v)"
+                                            Placeholder="@(option.Default ?? "Select...")" />
+                                }
+                                else
+                                {
+                                    <Input Value="@GetOptionValue(redistId, optionName, option.Default)"
+                                           ValueChanged="(string v) => SetOptionValue(redistId, optionName, v)"
+                                           Placeholder="@option.Default" />
+                                }
+                            </FormItem>
+                        }
+                    }
+                }
+            }
         </Form>
     </ChildContent>
 </GameEditView>
@@ -187,6 +235,8 @@
     IEnumerable<Engine> Engines = new List<Engine>();
     IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
     IEnumerable<Game> Games = new List<Game>();
+
+    Dictionary<Guid, Dictionary<string, string>> _redistOptions = new();
 
     private GameMetadataLookup? GameMetadataLookup;
 
@@ -209,7 +259,35 @@
             .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
         Redistributables = (await RedistributableService.GetAsync()).OrderByTitle(r => r.Name);
 
+        if (Id != Guid.Empty)
+            await LoadRedistributableOptions();
+
         _loaded = true;
+    }
+
+    private async Task LoadRedistributableOptions()
+    {
+        var game = await GameService
+            .AsNoTracking()
+            .Include(g => g.Redistributables)
+            .GetAsync(Id);
+
+        if (game?.Redistributables == null)
+            return;
+
+        foreach (var redist in game.Redistributables.Where(r => !string.IsNullOrWhiteSpace(r.OptionSchema)))
+        {
+            var optionsJson = await GameService.GetRedistributableOptionsAsync(Id, redist.Id);
+
+            if (!string.IsNullOrWhiteSpace(optionsJson))
+            {
+                try
+                {
+                    _redistOptions[redist.Id] = JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson);
+                }
+                catch { }
+            }
+        }
     }
 
     private async Task Save(Game game)
@@ -222,6 +300,8 @@
                 {
                     game.BaseGame = null; // clearing base game, model setup will write the BaseGameId value, referenced model will be loaded on update/get
                     game = await GameService.UpdateAsync(game);
+
+                    await SaveRedistributableOptions();
 
                     await MessageService.SuccessAsync("Game updated!");
                 }
@@ -277,6 +357,53 @@
     private void RemoveExternalId(Game game, GameExternalId externalId)
     {
         game.ExternalIds?.Remove(externalId);
+    }
+
+    private SDK.Models.OptionSchema ParseOptionSchema(string yaml)
+    {
+        try
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .IgnoreUnmatchedProperties()
+                .Build();
+
+            return deserializer.Deserialize<SDK.Models.OptionSchema>(yaml);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string GetOptionValue(Guid redistId, string optionName, string defaultValue = "")
+    {
+        if (_redistOptions.TryGetValue(redistId, out var options) && options.TryGetValue(optionName, out var value))
+            return value;
+
+        return defaultValue ?? "";
+    }
+
+    private void SetOptionBoolValue(Guid redistId, string optionName, bool value)
+    {
+        SetOptionValue(redistId, optionName, value ? "true" : "false");
+    }
+
+    private void SetOptionValue(Guid redistId, string optionName, string value)
+    {
+        if (!_redistOptions.ContainsKey(redistId))
+            _redistOptions[redistId] = new Dictionary<string, string>();
+
+        _redistOptions[redistId][optionName] = value;
+    }
+
+    private async Task SaveRedistributableOptions()
+    {
+        foreach (var kvp in _redistOptions)
+        {
+            var optionsJson = JsonSerializer.Serialize(kvp.Value);
+            await GameService.SetRedistributableOptionsAsync(Id, kvp.Key, optionsJson);
+        }
     }
 
     private async Task Delete(Game game)

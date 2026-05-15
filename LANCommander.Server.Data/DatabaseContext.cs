@@ -227,7 +227,8 @@ namespace LANCommander.Server.Data
                 .UsingEntity<Dictionary<string, object>>(
                     "GameRedistributable",
                     gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId").OnDelete(DeleteBehavior.Cascade),
-                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
+                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    j => j.Property<string>("Options")
                 );
 
             builder.Entity<Game>()

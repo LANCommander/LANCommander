@@ -8,6 +8,7 @@ namespace LANCommander.Server.Data.Models
         public string Name { get; set; }
         public string? Description { get; set; }
         public string? Notes { get; set; }
+        public string? OptionSchema { get; set; }
 
         public ICollection<Archive>? Archives { get; set; }
         public ICollection<Script>? Scripts { get; set; }

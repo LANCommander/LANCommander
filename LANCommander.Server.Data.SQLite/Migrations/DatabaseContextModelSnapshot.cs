@@ -127,6 +127,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Options")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("RedistributableId")
                         .HasColumnType("TEXT");
 
@@ -187,6 +190,9 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionOverrides")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")
@@ -1156,6 +1162,9 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionSchema")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")

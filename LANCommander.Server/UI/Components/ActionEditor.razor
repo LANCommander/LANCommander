@@ -1,7 +1,11 @@
 ﻿@using System.Collections.ObjectModel
+@using System.Text.Json
+@using YamlDotNet.Serialization
+@using YamlDotNet.Serialization.NamingConventions
 @using Action = LANCommander.Server.Data.Models.Action
 @inject ActionService ActionService
 @inject ArchiveService ArchiveService
+@inject GameService GameService
 @inject MessageService MessageService
 @inject ILogger<ActionEditor> Logger
 
@@ -22,6 +26,14 @@
         <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
             <Checkbox @bind-Checked="context.PrimaryAction"/>
         </PropertyColumn>
+        @if (_shimRedistributables.Any())
+        {
+            <PropertyColumn Property="a => a.OptionOverrides" Title="Option Overrides">
+                <Button Size="ButtonSize.Small" OnClick="() => ToggleOverrides(context)" Icon="@IconType.Outline.Setting" Type="ButtonType.Text">
+                    @(HasOverrides(context) ? "Edit" : "Add")
+                </Button>
+            </PropertyColumn>
+        }
         <ActionColumn>
             <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                 <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="ButtonType.Text"/>
@@ -33,6 +45,33 @@
             </Flex>
         </ActionColumn>
     </Table>
+
+    @if (_editingOverridesFor != null && _shimRedistributables.Any())
+    {
+        <Card Title="@($"Option Overrides for \"{_editingOverridesFor.Name}\"")">
+            @foreach (var redist in _shimRedistributables)
+            {
+                var schema = ParseOptionSchema(redist.OptionSchema);
+                if (schema?.Options != null && schema.Options.Any())
+                {
+                    <AntDesign.Text Strong>@redist.Name</AntDesign.Text>
+                    var flatOptions = schema.GetFlattenedOptions();
+                    @foreach (var kvp in flatOptions)
+                    {
+                        var optionName = kvp.Key;
+                        var option = kvp.Value;
+                        var redistId = redist.Id;
+                        <FormItem Label="@($"{optionName}{(!string.IsNullOrWhiteSpace(option.Description) ? $" — {option.Description}" : "")}")">
+                            <Input Value="@GetOverrideValue(_editingOverridesFor, redistId, optionName)"
+                                   ValueChanged="(string v) => SetOverrideValue(_editingOverridesFor, redistId, optionName, v)"
+                                   Placeholder="Use game default" />
+                        </FormItem>
+                    }
+                }
+            }
+            <Button OnClick="() => _editingOverridesFor = null">Done</Button>
+        </Card>
+    }
 
     <GridRow Justify="RowJustify.End">
         <GridCol>
@@ -50,8 +89,10 @@
     Game? _game;
     Server? _server;
     Tool? _tool;
-    
+
     ObservableCollection<Action> _sortedActions = new();
+    List<Data.Models.Redistributable> _shimRedistributables = new();
+    Action _editingOverridesFor;
 
     protected override async Task OnInitializedAsync() => await LoadActions();
 
@@ -61,8 +102,17 @@
         {
             _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameId == GameId.Value));
             _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
+
+            var game = await GameService
+                .AsNoTracking()
+                .Include(g => g.Redistributables)
+                .GetAsync(GameId.Value);
+
+            _shimRedistributables = game?.Redistributables?
+                .Where(r => !string.IsNullOrWhiteSpace(r.OptionSchema))
+                .ToList() ?? new();
         }
-        
+
         if (ServerId.HasValue)
             _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ServerId == ServerId.Value));
 
@@ -167,5 +217,79 @@
     {
         action.Path = path;
         action.WorkingDirectory = "{InstallDir}";
+    }
+
+    void ToggleOverrides(Action action)
+    {
+        _editingOverridesFor = _editingOverridesFor == action ? null : action;
+    }
+
+    bool HasOverrides(Action action)
+    {
+        return !string.IsNullOrWhiteSpace(action.OptionOverrides);
+    }
+
+    SDK.Models.OptionSchema ParseOptionSchema(string yaml)
+    {
+        try
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .IgnoreUnmatchedProperties()
+                .Build();
+
+            return deserializer.Deserialize<SDK.Models.OptionSchema>(yaml);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    string GetOverrideValue(Action action, Guid redistId, string optionName)
+    {
+        if (string.IsNullOrWhiteSpace(action.OptionOverrides))
+            return "";
+
+        try
+        {
+            var overrides = JsonSerializer.Deserialize<Dictionary<Guid, Dictionary<string, string>>>(action.OptionOverrides);
+
+            if (overrides != null && overrides.TryGetValue(redistId, out var redistOverrides) && redistOverrides.TryGetValue(optionName, out var value))
+                return value;
+        }
+        catch { }
+
+        return "";
+    }
+
+    void SetOverrideValue(Action action, Guid redistId, string optionName, string value)
+    {
+        Dictionary<Guid, Dictionary<string, string>> overrides;
+
+        try
+        {
+            overrides = string.IsNullOrWhiteSpace(action.OptionOverrides)
+                ? new()
+                : JsonSerializer.Deserialize<Dictionary<Guid, Dictionary<string, string>>>(action.OptionOverrides) ?? new();
+        }
+        catch
+        {
+            overrides = new();
+        }
+
+        if (!overrides.ContainsKey(redistId))
+            overrides[redistId] = new Dictionary<string, string>();
+
+        if (string.IsNullOrWhiteSpace(value))
+            overrides[redistId].Remove(optionName);
+        else
+            overrides[redistId][optionName] = value;
+
+        // Clean up empty entries
+        if (!overrides[redistId].Any())
+            overrides.Remove(redistId);
+
+        action.OptionOverrides = overrides.Any() ? JsonSerializer.Serialize(overrides) : null;
     }
 }

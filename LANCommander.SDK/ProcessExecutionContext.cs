@@ -1,10 +1,14 @@
 ﻿using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Enums;
@@ -182,6 +186,8 @@ namespace LANCommander.SDK
             if (!String.IsNullOrWhiteSpace(args))
                 Process.StartInfo.Arguments += " " + args;
 
+            ApplyCompatibilityOptions(manifest, action, installDirectory);
+
             logger?.LogTrace("Running game executable");
             logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
             logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
@@ -193,6 +199,126 @@ namespace LANCommander.SDK
             Process.Start();
 
             await Process.WaitForAllExitAsync(cancellationToken);
+        }
+
+        private void ApplyCompatibilityOptions(Models.Manifest.Game manifest, Models.Manifest.Action action, string installDirectory)
+        {
+            if (manifest.Redistributables == null)
+                return;
+
+            var shimRedistributables = manifest.Redistributables
+                .Where(r => !string.IsNullOrWhiteSpace(r.OptionSchema))
+                .ToList();
+
+            if (!shimRedistributables.Any())
+                return;
+
+            // Parse per-action overrides
+            Dictionary<Guid, Dictionary<string, string>> actionOverrides = null;
+
+            if (!string.IsNullOrWhiteSpace(action?.OptionOverrides))
+            {
+                try
+                {
+                    actionOverrides = JsonSerializer.Deserialize<Dictionary<Guid, Dictionary<string, string>>>(action.OptionOverrides);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Could not parse action option overrides");
+                }
+            }
+
+            foreach (var redistributable in shimRedistributables)
+            {
+                OptionSchema schema;
+
+                try
+                {
+                    var deserializer = new DeserializerBuilder()
+                        .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                        .IgnoreUnmatchedProperties()
+                        .Build();
+
+                    schema = deserializer.Deserialize<OptionSchema>(redistributable.OptionSchema);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Could not parse option schema for redistributable {Name}", redistributable.Name);
+                    continue;
+                }
+
+                if (schema == null)
+                    continue;
+
+                // Flatten nested options into dot-notation keys
+                var flatOptions = schema.GetFlattenedOptions();
+
+                // Resolve option values: defaults → per-game → per-action overrides
+                var resolvedOptions = new Dictionary<string, string>();
+
+                foreach (var kvp in flatOptions)
+                {
+                    if (!string.IsNullOrWhiteSpace(kvp.Value.Default))
+                        resolvedOptions[kvp.Key] = kvp.Value.Default;
+                }
+
+                // Apply per-game values
+                if (redistributable.Options != null)
+                {
+                    foreach (var kvp in redistributable.Options)
+                    {
+                        resolvedOptions[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Apply per-action overrides
+                if (actionOverrides != null && actionOverrides.TryGetValue(redistributable.Id, out var overrides))
+                {
+                    foreach (var kvp in overrides)
+                    {
+                        resolvedOptions[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Set environment variables for options that define envVar
+                {
+                    bool hasEnvVars = flatOptions.Any(kvp =>
+                        kvp.Value.IsEnvironmentVariable && resolvedOptions.ContainsKey(kvp.Key));
+
+                    if (hasEnvVars || !string.IsNullOrWhiteSpace(schema.CommandTemplate))
+                    {
+                        Process.StartInfo.UseShellExecute = false;
+                    }
+
+                    foreach (var kvp in flatOptions.Where(kvp => kvp.Value.IsEnvironmentVariable))
+                    {
+                        if (resolvedOptions.TryGetValue(kvp.Key, out var value) && !string.IsNullOrWhiteSpace(value))
+                        {
+                            // Use the leaf key name as the environment variable name
+                            var envVarName = kvp.Key.Contains(".") ? kvp.Key.Substring(kvp.Key.LastIndexOf('.') + 1) : kvp.Key;
+                            Process.StartInfo.EnvironmentVariables[envVarName] = ExpandVariables(value, installDirectory);
+                            logger?.LogTrace("Set environment variable {EnvVar}={Value}", envVarName, value);
+                        }
+                    }
+                }
+
+                // Apply command template
+                if (!string.IsNullOrWhiteSpace(schema.CommandTemplate))
+                {
+                    var originalExe = Process.StartInfo.FileName;
+                    var originalArgs = Process.StartInfo.Arguments;
+
+                    var expandedTemplate = ExpandVariables(schema.CommandTemplate, installDirectory);
+                    expandedTemplate = expandedTemplate.Replace("{exe}", originalExe).Replace("{args}", originalArgs);
+
+                    // Split template into command and arguments
+                    var parts = expandedTemplate.Split(new[] { ' ' }, 2);
+                    Process.StartInfo.FileName = parts[0];
+                    Process.StartInfo.Arguments = parts.Length > 1 ? parts[1] : string.Empty;
+
+                    logger?.LogTrace("Applied compatibility template: {FileName} {Arguments}", Process.StartInfo.FileName, Process.StartInfo.Arguments);
+                }
+            }
         }
 
         public void Dispose()

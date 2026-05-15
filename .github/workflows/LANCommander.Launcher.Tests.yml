@@ -1,0 +1,170 @@
+name: LANCommander Launcher Tests
+
+on:
+    workflow_call:
+        inputs:
+            build_dotnet_version:
+                description: 'Build .NET Version'
+                required: true
+                type: string
+        outputs:
+            visual_diff_count:
+                description: 'Number of visual baselines that regressed in this run'
+                value: ${{ jobs.test.outputs.visual_diff_count }}
+    workflow_dispatch:
+        inputs:
+            build_dotnet_version:
+                description: 'Build .NET Version'
+                required: false
+                type: string
+                default: '9.0.102'
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        name: Run Launcher Tests
+        runs-on: ubuntu-latest
+
+        outputs:
+            visual_diff_count: ${{ steps.summarize.outputs.visual_diff_count }}
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: true
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ inputs.build_dotnet_version }}
+
+            # Avalonia headless rendering uses Skia + the Inter font. Install
+            # font + GPU prereqs so screenshots render consistently.
+            - name: Install rendering prereqs
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y --no-install-recommends \
+                      libfontconfig1 libfreetype6 libice6 libsm6 libx11-6 libxcb1 libxext6
+
+            - name: Restore
+              run: dotnet restore
+
+            # ---- Unit + integration test projects ---------------------------------
+            # Services.Tests and Avalonia.IntegrationTests build cleanly without the
+            # Server/UI npm+pwsh chain. Avalonia.Tests likewise just needs Skia.
+
+            - name: Build test projects
+              run: |
+                  dotnet build LANCommander.Launcher.Services.Tests/LANCommander.Launcher.Services.Tests.csproj         -c Debug --no-restore
+                  dotnet build LANCommander.Launcher.Avalonia.IntegrationTests/LANCommander.Launcher.Avalonia.IntegrationTests.csproj -c Debug --no-restore
+                  dotnet build LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj         -c Debug --no-restore
+
+            - name: Run Services unit tests
+              run: |
+                  dotnet test LANCommander.Launcher.Services.Tests/LANCommander.Launcher.Services.Tests.csproj \
+                      -c Debug --no-build --no-restore \
+                      --logger "trx;LogFileName=services.trx" \
+                      --logger "console;verbosity=normal" \
+                      --results-directory test-results \
+                      --collect:"XPlat Code Coverage"
+
+            - name: Run Avalonia integration tests
+              run: |
+                  dotnet test LANCommander.Launcher.Avalonia.IntegrationTests/LANCommander.Launcher.Avalonia.IntegrationTests.csproj \
+                      -c Debug --no-build --no-restore \
+                      --logger "trx;LogFileName=integration.trx" \
+                      --logger "console;verbosity=normal" \
+                      --results-directory test-results \
+                      --collect:"XPlat Code Coverage"
+
+            # Visual tests are continued-on-error so a baseline regression doesn't
+            # mask any earlier failure and so we always reach the artifact-upload
+            # + summary steps below. The summary step re-asserts the failure for CI.
+            - name: Run Avalonia visual tests
+              id: visual_tests
+              continue-on-error: true
+              run: |
+                  dotnet test LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj \
+                      -c Debug --no-build --no-restore \
+                      --logger "trx;LogFileName=visual.trx" \
+                      --logger "console;verbosity=normal" \
+                      --results-directory test-results
+
+            # ---- Visual artifact collection --------------------------------------
+            # Aggregate every screenshot + diff PNG into top-level folders so the
+            # PR-comment job downstream can find them by predictable name.
+
+            - name: Collect visual artifacts
+              if: always()
+              run: |
+                  mkdir -p visual/screenshots visual/diffs visual/baselines
+                  cp -r LANCommander.Launcher.Avalonia.Tests/bin/Debug/net10.0/Screenshots/. visual/screenshots/ 2>/dev/null || true
+                  cp -r LANCommander.Launcher.Avalonia.Tests/bin/Debug/net10.0/Diffs/.       visual/diffs/       2>/dev/null || true
+                  cp -r LANCommander.Launcher.Avalonia.Tests/Baselines/.                     visual/baselines/   2>/dev/null || true
+
+            - name: Summarize visual diffs
+              id: summarize
+              if: always()
+              run: |
+                  shopt -s nullglob
+                  diffs=(visual/diffs/*.diff.png)
+                  count=${#diffs[@]}
+
+                  echo "visual_diff_count=$count" >> "$GITHUB_OUTPUT"
+                  echo "## Visual test summary" >> "$GITHUB_STEP_SUMMARY"
+                  echo "" >> "$GITHUB_STEP_SUMMARY"
+                  echo "$count baseline(s) regressed." >> "$GITHUB_STEP_SUMMARY"
+
+                  # JSON manifest the PR-comment job consumes
+                  python3 - "$count" <<'PY' > visual/regressions.json
+                  import json, os, sys
+                  count = int(sys.argv[1])
+                  diffs = sorted(os.listdir("visual/diffs")) if os.path.isdir("visual/diffs") else []
+                  data = {
+                      "regressed_count": count,
+                      "regressions": [
+                          {
+                              "name": d.replace(".diff.png", ""),
+                              "diff": f"visual/diffs/{d}",
+                              "actual": f"visual/screenshots/{d.replace('.diff.png', '.png')}",
+                              "baseline": f"visual/baselines/{d.replace('.diff.png', '.png')}",
+                          }
+                          for d in diffs
+                      ],
+                  }
+                  print(json.dumps(data, indent=2))
+                  PY
+
+                  cat visual/regressions.json
+
+            - name: Upload visual artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: launcher-visual-artifacts
+                  path: |
+                      visual/screenshots/**
+                      visual/diffs/**
+                      visual/baselines/**
+                      visual/regressions.json
+                  if-no-files-found: warn
+                  retention-days: 14
+
+            - name: Upload TRX + coverage
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: launcher-test-results
+                  path: test-results/**
+                  if-no-files-found: warn
+                  retention-days: 14
+
+            # Re-assert the visual test outcome so CI fails when baselines diverge,
+            # after artifacts are guaranteed uploaded.
+            - name: Fail if visual tests regressed
+              if: always() && steps.visual_tests.outcome == 'failure'
+              run: |
+                  echo "::error::Avalonia visual tests reported regressions. See the launcher-visual-artifacts artifact."
+                  exit 1

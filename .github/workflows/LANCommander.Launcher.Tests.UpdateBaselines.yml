@@ -1,0 +1,91 @@
+name: LANCommander Launcher Tests — Update Visual Baselines
+
+# Operator-triggered: re-renders every visual test on the CI host and commits the
+# new screenshots over the committed Baselines/. Only runs when a human dispatches
+# it from the Actions tab — never on push or PR — so accidental drift can't slip in.
+
+on:
+    workflow_dispatch:
+        inputs:
+            branch:
+                description: 'Branch to commit refreshed baselines to'
+                required: true
+                type: string
+                default: 'main'
+            build_dotnet_version:
+                description: 'Build .NET Version'
+                required: false
+                type: string
+                default: '9.0.102'
+
+permissions:
+    contents: write
+
+jobs:
+    refresh:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.branch }}
+                  submodules: true
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ inputs.build_dotnet_version }}
+
+            - name: Install rendering prereqs
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y --no-install-recommends \
+                      libfontconfig1 libfreetype6 libice6 libsm6 libx11-6 libxcb1 libxext6
+
+            - name: Restore + build visual test project
+              run: |
+                  dotnet restore LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj
+                  dotnet build   LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+
+            # Run visual tests, ignore failures (regressions are expected here — that's
+            # the whole point of refreshing). Then promote every captured screenshot
+            # to be the new baseline.
+            - name: Capture fresh screenshots
+              continue-on-error: true
+              run: |
+                  dotnet test LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj \
+                      -c Debug --no-build --no-restore \
+                      --logger "console;verbosity=normal"
+
+            - name: Promote captures to baselines
+              run: |
+                  set -euo pipefail
+                  src=LANCommander.Launcher.Avalonia.Tests/bin/Debug/net10.0/Screenshots
+                  dst=LANCommander.Launcher.Avalonia.Tests/Baselines
+
+                  if [ ! -d "$src" ]; then
+                      echo "::error::No screenshots captured at $src — visual tests didn't run."
+                      exit 1
+                  fi
+
+                  mkdir -p "$dst"
+                  cp -v "$src"/*.png "$dst"/
+
+                  echo "## Updated baselines" >> "$GITHUB_STEP_SUMMARY"
+                  echo "" >> "$GITHUB_STEP_SUMMARY"
+                  ls -1 "$dst"/*.png | xargs -n1 basename | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Commit + push refreshed baselines
+              run: |
+                  set -euo pipefail
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  if git diff --quiet -- LANCommander.Launcher.Avalonia.Tests/Baselines; then
+                      echo "Baselines unchanged — nothing to commit."
+                      exit 0
+                  fi
+
+                  git add LANCommander.Launcher.Avalonia.Tests/Baselines
+                  git commit -m "Refresh launcher visual baselines from CI run ${GITHUB_RUN_ID}"
+                  git push origin HEAD:${{ inputs.branch }}

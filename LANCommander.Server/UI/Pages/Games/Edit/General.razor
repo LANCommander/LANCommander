@@ -137,13 +137,15 @@
                                 <Flex Gap="FlexGap.Small">
                                     <Input @bind-Value="@externalId.Provider" Placeholder="Provider (e.g. Steam, GOG, IGDB)" Style="width: 200px" />
                                     <Input @bind-Value="@externalId.ExternalId" Placeholder="ID" Style="flex: 1" />
-                                    <Button Danger OnClick="() => RemoveExternalId(context, externalId)" Icon="@IconType.Outline.Delete" />
+                                    <Button Type="ButtonType.Text" Danger OnClick="() => RemoveExternalId(context, externalId)" Icon="@IconType.Outline.Close" />
                                 </Flex>
                             </SpaceItem>
                         }
                     }
                     <SpaceItem>
-                        <Button Type="ButtonType.Dashed" OnClick="() => AddExternalId(context)" Block Icon="@IconType.Outline.Plus">Add External ID</Button>
+                        <Flex Justify="FlexJustify.End">
+                            <Button Type="ButtonType.Primary" OnClick="() => AddExternalId(context)" Block Icon="@IconType.Outline.Plus">Add External ID</Button>
+                        </Flex>
                     </SpaceItem>
                 </Space>
             </FormItem>

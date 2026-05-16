@@ -53,23 +53,64 @@
     }
     else
     {
-        <h3>Account Connection</h3>
-        <Text>Connect your server to LANCommander HQ for enhanced metadata and media.</Text>
-        <h4>Basic Features</h4>
-        <ul>
-            <li>Access more metadata providers</li>
-            <li>Faster metadata access</li>
-            <li>One-time authentication</li>
-            <li>No additional server setup required</li>
-        </ul>
-        <h4>Premium Features</h4>
-        <ul>
-            <li>Access premium metadata providers</li>
-            <li>Curated/enhanced metadata</li>
-            <li>Support future LANCommander development!</li>
-        </ul>
+        <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
+            <Text>Connect your server to LANCommander HQ for access to expanded metadata providers, faster lookups, and premium features. All through one account.</Text>
+        
+            <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" />
+            
+            <Flex Gap="FlexGap.Middle" Justify="FlexJustify.Center">
+                <Card Title="Basic" Class="hq-feature-card hq-feature-card-basic">
+                    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Access more metadata providers</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Faster metadata lookups</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>One-time authentication</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>No additional server setup</Text>
+                        </Flex>
+                    </Flex>
+                </Card>
+                
+                <Card Title="Premium" Class="hq-feature-card hq-feature-card-premium">
+                    <Extra>
+                        $5/mo
+                    </Extra>
+                    <ChildContent>
+                        <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                <Text>Everything in Basic</Text>
+                            </Flex>
+                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                <Text>Premium metadata providers</Text>
+                            </Flex>
+                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                <Text>Curated & enhanced metadata</Text>
+                            </Flex>
+                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                <Text>Supports LANCommander development</Text>
+                            </Flex>
+                        </Flex>
+                    </ChildContent>
+                </Card>
+            </Flex>
 
-        <Button Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth">Connect</Button>
+            <Flex Justify="FlexJustify.Center">
+                <Button Block Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth" Style="max-width: 33%">Connect to HQ</Button>
+            </Flex>
+        </Flex>
     }
 
     <Divider Text="Advanced" />

@@ -1,4 +1,4 @@
-﻿using MadMilkman.Ini;
+using LANCommander.SDK.Parsers.Ini;
 
 namespace LANCommander.SDK.Tests.IniHandling
 {
@@ -177,12 +177,11 @@ Team=1
                     ],
                 },
 
-                new ConfigurationTest.UpdateSectionKeyValue("Startup")
+                new ConfigurationTest.UpdateSectionKeyValue("Startup", new IniParseOptions
                 {
-                    Options = new IniOptions
-                    {
-                        KeyDuplicate = IniDuplication.Ignored, // merges, takes first value of a multi-value key
-                    },
+                    AllowDuplicateKeys = false, // merges, takes first value of a multi-value key
+                })
+                {
                     UpdateKeyValues = [
                         new ConfigurationTest.UpdateSectionKeyValue.UpdateKeyValue {
                             Key = "Package",
@@ -207,12 +206,11 @@ Team=1
                     ],
                 },
 
-                new ConfigurationTest.UpdateSectionKeyValue("Startup")
+                new ConfigurationTest.UpdateSectionKeyValue("Startup", new IniParseOptions
                 {
-                    Options = new IniOptions
-                    {
-                        KeyDuplicate = IniDuplication.Allowed, // keep multi-value keys
-                    },
+                    AllowDuplicateKeys = true, // keep multi-value keys
+                })
+                {
                     UpdateKeyValues = [new ConfigurationTest.UpdateSectionKeyValue.UpdateKeyValue {
                         Key = "Package",
                         NewValue = "UI",

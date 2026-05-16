@@ -19,7 +19,6 @@
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="Crc32.NET" />
         <PackageReference Include="Facepunch.Steamworks" />
-        <PackageReference Include="MadMilkman.Ini" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />

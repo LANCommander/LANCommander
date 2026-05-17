@@ -1,4 +1,8 @@
+using System;
 using System.Collections.Generic;
+using YamlDotNet.Core;
+using YamlDotNet.Core.Events;
+using YamlDotNet.Serialization;
 
 namespace LANCommander.SDK.Models
 {
@@ -36,6 +40,28 @@ namespace LANCommander.SDK.Models
         }
     }
 
+    public class OptionChoice
+    {
+        public string Value { get; set; }
+        public string DisplayName { get; set; }
+
+        [YamlIgnore]
+        public string Label => !string.IsNullOrWhiteSpace(DisplayName) ? DisplayName : Value;
+
+        public OptionChoice() { }
+
+        public OptionChoice(string value)
+        {
+            Value = value;
+        }
+
+        public OptionChoice(string value, string displayName)
+        {
+            Value = value;
+            DisplayName = displayName;
+        }
+    }
+
     public class OptionDefinition
     {
         public string Type { get; set; }
@@ -44,7 +70,69 @@ namespace LANCommander.SDK.Models
         public string Default { get; set; }
         public string Description { get; set; }
         public bool Required { get; set; }
-        public List<string> Choices { get; set; }
+        public List<OptionChoice> Choices { get; set; }
         public Dictionary<string, OptionDefinition> Options { get; set; }
+    }
+
+    /// <summary>
+    /// Handles deserializing OptionChoice from both plain strings and mapping objects.
+    /// Plain string "foo" becomes OptionChoice { Value = "foo" }.
+    /// Mapping { Value: "foo", DisplayName: "Foo" } becomes OptionChoice { Value = "foo", DisplayName = "Foo" }.
+    /// </summary>
+    public class OptionChoiceYamlConverter : IYamlTypeConverter
+    {
+        public bool Accepts(Type type) => type == typeof(OptionChoice);
+
+        public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+        {
+            if (parser.TryConsume<Scalar>(out var scalar))
+            {
+                return new OptionChoice(scalar.Value);
+            }
+
+            if (parser.TryConsume<MappingStart>(out _))
+            {
+                var choice = new OptionChoice();
+
+                while (!parser.TryConsume<MappingEnd>(out _))
+                {
+                    var key = parser.Consume<Scalar>();
+                    var value = parser.Consume<Scalar>();
+
+                    switch (key.Value)
+                    {
+                        case "Value":
+                            choice.Value = value.Value;
+                            break;
+                        case "DisplayName":
+                            choice.DisplayName = value.Value;
+                            break;
+                    }
+                }
+
+                return choice;
+            }
+
+            throw new YamlException("Expected a scalar or mapping for OptionChoice");
+        }
+
+        public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
+        {
+            var choice = (OptionChoice)value;
+
+            if (string.IsNullOrWhiteSpace(choice.DisplayName))
+            {
+                emitter.Emit(new Scalar(choice.Value));
+            }
+            else
+            {
+                emitter.Emit(new MappingStart());
+                emitter.Emit(new Scalar("Value"));
+                emitter.Emit(new Scalar(choice.Value));
+                emitter.Emit(new Scalar("DisplayName"));
+                emitter.Emit(new Scalar(choice.DisplayName));
+                emitter.Emit(new MappingEnd());
+            }
+        }
     }
 }

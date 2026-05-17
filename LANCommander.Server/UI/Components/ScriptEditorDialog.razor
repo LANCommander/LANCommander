@@ -1,5 +1,6 @@
 @using LANCommander.SDK.Enums
 @using OptionSchema = LANCommander.SDK.Models.OptionSchema
+@using OptionChoiceYamlConverter = LANCommander.SDK.Models.OptionChoiceYamlConverter
 @using LANCommander.Server.Extensions
 @using YamlDotNet.Serialization
 @using YamlDotNet.Serialization.NamingConventions
@@ -350,6 +351,7 @@
             {
                 var deserializer = new DeserializerBuilder()
                     .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                    .WithTypeConverter(new OptionChoiceYamlConverter())
                     .IgnoreUnmatchedProperties()
                     .Build();
 

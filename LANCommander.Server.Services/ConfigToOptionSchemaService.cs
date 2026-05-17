@@ -26,6 +26,7 @@ public class ConfigToOptionSchemaService
 
         var serializer = new SerializerBuilder()
             .WithNamingConvention(PascalCaseNamingConvention.Instance)
+            .WithTypeConverter(new OptionChoiceYamlConverter())
             .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults | DefaultValuesHandling.OmitEmptyCollections)
             .Build();
 
@@ -153,13 +154,13 @@ public class ConfigToOptionSchemaService
                     break;
 
                 case JsonValueKind.Array:
-                    var choices = new List<string>();
+                    var choices = new List<OptionChoice>();
                     foreach (var item in prop.Value.EnumerateArray())
                     {
                         if (item.ValueKind == JsonValueKind.String)
-                            choices.Add(item.GetString() ?? "");
+                            choices.Add(new OptionChoice(item.GetString() ?? ""));
                         else
-                            choices.Add(item.GetRawText());
+                            choices.Add(new OptionChoice(item.GetRawText()));
                     }
 
                     options[SanitizeKey(prop.Name)] = new OptionDefinition

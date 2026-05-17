@@ -28,8 +28,8 @@
 
     @if (_model.Type == "choice")
     {
-        <FormItem Label="Choices (one per line)">
-            <TextArea @bind-Value="_choicesText" Rows="4" Placeholder="Option1&#10;Option2&#10;Option3" />
+        <FormItem Label="Choices (one per line, use Value|Display Name for display names)">
+            <TextArea @bind-Value="_choicesText" Rows="4" Placeholder="value1|Display Name 1&#10;value2|Display Name 2&#10;value3" />
         </FormItem>
     }
 
@@ -92,9 +92,20 @@
         if (_model.Type == "choice" && !string.IsNullOrWhiteSpace(_choicesText))
         {
             lines.Add($"{indent}Choices:");
-            foreach (var choice in _choicesText.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var line in _choicesText.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                lines.Add($"{indent}  - {choice.Trim()}");
+                var trimmed = line.Trim();
+                var parts = trimmed.Split('|', 2);
+
+                if (parts.Length == 2)
+                {
+                    lines.Add($"{indent}  - Value: {parts[0].Trim()}");
+                    lines.Add($"{indent}    DisplayName: {parts[1].Trim()}");
+                }
+                else
+                {
+                    lines.Add($"{indent}  - {trimmed}");
+                }
             }
         }
 

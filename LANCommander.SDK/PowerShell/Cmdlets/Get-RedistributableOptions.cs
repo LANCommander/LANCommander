@@ -67,6 +67,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
             {
                 var deserializer = new DeserializerBuilder()
                     .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                    .WithTypeConverter(new SDK.Models.OptionChoiceYamlConverter())
                     .IgnoreUnmatchedProperties()
                     .Build();
 

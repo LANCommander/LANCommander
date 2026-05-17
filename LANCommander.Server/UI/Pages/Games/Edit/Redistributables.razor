@@ -41,7 +41,7 @@
                                 }
                                 else
                                 {
-                                    <span style="color: rgba(0,0,0,0.45);">This redistributable has no configurable options.</span>
+                                    <span style="color: rgba(255,255,255,.45);">This redistributable has no configurable options.</span>
                                 }
                             </ChildContent>
                         </Panel>
@@ -188,6 +188,7 @@
         {
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithTypeConverter(new SDK.Models.OptionChoiceYamlConverter())
                 .IgnoreUnmatchedProperties()
                 .Build();
 

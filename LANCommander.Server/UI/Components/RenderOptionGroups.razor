@@ -31,7 +31,7 @@
                 <FormItem Label="@label">
                     @if (!string.IsNullOrWhiteSpace(option.Description) && !string.IsNullOrWhiteSpace(option.DisplayName))
                     {
-                        <p style="color: rgba(0,0,0,0.45); margin: -8px 0 8px;">@option.Description</p>
+                        <p style="color: rgba(255,255,255,0.45); font-size: 12px; margin: -8px 0 8px;">@option.Description</p>
                     }
                     @if (option.Type == "bool")
                     {
@@ -40,9 +40,11 @@
                     }
                     else if ((option.Type == "enum" || option.Type == "choice") && option.Choices != null)
                     {
-                        <Select TItem="string"
+                        <Select TItem="OptionChoice"
                                 TItemValue="string"
                                 DataSource="option.Choices"
+                                ValueName="@nameof(OptionChoice.Value)"
+                                LabelName="@nameof(OptionChoice.Label)"
                                 Value="@GetOptionValue(optionKey, option.Default)"
                                 ValueChanged="(string v) => SetValue(optionKey, v)"
                                 Placeholder="@(option.Default ?? "")" />

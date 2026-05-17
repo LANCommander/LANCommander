@@ -236,6 +236,7 @@ namespace LANCommander.SDK
                 {
                     var deserializer = new DeserializerBuilder()
                         .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                        .WithTypeConverter(new OptionChoiceYamlConverter())
                         .IgnoreUnmatchedProperties()
                         .Build();
 

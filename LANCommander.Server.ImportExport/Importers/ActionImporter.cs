@@ -37,10 +37,12 @@ public class ActionImporter(
             var action = new Data.Models.Action
             {
                 Name = record.Name,
+                Arguments = record.Arguments,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 PrimaryAction = record.IsPrimaryAction,
                 SortOrder = record.SortOrder,
+                OptionOverrides = record.OptionOverrides,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
             };
@@ -83,10 +85,12 @@ public class ActionImporter(
 
         try
         {
+            existing.Arguments = record.Arguments;
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.PrimaryAction = record.IsPrimaryAction;
             existing.SortOrder = record.SortOrder;
+            existing.OptionOverrides = record.OptionOverrides;
             existing.CreatedOn = record.CreatedOn;
             existing.UpdatedOn = record.UpdatedOn;
             

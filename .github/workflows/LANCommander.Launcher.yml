@@ -45,7 +45,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.build_platform == 'Linux' && inputs.build_arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

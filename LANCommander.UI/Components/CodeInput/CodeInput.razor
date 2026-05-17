@@ -13,12 +13,13 @@
     [Parameter] public EventCallback<string> OnSave { get; set; }
     [Parameter] public EventCallback OnReady { get; set; }
     [Parameter] public Language Language { get; set; }
-    [Parameter] public int Height { get; set; } = 450;
+    [Parameter] public int Height { get; set; }
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
     [Parameter] public string? ScriptType { get; set; }
 
     static bool _completionsRegistered;
+    static bool _yamlCompletionsRegistered;
     bool _isEditorInitialized = false;
     string? _previousValue;
     string? _previousScriptType;
@@ -26,17 +27,25 @@
 
     StandaloneCodeEditor _editor;
 
-    StandaloneEditorConstructionOptions _editorConstructionOptions(StandaloneCodeEditor editor) => new()
+    StandaloneEditorConstructionOptions _editorConstructionOptions(StandaloneCodeEditor editor)
     {
-        AutomaticLayout = true,
-        Language = Language.Id,
-        Theme = "vs-dark",
-        Value = Value,
-        Minimap = new EditorMinimapOptions { Enabled = false },
-        BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
-        WordWrap = "on",
-        FixedOverflowWidgets = true,
-    };
+        var options = new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = Language.Id,
+            Theme = "vs-dark",
+            Value = Value,
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+            WordWrap = "on",
+            FixedOverflowWidgets = true,
+        };
+
+        if (Height > 0)
+            options.Dimension = new Dimension { Height = Height };
+
+        return options;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -69,10 +78,16 @@
         _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./_content/LANCommander.UI/bundle.js");
 
-        if (!_completionsRegistered)
+        if (Language.Id == "powershell" && !_completionsRegistered)
         {
             _completionsRegistered = true;
             await _module.InvokeVoidAsync("registerPowerShellCompletions");
+        }
+
+        if (Language.Id == "yaml" && !_yamlCompletionsRegistered)
+        {
+            _yamlCompletionsRegistered = true;
+            await _module.InvokeVoidAsync("registerYamlCompletions");
         }
 
         if (ScriptType != null)

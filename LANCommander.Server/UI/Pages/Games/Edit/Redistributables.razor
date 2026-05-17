@@ -1,0 +1,201 @@
+@page "/Games/{id:guid}/Redistributables"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Games.Components
+@using YamlDotNet.Serialization
+@using YamlDotNet.Serialization.NamingConventions
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject GameService GameService
+@inject RedistributableService RedistributableService
+@inject ModalService ModalService
+@inject IMessageService MessageService
+@inject ILogger<Redistributables> Logger
+
+<GameEditView @ref="EditView" Id="Id">
+    <TitleTemplate>
+        <Text>Redistributables</Text>
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
+    </TitleExtraTemplate>
+    <ChildContent>
+        @if (_loaded)
+        {
+            <Flex Vertical Gap="FlexGap.Large">
+                @if (!_gameRedistributables.Any())
+                {
+                    <Empty Description="@("No redistributables have been added to this game")" />
+                }
+
+                <Collapse>
+                    @foreach (var redist in _gameRedistributables)
+                    {
+                        <Panel Header="@redist.Name">
+                            <ExtraTemplate>
+                                <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => RemoveRedistributable(redist)" />
+                            </ExtraTemplate>
+                            <ChildContent>
+                                @{ var schema = ParseOptionSchema(redist.OptionSchema); }
+                                @if (schema?.Options != null && schema.Options.Any())
+                                {
+                                    <RenderOptionGroups Schema="schema" RedistId="redist.Id" Options="_redistOptions" OnOptionChanged="OnOptionChanged" />
+                                }
+                                else
+                                {
+                                    <span style="color: rgba(0,0,0,0.45);">This redistributable has no configurable options.</span>
+                                }
+                            </ChildContent>
+                        </Panel>
+                    }
+                </Collapse>
+
+                <Flex Justify="FlexJustify.Center">
+                    <Button OnClick="OpenAddRedistributableDialog" Type="ButtonType.Primary">Add Redistributable</Button>
+                </Flex>
+            </Flex>
+        }
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    GameEditView EditView;
+    bool _loaded;
+
+    List<Redistributable> _gameRedistributables = new();
+    List<Redistributable> _allRedistributables = new();
+    Dictionary<Guid, Dictionary<string, string>> _redistOptions = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_loaded && Id != Guid.Empty)
+            await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        _allRedistributables = (await RedistributableService.GetAsync()).ToList();
+
+        var game = await GameService
+            .AsNoTracking()
+            .Include(g => g.Redistributables)
+            .GetAsync(Id);
+
+        if (game?.Redistributables != null)
+        {
+            _gameRedistributables = game.Redistributables.ToList();
+
+            foreach (var redist in _gameRedistributables.Where(r => !string.IsNullOrWhiteSpace(r.OptionSchema)))
+            {
+                var optionsJson = await GameService.GetRedistributableOptionsAsync(Id, redist.Id);
+                if (!string.IsNullOrWhiteSpace(optionsJson))
+                {
+                    try
+                    {
+                        _redistOptions[redist.Id] = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson);
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        _loaded = true;
+    }
+
+    async Task OpenAddRedistributableDialog()
+    {
+        var available = _allRedistributables
+            .Where(r => !_gameRedistributables.Any(gr => gr.Id == r.Id))
+            .ToList();
+
+        if (!available.Any())
+        {
+            MessageService.Info("All redistributables have already been added.");
+            return;
+        }
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Add Redistributable",
+            Maximizable = false,
+            Closable = true,
+            OkText = "Add",
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<RedistributablePickerDialog, IEnumerable<Redistributable>, Redistributable>(modalOptions, available);
+
+        modalRef.OnOk = async (selected) =>
+        {
+            if (selected != null)
+            {
+                _gameRedistributables.Add(selected);
+                await SyncRedistributables();
+                StateHasChanged();
+            }
+        };
+    }
+
+    async Task RemoveRedistributable(Redistributable redist)
+    {
+        _gameRedistributables.Remove(redist);
+        _redistOptions.Remove(redist.Id);
+        await SyncRedistributables();
+    }
+
+    async Task SyncRedistributables()
+    {
+        var game = await GameService
+            .Include(g => g.Redistributables)
+            .GetAsync(Id);
+
+        game.Redistributables = _gameRedistributables;
+        await GameService.UpdateAsync(game);
+    }
+
+    void OnOptionChanged((Guid redistId, string optionName, string value) args)
+    {
+        if (!_redistOptions.ContainsKey(args.redistId))
+            _redistOptions[args.redistId] = new Dictionary<string, string>();
+
+        _redistOptions[args.redistId][args.optionName] = args.value;
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            foreach (var kvp in _redistOptions)
+            {
+                var optionsJson = System.Text.Json.JsonSerializer.Serialize(kvp.Value);
+                await GameService.SetRedistributableOptionsAsync(Id, kvp.Key, optionsJson);
+            }
+
+            MessageService.Success("Redistributable options saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save redistributable options!");
+            Logger.LogError(ex, "Could not save redistributable options!");
+        }
+    }
+
+    SDK.Models.OptionSchema ParseOptionSchema(string yaml)
+    {
+        if (string.IsNullOrWhiteSpace(yaml))
+            return null;
+
+        try
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .IgnoreUnmatchedProperties()
+                .Build();
+
+            return deserializer.Deserialize<SDK.Models.OptionSchema>(yaml);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}

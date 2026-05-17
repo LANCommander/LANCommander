@@ -48,6 +48,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<PlaySessionService>();
         services.AddScoped<MediaService>();
         services.AddScoped<RedistributableService>();
+        services.AddScoped<ConfigToOptionSchemaService>();
         services.AddScoped<ToolService>();
         services.AddScoped(sp =>
         {

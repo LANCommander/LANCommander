@@ -1,0 +1,114 @@
+@inherits FeedbackComponent<AddOptionDialogOptions, string>
+
+<Form @ref="_form" Model="_model" Layout="@FormLayout.Vertical">
+    <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true, Message = "Name is required" } })>
+        <Input @bind-Value="_model.Name" Placeholder="e.g. PROTONPATH" />
+    </FormItem>
+
+    <FormItem Label="Display Name">
+        <Input @bind-Value="_model.DisplayName" Placeholder="e.g. Proton Path" />
+    </FormItem>
+
+    <FormItem Label="Description">
+        <Input @bind-Value="_model.Description" Placeholder="Description of this option" />
+    </FormItem>
+
+    <FormItem Label="Type">
+        <Select @bind-Value="_model.Type" TItemValue="string" TItem="string">
+            <SelectOption Value="@("string")" Label="String" />
+            <SelectOption Value="@("bool")" Label="Boolean" />
+            <SelectOption Value="@("int")" Label="Integer" />
+            <SelectOption Value="@("choice")" Label="Choice" />
+        </Select>
+    </FormItem>
+
+    <FormItem Label="Default Value">
+        <Input @bind-Value="_model.Default" Placeholder="Default value" />
+    </FormItem>
+
+    @if (_model.Type == "choice")
+    {
+        <FormItem Label="Choices (one per line)">
+            <TextArea @bind-Value="_choicesText" Rows="4" Placeholder="Option1&#10;Option2&#10;Option3" />
+        </FormItem>
+    }
+
+    <FormItem>
+        <Checkbox @bind-Checked="_model.Required">Required</Checkbox>
+    </FormItem>
+
+    <FormItem>
+        <Checkbox @bind-Checked="_model.IsEnvironmentVariable">Environment Variable</Checkbox>
+    </FormItem>
+</Form>
+
+@code {
+    Form<AddOptionFormModel> _form;
+    AddOptionFormModel _model = new();
+    string _choicesText = "";
+
+    protected override void OnInitialized()
+    {
+        if (Options != null)
+            _model.Type = Options.OptionType;
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        if (!_form.Validate())
+        {
+            args.Reject();
+            return;
+        }
+
+        var yaml = GenerateYaml();
+        await base.OkCancelRefWithResult!.OnOk(yaml);
+    }
+
+    string GenerateYaml()
+    {
+        var indent = "    ";
+        var lines = new List<string>
+        {
+            $"  {_model.Name}:",
+            $"{indent}Type: {_model.Type}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(_model.DisplayName))
+            lines.Add($"{indent}DisplayName: {_model.DisplayName}");
+
+        if (!string.IsNullOrWhiteSpace(_model.Description))
+            lines.Add($"{indent}Description: {_model.Description}");
+
+        if (!string.IsNullOrWhiteSpace(_model.Default))
+            lines.Add($"{indent}Default: {_model.Default}");
+
+        if (_model.Required)
+            lines.Add($"{indent}Required: true");
+
+        if (_model.IsEnvironmentVariable)
+            lines.Add($"{indent}IsEnvironmentVariable: true");
+
+        if (_model.Type == "choice" && !string.IsNullOrWhiteSpace(_choicesText))
+        {
+            lines.Add($"{indent}Choices:");
+            foreach (var choice in _choicesText.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                lines.Add($"{indent}  - {choice.Trim()}");
+            }
+        }
+
+        return string.Join("\n", lines) + "\n";
+    }
+
+    class AddOptionFormModel
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Type { get; set; } = "string";
+        public string Default { get; set; } = "";
+        public bool Required { get; set; }
+        public bool IsEnvironmentVariable { get; set; }
+    }
+}

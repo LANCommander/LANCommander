@@ -39,6 +39,7 @@ namespace LANCommander.SDK.Models
     public class OptionDefinition
     {
         public string Type { get; set; }
+        public string DisplayName { get; set; }
         public bool IsEnvironmentVariable { get; set; }
         public string Default { get; set; }
         public string Description { get; set; }

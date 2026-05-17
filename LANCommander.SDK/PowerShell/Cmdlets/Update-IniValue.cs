@@ -1,4 +1,4 @@
-﻿using MadMilkman.Ini;
+using LANCommander.SDK.Parsers.Ini;
 using System;
 using System.IO;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Text;
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     /// <summary>
-    /// Cmdlet for updating an INI file value. This cmdlet updates, adds, or removes a key-value pair within a specified section 
+    /// Cmdlet for updating an INI file value. This cmdlet updates, adds, or removes a key-value pair within a specified section
     /// of an INI file, based on provided parameters.
     /// </summary>
     [Cmdlet(VerbsData.Update, "IniValue")]
@@ -85,7 +85,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         public SwitchParameter Clear { get; set; } = false;
 
         /// <summary>
-        /// Gets or sets a switch parameter that specifies a new key-value pair will always be appended, 
+        /// Gets or sets a switch parameter that specifies a new key-value pair will always be appended,
         /// even if the key already exists.
         /// </summary>
         [Alias("append")]
@@ -175,55 +175,52 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         /// </summary>
         protected override void ProcessRecord()
         {
-            // Check if the specified INI file exists; if not, exit the method.
             if (!File.Exists(FilePath))
                 return;
 
-            // Configure INI file options based on provided parameters.
-            var iniOptions = new IniOptions()
+            var encoding = GetEncoding();
+            var options = new IniParseOptions
             {
-                Encoding = GetEncoding(),
-                SectionDuplicate = KeepSectionDuplicates ? IniDuplication.Allowed : IniDuplication.Ignored,
-                KeyDuplicate = KeepKeyDuplicates ? IniDuplication.Allowed : IniDuplication.Ignored,
+                Encoding = encoding,
+                AllowDuplicateKeys = KeepKeyDuplicates,
+                AllowDuplicateSections = KeepSectionDuplicates,
             };
 
-            // Load the INI file with the specified options.
-            var ini = new IniFile(iniOptions);
-            ini.Load(FilePath);
+            var ini = IniParser.Load(FilePath, options);
 
-            // Retrieve the specified section; if not found and appending/updating is not allowed, exit.
+            // Retrieve the specified section
             var iniSection = ini.Sections[Section];
             if (iniSection == null && !AlwaysAppend && !UpdateOrAdd)
                 return;
 
-            // Create a new section if it does not exist.
+            // Create a new section if it does not exist
             if (iniSection == null)
             {
-                iniSection = new IniSection(ini, Section);
+                iniSection = new IniSection(Section);
                 ini.Sections.Add(iniSection);
             }
 
-            // Function for matching a key using case-insensitive comparison.
+            // Function for matching a key using case-insensitive comparison
             bool keyMatcher(IniKey x) => string.Equals(x.Name, Key, StringComparison.OrdinalIgnoreCase);
 
-            // If the operation is to remove or clear keys, perform deletion of matching keys.
+            // If the operation is to remove or clear keys, perform deletion of matching keys
             if (OnlyRemove || Clear)
             {
                 var list = iniSection.Keys.Where(keyMatcher).ToList();
                 list.ForEach(x => iniSection.Keys.Remove(x));
             }
 
-            // If removal is not the sole operation, proceed with updating or adding the value.
+            // If removal is not the sole operation, proceed with updating or adding the value
             if (!OnlyRemove)
             {
-                // assuming most of the engines interpret INI files from top to bottom using the last value of a multiple existing key, we update the last found key
+                // Update the last found key (most engines use last value for duplicate keys)
                 var firstMatch = iniSection.Keys.LastOrDefault(keyMatcher);
                 var iniValue = Value;
 
-                // Adjust the value's surrounding quotes based on the WrapValueInQuotes parameter.
+                // Adjust the value's surrounding quotes based on the WrapValueInQuotes parameter
                 iniValue = ApplyQuoteWrapping(iniValue, firstMatch?.Value);
 
-                // Insert a new key-value pair if appending is enforced or the key does not exist.
+                // Insert a new key-value pair if appending is enforced or the key does not exist
                 if (AlwaysAppend.ToBool() || (UpdateOrAdd && firstMatch == null))
                 {
                     if (InsertIndex.HasValue && InsertIndex.Value >= 0)
@@ -233,7 +230,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 }
                 else if (firstMatch != null)
                 {
-                    // Handle updating an existing key, optionally repositioning it if an insertion index is specified.
+                    // Handle updating an existing key, optionally repositioning it
                     var insertIndex = (InsertIndex.HasValue && InsertIndex.Value >= 0)
                         ? Math.Clamp(InsertIndex.Value, 0, iniSection.Keys.Count - 1)
                         : -1;
@@ -243,33 +240,19 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                         iniSection.Keys.Remove(firstMatch);
                         iniSection.Keys.Insert(insertIndex, firstMatch);
                     }
-                    // Update the existing key's value.
+
+                    // Update the existing key's value
                     firstMatch.Value = iniValue;
                 }
-                // No else clause – updating without adding a new key should be possible.
             }
 
-            // Save the modified INI file.
-            ini.Save(FilePath);
+            // Save the modified INI file
+            IniParser.Save(ini, FilePath, encoding);
         }
 
         /// <summary>
         /// Applies quote wrapping on the given string based on the <see cref="WrapValueInQuotes"/> parameter.
-        /// <list type="bullet">
-        /// <item>
-        /// <description>If <c>null</c>: uses the quoting format of the existing INI value if available.</description>
-        /// </item>
-        /// <item>
-        /// <description>If <c>true</c>: enforces quotes around the value.</description>
-        /// </item>
-        /// <item>
-        /// <description>If <c>false</c>: ensures the value is stored without quotes.</description>
-        /// </item>
-        /// </list>
         /// </summary>
-        /// <param name="newValue">The new value to be processed.</param>
-        /// <param name="existingValue">The existing INI value (if any) for reference.</param>
-        /// <returns>The processed string with quotes applied or removed according to the settings.</returns>
         private string ApplyQuoteWrapping(string newValue, string existingValue)
         {
             if (string.IsNullOrEmpty(newValue))
@@ -284,17 +267,14 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
             if (WrapValueInQuotes == null)
             {
-                // If null, use the quoting style of the existing value if available.
                 return isExistingValueQuoted ? $"\"{newValue}\"" : newValue;
             }
             else if (WrapValueInQuotes.Value)
             {
-                // If true, enforce quotes.
                 return isNewValueQuoted ? newValue : $"\"{newValue}\"";
             }
             else
             {
-                // If false, remove any surrounding quotes.
                 return isNewValueQuoted ? newValue.Substring(1, newValue.Length - 2) : newValue;
             }
         }

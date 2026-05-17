@@ -52,6 +52,7 @@ public class RedistributableImporter(
             existing.Name = record.Name;
             existing.Description = record.Description;
             existing.Notes = record.Notes;
+            existing.OptionSchema = record.OptionSchema;
             existing.CreatedOn = record.CreatedOn;
             existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.UpdatedOn = record.UpdatedOn;

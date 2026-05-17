@@ -150,17 +150,66 @@ namespace LANCommander.Server.Services
                     .Include(g => g.ExternalIds);
             }).GetAsync(id);
 
-            return GetManifest(game);
+            return await GetManifestAsync(game);
         }
         
-        public SDK.Models.Manifest.Game GetManifest(Game game)
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
         {
             if (game == null)
                 return null;
 
             var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
 
+            if (game.Redistributables != null && game.Redistributables.Any())
+            {
+                using var context = await contextFactory.CreateDbContextAsync();
+
+                foreach (var redistributable in manifest.Redistributables)
+                {
+                    var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                        .FirstOrDefaultAsync(e =>
+                            EF.Property<Guid>(e, "GameId") == game.Id &&
+                            EF.Property<Guid>(e, "RedistributableId") == redistributable.Id);
+
+                    if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson && !string.IsNullOrWhiteSpace(optionsJson))
+                    {
+                        redistributable.Options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson);
+                    }
+                }
+            }
+
             return manifest;
+        }
+
+        public async Task<string> GetRedistributableOptionsAsync(Guid gameId, Guid redistributableId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                .FirstOrDefaultAsync(e =>
+                    EF.Property<Guid>(e, "GameId") == gameId &&
+                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
+
+            if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson)
+                return optionsJson;
+
+            return null;
+        }
+
+        public async Task SetRedistributableOptionsAsync(Guid gameId, Guid redistributableId, string optionsJson)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                .FirstOrDefaultAsync(e =>
+                    EF.Property<Guid>(e, "GameId") == gameId &&
+                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
+
+            if (joinEntry != null)
+            {
+                joinEntry["Options"] = optionsJson;
+                await context.SaveChangesAsync();
+            }
         }
 
         public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)

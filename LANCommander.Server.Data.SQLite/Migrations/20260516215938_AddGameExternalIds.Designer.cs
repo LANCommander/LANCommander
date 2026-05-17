@@ -3,6 +3,7 @@ using System;
 using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260516215938_AddGameExternalIds")]
+    partial class AddGameExternalIds
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -130,9 +133,6 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("RedistributableId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Options")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("GameId", "RedistributableId");
 
                     b.HasIndex("RedistributableId");
@@ -190,9 +190,6 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OptionOverrides")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")
@@ -1201,9 +1198,6 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OptionSchema")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")

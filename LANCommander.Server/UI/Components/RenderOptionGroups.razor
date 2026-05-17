@@ -1,0 +1,98 @@
+@using LANCommander.SDK.Models
+
+@RenderOptions(Schema?.Options, "")
+
+@code {
+    [Parameter] public OptionSchema Schema { get; set; }
+    [Parameter] public Guid RedistId { get; set; }
+    [Parameter] public Dictionary<Guid, Dictionary<string, string>> Options { get; set; }
+    [Parameter] public EventCallback<(Guid redistId, string optionName, string value)> OnOptionChanged { get; set; }
+
+    RenderFragment RenderOptions(Dictionary<string, OptionDefinition> options, string prefix) => __builder =>
+    {
+        if (options == null)
+            return;
+
+        var groups = options.Where(kvp => string.IsNullOrWhiteSpace(kvp.Value.Type) && kvp.Value.Options != null && kvp.Value.Options.Any()).ToList();
+        var leafOptions = options.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value.Type)).ToList();
+
+        // Render leaf options as form items
+        if (leafOptions.Any())
+        {
+            <Form Model="Schema" Layout="FormLayout.Vertical">
+            @foreach (var kvp in leafOptions)
+            {
+                var optionKey = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+                var option = kvp.Value;
+                var label = !string.IsNullOrWhiteSpace(option.DisplayName) ? option.DisplayName
+                    : !string.IsNullOrWhiteSpace(option.Description) ? option.Description
+                    : kvp.Key;
+
+                <FormItem Label="@label">
+                    @if (!string.IsNullOrWhiteSpace(option.Description) && !string.IsNullOrWhiteSpace(option.DisplayName))
+                    {
+                        <p style="color: rgba(0,0,0,0.45); margin: -8px 0 8px;">@option.Description</p>
+                    }
+                    @if (option.Type == "bool")
+                    {
+                        var isChecked = GetOptionValue(optionKey) == "true";
+                        <Checkbox Checked="@isChecked" CheckedChanged="(bool v) => SetBoolValue(optionKey, v)" />
+                    }
+                    else if ((option.Type == "enum" || option.Type == "choice") && option.Choices != null)
+                    {
+                        <Select TItem="string"
+                                TItemValue="string"
+                                DataSource="option.Choices"
+                                Value="@GetOptionValue(optionKey, option.Default)"
+                                ValueChanged="(string v) => SetValue(optionKey, v)"
+                                Placeholder="@(option.Default ?? "")" />
+                    }
+                    else
+                    {
+                        <Input Value="@GetOptionValue(optionKey, option.Default)"
+                               ValueChanged="(string v) => SetValue(optionKey, v)"
+                               Placeholder="@option.Default" />
+                    }
+                </FormItem>
+            }
+            </Form>
+        }
+
+        // Render groups as collapsible panels
+        if (groups.Any())
+        {
+            <Collapse>
+                @foreach (var kvp in groups)
+                {
+                    var groupPrefix = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+                    var groupLabel = !string.IsNullOrWhiteSpace(kvp.Value.DisplayName) ? kvp.Value.DisplayName
+                        : !string.IsNullOrWhiteSpace(kvp.Value.Description) ? kvp.Value.Description
+                        : kvp.Key;
+
+                    <Panel Header="@groupLabel">
+                        @RenderOptions(kvp.Value.Options, groupPrefix)
+                    </Panel>
+                }
+            </Collapse>
+        }
+    };
+
+    string GetOptionValue(string optionName, string defaultValue = "")
+    {
+        if (Options.TryGetValue(RedistId, out var opts) && opts.TryGetValue(optionName, out var value))
+            return value;
+
+        return defaultValue ?? "";
+    }
+
+    async Task SetBoolValue(string optionName, bool value)
+    {
+        await SetValue(optionName, value ? "true" : "false");
+    }
+
+    async Task SetValue(string optionName, string value)
+    {
+        if (OnOptionChanged.HasDelegate)
+            await OnOptionChanged.InvokeAsync((RedistId, optionName, value));
+    }
+}

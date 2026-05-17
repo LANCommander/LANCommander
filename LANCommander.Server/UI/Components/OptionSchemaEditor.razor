@@ -1,0 +1,88 @@
+@using LANCommander.UI.Components
+@inject ModalService ModalService
+
+<Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center" Style="margin-bottom: 16px;">
+    <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap" Align="FlexAlign.Center">
+        <Dropdown>
+            <Overlay>
+                <Menu>
+                    <MenuItem OnClick="AddStringOption">String Option</MenuItem>
+                    <MenuItem OnClick="AddBoolOption">Boolean Option</MenuItem>
+                    <MenuItem OnClick="AddIntOption">Integer Option</MenuItem>
+                    <MenuItem OnClick="AddChoiceOption">Choice Option</MenuItem>
+                </Menu>
+            </Overlay>
+            <ChildContent>
+                <Button Type="@ButtonType.Primary">Add Option</Button>
+            </ChildContent>
+        </Dropdown>
+
+        <Button Icon="@IconType.Outline.Upload" OnClick="() => _configImport.Open()" Type="@ButtonType.Text">Import Config</Button>
+    </Flex>
+</Flex>
+
+<div style="height: 500px; min-height: 500px;">
+    <CodeInput @ref="_codeInput" Value="@Value" ValueChanged="OnEditorValueChanged" Language="Languages.YAML" OnSave="OnSaveCallback" Height="500" />
+</div>
+
+<ConfigImportDialog @ref="_configImport" OnImported="OnConfigImported" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    CodeInput? _codeInput;
+    ConfigImportDialog _configImport;
+
+    async Task AddStringOption() => await OpenAddOptionDialog("string");
+    async Task AddBoolOption() => await OpenAddOptionDialog("bool");
+    async Task AddIntOption() => await OpenAddOptionDialog("int");
+    async Task AddChoiceOption() => await OpenAddOptionDialog("choice");
+
+    async Task OpenAddOptionDialog(string optionType)
+    {
+        var modalOptions = new ModalOptions
+        {
+            Title = $"Add {optionType.Substring(0, 1).ToUpper() + optionType.Substring(1)} Option",
+            Maximizable = false,
+            Closable = true,
+            OkText = "Insert",
+        };
+
+        var dialogOptions = new AddOptionDialogOptions
+        {
+            OptionType = optionType
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<AddOptionDialog, AddOptionDialogOptions, string>(modalOptions, dialogOptions);
+
+        modalRef.OnOk = async (yaml) =>
+        {
+            if (_codeInput != null)
+                await _codeInput.InsertText(yaml);
+        };
+    }
+
+    async Task OnEditorValueChanged(string? newValue)
+    {
+        Value = newValue;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+    }
+
+    async Task OnConfigImported(string yaml)
+    {
+        Value = yaml;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+    }
+
+    async Task OnSaveCallback(string value)
+    {
+        if (OnSave.HasDelegate)
+            await OnSave.InvokeAsync();
+    }
+}

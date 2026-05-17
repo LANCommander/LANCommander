@@ -21,9 +21,8 @@ public class GameExporter(
 
     public override async Task<Game> ExportAsync(Guid id)
     {
-        // Retrieve the game again, but only get the minimal amount of data required
-        var manifest = await gameService.GetAsync<Game>(id);
-        
+        var manifest = await gameService.GetManifestAsync(id);
+
         manifest.Actions ??= new List<SDK.Models.Manifest.Action>();
         manifest.Archives ??= new List<SDK.Models.Manifest.Archive>();
         manifest.Collections ??= new List<SDK.Models.Manifest.Collection>();
@@ -36,6 +35,7 @@ public class GameExporter(
         manifest.Platforms ??= new List<SDK.Models.Manifest.Platform>();
         manifest.PlaySessions ??= new List<SDK.Models.Manifest.PlaySession>();
         manifest.Publishers ??= new List<SDK.Models.Manifest.Company>();
+        manifest.Redistributables ??= new List<SDK.Models.Manifest.Redistributable>();
         manifest.Saves ??= new List<SDK.Models.Manifest.Save>();
         manifest.SavePaths ??= new List<SDK.Models.Manifest.SavePath>();
         manifest.Scripts ??= new List<SDK.Models.Manifest.Script>();

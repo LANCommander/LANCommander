@@ -33,5 +33,7 @@ namespace LANCommander.SDK.Enums
         ApplicationStart,
         [Display(Name = "Package")]
         Package,
+        [Display(Name = "Run Wrapper")]
+        RunWrapper,
     }
 }

@@ -9,6 +9,8 @@ namespace LANCommander.SDK.Models.Manifest
         public string Name { get; set; }
         public string Description { get; set; }
         public string Notes { get; set; }
+        public string OptionSchema { get; set; }
+        public Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
         public DateTime ReleasedOn { get; set; }
         public virtual ICollection<Archive> Archives { get; set; } =  new List<Archive>();
         public virtual ICollection<Script> Scripts { get; set; } = new List<Script>();

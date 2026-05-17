@@ -1,9 +1,13 @@
 @using LANCommander.SDK.Enums
+@using OptionSchema = LANCommander.SDK.Models.OptionSchema
 @using LANCommander.Server.Extensions
+@using YamlDotNet.Serialization
+@using YamlDotNet.Serialization.NamingConventions
 @inherits FeedbackComponent<ScriptEditorOptions, Script>
 @inject ScriptService ScriptService
 @inject ArchiveService ArchiveService
 @inject ServerService ServerService
+@inject RedistributableService RedistributableService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
@@ -46,6 +50,26 @@
 
                 <ChildContent>
                     <Button Type="@ButtonType.Primary">Variables</Button>
+                </ChildContent>
+            </Dropdown>
+        }
+
+        @if (_optionKeys.Any())
+        {
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        @foreach (var optionKey in _optionKeys)
+                        {
+                            <MenuItem OnClick="() => InsertOptionValue(optionKey)">
+                                $Options.@optionKey
+                            </MenuItem>
+                        }
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary">Options</Button>
                 </ChildContent>
             </Dropdown>
         }
@@ -93,6 +117,8 @@
     PowerShellConsole? _console;
     IEnumerable<Snippet> Snippets { get; set; } = [];
     List<string> _variables = new();
+    List<string> _optionKeys = new();
+    string _redistributableName = string.Empty;
 
     bool _debugging;
     bool _isNewScript;
@@ -144,6 +170,9 @@
         if (Options.ScriptId != Guid.Empty)
         {
             _script = await ScriptService.GetAsync(Options.ScriptId);
+
+            if (_script.RedistributableId.HasValue && _script.RedistributableId != Guid.Empty)
+                await LoadRedistributableOptions(_script.RedistributableId.Value);
         }
         else
         {
@@ -165,6 +194,7 @@
             {
                 _script.RedistributableId = Options.RedistributableId;
                 _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == Options.RedistributableId);
+                await LoadRedistributableOptions(Options.RedistributableId.Value);
             }
             else if (Options.ServerId.HasValue && Options.ServerId != Guid.Empty)
             {
@@ -287,5 +317,53 @@
     {
         if (_codeInput != null)
             await _codeInput.InsertSnippet(snippet.Content);
+    }
+
+    async Task InsertOptionValue(string optionKey)
+    {
+        if (_codeInput == null)
+            return;
+
+        var text = $"$Options.{optionKey}";
+
+        if (string.IsNullOrEmpty(_script.Contents) || !_script.Contents.Contains("Get-RedistributableOptions"))
+        {
+            var boilerplate = $"$Options = Get-RedistributableOptions -Path $InstallDirectory -Id $GameManifest.Id -Name \"{_redistributableName}\"\n";
+            text = boilerplate + text;
+        }
+
+        await _codeInput.InsertText(text);
+    }
+
+    async Task LoadRedistributableOptions(Guid redistributableId)
+    {
+        try
+        {
+            var redistributable = await RedistributableService.GetAsync(redistributableId);
+
+            if (redistributable == null)
+                return;
+
+            _redistributableName = redistributable.Name ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(redistributable.OptionSchema))
+            {
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                    .IgnoreUnmatchedProperties()
+                    .Build();
+
+                var schema = deserializer.Deserialize<OptionSchema>(redistributable.OptionSchema);
+
+                if (schema != null)
+                {
+                    _optionKeys = schema.GetFlattenedOptions().Keys.ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load redistributable option schema");
+        }
     }
 }

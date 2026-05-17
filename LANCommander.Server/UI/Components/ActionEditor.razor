@@ -34,6 +34,7 @@
         </ActionColumn>
     </Table>
 
+
     <GridRow Justify="RowJustify.End">
         <GridCol>
             <Button OnClick="AddAction" Type="ButtonType.Primary">Add Action</Button>
@@ -50,7 +51,7 @@
     Game? _game;
     Server? _server;
     Tool? _tool;
-    
+
     ObservableCollection<Action> _sortedActions = new();
 
     protected override async Task OnInitializedAsync() => await LoadActions();
@@ -61,8 +62,9 @@
         {
             _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameId == GameId.Value));
             _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
+
         }
-        
+
         if (ServerId.HasValue)
             _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ServerId == ServerId.Value));
 
@@ -168,4 +170,5 @@
         action.Path = path;
         action.WorkingDirectory = "{InstallDir}";
     }
+
 }

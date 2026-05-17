@@ -200,6 +200,36 @@ This cmdlet can be useful if you have a game that might require a persistent ID 
 Get-UserCustomField -Name "SteamId"
 ```
 
+## `Get-RedistributableOptions`
+Retrieves the resolved options for a redistributable assigned to a game.
+
+### Syntax
+```powershell
+Get-RedistributableOptions
+    -Path <string>
+    -Id <Guid>
+    -Name <string>
+```
+
+### Description
+The `Get-RedistributableOptions` cmdlet reads the game manifest and returns the resolved option values for the specified redistributable as a nested `PSObject`. Options are resolved in order: schema defaults, then per-game configured values. Nested options in the schema are represented as nested properties on the returned object.
+
+This cmdlet is useful in [Install](/Scripting/Script Types/Install), [Before Start](/Scripting/Script Types/Before Start), and [Run Wrapper](/Scripting/Script Types/Run Wrapper) scripts where you need to access compatibility shim configuration.
+
+### Example
+```powershell
+$options = Get-RedistributableOptions -Path $InstallDirectory -Id $GameManifest.Id -Name "umu-launcher"
+
+# Access nested options
+Write-Host $options.Game.GAMEID        # "umu-default" or admin-configured value
+Write-Host $options.Proton.PROTONPATH  # "GE-Proton" or admin-configured value
+
+# Use in a script
+if ($options.Proton.PROTONPATH -eq "GE-Proton") {
+    Write-Host "Using default Proton version"
+}
+```
+
 ## `Update-UserCustomField`
 Updates the value of a custom field on a users profile.
 

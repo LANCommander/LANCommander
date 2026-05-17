@@ -9,6 +9,7 @@ namespace LANCommander.Server.ImportExport.Importers;
 public class GameImporter(
     ILogger<GameImporter> logger,
     GameService gameService,
+    RedistributableService redistributableService,
     UserService userService) : BaseImporter<Game>
 {
     public override string GetKey(Game record)
@@ -165,6 +166,29 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        if (manifest.Redistributables != null && manifest.Redistributables.Any())
+        {
+            await gameService.SyncRelatedCollectionAsync(
+                game,
+                g => g.Redistributables,
+                manifest.Redistributables,
+                r => rd => rd.Id == r.Id || rd.Name == r.Name);
+
+            foreach (var redistributable in manifest.Redistributables)
+            {
+                if (redistributable.Options != null && redistributable.Options.Any())
+                {
+                    var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == redistributable.Id || r.Name == redistributable.Name);
+
+                    if (existing != null)
+                    {
+                        var optionsJson = System.Text.Json.JsonSerializer.Serialize(redistributable.Options);
+                        await gameService.SetRedistributableOptionsAsync(game.Id, existing.Id, optionsJson);
+                    }
+                }
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(manifest.BaseGame) || manifest.BaseGameId != Guid.Empty)
         {

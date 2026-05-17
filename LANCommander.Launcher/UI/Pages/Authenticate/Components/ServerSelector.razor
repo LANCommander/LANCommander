@@ -2,6 +2,7 @@
 @using LANCommander.SDK.Models
 @using ListItem = AntDesign.ListItem
 @namespace LANCommander.Launcher.UI
+@implements IDisposable
 @inject IConnectionClient ConnectionClient
 @inject BeaconClient BeaconClient
 @inject NavigationManager NavigationManager
@@ -105,7 +106,10 @@
         var discoveredServer = new DiscoveredServer(e.Message, e.EndPoint);
 
         if (DiscoveredServers.All(s => s.Address != discoveredServer.Address))
+        {
             DiscoveredServers.Add(discoveredServer);
+            InvokeAsync(StateHasChanged);
+        }
     }
 
     async Task SelectServer(Uri serverAddress)
@@ -162,6 +166,7 @@
 
     public void Dispose()
     {
+        BeaconClient.OnBeaconResponse -= OnBeaconResponse;
         DiscoveryToken?.Cancel();
         DiscoveryToken?.Dispose();
     }

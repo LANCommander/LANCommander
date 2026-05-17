@@ -116,6 +116,12 @@ jobs:
           -p:FileVersion="$ASSEMBLY_VERSION" \
           -p:InformationalVersion="$SEMVER"
 
+        # Disable NetBeauty on ARM64 runners — nbeauty2 only ships x64 native binaries
+        DISABLE_BEAUTY="False"
+        if [ "${{ inputs.build_arch }}" = "arm64" ] && [ "${{ inputs.build_platform }}" = "Linux" ]; then
+          DISABLE_BEAUTY="True"
+        fi
+
         dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" \
           -c "${{ inputs.build_configuration }}" \
           --self-contained \
@@ -123,7 +129,8 @@ jobs:
           -p:Version="$SEMVER" \
           -p:AssemblyVersion="$ASSEMBLY_VERSION" \
           -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
+          -p:InformationalVersion="$SEMVER" \
+          -p:DisableBeauty="$DISABLE_BEAUTY"
 
 
     - name: Bundle and Clean

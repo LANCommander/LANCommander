@@ -25,9 +25,9 @@ public class DiscoveryProbe : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly byte[] _probeId;
     private readonly NetworkInterface _networkInterface;
-    
+
     private byte[] _buffer = new byte[BufferSize];
-    
+
     public delegate void OnBeaconResponseHandler(object sender, BeaconResponseArgs e);
     public event OnBeaconResponseHandler OnBeaconResponse;
 
@@ -36,7 +36,7 @@ public class DiscoveryProbe : IDisposable
         _networkInterface = networkInterface;
         _udpClient = new UdpClient(0);
         _udpClient.EnableBroadcast = true;
-        
+
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         _broadcastEndpoints = networkInterface.GetBroadcastAddresses().Select(ba => new IPEndPoint(ba, _port));
@@ -50,7 +50,7 @@ public class DiscoveryProbe : IDisposable
     public async Task SendAsync()
     {
         foreach (var endpoint in _broadcastEndpoints)
-            await _udpClient.SendAsync(_probeId, _probeId.Length, endpoint);
+            _socket.SendTo(_probeId, endpoint);
     }
 
     /// <summary>
@@ -72,6 +72,7 @@ public class DiscoveryProbe : IDisposable
 
         EndPoint fromEndpoint = new IPEndPoint(IPAddress.Any, 0);
 
+        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
         _socket.Bind(new IPEndPoint(addressInformation.Address, _port));
         _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndpoint, ReceiveCallback, null);
     }
@@ -92,7 +93,7 @@ public class DiscoveryProbe : IDisposable
             {
                 byte[] response = new byte[receivedBytes];
                 Array.Copy(_buffer, response, receivedBytes);
-                
+
                 var message = Encoding.UTF8.GetString(response);
 
                 OnBeaconResponse?.Invoke(this, new BeaconResponseArgs

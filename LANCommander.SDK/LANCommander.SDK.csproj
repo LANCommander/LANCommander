@@ -18,6 +18,7 @@
     <ItemGroup>
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="Crc32.NET" />
+        <PackageReference Include="DiscordRichPresence" />
         <PackageReference Include="Facepunch.Steamworks" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" />

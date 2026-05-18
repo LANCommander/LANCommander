@@ -1,4 +1,5 @@
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Clients;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
@@ -37,6 +38,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ChatHubClient>();
         services.AddSingleton<IConnectionClient, ConnectionClient>();
         services.AddSingleton<DepotClient>();
+        services.AddSingleton<DiscordClient>();
         services.AddSingleton<GameClient>();
         services.AddSingleton<IssueClient>();
         services.AddSingleton<LauncherClient>();

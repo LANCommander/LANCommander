@@ -13,6 +13,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Avalonia.Views;
+using LANCommander.SDK.Clients;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.PowerShell;
@@ -500,6 +501,8 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             StatusMessage = "Starting...";
 
+            var discordClient = _serviceProvider.GetRequiredService<DiscordClient>();
+
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -524,6 +527,11 @@ public partial class GameActionBarViewModel : ViewModelBase
 
                 _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
 
+                var discordAppId = localGame.ExternalIds?
+                    .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
+                    ?.ExternalId;
+                discordClient.UpdatePresence(localGame.Title, discordAppId);
+
                 // Run the game
                 await gameService.Run(localGame, primaryAction);
 
@@ -537,6 +545,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             }
             finally
             {
+                discordClient.ClearPresence();
                 IsStarting = false;
             }
         }
@@ -552,6 +561,8 @@ public partial class GameActionBarViewModel : ViewModelBase
         IsStarting = true;
         StatusMessage = $"Starting {action.Name}...";
 
+        var discordClient = _serviceProvider.GetRequiredService<DiscordClient>();
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
@@ -564,6 +575,11 @@ public partial class GameActionBarViewModel : ViewModelBase
             }
 
             _logger.LogInformation("Running action {ActionName} for game {GameId}", action.Name, GameId);
+
+            var discordAppId = localGame.ExternalIds?
+                .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
+                ?.ExternalId;
+            discordClient.UpdatePresence(localGame.Title, discordAppId);
 
             // Run the game with the specific action
             await gameService.Run(localGame, action);
@@ -578,6 +594,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         }
         finally
         {
+            discordClient.ClearPresence();
             IsStarting = false;
         }
     }
@@ -1045,6 +1062,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to add game {GameId} ({Title}) to library", GameId, Title);
             StatusMessage = $"Failed to add: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Add to Library", ex.Message);
         }
         finally
         {
@@ -1078,6 +1096,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to remove game {GameId} ({Title}) from library", GameId, Title);
             StatusMessage = $"Failed to remove: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Remove from Library", ex.Message);
         }
         finally
         {

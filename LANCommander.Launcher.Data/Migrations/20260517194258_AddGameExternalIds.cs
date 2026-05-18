@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -41,9 +41,9 @@ namespace LANCommander.Launcher.Data.Migrations
 
             // Migrate existing IGDBId data
             migrationBuilder.Sql(@"
-                INSERT INTO GameExternalIds (Id, GameId, Provider, ExternalId, CreatedOn, UpdatedOn)
+                INSERT INTO GameExternalIds (Id, GameId, Provider, ExternalId, ImportedOn, CreatedOn, UpdatedOn)
                 SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))),
-                       Id, 'IGDB', CAST(IGDBId AS TEXT), CreatedOn, UpdatedOn
+                       Id, 'IGDB', CAST(IGDBId AS TEXT), CreatedOn, CreatedOn, UpdatedOn
                 FROM Games
                 WHERE IGDBId IS NOT NULL
             ");
@@ -56,21 +56,14 @@ namespace LANCommander.Launcher.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "GameExternalIds");
+
             migrationBuilder.AddColumn<long>(
                 name: "IGDBId",
                 table: "Games",
                 type: "INTEGER",
                 nullable: true);
-
-            // Migrate data back
-            migrationBuilder.Sql(@"
-                UPDATE Games
-                SET IGDBId = CAST((SELECT ExternalId FROM GameExternalIds WHERE GameExternalIds.GameId = Games.Id AND Provider = 'IGDB' LIMIT 1) AS INTEGER)
-                WHERE Id IN (SELECT GameId FROM GameExternalIds WHERE Provider = 'IGDB')
-            ");
-
-            migrationBuilder.DropTable(
-                name: "GameExternalIds");
         }
     }
 }

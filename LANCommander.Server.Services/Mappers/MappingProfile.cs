@@ -120,6 +120,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.ServerConsole, SDK.Models.Manifest.ServerConsole>().ReverseMap();
             CreateMap<Data.Models.ServerHttpPath, SDK.Models.Manifest.ServerHttpPath>().ReverseMap();
             CreateMap<Data.Models.Tag, SDK.Models.Manifest.Tag>().ReverseMap();
+            CreateMap<Data.Models.Tool, SDK.Models.Manifest.Tool>().ReverseMap();
         }
 
         private void CreateEntityReferenceMap<TEntity>(Expression<Func<TEntity, string>> nameMember)

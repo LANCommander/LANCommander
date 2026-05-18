@@ -43,7 +43,7 @@
     </ItemGroup>
     
     <ItemGroup>
-        <None Update="icon.png">
+        <None Update="package-icon.png">
             <Pack>True</Pack>
             <PackagePath>\</PackagePath>
         </None>

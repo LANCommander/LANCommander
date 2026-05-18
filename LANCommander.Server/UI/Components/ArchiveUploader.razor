@@ -22,7 +22,7 @@
     </Template>;
 }
 
-<Modal Visible="@Visible" Title="Upload Archive" OnOk="Start" OnCancel="Cancel" Footer="@Footer" Closable="@(!Uploading)" MaskClosable="@(!Uploading)">
+<Modal Visible="@Visible" Title="Upload Archive" OnOk="Start" OnCancel="Cancel" Footer="@Footer" Closable="@(!Uploading)" MaskClosable="false">
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" /> 

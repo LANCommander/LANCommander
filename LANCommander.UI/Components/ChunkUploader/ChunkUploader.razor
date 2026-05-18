@@ -13,7 +13,7 @@
 
     <span class="uploader-progress-rate"></span>
 
-    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput" role="button">
+    <label tabindex="0" class="ant-upload" style="display: grid;" for="@($"ChunkFileInput-{_uploaderId}")" role="button">
         <InputFile @ref="_fileInput" @key="@_uploaderId" id="@($"ChunkFileInput-{_uploaderId}")" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
         
         <div class="ant-upload-drag-container">

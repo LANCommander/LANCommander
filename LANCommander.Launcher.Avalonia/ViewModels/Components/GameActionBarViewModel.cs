@@ -783,6 +783,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to start installation for game {GameId} ({Title})", GameId, Title);
             StatusMessage = $"Failed to install: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Install", ex.Message);
         }
         finally
         {

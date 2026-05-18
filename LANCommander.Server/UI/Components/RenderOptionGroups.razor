@@ -33,27 +33,18 @@
                     {
                         <p style="color: rgba(255,255,255,0.45); font-size: 12px; margin: -8px 0 8px;">@option.Description</p>
                     }
-                    @if (option.Type == "bool")
+                    @if (option.IsList)
                     {
-                        var isChecked = GetOptionValue(optionKey) == "true";
-                        <Checkbox Checked="@isChecked" CheckedChanged="(bool v) => SetBoolValue(optionKey, v)" />
-                    }
-                    else if ((option.Type == "enum" || option.Type == "choice") && option.Choices != null)
-                    {
-                        <Select TItem="OptionChoice"
-                                TItemValue="string"
-                                DataSource="option.Choices"
-                                ValueName="@nameof(OptionChoice.Value)"
-                                LabelName="@nameof(OptionChoice.Label)"
-                                Value="@GetOptionValue(optionKey, option.Default)"
-                                ValueChanged="(string v) => SetValue(optionKey, v)"
-                                Placeholder="@(option.Default ?? "")" />
+                        <RenderListOption Definition="option"
+                                          Value="@GetOptionValue(optionKey, option.GetDefaultAsString())"
+                                          ValueChanged="(string v) => SetValue(optionKey, v)" />
                     }
                     else
                     {
-                        <Input Value="@GetOptionValue(optionKey, option.Default)"
-                               ValueChanged="(string v) => SetValue(optionKey, v)"
-                               Placeholder="@option.Default" />
+                        <RenderOptionInput Definition="option"
+                                           Value="@GetOptionValue(optionKey, option.GetDefaultAsString())"
+                                           Placeholder="@option.GetDefaultAsString()"
+                                           ValueChanged="(string v) => SetValue(optionKey, v)" />
                     }
                 </FormItem>
             }
@@ -85,11 +76,6 @@
             return value;
 
         return defaultValue ?? "";
-    }
-
-    async Task SetBoolValue(string optionName, bool value)
-    {
-        await SetValue(optionName, value ? "true" : "false");
     }
 
     async Task SetValue(string optionName, string value)

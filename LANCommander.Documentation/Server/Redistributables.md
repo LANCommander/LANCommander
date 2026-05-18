@@ -66,17 +66,72 @@ A dictionary of option definitions. Options can be nested to create logical grou
 
 Each option definition supports the following fields:
 
-| Field                   | Type       | Description                                                        |
-|-------------------------|------------|--------------------------------------------------------------------|
-| `Type`                  | `string`   | The data type: `string`, `bool`, or `enum`                         |
-| `Default`               | `string`   | The default value if none is configured                            |
-| `Description`           | `string`   | A human-readable description shown in the admin UI                 |
-| `Required`              | `bool`     | Whether the option must be configured                              |
+| Field                   | Type       | Description                                                                                        |
+|-------------------------|------------|----------------------------------------------------------------------------------------------------|
+| `Type`                  | `string`   | The data type: `string`, `bool`, `int`, `choice`, or `list`                                        |
+| `Default`               | `string`   | The default value if none is configured. For `list`, a YAML sequence (see below).                  |
+| `Description`           | `string`   | A human-readable description shown in the admin UI                                                 |
+| `Required`              | `bool`     | Whether the option must be configured                                                              |
 | `IsEnvironmentVariable` | `bool`     | If `true`, the resolved value is set as a process environment variable using the option's key name |
-| `Choices`               | `string[]` | Available values for `enum` type options                           |
-| `Options`               | `dict`     | Child options for creating nested groups                           |
+| `Choices`               | `string[]` | Available values for `choice` type options                                                         |
+| `Options`               | `dict`     | Child options for creating nested groups                                                           |
+| `ItemType`              | `string`   | For scalar `list` options: the type of each item (`string`, `int`, `bool`). Defaults to `string`.  |
+| `Fields`                | `dict`     | For composite `list` options: per-row sub-schema. Presence of `Fields` makes the list composite.   |
+| `MinItems` / `MaxItems` | `int`      | For `list` options: lower/upper bounds on the number of rows. Both optional.                       |
 
 Nested options are flattened using dot-notation keys for storage and resolution (e.g., `Game.GAMEID`). When `IsEnvironmentVariable` is `true`, only the leaf key name is used as the environment variable name (e.g., `GAMEID`, not `Game.GAMEID`).
+
+### List Options
+Use `Type: list` when an option needs to hold a variable number of values — for example, repeated INI entries like `ListFactories[0]=…`, `ListFactories[1]=…`, etc.
+
+A list option is either **scalar** (a list of plain values) or **composite** (a list of records). The shape of each row is determined entirely by the schema; how the values are emitted into the target config is up to the redistributable's scripts.
+
+**Scalar list** — each row is a single value:
+```yaml
+Options:
+  AllowedHosts:
+    Type: list
+    ItemType: string
+    Default:
+      - localhost
+      - example.com
+```
+
+**Composite list** — each row is a record with named fields. A list-level `Default:` seeds initial rows; per-field `Default:` inside `Fields` is used to prefill new rows when an admin clicks "+ Add Item":
+```yaml
+Options:
+  MasterServers:
+    Type: list
+    DisplayName: Master Servers
+    Fields:
+      Address:
+        Type: string
+        Default: master.example.com
+      Port:
+        Type: int
+        Default: 28900
+      GameName:
+        Type: string
+        Default: unreal
+    MinItems: 1
+    MaxItems: 16
+    Default:
+      - { Address: master.oldunreal.com, Port: 28900, GameName: unreal }
+      - { Address: master.hlkclan.net,   Port: 28900, GameName: unreal }
+```
+
+**Consuming list values in scripts.** `Get-RedistributableOptions` hydrates list values into native PowerShell arrays — scalar lists become typed arrays (`string[]`/`int[]`/`bool[]`), composite lists become arrays of `PSObject`s keyed by `Fields`. The script decides the on-disk format:
+```powershell
+$opts = Get-RedistributableOptions -Path $InstallDirectory -Id $GameId -Name "UBrowser"
+$lines = @()
+for ($i = 0; $i -lt $opts.MasterServers.Count; $i++) {
+    $s = $opts.MasterServers[$i]
+    $lines += "ListFactories[$i]=UBrowser.UBrowserGSpyFact,MasterServerAddress=$($s.Address),MasterServerTCPPort=$($s.Port),GameName=$($s.GameName)"
+}
+$lines | Set-Content (Join-Path $InstallDirectory "System/UnrealTournament.ini")
+```
+
+**Environment variables.** `IsEnvironmentVariable: true` is ignored for `Type: list` because environment variables are scalar. Read list values from `Get-RedistributableOptions` in a script instead.
 
 ## Per-Game Options
 When a game is assigned a redistributable that has an option schema, the game's **Redistributables** page will display form fields for each option. Administrators can configure values specific to that game (e.g., setting the correct `GAMEID` for protonfixes). These values are stored on the game-redistributable relationship and override the schema defaults.

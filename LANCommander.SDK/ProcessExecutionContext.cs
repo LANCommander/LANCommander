@@ -259,8 +259,9 @@ namespace LANCommander.SDK
 
                 foreach (var kvp in flatOptions)
                 {
-                    if (!string.IsNullOrWhiteSpace(kvp.Value.Default))
-                        resolvedOptions[kvp.Key] = kvp.Value.Default;
+                    var defaultValue = kvp.Value.GetDefaultAsString();
+                    if (!string.IsNullOrWhiteSpace(defaultValue))
+                        resolvedOptions[kvp.Key] = defaultValue;
                 }
 
                 // Apply per-game values
@@ -284,7 +285,7 @@ namespace LANCommander.SDK
                 // Set environment variables for options that define envVar
                 {
                     bool hasEnvVars = flatOptions.Any(kvp =>
-                        kvp.Value.IsEnvironmentVariable && resolvedOptions.ContainsKey(kvp.Key));
+                        kvp.Value.IsEnvironmentVariable && !kvp.Value.IsList && resolvedOptions.ContainsKey(kvp.Key));
 
                     if (hasEnvVars || !string.IsNullOrWhiteSpace(schema.CommandTemplate))
                     {
@@ -293,6 +294,12 @@ namespace LANCommander.SDK
 
                     foreach (var kvp in flatOptions.Where(kvp => kvp.Value.IsEnvironmentVariable))
                     {
+                        if (kvp.Value.IsList)
+                        {
+                            logger?.LogTrace("Skipping env-var assignment for list option {Key} — read it via Get-RedistributableOptions instead", kvp.Key);
+                            continue;
+                        }
+
                         if (resolvedOptions.TryGetValue(kvp.Key, out var value) && !string.IsNullOrWhiteSpace(value))
                         {
                             // Use the leaf key name as the environment variable name

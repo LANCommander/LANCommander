@@ -10,6 +10,7 @@
                     <MenuItem OnClick="AddBoolOption">Boolean Option</MenuItem>
                     <MenuItem OnClick="AddIntOption">Integer Option</MenuItem>
                     <MenuItem OnClick="AddChoiceOption">Choice Option</MenuItem>
+                    <MenuItem OnClick="AddListOption">List Option</MenuItem>
                 </Menu>
             </Overlay>
             <ChildContent>
@@ -39,6 +40,7 @@
     async Task AddBoolOption() => await OpenAddOptionDialog("bool");
     async Task AddIntOption() => await OpenAddOptionDialog("int");
     async Task AddChoiceOption() => await OpenAddOptionDialog("choice");
+    async Task AddListOption() => await OpenAddOptionDialog("list");
 
     async Task OpenAddOptionDialog(string optionType)
     {

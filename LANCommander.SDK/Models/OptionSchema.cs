@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Text.Json;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -14,6 +16,8 @@ namespace LANCommander.SDK.Models
         /// <summary>
         /// Flattens nested options into dot-notation keys (e.g., "Proton.Path").
         /// Leaf options (those with a Type) are included; group nodes (those with only child Options) are not.
+        /// List options are treated as leaves — their <see cref="OptionDefinition.Fields"/> are not flattened
+        /// because they describe per-item shape, not sibling options.
         /// </summary>
         public Dictionary<string, OptionDefinition> GetFlattenedOptions()
         {
@@ -34,7 +38,7 @@ namespace LANCommander.SDK.Models
                 if (!string.IsNullOrWhiteSpace(kvp.Value.Type))
                     result[key] = kvp.Value;
 
-                if (kvp.Value.Options != null && kvp.Value.Options.Count > 0)
+                if (!kvp.Value.IsList && kvp.Value.Options != null && kvp.Value.Options.Count > 0)
                     FlattenOptions(kvp.Value.Options, key, result);
             }
         }
@@ -67,11 +71,97 @@ namespace LANCommander.SDK.Models
         public string Type { get; set; }
         public string DisplayName { get; set; }
         public bool IsEnvironmentVariable { get; set; }
-        public string Default { get; set; }
+
+        /// <summary>
+        /// The default value for this option. For scalar options this is a string;
+        /// for <c>list</c> options this is a YAML sequence (deserialized as <c>IList&lt;object&gt;</c>)
+        /// of either scalars (scalar list) or mappings (composite list).
+        /// </summary>
+        public object Default { get; set; }
+
         public string Description { get; set; }
         public bool Required { get; set; }
         public List<OptionChoice> Choices { get; set; }
         public Dictionary<string, OptionDefinition> Options { get; set; }
+
+        /// <summary>
+        /// For scalar <c>list</c> options: the type of each item (<c>string</c>, <c>int</c>, <c>bool</c>).
+        /// Ignored for composite lists (which use <see cref="Fields"/>) and non-list options.
+        /// </summary>
+        public string ItemType { get; set; }
+
+        /// <summary>
+        /// For composite <c>list</c> options: the schema of each row. Presence of <c>Fields</c>
+        /// distinguishes composite lists from scalar lists.
+        /// </summary>
+        public Dictionary<string, OptionDefinition> Fields { get; set; }
+
+        /// <summary>
+        /// Minimum number of items required for a list option. Null means no minimum.
+        /// </summary>
+        public int? MinItems { get; set; }
+
+        /// <summary>
+        /// Maximum number of items allowed for a list option. Null means no maximum.
+        /// </summary>
+        public int? MaxItems { get; set; }
+
+        [YamlIgnore]
+        public bool IsList => string.Equals(Type, "list", StringComparison.OrdinalIgnoreCase);
+
+        [YamlIgnore]
+        public bool IsCompositeList => IsList && Fields != null && Fields.Count > 0;
+
+        /// <summary>
+        /// Returns the default value in the canonical string form used by per-game / per-action option storage.
+        /// For non-list options this is the raw string. For list options this is a JSON-encoded array
+        /// of either scalars (scalar list) or objects (composite list).
+        /// </summary>
+        public string GetDefaultAsString()
+        {
+            if (Default == null)
+                return null;
+
+            if (IsList)
+            {
+                var normalized = NormalizeYamlValueForJson(Default);
+
+                if (normalized == null)
+                    return null;
+
+                return JsonSerializer.Serialize(normalized);
+            }
+
+            return Default.ToString();
+        }
+
+        /// <summary>
+        /// YamlDotNet decodes untyped objects as nested <c>Dictionary&lt;object,object&gt;</c> /
+        /// <c>List&lt;object&gt;</c>. Convert those to <c>Dictionary&lt;string,object&gt;</c> /
+        /// <c>List&lt;object&gt;</c> so System.Text.Json emits clean JSON.
+        /// </summary>
+        private static object NormalizeYamlValueForJson(object value)
+        {
+            switch (value)
+            {
+                case null:
+                    return null;
+                case string s:
+                    return s;
+                case IDictionary dict:
+                    var map = new Dictionary<string, object>();
+                    foreach (DictionaryEntry entry in dict)
+                        map[entry.Key?.ToString() ?? string.Empty] = NormalizeYamlValueForJson(entry.Value);
+                    return map;
+                case IEnumerable enumerable:
+                    var list = new List<object>();
+                    foreach (var item in enumerable)
+                        list.Add(NormalizeYamlValueForJson(item));
+                    return list;
+                default:
+                    return value;
+            }
+        }
     }
 
     /// <summary>

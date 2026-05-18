@@ -1,0 +1,47 @@
+@using LANCommander.SDK.Models
+
+@if (Definition.Type == "bool")
+{
+    var isChecked = Value == "true";
+    <Checkbox Checked="@isChecked" CheckedChanged="OnBoolChanged" />
+}
+else if ((Definition.Type == "enum" || Definition.Type == "choice") && Definition.Choices != null)
+{
+    <Select TItem="OptionChoice"
+            TItemValue="string"
+            DataSource="Definition.Choices"
+            ValueName="@nameof(OptionChoice.Value)"
+            LabelName="@nameof(OptionChoice.Label)"
+            Value="@Value"
+            ValueChanged="(string v) => OnStringChanged(v)"
+            Placeholder="@(Placeholder ?? "")" />
+}
+else
+{
+    <Input Value="@Value"
+           ValueChanged="(string v) => OnStringChanged(v)"
+           Placeholder="@Placeholder" />
+}
+
+@code {
+    [Parameter] public OptionDefinition Definition { get; set; }
+    [Parameter] public string Value { get; set; }
+    [Parameter] public string Placeholder { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    async Task OnBoolChanged(bool value)
+    {
+        await Emit(value ? "true" : "false");
+    }
+
+    async Task OnStringChanged(string value)
+    {
+        await Emit(value);
+    }
+
+    async Task Emit(string value)
+    {
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(value);
+    }
+}

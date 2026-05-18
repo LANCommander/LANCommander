@@ -19,12 +19,16 @@
             <SelectOption Value="@("bool")" Label="Boolean" />
             <SelectOption Value="@("int")" Label="Integer" />
             <SelectOption Value="@("choice")" Label="Choice" />
+            <SelectOption Value="@("list")" Label="List" />
         </Select>
     </FormItem>
 
-    <FormItem Label="Default Value">
-        <Input @bind-Value="_model.Default" Placeholder="Default value" />
-    </FormItem>
+    @if (_model.Type != "list")
+    {
+        <FormItem Label="Default Value">
+            <Input @bind-Value="_model.Default" Placeholder="Default value" />
+        </FormItem>
+    }
 
     @if (_model.Type == "choice")
     {
@@ -33,12 +37,81 @@
         </FormItem>
     }
 
+    @if (_model.Type == "list")
+    {
+        <FormItem Label="Item Shape">
+            <Select @bind-Value="_model.ListShape" TItemValue="string" TItem="string">
+                <SelectOption Value="@("scalar")" Label="Scalar (list of values)" />
+                <SelectOption Value="@("composite")" Label="Composite (list of records)" />
+            </Select>
+        </FormItem>
+
+        @if (_model.ListShape == "scalar")
+        {
+            <FormItem Label="Item Type">
+                <Select @bind-Value="_model.ItemType" TItemValue="string" TItem="string">
+                    <SelectOption Value="@("string")" Label="String" />
+                    <SelectOption Value="@("int")" Label="Integer" />
+                    <SelectOption Value="@("bool")" Label="Boolean" />
+                </Select>
+            </FormItem>
+        }
+        else
+        {
+            <FormItem Label="Fields">
+                @if (!_model.Fields.Any())
+                {
+                    <p style="color: rgba(255,255,255,.45); margin: 0 0 8px;">No fields. Add at least one.</p>
+                }
+                @for (int i = 0; i < _model.Fields.Count; i++)
+                {
+                    var index = i;
+                    var field = _model.Fields[index];
+                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Style="margin-bottom: 8px;">
+                        <div style="flex: 2; min-width: 0;">
+                            <Input @bind-Value="field.Name" Placeholder="Field name (e.g. Address)" />
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <Select @bind-Value="field.Type" TItemValue="string" TItem="string">
+                                <SelectOption Value="@("string")" Label="String" />
+                                <SelectOption Value="@("int")" Label="Integer" />
+                                <SelectOption Value="@("bool")" Label="Boolean" />
+                            </Select>
+                        </div>
+                        <div style="flex: 2; min-width: 0;">
+                            <Input @bind-Value="field.Default" Placeholder="Default (optional)" />
+                        </div>
+                        <Button Type="ButtonType.Text"
+                                Icon="@IconType.Outline.Close"
+                                Danger
+                                Size="ButtonSize.Small"
+                                OnClick="() => _model.Fields.RemoveAt(index)" />
+                    </Flex>
+                }
+                <Button OnClick="AddField" Icon="@IconType.Outline.Plus" Size="ButtonSize.Small">Add Field</Button>
+            </FormItem>
+        }
+
+        <Flex Gap="FlexGap.Small">
+            <FormItem Label="Min Items" Style="flex: 1;">
+                <AntDesign.InputNumber @bind-Value="_model.MinItems" Min="0" />
+            </FormItem>
+            <FormItem Label="Max Items" Style="flex: 1;">
+                <AntDesign.InputNumber @bind-Value="_model.MaxItems" Min="0" />
+            </FormItem>
+        </Flex>
+    }
+
     <FormItem>
         <Checkbox @bind-Checked="_model.Required">Required</Checkbox>
     </FormItem>
 
     <FormItem>
-        <Checkbox @bind-Checked="_model.IsEnvironmentVariable">Environment Variable</Checkbox>
+        <Checkbox @bind-Checked="_model.IsEnvironmentVariable" Disabled="@(_model.Type == "list")">Environment Variable</Checkbox>
+        @if (_model.Type == "list")
+        {
+            <span style="color: rgba(255,255,255,.45); font-size: 12px; margin-left: 8px;">Lists can't be set as a single env var — read them via Get-RedistributableOptions in a script.</span>
+        }
     </FormItem>
 </Form>
 
@@ -53,9 +126,20 @@
             _model.Type = Options.OptionType;
     }
 
+    void AddField()
+    {
+        _model.Fields.Add(new AddOptionFieldModel());
+    }
+
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         if (!_form.Validate())
+        {
+            args.Reject();
+            return;
+        }
+
+        if (_model.Type == "list" && _model.ListShape == "composite" && !_model.Fields.Any(f => !string.IsNullOrWhiteSpace(f.Name)))
         {
             args.Reject();
             return;
@@ -80,13 +164,13 @@
         if (!string.IsNullOrWhiteSpace(_model.Description))
             lines.Add($"{indent}Description: {_model.Description}");
 
-        if (!string.IsNullOrWhiteSpace(_model.Default))
+        if (_model.Type != "list" && !string.IsNullOrWhiteSpace(_model.Default))
             lines.Add($"{indent}Default: {_model.Default}");
 
         if (_model.Required)
             lines.Add($"{indent}Required: true");
 
-        if (_model.IsEnvironmentVariable)
+        if (_model.IsEnvironmentVariable && _model.Type != "list")
             lines.Add($"{indent}IsEnvironmentVariable: true");
 
         if (_model.Type == "choice" && !string.IsNullOrWhiteSpace(_choicesText))
@@ -109,6 +193,31 @@
             }
         }
 
+        if (_model.Type == "list")
+        {
+            if (_model.ListShape == "composite")
+            {
+                lines.Add($"{indent}Fields:");
+                foreach (var field in _model.Fields.Where(f => !string.IsNullOrWhiteSpace(f.Name)))
+                {
+                    lines.Add($"{indent}  {field.Name.Trim()}:");
+                    lines.Add($"{indent}    Type: {field.Type}");
+                    if (!string.IsNullOrWhiteSpace(field.Default))
+                        lines.Add($"{indent}    Default: {field.Default}");
+                }
+            }
+            else if (!string.Equals(_model.ItemType, "string", StringComparison.OrdinalIgnoreCase))
+            {
+                lines.Add($"{indent}ItemType: {_model.ItemType}");
+            }
+
+            if (_model.MinItems.HasValue)
+                lines.Add($"{indent}MinItems: {_model.MinItems.Value}");
+
+            if (_model.MaxItems.HasValue)
+                lines.Add($"{indent}MaxItems: {_model.MaxItems.Value}");
+        }
+
         return string.Join("\n", lines) + "\n";
     }
 
@@ -121,5 +230,19 @@
         public string Default { get; set; } = "";
         public bool Required { get; set; }
         public bool IsEnvironmentVariable { get; set; }
+
+        // List-only
+        public string ListShape { get; set; } = "scalar"; // "scalar" | "composite"
+        public string ItemType { get; set; } = "string";
+        public List<AddOptionFieldModel> Fields { get; set; } = new();
+        public int? MinItems { get; set; }
+        public int? MaxItems { get; set; }
+    }
+
+    class AddOptionFieldModel
+    {
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "string";
+        public string Default { get; set; } = "";
     }
 }

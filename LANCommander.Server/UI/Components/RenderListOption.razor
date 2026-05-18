@@ -1,0 +1,222 @@
+@using System.Text.Json
+@using LANCommander.SDK.Models
+
+@if (_rows.Count == 0)
+{
+    <p style="color: rgba(255,255,255,.45); margin: 0 0 8px;">No items.</p>
+}
+
+@for (int i = 0; i < _rows.Count; i++)
+{
+    var index = i;
+    var row = _rows[index];
+
+    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Style="margin-bottom: 8px;">
+        <div style="flex: 1; min-width: 0;">
+            @if (Definition.IsCompositeList)
+            {
+                <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap">
+                    @foreach (var field in Definition.Fields)
+                    {
+                        var fieldKey = field.Key;
+                        var fieldDef = field.Value;
+                        var fieldLabel = !string.IsNullOrWhiteSpace(fieldDef.DisplayName) ? fieldDef.DisplayName : fieldKey;
+                        var fieldValue = row.TryGetValue(fieldKey, out var v) ? v : "";
+
+                        <div style="flex: 1; min-width: 140px;">
+                            <div style="color: rgba(255,255,255,.65); font-size: 12px; margin-bottom: 2px;">@fieldLabel</div>
+                            <RenderOptionInput Definition="fieldDef"
+                                               Value="@fieldValue"
+                                               Placeholder="@fieldDef.GetDefaultAsString()"
+                                               ValueChanged="(string nv) => OnFieldChanged(index, fieldKey, nv)" />
+                        </div>
+                    }
+                </Flex>
+            }
+            else
+            {
+                <RenderOptionInput Definition="@_scalarItemDefinition"
+                                   Value="@(row.TryGetValue(ValueKey, out var sv) ? sv : "")"
+                                   ValueChanged="(string nv) => OnFieldChanged(index, ValueKey, nv)" />
+            }
+        </div>
+        <Button Type="ButtonType.Text"
+                Icon="@IconType.Outline.Close"
+                Danger
+                Size="ButtonSize.Small"
+                Disabled="@(_rows.Count <= (Definition.MinItems ?? 0))"
+                OnClick="() => RemoveRow(index)" />
+    </Flex>
+}
+
+<Button OnClick="AddRow"
+        Icon="@IconType.Outline.Plus"
+        Disabled="@(Definition.MaxItems.HasValue && _rows.Count >= Definition.MaxItems.Value)">
+    Add Item
+</Button>
+
+@if (Definition.MinItems.HasValue || Definition.MaxItems.HasValue)
+{
+    <span style="color: rgba(255,255,255,.45); font-size: 12px; margin-left: 12px;">
+        @(Definition.MinItems.HasValue ? $"min {Definition.MinItems.Value}" : "")@(Definition.MinItems.HasValue && Definition.MaxItems.HasValue ? ", " : "")@(Definition.MaxItems.HasValue ? $"max {Definition.MaxItems.Value}" : "")
+    </span>
+}
+
+@code {
+    const string ValueKey = "__value";
+
+    [Parameter] public OptionDefinition Definition { get; set; }
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    List<Dictionary<string, string>> _rows = new();
+    OptionDefinition _scalarItemDefinition;
+    string _lastSyncedValue;
+
+    protected override void OnParametersSet()
+    {
+        _scalarItemDefinition = new OptionDefinition
+        {
+            Type = string.IsNullOrWhiteSpace(Definition.ItemType) ? "string" : Definition.ItemType
+        };
+
+        // Only reparse Value when it changed externally (not as the result of our own emit).
+        if (!ReferenceEquals(Value, _lastSyncedValue) && Value != _lastSyncedValue)
+        {
+            _rows = ParseValue(Value);
+            _lastSyncedValue = Value;
+        }
+    }
+
+    List<Dictionary<string, string>> ParseValue(string json)
+    {
+        var result = new List<Dictionary<string, string>>();
+
+        if (string.IsNullOrWhiteSpace(json))
+            return result;
+
+        JsonElement root;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            root = doc.RootElement.Clone();
+        }
+        catch
+        {
+            return result;
+        }
+
+        if (root.ValueKind != JsonValueKind.Array)
+            return result;
+
+        foreach (var item in root.EnumerateArray())
+        {
+            if (Definition.IsCompositeList)
+            {
+                var dict = new Dictionary<string, string>();
+                if (item.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var field in Definition.Fields)
+                    {
+                        if (item.TryGetProperty(field.Key, out var fieldEl))
+                            dict[field.Key] = ReadScalar(fieldEl);
+                    }
+                }
+                result.Add(dict);
+            }
+            else
+            {
+                result.Add(new Dictionary<string, string> { [ValueKey] = ReadScalar(item) });
+            }
+        }
+
+        return result;
+    }
+
+    static string ReadScalar(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.String => element.GetString() ?? "",
+        JsonValueKind.Null or JsonValueKind.Undefined => "",
+        _ => element.GetRawText()
+    };
+
+    async Task OnFieldChanged(int index, string fieldKey, string value)
+    {
+        if (index < 0 || index >= _rows.Count)
+            return;
+
+        _rows[index][fieldKey] = value;
+        await EmitChange();
+    }
+
+    async Task AddRow()
+    {
+        if (Definition.MaxItems.HasValue && _rows.Count >= Definition.MaxItems.Value)
+            return;
+
+        var row = new Dictionary<string, string>();
+
+        if (Definition.IsCompositeList)
+        {
+            foreach (var field in Definition.Fields)
+            {
+                var fieldDefault = field.Value?.GetDefaultAsString();
+                if (!string.IsNullOrWhiteSpace(fieldDefault))
+                    row[field.Key] = fieldDefault;
+            }
+        }
+        else
+        {
+            row[ValueKey] = "";
+        }
+
+        _rows.Add(row);
+        await EmitChange();
+    }
+
+    async Task RemoveRow(int index)
+    {
+        if (index < 0 || index >= _rows.Count)
+            return;
+
+        if (_rows.Count <= (Definition.MinItems ?? 0))
+            return;
+
+        _rows.RemoveAt(index);
+        await EmitChange();
+    }
+
+    async Task EmitChange()
+    {
+        var json = Serialize();
+        _lastSyncedValue = json;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(json);
+    }
+
+    string Serialize()
+    {
+        if (Definition.IsCompositeList)
+        {
+            var items = new List<Dictionary<string, string>>();
+            foreach (var row in _rows)
+            {
+                var entry = new Dictionary<string, string>();
+                foreach (var field in Definition.Fields)
+                {
+                    entry[field.Key] = row.TryGetValue(field.Key, out var v) ? v : "";
+                }
+                items.Add(entry);
+            }
+            return JsonSerializer.Serialize(items);
+        }
+        else
+        {
+            var items = new List<string>();
+            foreach (var row in _rows)
+                items.Add(row.TryGetValue(ValueKey, out var v) ? v : "");
+            return JsonSerializer.Serialize(items);
+        }
+    }
+}

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -8,7 +9,6 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using LANCommander.Launcher.Avalonia.Converters;
 using LANCommander.Launcher.Avalonia.Helpers;
 
 namespace LANCommander.Launcher.Avalonia.Views.Components;
@@ -16,6 +16,13 @@ namespace LANCommander.Launcher.Avalonia.Views.Components;
 public partial class Cover : UserControl
 {
     private static readonly HttpClient _httpClient = new();
+
+    // Strong-reference bitmap cache keyed by "path|decodeWidth" so covers that
+    // scroll back into view are displayed instantly without re-reading the file.
+    private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
+    private static readonly LinkedList<string> _cacheOrder = new();
+    private static readonly object _cacheLock = new();
+    private const int MaxCacheEntries = 200;
 
     public static readonly StyledProperty<string?> SourceProperty =
         AvaloniaProperty.Register<Cover, string?>(nameof(Source));
@@ -161,6 +168,26 @@ public partial class Cover : UserControl
             || string.Equals(mimeType, "image/gif", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Returns the pixel width to decode covers at, accounting for DPI scaling.
+    /// Covers are laid out at 140-220 CSS px; we round up to the nearest
+    /// multiple of 20 device pixels so a small layout change doesn't
+    /// invalidate the cache.
+    /// </summary>
+    private int GetDecodePixelWidth()
+    {
+        var dpi = VisualRoot is TopLevel topLevel
+            ? topLevel.RenderScaling
+            : 1.0;
+
+        var layoutWidth = Bounds.Width > 0 ? Bounds.Width : 160;
+        var pixelWidth = (int)Math.Ceiling(layoutWidth * dpi);
+
+        // Round up to the nearest 20px to keep cache keys stable across
+        // minor layout shifts (e.g. 142px and 148px both decode at 160px).
+        return Math.Max(80, ((pixelWidth + 19) / 20) * 20);
+    }
+
     private void LoadCover(string? source, string? mimeType)
     {
         _loadCts?.Cancel();
@@ -183,35 +210,112 @@ public partial class Cover : UserControl
             return;
         }
 
+        var cts = new CancellationTokenSource();
+        _loadCts = cts;
+
         if (Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
             (uri.Scheme == "http" || uri.Scheme == "https"))
         {
-            var cts = new CancellationTokenSource();
-            _loadCts = cts;
             _ = LoadRemoteImageAsync(uri, cts.Token);
         }
         else
         {
-            LoadLocalImage(source);
+            _ = LoadLocalImageAsync(source, cts.Token);
         }
     }
 
-    private void LoadLocalImage(string path)
+    private async Task LoadLocalImageAsync(string path, CancellationToken ct)
     {
-        var bitmap = FilePathToBitmapConverter.Instance.Convert(
-            path, typeof(Bitmap), null, System.Globalization.CultureInfo.InvariantCulture) as Bitmap;
-        SetBitmap(bitmap);
+        var decodeWidth = GetDecodePixelWidth();
+        var cacheKey = $"{path}|{decodeWidth}";
+
+        // Fast path: bitmap is already cached from a previous scroll position.
+        lock (_cacheLock)
+        {
+            if (_bitmapCache.TryGetValue(cacheKey, out var cached))
+            {
+                // Move to end of LRU list
+                _cacheOrder.Remove(cacheKey);
+                _cacheOrder.AddLast(cacheKey);
+                SetBitmap(cached);
+                return;
+            }
+        }
+
+        try
+        {
+            // Debounce: wait briefly so covers that are scrolled past quickly
+            // never start an expensive file-read + decode.
+            await Task.Delay(100, ct);
+
+            var bitmap = await Task.Run(() =>
+            {
+                if (!System.IO.File.Exists(path))
+                    return null;
+
+                var bytes = System.IO.File.ReadAllBytes(path);
+                using var stream = new MemoryStream(bytes);
+                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.LowQuality);
+            }, ct);
+
+            if (ct.IsCancellationRequested)
+            {
+                bitmap?.Dispose();
+                return;
+            }
+
+            if (bitmap != null)
+            {
+                lock (_cacheLock)
+                {
+                    // Another Cover may have cached the same key while we were
+                    // decoding; prefer the existing entry to avoid duplicates.
+                    if (_bitmapCache.TryGetValue(cacheKey, out var existing))
+                    {
+                        bitmap.Dispose();
+                        bitmap = existing;
+                        _cacheOrder.Remove(cacheKey);
+                    }
+                    else
+                    {
+                        _bitmapCache[cacheKey] = bitmap;
+                    }
+
+                    _cacheOrder.AddLast(cacheKey);
+
+                    // Evict oldest entries when the cache is full.
+                    while (_cacheOrder.Count > MaxCacheEntries)
+                    {
+                        var oldest = _cacheOrder.First!.Value;
+                        _cacheOrder.RemoveFirst();
+                        if (_bitmapCache.Remove(oldest, out var evicted))
+                            evicted.Dispose();
+                    }
+                }
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap));
+        }
+        catch
+        {
+            if (!ct.IsCancellationRequested)
+                await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null));
+        }
     }
 
     private async Task LoadRemoteImageAsync(Uri uri, CancellationToken ct)
     {
         try
         {
+            // Debounce remote loads as well.
+            await Task.Delay(100, ct);
+
+            var decodeWidth = GetDecodePixelWidth();
             var data = await _httpClient.GetByteArrayAsync(uri, ct);
             if (ct.IsCancellationRequested) return;
 
             using var stream = new MemoryStream(data);
-            var bitmap = Bitmap.DecodeToWidth(stream, 320, BitmapInterpolationMode.HighQuality);
+            var bitmap = Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.LowQuality);
 
             if (ct.IsCancellationRequested)
             {

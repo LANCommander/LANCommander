@@ -13,9 +13,9 @@ import ScreenshotCarousel from '@site/src/components/ScreenshotCarousel';
 LANCommander has been upgraded from .NET 8 to .NET 10. This should be a seamless transition as all LANCommander binaries are self-contained and include the appropriate .NET runtime. However, if you are running an older version of Windows that does not support .NET 10, you may encounter issues running this version of LANCommander. The minimum supported Windows version is now Windows 10 version 1809.
 
 ## Launching Into the Future
-To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
+To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](https://www.tryphotino.io/). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
 
-Unfortunately, over time limitations of the platform made it apparent that a change had to be made. As such, community member [slace]() kicked off a proof of concept for a launcher built using Avalonia, an open-source native UI framework for .NET. While rough at first, it was immediately apparent that this could be the way forward. The decision was made and the next few months would see a refocus of the project to built out a new launcher with a major focus on performance, design, and feature parity.
+Unfortunately, over time limitations of the platform made it apparent that a change had to be made. As such, community member [aaronpowell](https://github.com/aaronpowell) kicked off a proof of concept for a launcher built using Avalonia, an open-source native UI framework for .NET. While rough at first, it was immediately apparent that this could be the way forward. The decision was made and the next few months would see a refocus of the project to built out a new launcher with a major focus on performance, design, and feature parity.
 
 The result is, well, a project that went off a little off the rails in the best possible fashion:
 
@@ -77,22 +77,46 @@ As with the last version, the chat functionality remains pretty barebones. This 
 This release should also be pretty exciting for server admins. With a new launcher with shiny new features brings a set of tools to manage them.
 
 ### LANCommander HQ
-A new metadata provider has been added: LANCommander HQ. This gives server admins another option for sourcing game metadata and media alongside IGDB and SteamGridDB. In addition, support for external IDs beyond IGDB has been introduced, making it easier to cross-reference games across multiple platforms and services.
+A new metadata provider has been added: LANCommander HQ. This gives server admins another option for sourcing game metadata and media alongside IGDB and SteamGridDB. In addition, support for external IDs beyond IGDB has been introduced, making it easier to cross-reference games across multiple platforms and services. To get started with the HQ, link your Discord account under "Integrations / HQ" in the server settings. Existing metadata providers such as IGDB and SteamGridDB are still available as well, so no functionality has been lost from previous versions.
 
 ### Preview Tool
 A new "Preview" editing view has been added to the server for managing game art. Inspired by the launcher's presentation, this tool gives admins a better sense of how their media will look in the launcher before publishing. Screenshots and videos can now be uploaded in bulk, and the media grabber supports selecting multiple assets at once. Animated covers are now supported as well, APNG images grabbed from SteamGridDB are automatically converted to video and should display in the new launcher.
+
+![Preview Tool](./_Assets/2.1.0%20-%20Server%20-%20Preview.png)
 
 ### Script Editor Improvements
 The script editor has received a significant upgrade. Context-aware code completions now suggest built-in PowerShell cmdlets, LANCommander-specific variables, and generated type definitions. Validation has been improved, and script errors are now logged rather than silently swallowed. A new `Set-GameDetails` cmdlet has been added for specifying package details from within scripts.
 
 ### Redistributable Options
-Redistributables now support configurable options. Options can be defined with a schema editor, given display names, and are preserved across import/export. A new **RunWrapper** script type has been added as well, giving admins more control over how redistributables and games are executed. This should enhance redistributables to cover more use cases such as emulators, launchers, and compatiblity shims like Proton or dgVoodoo.
+Redistributables now support configurable options. Options can be defined with a schema editor, given display names, and are preserved across import/export. Assigning redistributables to a game can now be accessed under the "Redistributables" section of the game editor. When selected, a redistributable with options will render as an easy-to-use form and per-game overrides can be defined.
+
+![Redistributable Options](./_Assets/2.1.0%20-%20Server%20-%20Redistributable%20Options.png)
+
+A new **RunWrapper** script type has been added as well, giving admins more control over how redistributables and games are executed. This should enhance redistributables to cover more use cases such as emulators, launchers, and compatiblity shims like Proton or dgVoodoo.
 
 ### Key Management
 Key allocation has been improved. The allocation method on keys is now nullable, and a new manual key assignment dialog has been added. The logic for choosing the next available key has also been reworked.
 
 ### Media & Tooling
 Server settings now include checks for ffmpeg and yt-dlp availability, with automatic installation support in Docker environments. A new streaming endpoint for media has been added, improving video playback in the launcher. Automatic downloads for Steam screenshots have been added as well. YouTube video support has been added to the media grabber, and ffmpeg is now used for video processing tasks such as APNG conversion and thumbnail generation.
+
+## LANCommander HQ
+Last but far from least, this release coincides with the launch of [LANCommander HQ](https://hq.lancommander.com), a new metadata provider and community hub for LANCommander users. The HQ aims to provide a centralized platform for game metadata and media across multiple providers, while also normalizing and enhancing that data with a focus on the needs of LANCommander users. There's a bit to cover, so let's dive in!
+
+### Metadata
+LANCommander HQ aggregates metadata from multiple sources including IGDB, SteamGridDB, and user contributions. This data is then normalized and enhanced with a focus on the needs of LANCommander users. There are many metadata providers out there, and unfortunately they all have their own unique schemas and data quality issues. The HQ's goal is to provide a single source of truth for game metadata that can be consumed by LANCommander servers and launchers.
+
+There are a lot of exciting features in the works for the HQ, but for this release the focus is on building out the core infrastructure and integrating with the new launcher. Expect to see more features and improvements in the future as the HQ continues to evolve.
+
+### Community
+The main features of the HQ are currently focused on metadata, but there is the potential to expand it into a broader community hub for LANCommander users. This could include an area to share game configurations, scripts, and other resources. Additionally, there are some content moderation tools in place that should allow the HQ to host user-generated content and provide the best possible experience for all users. If you have a knack for curation and want to help out, there will likely be opportunities to get involved in the future!
+
+### Tiering / Subscriptions
+The HQ operates on a tiered subscription model. Currently there are only two tiers: Basic (Free) and Premium ($5/month). The Basic tier provides access to the core metadata features of the HQ, while the Premium tier provides access to additional features such as enhanced metadata, relaxed rate limiting, and more. More information will be provided in the near future and will be provided on this site under the [LANCommander HQ](/hq) section. All paid subscriptions on the HQ are handled by Stripe, so every transaction is secure and your personal information is protected.
+
+This subscription model is primarily in place to help cover the costs of running the HQ while also providing a sustainable path forward for continued development of LANCommander itself. This entire project is developed and maintained by essentially one person with some help from the community here and there. While this is a labor of love, there are real costs associated with running the infrastructure for the HQ and continued development of LANCommander. The subscription model is designed to be as accessible as possible while also providing a way for users to support the project if they find value in it.
+
+As such, this will probably mean that the Patreon page will be going away in the near future. For existing patrons, it is recommended to switch over to the new subscription model on the HQ as it provides a more direct way to support the project and access the benefits of the HQ _today_.
 
 ## Changelog
 

@@ -3,8 +3,14 @@ title: 2.1.0-rc1
 ---
 
 import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ScreenshotCarousel from '@site/src/components/ScreenshotCarousel';
 
 # LANCommander 2.1.0 Release Candidate 1 Release Notes
+
+## Breaking Changes
+
+### .NET 10
+LANCommander has been upgraded from .NET 8 to .NET 10. This should be a seamless transition as all LANCommander binaries are self-contained and include the appropriate .NET runtime. However, if you are running an older version of Windows that does not support .NET 10, you may encounter issues running this version of LANCommander. The minimum supported Windows version is now Windows 10 version 1809.
 
 ## Launching Into the Future
 To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
@@ -12,22 +18,33 @@ To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, th
 Unfortunately, over time limitations of the platform made it apparent that a change had to be made. As such, community member [slace]() kicked off a proof of concept for a launcher built using Avalonia, an open-source native UI framework for .NET. While rough at first, it was immediately apparent that this could be the way forward. The decision was made and the next few months would see a refocus of the project to built out a new launcher with a major focus on performance, design, and feature parity.
 
 The result is, well, a project that went off a little off the rails in the best possible fashion:
-<image carousel>
+
+<ScreenshotCarousel screenshots={[
+  { src: require('./_Assets/2.1.0 - Launcher.jpg').default, alt: 'Launcher', label: 'Launcher', caption: 'The brand new Avalonia-based launcher' },
+  { src: require('./_Assets/2.1.0 - Shelf.jpg').default, alt: 'Shelf View', label: 'Shelf View', caption: 'Browse your library in the new shelf layout' },
+  { src: require('./_Assets/2.1.0 - Depot.jpg').default, alt: 'Depot', label: 'Depot', caption: 'The redesigned depot with categorization carousels' },
+  { src: require('./_Assets/2.1.0 - Screenshot.jpg').default, alt: 'Game Details', label: 'Game Details', caption: 'Screenshots and videos displayed right in the detail view' },
+  { src: require('./_Assets/2.1.0 - Downloads.png').default, alt: 'Download Queue', label: 'Download Queue', caption: 'Track every step of the installation process' },
+]} />
 
 I think the screenshots speak for themselves. Okay, not quite, there's a lot of fun stuff in this build so let's dive right in!
 
 ### User Library
 Previous versions of the launcher attempted to bring the art of a game to the forefront. These views are where most players spend their time interacting with the application. However, everyone's tastes are different. As such the library now contains three main views; cover grid, list, and shelf.
 
-### Game Details
-Browsing the user library is great and all, but the detail views is where a game really gets to shine. Metadata has shifted to the right-hand side, descriptions now support more complex formatting with Markdown rendering support, and _finally_ videos and screenshots are displayed in a carousel.
+![Shelf View](./_Assets/2.1.0%20-%20Shelf.jpg)
 
-<screenshots>
+### Game Details
+Browsing the user library is great and all, but the detail view is where a game really gets to shine. Metadata has shifted to the right-hand side, descriptions now support more complex formatting with Markdown rendering support, and _finally_ videos and screenshots are displayed in a carousel. A lightbox viewer lets you zoom in on screenshots, watch videos, and even read game manuals right from the detail view thanks to the new built-in PDF viewer.
+
+![Game Screenshot Detail](./_Assets/2.1.0%20-%20Screenshot.jpg)
 
 This is really just the start of something new. Expect this part of the launcher to be built out more in the future with better publishing tools and metadata expansion.
 
 ### Depot
 The depot has been overhauled too, probably more than any other part of the launcher. Previous iterations have been _fine_, but with large game sets it was hard to find just what you needed. The new depot puts a focus on categorization while maintaining granular filtering tools to get you exactly where you need to go.
+
+![Depot](./_Assets/2.1.0%20-%20Depot.jpg)
 
 As you can see, this section more than any other benefits from high quality metadata. We'll get into that later, but first let's talk about game installation.
 
@@ -39,38 +56,99 @@ The LANCommander launcher is essentially a UI wrapper for the LANCommander SDK. 
 To resolve this in 2.1.0, the game install process has moved to a two-layer queuing system. The first layer of the queue manages what actually enters the download queue. This could be a game, redistributable, tool, or addon. The second layer handles any subprocessing step such as executing the different script types, save downloading, existing file verification, etc. The result is a system that is more transparent and reliable.
 
 This queuing system has been exposed somewhat in the download queue:
-<screenshot>
+
+![Download Queue](./_Assets/2.1.0%20-%20Downloads.png)
 
 Each entry in the download queue will now report each step of the process during a game installation. In addition to looking a bit less mystical, this should give users an idea of what _exactly_ is happening during a game installation.
 
+### Discord Rich Presence
+The launcher now integrates with Discord Rich Presence. When you're playing a game through LANCommander, your Discord status will update to show what you're playing. By default this will show as LANCommander with the game name as the status. If the game is mapped to the correct Discord ID (via external IDs in the server), then the game's official Discord assets will be used for a more polished presentation.
+
+### Offline Mode
+Previous attempts at an offline mode in the launcher were pretty clunky and unreliable. In 2.1.0, the launcher now has a proper offline mode that allows you to launch previously installed games even when the server is unreachable.
+
+### Single Sign-On
+SSO was supported in the previous launcher, but it was a bit of an afterthought and not super reliable. In the new launcher it's been given more attention and should work as expected.
+
 ### Chat
-As with the last version, the chat functionality remains pretty barebones. This is an area that will get more attention in the future, but it _is_ currently available in the new launcher.
+As with the last version, the chat functionality remains pretty barebones. This is an area that will get more attention in the future, but it _is_ currently available in the new launcher. It might even work a little better.
 
 ## Server Improvements
 This release should also be pretty exciting for server admins. With a new launcher with shiny new features brings a set of tools to manage them.
 
-<more information if possible>
+### LANCommander HQ
+A new metadata provider has been added: LANCommander HQ. This gives server admins another option for sourcing game metadata and media alongside IGDB and SteamGridDB. In addition, support for external IDs beyond IGDB has been introduced, making it easier to cross-reference games across multiple platforms and services.
+
+### Preview Tool
+A new "Preview" editing view has been added to the server for managing game art. Inspired by the launcher's presentation, this tool gives admins a better sense of how their media will look in the launcher before publishing. Screenshots and videos can now be uploaded in bulk, and the media grabber supports selecting multiple assets at once. Animated covers are now supported as well, APNG images grabbed from SteamGridDB are automatically converted to video and should display in the new launcher.
+
+### Script Editor Improvements
+The script editor has received a significant upgrade. Context-aware code completions now suggest built-in PowerShell cmdlets, LANCommander-specific variables, and generated type definitions. Validation has been improved, and script errors are now logged rather than silently swallowed. A new `Set-GameDetails` cmdlet has been added for specifying package details from within scripts.
+
+### Redistributable Options
+Redistributables now support configurable options. Options can be defined with a schema editor, given display names, and are preserved across import/export. A new **RunWrapper** script type has been added as well, giving admins more control over how redistributables and games are executed. This should enhance redistributables to cover more use cases such as emulators, launchers, and compatiblity shims like Proton or dgVoodoo.
+
+### Key Management
+Key allocation has been improved. The allocation method on keys is now nullable, and a new manual key assignment dialog has been added. The logic for choosing the next available key has also been reworked.
+
+### Media & Tooling
+Server settings now include checks for ffmpeg and yt-dlp availability, with automatic installation support in Docker environments. A new streaming endpoint for media has been added, improving video playback in the launcher. Automatic downloads for Steam screenshots have been added as well. YouTube video support has been added to the media grabber, and ffmpeg is now used for video processing tasks such as APNG conversion and thumbnail generation.
 
 ## Changelog
 
 **Launcher**
 - Added: Brand new launcher built on Avalonia
-- Added: Screenshots and videos to game Details
-- Added: Redesigned depot with focus on categorization
-- Added: Tools!
+- Added: Screenshots and videos in game detail carousel with lightbox viewer
+- Added: Redesigned depot with categorization carousels and advanced filtering
+- Added: Tools support
 - Added: Download transfer speed graph
-- Added: OS notifications upon game installation
-- Changed: Refactored game/redistributable/tool install process
-- Changed: Imports should be faster and should execute in the background without causing too many UI hiccups
+- Added: OS notifications upon game installation completion
+- Added: Discord Rich Presence integration
+- Added: Offline mode for playing games without server connectivity
+- Added: SSO/OIDC external authentication provider support
+- Added: Built-in PDF viewer for game manuals
+- Added: Splash screen on startup
+- Added: Verify files option in game dropdown
+- Added: Markdown rendering for game descriptions
+- Changed: Refactored game/redistributable/tool install process to two-layer queue system
+- Changed: Imports should be faster and execute in the background without causing major UI hiccups
+- Changed: Improved memory management with proper disposal of HTTP clients, RPC clients, and cancellation tokens
 - Fixed: Installing games that already have files on disk will show the verification process during install
 - Fixed: Logging in and logging out should no longer cause a hung UI
+- Fixed: Install-uninstall-reinstall cycle no longer locks the game
+- Fixed: Authentication token race condition causing crashes after login
 
 **Server**
 - Added: LANCommander HQ metadata provider support
+- Added: Support for external IDs beyond IGDB
 - Added: New launcher-inspired "Preview" tool for managing art
+- Added: Context-aware script editor with code completions, validation, and PowerShell type definitions
+- Added: Redistributable options with schema editor and display names
+- Added: RunWrapper script type
+- Added: Package versioning for archives
+- Added: Bulk upload for screenshots and videos
+- Added: Multiple select support in media grabber
+- Added: Animated cover support (APNG auto-conversion to video)
+- Added: Steam screenshot downloads
+- Added: YouTube video support in media grabber
+- Added: Media streaming endpoint
+- Added: ffmpeg/yt-dlp availability checks and auto-install in Docker
+- Added: Manual key assignment dialog and reworked key allocation
+- Added: `Set-GameDetails` cmdlet for package scripts
 - Fixed: Media uploads should now behave as expected
-- Fixed:
+- Fixed: Game archive uploads in web UI
+- Fixed: Orphaned files tool
+- Fixed: Redistributable archive downloads
+- Fixed: Script working directory for games
+- Fixed: SteamCMD login when SteamGuard is enabled
+- Fixed: Import file cleanup after completion
+
+**Infrastructure**
+- Upgraded to .NET 10
+- Added ARM64 build support
+- Removed legacy Photino launcher from CI
+- Added nightly builds for Avalonia launcher
 
 ## Downloads
 
-<ReleaseDownloads release="v2.0.2" />
+<ReleaseDownloads release="v2.1.0-rc1" />

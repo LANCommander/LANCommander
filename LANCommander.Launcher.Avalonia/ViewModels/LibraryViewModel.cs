@@ -34,45 +34,55 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         IsLoading = true;
         HasError = false;
         StatusMessage = "Loading library...";
-        Games.Clear();
-        _allGames.Clear();
-        AvailableGenres.Clear();
-        AvailableTags.Clear();
-        AvailableDevelopers.Clear();
-        AvailablePublishers.Clear();
 
         _logger.LogInformation("Loading library (offline: {IsOffline})...", IsOfflineMode);
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
-            var mediaService   = scope.ServiceProvider.GetRequiredService<MediaService>();
-            var gameService    = scope.ServiceProvider.GetRequiredService<GameService>();
-
-            var items = await libraryService.GetItemsAsync();
-
-            foreach (var item in items ?? [])
+            // Run DB query and media lookups off the UI thread
+            var collected = await Task.Run(async () =>
             {
-                if (item.DataItem is not LANCommander.Launcher.Data.Models.Game game)
-                    continue;
+                using var scope = _serviceProvider.CreateScope();
+                var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+                var mediaService   = scope.ServiceProvider.GetRequiredService<MediaService>();
 
-                string? coverPath = null;
-                
-                var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
-                
-                if (coverMedia != null && mediaService.FileExists(coverMedia))
-                    coverPath = mediaService.GetImagePath(coverMedia);
+                var items = await libraryService.GetItemsAsync();
+                var results = new System.Collections.Generic.List<GameItemViewModel>();
 
-                _allGames.Add(new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false));
-            }
+                foreach (var item in items ?? [])
+                {
+                    if (item.DataItem is not LANCommander.Launcher.Data.Models.Game game)
+                        continue;
+
+                    string? coverPath = null;
+
+                    var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+
+                    if (coverMedia != null && mediaService.FileExists(coverMedia))
+                        coverPath = mediaService.GetImagePath(coverMedia);
+
+                    results.Add(new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false));
+                }
+
+                return results;
+            });
+
+            Games.Clear();
+            _allGames.Clear();
+            AvailableGenres.Clear();
+            AvailableTags.Clear();
+            AvailableDevelopers.Clear();
+            AvailablePublishers.Clear();
+
+            foreach (var vm in collected)
+                _allGames.Add(vm);
 
             PopulateGenres();
             PopulateTags();
             PopulateDevelopers();
             PopulatePublishers();
             ApplyFilters();
-            
+
             _logger.LogInformation("Loaded {Count} library games", _allGames.Count);
         }
         catch (Exception ex)

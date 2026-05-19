@@ -237,7 +237,7 @@ public partial class ShellViewModel : ViewModelBase
         // Load cached data from local DB first so the user sees games immediately
         try
         {
-            await LoadViewModelsAsync();
+            await LibraryViewModel.LoadGamesAsync();
         }
         catch (Exception ex)
         {
@@ -248,9 +248,26 @@ public partial class ShellViewModel : ViewModelBase
             IsLoading = false;
         }
 
+        // Load depot data in the background so the UI is not blocked by network calls
+        _ = LoadDepotInBackgroundAsync();
+
         // Import in the background, then refresh
         if (!IsOfflineMode)
             _ = ImportInBackgroundAsync();
+    }
+
+    private async Task LoadDepotInBackgroundAsync()
+    {
+        try
+        {
+            // Load sequentially to avoid file access conflicts when downloading shared media
+            await GamesListViewModel.LoadGamesAsync();
+            await DepotViewModel.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load depot data");
+        }
     }
 
     private async Task ImportInBackgroundAsync()
@@ -302,30 +319,22 @@ public partial class ShellViewModel : ViewModelBase
         {
             ImportIndex = update.Index;
         });
-
-        // Refresh the library after each game's items finish importing
-        if (update.CurrentItem?.Type == nameof(SDK.Models.Manifest.Game))
-        {
-            await Dispatcher.UIThread.InvokeAsync(async () =>
-            {
-                try
-                {
-                    await LibraryViewModel.LoadGamesAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to refresh library during import");
-                }
-            });
-        }
     }
 
     private async Task OnImportCompleted(ImportStatusUpdate update)
     {
-        await Dispatcher.UIThread.InvokeAsync(async () =>
+        // Run the heavy data loading off the UI thread
+        try
         {
-            ImportIndex = update.Total;
             await LoadViewModelsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reload view models after import");
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
             ImportIndex = 0;
             ImportTotal = 0;
         });

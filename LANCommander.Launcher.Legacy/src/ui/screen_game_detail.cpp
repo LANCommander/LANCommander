@@ -4,6 +4,7 @@
 #include "ui/window_chrome.h"
 #include "ui/image_cache.h"
 #include "app/app.h"
+#include "app/game_database.h"
 
 #include <allegro.h>
 #include <cstdio>
@@ -48,7 +49,14 @@ namespace launcher
             auto result = app.games().get(app.selected_game());
 
             if (result)
+            {
                 s_game = result.value;
+
+                // Apply local install state from database.
+                InstalledGame local;
+                if (app.game_db().find(s_game.id, &local))
+                    s_game.install_directory = local.install_directory;
+            }
             else
             {
                 s_game = lancommander::Game();
@@ -361,6 +369,10 @@ namespace launcher
                         items[i].status == DownloadStatus::Complete)
                     {
                         s_game.install_directory = items[i].install_dir;
+
+                        // Persist to local database.
+                        app.game_db().set_installed(s_game.id, items[i].install_dir);
+
                         // Reload actions now that the game is installed.
                         auto actions = app.games().get_actions(s_game.id);
                         if (actions)
@@ -536,7 +548,7 @@ namespace launcher
                         app.library().add(s_game.id);
 
                     // Determine install directory.
-                    std::string install_root = app.settings().install_directory;
+                    std::string install_root = app.settings().games.install_directory;
                     if (install_root.empty())
                     {
                         char exe_buf[MAX_PATH];
@@ -552,6 +564,9 @@ namespace launcher
                         }
                         else
                             install_root = "Games";
+
+                        // Persist so the computed path is saved on exit.
+                        app.settings().games.install_directory = install_root;
                     }
                     CreateDirectoryA(install_root.c_str(), NULL);
                     std::string game_dir = install_root + "\\" + s_game.title;
@@ -688,8 +703,74 @@ namespace launcher
                                                                "Uninstall", input);
                         if (uns_btn.clicked)
                         {
-                            s_status_message = "Uninstall not yet implemented";
-                            s_status_color = theme().text_dim;
+#ifdef ALLEGRO_WINDOWS
+                            std::string dir = s_game.install_directory;
+                            normalize_slashes(dir);
+
+                            // Read the file manifest written during extraction.
+                            std::string list_path = dir + "\\.lancommander\\" +
+                                                    s_game.id + "\\FileList.txt";
+
+                            FILE *fl = fopen(list_path.c_str(), "r");
+                            if (fl)
+                            {
+                                char line[1024];
+                                int deleted = 0;
+                                while (fgets(line, sizeof(line), fl))
+                                {
+                                    // Format: "path | CRC32HEX"
+                                    char *sep = strstr(line, " | ");
+                                    size_t len = sep ? (size_t)(sep - line) : strlen(line);
+                                    // Trim trailing whitespace/newline.
+                                    while (len > 0 && (line[len - 1] == '\n' ||
+                                           line[len - 1] == '\r' || line[len - 1] == ' '))
+                                        len--;
+                                    if (len == 0) continue;
+
+                                    std::string rel(line, len);
+                                    // Skip directory entries (trailing slash).
+                                    if (rel[rel.size() - 1] == '/' ||
+                                        rel[rel.size() - 1] == '\\')
+                                        continue;
+
+                                    for (size_t c = 0; c < rel.size(); ++c)
+                                        if (rel[c] == '/') rel[c] = '\\';
+
+                                    std::string full = dir + "\\" + rel;
+                                    if (DeleteFileA(full.c_str()))
+                                        deleted++;
+                                }
+                                fclose(fl);
+
+                                // Remove empty directories bottom-up.
+                                // Walk dir tree and remove empties (best-effort).
+                                // Start by removing the metadata directory.
+                                DeleteFileA(list_path.c_str());
+                                std::string meta_game = dir + "\\.lancommander\\" + s_game.id;
+                                RemoveDirectoryA(meta_game.c_str());
+                                // Try removing .lancommander if empty.
+                                std::string meta_root = dir + "\\.lancommander";
+                                RemoveDirectoryA(meta_root.c_str());
+                                // Try removing the install dir itself if empty.
+                                RemoveDirectoryA(dir.c_str());
+
+                                s_game.install_directory.clear();
+                                s_actions.clear();
+
+                                // Remove from local database.
+                                app.game_db().set_uninstalled(s_game.id);
+
+                                char msg_buf[64];
+                                sprintf(msg_buf, "Uninstalled (%d files removed)", deleted);
+                                s_status_message = msg_buf;
+                                s_status_color = theme().success;
+                            }
+                            else
+                            {
+                                s_status_message = "No file manifest found";
+                                s_status_color = theme().error;
+                            }
+#endif
                         }
                     }
                 }

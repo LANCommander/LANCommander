@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "ui/image_cache.h"
 #include "app/download_queue.h"
+#include "app/game_database.h"
 
 // Which tab is active on the library screen.
 enum class LibraryTab
@@ -28,7 +29,8 @@ namespace launcher
     {
         Login,
         Library,
-        GameDetail
+        GameDetail,
+        Downloads
     };
 
     // Application state and lifecycle.
@@ -92,6 +94,9 @@ namespace launcher
         // Download queue.
         DownloadQueue &downloads();
 
+        // Local database of installed games.
+        GameDatabase &game_db();
+
         // Request the app to quit.
         void quit();
         bool should_quit() const;
@@ -122,6 +127,7 @@ namespace launcher
         std::vector<lancommander::Game> m_game_cache;
         std::vector<lancommander::DepotGame> m_depot_cache;
         DownloadQueue m_downloads;
+        GameDatabase m_game_db;
         LibraryTab m_library_tab;
         bool m_quit;
     };

@@ -32,7 +32,7 @@ namespace launcher
         }
 
         ImageCache::ImageCache(lancommander::MediaClient &media)
-            : m_media(media)
+            : m_media(media), m_access_counter(0), m_decodes_this_frame(0)
         {
             m_cache_dir = exe_relative("cache");
             CreateDirectoryA(m_cache_dir.c_str(), NULL);
@@ -59,10 +59,56 @@ namespace launcher
             return m_cache_dir + "\\" + media_id;
         }
 
+        void ImageCache::begin_frame()
+        {
+            m_decodes_this_frame = 0;
+        }
+
+        void ImageCache::evict_oldest()
+        {
+            // Find the entry with the lowest last_access that has a bitmap
+            // (NULL entries are tiny — prefer evicting real bitmaps first).
+            std::map<std::string, Entry>::iterator victim = m_cache.end();
+            unsigned long long oldest = (unsigned long long)-1;
+
+            for (std::map<std::string, Entry>::iterator it = m_cache.begin();
+                 it != m_cache.end(); ++it)
+            {
+                if (it->second.bmp && it->second.last_access < oldest)
+                {
+                    oldest = it->second.last_access;
+                    victim = it;
+                }
+            }
+
+            // If no bitmap entries found, evict any NULL entry.
+            if (victim == m_cache.end())
+            {
+                for (std::map<std::string, Entry>::iterator it = m_cache.begin();
+                     it != m_cache.end(); ++it)
+                {
+                    if (it->second.last_access < oldest)
+                    {
+                        oldest = it->second.last_access;
+                        victim = it;
+                    }
+                }
+            }
+
+            if (victim != m_cache.end())
+            {
+                if (victim->second.bmp)
+                    destroy_bitmap(victim->second.bmp);
+                m_cache.erase(victim);
+            }
+        }
+
         BITMAP *ImageCache::get(const std::string &media_id, int max_w, int max_h)
         {
             if (media_id.empty())
                 return NULL;
+
+            ++m_access_counter;
 
             // Check in-memory cache first.  If the cached size differs we
             // re-decode at the new size (rare).
@@ -70,12 +116,19 @@ namespace launcher
             if (it != m_cache.end())
             {
                 if (it->second.max_w == max_w && it->second.max_h == max_h)
+                {
+                    it->second.last_access = m_access_counter;
                     return it->second.bmp;
+                }
                 // Size changed — discard old bitmap.
                 if (it->second.bmp)
                     destroy_bitmap(it->second.bmp);
                 m_cache.erase(it);
             }
+
+            // Per-frame decode budget — show placeholder until next frame.
+            if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
+                return NULL;
 
             // Ensure the file exists on disk (download if needed).
             std::string path = file_path(media_id);
@@ -90,6 +143,7 @@ namespace launcher
                     e.bmp = NULL;
                     e.max_w = max_w;
                     e.max_h = max_h;
+                    e.last_access = m_access_counter;
                     m_cache[media_id] = e;
                     return NULL;
                 }
@@ -103,9 +157,16 @@ namespace launcher
                 e.bmp = NULL;
                 e.max_w = max_w;
                 e.max_h = max_h;
+                e.last_access = m_access_counter;
                 m_cache[media_id] = e;
                 return NULL;
             }
+
+            ++m_decodes_this_frame;
+
+            // Evict oldest entries if at capacity.
+            while ((int)m_cache.size() >= MAX_ENTRIES)
+                evict_oldest();
 
             // Convert raw RGBA pixels to an Allegro BITMAP.
             // Use create_bitmap_ex at 32-bit so the alpha channel is preserved
@@ -132,6 +193,7 @@ namespace launcher
             e.bmp = bmp;
             e.max_w = max_w;
             e.max_h = max_h;
+            e.last_access = m_access_counter;
             m_cache[media_id] = e;
             return bmp;
         }

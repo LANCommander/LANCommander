@@ -21,6 +21,9 @@ namespace launcher
             // --- Keyboard: drain all pending keys ---
             keys.clear();
 
+            if (keyboard_needs_poll())
+                poll_keyboard();
+
             while (keypressed())
             {
                 int k = readkey();

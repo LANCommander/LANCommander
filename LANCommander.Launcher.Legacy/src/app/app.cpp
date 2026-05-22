@@ -12,6 +12,7 @@
 #include "ui/screen_login.h"
 #include "ui/screen_library.h"
 #include "ui/screen_game_detail.h"
+#include "ui/screen_downloads.h"
 
 // Pull in the WinINet backend header (resolved via include paths from CMake).
 #include "wininet_http_client.h"
@@ -19,7 +20,8 @@
 namespace launcher
 {
 
-    static const char *SETTINGS_FILE = "launcher.ini";
+    static const char *SETTINGS_FILE = "Settings.yml";
+    static const char *GAME_DB_FILE = "LANCommander.db";
 
     // Allegro close-button callback (Alt+F4, taskbar Close, etc.).
     static volatile int s_close_requested = 0;
@@ -90,6 +92,9 @@ namespace launcher
         // --- Settings ---
         m_settings.load(SETTINGS_FILE);
 
+        // --- Local game database ---
+        m_game_db.open(GAME_DB_FILE);
+
         // --- SDK clients ---
         m_http = new lancommander::WinInetHttpClient();
         m_auth = new lancommander::AuthenticationClient(*m_http);
@@ -106,12 +111,18 @@ namespace launcher
         m_image_cache = new ui::ImageCache(*m_media);
 
         // Restore saved connection state.
-        if (!m_settings.server_address.empty())
-            m_connection->set_server_address(m_settings.server_address);
+        if (!m_settings.authentication.server_address.empty())
+            m_connection->set_server_address(m_settings.authentication.server_address);
 
-        if (!m_settings.access_token.empty())
+        if (m_settings.authentication.offline_mode)
         {
-            m_connection->set_access_token(m_settings.access_token);
+            // Offline mode — skip validation, go straight to library.
+            m_connection->enable_offline_mode();
+            m_current_screen = Screen::Library;
+        }
+        else if (!m_settings.authentication.token.access_token.empty())
+        {
+            m_connection->set_access_token(m_settings.authentication.token.access_token);
 
             // Validate token — if still valid, skip login.
             auto valid = m_auth->validate();
@@ -126,6 +137,30 @@ namespace launcher
 
                 m_connection->connect();
                 m_current_screen = Screen::Library;
+            }
+            else
+            {
+                // Token invalid — try refresh before falling back to login.
+                lancommander::AuthToken current;
+                current.access_token = m_settings.authentication.token.access_token;
+                current.refresh_token = m_settings.authentication.token.refresh_token;
+
+                auto refreshed = m_auth->refresh(current);
+                if (refreshed)
+                {
+                    m_connection->set_access_token(refreshed.value.access_token);
+                    m_settings.authentication.token.access_token = refreshed.value.access_token;
+                    m_settings.authentication.token.refresh_token = refreshed.value.refresh_token;
+
+                    lancommander::ProfileClient profile(*m_http);
+                    auto alias = profile.get_alias();
+                    if (alias)
+                        m_user_alias = alias.value;
+
+                    m_connection->connect();
+                    m_current_screen = Screen::Library;
+                }
+                // else: refresh failed — stay on login screen.
             }
         }
 
@@ -152,7 +187,8 @@ namespace launcher
             // Global ESC handling
             if (input.key_pressed(KEY_ESC))
             {
-                if (m_current_screen == Screen::GameDetail)
+                if (m_current_screen == Screen::GameDetail ||
+                    m_current_screen == Screen::Downloads)
                     m_current_screen = Screen::Library;
                 else
                     m_quit = true;
@@ -160,6 +196,9 @@ namespace launcher
 
             // --- Tick download queue ---
             m_downloads.tick(*m_games);
+
+            // --- Reset per-frame decode budget ---
+            m_image_cache->begin_frame();
 
             // --- Clear ---
             clear_to_color(m_backbuffer, ui::theme().bg);
@@ -176,10 +215,14 @@ namespace launcher
                 case Screen::GameDetail:
                     ui::screen_game_detail_draw(*this, input);
                     break;
+                case Screen::Downloads:
+                    ui::screen_downloads_draw(*this, input);
+                    break;
             }
 
             // --- Footer bar (drawn on top of screen content) ---
-            if (m_current_screen == Screen::Library || m_current_screen == Screen::GameDetail)
+            if (m_current_screen == Screen::Library || m_current_screen == Screen::GameDetail ||
+                m_current_screen == Screen::Downloads)
                 ui::window_footer_draw(*this, input);
 
             // --- Window chrome (custom title bar, drawn on top) ---
@@ -199,8 +242,8 @@ namespace launcher
     void App::shutdown()
     {
         // Save settings before exit.
-        m_settings.server_address = m_connection->get_server_address();
-        m_settings.access_token = m_connection->get_access_token();
+        m_settings.authentication.server_address = m_connection->get_server_address();
+        m_settings.authentication.token.access_token = m_connection->get_access_token();
         m_settings.save(SETTINGS_FILE);
 
         if (m_backbuffer)
@@ -245,6 +288,7 @@ namespace launcher
     std::vector<lancommander::DepotGame> &App::depot_cache() { return m_depot_cache; }
     ui::ImageCache &App::image_cache() { return *m_image_cache; }
     DownloadQueue &App::downloads() { return m_downloads; }
+    GameDatabase &App::game_db() { return m_game_db; }
 
     LibraryTab App::library_tab() const { return m_library_tab; }
     void App::set_library_tab(LibraryTab tab) { m_library_tab = tab; }

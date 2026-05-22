@@ -29,8 +29,8 @@ namespace launcher
             // Initialize fields from saved settings on first draw.
             if (!s_initialized)
             {
-                s_server_address = app.settings().server_address;
-                s_username = app.settings().username;
+                s_server_address = app.settings().authentication.server_address;
+                s_username = app.settings().launcher.username;
                 s_password.clear();
                 s_error_message.clear();
                 s_initialized = true;
@@ -124,10 +124,10 @@ namespace launcher
                     app.connection().connect();
 
                     // Save to settings.
-                    app.settings().server_address = s_server_address;
-                    app.settings().access_token = token.value.access_token;
-                    app.settings().refresh_token = token.value.refresh_token;
-                    app.settings().username = s_username;
+                    app.settings().authentication.server_address = s_server_address;
+                    app.settings().authentication.token.access_token = token.value.access_token;
+                    app.settings().authentication.token.refresh_token = token.value.refresh_token;
+                    app.settings().launcher.username = s_username;
 
                     // Get user alias.
                     lancommander::ProfileClient profile(app.http());

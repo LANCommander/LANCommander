@@ -11,6 +11,7 @@
 
 #include <windows.h>
 #include <dwmapi.h>
+#include <cstdio>
 
 namespace launcher
 {
@@ -198,9 +199,8 @@ namespace launcher
         }
 
         // ---------------------------------------------------------------
-        // Footer bar: Depot/Library toggle + download progress
+        // Footer bar: Depot/Library toggle + download status
         // ---------------------------------------------------------------
-        static bool s_queue_expanded = false;
 
         static void format_bytes(unsigned long bytes, char *buf, int buf_sz)
         {
@@ -222,96 +222,6 @@ namespace launcher
 
             int fy = sh - FOOTER_H;
             int th = text_height();
-
-            // ==== Expanded download queue panel (above footer) ====
-            if (s_queue_expanded)
-            {
-                const std::vector<DownloadItem> &items = app.downloads().items();
-                int item_h = 36;
-                int panel_h = (int)items.size() * item_h + 8;
-                if (panel_h < 44) panel_h = 44;
-                if (panel_h > 250) panel_h = 250;
-
-                int py = fy - panel_h;
-                panel(buf, 0, py, sw, panel_h, theme().surface);
-                hline(buf, 0, py, sw - 1, theme().divider);
-
-                if (items.empty())
-                {
-                    draw_text_center(buf, sw / 2, py + (panel_h - th) / 2,
-                                     theme().text_disabled, "No downloads");
-                }
-                else
-                {
-                    int iy = py + 4;
-                    for (size_t i = 0; i < items.size() && iy + item_h <= fy; ++i)
-                    {
-                        const DownloadItem &it = items[i];
-
-                        // Title
-                        draw_text(buf, 12, iy + 2, theme().text, it.title.c_str());
-
-                        // Status + progress
-                        const char *status_str = "Queued";
-                        int status_color = theme().text_dim;
-                        switch (it.status)
-                        {
-                        case DownloadStatus::Downloading:
-                            status_str = "Downloading";
-                            status_color = theme().primary;
-                            break;
-                        case DownloadStatus::Extracting:
-                            status_str = "Extracting";
-                            status_color = theme().warning;
-                            break;
-                        case DownloadStatus::Complete:
-                            status_str = "Complete";
-                            status_color = theme().success;
-                            break;
-                        case DownloadStatus::Failed:
-                            status_str = "Failed";
-                            status_color = theme().error;
-                            break;
-                        default:
-                            break;
-                        }
-
-                        // Status text + bytes
-                        char info[128];
-                        if (it.status == DownloadStatus::Downloading && it.total > 0)
-                        {
-                            char recv_s[32], total_s[32];
-                            format_bytes(it.received, recv_s, sizeof(recv_s));
-                            format_bytes(it.total, total_s, sizeof(total_s));
-                            sprintf(info, "%s  %s / %s  (%d%%)",
-                                    status_str, recv_s, total_s,
-                                    (int)(it.progress * 100));
-                        }
-                        else
-                            sprintf(info, "%s", status_str);
-
-                        draw_text(buf, 12, iy + 2 + th + 2, status_color, info);
-
-                        // Progress bar
-                        if (it.status == DownloadStatus::Downloading)
-                        {
-                            int bar_x = sw - 200 - 12;
-                            int bar_w = 200;
-                            int bar_y2 = iy + item_h - 8;
-                            rectfill(buf, bar_x, bar_y2, bar_x + bar_w - 1, bar_y2 + 3,
-                                     theme().panel);
-                            int fill = (int)(it.progress * bar_w);
-                            if (fill > 0)
-                                rectfill(buf, bar_x, bar_y2, bar_x + fill - 1, bar_y2 + 3,
-                                         theme().primary);
-                        }
-
-                        iy += item_h;
-                        if (i + 1 < items.size())
-                            hline(buf, 8, iy - 1, sw - 8, theme().divider);
-                    }
-                }
-            }
 
             // ==== Footer bar ====
             panel(buf, 0, fy, sw, FOOTER_H, theme().footer);
@@ -343,7 +253,11 @@ namespace launcher
                                  depot_label);
 
                 if (depot_hovered && input.mouse.clicked && !depot_active)
+                {
                     app.set_library_tab(LibraryTab::Depot);
+                    if (app.current_screen() != Screen::Library)
+                        app.switch_screen(Screen::Library);
+                }
 
                 int lx = dx + depot_w + 4;
                 bool lib_active = (app.library_tab() == LibraryTab::Library);
@@ -360,19 +274,29 @@ namespace launcher
                                  lib_label);
 
                 if (lib_hovered && input.mouse.clicked && !lib_active)
+                {
                     app.set_library_tab(LibraryTab::Library);
+                    if (app.current_screen() != Screen::Library)
+                        app.switch_screen(Screen::Library);
+                }
             }
 
-            // --- Center: Download progress or button ---
+            // --- Center: Download progress or Downloads button ---
             {
                 const DownloadItem *cur = app.downloads().current_item();
+                bool on_downloads_screen = (app.current_screen() == Screen::Downloads);
+
                 if (cur && (cur->status == DownloadStatus::Downloading ||
                             cur->status == DownloadStatus::Extracting))
                 {
                     // Show active download: title + progress bar + percentage.
+                    // Clicking navigates to the Downloads screen.
                     int cx = sw / 2;
                     int info_w = 300;
                     int info_x = cx - info_w / 2;
+
+                    bool area_hovered = (input.mouse.x >= info_x && input.mouse.x < info_x + info_w &&
+                                         input.mouse.y >= fy && input.mouse.y < fy + FOOTER_H);
 
                     // Title (left)
                     set_clip_rect(buf, info_x, fy, info_x + info_w - 80, fy + FOOTER_H);
@@ -395,10 +319,13 @@ namespace launcher
                     if (fill > 0)
                         rectfill(buf, bar_x, bar_y2, bar_x + fill - 1, bar_y2 + 2,
                                  theme().primary);
+
+                    if (area_hovered && input.mouse.clicked && !on_downloads_screen)
+                        app.switch_screen(Screen::Downloads);
                 }
                 else
                 {
-                    // "Downloads" button with pending count badge.
+                    // "Downloads" button — navigates to the Downloads screen.
                     int pending = app.downloads().pending_count();
                     char dl_label[32];
                     if (pending > 0)
@@ -412,16 +339,20 @@ namespace launcher
                     bool dl_hovered = (input.mouse.x >= dl_x && input.mouse.x < dl_x + dl_w &&
                                        input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
-                    if (dl_hovered)
+                    if (on_downloads_screen)
+                        rectfill(buf, dl_x, btn_y, dl_x + dl_w - 1, btn_y + btn_h - 1,
+                                 theme().primary);
+                    else if (dl_hovered)
                         rectfill(buf, dl_x, btn_y, dl_x + dl_w - 1, btn_y + btn_h - 1,
                                  theme().panel_hover);
 
                     draw_text_center(buf, dl_x + dl_w / 2, btn_y + (btn_h - th) / 2,
-                                     dl_hovered ? theme().text : theme().text_disabled,
+                                     (on_downloads_screen || dl_hovered)
+                                         ? theme().text_bright : theme().text_disabled,
                                      dl_label);
 
-                    if (dl_hovered && input.mouse.clicked)
-                        s_queue_expanded = !s_queue_expanded;
+                    if (dl_hovered && input.mouse.clicked && !on_downloads_screen)
+                        app.switch_screen(Screen::Downloads);
                 }
             }
         }

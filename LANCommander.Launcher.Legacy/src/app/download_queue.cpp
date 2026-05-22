@@ -79,6 +79,9 @@ namespace launcher
         unsigned int file_count = mz_zip_reader_get_num_files(&zip);
         bool extract_ok = true;
 
+        // Build the file manifest as we extract (path | CRC32HEX).
+        std::string file_manifest;
+
         for (unsigned int i = 0; i < file_count; ++i)
         {
             mz_zip_archive_file_stat st;
@@ -116,6 +119,14 @@ namespace launcher
                     extract_ok = false;
                     break;
                 }
+
+                // Record file in manifest: "entry_path | CRC32HEX\n"
+                char crc_hex[16];
+                sprintf(crc_hex, "%08X", (unsigned int)st.m_crc32);
+                file_manifest += st.m_filename;
+                file_manifest += " | ";
+                file_manifest += crc_hex;
+                file_manifest += "\n";
             }
 
             ctx->item->progress = (float)(i + 1) / (float)file_count;
@@ -126,6 +137,20 @@ namespace launcher
 
         if (extract_ok)
         {
+            // Write FileList.txt to .lancommander/{GameId}/ inside install dir.
+            std::string meta_dir = ctx->item->install_dir + "\\.lancommander";
+            CreateDirectoryA(meta_dir.c_str(), NULL);
+            meta_dir += "\\" + ctx->item->game_id;
+            CreateDirectoryA(meta_dir.c_str(), NULL);
+
+            std::string list_path = meta_dir + "\\FileList.txt";
+            FILE *fl = fopen(list_path.c_str(), "w");
+            if (fl)
+            {
+                fwrite(file_manifest.c_str(), 1, file_manifest.size(), fl);
+                fclose(fl);
+            }
+
             ctx->item->progress = 1.0f;
             ctx->item->status = DownloadStatus::Complete;
         }

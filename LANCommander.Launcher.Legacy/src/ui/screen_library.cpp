@@ -4,6 +4,7 @@
 #include "ui/window_chrome.h"
 #include "ui/image_cache.h"
 #include "app/app.h"
+#include "app/game_database.h"
 
 #include <allegro.h>
 #include <algorithm>
@@ -93,6 +94,11 @@ namespace launcher
                                 }
                             }
                         }
+
+                        // Apply local install state from database.
+                        InstalledGame local;
+                        if (app.game_db().find(g.id, &local))
+                            g.install_directory = local.install_directory;
 
                         lib.push_back(g);
                     }

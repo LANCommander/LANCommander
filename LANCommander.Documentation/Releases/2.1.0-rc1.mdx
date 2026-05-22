@@ -15,7 +15,7 @@ LANCommander has been upgraded from .NET 8 to .NET 10. This should be a seamless
 ## Launching Into the Future
 To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](https://www.tryphotino.io/). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
 
-Unfortunately, over time limitations of the platform made it apparent that a change had to be made. As such, community member [aaronpowell](https://github.com/aaronpowell) kicked off a proof of concept for a launcher built using Avalonia, an open-source native UI framework for .NET. While rough at first, it was immediately apparent that this could be the way forward. The decision was made and the next few months would see a refocus of the project to built out a new launcher with a major focus on performance, design, and feature parity.
+Unfortunately, over time limitations of the platform made it apparent that a change had to be made. Community member [aaronpowell](https://github.com/aaronpowell) stepped up and built out a proof of concept for a launcher using Avalonia, an open-source native cross-platform UI framework for .NET. The potential was immediately clear and the decision was made to jump in head first. The following months saw the project refocus on build a new launcher with a major emphasis on performance, reliability, design, and feature parity.
 
 The result is, well, a project that went off a little off the rails in the best possible fashion:
 
@@ -117,6 +117,18 @@ The HQ operates on a tiered subscription model. Currently there are only two tie
 This subscription model is primarily in place to help cover the costs of running the HQ while also providing a sustainable path forward for continued development of LANCommander itself. This entire project is developed and maintained by essentially one person with some help from the community here and there. While this is a labor of love, there are real costs associated with running the infrastructure for the HQ and continued development of LANCommander. The subscription model is designed to be as accessible as possible while also providing a way for users to support the project if they find value in it.
 
 As such, this will probably mean that the Patreon page will be going away in the near future. For existing patrons, it is recommended to switch over to the new subscription model on the HQ as it provides a more direct way to support the project and access the benefits of the HQ _today_.
+
+## Contributions
+This release includes contributions from the following community members:
+
+**@aaronpowell | PR [#395](https://github.com/LANCommander/LANCommander/pull/395): Avalonia Launcher**
+A substantial 42-commit, 6,000-line PR that bootstrapped the cross-platform Avalonia launcher. Aaron built out the core application structure, service wiring, and async initialization, and then built out the UI with filtered depot browsing and grid layout, a download queue, install/uninstall flows, a settings page, PDF manual viewer, game action bars, and a full CI pipeline for Windows, Linux, and macOS builds. A lot of the foundation that the current launcher sits on came from this PR.
+
+**@akifreak | PR [#398](https://github.com/LANCommander/LANCommander/pull/398): Fix Game Archive Upload**
+Discovered that archive uploads through the web UI were silently broken after upgrading to v2.0.2, traced the problem through the JavaScript bundle, and submitted 11 targeted fixes rather than a single bug report. The fixes covered ES module loading, null-guards on DOM elements, a FileMode.Append seek conflict, incorrect archive ID passing, and error propagation throughout the upload pipeline. The uploading process should feel much more stable now!
+
+**@MasterMNB | PR [#400](https://github.com/LANCommander/LANCommander/pull/400): Avalonia Launcher Back Button**
+Improved the visibility and styling of the back button in the `GameDetailView`, which was previously hard to distinguish from the background. It's a small change, but it's a real usability improvement that makes navigation feel more intentional.
 
 ## Changelog
 

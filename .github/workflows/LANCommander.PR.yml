@@ -12,6 +12,8 @@ on:
 permissions:
     contents: write
     packages: read
+    checks: write
+    pull-requests: write
 
 jobs:
     prep:
@@ -55,6 +57,58 @@ jobs:
 
                   echo "version_semver=$VERSION_SEMVER" >> $GITHUB_OUTPUT
                   echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
+
+    ui_tests:
+        needs: [prep]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ needs.prep.outputs.build_dotnet_version }}
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            - name: Install Node packages
+              run: |
+                  npm install --prefix ./LANCommander.UI
+                  npm install --prefix ./LANCommander.Server
+
+            - name: Restore dependencies
+              run: dotnet restore LANCommander.Server.UI.Tests
+
+            - name: Build test project
+              run: dotnet build LANCommander.Server.UI.Tests --no-restore --configuration Release
+
+            - name: Install Playwright browsers
+              run: pwsh LANCommander.Server.UI.Tests/bin/Release/net9.0/playwright.ps1 install --with-deps chromium
+
+            - name: Run UI tests
+              run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults
+              env:
+                  SCREENSHOT_DIR: ${{ github.workspace }}/TestResults/Screenshots
+
+            - name: Test report
+              if: always()
+              uses: dorny/test-reporter@v1
+              with:
+                  name: UI Test Results
+                  path: ./TestResults/ui-test-results.trx
+                  reporter: dotnet-trx
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ui-test-results
+                  path: ./TestResults
+                  retention-days: 7
 
     build_server_linux_arm64:
         needs: [prep]

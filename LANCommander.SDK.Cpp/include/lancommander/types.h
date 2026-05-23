@@ -1,6 +1,7 @@
 #ifndef LANCOMMANDER_TYPES_H
 #define LANCOMMANDER_TYPES_H
 
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <utility>

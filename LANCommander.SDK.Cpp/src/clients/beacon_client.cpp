@@ -1,6 +1,7 @@
 #include "lancommander/clients/beacon_client.h"
 #include "../json/json_helpers.h"
 
+#include <cstdint>
 #include <cstring>
 
 #ifdef _WIN32

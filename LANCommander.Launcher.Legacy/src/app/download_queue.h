@@ -7,6 +7,7 @@
 namespace lancommander
 {
     class GameClient;
+    class LibraryClient;
 }
 
 namespace launcher
@@ -27,6 +28,7 @@ namespace launcher
         std::string title;
         std::string dest_path; // temp zip path
         std::string install_dir;
+        bool add_to_library;      // add game to user's library before downloading
         DownloadStatus status;
         float progress;           // 0.0 - 1.0
         unsigned long received;   // bytes
@@ -34,7 +36,8 @@ namespace launcher
         std::string error;
 
         DownloadItem()
-            : status(DownloadStatus::Queued), progress(0.0f),
+            : add_to_library(false),
+              status(DownloadStatus::Queued), progress(0.0f),
               received(0), total(0) {}
     };
 
@@ -45,11 +48,13 @@ namespace launcher
         ~DownloadQueue();
 
         // Add a game to the download queue.
+        // If add_to_library is true, the background thread will call
+        // library.add() before starting the download.
         void enqueue(const std::string &game_id, const std::string &title,
-                     const std::string &install_dir);
+                     const std::string &install_dir, bool add_to_library = false);
 
         // Call once per frame to check thread state and advance the queue.
-        void tick(lancommander::GameClient &games);
+        void tick(lancommander::GameClient &games, lancommander::LibraryClient &library);
 
         // Current state accessors.
         bool has_active() const;
@@ -68,7 +73,7 @@ namespace launcher
         void *m_thread;
         volatile bool m_thread_done;
 
-        void start_next(lancommander::GameClient &games);
+        void start_next(lancommander::GameClient &games, lancommander::LibraryClient &library);
     };
 
 } // namespace launcher

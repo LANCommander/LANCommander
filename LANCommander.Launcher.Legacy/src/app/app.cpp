@@ -5,6 +5,7 @@
 #endif
 
 #include "app/app.h"
+#include "app/logger.h"
 #include "ui/input.h"
 #include "ui/theme.h"
 #include "ui/image_decoder.h"
@@ -13,6 +14,7 @@
 #include "ui/screen_library.h"
 #include "ui/screen_game_detail.h"
 #include "ui/screen_downloads.h"
+#include "ui/screen_settings.h"
 
 // Pull in the WinINet backend header (resolved via include paths from CMake).
 #include "wininet_http_client.h"
@@ -20,8 +22,11 @@
 namespace launcher
 {
 
-    static const char *SETTINGS_FILE = "Settings.yml";
-    static const char *GAME_DB_FILE = "LANCommander.db";
+    static const char *DATA_DIR      = "Data";
+    static const char *SETTINGS_FILE = "Data\\Settings.yml";
+    static const char *GAME_DB_FILE  = "Data\\LANCommander.db";
+    static const char *LOG_DIR       = "Data\\Logs";
+    static const char *MEDIA_DIR     = "Data\\Media";
 
     // Allegro close-button callback (Alt+F4, taskbar Close, etc.).
     static volatile int s_close_requested = 0;
@@ -52,9 +57,17 @@ namespace launcher
         m_width = width;
         m_height = height;
 
+        // Create the Data directory structure.
+        CreateDirectoryA(DATA_DIR, NULL);
+
+        log_init(LOG_DIR);
+
         // --- Allegro initialization ---
         if (allegro_init() != 0)
+        {
+            log_error("allegro_init() failed");
             return false;
+        }
 
         install_keyboard();
         install_mouse();
@@ -72,7 +85,10 @@ namespace launcher
         }
 
         set_window_title("LANCommander");
-        show_mouse(screen);
+
+        // Don't use show_mouse(screen) — it fights with backbuffer
+        // blitting. We draw our own cursor on the backbuffer instead.
+        show_mouse(NULL);
 
         // Remove the native Windows frame — we draw our own title bar.
         ui::chrome_remove_frame();
@@ -108,15 +124,19 @@ namespace launcher
 
         // Image loading (GDI+ for PNG/JPEG decode).
         image_decoder_init();
-        m_image_cache = new ui::ImageCache(*m_media);
+        m_image_cache = new ui::ImageCache(*m_media, MEDIA_DIR);
 
         // Restore saved connection state.
         if (!m_settings.authentication.server_address.empty())
+        {
+            log_info("Server address: %s", m_settings.authentication.server_address.c_str());
             m_connection->set_server_address(m_settings.authentication.server_address);
+        }
 
         if (m_settings.authentication.offline_mode)
         {
             // Offline mode — skip validation, go straight to library.
+            log_info("Offline mode enabled, skipping login");
             m_connection->enable_offline_mode();
             m_current_screen = Screen::Library;
         }
@@ -125,10 +145,13 @@ namespace launcher
             m_connection->set_access_token(m_settings.authentication.token.access_token);
 
             // Validate token — if still valid, skip login.
+            log_info("Validating saved token");
             auto valid = m_auth->validate();
 
             if (valid && valid.value)
             {
+                log_info("Token valid, skipping login");
+
                 // Fetch user alias for display.
                 lancommander::ProfileClient profile(*m_http);
                 auto alias = profile.get_alias();
@@ -141,6 +164,7 @@ namespace launcher
             else
             {
                 // Token invalid — try refresh before falling back to login.
+                log_info("Token invalid, attempting refresh");
                 lancommander::AuthToken current;
                 current.access_token = m_settings.authentication.token.access_token;
                 current.refresh_token = m_settings.authentication.token.refresh_token;
@@ -148,6 +172,7 @@ namespace launcher
                 auto refreshed = m_auth->refresh(current);
                 if (refreshed)
                 {
+                    log_info("Token refreshed successfully");
                     m_connection->set_access_token(refreshed.value.access_token);
                     m_settings.authentication.token.access_token = refreshed.value.access_token;
                     m_settings.authentication.token.refresh_token = refreshed.value.refresh_token;
@@ -160,10 +185,15 @@ namespace launcher
                     m_connection->connect();
                     m_current_screen = Screen::Library;
                 }
-                // else: refresh failed — stay on login screen.
+                else
+                {
+                    log_warn("Token refresh failed, showing login screen");
+                }
             }
         }
 
+        log_info("Init complete, starting on %s screen",
+                 m_current_screen == Screen::Library ? "Library" : "Login");
         return true;
     }
 
@@ -188,14 +218,15 @@ namespace launcher
             if (input.key_pressed(KEY_ESC))
             {
                 if (m_current_screen == Screen::GameDetail ||
-                    m_current_screen == Screen::Downloads)
+                    m_current_screen == Screen::Downloads ||
+                    m_current_screen == Screen::Settings)
                     m_current_screen = Screen::Library;
                 else
                     m_quit = true;
             }
 
             // --- Tick download queue ---
-            m_downloads.tick(*m_games);
+            m_downloads.tick(*m_games, *m_library);
 
             // --- Reset per-frame decode budget ---
             m_image_cache->begin_frame();
@@ -218,16 +249,63 @@ namespace launcher
                 case Screen::Downloads:
                     ui::screen_downloads_draw(*this, input);
                     break;
+                case Screen::Settings:
+                    ui::screen_settings_draw(*this, input);
+                    break;
             }
 
             // --- Footer bar (drawn on top of screen content) ---
             if (m_current_screen == Screen::Library || m_current_screen == Screen::GameDetail ||
-                m_current_screen == Screen::Downloads)
+                m_current_screen == Screen::Downloads || m_current_screen == Screen::Settings)
                 ui::window_footer_draw(*this, input);
 
             // --- Window chrome (custom title bar, drawn on top) ---
             if (ui::window_chrome_draw(*this, input))
                 m_quit = true;
+
+            // --- Mouse cursor (drawn on backbuffer so it isn't overwritten) ---
+            {
+                // 12x19 arrow cursor bitmap (0=transparent, 1=black, 2=white)
+                static const unsigned char cursor[19][12] = {
+                    {1,0,0,0,0,0,0,0,0,0,0,0},
+                    {1,1,0,0,0,0,0,0,0,0,0,0},
+                    {1,2,1,0,0,0,0,0,0,0,0,0},
+                    {1,2,2,1,0,0,0,0,0,0,0,0},
+                    {1,2,2,2,1,0,0,0,0,0,0,0},
+                    {1,2,2,2,2,1,0,0,0,0,0,0},
+                    {1,2,2,2,2,2,1,0,0,0,0,0},
+                    {1,2,2,2,2,2,2,1,0,0,0,0},
+                    {1,2,2,2,2,2,2,2,1,0,0,0},
+                    {1,2,2,2,2,2,2,2,2,1,0,0},
+                    {1,2,2,2,2,2,2,2,2,2,1,0},
+                    {1,2,2,2,2,2,2,2,2,2,2,1},
+                    {1,2,2,2,2,2,2,1,1,1,1,1},
+                    {1,2,2,2,1,2,2,1,0,0,0,0},
+                    {1,2,2,1,0,1,2,2,1,0,0,0},
+                    {1,2,1,0,0,1,2,2,1,0,0,0},
+                    {1,1,0,0,0,0,1,2,2,1,0,0},
+                    {1,0,0,0,0,0,1,2,2,1,0,0},
+                    {0,0,0,0,0,0,0,1,1,0,0,0},
+                };
+                int mx = input.mouse.x;
+                int my = input.mouse.y;
+                int col_b = makecol(0, 0, 0);
+                int col_w = makecol(255, 255, 255);
+                for (int row = 0; row < 19; ++row)
+                {
+                    int py = my + row;
+                    if (py < 0 || py >= m_height) continue;
+                    for (int col = 0; col < 12; ++col)
+                    {
+                        int px = mx + col;
+                        if (px < 0 || px >= m_width) continue;
+                        if (cursor[row][col] == 1)
+                            putpixel(m_backbuffer, px, py, col_b);
+                        else if (cursor[row][col] == 2)
+                            putpixel(m_backbuffer, px, py, col_w);
+                    }
+                }
+            }
 
             // --- Flip ---
             blit(m_backbuffer, screen, 0, 0, 0, 0, m_width, m_height);
@@ -241,6 +319,8 @@ namespace launcher
 
     void App::shutdown()
     {
+        log_shutdown();
+
         // Save settings before exit.
         m_settings.authentication.server_address = m_connection->get_server_address();
         m_settings.authentication.token.access_token = m_connection->get_access_token();

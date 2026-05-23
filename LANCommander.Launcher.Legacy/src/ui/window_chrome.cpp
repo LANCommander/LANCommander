@@ -10,8 +10,26 @@
 #include "app/app.h"
 
 #include <windows.h>
-#include <dwmapi.h>
 #include <cstdio>
+
+// DWM is Vista+ only. Dynamically load to keep Win9x compatibility.
+typedef HRESULT (WINAPI *PFN_DwmSetWindowAttribute)(HWND, DWORD, LPCVOID, DWORD);
+static PFN_DwmSetWindowAttribute s_pfnDwmSetWindowAttribute = NULL;
+static bool s_dwm_checked = false;
+
+static void ensure_dwm()
+{
+    if (s_dwm_checked) return;
+    s_dwm_checked = true;
+    HMODULE hDwm = LoadLibraryA("dwmapi.dll");
+    if (hDwm)
+        s_pfnDwmSetWindowAttribute = (PFN_DwmSetWindowAttribute)
+            GetProcAddress(hDwm, "DwmSetWindowAttribute");
+}
+
+// DWM constants (avoid requiring dwmapi.h)
+#define LC_DWMWA_NCRENDERING_POLICY 2
+#define LC_DWMNCRP_DISABLED         1
 
 namespace launcher
 {
@@ -84,12 +102,27 @@ namespace launcher
                          WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
             SetWindowLong(hwnd, GWL_EXSTYLE, exstyle);
 
-            DWMNCRENDERINGPOLICY policy = DWMNCRP_DISABLED;
-            DwmSetWindowAttribute(hwnd, DWMWA_NCRENDERING_POLICY,
-                                  &policy, sizeof(policy));
+            // Disable DWM non-client rendering (Vista+ only, no-op on Win9x/XP)
+            ensure_dwm();
+            if (s_pfnDwmSetWindowAttribute)
+            {
+                DWORD policy = LC_DWMNCRP_DISABLED;
+                s_pfnDwmSetWindowAttribute(hwnd, LC_DWMWA_NCRENDERING_POLICY,
+                                           &policy, sizeof(policy));
+            }
+
+            // Install the WndProc subclass BEFORE SetWindowPos so that
+            // the WM_NCCALCSIZE triggered by SWP_FRAMECHANGED is handled
+            // by our proc (returns 0 → no non-client area).
+            ensure_subclass();
 
             SetWindowPos(hwnd, NULL, wr.left, wr.top, cw, ch,
                          SWP_NOZORDER | SWP_FRAMECHANGED);
+
+            // Re-assert foreground + focus — the style change to WS_POPUP
+            // can cause the window to lose keyboard focus on some systems.
+            SetForegroundWindow(hwnd);
+            SetFocus(hwnd);
 #endif
         }
 
@@ -354,6 +387,31 @@ namespace launcher
                     if (dl_hovered && input.mouse.clicked && !on_downloads_screen)
                         app.switch_screen(Screen::Downloads);
                 }
+            }
+
+            // --- Right: Settings button ---
+            {
+                const char *settings_label = "Settings";
+                int set_w = text_width(settings_label) + 20;
+                int set_x = sw - pad - set_w;
+                bool on_settings = (app.current_screen() == Screen::Settings);
+                bool set_hovered = (input.mouse.x >= set_x && input.mouse.x < set_x + set_w &&
+                                    input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
+
+                if (on_settings)
+                    rectfill(buf, set_x, btn_y, set_x + set_w - 1, btn_y + btn_h - 1,
+                             theme().primary);
+                else if (set_hovered)
+                    rectfill(buf, set_x, btn_y, set_x + set_w - 1, btn_y + btn_h - 1,
+                             theme().panel_hover);
+
+                draw_text_center(buf, set_x + set_w / 2, btn_y + (btn_h - th) / 2,
+                                 (on_settings || set_hovered)
+                                     ? theme().text_bright : theme().text_dim,
+                                 settings_label);
+
+                if (set_hovered && input.mouse.clicked && !on_settings)
+                    app.switch_screen(Screen::Settings);
             }
         }
 

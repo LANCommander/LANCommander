@@ -30,7 +30,8 @@ namespace launcher
         Login,
         Library,
         GameDetail,
-        Downloads
+        Downloads,
+        Settings
     };
 
     // Application state and lifecycle.

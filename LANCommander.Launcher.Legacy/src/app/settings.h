@@ -2,6 +2,7 @@
 #define LAUNCHER_SETTINGS_H
 
 #include <string>
+#include <vector>
 
 namespace launcher
 {
@@ -18,7 +19,7 @@ namespace launcher
     //       RefreshToken       -> authentication.refresh_token
     //     OfflineModeEnabled   -> authentication.offline_mode
     //   Games:
-    //     InstallDirectories   -> games.install_directory  (first entry)
+    //     InstallDirectories   -> games.install_directories
     //   Launcher:
     //     Username             -> launcher.username
 
@@ -39,7 +40,12 @@ namespace launcher
 
     struct GameSettings
     {
-        std::string install_directory;
+        std::vector<std::string> install_directories;
+
+        GameSettings()
+        {
+            install_directories.push_back("C:\\Games");
+        }
     };
 
     struct LauncherSettings

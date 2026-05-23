@@ -129,23 +129,42 @@ namespace launcher
             {
                 if (key == "InstallDirectories")
                 {
-                    // Inline flow sequence: [path]
-                    // Strip surrounding brackets if present.
+                    // Clear default when we find this key in the file.
+                    games.install_directories.clear();
+
+                    // Inline flow sequence: [path1, path2]
                     if (!value.empty() && value[0] == '[')
                     {
                         value = value.substr(1);
                         if (!value.empty() && value[value.size() - 1] == ']')
                             value = value.substr(0, value.size() - 1);
+                        // Split by comma
+                        size_t pos = 0;
+                        while (pos < value.size())
+                        {
+                            size_t comma = value.find(',', pos);
+                            if (comma == std::string::npos)
+                                comma = value.size();
+                            std::string entry = value.substr(pos, comma - pos);
+                            // Trim spaces
+                            size_t s = entry.find_first_not_of(' ');
+                            size_t e = entry.find_last_not_of(' ');
+                            if (s != std::string::npos)
+                                games.install_directories.push_back(entry.substr(s, e - s + 1));
+                            pos = comma + 1;
+                        }
                     }
-                    // Take the first (or only) entry.
-                    if (!value.empty())
-                        games.install_directory = value;
+                    else if (!value.empty())
+                    {
+                        games.install_directories.push_back(value);
+                    }
+                    subsection = "InstallDirectories";
                 }
-                else if (key == "-")
+                else if (key == "-" && subsection == "InstallDirectories")
                 {
                     // Block sequence item under InstallDirectories
-                    if (games.install_directory.empty())
-                        games.install_directory = value;
+                    if (!value.empty())
+                        games.install_directories.push_back(value);
                 }
             }
             else if (section == "Launcher")
@@ -177,8 +196,12 @@ namespace launcher
         fprintf(f, "  OfflineModeEnabled: %s\n", authentication.offline_mode ? "true" : "false");
 
         fprintf(f, "Games:\n");
-        if (!games.install_directory.empty())
-            fprintf(f, "  InstallDirectories:\n  - %s\n", games.install_directory.c_str());
+        if (!games.install_directories.empty())
+        {
+            fprintf(f, "  InstallDirectories:\n");
+            for (size_t i = 0; i < games.install_directories.size(); ++i)
+                fprintf(f, "  - %s\n", games.install_directories[i].c_str());
+        }
         else
             fprintf(f, "  InstallDirectories: []\n");
 

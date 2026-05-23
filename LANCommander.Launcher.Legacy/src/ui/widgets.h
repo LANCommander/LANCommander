@@ -52,6 +52,26 @@ namespace launcher
 
         void divider(BITMAP *bmp, int x, int y, int w);
 
+        // --- Scrollbar ---
+
+        // Draw a vertical scrollbar track + thumb with click/drag support.
+        // `scroll_y` is updated in-place when the user drags the thumb
+        // or clicks the track.
+        void scrollbar(BITMAP *bmp, int x, int y, int h,
+                       int content_h, int viewport_h, int &scroll_y,
+                       const InputState &input);
+
+        // --- Modal overlay ---
+
+        // Draw a semi-transparent dark backdrop over the entire screen.
+        void modal_backdrop(BITMAP *bmp, int sw, int sh);
+
+        // --- Checkbox ---
+
+        // Draw a checkbox with label. Returns true if toggled this frame.
+        bool checkbox(BITMAP *bmp, int x, int y, const char *label_text,
+                      bool &checked, const InputState &input);
+
     } // namespace ui
 } // namespace launcher
 

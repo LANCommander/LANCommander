@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Options
 # ---------------------------------------------------------------------------
 option(ALLEGRO_STATIC "Link Allegro 4 statically" ON)
+option(TARGET_WIN9X   "Target Windows 95/98 (subsystem 4.0, no DWM/GDI+ link)" OFF)
 
 # ---------------------------------------------------------------------------
 # Allegro 4
@@ -67,16 +68,21 @@ add_executable(launcher WIN32
     src/app/app.cpp
     src/app/settings.cpp
     src/app/download_queue.cpp
+    src/app/game_database.cpp
+    src/app/logger.cpp
     vendor/miniz/miniz.c
     vendor/miniz/miniz_tdef.c
     vendor/miniz/miniz_tinfl.c
     vendor/miniz/miniz_zip.c
+    vendor/sqlite3/sqlite3.c
     src/ui/input.cpp
     src/ui/theme.cpp
     src/ui/widgets.cpp
     src/ui/screen_login.cpp
     src/ui/screen_library.cpp
     src/ui/screen_game_detail.cpp
+    src/ui/screen_downloads.cpp
+    src/ui/screen_settings.cpp
     src/ui/window_chrome.cpp
     src/ui/gdi_font.cpp
     src/ui/image_decoder.cpp
@@ -86,6 +92,7 @@ add_executable(launcher WIN32
 target_include_directories(launcher PRIVATE
     src/
     vendor/miniz/
+    vendor/sqlite3/
     ${ALLEGRO_INCLUDE_DIRS}
 )
 
@@ -109,11 +116,11 @@ endif()
 
 # Platform libraries
 if(WIN32)
-    # Allegro 4 on Windows needs these system libraries
+    # Allegro 4 on Windows needs these system libraries.
+    # dwmapi is loaded dynamically at runtime (Vista+) so we never link it.
     target_link_libraries(launcher
         gdi32
         gdiplus
-        dwmapi
         user32
         ole32
         dinput8
@@ -122,6 +129,26 @@ if(WIN32)
         winmm
         dsound
     )
+
+    if(TARGET_WIN9X)
+        target_compile_definitions(launcher PRIVATE
+            WINVER=0x0400
+            _WIN32_WINNT=0x0400
+        )
+        # PE subsystem 4.0 required for Win95/98 loader
+        if(MSVC)
+            target_link_options(launcher PRIVATE
+                "/SUBSYSTEM:WINDOWS,4.0"
+            )
+        elseif(MINGW)
+            target_link_options(launcher PRIVATE
+                "-Wl,--subsystem,windows:4.0"
+                "-static"
+                "-static-libgcc"
+                "-static-libstdc++"
+            )
+        endif()
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------

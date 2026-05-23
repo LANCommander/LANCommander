@@ -5,6 +5,7 @@
 #include "ui/image_cache.h"
 #include "app/app.h"
 #include "app/game_database.h"
+#include "app/logger.h"
 
 #include <allegro.h>
 #include <cstdio>
@@ -38,6 +39,24 @@ namespace launcher
         static void *s_process_handle = NULL; // HANDLE
         static bool s_is_running = false;
         static bool s_is_starting = false;
+
+        // -----------------------------------------------------------------
+        // Modal dialog state
+        // -----------------------------------------------------------------
+        enum class ModalType { None, ActionSelect, InstallOptions };
+        static ModalType s_modal = ModalType::None;
+
+        // Action selection dialog
+        static std::vector<const lancommander::Action *> s_modal_actions;
+
+        // Install options dialog
+        static std::vector<lancommander::Game> s_addons;
+        // Using char instead of bool because vector<bool> is a
+        // special-cased bitfield that doesn't support references.
+        static std::vector<char> s_addon_selected;
+        static int s_install_dir_index = 0;
+        static bool s_addons_loaded = false;
+        static int s_install_scroll_y = 0;
 
         // -----------------------------------------------------------------
         // Helpers
@@ -356,6 +375,8 @@ namespace launcher
             {
                 load_game(app);
                 s_scroll_y = 0;
+                s_modal = ModalType::None;
+                s_addons_loaded = false;
             }
 
             // Check if a download for this game just completed — update
@@ -544,38 +565,46 @@ namespace launcher
                                                        theme().primary, theme().primary_hover);
                 if (install_btn.clicked)
                 {
-                    if (!s_game.in_library)
-                        app.library().add(s_game.id);
+                    bool multiple_dirs = app.settings().games.install_directories.size() > 1;
 
-                    // Determine install directory.
-                    std::string install_root = app.settings().games.install_directory;
-                    if (install_root.empty())
+                    // Fetch addons if not loaded yet
+                    if (!s_addons_loaded)
                     {
-                        char exe_buf[MAX_PATH];
-                        DWORD n = GetModuleFileNameA(NULL, exe_buf, MAX_PATH);
-                        if (n > 0)
-                        {
-                            std::string exe(exe_buf, n);
-                            size_t slash = exe.find_last_of("\\/");
-                            if (slash != std::string::npos)
-                                install_root = exe.substr(0, slash + 1) + "Games";
-                            else
-                                install_root = "Games";
-                        }
-                        else
-                            install_root = "Games";
-
-                        // Persist so the computed path is saved on exit.
-                        app.settings().games.install_directory = install_root;
+                        s_addons.clear();
+                        auto addons_result = app.games().get_addons(s_game.id);
+                        if (addons_result)
+                            s_addons = addons_result.value;
+                        s_addon_selected.assign(s_addons.size(), false);
+                        s_addons_loaded = true;
                     }
-                    CreateDirectoryA(install_root.c_str(), NULL);
-                    std::string game_dir = install_root + "\\" + s_game.title;
-                    CreateDirectoryA(game_dir.c_str(), NULL);
 
-                    // Enqueue the download (runs in background thread).
-                    app.downloads().enqueue(s_game.id, s_game.title, game_dir);
-                    s_status_message = "Added to download queue";
-                    s_status_color = theme().success;
+                    if (multiple_dirs || !s_addons.empty())
+                    {
+                        // Show install options dialog
+                        s_install_dir_index = 0;
+                        s_install_scroll_y = 0;
+                        s_modal = ModalType::InstallOptions;
+                    }
+                    else
+                    {
+                        // Direct install — single directory, no addons
+                        std::string install_root;
+                        if (!app.settings().games.install_directories.empty())
+                            install_root = app.settings().games.install_directories[0];
+                        if (install_root.empty())
+                            install_root = "C:\\Games";
+
+                        log_info("Install clicked: %s -> %s", s_game.title.c_str(), install_root.c_str());
+
+                        CreateDirectoryA(install_root.c_str(), NULL);
+                        std::string game_dir = install_root + "\\" + s_game.title;
+                        CreateDirectoryA(game_dir.c_str(), NULL);
+
+                        bool needs_lib_add = !s_game.in_library;
+                        app.downloads().enqueue(s_game.id, s_game.title, game_dir, needs_lib_add);
+                        s_status_message = "Added to download queue";
+                        s_status_color = theme().success;
+                    }
                 }
                 btn_x += btn_w + 8;
 
@@ -633,32 +662,47 @@ namespace launcher
                     }
                     else
                     {
-                        const lancommander::Action *primary = pick_primary_action();
-                        if (primary)
+                        // Count primary actions
+                        s_modal_actions.clear();
+                        for (size_t i = 0; i < s_actions.size(); ++i)
+                            if (s_actions[i].is_primary)
+                                s_modal_actions.push_back(&s_actions[i]);
+
+                        if (s_modal_actions.size() > 1)
                         {
-                            s_is_starting = true;
-                            s_running_game_id = s_game.id;
-                            std::string launch_err;
-                            if (launch_action(app, *primary, &launch_err))
-                            {
-                                app.games().notify_started(s_game.id);
-                                s_status_message = "Running: " + primary->name;
-                                s_status_color = theme().success;
-                                s_is_running = true;
-                                s_is_starting = false;
-                            }
-                            else
-                            {
-                                s_status_message = launch_err;
-                                s_status_color = theme().error;
-                                s_is_starting = false;
-                                s_running_game_id.clear();
-                            }
+                            // Multiple primary actions — show selection dialog
+                            s_modal = ModalType::ActionSelect;
                         }
                         else
                         {
-                            s_status_message = "No actions available";
-                            s_status_color = theme().error;
+                            // Single or zero primary actions — launch directly
+                            const lancommander::Action *primary = pick_primary_action();
+                            if (primary)
+                            {
+                                s_is_starting = true;
+                                s_running_game_id = s_game.id;
+                                std::string launch_err;
+                                if (launch_action(app, *primary, &launch_err))
+                                {
+                                    app.games().notify_started(s_game.id);
+                                    s_status_message = "Running: " + primary->name;
+                                    s_status_color = theme().success;
+                                    s_is_running = true;
+                                    s_is_starting = false;
+                                }
+                                else
+                                {
+                                    s_status_message = launch_err;
+                                    s_status_color = theme().error;
+                                    s_is_starting = false;
+                                    s_running_game_id.clear();
+                                }
+                            }
+                            else
+                            {
+                                s_status_message = "No actions available";
+                                s_status_color = theme().error;
+                            }
                         }
                     }
                 }
@@ -889,9 +933,285 @@ namespace launcher
             // Restore clip rect.
             set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
 
+            // Scrollbar
+            {
+                int visible_h = sh - top;
+                scrollbar(buf, sw - 14, top, visible_h,
+                          total_page_h, visible_h, s_scroll_y, input);
+            }
+
             // --- Back navigation ---
-            if (back_btn.clicked)
+            if (back_btn.clicked && s_modal == ModalType::None)
                 app.switch_screen(Screen::Library);
+
+            // =============================================================
+            // Modal dialogs (drawn on top of everything)
+            // =============================================================
+
+            if (s_modal == ModalType::ActionSelect)
+            {
+                modal_backdrop(buf, sw, sh);
+
+                int dlg_w = 340;
+                int row_h = 30;
+                int pad = 16;
+                int count = (int)s_modal_actions.size();
+                int dlg_h = pad + th + 12 + count * (row_h + 4) + 12 + row_h + pad;
+                int dx = (sw - dlg_w) / 2;
+                int dy = (sh - dlg_h) / 2;
+
+                panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
+                rect(buf, dx, dy, dx + dlg_w - 1, dy + dlg_h - 1, theme().divider);
+
+                int cy = dy + pad;
+                draw_text_center(buf, dx + dlg_w / 2, cy, theme().text_bright, "Choose an action");
+                cy += th + 4;
+                draw_text_center(buf, dx + dlg_w / 2, cy, theme().text_dim, s_game.title.c_str());
+                cy += th + 12;
+
+                int btn_pad = 24;
+                int btn_w = dlg_w - btn_pad * 2;
+
+                for (int i = 0; i < count; ++i)
+                {
+                    ButtonState ab = button(buf, dx + btn_pad, cy, btn_w, row_h,
+                                            s_modal_actions[i]->name.c_str(), input);
+                    if (ab.clicked)
+                    {
+                        const lancommander::Action *action = s_modal_actions[i];
+                        s_modal = ModalType::None;
+
+                        s_is_starting = true;
+                        s_running_game_id = s_game.id;
+                        std::string launch_err;
+                        if (launch_action(app, *action, &launch_err))
+                        {
+                            app.games().notify_started(s_game.id);
+                            s_status_message = "Running: " + action->name;
+                            s_status_color = theme().success;
+                            s_is_running = true;
+                            s_is_starting = false;
+                        }
+                        else
+                        {
+                            s_status_message = launch_err;
+                            s_status_color = theme().error;
+                            s_is_starting = false;
+                            s_running_game_id.clear();
+                        }
+                    }
+                    cy += row_h + 4;
+                }
+
+                cy += 8;
+                int cancel_w = 90;
+                ButtonState cancel = button(buf, dx + dlg_w - btn_pad - cancel_w, cy,
+                                            cancel_w, row_h, "Cancel", input);
+                if (cancel.clicked || input.key_pressed(KEY_ESC))
+                    s_modal = ModalType::None;
+            }
+
+            if (s_modal == ModalType::InstallOptions)
+            {
+                modal_backdrop(buf, sw, sh);
+
+                const std::vector<std::string> &dirs = app.settings().games.install_directories;
+                bool show_dirs = dirs.size() > 1;
+                int addon_count = (int)s_addons.size();
+
+                int dlg_w = 420;
+                int pad = 16;
+                int row_h = 24;
+                int dlg_h = pad + th + 12; // title
+                if (show_dirs)
+                    dlg_h += th + 4 + row_h + 12; // dir label + dropdown + gap
+                if (addon_count > 0)
+                {
+                    dlg_h += th + 8; // "Add-ons" header
+                    int visible = addon_count > 8 ? 8 : addon_count;
+                    dlg_h += visible * (row_h + 2) + 8;
+                }
+                dlg_h += 12 + 28 + pad; // gap + buttons + bottom pad
+
+                int dx = (sw - dlg_w) / 2;
+                int dy = (sh - dlg_h) / 2;
+
+                panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
+                rect(buf, dx, dy, dx + dlg_w - 1, dy + dlg_h - 1, theme().divider);
+
+                int cx = dx + pad;
+                int content_w = dlg_w - pad * 2;
+                int cy = dy + pad;
+
+                // Title
+                char title_buf[128];
+                sprintf(title_buf, "Install %s", s_game.title.c_str());
+                draw_text_center(buf, dx + dlg_w / 2, cy, theme().text_bright, title_buf);
+                cy += th + 12;
+
+                // Install directory selector
+                if (show_dirs)
+                {
+                    label(buf, cx, cy, theme().text_dim, "Install Directory");
+                    cy += th + 4;
+
+                    // Draw as prev/next selector since we don't have a real dropdown
+                    int sel_w = content_w - 60;
+                    int arrow_w = 26;
+
+                    // Left arrow
+                    ButtonState left_btn = button(buf, cx, cy, arrow_w, row_h, "<", input);
+                    if (left_btn.clicked && s_install_dir_index > 0)
+                        s_install_dir_index--;
+
+                    // Current directory text
+                    rectfill(buf, cx + arrow_w + 2, cy,
+                             cx + arrow_w + 2 + sel_w - 1, cy + row_h - 1,
+                             theme().input_bg);
+                    rect(buf, cx + arrow_w + 2, cy,
+                         cx + arrow_w + 2 + sel_w - 1, cy + row_h - 1,
+                         theme().input_border);
+                    {
+                        const char *dir_text = "";
+                        if (s_install_dir_index >= 0 && s_install_dir_index < (int)dirs.size())
+                            dir_text = dirs[s_install_dir_index].c_str();
+                        set_clip_rect(buf, cx + arrow_w + 6, cy,
+                                      cx + arrow_w + sel_w - 4, cy + row_h - 1);
+                        draw_text(buf, cx + arrow_w + 6,
+                                  cy + (row_h - th) / 2, theme().text, dir_text);
+                        set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+                    }
+
+                    // Right arrow
+                    ButtonState right_btn = button(buf, cx + arrow_w + 2 + sel_w + 2, cy,
+                                                    arrow_w, row_h, ">", input);
+                    if (right_btn.clicked && s_install_dir_index < (int)dirs.size() - 1)
+                        s_install_dir_index++;
+
+                    cy += row_h + 12;
+                }
+
+                // Addons
+                if (addon_count > 0)
+                {
+                    draw_text(buf, cx, cy, theme().text_bright, "Optional Add-ons");
+
+                    // Select All / None buttons
+                    {
+                        int all_w = text_width("All") + 12;
+                        int none_w = text_width("None") + 12;
+                        int bx = cx + content_w - all_w - 4 - none_w;
+                        ButtonState all_btn = button(buf, bx, cy - 2, all_w, th + 4, "All", input);
+                        if (all_btn.clicked)
+                            for (int i = 0; i < addon_count; ++i)
+                                s_addon_selected[i] = 1;
+                        bx += all_w + 4;
+                        ButtonState none_btn = button(buf, bx, cy - 2, none_w, th + 4, "None", input);
+                        if (none_btn.clicked)
+                            for (int i = 0; i < addon_count; ++i)
+                                s_addon_selected[i] = 0;
+                    }
+
+                    cy += th + 8;
+
+                    int visible = addon_count > 8 ? 8 : addon_count;
+                    int list_h = visible * (row_h + 2);
+
+                    set_clip_rect(buf, cx, cy, cx + content_w - 1, cy + list_h - 1);
+
+                    int ay = cy - s_install_scroll_y;
+                    for (int i = 0; i < addon_count; ++i)
+                    {
+                        if (ay + row_h >= cy && ay < cy + list_h)
+                        {
+                            const char *type_str = "";
+                            switch (s_addons[i].type)
+                            {
+                            case lancommander::GameType::Expansion:
+                            case lancommander::GameType::StandaloneExpansion:
+                                type_str = "Expansion"; break;
+                            case lancommander::GameType::Mod:
+                            case lancommander::GameType::StandaloneMod:
+                                type_str = "Mod"; break;
+                            default: break;
+                            }
+
+                            bool sel = (s_addon_selected[i] != 0);
+                            checkbox(buf, cx, ay, s_addons[i].title.c_str(), sel, input);
+                            s_addon_selected[i] = sel ? 1 : 0;
+
+                            if (type_str[0])
+                                draw_text_right(buf, cx + content_w, ay + (row_h - th) / 2,
+                                                theme().text_dim, type_str);
+                        }
+                        ay += row_h + 2;
+                    }
+                    set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+
+                    // Scroll for long addon lists
+                    if (addon_count > visible)
+                    {
+                        int total_addon_h = addon_count * (row_h + 2);
+                        scrollbar(buf, cx + content_w + 2, cy, list_h,
+                                  total_addon_h, list_h, s_install_scroll_y, input);
+                    }
+
+                    cy += list_h + 8;
+                }
+
+                // Buttons
+                cy += 4;
+                int btn_w = 90;
+                int btn_h2 = 28;
+                int btn_gap = 8;
+
+                ButtonState cancel = button(buf, dx + dlg_w - pad - btn_w, cy,
+                                            btn_w, btn_h2, "Cancel", input);
+
+                ButtonState install = button(buf, dx + dlg_w - pad - btn_w - btn_gap - btn_w, cy,
+                                              btn_w, btn_h2, "Install", input);
+
+                if (install.clicked)
+                {
+                    // Get selected install directory
+                    std::string install_root;
+                    if (show_dirs && s_install_dir_index >= 0 &&
+                        s_install_dir_index < (int)dirs.size())
+                        install_root = dirs[s_install_dir_index];
+                    else if (!dirs.empty())
+                        install_root = dirs[0];
+                    if (install_root.empty())
+                        install_root = "C:\\Games";
+
+                    log_info("Install (dialog): %s -> %s", s_game.title.c_str(), install_root.c_str());
+
+                    CreateDirectoryA(install_root.c_str(), NULL);
+                    std::string game_dir = install_root + "\\" + s_game.title;
+                    CreateDirectoryA(game_dir.c_str(), NULL);
+
+                    bool needs_lib_add = !s_game.in_library;
+                    app.downloads().enqueue(s_game.id, s_game.title, game_dir, needs_lib_add);
+
+                    // Enqueue selected addons
+                    for (int i = 0; i < addon_count; ++i)
+                    {
+                        if (s_addon_selected[i])
+                        {
+                            std::string addon_dir = game_dir;
+                            log_info("Addon selected: %s", s_addons[i].title.c_str());
+                            app.downloads().enqueue(s_addons[i].id, s_addons[i].title,
+                                                    addon_dir, false);
+                        }
+                    }
+
+                    s_status_message = "Added to download queue";
+                    s_status_color = theme().success;
+                    s_modal = ModalType::None;
+                }
+
+                if (cancel.clicked || input.key_pressed(KEY_ESC))
+                    s_modal = ModalType::None;
+            }
         }
 
     } // namespace ui

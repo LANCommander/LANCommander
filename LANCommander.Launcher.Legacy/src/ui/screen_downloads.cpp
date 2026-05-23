@@ -219,6 +219,10 @@ namespace launcher
 
             set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
 
+            // Scrollbar
+            scrollbar(buf, sw - 14, content_y, content_h,
+                      total_h, content_h, s_scroll_y, input);
+
             // --- Back navigation ---
             if (back_btn.clicked)
                 app.switch_screen(Screen::Library);

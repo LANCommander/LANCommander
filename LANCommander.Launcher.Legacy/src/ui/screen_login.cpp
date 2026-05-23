@@ -3,6 +3,7 @@
 #include "ui/widgets.h"
 #include "ui/window_chrome.h"
 #include "app/app.h"
+#include "app/logger.h"
 
 #include <allegro.h>
 
@@ -116,10 +117,12 @@ namespace launcher
                     app.connection().set_server_address(s_server_address);
 
                 // Attempt login.
+                log_info("Login attempt: %s@%s", s_username.c_str(), s_server_address.c_str());
                 auto token = app.auth().login(s_username, s_password);
 
                 if (token)
                 {
+                    log_info("Login successful");
                     app.connection().set_access_token(token.value.access_token);
                     app.connection().connect();
 
@@ -146,6 +149,7 @@ namespace launcher
                 {
                     s_error_message = token.error;
                     s_connecting = false;
+                    log_error("Login failed: %s", token.error.c_str());
                 }
             }
 
@@ -158,6 +162,7 @@ namespace launcher
             // Tab between fields
             if (input.key_pressed(KEY_TAB))
                 s_focus = (s_focus + 1) % 3;
+
         }
     } // namespace ui
 } // namespace launcher

@@ -27,12 +27,13 @@ namespace launcher {
             std::vector<KeyEvent> keys;
             MouseState mouse;
 
-            // Drain all pending Allegro input into this struct.
+            // Drain all pending input into this struct.
             void poll();
 
             // Convenience: was a specific scancode pressed this frame?
             bool key_pressed(int scancode) const;
         };
+
 
     } // namespace ui
 } // namespace launcher

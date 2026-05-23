@@ -312,6 +312,10 @@ namespace launcher
             // Restore clip rect.
             set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
 
+            // Scrollbar
+            scrollbar(buf, sw - 14, grid_y, grid_area_h,
+                      content_h, grid_area_h, s_scroll_y, input);
+
         }
 
     } // namespace ui

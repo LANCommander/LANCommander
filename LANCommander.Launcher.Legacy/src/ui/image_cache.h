@@ -24,7 +24,7 @@ namespace launcher
             static const int MAX_ENTRIES = 30;
             static const int MAX_DECODES_PER_FRAME = 2;
 
-            explicit ImageCache(lancommander::MediaClient &media);
+            ImageCache(lancommander::MediaClient &media, const std::string &media_dir);
             ~ImageCache();
 
             // Call once per frame before any get() calls to reset the decode budget.

@@ -17,24 +17,10 @@ namespace launcher
     namespace ui
     {
 
-        // Build cache directory path next to the executable.
-        static std::string exe_relative(const char *subdir)
-        {
-            char buf[MAX_PATH];
-            DWORD n = GetModuleFileNameA(NULL, buf, MAX_PATH);
-            if (n == 0)
-                return std::string(subdir);
-            std::string path(buf, n);
-            size_t slash = path.find_last_of("\\/");
-            if (slash == std::string::npos)
-                return std::string(subdir);
-            return path.substr(0, slash + 1) + subdir;
-        }
-
-        ImageCache::ImageCache(lancommander::MediaClient &media)
+        ImageCache::ImageCache(lancommander::MediaClient &media, const std::string &media_dir)
             : m_media(media), m_access_counter(0), m_decodes_this_frame(0)
         {
-            m_cache_dir = exe_relative("cache");
+            m_cache_dir = media_dir;
             CreateDirectoryA(m_cache_dir.c_str(), NULL);
         }
 

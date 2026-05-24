@@ -122,6 +122,28 @@ namespace launcher
                 }
                 break;
             }
+
+            case WM_ERASEBKGND:
+                // Suppress background erase — we paint the entire client area.
+                return 1;
+
+            case WM_PAINT:
+            {
+                // Prevent Allegro's default WM_PAINT from blitting its
+                // stale 800x600 screen surface. Just validate the
+                // region — our main loop repaints every frame.
+                PAINTSTRUCT ps;
+                BeginPaint(hwnd, &ps);
+                if (s_app && s_app->backbuffer())
+                {
+                    blit_to_hdc(s_app->backbuffer(), ps.hdc,
+                                0, 0, 0, 0,
+                                s_app->screen_width(),
+                                s_app->screen_height());
+                }
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
             }
             if (s_orig_wndproc)
                 return s_orig_wndproc(hwnd, msg, wp, lp);

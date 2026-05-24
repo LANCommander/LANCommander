@@ -214,6 +214,16 @@ namespace launcher
             int rows = (count + cols - 1) / cols;
             int content_h = GRID_PAD + rows * (item_h + row_spacing);
 
+            // Set the image cache capacity to the number of covers that can
+            // fit on screen plus two extra rows as a scroll buffer.
+            {
+                int visible_rows = (grid_area_h + item_h + row_spacing - 1)
+                                   / (item_h + row_spacing);
+                int capacity = cols * (visible_rows + 2);
+                if (capacity < 16) capacity = 16;
+                app.image_cache().set_capacity(capacity);
+            }
+
             // Scroll
             if (input.mouse.wheel_delta != 0 && input.mouse.y >= grid_y)
             {

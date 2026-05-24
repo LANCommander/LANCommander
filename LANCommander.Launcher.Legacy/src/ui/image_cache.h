@@ -21,11 +21,15 @@ namespace launcher
         class ImageCache
         {
         public:
-            static const int MAX_ENTRIES = 30;
-            static const int MAX_DECODES_PER_FRAME = 2;
+            static const int DEFAULT_MAX_ENTRIES = 64;
+            static const int MAX_DECODES_PER_FRAME = 4;
 
             ImageCache(lancommander::MediaClient &media, const std::string &media_dir);
             ~ImageCache();
+
+            // Set the maximum number of cached entries.  The library screen
+            // calls this each frame based on how many covers fit in the window.
+            void set_capacity(int max_entries);
 
             // Call once per frame before any get() calls to reset the decode budget.
             void begin_frame();
@@ -52,6 +56,7 @@ namespace launcher
             std::map<std::string, Entry> m_cache;
             unsigned long long m_access_counter;
             int m_decodes_this_frame;
+            int m_max_entries;
 
             std::string file_path(const std::string &media_id) const;
             void evict_oldest();

@@ -56,7 +56,7 @@ jobs:
         run: |
           ALLEGRO_SRC="LANCommander.Launcher.Legacy/vendor/allegro4/allegro5-4.4.3.1"
           ALLEGRO_BUILD="LANCommander.Launcher.Legacy/build-allegro-win9x"
-          ALLEGRO_PREFIX="LANCommander.Launcher.Legacy/allegro4-win9x"
+          ALLEGRO_PREFIX="$(pwd)/LANCommander.Launcher.Legacy/allegro4-win9x"
 
           cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
               -G "MinGW Makefiles" \
@@ -83,7 +83,7 @@ jobs:
         run: |
           LAUNCHER_DIR="LANCommander.Launcher.Legacy"
           LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x"
-          ALLEGRO_PREFIX="$LAUNCHER_DIR/allegro4-win9x"
+          ALLEGRO_PREFIX="$(pwd)/$LAUNCHER_DIR/allegro4-win9x"
 
           cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD" \
               -G "MinGW Makefiles" \

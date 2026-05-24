@@ -411,37 +411,37 @@ jobs:
       - name: Download Launcher Avalonia Linux ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Avalonia Linux x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Avalonia macOS ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Avalonia macOS x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Avalonia Windows ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Avalonia Windows x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Create or update nightly release

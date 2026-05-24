@@ -224,25 +224,25 @@ jobs:
       - name: Download Avalonia Launcher Linux x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Avalonia Launcher macOS ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Avalonia Launcher macOS x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Avalonia Launcher Windows x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Debug - List Artifact Files
@@ -263,10 +263,10 @@ jobs:
             artifacts/LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher.Avalonia-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
 
       - name: Checkout Repo for Docker build
         uses: actions/checkout@v4

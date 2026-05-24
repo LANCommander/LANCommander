@@ -164,7 +164,7 @@ jobs:
       run: |
         $compress = @{
           Path = "LANCommander.Launcher.Avalonia/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/*"
-          DestinationPath = "LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
+          DestinationPath = "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }
         Compress-Archive @compress
@@ -172,5 +172,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        path: LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
-        name: LANCommander.Launcher.Avalonia-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        path: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        name: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

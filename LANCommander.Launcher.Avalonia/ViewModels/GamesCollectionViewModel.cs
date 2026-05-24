@@ -69,6 +69,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsHorizontalView))]
     [NotifyPropertyChangedFor(nameof(IsGridViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsListViewFlat))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryListViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsHorizontalViewFlat))]
     [NotifyPropertyChangedFor(nameof(AvailableGroupByOptions))]
     private GameViewType _selectedViewType = GameViewType.Grid;
@@ -77,6 +78,8 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         if (value == GameViewType.Horizontal && SelectedGroupBy == GroupBy.None)
             SelectedGroupBy = GroupBy.FirstLetter;
+        else if (value != GameViewType.Horizontal && IsLibraryContext && SelectedGroupBy != GroupBy.None)
+            SelectedGroupBy = GroupBy.None;
     }
 
     public bool IsGridView       => SelectedViewType == GameViewType.Grid;
@@ -85,8 +88,18 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
     // Flat variants: only true when NOT grouped
     public bool IsGridViewFlat       => IsGridView       && !IsGrouped;
-    public bool IsListViewFlat       => IsListView       && !IsGrouped;
+    public bool IsListViewFlat       => IsListView       && !IsGrouped && !IsLibraryContext;
+    public bool IsLibraryListViewFlat => IsListView      && !IsGrouped && IsLibraryContext;
     public bool IsHorizontalViewFlat => IsHorizontalView && !IsGrouped;
+
+    /// <summary>Override in LibraryViewModel to enable the library-specific list layout.</summary>
+    public virtual bool IsLibraryContext => false;
+
+    /// <summary>Whether a collection filter is active (used by LibraryRowView).</summary>
+    public virtual bool IsCollectionFiltered => false;
+
+    /// <summary>Name of the currently filtered collection (used by LibraryRowView).</summary>
+    public virtual string FilteredCollectionName => string.Empty;
 
     // ── Grouping ──────────────────────────────────────────────────────────────
 
@@ -95,10 +108,11 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsGroupByFirstLetter))]
     [NotifyPropertyChangedFor(nameof(IsGridViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsListViewFlat))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryListViewFlat))]
     [NotifyPropertyChangedFor(nameof(IsHorizontalViewFlat))]
-    private GroupBy _selectedGroupBy = GroupBy.None;
+    private GroupBy? _selectedGroupBy = GroupBy.None;
 
-    public bool IsGrouped => SelectedGroupBy != GroupBy.None;
+    public bool IsGrouped => SelectedGroupBy != null && SelectedGroupBy != GroupBy.None;
     public bool IsGroupByFirstLetter => SelectedGroupBy == GroupBy.FirstLetter;
 
     public IReadOnlyList<GroupBy> AvailableGroupByOptions =>
@@ -119,6 +133,14 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<Genre> _availableGenres = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCollectionFiltered))]
+    [NotifyPropertyChangedFor(nameof(FilteredCollectionName))]
+    private string? _selectedCollection;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _availableCollections = new();
 
     [ObservableProperty]
     private string? _selectedTag;
@@ -179,6 +201,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         SearchText            = string.Empty;
         SelectedGenre         = null;
+        SelectedCollection    = null;
         SelectedTag           = null;
         SelectedDeveloper     = null;
         SelectedPublisher     = null;
@@ -219,6 +242,12 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
             filtered = filtered.Where(g =>
                 !string.IsNullOrEmpty(g.Genres) &&
                 g.Genres.Contains(SelectedGenre.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(SelectedCollection))
+            filtered = filtered.Where(g =>
+                !string.IsNullOrEmpty(g.Collections) &&
+                g.Collections.Split(", ", StringSplitOptions.RemoveEmptyEntries)
+                    .Any(c => c.Equals(SelectedCollection, StringComparison.OrdinalIgnoreCase)));
 
         if (!string.IsNullOrEmpty(SelectedTag))
             filtered = filtered.Where(g =>
@@ -279,7 +308,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         GroupedGames.Clear();
 
-        if (SelectedGroupBy == GroupBy.None)
+        if (SelectedGroupBy is null or GroupBy.None)
             return;
 
         IEnumerable<GameGroupViewModel> groups = SelectedGroupBy switch
@@ -349,7 +378,8 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     partial void OnSortAscendingChanged(bool value)              => ApplyFilters();
     partial void OnShowInLibraryOnlyChanged(bool value)          => ApplyFilters();
     partial void OnSelectedGenreChanged(Genre? value)            => ApplyFilters();
-    partial void OnSelectedGroupByChanged(GroupBy value)         => ApplyFilters();
+    partial void OnSelectedGroupByChanged(GroupBy? value)        => ApplyFilters();
+    partial void OnSelectedCollectionChanged(string? value)       => ApplyFilters();
     partial void OnSelectedTagChanged(string? value)             => ApplyFilters();
     partial void OnSelectedDeveloperChanged(string? value)       => ApplyFilters();
     partial void OnSelectedPublisherChanged(string? value)       => ApplyFilters();
@@ -362,17 +392,32 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void RaiseGameSelected(SDK.Models.Game game) =>
         GameSelected?.Invoke(this, game);
 
+    protected void PopulateCollections()
+    {
+        AvailableCollections.Clear();
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var g in _allGames)
+            if (!string.IsNullOrEmpty(g.Collections))
+                foreach (var c in g.Collections.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+                    seen.Add(c);
+
+        foreach (var c in seen.OrderBy(x => x))
+            AvailableCollections.Add(c);
+    }
+
     protected void PopulateTags()
     {
         AvailableTags.Clear();
-        
+
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        
+
         foreach (var g in _allGames)
             if (!string.IsNullOrEmpty(g.Tags))
                 foreach (var t in g.Tags.Split(", ", StringSplitOptions.RemoveEmptyEntries))
                     seen.Add(t);
-        
+
         foreach (var t in seen.OrderBy(x => x))
             AvailableTags.Add(t);
     }

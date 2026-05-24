@@ -7,7 +7,12 @@
             x:DataType="vm:GamesCollectionViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Button.active">
+        <Style Selector="Button.viewToggle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+        <Style Selector="Button.viewToggle.active">
             <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
         </Style>
     </UserControl.Styles>
@@ -69,6 +74,15 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                    </StackPanel>
+
+                    <!-- Collection -->
+                    <StackPanel Spacing="4" Margin="0,0,12,8">
+                        <TextBlock Text="Collection" FontSize="11" Opacity="0.6" />
+                        <ComboBox ItemsSource="{Binding AvailableCollections}"
+                                  SelectedItem="{Binding SelectedCollection}"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch" />
                     </StackPanel>
 
                     <!-- Tags -->
@@ -153,21 +167,21 @@
                             Padding="4"
                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
                         <StackPanel Orientation="Horizontal">
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
-                                    ToolTip.Tip="Grid view"
+                            <Button Classes="viewToggle"
                                     Classes.active="{Binding IsGridView}"
+                                    ToolTip.Tip="Grid view"
                                     Click="GridViewButton_Click">
                                 <Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
                             </Button>
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
-                                    ToolTip.Tip="List view"
+                            <Button Classes="viewToggle"
                                     Classes.active="{Binding IsListView}"
+                                    ToolTip.Tip="List view"
                                     Click="ListViewButton_Click">
                                 <Icon Type="Regular" Value="Rows" Width="14" Height="14" />
                             </Button>
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
-                                    ToolTip.Tip="Horizontal view"
+                            <Button Classes="viewToggle"
                                     Classes.active="{Binding IsHorizontalView}"
+                                    ToolTip.Tip="Horizontal view"
                                     Click="HorizontalViewButton_Click">
                                 <Icon Type="Regular" Value="ArrowsHorizontal" Width="14" Height="14" />
                             </Button>
@@ -217,10 +231,11 @@
 
         <!-- ── Sub-views ──────────────────────────────────────────────────── -->
         <Grid>
-            <local:GamesGridView    IsVisible="{Binding IsGridViewFlat}" />
-            <local:GamesRowView     IsVisible="{Binding IsListViewFlat}" />
-            <local:GamesShelfView   IsVisible="{Binding IsHorizontalViewFlat}" />
-            <local:GamesGroupedView IsVisible="{Binding IsGrouped}" />
+            <local:GamesGridView       IsVisible="{Binding IsGridViewFlat}" />
+            <local:GamesRowView        IsVisible="{Binding IsListViewFlat}" />
+            <local:LibraryRowView      IsVisible="{Binding IsLibraryListViewFlat}" />
+            <local:GamesShelfView      IsVisible="{Binding IsHorizontalViewFlat}" />
+            <local:GamesGroupedView    IsVisible="{Binding IsGrouped}" />
         </Grid>
 
     </DockPanel>

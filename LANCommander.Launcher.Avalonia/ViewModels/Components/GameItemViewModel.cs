@@ -60,6 +60,9 @@ public partial class GameItemViewModel : ViewModelBase
     private string? _coverMimeType;
 
     [ObservableProperty]
+    private string? _iconPath;
+
+    [ObservableProperty]
     private string? _heroPath;
 
     [ObservableProperty]

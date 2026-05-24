@@ -62,6 +62,7 @@ jobs:
               -G "MinGW Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX="$ALLEGRO_PREFIX" \
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
               -DSHARED=OFF \
               -DWANT_EXAMPLES=OFF \
               -DWANT_TOOLS=OFF \

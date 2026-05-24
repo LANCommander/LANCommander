@@ -73,10 +73,11 @@
                          MimeType="{Binding CoverMimeType}"
                          Title="{Binding Title}"
                          HorizontalAlignment="Stretch"
-                         VerticalAlignment="Stretch">
+                         VerticalAlignment="Stretch"
+                         IsHitTestVisible="False">
                 <local:Cover.Overlay>
-                    <Panel>
-                        <Border Classes="GlassOverlay" IsHitTestVisible="False" CornerRadius="0">
+                    <Panel IsHitTestVisible="False">
+                        <Border Classes="GlassOverlay" CornerRadius="0" IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
                                     <GradientStop Color="#45FFFFFF" Offset="0" />

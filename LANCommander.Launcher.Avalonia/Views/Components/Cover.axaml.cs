@@ -21,8 +21,9 @@ public partial class Cover : UserControl
     // scroll back into view are displayed instantly without re-reading the file.
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly LinkedList<string> _cacheOrder = new();
+    private static readonly Dictionary<string, LinkedListNode<string>> _cacheNodes = new();
     private static readonly object _cacheLock = new();
-    private const int MaxCacheEntries = 200;
+    private const int MaxCacheEntries = 500;
 
     public static readonly StyledProperty<string?> SourceProperty =
         AvaloniaProperty.Register<Cover, string?>(nameof(Source));
@@ -54,6 +55,7 @@ public partial class Cover : UserControl
     private VideoFrameRenderer? _videoRenderer;
     private bool _isAnimatedCover;
     private bool _receivedFirstFrame;
+    private string? _lastLoadedSource;
 
     public string? Source
     {
@@ -150,6 +152,7 @@ public partial class Cover : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _lastLoadedSource = null;
         StopVideo();
         base.OnDetachedFromVisualTree(e);
     }
@@ -190,12 +193,17 @@ public partial class Cover : UserControl
 
     private void LoadCover(string? source, string? mimeType)
     {
+        // Skip reload if the source hasn't changed (e.g. recycled with same game)
+        if (source == _lastLoadedSource && HasCover)
+            return;
+
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = null;
         StopVideo();
 
         _isAnimatedCover = IsAnimatedMimeType(mimeType);
+        _lastLoadedSource = source;
 
         if (string.IsNullOrEmpty(source))
         {
@@ -230,13 +238,17 @@ public partial class Cover : UserControl
         var cacheKey = $"{path}|{decodeWidth}";
 
         // Fast path: bitmap is already cached from a previous scroll position.
+        // No debounce — show it instantly to eliminate flicker on scroll-back.
         lock (_cacheLock)
         {
             if (_bitmapCache.TryGetValue(cacheKey, out var cached))
             {
-                // Move to end of LRU list
-                _cacheOrder.Remove(cacheKey);
-                _cacheOrder.AddLast(cacheKey);
+                // Move to end of LRU list (O(1) via node lookup)
+                if (_cacheNodes.TryGetValue(cacheKey, out var node))
+                {
+                    _cacheOrder.Remove(node);
+                    _cacheOrder.AddLast(node);
+                }
                 SetBitmap(cached);
                 return;
             }
@@ -246,15 +258,14 @@ public partial class Cover : UserControl
         {
             // Debounce: wait briefly so covers that are scrolled past quickly
             // never start an expensive file-read + decode.
-            await Task.Delay(100, ct);
+            await Task.Delay(50, ct);
 
             var bitmap = await Task.Run(() =>
             {
                 if (!System.IO.File.Exists(path))
                     return null;
 
-                var bytes = System.IO.File.ReadAllBytes(path);
-                using var stream = new MemoryStream(bytes);
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.LowQuality);
             }, ct);
 
@@ -274,43 +285,68 @@ public partial class Cover : UserControl
                     {
                         bitmap.Dispose();
                         bitmap = existing;
-                        _cacheOrder.Remove(cacheKey);
+                        if (_cacheNodes.TryGetValue(cacheKey, out var existingNode))
+                        {
+                            _cacheOrder.Remove(existingNode);
+                            _cacheOrder.AddLast(existingNode);
+                        }
                     }
                     else
                     {
                         _bitmapCache[cacheKey] = bitmap;
+                        var newNode = _cacheOrder.AddLast(cacheKey);
+                        _cacheNodes[cacheKey] = newNode;
                     }
-
-                    _cacheOrder.AddLast(cacheKey);
 
                     // Evict oldest entries when the cache is full.
                     while (_cacheOrder.Count > MaxCacheEntries)
                     {
-                        var oldest = _cacheOrder.First!.Value;
+                        var oldestNode = _cacheOrder.First!;
+                        var oldest = oldestNode.Value;
                         _cacheOrder.RemoveFirst();
+                        _cacheNodes.Remove(oldest);
                         if (_bitmapCache.Remove(oldest, out var evicted))
                             evicted.Dispose();
                     }
                 }
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap));
+            // Use Background priority so multiple covers completing together
+            // coalesce into fewer layout passes instead of each forcing one.
+            await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap), DispatcherPriority.Background);
         }
         catch
         {
             if (!ct.IsCancellationRequested)
-                await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null));
+                await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
         }
     }
 
     private async Task LoadRemoteImageAsync(Uri uri, CancellationToken ct)
     {
+        var decodeWidth = GetDecodePixelWidth();
+        var cacheKey = $"{uri.AbsoluteUri}|{decodeWidth}";
+
+        // Fast path: already cached.
+        lock (_cacheLock)
+        {
+            if (_bitmapCache.TryGetValue(cacheKey, out var cached))
+            {
+                if (_cacheNodes.TryGetValue(cacheKey, out var node))
+                {
+                    _cacheOrder.Remove(node);
+                    _cacheOrder.AddLast(node);
+                }
+                SetBitmap(cached);
+                return;
+            }
+        }
+
         try
         {
             // Debounce remote loads as well.
-            await Task.Delay(100, ct);
+            await Task.Delay(50, ct);
 
-            var decodeWidth = GetDecodePixelWidth();
             var data = await _httpClient.GetByteArrayAsync(uri, ct);
             if (ct.IsCancellationRequested) return;
 
@@ -323,12 +359,42 @@ public partial class Cover : UserControl
                 return;
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap));
+            lock (_cacheLock)
+            {
+                if (_bitmapCache.TryGetValue(cacheKey, out var existing))
+                {
+                    bitmap.Dispose();
+                    bitmap = existing;
+                    if (_cacheNodes.TryGetValue(cacheKey, out var existingNode))
+                    {
+                        _cacheOrder.Remove(existingNode);
+                        _cacheOrder.AddLast(existingNode);
+                    }
+                }
+                else
+                {
+                    _bitmapCache[cacheKey] = bitmap;
+                    var newNode = _cacheOrder.AddLast(cacheKey);
+                    _cacheNodes[cacheKey] = newNode;
+                }
+
+                while (_cacheOrder.Count > MaxCacheEntries)
+                {
+                    var oldestNode = _cacheOrder.First!;
+                    var oldest = oldestNode.Value;
+                    _cacheOrder.RemoveFirst();
+                    _cacheNodes.Remove(oldest);
+                    if (_bitmapCache.Remove(oldest, out var evicted))
+                        evicted.Dispose();
+                }
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap), DispatcherPriority.Background);
         }
         catch
         {
             if (!ct.IsCancellationRequested)
-                await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null));
+                await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
         }
     }
 

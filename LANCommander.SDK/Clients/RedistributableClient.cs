@@ -110,10 +110,13 @@ namespace LANCommander.SDK.Services
 
                 await WriteScriptsAsync(game, redistributable);
 
-                var installed =
+                var hasDetectInstallScript = redistributable.Scripts != null &&
+                    redistributable.Scripts.Any(s => s.Type == Enums.ScriptType.DetectInstall);
+
+                var installed = hasDetectInstallScript &&
                     await scriptClient.Redistributable_RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
 
-                logger?.LogTrace("Redistributable install detection returned {Result}", installed);
+                logger?.LogTrace("Redistributable install detection returned {Result} (hasDetectScript={HasDetectScript})", installed, hasDetectInstallScript);
 
                 if (!installed)
                 {

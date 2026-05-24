@@ -56,34 +56,13 @@ static std::wstring to_wide(const char *s)
     return w;
 }
 
-bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out)
+// Common helper: scale a GDI+ Bitmap and convert to RGBA pixel buffer.
+static bool scale_and_convert(Gdiplus::Bitmap *src, int max_w, int max_h, DecodedImage *out)
 {
-    if (!out)
-        return false;
-
-    ensure_gdiplus();
-    out->pixels = NULL;
-    out->width = 0;
-    out->height = 0;
-
-    std::wstring wpath = to_wide(path);
-    if (wpath.empty())
-        return false;
-
-    Gdiplus::Bitmap *src = new Gdiplus::Bitmap(wpath.c_str());
-    if (!src || src->GetLastStatus() != Gdiplus::Ok)
-    {
-        delete src;
-        return false;
-    }
-
     int src_w = (int)src->GetWidth();
     int src_h = (int)src->GetHeight();
     if (src_w <= 0 || src_h <= 0)
-    {
-        delete src;
         return false;
-    }
 
     // Compute target size preserving aspect ratio.
     int dst_w = src_w;
@@ -111,7 +90,6 @@ bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out
         g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
         g.DrawImage(src, 0, 0, dst_w, dst_h);
     }
-    delete src;
 
     // Lock bits and copy to our RGBA buffer.
     Gdiplus::Rect rect(0, 0, dst_w, dst_h);
@@ -149,6 +127,85 @@ bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out
     out->width = dst_w;
     out->height = dst_h;
     return true;
+}
+
+bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out)
+{
+    if (!out)
+        return false;
+
+    ensure_gdiplus();
+    out->pixels = NULL;
+    out->width = 0;
+    out->height = 0;
+
+    std::wstring wpath = to_wide(path);
+    if (wpath.empty())
+        return false;
+
+    Gdiplus::Bitmap *src = new Gdiplus::Bitmap(wpath.c_str());
+    if (!src || src->GetLastStatus() != Gdiplus::Ok)
+    {
+        delete src;
+        return false;
+    }
+
+    bool ok = scale_and_convert(src, max_w, max_h, out);
+    delete src;
+    return ok;
+}
+
+bool decode_image_memory(const void *data, int data_size, int max_w, int max_h, DecodedImage *out)
+{
+    if (!out || !data || data_size <= 0)
+        return false;
+
+    ensure_gdiplus();
+    out->pixels = NULL;
+    out->width = 0;
+    out->height = 0;
+
+    // Create an IStream over the memory buffer.
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, data_size);
+    if (!hMem)
+        return false;
+
+    void *pMem = GlobalLock(hMem);
+    memcpy(pMem, data, data_size);
+    GlobalUnlock(hMem);
+
+    IStream *stream = NULL;
+    if (CreateStreamOnHGlobal(hMem, TRUE, &stream) != S_OK)
+    {
+        GlobalFree(hMem);
+        return false;
+    }
+
+    Gdiplus::Bitmap *src = new Gdiplus::Bitmap(stream);
+    bool ok = (src && src->GetLastStatus() == Gdiplus::Ok);
+    if (ok)
+        ok = scale_and_convert(src, max_w, max_h, out);
+
+    delete src;
+    stream->Release(); // also frees hMem (fDeleteOnRelease = TRUE)
+    return ok;
+}
+
+bool decode_image_resource(const char *resource_name, int max_w, int max_h, DecodedImage *out)
+{
+    if (!resource_name || !out)
+        return false;
+
+    HRSRC hRes = FindResourceA(NULL, resource_name, RT_RCDATA);
+    if (!hRes)
+        return false;
+    HGLOBAL hData = LoadResource(NULL, hRes);
+    if (!hData)
+        return false;
+    const void *resData = LockResource(hData);
+    int resSize = (int)SizeofResource(NULL, hRes);
+
+    return decode_image_memory(resData, resSize, max_w, max_h, out);
 }
 
 void free_decoded_image(DecodedImage *img)

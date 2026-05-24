@@ -57,6 +57,16 @@ namespace launcher
         // Font height in pixels.
         int text_height();
 
+        // Draw word-wrapped text within a given width. Returns the total
+        // height consumed (pixels). If bmp is NULL, only measures without drawing.
+        int draw_text_wrap(BITMAP *bmp, int x, int y, int max_w, int color,
+                           const char *text, int line_spacing = 2);
+
+        // Draw word-wrapped text centered horizontally within a region.
+        // Returns the total height consumed. If bmp is NULL, only measures.
+        int draw_text_wrap_center(BITMAP *bmp, int cx, int y, int max_w, int color,
+                                  const char *text, int line_spacing = 2);
+
     } // namespace ui
 } // namespace launcher
 

@@ -2,6 +2,7 @@
 #include "ui/gdi_font.h"
 
 #include <allegro.h>
+#include <string>
 
 namespace launcher
 {
@@ -81,6 +82,125 @@ namespace launcher
             if (g_gdi_font_active)
                 return gdi_font_height();
             return ::text_height(font);
+        }
+
+        // Word-wrap helper: breaks text at word boundaries to fit within max_w.
+        // Draws each line if bmp is non-NULL, and returns total height used.
+        int draw_text_wrap(BITMAP *bmp, int x, int y, int max_w, int color,
+                           const char *text, int line_spacing)
+        {
+            if (!text || !*text)
+                return 0;
+
+            int th = text_height();
+            int total_h = 0;
+            const char *p = text;
+
+            while (*p)
+            {
+                // Skip leading spaces (except at the very start).
+                if (total_h > 0)
+                    while (*p == ' ') p++;
+
+                if (!*p) break;
+
+                // Handle explicit newlines.
+                if (*p == '\n') { total_h += th + line_spacing; p++; continue; }
+                if (*p == '\r') { p++; continue; }
+
+                // Find how many characters fit on this line, breaking at word boundaries.
+                int best_break = 0; // number of chars for best word-boundary break
+                int len = 0;
+
+                while (p[len] && p[len] != '\n' && p[len] != '\r')
+                {
+                    len++;
+                    // Measure the substring so far.
+                    std::string seg(p, len);
+                    if (text_width(seg.c_str()) > max_w)
+                    {
+                        len--;
+                        break;
+                    }
+                    // Track the last word boundary (space).
+                    if (p[len] == ' ' || p[len] == '\0' || p[len] == '\n')
+                        best_break = len;
+                }
+
+                // If we consumed the rest of the string or hit a newline, use full length.
+                if (!p[len] || p[len] == '\n' || p[len] == '\r')
+                    best_break = len;
+
+                // If no word boundary was found (single long word), force break at len.
+                if (best_break == 0)
+                    best_break = len > 0 ? len : 1;
+
+                if (bmp)
+                {
+                    std::string row(p, best_break);
+                    draw_text(bmp, x, y + total_h, color, row.c_str());
+                }
+
+                total_h += th + line_spacing;
+                p += best_break;
+            }
+
+            return total_h;
+        }
+
+        int draw_text_wrap_center(BITMAP *bmp, int cx, int y, int max_w, int color,
+                                  const char *text, int line_spacing)
+        {
+            if (!text || !*text)
+                return 0;
+
+            int th = text_height();
+            int total_h = 0;
+            const char *p = text;
+
+            while (*p)
+            {
+                if (total_h > 0)
+                    while (*p == ' ') p++;
+
+                if (!*p) break;
+
+                if (*p == '\n') { total_h += th + line_spacing; p++; continue; }
+                if (*p == '\r') { p++; continue; }
+
+                int best_break = 0;
+                int len = 0;
+
+                while (p[len] && p[len] != '\n' && p[len] != '\r')
+                {
+                    len++;
+                    std::string seg(p, len);
+                    if (text_width(seg.c_str()) > max_w)
+                    {
+                        len--;
+                        break;
+                    }
+                    if (p[len] == ' ' || p[len] == '\0' || p[len] == '\n')
+                        best_break = len;
+                }
+
+                if (!p[len] || p[len] == '\n' || p[len] == '\r')
+                    best_break = len;
+
+                if (best_break == 0)
+                    best_break = len > 0 ? len : 1;
+
+                if (bmp)
+                {
+                    std::string row(p, best_break);
+                    draw_text_center(bmp, cx, y + total_h, color, row.c_str());
+                }
+
+                total_h += th + line_spacing;
+                p += best_break;
+            }
+
+            return total_h;
         }
 
     } // namespace ui

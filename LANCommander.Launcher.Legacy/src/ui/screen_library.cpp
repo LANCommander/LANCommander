@@ -49,12 +49,25 @@ namespace launcher
             return g.sort_title.empty() ? g.title : g.sort_title;
         }
 
+        static bool is_top_level(lancommander::GameType t)
+        {
+            return t == lancommander::GameType::MainGame
+                || t == lancommander::GameType::StandaloneExpansion
+                || t == lancommander::GameType::StandaloneMod;
+        }
+
         static void load_depot(App &app)
         {
             auto result = app.depot().get();
             if (result)
             {
-                app.depot_cache() = result.value.games;
+                std::vector<lancommander::DepotGame> filtered;
+                for (size_t i = 0; i < result.value.games.size(); ++i)
+                {
+                    if (is_top_level(result.value.games[i].type))
+                        filtered.push_back(result.value.games[i]);
+                }
+                app.depot_cache() = filtered;
                 std::sort(app.depot_cache().begin(), app.depot_cache().end(),
                           [](const lancommander::DepotGame &a, const lancommander::DepotGame &b)
                           { return iless(sort_key(a), sort_key(b)); });
@@ -77,7 +90,7 @@ namespace launcher
                 std::vector<lancommander::Game> lib;
                 for (size_t i = 0; i < result.value.size(); ++i)
                 {
-                    if (result.value[i].in_library)
+                    if (result.value[i].in_library && is_top_level(result.value[i].type))
                     {
                         lancommander::Game g = result.value[i];
 
@@ -214,6 +227,16 @@ namespace launcher
             int rows = (count + cols - 1) / cols;
             int content_h = GRID_PAD + rows * (item_h + row_spacing);
 
+            // Set the image cache capacity to the number of covers that can
+            // fit on screen plus two extra rows as a scroll buffer.
+            {
+                int visible_rows = (grid_area_h + item_h + row_spacing - 1)
+                                   / (item_h + row_spacing);
+                int capacity = cols * (visible_rows + 2);
+                if (capacity < 16) capacity = 16;
+                app.image_cache().set_capacity(capacity);
+            }
+
             // Scroll
             if (input.mouse.wheel_delta != 0 && input.mouse.y >= grid_y)
             {
@@ -272,12 +295,15 @@ namespace launcher
                 }
                 else
                 {
-                    // Placeholder: dark panel with title.
+                    // Placeholder: dark panel with word-wrapped title.
                     rectfill(buf, cx, cy, cx + item_w - 1, cy + item_h - 1, theme().panel);
-                    int tx = cx + item_w / 2;
-                    int ty = cy + item_h / 2 - text_height() / 2;
                     set_clip_rect(buf, cx, cy, cx + item_w - 1, cy + item_h - 1);
-                    draw_text_center(buf, tx, ty, theme().text_dim, item_title);
+                    int pad = 8;
+                    int wrap_w = item_w - pad * 2;
+                    int text_h = draw_text_wrap_center(NULL, 0, 0, wrap_w, 0, item_title);
+                    int ty = cy + (item_h - text_h) / 2;
+                    draw_text_wrap_center(buf, cx + item_w / 2, ty, wrap_w,
+                                          theme().text_dim, item_title);
                     set_clip_rect(buf, 0, grid_y, sw - 1, sh - footer_height() - 1);
                 }
 

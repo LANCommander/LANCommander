@@ -39,10 +39,41 @@ namespace launcher
         static const int CHROME_H = 32;
         static const int FOOTER_H = 40;
         static const int BTN_W = 36;
+        static const int RESIZE_BORDER = 6;
+        static const int MIN_W = 640;
+        static const int MIN_H = 480;
 
 #ifdef ALLEGRO_WINDOWS
         typedef LRESULT(CALLBACK *WndProcFn)(HWND, UINT, WPARAM, LPARAM);
         static WndProcFn s_orig_wndproc = NULL;
+        static App *s_app = NULL;
+
+        static LRESULT chrome_hittest(HWND hwnd, LPARAM lp)
+        {
+            POINT pt = { (short)LOWORD(lp), (short)HIWORD(lp) };
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            ScreenToClient(hwnd, &pt);
+
+            int w = rc.right;
+            int h = rc.bottom;
+
+            bool top    = pt.y < RESIZE_BORDER;
+            bool bottom = pt.y >= h - RESIZE_BORDER;
+            bool left   = pt.x < RESIZE_BORDER;
+            bool right  = pt.x >= w - RESIZE_BORDER;
+
+            if (top && left)     return HTTOPLEFT;
+            if (top && right)    return HTTOPRIGHT;
+            if (bottom && left)  return HTBOTTOMLEFT;
+            if (bottom && right) return HTBOTTOMRIGHT;
+            if (top)             return HTTOP;
+            if (bottom)          return HTBOTTOM;
+            if (left)            return HTLEFT;
+            if (right)           return HTRIGHT;
+
+            return HTCLIENT;
+        }
 
         static LRESULT CALLBACK chrome_wndproc(HWND hwnd, UINT msg,
                                                WPARAM wp, LPARAM lp)
@@ -50,13 +81,69 @@ namespace launcher
             switch (msg)
             {
             case WM_NCHITTEST:
-                return HTCLIENT;
+                return chrome_hittest(hwnd, lp);
+
             case WM_NCCALCSIZE:
                 if (wp) return 0;
                 break;
+
             case WM_SETCURSOR:
-                SetCursor(LoadCursor(NULL, IDC_ARROW));
+            {
+                // Show resize cursors at window edges, arrow elsewhere.
+                LRESULT ht = chrome_hittest(hwnd, GetMessagePos());
+                LPCSTR cur = IDC_ARROW;
+                switch (ht)
+                {
+                case HTLEFT: case HTRIGHT:           cur = IDC_SIZEWE;   break;
+                case HTTOP: case HTBOTTOM:            cur = IDC_SIZENS;   break;
+                case HTTOPLEFT: case HTBOTTOMRIGHT:   cur = IDC_SIZENWSE; break;
+                case HTTOPRIGHT: case HTBOTTOMLEFT:   cur = IDC_SIZENESW; break;
+                }
+                SetCursor(LoadCursor(NULL, cur));
                 return TRUE;
+            }
+
+            case WM_GETMINMAXINFO:
+            {
+                MINMAXINFO *mmi = (MINMAXINFO *)lp;
+                mmi->ptMinTrackSize.x = MIN_W;
+                mmi->ptMinTrackSize.y = MIN_H;
+                return 0;
+            }
+
+            case WM_SIZE:
+            {
+                if (wp != SIZE_MINIMIZED && s_app)
+                {
+                    int new_w = LOWORD(lp);
+                    int new_h = HIWORD(lp);
+                    if (new_w > 0 && new_h > 0)
+                        s_app->request_resize(new_w, new_h);
+                }
+                break;
+            }
+
+            case WM_ERASEBKGND:
+                // Suppress background erase — we paint the entire client area.
+                return 1;
+
+            case WM_PAINT:
+            {
+                // Prevent Allegro's default WM_PAINT from blitting its
+                // stale 800x600 screen surface. Just validate the
+                // region — our main loop repaints every frame.
+                PAINTSTRUCT ps;
+                BeginPaint(hwnd, &ps);
+                if (s_app && s_app->backbuffer())
+                {
+                    blit_to_hdc(s_app->backbuffer(), ps.hdc,
+                                0, 0, 0, 0,
+                                s_app->screen_width(),
+                                s_app->screen_height());
+                }
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
             }
             if (s_orig_wndproc)
                 return s_orig_wndproc(hwnd, msg, wp, lp);
@@ -77,9 +164,11 @@ namespace launcher
         int chrome_height() { return CHROME_H; }
         int footer_height() { return FOOTER_H; }
 
-        void chrome_remove_frame()
+        void chrome_remove_frame(App *app)
         {
 #ifdef ALLEGRO_WINDOWS
+            s_app = app;
+
             HWND hwnd = win_get_window();
             if (!hwnd) return;
 
@@ -148,6 +237,95 @@ namespace launcher
             }
         }
 
+        // ---------------------------------------------------------------
+        // Title bar icon — loaded once from the EXE resource.
+        // ---------------------------------------------------------------
+        static BITMAP *s_icon_bmp = NULL;
+        static bool s_icon_loaded = false;
+        static const int ICON_SIZE = 20; // display size in the title bar
+
+        static void ensure_icon_loaded()
+        {
+            if (s_icon_loaded) return;
+            s_icon_loaded = true;
+
+#ifdef ALLEGRO_WINDOWS
+            // Load the icon resource embedded via launcher.rc.
+            HICON hIcon = (HICON)LoadImageA(
+                GetModuleHandle(NULL), "IDI_ICON1", IMAGE_ICON,
+                ICON_SIZE, ICON_SIZE, LR_DEFAULTCOLOR);
+            if (!hIcon) return;
+
+            // Extract pixels via GetIconInfo + GetDIBits.
+            ICONINFO ii;
+            if (!GetIconInfo(hIcon, &ii))
+            {
+                DestroyIcon(hIcon);
+                return;
+            }
+
+            HDC hdc = GetDC(NULL);
+
+            BITMAPINFOHEADER bih;
+            memset(&bih, 0, sizeof(bih));
+            bih.biSize = sizeof(bih);
+            bih.biWidth = ICON_SIZE;
+            bih.biHeight = -ICON_SIZE; // top-down
+            bih.biPlanes = 1;
+            bih.biBitCount = 32;
+            bih.biCompression = BI_RGB;
+
+            unsigned char *pixels = new unsigned char[ICON_SIZE * ICON_SIZE * 4];
+
+            GetDIBits(hdc, ii.hbmColor, 0, ICON_SIZE,
+                      pixels, (BITMAPINFO *)&bih, DIB_RGB_COLORS);
+
+            ReleaseDC(NULL, hdc);
+
+            // Create an Allegro bitmap from the BGRA pixels.
+            s_icon_bmp = create_bitmap_ex(32, ICON_SIZE, ICON_SIZE);
+            if (s_icon_bmp)
+            {
+                for (int y = 0; y < ICON_SIZE; y++)
+                {
+                    for (int x = 0; x < ICON_SIZE; x++)
+                    {
+                        int idx = (y * ICON_SIZE + x) * 4;
+                        int b = pixels[idx + 0];
+                        int g = pixels[idx + 1];
+                        int r = pixels[idx + 2];
+                        int a = pixels[idx + 3];
+
+                        // Pre-multiply against black background for
+                        // simple blit (no alpha blending needed).
+                        r = r * a / 255;
+                        g = g * a / 255;
+                        b = b * a / 255;
+
+                        putpixel(s_icon_bmp, x, y, makecol32(r, g, b));
+                    }
+                }
+            }
+
+            delete[] pixels;
+            DeleteObject(ii.hbmColor);
+            DeleteObject(ii.hbmMask);
+            DestroyIcon(hIcon);
+#endif
+        }
+
+        // Dropdown menu state.
+        static bool s_user_dropdown_open = false;
+
+        // Dropdown menu item IDs.
+        enum class UserMenuItem
+        {
+            None,
+            Settings,
+            GoOffline,
+            Logout
+        };
+
         bool window_chrome_draw(App &app, const InputState &input)
         {
 #ifdef ALLEGRO_WINDOWS
@@ -156,22 +334,24 @@ namespace launcher
 
             BITMAP *buf = app.backbuffer();
             int sw = app.screen_width();
+            int sh = app.screen_height();
             bool close_clicked = false;
 
             // --- Semi-transparent black overlay (50% opacity) ---
             draw_tint(buf, 0, 0, sw, CHROME_H, 0, 0, 0, 128);
 
-            // --- Title ---
-            draw_text(buf, 10, (CHROME_H - text_height()) / 2,
-                      theme().text_bright, "LANCommander");
-
-            // --- Player alias (left of window buttons) ---
-            int buttons_left = sw - BTN_W * 2;
-            if (!app.user_alias().empty())
+            // --- Icon + Title ---
+            ensure_icon_loaded();
+            int title_x = 10;
+            if (s_icon_bmp)
             {
-                draw_text_right(buf, buttons_left - 12, (CHROME_H - text_height()) / 2,
-                                theme().text_dim, app.user_alias().c_str());
+                int icon_y = (CHROME_H - ICON_SIZE) / 2;
+                blit(s_icon_bmp, buf, 0, 0, title_x, icon_y,
+                     ICON_SIZE, ICON_SIZE);
+                title_x += ICON_SIZE + 6;
             }
+            draw_text(buf, title_x, (CHROME_H - text_height()) / 2,
+                      theme().text_bright, "LANCommander");
 
             // --- Close button (right edge) ---
             int close_x = sw - BTN_W;
@@ -211,12 +391,149 @@ namespace launcher
                 }
             }
 
+            // --- User dropdown button (left of minimize) ---
+            int user_btn_x = 0;
+            int user_btn_w = 0;
+            int user_btn_right = min_x;
+
+            std::string alias_str = app.user_alias();
+            if (!alias_str.empty())
+            {
+                int pad = 16;
+                int th = text_height();
+                int alias_w = text_width(alias_str.c_str());
+                user_btn_w = pad + alias_w + pad;
+                user_btn_x = user_btn_right - user_btn_w;
+
+                bool hovered = (input.mouse.x >= user_btn_x && input.mouse.x < user_btn_right &&
+                                input.mouse.y >= 0 && input.mouse.y < CHROME_H);
+
+                // Background — always primary blue, darker when active.
+                int bg = (s_user_dropdown_open || hovered) ? theme().primary_active : theme().primary;
+                panel(buf, user_btn_x, 0, user_btn_w, CHROME_H, bg);
+
+                int text_y = (CHROME_H - th) / 2;
+                draw_text(buf, user_btn_x + pad, text_y, theme().text_bright, alias_str.c_str());
+
+                // Toggle on click.
+                if (hovered && input.mouse.clicked)
+                    s_user_dropdown_open = !s_user_dropdown_open;
+            }
+
+            // --- User dropdown menu ---
+            UserMenuItem menu_action = UserMenuItem::None;
+
+            if (s_user_dropdown_open && user_btn_w > 0)
+            {
+                int menu_item_h = CHROME_H;
+                int menu_w = user_btn_w;
+                if (menu_w < 160) menu_w = 160;
+                int menu_x = user_btn_right - menu_w;
+                int menu_y = CHROME_H;
+
+                const char *items[] = { "Settings", "Go Offline", "Logout" };
+                UserMenuItem ids[] = {
+                    UserMenuItem::Settings,
+                    UserMenuItem::GoOffline,
+                    UserMenuItem::Logout
+                };
+                int item_count = 3;
+                int menu_h = item_count * menu_item_h;
+
+                // Clamp menu to screen.
+                if (menu_y + menu_h > sh)
+                    menu_h = sh - menu_y;
+
+                // Menu background.
+                panel(buf, menu_x, menu_y, menu_w, menu_h, theme().surface);
+                rect(buf, menu_x, menu_y, menu_x + menu_w - 1, menu_y + menu_h - 1,
+                     theme().divider);
+
+                // Check if the offline label should say "Go Online" instead.
+                if (app.settings().authentication.offline_mode)
+                    items[1] = "Go Online";
+
+                bool any_item_hovered = false;
+                for (int i = 0; i < item_count; ++i)
+                {
+                    int iy = menu_y + i * menu_item_h;
+                    if (iy + menu_item_h > menu_y + menu_h)
+                        break;
+
+                    bool item_hovered = (input.mouse.x >= menu_x &&
+                                         input.mouse.x < menu_x + menu_w &&
+                                         input.mouse.y >= iy &&
+                                         input.mouse.y < iy + menu_item_h);
+
+                    if (item_hovered)
+                    {
+                        any_item_hovered = true;
+                        panel(buf, menu_x + 1, iy, menu_w - 2, menu_item_h,
+                              theme().panel_hover);
+                    }
+
+                    // Separator above "Logout".
+                    if (i == item_count - 1)
+                        hline(buf, menu_x + 1, iy, menu_x + menu_w - 2, theme().divider);
+
+                    int text_y = iy + (menu_item_h - text_height()) / 2;
+                    int color = item_hovered ? theme().text_bright : theme().text;
+
+                    // Logout in red.
+                    if (ids[i] == UserMenuItem::Logout && !item_hovered)
+                        color = theme().error;
+
+                    draw_text(buf, menu_x + 12, text_y, color, items[i]);
+
+                    if (item_hovered && input.mouse.clicked)
+                        menu_action = ids[i];
+                }
+
+                // Close menu when clicking outside.
+                bool in_menu = (input.mouse.x >= menu_x && input.mouse.x < menu_x + menu_w &&
+                                input.mouse.y >= menu_y && input.mouse.y < menu_y + menu_h);
+                bool in_button = (input.mouse.x >= user_btn_x && input.mouse.x < user_btn_right &&
+                                  input.mouse.y >= 0 && input.mouse.y < CHROME_H);
+
+                if (input.mouse.clicked && !in_menu && !in_button)
+                    s_user_dropdown_open = false;
+            }
+
+            // Handle menu actions.
+            if (menu_action != UserMenuItem::None)
+            {
+                s_user_dropdown_open = false;
+
+                switch (menu_action)
+                {
+                case UserMenuItem::Settings:
+                    app.switch_screen(Screen::Settings);
+                    break;
+                case UserMenuItem::GoOffline:
+                {
+                    bool offline = !app.settings().authentication.offline_mode;
+                    app.settings().authentication.offline_mode = offline;
+                    if (offline)
+                        app.connection().enable_offline_mode();
+                    break;
+                }
+                case UserMenuItem::Logout:
+                    app.settings().authentication.token.access_token.clear();
+                    app.settings().authentication.token.refresh_token.clear();
+                    app.set_user_alias("");
+                    app.switch_screen(Screen::Login);
+                    break;
+                default:
+                    break;
+                }
+            }
+
             // --- Drag handling ---
-            int drag_right = min_x;
+            int drag_right = (user_btn_w > 0) ? user_btn_x : min_x;
             bool in_drag_area = (input.mouse.x >= 0 && input.mouse.x < drag_right &&
                                  input.mouse.y >= 0 && input.mouse.y < CHROME_H);
 
-            if (in_drag_area && input.mouse.pressed)
+            if (in_drag_area && input.mouse.pressed && !s_user_dropdown_open)
             {
 #ifdef ALLEGRO_WINDOWS
                 HWND hwnd = win_get_window();
@@ -264,51 +581,26 @@ namespace launcher
             int btn_h = 24;
             int btn_y = fy + (FOOTER_H - btn_h) / 2;
 
-            // --- Left: Depot / Library toggle ---
+            // --- Left: Depot / Library toggle (only show the inactive button) ---
             {
-                const char *depot_label = "Depot";
-                const char *lib_label = "Library";
-                int depot_w = text_width(depot_label) + 20;
-                int lib_w = text_width(lib_label) + 20;
-
-                int dx = pad;
                 bool depot_active = (app.library_tab() == LibraryTab::Depot);
-                bool depot_hovered = (input.mouse.x >= dx && input.mouse.x < dx + depot_w &&
-                                      input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
-                if (depot_active)
-                    rectfill(buf, dx, btn_y, dx + depot_w - 1, btn_y + btn_h - 1, theme().primary);
-                else if (depot_hovered)
-                    rectfill(buf, dx, btn_y, dx + depot_w - 1, btn_y + btn_h - 1, theme().panel_hover);
+                const char *label = depot_active ? "Library" : "Depot";
+                int bw = text_width(label) + 20;
+                int bx = pad;
 
-                draw_text_center(buf, dx + depot_w / 2, btn_y + (btn_h - th) / 2,
-                                 depot_active ? theme().text_bright : theme().text_dim,
-                                 depot_label);
+                bool hovered = (input.mouse.x >= bx && input.mouse.x < bx + bw &&
+                                input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
-                if (depot_hovered && input.mouse.clicked && !depot_active)
+                if (hovered)
+                    rectfill(buf, bx, btn_y, bx + bw - 1, btn_y + btn_h - 1, theme().panel_hover);
+
+                draw_text_center(buf, bx + bw / 2, btn_y + (btn_h - th) / 2,
+                                 theme().text_dim, label);
+
+                if (hovered && input.mouse.clicked)
                 {
-                    app.set_library_tab(LibraryTab::Depot);
-                    if (app.current_screen() != Screen::Library)
-                        app.switch_screen(Screen::Library);
-                }
-
-                int lx = dx + depot_w + 4;
-                bool lib_active = (app.library_tab() == LibraryTab::Library);
-                bool lib_hovered = (input.mouse.x >= lx && input.mouse.x < lx + lib_w &&
-                                    input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
-
-                if (lib_active)
-                    rectfill(buf, lx, btn_y, lx + lib_w - 1, btn_y + btn_h - 1, theme().primary);
-                else if (lib_hovered)
-                    rectfill(buf, lx, btn_y, lx + lib_w - 1, btn_y + btn_h - 1, theme().panel_hover);
-
-                draw_text_center(buf, lx + lib_w / 2, btn_y + (btn_h - th) / 2,
-                                 lib_active ? theme().text_bright : theme().text_dim,
-                                 lib_label);
-
-                if (lib_hovered && input.mouse.clicked && !lib_active)
-                {
-                    app.set_library_tab(LibraryTab::Library);
+                    app.set_library_tab(depot_active ? LibraryTab::Library : LibraryTab::Depot);
                     if (app.current_screen() != Screen::Library)
                         app.switch_screen(Screen::Library);
                 }
@@ -389,30 +681,6 @@ namespace launcher
                 }
             }
 
-            // --- Right: Settings button ---
-            {
-                const char *settings_label = "Settings";
-                int set_w = text_width(settings_label) + 20;
-                int set_x = sw - pad - set_w;
-                bool on_settings = (app.current_screen() == Screen::Settings);
-                bool set_hovered = (input.mouse.x >= set_x && input.mouse.x < set_x + set_w &&
-                                    input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
-
-                if (on_settings)
-                    rectfill(buf, set_x, btn_y, set_x + set_w - 1, btn_y + btn_h - 1,
-                             theme().primary);
-                else if (set_hovered)
-                    rectfill(buf, set_x, btn_y, set_x + set_w - 1, btn_y + btn_h - 1,
-                             theme().panel_hover);
-
-                draw_text_center(buf, set_x + set_w / 2, btn_y + (btn_h - th) / 2,
-                                 (on_settings || set_hovered)
-                                     ? theme().text_bright : theme().text_dim,
-                                 settings_label);
-
-                if (set_hovered && input.mouse.clicked && !on_settings)
-                    app.switch_screen(Screen::Settings);
-            }
         }
 
     } // namespace ui

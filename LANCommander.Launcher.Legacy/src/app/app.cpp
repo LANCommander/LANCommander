@@ -34,7 +34,7 @@ namespace launcher
     END_OF_STATIC_FUNCTION(close_button_handler)
 
     App::App()
-        : m_width(0), m_height(0), m_backbuffer(NULL), m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_image_cache(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Depot), m_quit(false)
+        : m_width(0), m_height(0), m_backbuffer(NULL), m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_image_cache(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Depot), m_quit(false), m_resize_pending(false), m_pending_width(0), m_pending_height(0)
     {
     }
 
@@ -91,7 +91,7 @@ namespace launcher
         show_mouse(NULL);
 
         // Remove the native Windows frame — we draw our own title bar.
-        ui::chrome_remove_frame();
+        ui::chrome_remove_frame(this);
 
         m_backbuffer = create_bitmap(m_width, m_height);
 
@@ -138,6 +138,8 @@ namespace launcher
             // Offline mode — skip validation, go straight to library.
             log_info("Offline mode enabled, skipping login");
             m_connection->enable_offline_mode();
+            if (!m_settings.launcher.username.empty())
+                m_user_alias = m_settings.launcher.username;
             m_current_screen = Screen::Library;
         }
         else if (!m_settings.authentication.token.access_token.empty())
@@ -155,8 +157,10 @@ namespace launcher
                 // Fetch user alias for display.
                 lancommander::ProfileClient profile(*m_http);
                 auto alias = profile.get_alias();
-                if (alias)
+                if (alias && !alias.value.empty())
                     m_user_alias = alias.value;
+                else if (!m_settings.launcher.username.empty())
+                    m_user_alias = m_settings.launcher.username;
 
                 m_connection->connect();
                 m_current_screen = Screen::Library;
@@ -179,8 +183,10 @@ namespace launcher
 
                     lancommander::ProfileClient profile(*m_http);
                     auto alias = profile.get_alias();
-                    if (alias)
+                    if (alias && !alias.value.empty())
                         m_user_alias = alias.value;
+                    else if (!m_settings.launcher.username.empty())
+                        m_user_alias = m_settings.launcher.username;
 
                     m_connection->connect();
                     m_current_screen = Screen::Library;
@@ -192,8 +198,13 @@ namespace launcher
             }
         }
 
-        log_info("Init complete, starting on %s screen",
-                 m_current_screen == Screen::Library ? "Library" : "Login");
+        // Final fallback: use saved username if alias is still empty.
+        if (m_user_alias.empty() && !m_settings.launcher.username.empty())
+            m_user_alias = m_settings.launcher.username;
+
+        log_info("Init complete, starting on %s screen (alias=%s)",
+                 m_current_screen == Screen::Library ? "Library" : "Login",
+                 m_user_alias.c_str());
         return true;
     }
 
@@ -205,6 +216,9 @@ namespace launcher
         {
             // --- Input: drain all events once per frame ---
             input.poll();
+
+            // --- Apply pending resize (set by WndProc) ---
+            apply_pending_resize();
 
             // OS close request (taskbar Close, WM_CLOSE).
             if (s_close_requested)
@@ -308,7 +322,18 @@ namespace launcher
             }
 
             // --- Flip ---
+            // Blit directly to the window DC so we aren't limited by
+            // Allegro's fixed-size screen bitmap after a resize.
+#ifdef ALLEGRO_WINDOWS
+            {
+                HWND hwnd = win_get_window();
+                HDC hdc = GetDC(hwnd);
+                blit_to_hdc(m_backbuffer, hdc, 0, 0, 0, 0, m_width, m_height);
+                ReleaseDC(hwnd, hdc);
+            }
+#else
             blit(m_backbuffer, screen, 0, 0, 0, 0, m_width, m_height);
+#endif
 
             // Simple frame limiter (~30 FPS to keep CPU usage low)
             rest(33);
@@ -362,7 +387,7 @@ namespace launcher
     std::string App::selected_game() const { return m_selected_game; }
 
     void App::set_user_alias(const std::string &alias) { m_user_alias = alias; }
-    std::string App::user_alias() const { return m_user_alias; }
+    const std::string &App::user_alias() const { return m_user_alias; }
 
     std::vector<lancommander::Game> &App::game_cache() { return m_game_cache; }
     std::vector<lancommander::DepotGame> &App::depot_cache() { return m_depot_cache; }
@@ -375,5 +400,36 @@ namespace launcher
 
     void App::quit() { m_quit = true; }
     bool App::should_quit() const { return m_quit; }
+
+    void App::request_resize(int new_w, int new_h)
+    {
+        m_pending_width = new_w;
+        m_pending_height = new_h;
+        m_resize_pending = true;
+    }
+
+    void App::apply_pending_resize()
+    {
+        if (!m_resize_pending)
+            return;
+        m_resize_pending = false;
+
+        int new_w = m_pending_width;
+        int new_h = m_pending_height;
+
+        if (new_w == m_width && new_h == m_height)
+            return;
+        if (new_w <= 0 || new_h <= 0)
+            return;
+
+        BITMAP *new_buf = create_bitmap(new_w, new_h);
+        if (!new_buf)
+            return;
+
+        destroy_bitmap(m_backbuffer);
+        m_backbuffer = new_buf;
+        m_width = new_w;
+        m_height = new_h;
+    }
 
 } // namespace launcher

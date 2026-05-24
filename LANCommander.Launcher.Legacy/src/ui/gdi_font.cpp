@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 
 namespace
 {
@@ -19,10 +20,27 @@ namespace
     HDC g_measure_dc = NULL;   // off-screen DC kept for measuring only
     int g_font_height = 0;
 
+    // Convert a UTF-8 string to UTF-16 for wide Win32 APIs.
+    std::wstring utf8_to_wide(const char *s, int len = -1)
+    {
+        if (!s || (len == 0) || (len == -1 && !*s))
+            return std::wstring();
+        int wlen = MultiByteToWideChar(CP_UTF8, 0, s, len, NULL, 0);
+        if (wlen <= 0)
+            return std::wstring();
+        std::wstring w(wlen, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, s, len, &w[0], wlen);
+        // If len was -1, MultiByteToWideChar includes the null terminator in wlen.
+        if (len == -1 && !w.empty() && w.back() == L'\0')
+            w.pop_back();
+        return w;
+    }
+
     // Try to create the font with the given face name.
     HFONT try_create(const char *face, int pt)
     {
-        return CreateFontA(
+        std::wstring wface = utf8_to_wide(face);
+        return CreateFontW(
             -pt,                       // negative = point size (not cell height)
             0, 0, 0,
             FW_NORMAL,                 // weight
@@ -32,7 +50,7 @@ namespace
             CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY,
             DEFAULT_PITCH | FF_SWISS,
-            face);
+            wface.c_str());
     }
 
     // Verify the returned font actually matches the requested face name
@@ -41,11 +59,12 @@ namespace
     {
         HDC dc = GetDC(NULL);
         HFONT old = (HFONT)SelectObject(dc, hf);
-        char actual[LF_FACESIZE] = {};
-        GetTextFaceA(dc, LF_FACESIZE, actual);
+        wchar_t actual[LF_FACESIZE] = {};
+        GetTextFaceW(dc, LF_FACESIZE, actual);
         SelectObject(dc, old);
         ReleaseDC(NULL, dc);
-        return _stricmp(actual, expected) == 0;
+        std::wstring wexpected = utf8_to_wide(expected);
+        return _wcsicmp(actual, wexpected.c_str()) == 0;
     }
 }
 
@@ -73,8 +92,8 @@ void gdi_font_init(int point_size)
     g_measure_dc = CreateCompatibleDC(NULL);
     SelectObject(g_measure_dc, g_hfont);
 
-    TEXTMETRICA tm;
-    GetTextMetricsA(g_measure_dc, &tm);
+    TEXTMETRICW tm;
+    GetTextMetricsW(g_measure_dc, &tm);
     g_font_height = tm.tmHeight;
 }
 
@@ -99,10 +118,11 @@ int gdi_font_height()
 
 int gdi_font_text_width(const char *text)
 {
-    if (!g_measure_dc || !text)
+    if (!g_measure_dc || !text || !*text)
         return 0;
+    std::wstring w = utf8_to_wide(text);
     SIZE sz;
-    GetTextExtentPoint32A(g_measure_dc, text, (int)strlen(text), &sz);
+    GetTextExtentPoint32W(g_measure_dc, w.c_str(), (int)w.size(), &sz);
     return sz.cx;
 }
 
@@ -122,10 +142,11 @@ static void render(BITMAP *dst, int x, int y, int allegro_color, const char *tex
     if (!g_hfont || !text || !*text || !dst)
         return;
 
-    int len = (int)strlen(text);
+    std::wstring wtext = utf8_to_wide(text);
+    int wlen = (int)wtext.size();
 
     SIZE sz;
-    GetTextExtentPoint32A(g_measure_dc, text, len, &sz);
+    GetTextExtentPoint32W(g_measure_dc, wtext.c_str(), wlen, &sz);
     int tw = sz.cx;
     int th = sz.cy;
     if (tw <= 0 || th <= 0)
@@ -160,7 +181,7 @@ static void render(BITMAP *dst, int x, int y, int allegro_color, const char *tex
     SetTextColor(dc, (COLORREF)0x00FFFFFF); // white
     SetBkMode(dc, TRANSPARENT);
     RECT rc = {0, 0, tw, th};
-    DrawTextA(dc, text, len, &rc, DT_LEFT | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
+    DrawTextW(dc, wtext.c_str(), wlen, &rc, DT_LEFT | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
 
     GdiFlush();
 

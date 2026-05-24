@@ -19,6 +19,13 @@ void image_decoder_shutdown();
 // free_decoded_image() when done.
 bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out);
 
+// Same as above but decodes from a memory buffer instead of a file path.
+bool decode_image_memory(const void *data, int data_size, int max_w, int max_h, DecodedImage *out);
+
+// Decode an image embedded as an RCDATA resource in the current executable.
+// resource_name is the name used in the .rc file (e.g. "BG_AOE2").
+bool decode_image_resource(const char *resource_name, int max_w, int max_h, DecodedImage *out);
+
 void free_decoded_image(DecodedImage *img);
 
 #endif // LAUNCHER_UI_IMAGE_DECODER_H

@@ -18,7 +18,8 @@ namespace launcher
     {
 
         ImageCache::ImageCache(lancommander::MediaClient &media, const std::string &media_dir)
-            : m_media(media), m_access_counter(0), m_decodes_this_frame(0)
+            : m_media(media), m_access_counter(0), m_decodes_this_frame(0),
+              m_max_entries(DEFAULT_MAX_ENTRIES)
         {
             m_cache_dir = media_dir;
             CreateDirectoryA(m_cache_dir.c_str(), NULL);
@@ -43,6 +44,12 @@ namespace launcher
         std::string ImageCache::file_path(const std::string &media_id) const
         {
             return m_cache_dir + "\\" + media_id;
+        }
+
+        void ImageCache::set_capacity(int max_entries)
+        {
+            if (max_entries < 1) max_entries = 1;
+            m_max_entries = max_entries;
         }
 
         void ImageCache::begin_frame()
@@ -96,17 +103,25 @@ namespace launcher
 
             ++m_access_counter;
 
-            // Check in-memory cache first.  If the cached size differs we
-            // re-decode at the new size (rare).
+            // Check in-memory cache first.  If the requested size differs
+            // from the cached size, return the old bitmap immediately (the
+            // caller centers it, so a few pixels off is fine) and queue a
+            // re-decode for a future frame.
             std::map<std::string, Entry>::iterator it = m_cache.find(media_id);
             if (it != m_cache.end())
             {
+                it->second.last_access = m_access_counter;
+
                 if (it->second.max_w == max_w && it->second.max_h == max_h)
-                {
-                    it->second.last_access = m_access_counter;
                     return it->second.bmp;
-                }
-                // Size changed — discard old bitmap.
+
+                // Size changed — return the stale bitmap while we wait for
+                // a decode slot.  Only re-decode when budget allows.
+                if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
+                    return it->second.bmp;
+
+                // Budget available — discard old bitmap and fall through
+                // to re-decode at the new size.
                 if (it->second.bmp)
                     destroy_bitmap(it->second.bmp);
                 m_cache.erase(it);
@@ -151,7 +166,7 @@ namespace launcher
             ++m_decodes_this_frame;
 
             // Evict oldest entries if at capacity.
-            while ((int)m_cache.size() >= MAX_ENTRIES)
+            while ((int)m_cache.size() >= m_max_entries)
                 evict_oldest();
 
             // Convert raw RGBA pixels to an Allegro BITMAP.

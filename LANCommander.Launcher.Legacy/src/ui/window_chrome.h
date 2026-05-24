@@ -18,7 +18,8 @@ namespace launcher
         int footer_height();
 
         // Remove the native Windows frame from the Allegro window.
-        void chrome_remove_frame();
+        // Stores the App pointer for resize handling in the WndProc.
+        void chrome_remove_frame(App *app);
 
         // Draw the title bar (semi-transparent overlay) and handle drag / close / minimize.
         // Returns true if the close button was clicked.

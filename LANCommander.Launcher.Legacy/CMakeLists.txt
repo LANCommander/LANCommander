@@ -64,6 +64,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../LANCommander.SDK.Cpp
 # Launcher executable
 # ---------------------------------------------------------------------------
 add_executable(launcher WIN32
+    src/launcher.rc
     src/main.cpp
     src/app/app.cpp
     src/app/settings.cpp

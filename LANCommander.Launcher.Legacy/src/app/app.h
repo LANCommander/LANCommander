@@ -77,7 +77,7 @@ namespace launcher
 
         // Currently authenticated user alias.
         void set_user_alias(const std::string &alias);
-        std::string user_alias() const;
+        const std::string &user_alias() const;
 
         // Cached game list (refreshed on library screen entry).
         std::vector<lancommander::Game> &game_cache();
@@ -101,6 +101,10 @@ namespace launcher
         // Request the app to quit.
         void quit();
         bool should_quit() const;
+
+        // Resize support — called from WndProc, applied in the main loop.
+        void request_resize(int new_w, int new_h);
+        void apply_pending_resize();
 
     private:
         // Allegro
@@ -131,6 +135,11 @@ namespace launcher
         GameDatabase m_game_db;
         LibraryTab m_library_tab;
         bool m_quit;
+
+        // Pending resize (set from WndProc, consumed in main loop)
+        bool m_resize_pending;
+        int m_pending_width;
+        int m_pending_height;
     };
 
 } // namespace launcher

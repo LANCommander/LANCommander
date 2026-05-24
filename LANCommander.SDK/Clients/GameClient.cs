@@ -1251,6 +1251,50 @@ namespace LANCommander.SDK.Services
             }
             #endregion
 
+            #region Delete Redistributable Files
+            if (manifest.Redistributables != null)
+            {
+                foreach (var redistributable in manifest.Redistributables)
+                {
+                    try
+                    {
+                        var redistFileListPath = GetMetadataFilePath(installDirectory, redistributable.Id, "FileList.txt");
+
+                        if (File.Exists(redistFileListPath))
+                        {
+                            var redistFiles = await File.ReadAllLinesAsync(redistFileListPath);
+
+                            foreach (var file in redistFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
+                            {
+                                var localPath = Path.Combine(installDirectory, file);
+
+                                try
+                                {
+                                    if (File.Exists(localPath))
+                                        File.Delete(localPath);
+
+                                    logger?.LogTrace("Deleted redistributable file {LocalPath}", localPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger?.LogWarning(ex, "Could not remove redistributable file {LocalPath}", localPath);
+                                }
+                            }
+                        }
+
+                        var redistMetadataPath = GetMetadataDirectoryPath(installDirectory, redistributable.Id);
+
+                        if (Directory.Exists(redistMetadataPath))
+                            Directory.Delete(redistMetadataPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not clean up redistributable {RedistributableId}", redistributable.Id);
+                    }
+                }
+            }
+            #endregion
+
             #region Delete Files
             var fileListPath = GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
 

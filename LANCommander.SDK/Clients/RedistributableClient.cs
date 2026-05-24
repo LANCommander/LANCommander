@@ -121,35 +121,40 @@ namespace LANCommander.SDK.Services
                 if (!installed)
                 {
                     logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
-                    
-                    if (redistributable.Archives?.Any() ?? false)
+
+                    using (var fileTracker = new InstallDirectoryFileTracker(game.InstallDirectory))
                     {
-                        logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
+                        if (redistributable.Archives?.Any() ?? false)
+                        {
+                            logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
 
-                        var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts,
-                            TimeSpan.FromMilliseconds(500), new ExtractionResult(),
-                            async () =>
-                            {
-                                logger?.LogTrace("Attempting to download and extract redistributable");
+                            var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts,
+                                TimeSpan.FromMilliseconds(500), new ExtractionResult(),
+                                async () =>
+                                {
+                                    logger?.LogTrace("Attempting to download and extract redistributable");
 
-                                return await DownloadAndExtractAsync(redistributable, game, CancellationToken.None);
-                            });
-                        
-                        if (!result.Success && !result.Canceled)
-                            throw new InstallException("Could not extract the redistributable. Retry the install or check your connection");
-                        else if (result.Canceled)
-                            throw new InstallCanceledException("Redistributable install canceled");
+                                    return await DownloadAndExtractAsync(redistributable, game, CancellationToken.None);
+                                });
 
-                        logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", result.Directory);
-                        logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
+                            if (!result.Success && !result.Canceled)
+                                throw new InstallException("Could not extract the redistributable. Retry the install or check your connection");
+                            else if (result.Canceled)
+                                throw new InstallCanceledException("Redistributable install canceled");
 
-                        await RunPostInstallScripts(game, redistributable);
-                    }
-                    else
-                    {
-                        logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
+                            logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", result.Directory);
+                            logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                        await RunPostInstallScripts(game, redistributable);
+                            await RunPostInstallScripts(game, redistributable);
+                        }
+                        else
+                        {
+                            logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
+
+                            await RunPostInstallScripts(game, redistributable);
+                        }
+
+                        SaveTrackedFiles(game.InstallDirectory, redistributable.Id, fileTracker);
                     }
                 }
             }
@@ -322,6 +327,85 @@ namespace LANCommander.SDK.Services
                             Changelog = changelog,
                         })
                         .PostAsync();
+            }
+        }
+        private void SaveTrackedFiles(string installDirectory, Guid redistributableId, InstallDirectoryFileTracker fileTracker)
+        {
+            try
+            {
+                var relativePaths = fileTracker.GetCreatedFiles()
+                    .Select(f => Path.GetRelativePath(installDirectory, f))
+                    .OrderBy(f => f)
+                    .ToList();
+
+                var fileListPath = GameClient.GetMetadataFilePath(installDirectory, redistributableId, "FileList.txt");
+
+                var directory = Path.GetDirectoryName(fileListPath);
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+
+                File.WriteAllText(fileListPath, string.Join(Environment.NewLine, relativePaths));
+
+                logger?.LogTrace("Tracked {Count} files installed by redistributable {RedistributableId}", relativePaths.Count, redistributableId);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not track files for redistributable {RedistributableId}", redistributableId);
+            }
+        }
+
+        private class InstallDirectoryFileTracker : IDisposable
+        {
+            private readonly FileSystemWatcher _watcher;
+            private readonly HashSet<string> _createdFiles = new(StringComparer.OrdinalIgnoreCase);
+            private readonly string _metadataPath;
+            private readonly object _lock = new();
+
+            public InstallDirectoryFileTracker(string installDirectory)
+            {
+                _metadataPath = Path.Combine(installDirectory, ".lancommander");
+
+                _watcher = new FileSystemWatcher(installDirectory)
+                {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName,
+                    EnableRaisingEvents = true,
+                };
+
+                _watcher.Created += OnFileCreated;
+                _watcher.Renamed += OnFileRenamed;
+            }
+
+            private void OnFileCreated(object sender, FileSystemEventArgs e)
+            {
+                if (e.FullPath.StartsWith(_metadataPath, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                lock (_lock)
+                    _createdFiles.Add(e.FullPath);
+            }
+
+            private void OnFileRenamed(object sender, RenamedEventArgs e)
+            {
+                if (e.FullPath.StartsWith(_metadataPath, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                lock (_lock)
+                    _createdFiles.Add(e.FullPath);
+            }
+
+            public IEnumerable<string> GetCreatedFiles()
+            {
+                lock (_lock)
+                    return _createdFiles.ToList();
+            }
+
+            public void Dispose()
+            {
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Created -= OnFileCreated;
+                _watcher.Renamed -= OnFileRenamed;
+                _watcher.Dispose();
             }
         }
     }

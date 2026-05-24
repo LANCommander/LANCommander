@@ -4,17 +4,16 @@
   </Folder>
   <Folder Name="/LANCommander.Launcher/">
     <Project Path="LANCommander.Launcher.Avalonia/LANCommander.Launcher.Avalonia.csproj" />
-    <Project Path="LANCommander.Launcher.CLI\LANCommander.Launcher.CLI.csproj" />
     <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
     <Project Path="LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
-    <Project Path="LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" Type="C#" />
     <Project Path="LANCommander.Launcher\LANCommander.Launcher.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Server/">
-    <Project Path="LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" Type="C#" />
     <Project Path="LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
-    <Project Path="LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" Type="C#" />
     <Project Path="LANCommander.Server\LANCommander.Server.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Server/LANCommander.Server.Data/">
@@ -28,7 +27,7 @@
     <Project Path="LANCommander.Launcher.Avalonia.Tests\LANCommander.Launcher.Avalonia.Tests.csproj" />
     <Project Path="LANCommander.Launcher.Services.Tests\LANCommander.Launcher.Services.Tests.csproj" />
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
-    <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="Classic C#" />
+    <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="C#" />
   </Folder>
   <Folder Name="/Scripts/">
     <File Path="Scripts\Clean.ps1" />
@@ -37,10 +36,10 @@
   <Folder Name="/Solution Items/">
     <File Path="Microsoft.Common.props" />
   </Folder>
-  <Project Path="LANCommander.AppHost\LANCommander.AppHost.csproj" Type="Classic C#" />
+  <Project Path="LANCommander.AppHost\LANCommander.AppHost.csproj" Type="C#" />
   <Project Path="LANCommander.AutoUpdater\LANCommander.AutoUpdater.csproj" />
   <Project Path="LANCommander.SDK\LANCommander.SDK.csproj" />
-  <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" Type="Classic C#" />
+  <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" Type="C#" />
   <Project Path="LANCommander.Steam\LANCommander.Steam.csproj" />
   <Project Path="LANCommander.UI\LANCommander.UI.csproj" />
   <Project Path="LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj" />

@@ -49,12 +49,25 @@ namespace launcher
             return g.sort_title.empty() ? g.title : g.sort_title;
         }
 
+        static bool is_top_level(lancommander::GameType t)
+        {
+            return t == lancommander::GameType::MainGame
+                || t == lancommander::GameType::StandaloneExpansion
+                || t == lancommander::GameType::StandaloneMod;
+        }
+
         static void load_depot(App &app)
         {
             auto result = app.depot().get();
             if (result)
             {
-                app.depot_cache() = result.value.games;
+                std::vector<lancommander::DepotGame> filtered;
+                for (size_t i = 0; i < result.value.games.size(); ++i)
+                {
+                    if (is_top_level(result.value.games[i].type))
+                        filtered.push_back(result.value.games[i]);
+                }
+                app.depot_cache() = filtered;
                 std::sort(app.depot_cache().begin(), app.depot_cache().end(),
                           [](const lancommander::DepotGame &a, const lancommander::DepotGame &b)
                           { return iless(sort_key(a), sort_key(b)); });
@@ -77,7 +90,7 @@ namespace launcher
                 std::vector<lancommander::Game> lib;
                 for (size_t i = 0; i < result.value.size(); ++i)
                 {
-                    if (result.value[i].in_library)
+                    if (result.value[i].in_library && is_top_level(result.value[i].type))
                     {
                         lancommander::Game g = result.value[i];
 

@@ -139,7 +139,8 @@ namespace LANCommander.SDK.Services
 
                             if (!result.Success && !result.Canceled)
                                 throw new InstallException("Could not extract the redistributable. Retry the install or check your connection");
-                            else if (result.Canceled)
+                            
+                            if (result.Canceled)
                                 throw new InstallCanceledException("Redistributable install canceled");
 
                             logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", result.Directory);

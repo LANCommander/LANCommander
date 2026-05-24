@@ -1070,7 +1070,8 @@ namespace LANCommander.SDK.Services
 
                             if (!result.Success && !result.Canceled)
                                 throw new InstallException("Could not extract the installer. Retry the install or check your connection");
-                            else if (result.Canceled)
+                            
+                            if (result.Canceled)
                                 throw new InstallCanceledException("Game install was canceled");
 
                             game.InstallDirectory = result.Directory;
@@ -1150,11 +1151,13 @@ namespace LANCommander.SDK.Services
             // RedistributableClient.InstallAsync bundles download + install into one operation.
             // We fire task progress for both tasks but execute them as one call.
             var firstTask = planItem.Tasks.OrderBy(t => t.Order).FirstOrDefault();
+            
             if (firstTask == null)
                 return;
 
             // Get parent game context from task parameters
-            Guid parentGameId = Guid.Empty;
+            var parentGameId = Guid.Empty;
+            
             if (firstTask.Parameters.TryGetValue("ParentGameId", out var parentGameIdStr))
                 Guid.TryParse(parentGameIdStr, out parentGameId);
 
@@ -1362,6 +1365,7 @@ namespace LANCommander.SDK.Services
             var gameFileList = installResult.FileList;
 
             var baseManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, baseGameId);
+            
             if (baseManifest == null)
             {
                 logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
@@ -1373,6 +1377,7 @@ namespace LANCommander.SDK.Services
             gameFileList.InstallDirectory = installDirectory;
 
             addonIds ??= [];
+            
             foreach (var addon in baseManifest.Addons)
             {
                 if (!addonIds.Contains(addon.Id))
@@ -1896,11 +1901,13 @@ namespace LANCommander.SDK.Services
             var gameArchives = new GameInstallationArchiveEntries();
 
             var manifests = await GetManifestsAsync(installDirectory, gameId);
+            
             if (manifests == null || !manifests.Any())
                 return gameArchives;
 
             // Retrieves and processes the base game manifest and its archive entries.
             var baseManifest = gameArchives.BaseGame.Manifest = manifests.FirstOrDefault(mf => mf.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+            
             if (baseManifest != null)
             {
                 var entries = await GetGameInstallationArchiveEntries(gameId, baseManifest);
@@ -1926,6 +1933,7 @@ namespace LANCommander.SDK.Services
                 depArchiveInfo.Entries.AddRange(depEntries);
 
                 var savePathEntries = depManifest.SavePaths?.SelectMany(p => saveClient.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                
                 depArchiveInfo.SavePaths = savePathEntries;
             }
 
@@ -2196,7 +2204,6 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
             var archives = await GetGameInstallationArchivesEntries(installDirectory, gameId);
-            var manifest = archives?.BaseGame?.Entries;
             var entries = archives?.BaseGame?.Entries?.ToList() ?? [];
 
             foreach ((var dependentGameId, var dependentGameInfo) in archives?.Addons ?? [])
@@ -2373,6 +2380,7 @@ namespace LANCommander.SDK.Services
 
             var uniqueList = listRemoved.ExceptBy(listAdded.Select(x => x.EntryPath), x => x.EntryPath, StringComparer.OrdinalIgnoreCase);
             var possibleRestoreEntries = uniqueList.Select(x => x.EntryPath).ToArray();
+            
             return RestoreFilesAsync(installDirectory, gameId, possibleRestoreEntries);
         }
 
@@ -2418,8 +2426,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(aliasFilePath))
                 return File.ReadAllText(aliasFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static async Task<string> GetPlayerAliasAsync(string installDirectory, Guid gameId)
@@ -2428,8 +2436,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(aliasFilePath))
                 return await File.ReadAllTextAsync(aliasFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static void UpdatePlayerAlias(string installDirectory, Guid gameId, string newName)
@@ -2448,8 +2456,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(keyFilePath))
                 return File.ReadAllText(keyFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static async Task<string> GetCurrentKeyAsync(string installDirectory, Guid gameId)
@@ -2458,8 +2466,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(keyFilePath))
                 return await File.ReadAllTextAsync(keyFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static void UpdateCurrentKey(string installDirectory, Guid gameId, string newKey)

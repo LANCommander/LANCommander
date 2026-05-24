@@ -65,11 +65,14 @@ public sealed class PowerShellHostLogger : ILogger
             return;
 
         var message = formatter(state, exception);
+        
         if (string.IsNullOrEmpty(message) && exception == null)
             return;
 
         var prefix = string.IsNullOrEmpty(_categoryName) ? "" : $"[{_categoryName}] ";
+        
         var text = prefix + message;
+        
         if (exception != null && !message.Contains(exception.Message))
             text += Environment.NewLine + exception.ToString();
 

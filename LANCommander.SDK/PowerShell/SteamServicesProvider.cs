@@ -31,17 +31,16 @@ public static class SteamServicesProvider
             return existing;
 
         var settingsProvider = sessionState.PSVariable.GetValue(SettingsProviderKey) as LANCommander.SDK.Abstractions.ISettingsProvider;
+        
         if (settingsProvider == null)
-        {
             throw new InvalidOperationException("ISettingsProvider not found in session state. Ensure the PowerShell runspace is properly initialized.");
-        }
 
         ILogger<SteamCmdService>? logger = null;
+        
         var hostUI = sessionState.PSVariable.GetValue(PSHostUIKey) as System.Management.Automation.Host.PSHostUserInterface;
+        
         if (hostUI != null)
-        {
             logger = new PowerShellHostLogger<SteamCmdService>(hostUI);
-        }
 
         var options = new SteamCmdOptions
         {
@@ -75,6 +74,4 @@ public static class SteamServicesProvider
 
         return service;
     }
-    
-    
 }

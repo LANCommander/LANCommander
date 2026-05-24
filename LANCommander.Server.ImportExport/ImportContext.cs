@@ -38,8 +38,6 @@ public class ImportContext : IDisposable
     private readonly StorageLocationService _storageLocationService;
     private readonly ILogger<ImportContext> _logger;
 
-    private string? _uploadedArchivePath;
-    
     #region Importers
     private readonly ActionImporter _actions;
     private readonly ArchiveImporter _archives;
@@ -103,10 +101,8 @@ public class ImportContext : IDisposable
 
     public void SetId(Guid id) => Id = id;
 
-    public void TrackUploadedArchive(string path) => _uploadedArchivePath = path;
-
     #region Initialize Import
-    public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(string archivePath)
+    public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(string archivePath, ManifestType? manifestType = null)
     {
         _actions.UseContext(this);
         _archives.UseContext(this);
@@ -131,18 +127,18 @@ public class ImportContext : IDisposable
         _servers.UseContext(this);
         _tags.UseContext(this);
         _tools.UseContext(this);
-        
+
         Archive = ZipArchive.OpenArchive(archivePath, new ReaderOptions());
 
         var manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == ManifestHelper.ManifestFilename);
-        
+
         // Legacy purposes
         if (manifestEntry == null)
             manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == "_manifest.yml");
 
         if (manifestEntry == null)
             throw new InvalidOperationException("Invalid import file, cannot load manifest");
-        
+
         using (var reader = new StreamReader(manifestEntry.OpenEntryStream()))
         {
             var manifestContents = await reader.ReadToEndAsync();
@@ -155,19 +151,47 @@ public class ImportContext : IDisposable
                     return await InitializeLegacyGameImportAsync(legacyGameManifest);
             }
 
-            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Game>(manifestContents, out var gameManifest))
+            if (manifestType.HasValue)
+                return await InitializeByTypeAsync(manifestType.Value, manifestContents);
+
+            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Game>(manifestContents, out var gameManifest) && !String.IsNullOrWhiteSpace(gameManifest.Title))
                 return await InitializeGameImportAsync(gameManifest);
-            
-            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Redistributable>(manifestContents, out var redistributableManifest))
+
+            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Redistributable>(manifestContents, out var redistributableManifest) && !String.IsNullOrWhiteSpace(redistributableManifest.Name))
                 return await InitializeRedistributableImportAsync(redistributableManifest);
-            
-            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Server>(manifestContents, out var serverManifest))
+
+            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Server>(manifestContents, out var serverManifest) && !String.IsNullOrWhiteSpace(serverManifest.Name))
                 return await InitializeServerImportAsync(serverManifest);
-            
-            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Tool>(manifestContents, out var toolManifest))
+
+            if (ManifestHelper.TryDeserialize<SDK.Models.Manifest.Tool>(manifestContents, out var toolManifest) && !String.IsNullOrWhiteSpace(toolManifest.Name))
                 return await InitializeToolImportAsync(toolManifest);
-                
+
             throw new InvalidOperationException("Unknown manifest file");
+        }
+    }
+
+    private async Task<IEnumerable<IImportItemInfo>> InitializeByTypeAsync(ManifestType manifestType, string manifestContents)
+    {
+        switch (manifestType)
+        {
+            case ManifestType.Game:
+                var gameManifest = ManifestHelper.Deserialize<SDK.Models.Manifest.Game>(manifestContents);
+                return await InitializeGameImportAsync(gameManifest);
+
+            case ManifestType.Redistributable:
+                var redistributableManifest = ManifestHelper.Deserialize<SDK.Models.Manifest.Redistributable>(manifestContents);
+                return await InitializeRedistributableImportAsync(redistributableManifest);
+
+            case ManifestType.Server:
+                var serverManifest = ManifestHelper.Deserialize<SDK.Models.Manifest.Server>(manifestContents);
+                return await InitializeServerImportAsync(serverManifest);
+
+            case ManifestType.Tool:
+                var toolManifest = ManifestHelper.Deserialize<SDK.Models.Manifest.Tool>(manifestContents);
+                return await InitializeToolImportAsync(toolManifest);
+
+            default:
+                throw new InvalidOperationException($"Unsupported manifest type: {manifestType}");
         }
     }
 
@@ -553,17 +577,5 @@ public class ImportContext : IDisposable
     {
         if (Archive != null)
             Archive.Dispose();
-
-        if (_uploadedArchivePath != null && File.Exists(_uploadedArchivePath))
-        {
-            try
-            {
-                File.Delete(_uploadedArchivePath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not delete uploaded import archive at {Path}", _uploadedArchivePath);
-            }
-        }
     }
 }

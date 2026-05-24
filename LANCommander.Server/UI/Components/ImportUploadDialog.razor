@@ -302,9 +302,7 @@ else if (_stage == ImportStage.Failed)
 
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(_uploadObjectKey);
 
-                ImportContext.TrackUploadedArchive(archivePath);
-
-                ImportItems = await ImportContext.InitializeImportAsync(archivePath);
+                ImportItems = await ImportContext.InitializeImportAsync(archivePath, Options.ManifestType);
 
                 _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
                 
@@ -366,7 +364,7 @@ else if (_stage == ImportStage.Failed)
     {
         try
         {
-            ImportItems = await ImportContext.InitializeImportAsync(path);
+            ImportItems = await ImportContext.InitializeImportAsync(path, Options.ManifestType);
             
             _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
             

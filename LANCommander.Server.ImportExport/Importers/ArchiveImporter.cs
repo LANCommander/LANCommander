@@ -173,7 +173,8 @@ public class ArchiveImporter(
                 if (archiveEntry == null)
                     return false;
                 
-                await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+                using var entryStream = archiveEntry.OpenEntryStream();
+                await archiveService.WriteToFileAsync(archive, entryStream);
 
                 return true;
             }

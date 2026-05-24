@@ -28,10 +28,17 @@ class Program
     internal static IServiceProvider? HeadlessServiceProvider;
     internal static string[]? HeadlessArgs;
 
+    private static readonly string[] CliVerbs =
+    [
+        "RunScript", "Install", "Uninstall", "Run", "Sync",
+        "Import", "Export", "Upload", "Login", "Logout", "ChangeAlias"
+    ];
+
     [STAThread]
     public static void Main(string[] args)
     {
-        if (args.Any(a => a.Equals("RunScript", StringComparison.OrdinalIgnoreCase)))
+        if (args.Any(a => CliVerbs.Any(v => v.Equals(a, StringComparison.OrdinalIgnoreCase)))
+            || args.Any(a => a is "--help" or "--version"))
         {
             RunHeadlessAsync(args).GetAwaiter().GetResult();
             return;
@@ -72,6 +79,12 @@ class Program
         configuration.Bind(settings);
 
         var services = new ServiceCollection();
+
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
 
         services.Configure<Settings.Settings>(configuration);
 

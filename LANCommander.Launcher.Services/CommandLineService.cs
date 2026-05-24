@@ -33,6 +33,7 @@ namespace LANCommander.Launcher.Services
                     RunScriptCommandLineOptions,
                     InstallCommandLineOptions,
                     UninstallCommandLineOptions,
+                    RunCommandLineOptions,
                     SyncCommandLineOptions,
                     ImportCommandLineOptions,
                     ExportCommandLineOptions,

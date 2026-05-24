@@ -39,10 +39,41 @@ namespace launcher
         static const int CHROME_H = 32;
         static const int FOOTER_H = 40;
         static const int BTN_W = 36;
+        static const int RESIZE_BORDER = 6;
+        static const int MIN_W = 640;
+        static const int MIN_H = 480;
 
 #ifdef ALLEGRO_WINDOWS
         typedef LRESULT(CALLBACK *WndProcFn)(HWND, UINT, WPARAM, LPARAM);
         static WndProcFn s_orig_wndproc = NULL;
+        static App *s_app = NULL;
+
+        static LRESULT chrome_hittest(HWND hwnd, LPARAM lp)
+        {
+            POINT pt = { (short)LOWORD(lp), (short)HIWORD(lp) };
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            ScreenToClient(hwnd, &pt);
+
+            int w = rc.right;
+            int h = rc.bottom;
+
+            bool top    = pt.y < RESIZE_BORDER;
+            bool bottom = pt.y >= h - RESIZE_BORDER;
+            bool left   = pt.x < RESIZE_BORDER;
+            bool right  = pt.x >= w - RESIZE_BORDER;
+
+            if (top && left)     return HTTOPLEFT;
+            if (top && right)    return HTTOPRIGHT;
+            if (bottom && left)  return HTBOTTOMLEFT;
+            if (bottom && right) return HTBOTTOMRIGHT;
+            if (top)             return HTTOP;
+            if (bottom)          return HTBOTTOM;
+            if (left)            return HTLEFT;
+            if (right)           return HTRIGHT;
+
+            return HTCLIENT;
+        }
 
         static LRESULT CALLBACK chrome_wndproc(HWND hwnd, UINT msg,
                                                WPARAM wp, LPARAM lp)
@@ -50,13 +81,47 @@ namespace launcher
             switch (msg)
             {
             case WM_NCHITTEST:
-                return HTCLIENT;
+                return chrome_hittest(hwnd, lp);
+
             case WM_NCCALCSIZE:
                 if (wp) return 0;
                 break;
+
             case WM_SETCURSOR:
-                SetCursor(LoadCursor(NULL, IDC_ARROW));
+            {
+                // Show resize cursors at window edges, arrow elsewhere.
+                LRESULT ht = chrome_hittest(hwnd, GetMessagePos());
+                LPCSTR cur = IDC_ARROW;
+                switch (ht)
+                {
+                case HTLEFT: case HTRIGHT:           cur = IDC_SIZEWE;   break;
+                case HTTOP: case HTBOTTOM:            cur = IDC_SIZENS;   break;
+                case HTTOPLEFT: case HTBOTTOMRIGHT:   cur = IDC_SIZENWSE; break;
+                case HTTOPRIGHT: case HTBOTTOMLEFT:   cur = IDC_SIZENESW; break;
+                }
+                SetCursor(LoadCursor(NULL, cur));
                 return TRUE;
+            }
+
+            case WM_GETMINMAXINFO:
+            {
+                MINMAXINFO *mmi = (MINMAXINFO *)lp;
+                mmi->ptMinTrackSize.x = MIN_W;
+                mmi->ptMinTrackSize.y = MIN_H;
+                return 0;
+            }
+
+            case WM_SIZE:
+            {
+                if (wp != SIZE_MINIMIZED && s_app)
+                {
+                    int new_w = LOWORD(lp);
+                    int new_h = HIWORD(lp);
+                    if (new_w > 0 && new_h > 0)
+                        s_app->request_resize(new_w, new_h);
+                }
+                break;
+            }
             }
             if (s_orig_wndproc)
                 return s_orig_wndproc(hwnd, msg, wp, lp);
@@ -77,9 +142,11 @@ namespace launcher
         int chrome_height() { return CHROME_H; }
         int footer_height() { return FOOTER_H; }
 
-        void chrome_remove_frame()
+        void chrome_remove_frame(App *app)
         {
 #ifdef ALLEGRO_WINDOWS
+            s_app = app;
+
             HWND hwnd = win_get_window();
             if (!hwnd) return;
 

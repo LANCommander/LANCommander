@@ -102,6 +102,10 @@ namespace launcher
         void quit();
         bool should_quit() const;
 
+        // Resize support — called from WndProc, applied in the main loop.
+        void request_resize(int new_w, int new_h);
+        void apply_pending_resize();
+
     private:
         // Allegro
         int m_width;
@@ -131,6 +135,11 @@ namespace launcher
         GameDatabase m_game_db;
         LibraryTab m_library_tab;
         bool m_quit;
+
+        // Pending resize (set from WndProc, consumed in main loop)
+        bool m_resize_pending;
+        int m_pending_width;
+        int m_pending_height;
     };
 
 } // namespace launcher

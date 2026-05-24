@@ -151,18 +151,3 @@ if(WIN32)
         endif()
     endif()
 endif()
-
-# ---------------------------------------------------------------------------
-# Crash test (minimal Allegro-only executable for diagnostics)
-# ---------------------------------------------------------------------------
-add_executable(crash_test WIN32 src/crash_test.cpp)
-target_include_directories(crash_test PRIVATE ${ALLEGRO_INCLUDE_DIRS})
-if(ALLEGRO_STATIC)
-    target_compile_definitions(crash_test PRIVATE ALLEGRO_STATICLINK)
-endif()
-if(ALLEGRO_FOUND)
-    target_link_libraries(crash_test ${ALLEGRO_LIBRARIES})
-endif()
-if(WIN32)
-    target_link_libraries(crash_test gdi32 user32 ole32 dinput8 ddraw dxguid winmm dsound)
-endif()

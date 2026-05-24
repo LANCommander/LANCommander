@@ -129,7 +129,9 @@ namespace LANCommander.SDK.Helpers
                 { ScriptType.KeyChange, "ChangeKey.ps1" },
                 { ScriptType.DetectInstall, "DetectInstall.ps1" },
                 { ScriptType.BeforeStart, "BeforeStart.ps1" },
-                { ScriptType.AfterStop, "AfterStop.ps1" }
+                { ScriptType.AfterStop, "AfterStop.ps1" },
+                { ScriptType.Package, "Package.ps1" },
+                { ScriptType.RunWrapper, "RunWrapper.ps1" }
             };
 
             return filenames[type];

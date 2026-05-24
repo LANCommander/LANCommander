@@ -295,12 +295,15 @@ namespace launcher
                 }
                 else
                 {
-                    // Placeholder: dark panel with title.
+                    // Placeholder: dark panel with word-wrapped title.
                     rectfill(buf, cx, cy, cx + item_w - 1, cy + item_h - 1, theme().panel);
-                    int tx = cx + item_w / 2;
-                    int ty = cy + item_h / 2 - text_height() / 2;
                     set_clip_rect(buf, cx, cy, cx + item_w - 1, cy + item_h - 1);
-                    draw_text_center(buf, tx, ty, theme().text_dim, item_title);
+                    int pad = 8;
+                    int wrap_w = item_w - pad * 2;
+                    int text_h = draw_text_wrap_center(NULL, 0, 0, wrap_w, 0, item_title);
+                    int ty = cy + (item_h - text_h) / 2;
+                    draw_text_wrap_center(buf, cx + item_w / 2, ty, wrap_w,
+                                          theme().text_dim, item_title);
                     set_clip_rect(buf, 0, grid_y, sw - 1, sh - footer_height() - 1);
                 }
 

@@ -1,2 +1,10 @@
 // Application icon — shown in taskbar, Alt+Tab, and title bar.
 IDI_ICON1 ICON "launcher.ico"
+
+// Login screen background images (embedded JPEG data).
+BG_AOE2    RCDATA "../assets/backgrounds/aoe2.jpg"
+BG_BFME2   RCDATA "../assets/backgrounds/bfme2.jpg"
+BG_CSS     RCDATA "../assets/backgrounds/css.jpg"
+BG_NS2     RCDATA "../assets/backgrounds/ns2.jpg"
+BG_SOLDAT2 RCDATA "../assets/backgrounds/soldat2.jpg"
+BG_UT2004  RCDATA "../assets/backgrounds/ut2004.jpg"

@@ -450,24 +450,8 @@ namespace launcher
             // Left column height: description
             int left_h = 12;
             if (!s_game.description.empty())
-            {
-                std::string desc = s_game.description;
-                size_t pos = 0;
-                while (pos < desc.size())
-                {
-                    size_t end = pos;
-                    while (end < desc.size())
-                    {
-                        std::string substr = desc.substr(pos, end - pos + 1);
-                        if (text_width(substr.c_str()) > left_max) break;
-                        if (desc[end] == '\n') { end++; break; }
-                        end++;
-                    }
-                    if (end == pos) end++;
-                    left_h += th + 2;
-                    pos = end;
-                }
-            }
+                left_h += draw_text_wrap(NULL, 0, 0, left_max, 0,
+                                         s_game.description.c_str());
 
             int body_h = (right_h > left_h ? right_h : left_h) + 20;
             int total_page_h = hero_h + bar_h + body_h;
@@ -541,11 +525,29 @@ namespace launcher
             }
 
             // --- Back button overlaid on the hero ---
-            int back_w = 60;
+            const char *back_label = (app.library_tab() == LibraryTab::Depot)
+                                         ? "Back to Depot" : "Back to Library";
+            int back_w = text_width(back_label) + 20;
             int back_h = 22;
             int back_x = 8;
             int back_y = hero_y + 8;
-            ButtonState back_btn = button(buf, back_x, back_y, back_w, back_h, "< Back", input);
+
+            ButtonState back_btn;
+            {
+                back_btn.hovered = (input.mouse.x >= back_x && input.mouse.x < back_x + back_w &&
+                                    input.mouse.y >= back_y && input.mouse.y < back_y + back_h);
+                back_btn.clicked = back_btn.hovered && input.mouse.clicked;
+
+                drawing_mode(DRAW_MODE_TRANS, NULL, 0, 0);
+                set_trans_blender(0, 0, 0, back_btn.hovered ? 180 : 140);
+                rectfill(buf, back_x, back_y, back_x + back_w - 1, back_y + back_h - 1,
+                         makecol(0, 0, 0));
+                drawing_mode(DRAW_MODE_SOLID, NULL, 0, 0);
+
+                int tx = back_x + (back_w - text_width(back_label)) / 2;
+                int ty = back_y + (back_h - th) / 2;
+                draw_text(buf, tx, ty, theme().text_bright, back_label);
+            }
 
             // =============================================================
             // Action bar — directly below hero
@@ -901,34 +903,8 @@ namespace launcher
             int y = below_bar + 12;
 
             if (!s_game.description.empty())
-            {
-                std::string desc = s_game.description;
-                int max_w = left_max;
-                size_t pos = 0;
-
-                while (pos < desc.size())
-                {
-                    size_t end = pos;
-                    while (end < desc.size())
-                    {
-                        std::string substr = desc.substr(pos, end - pos + 1);
-                        if (text_width(substr.c_str()) > max_w) break;
-                        if (desc[end] == '\n') { end++; break; }
-                        end++;
-                    }
-                    if (end == pos) end++;
-
-                    std::string line_str = desc.substr(pos, end - pos);
-                    while (!line_str.empty() &&
-                           (line_str[line_str.size() - 1] == '\n' ||
-                            line_str[line_str.size() - 1] == '\r'))
-                        line_str.erase(line_str.size() - 1);
-
-                    label(buf, left_margin, y, theme().text, line_str.c_str());
-                    y += th + 2;
-                    pos = end;
-                }
-            }
+                draw_text_wrap(buf, left_margin, y, left_max, theme().text,
+                               s_game.description.c_str());
 
             // Restore clip rect.
             set_clip_rect(buf, 0, 0, sw - 1, sh - 1);

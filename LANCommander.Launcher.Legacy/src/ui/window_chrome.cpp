@@ -581,51 +581,26 @@ namespace launcher
             int btn_h = 24;
             int btn_y = fy + (FOOTER_H - btn_h) / 2;
 
-            // --- Left: Depot / Library toggle ---
+            // --- Left: Depot / Library toggle (only show the inactive button) ---
             {
-                const char *depot_label = "Depot";
-                const char *lib_label = "Library";
-                int depot_w = text_width(depot_label) + 20;
-                int lib_w = text_width(lib_label) + 20;
-
-                int dx = pad;
                 bool depot_active = (app.library_tab() == LibraryTab::Depot);
-                bool depot_hovered = (input.mouse.x >= dx && input.mouse.x < dx + depot_w &&
-                                      input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
-                if (depot_active)
-                    rectfill(buf, dx, btn_y, dx + depot_w - 1, btn_y + btn_h - 1, theme().primary);
-                else if (depot_hovered)
-                    rectfill(buf, dx, btn_y, dx + depot_w - 1, btn_y + btn_h - 1, theme().panel_hover);
+                const char *label = depot_active ? "Library" : "Depot";
+                int bw = text_width(label) + 20;
+                int bx = pad;
 
-                draw_text_center(buf, dx + depot_w / 2, btn_y + (btn_h - th) / 2,
-                                 depot_active ? theme().text_bright : theme().text_dim,
-                                 depot_label);
+                bool hovered = (input.mouse.x >= bx && input.mouse.x < bx + bw &&
+                                input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
-                if (depot_hovered && input.mouse.clicked && !depot_active)
+                if (hovered)
+                    rectfill(buf, bx, btn_y, bx + bw - 1, btn_y + btn_h - 1, theme().panel_hover);
+
+                draw_text_center(buf, bx + bw / 2, btn_y + (btn_h - th) / 2,
+                                 theme().text_dim, label);
+
+                if (hovered && input.mouse.clicked)
                 {
-                    app.set_library_tab(LibraryTab::Depot);
-                    if (app.current_screen() != Screen::Library)
-                        app.switch_screen(Screen::Library);
-                }
-
-                int lx = dx + depot_w + 4;
-                bool lib_active = (app.library_tab() == LibraryTab::Library);
-                bool lib_hovered = (input.mouse.x >= lx && input.mouse.x < lx + lib_w &&
-                                    input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
-
-                if (lib_active)
-                    rectfill(buf, lx, btn_y, lx + lib_w - 1, btn_y + btn_h - 1, theme().primary);
-                else if (lib_hovered)
-                    rectfill(buf, lx, btn_y, lx + lib_w - 1, btn_y + btn_h - 1, theme().panel_hover);
-
-                draw_text_center(buf, lx + lib_w / 2, btn_y + (btn_h - th) / 2,
-                                 lib_active ? theme().text_bright : theme().text_dim,
-                                 lib_label);
-
-                if (lib_hovered && input.mouse.clicked && !lib_active)
-                {
-                    app.set_library_tab(LibraryTab::Library);
+                    app.set_library_tab(depot_active ? LibraryTab::Library : LibraryTab::Depot);
                     if (app.current_screen() != Screen::Library)
                         app.switch_screen(Screen::Library);
                 }

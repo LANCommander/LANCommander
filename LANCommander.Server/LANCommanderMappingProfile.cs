@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 
 namespace LANCommander.Server
@@ -20,7 +21,8 @@ namespace LANCommander.Server
             CreateMap<Data.Models.MultiplayerMode, SDK.Models.MultiplayerMode>();
             CreateMap<Data.Models.Platform, SDK.Models.Platform>();
             CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
-            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>()
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
             CreateMap<Data.Models.Server, SDK.Models.Server>();
             CreateMap<Data.Models.ServerConsole, SDK.Models.ServerConsole>();
             CreateMap<Data.Models.ServerHttpPath, SDK.Models.ServerHttpPath>();
@@ -41,7 +43,10 @@ namespace LANCommander.Server
                 .MaxDepth(5)
                 .ForMember(dest =>
                     dest.DependentGames,
-                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));
+                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)))
+                .ForMember(dest =>
+                    dest.Scripts,
+                    opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
 
             CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
                 .ForMember(dest =>

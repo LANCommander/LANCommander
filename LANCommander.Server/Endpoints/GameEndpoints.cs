@@ -225,7 +225,7 @@ public static class GameEndpoints
             var results = await scriptService
                 .AsSplitQuery()
                 .AsNoTracking()
-                .GetAsync(s => s.GameId == id);
+                .GetAsync(s => s.GameId == id && s.Type != SDK.Enums.ScriptType.Package);
 
             return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
         }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);

@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
 
@@ -24,7 +25,8 @@ namespace LANCommander.Server
             CreateMap<Data.Models.MultiplayerMode, SDK.Models.MultiplayerMode>();
             CreateMap<Data.Models.Platform, SDK.Models.Platform>();
             CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
-            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>()
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
             CreateMap<Data.Models.Server, SDK.Models.Server>();
             CreateMap<Data.Models.ServerConsole, SDK.Models.ServerConsole>();
             CreateMap<Data.Models.ServerHttpPath, SDK.Models.ServerHttpPath>();
@@ -69,7 +71,10 @@ namespace LANCommander.Server
                 .MaxDepth(5)
                 .ForMember(dest =>
                     dest.DependentGames,
-                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));
+                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)))
+                .ForMember(dest =>
+                    dest.Scripts,
+                    opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
 
             CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
                 .ForMember(dest =>
@@ -100,6 +105,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>()
                 .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
                 .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
                 .ReverseMap()
                 .ForMember(dest => dest.BaseGameId, opt => opt.Ignore())
                 .ForMember(dest => dest.BaseGame, opt => opt.Ignore());
@@ -112,7 +118,9 @@ namespace LANCommander.Server
             CreateMap<Data.Models.MultiplayerMode, SDK.Models.Manifest.MultiplayerMode>().ReverseMap();
             CreateMap<Data.Models.Platform, SDK.Models.Manifest.Platform>().ReverseMap();
             CreateMap<Data.Models.PlaySession, SDK.Models.Manifest.PlaySession>().ReverseMap();
-            CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>().ReverseMap();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>()
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
+                .ReverseMap();
             CreateMap<Data.Models.GameSave, SDK.Models.Manifest.Save>().ReverseMap();
             CreateMap<Data.Models.SavePath, SDK.Models.Manifest.SavePath>().ReverseMap();
             CreateMap<Data.Models.Script, SDK.Models.Manifest.Script>().ReverseMap();

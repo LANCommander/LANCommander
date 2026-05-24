@@ -59,7 +59,7 @@ public static class RedistributablesEndpoints
             var results = await scriptService
                 .AsSplitQuery()
                 .AsNoTracking()
-                .GetAsync(s => s.RedistributableId == id);
+                .GetAsync(s => s.RedistributableId == id && s.Type != SDK.Enums.ScriptType.Package);
 
             return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
         }, tags: ["Scripts", $"Redistributables/{id}/Scripts", "Redistributables", $"Redistributables/{id}"]);

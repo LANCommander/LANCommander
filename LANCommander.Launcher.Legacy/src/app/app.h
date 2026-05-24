@@ -77,7 +77,7 @@ namespace launcher
 
         // Currently authenticated user alias.
         void set_user_alias(const std::string &alias);
-        std::string user_alias() const;
+        const std::string &user_alias() const;
 
         // Cached game list (refreshed on library screen entry).
         std::vector<lancommander::Game> &game_cache();

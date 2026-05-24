@@ -1,0 +1,2 @@
+// Application icon — shown in taskbar, Alt+Tab, and title bar.
+IDI_ICON1 ICON "launcher.ico"

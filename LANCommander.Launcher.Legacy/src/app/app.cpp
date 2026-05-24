@@ -138,6 +138,8 @@ namespace launcher
             // Offline mode — skip validation, go straight to library.
             log_info("Offline mode enabled, skipping login");
             m_connection->enable_offline_mode();
+            if (!m_settings.launcher.username.empty())
+                m_user_alias = m_settings.launcher.username;
             m_current_screen = Screen::Library;
         }
         else if (!m_settings.authentication.token.access_token.empty())
@@ -155,8 +157,10 @@ namespace launcher
                 // Fetch user alias for display.
                 lancommander::ProfileClient profile(*m_http);
                 auto alias = profile.get_alias();
-                if (alias)
+                if (alias && !alias.value.empty())
                     m_user_alias = alias.value;
+                else if (!m_settings.launcher.username.empty())
+                    m_user_alias = m_settings.launcher.username;
 
                 m_connection->connect();
                 m_current_screen = Screen::Library;
@@ -179,8 +183,10 @@ namespace launcher
 
                     lancommander::ProfileClient profile(*m_http);
                     auto alias = profile.get_alias();
-                    if (alias)
+                    if (alias && !alias.value.empty())
                         m_user_alias = alias.value;
+                    else if (!m_settings.launcher.username.empty())
+                        m_user_alias = m_settings.launcher.username;
 
                     m_connection->connect();
                     m_current_screen = Screen::Library;
@@ -192,8 +198,13 @@ namespace launcher
             }
         }
 
-        log_info("Init complete, starting on %s screen",
-                 m_current_screen == Screen::Library ? "Library" : "Login");
+        // Final fallback: use saved username if alias is still empty.
+        if (m_user_alias.empty() && !m_settings.launcher.username.empty())
+            m_user_alias = m_settings.launcher.username;
+
+        log_info("Init complete, starting on %s screen (alias=%s)",
+                 m_current_screen == Screen::Library ? "Library" : "Login",
+                 m_user_alias.c_str());
         return true;
     }
 
@@ -376,7 +387,7 @@ namespace launcher
     std::string App::selected_game() const { return m_selected_game; }
 
     void App::set_user_alias(const std::string &alias) { m_user_alias = alias; }
-    std::string App::user_alias() const { return m_user_alias; }
+    const std::string &App::user_alias() const { return m_user_alias; }
 
     std::vector<lancommander::Game> &App::game_cache() { return m_game_cache; }
     std::vector<lancommander::DepotGame> &App::depot_cache() { return m_depot_cache; }

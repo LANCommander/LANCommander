@@ -54,7 +54,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _logger = serviceProvider.GetRequiredService<ILogger<MainWindowViewModel>>();
 
         SplashViewModel = new SplashViewModel();
-        ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider);
+        ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider, serviceProvider.GetRequiredService<BeaconClient>());
         LoginViewModel = new LoginViewModel(connectionClient, authenticationService, serviceProvider.GetRequiredService<AuthenticationClient>(), settingsProvider);
         ShellViewModel = new ShellViewModel(serviceProvider);
 

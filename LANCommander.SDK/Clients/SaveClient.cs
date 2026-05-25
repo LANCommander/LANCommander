@@ -119,9 +119,12 @@ namespace LANCommander.SDK.Services
                 }
                 
                 if (!destination.Exists)
+                {
+                    logger?.LogWarning("Save archive was not downloaded for game {GameId}", gameId);
                     return;
+                }
 
-                logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
+                logger?.LogDebug("Save archive downloaded to {SaveTempLocation} for game {GameId}", destination, gameId);
 
                 tempFile = destination.FullName;
 
@@ -134,7 +137,7 @@ namespace LANCommander.SDK.Services
 
                     bool success = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(200), false, () =>
                     {
-                        logger?.LogTrace("Attempting to extracting save entries to the temporary location {TempPath}", tempLocation);
+                        logger?.LogTrace("Extracting save archive to temporary location {TempPath}", tempLocation);
 
                         ExtractFilesFromZip(tempFile, tempLocation);
 
@@ -157,6 +160,8 @@ namespace LANCommander.SDK.Services
                     {
                         var entries = GetFileSavePathEntries(savePath, installDirectory) ?? [];
 
+                        logger?.LogTrace("Processing save path {SavePathId} with {EntryCount} entries", savePath.Id, entries.Count());
+
                         foreach (var entry in entries)
                         {
                             var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
@@ -173,6 +178,8 @@ namespace LANCommander.SDK.Services
                                     File.Delete(destinationPath);
 
                                 File.Move(entryPath, destinationPath);
+
+                                logger?.LogTrace("Restored save file {ArchivePath} to {DestinationPath}", entry.ArchivePath, destinationPath);
                             }
                             else if (Directory.Exists(entryPath))
                             {
@@ -182,7 +189,7 @@ namespace LANCommander.SDK.Services
                                 foreach (var entryFile in entryFiles)
                                 {
                                     var fileDestination = entryFile.Replace(entryPath, destinationPath);
-                                    
+
                                     var destinationDirectory = Path.GetDirectoryName(fileDestination);
 
                                     Directory.CreateDirectory(destinationDirectory);
@@ -192,6 +199,12 @@ namespace LANCommander.SDK.Services
 
                                     File.Move(entryFile, fileDestination);
                                 }
+
+                                logger?.LogTrace("Restored save directory {ArchivePath} ({FileCount} files) to {DestinationPath}", entry.ArchivePath, entryFiles.Length, destinationPath);
+                            }
+                            else
+                            {
+                                logger?.LogWarning("Save entry {ArchivePath} not found in archive at {EntryPath}", entry.ArchivePath, entryPath);
                             }
                         }
                     }
@@ -230,7 +243,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    logger?.LogError(ex, "The files in a save could not be extracted to their destination");
+                    logger?.LogError(ex, "Failed to extract save files for game {GameId}", gameId);
                 }
                 finally
                 {
@@ -274,11 +287,19 @@ namespace LANCommander.SDK.Services
 
                 if (savePacker.HasEntries())
                 {
+                    logger?.LogDebug("Packing {EntryCount} save entries for game {GameId}", savePacker.EntryCount, gameId);
+
                     await savePacker.AddManifestAsync(manifest);
 
                     var stream = await savePacker.PackAsync();
 
                     await UploadAsync(stream, manifest);
+
+                    logger?.LogDebug("Save uploaded for game {GameId} ({Size} bytes)", gameId, stream.Length);
+                }
+                else
+                {
+                    logger?.LogDebug("No save files found to upload for game {GameId}", gameId);
                 }
             }
         }

@@ -528,7 +528,7 @@ namespace LANCommander.SDK.Services
             #endregion
 
             #region Download Latest Save
-            logger?.LogTrace("Attempting to download the latest save");
+            logger?.LogInformation("Downloading latest save for game {GameTitle} ({GameId}) during install", game.Title, game.Id);
 
             _installProgress.Status = InstallStatus.DownloadingSaves;
 
@@ -2023,25 +2023,48 @@ namespace LANCommander.SDK.Services
                     {
                         await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                         {
-                            logger?.LogTrace("Attempting to download save");
+                            logger?.LogTrace("Checking for latest save for game {GameId}", manifest.Id);
 
                             try
                             {
                                 var latestSave = await saveClient.GetLatestAsync(manifest.Id);
 
-                                if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
+                                if (latestSave == null)
+                                {
+                                    logger?.LogDebug("No saves found on server for game {GameId}", manifest.Id);
+                                }
+                                else if (lastRun == null)
+                                {
+                                    logger?.LogInformation("Downloading save for game {GameId} (first run, save date: {SaveDate})", manifest.Id, latestSave.CreatedOn);
                                     await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                }
+                                else if (latestSave.CreatedOn > lastRun)
+                                {
+                                    logger?.LogInformation("Downloading newer save for game {GameId} (save date: {SaveDate}, last run: {LastRun})", manifest.Id, latestSave.CreatedOn, lastRun);
+                                    await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                }
+                                else
+                                {
+                                    logger?.LogDebug("Save for game {GameId} is up to date (save date: {SaveDate}, last run: {LastRun})", manifest.Id, latestSave.CreatedOn, lastRun);
+                                }
                             }
                             catch (HttpRequestException ex)
                             {
                                 if (ex.StatusCode == HttpStatusCode.NotFound)
+                                {
+                                    logger?.LogDebug("No saves found on server for game {GameId} (404)", manifest.Id);
                                     return true;
-                                
+                                }
+
                                 throw;
                             }
 
                             return true;
                         });
+                    }
+                    else
+                    {
+                        logger?.LogDebug("Skipping save download for game {GameId}, not connected to server", manifest.Id);
                     }
                     #endregion
 
@@ -2109,13 +2132,19 @@ namespace LANCommander.SDK.Services
                 {
                     await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                     {
-                        logger?.LogTrace("Attempting to upload save");
+                        logger?.LogDebug("Uploading save for game {GameId}", manifest.Id);
 
                         await saveClient.UploadAsync(installDirectory, manifest.Id);
+
+                        logger?.LogInformation("Save uploaded successfully for game {GameId}", manifest.Id);
 
                         return true;
                     });
                 }
+            }
+            else
+            {
+                logger?.LogDebug("Skipping save upload, not connected to server");
             }
         }
 

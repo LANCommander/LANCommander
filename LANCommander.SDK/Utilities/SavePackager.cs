@@ -90,6 +90,8 @@ public class SavePacker : IDisposable
         return _archive.Entries.Any();
     }
 
+    public int EntryCount => _archive.Entries.Count();
+
     public bool HasManifest()
     {
         return _archive.Entries.Any(entry => string.Equals(ManifestHelper.ManifestFilename, entry.Key, StringComparison.OrdinalIgnoreCase));

@@ -103,7 +103,7 @@ namespace LANCommander.Launcher.Services
 
                 await playSessionService.StartSession(game.Id, userId);
 
-                await gameClient.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.CreatedOn);
+                await gameClient.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.End);
             }
             catch (Exception ex)
             {

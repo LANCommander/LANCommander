@@ -172,9 +172,9 @@ public partial class Cover : UserControl
     }
 
     /// <summary>
-    /// Returns the pixel width to decode covers at, accounting for DPI scaling.
-    /// Covers are laid out at 140-220 CSS px; we round up to the nearest
-    /// multiple of 20 device pixels so a small layout change doesn't
+    /// Returns the pixel width to decode covers at, accounting for DPI scaling
+    /// and hover zoom (covers scale to 1.1x on hover). We round up to the
+    /// nearest multiple of 20 device pixels so a small layout change doesn't
     /// invalidate the cache.
     /// </summary>
     private int GetDecodePixelWidth()
@@ -184,7 +184,10 @@ public partial class Cover : UserControl
             : 1.0;
 
         var layoutWidth = Bounds.Width > 0 ? Bounds.Width : 160;
-        var pixelWidth = (int)Math.Ceiling(layoutWidth * dpi);
+
+        // Add 15% headroom so hover zoom (1.1x) doesn't upscale beyond
+        // the decoded resolution.
+        var pixelWidth = (int)Math.Ceiling(layoutWidth * dpi * 1.15);
 
         // Round up to the nearest 20px to keep cache keys stable across
         // minor layout shifts (e.g. 142px and 148px both decode at 160px).
@@ -266,7 +269,7 @@ public partial class Cover : UserControl
                     return null;
 
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.LowQuality);
+                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.HighQuality);
             }, ct);
 
             if (ct.IsCancellationRequested)
@@ -351,7 +354,7 @@ public partial class Cover : UserControl
             if (ct.IsCancellationRequested) return;
 
             using var stream = new MemoryStream(data);
-            var bitmap = Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.LowQuality);
+            var bitmap = Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.HighQuality);
 
             if (ct.IsCancellationRequested)
             {
@@ -405,7 +408,9 @@ public partial class Cover : UserControl
         try
         {
             _receivedFirstFrame = false;
-            _videoRenderer = new VideoFrameRenderer(maxWidth: 320, maxHeight: 480);
+            var decodeWidth = (uint)GetDecodePixelWidth();
+            var maxHeight = (uint)(decodeWidth * 1.5);
+            _videoRenderer = new VideoFrameRenderer(maxWidth: decodeWidth, maxHeight: maxHeight);
             _videoRenderer.FrameReady += OnVideoFrameReady;
             _videoRenderer.Play(source, muted: true, loop: true);
 

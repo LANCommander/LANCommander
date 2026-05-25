@@ -1,4 +1,6 @@
-﻿using LANCommander.Launcher.Models;
+﻿using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Import.Factories;
@@ -13,6 +15,8 @@ namespace LANCommander.Launcher.Services
         GameClient gameClient,
         ToolClient toolClient,
         LibraryClient libraryClient,
+        PlaySessionClient playSessionClient,
+        DatabaseContext dbContext,
         GameService gameService) : BaseService(logger)
     {
         private const int MaxConcurrentManifestFetches = 8;
@@ -91,16 +95,72 @@ namespace LANCommander.Launcher.Services
 
             await importContext.ImportQueueAsync();
             await importContext.DownloadPendingMediaAsync();
+
+            // Sync play sessions for all library games
+            await SyncPlaySessionsAsync(remoteLibrary.Select(g => g.Id));
         }
 
         public async Task ImportGameAsync(Guid gameId)
         {
             var importContext = importContextFactory.Create();
-            
+
             var manifest = await gameClient.GetManifestAsync(gameId);
-            
+
             await importContext.AddAsync(manifest);
             await importContext.ImportQueueAsync();
+
+            await SyncPlaySessionsAsync([gameId]);
+        }
+
+        private async Task SyncPlaySessionsAsync(IEnumerable<Guid> gameIds)
+        {
+            try
+            {
+                var localSessionIds = (await dbContext.Set<Data.Models.PlaySession>()
+                    .Select(ps => ps.Id)
+                    .ToListAsync())
+                    .ToHashSet();
+
+                foreach (var gameId in gameIds)
+                {
+                    try
+                    {
+                        var remoteSessions = await playSessionClient.GetAsync(gameId);
+
+                        if (remoteSessions == null)
+                            continue;
+
+                        foreach (var remote in remoteSessions)
+                        {
+                            if (!localSessionIds.Contains(remote.Id))
+                            {
+                                dbContext.Set<Data.Models.PlaySession>().Add(new Data.Models.PlaySession
+                                {
+                                    Id = remote.Id,
+                                    GameId = remote.GameId,
+                                    UserId = remote.UserId,
+                                    Start = remote.Start,
+                                    End = remote.End,
+                                    CreatedOn = remote.CreatedOn,
+                                    UpdatedOn = remote.UpdatedOn,
+                                });
+
+                                localSessionIds.Add(remote.Id);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Failed to sync play sessions for game {GameId}", gameId);
+                    }
+                }
+
+                await dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Failed to sync play sessions");
+            }
         }
 
         public async Task ImportToolAsync(Guid toolId)

@@ -1,7 +1,10 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Input;
+using Avalonia.VisualTree;
+using LANCommander.Launcher.Avalonia.Controls;
 
 namespace LANCommander.Launcher.Avalonia.Views.Components;
 
@@ -25,15 +28,51 @@ public partial class CoverButton : UserControl
         set => SetValue(CommandParameterProperty, value);
     }
 
+    private ContentPresenter? _itemContainer;
+    private bool _isInsideCarousel;
+    private bool _resolved;
+
     public CoverButton()
     {
         InitializeComponent();
+    }
+
+    /// <summary>
+    /// Finds the ContentPresenter container, but only when inside a CarouselControl.
+    /// Caches the result so the visual tree walk only happens once.
+    /// </summary>
+    private ContentPresenter? GetItemContainer()
+    {
+        if (_resolved)
+            return _itemContainer;
+
+        _resolved = true;
+        _isInsideCarousel = this.FindAncestorOfType<CarouselControl>() != null;
+
+        if (!_isInsideCarousel)
+            return null;
+
+        var current = this.GetVisualParent();
+        while (current != null)
+        {
+            if (current is ContentPresenter cp && cp.GetVisualParent() is Panel)
+            {
+                _itemContainer = cp;
+                return cp;
+            }
+            current = current.GetVisualParent();
+        }
+        return null;
     }
 
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
         ZIndex = 100;
+
+        var container = GetItemContainer();
+        if (container != null)
+            container.ZIndex = 1;
 
         if (CoverControl != null)
             CoverControl.IsPlayingAnimation = true;
@@ -43,6 +82,10 @@ public partial class CoverButton : UserControl
     {
         base.OnPointerExited(e);
         ZIndex = 0;
+
+        var container = GetItemContainer();
+        if (container != null)
+            container.ZIndex = 0;
 
         if (CoverControl != null)
             CoverControl.IsPlayingAnimation = false;

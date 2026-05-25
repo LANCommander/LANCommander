@@ -57,6 +57,8 @@ public class BeaconClient(
 
                 await probeClient.BindSocketAsync(port);
 
+                probeClient.OnBeaconResponse += (sender, args) => OnBeaconResponse?.Invoke(sender, args);
+
                 _probeClients.Add(probeClient);
             }
             catch

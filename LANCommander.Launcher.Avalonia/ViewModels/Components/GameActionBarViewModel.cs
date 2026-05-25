@@ -176,7 +176,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
         IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
 
-        LoadPlayStats(game);
+        await LoadPlayStatsAsync(game.Id);
         LoadManuals(game);
         await LoadActionsAsync();
         StartRunningCheck();
@@ -204,7 +204,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
-            LoadPlayStats(localGame);
+            await LoadPlayStatsAsync(localGame.Id);
             LoadManuals(localGame);
         }
         else
@@ -217,11 +217,18 @@ public partial class GameActionBarViewModel : ViewModelBase
             HasManuals = false;
         }
 
-        // Download size from latest archive
-        var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-        DownloadSizeText = latestArchive?.CompressedSize > 0
-            ? FormatBytes(latestArchive.CompressedSize)
-            : string.Empty;
+        // Download size from latest archive (only show when not installed)
+        if (!IsInstalled)
+        {
+            var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+            DownloadSizeText = latestArchive?.CompressedSize > 0
+                ? FormatBytes(latestArchive.CompressedSize)
+                : string.Empty;
+        }
+        else
+        {
+            DownloadSizeText = string.Empty;
+        }
 
         await LoadActionsAsync();
         StartRunningCheck();
@@ -293,7 +300,7 @@ public partial class GameActionBarViewModel : ViewModelBase
                 IsInstalled = localGame.Installed;
                 InstallDirectory = localGame.InstallDirectory;
                 IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
-                LoadPlayStats(localGame);
+                await LoadPlayStatsAsync(localGame.Id);
                 LoadManuals(localGame);
                 await LoadActionsAsync();
                 StatusMessage = IsInstalled ? "Installation complete!" : null;
@@ -364,20 +371,13 @@ public partial class GameActionBarViewModel : ViewModelBase
     {
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            var localGame = await gameService.GetAsync(GameId);
-            if (localGame != null)
+            if (Dispatcher.UIThread.CheckAccess())
             {
-                // Ensure we're on the UI thread when updating properties
-                if (Dispatcher.UIThread.CheckAccess())
-                {
-                    LoadPlayStats(localGame);
-                }
-                else
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() => LoadPlayStats(localGame));
-                }
+                await LoadPlayStatsAsync(GameId);
+            }
+            else
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => LoadPlayStatsAsync(GameId));
             }
         }
         catch (Exception ex)
@@ -386,13 +386,18 @@ public partial class GameActionBarViewModel : ViewModelBase
         }
     }
 
-    private void LoadPlayStats(Game game)
+    private async Task LoadPlayStatsAsync(Guid gameId)
     {
-        // Calculate play time
-        if (game.PlaySessions != null && game.PlaySessions.Any())
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+        var playSessions = await dbContext.Set<Data.Models.PlaySession>()
+            .Where(ps => ps.GameId == gameId && ps.Start != null && ps.End != null)
+            .ToListAsync();
+
+        if (playSessions.Any())
         {
-            var totalTime = new TimeSpan(game.PlaySessions
-                .Where(ps => ps.End != null && ps.Start != null)
+            var totalTime = new TimeSpan(playSessions
                 .Select(ps => ps.End!.Value.Subtract(ps.Start!.Value))
                 .Sum(ts => ts.Ticks));
 
@@ -403,30 +408,21 @@ public partial class GameActionBarViewModel : ViewModelBase
             else
                 PlayTime = $"{totalTime.TotalHours:0.#} hours";
 
-            // Last played
-            var lastSession = game.PlaySessions
-                .Where(ps => ps.End != null && ps.Start != null)
+            var lastSession = playSessions
                 .OrderByDescending(ps => ps.End)
-                .FirstOrDefault();
+                .First();
 
-            if (lastSession?.End != null)
-            {
-                var elapsed = DateTime.Now - lastSession.End.Value;
-                if (elapsed.TotalMinutes < 1)
-                    LastPlayed = "Just now";
-                else if (elapsed.TotalHours < 1)
-                    LastPlayed = $"{elapsed.TotalMinutes:0} minutes ago";
-                else if (elapsed.TotalDays < 1)
-                    LastPlayed = $"{elapsed.TotalHours:0} hours ago";
-                else if (elapsed.TotalDays < 7)
-                    LastPlayed = $"{elapsed.TotalDays:0} days ago";
-                else
-                    LastPlayed = lastSession.End.Value.ToString("MMM d, yyyy");
-            }
+            var elapsed = DateTime.Now - lastSession.End!.Value;
+            if (elapsed.TotalMinutes < 1)
+                LastPlayed = "Just now";
+            else if (elapsed.TotalHours < 1)
+                LastPlayed = $"{elapsed.TotalMinutes:0} minutes ago";
+            else if (elapsed.TotalDays < 1)
+                LastPlayed = $"{elapsed.TotalHours:0} hours ago";
+            else if (elapsed.TotalDays < 7)
+                LastPlayed = $"{elapsed.TotalDays:0} days ago";
             else
-            {
-                LastPlayed = "Never";
-            }
+                LastPlayed = lastSession.End.Value.ToString("MMM d, yyyy");
         }
         else
         {

@@ -41,8 +41,12 @@ Back for another round of contributions, akifreak tracked down and fixed an issu
 
 **Launcher**
 - Added: Automatic server discovery via beacon system
+- Added: Play session sync on game import
+- Added: Additional save handling logging
 - Changed: Reworked list view layout
 - Changed: Performance optimizations
+- Changed: Increased cover art rendering quality
+- Changed: Action bar layout and behavior adjustments
 - Fixed: Shadow overlay on covers in carousels
 - Fixed: Cover art clipping on hover in carousels
 - Fixed: Play button now shows correct playing/stop state when a game is running
@@ -50,11 +54,14 @@ Back for another round of contributions, akifreak tracked down and fixed an issu
 
 **Server**
 - Fixed: Redistributable and tool importing
+- Fixed: Media settings page failing to render
 
 **SDK**
 - Fixed: Discovery probe socket resilience against malformed data
 - Fixed: Broadcast send reliability in DiscoveryProbe
 - Fixed: Beacon responses now forwarded to BeaconClient event
+- Fixed: Save client now checks for newer server saves before uploading
+- Added: Logging in save packaging and upload pipeline
 
 ## Downloads
 

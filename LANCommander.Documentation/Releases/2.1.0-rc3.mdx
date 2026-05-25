@@ -1,0 +1,61 @@
+---
+title: 2.1.0-rc3
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+
+# LANCommander 2.1.0 Release Candidate 3 Release Notes
+
+## Server Discovery
+The Avalonia launcher now supports automatic server discovery using the beacon system. When connecting to a server, the launcher can discover LANCommander servers on the local network without needing to manually enter an address. This feature was already present in the legacy Photino launcher and has now been brought forward to the new Avalonia-based launcher.
+
+## Launcher Improvements
+
+### List View Rework
+The list view in the launcher library has been reworked for a cleaner presentation and better usability. It is essentially a reimagination of the library view in the previous launcher.
+
+### Carousel Fixes
+Cover art in carousels has received several visual fixes. The shadow overlay on covers now renders correctly, and covers are no longer cut off at the bottom when hovered. These are small polish items that improve the overall look and feel of the depot and library views.
+
+### Play Button State
+The play button now correctly reflects the current state of a running game, showing the appropriate playing/stop indicator when a game is actively running.
+
+### Performance Optimizations
+General launcher optimizations have been made to improve responsiveness and reduce resource usage.
+
+## Bug Fixes
+
+### Redistributable and Tool Importing
+Fixed an issue where importing redistributables and tools from an LCX file was not working correctly.
+
+### Linux Path Expansion
+Path variable expansion now correctly preserves the Linux root (`/`) prefix. Previously, expanding variables like `{InstallDir}` on Linux could strip the leading slash, resulting in incorrect paths.
+
+## Contributions
+This release includes contributions from the following community members:
+
+**@akifreak | PR [#403](https://github.com/LANCommander/LANCommander/pull/403): Fix Beacon Discovery**
+Back for another round of contributions, akifreak tracked down and fixed an issue where server discovery wasn't working reliably. In some cases the launcher was actually finding servers on the network but wasn't surfacing them in the UI. The fix spans the full discovery pipeline; making the probe socket more resilient to bad data, ensuring beacon responses actually reach the client, and refreshing the server list as soon as a new server is found.
+
+## Changelog
+
+**Launcher**
+- Added: Automatic server discovery via beacon system
+- Changed: Reworked list view layout
+- Changed: Performance optimizations
+- Fixed: Shadow overlay on covers in carousels
+- Fixed: Cover art clipping on hover in carousels
+- Fixed: Play button now shows correct playing/stop state when a game is running
+- Fixed: Linux path variable expansion now preserves root prefix
+
+**Server**
+- Fixed: Redistributable and tool importing
+
+**SDK**
+- Fixed: Discovery probe socket resilience against malformed data
+- Fixed: Broadcast send reliability in DiscoveryProbe
+- Fixed: Beacon responses now forwarded to BeaconClient event
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.0-rc3" />

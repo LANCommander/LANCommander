@@ -64,6 +64,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 using var scope = _serviceProvider.CreateScope();
                 var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
                 var mediaService   = scope.ServiceProvider.GetRequiredService<MediaService>();
+                var mediaClient    = scope.ServiceProvider.GetRequiredService<MediaClient>();
                 var dbContext       = scope.ServiceProvider.GetRequiredService<DbContext>();
 
                 var items = await libraryService.GetItemsAsync();
@@ -83,11 +84,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                     if (coverMedia != null && mediaService.FileExists(coverMedia))
                         coverPath = mediaService.GetImagePath(coverMedia);
 
-                    string? iconPath = null;
-                    var iconMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
-
-                    if (iconMedia != null && mediaService.FileExists(iconMedia))
-                        iconPath = mediaService.GetImagePath(iconMedia);
+                    var iconPath = await GetOrDownloadIconPathAsync(game, mediaService, mediaClient);
 
                     var vm = new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false);
                     vm.IconPath = iconPath;
@@ -243,5 +240,44 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         {
             _logger.LogError(ex, "Failed to fetch game {GameId}", gameItem.Id);
         }
+    }
+
+    private async Task<string?> GetOrDownloadIconPathAsync(
+        LANCommander.Launcher.Data.Models.Game game,
+        MediaService mediaService,
+        MediaClient mediaClient)
+    {
+        var iconMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+        if (iconMedia == null) return null;
+
+        if (mediaService.FileExists(iconMedia))
+            return mediaService.GetImagePath(iconMedia);
+
+        if (IsOfflineMode)
+            return null;
+
+        try
+        {
+            var sdkMedia = new SDK.Models.Media
+            {
+                Id = iconMedia.Id,
+                FileId = iconMedia.FileId,
+                Crc32 = iconMedia.Crc32,
+                MimeType = iconMedia.MimeType,
+                Type = iconMedia.Type,
+            };
+
+            var path = mediaService.GetImagePath(iconMedia);
+            var fileInfo = await mediaClient.DownloadAsync(sdkMedia, path);
+
+            if (fileInfo.Exists)
+                return fileInfo.FullName;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to download icon for game {GameId}", game.Id);
+        }
+
+        return null;
     }
 }

@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -76,6 +77,7 @@ public partial class LibrarySidebarViewModel : ViewModelBase
             using var scope = _serviceProvider.CreateScope();
             var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+            var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
             var items = await libraryService.GetItemsAsync();
 
@@ -83,7 +85,7 @@ public partial class LibrarySidebarViewModel : ViewModelBase
             {
                 if (item.DataItem is Game game)
                 {
-                    var iconPath = GetIconPath(game, mediaService);
+                    var iconPath = await GetOrDownloadIconPathAsync(game, mediaService, mediaClient);
                     Items.Add(new LibraryItemViewModel(game, iconPath));
                 }
             }
@@ -102,13 +104,41 @@ public partial class LibrarySidebarViewModel : ViewModelBase
         }
     }
 
-    private string? GetIconPath(Game game, MediaService mediaService)
+    private async Task<string?> GetOrDownloadIconPathAsync(Game game, MediaService mediaService, MediaClient mediaClient)
     {
         var icon = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
         if (icon == null) return null;
 
         var path = mediaService.GetImagePath(icon);
-        return mediaService.FileExists(icon) ? path : null;
+
+        if (mediaService.FileExists(icon))
+            return path;
+
+        if (IsOfflineMode)
+            return null;
+
+        try
+        {
+            var sdkMedia = new SDK.Models.Media
+            {
+                Id = icon.Id,
+                FileId = icon.FileId,
+                Crc32 = icon.Crc32,
+                MimeType = icon.MimeType,
+                Type = icon.Type,
+            };
+
+            var fileInfo = await mediaClient.DownloadAsync(sdkMedia, path);
+
+            if (fileInfo.Exists)
+                return fileInfo.FullName;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to download icon for game {GameId}", game.Id);
+        }
+
+        return null;
     }
 
     [RelayCommand]

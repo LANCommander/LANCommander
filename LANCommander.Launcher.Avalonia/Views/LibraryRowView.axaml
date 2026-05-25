@@ -102,7 +102,8 @@
                                  ItemsSource="{Binding RecentlyPlayedGames}"
                                  ItemWidth="160"
                                  VisibleItems="5"
-                                 Gap="16">
+                                 Gap="16"
+                                 ItemOverflow="14">
                     <CarouselControl.IsVisible>
                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                             <Binding Path="HasRecentlyPlayed" />

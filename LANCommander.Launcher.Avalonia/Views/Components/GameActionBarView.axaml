@@ -5,14 +5,8 @@
              x:DataType="vm:GameActionBarViewModel">
 
     <UserControl.Styles>
-        <!-- Green background on the primary button when running -->
-        <!--<Style Selector="SplitButton.PlayButton.Running">
-            <Setter Property="Background" Value="#52c41a" />
-        </Style>
-        <Style Selector="SplitButton.PlayButton.Running:pointerover">
-            <Setter Property="Background" Value="#C42B1C" />
-        </Style>
-        <Style Selector="SplitButton.PlayButton.Running TextBlock.RunningState">
+        <!-- Running state: "Running" text visible, "Stop" hidden -->
+        <Style Selector="SplitButton.Running TextBlock.RunningState">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="Transitions">
                 <Setter.Value>
@@ -22,10 +16,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style Selector="SplitButton.PlayButton.Running:pointerover TextBlock.RunningState">
-            <Setter Property="Opacity" Value="0" />
-        </Style>
-        <Style Selector="SplitButton.PlayButton.Running StackPanel.Stop">
+        <Style Selector="SplitButton.Running StackPanel.Stop">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
                 <Setter.Value>
@@ -35,7 +26,28 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        -->
+
+        <!-- Hover: fade out "Running", fade in "Stop" -->
+        <Style Selector="SplitButton.Running:pointerover TextBlock.RunningState">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="SplitButton.Running:pointerover StackPanel.Stop">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <!-- Hover: turn button red (error/danger) -->
+        <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+        </Style>
+        <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_SecondaryButton /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
+        </Style>
+        <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_PrimaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+        </Style>
+        <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_SecondaryButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+        </Style>
     </UserControl.Styles>
     
     <StackPanel Spacing="12" HorizontalAlignment="Left">

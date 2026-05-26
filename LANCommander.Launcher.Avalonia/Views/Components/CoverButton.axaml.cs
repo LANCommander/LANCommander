@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using LANCommander.Launcher.Avalonia.Controls;
 
@@ -68,26 +69,36 @@ public partial class CoverButton : UserControl
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
-        ZIndex = 100;
-
-        var container = GetItemContainer();
-        if (container != null)
-            container.ZIndex = 1;
-
-        if (CoverControl != null)
-            CoverControl.IsPlayingAnimation = true;
+        SetHighlighted(true);
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        ZIndex = 0;
+        SetHighlighted(false);
+    }
+
+    protected override void OnGotFocus(GotFocusEventArgs e)
+    {
+        base.OnGotFocus(e);
+        SetHighlighted(true);
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        SetHighlighted(false);
+    }
+
+    private void SetHighlighted(bool highlighted)
+    {
+        ZIndex = highlighted ? 100 : 0;
 
         var container = GetItemContainer();
         if (container != null)
-            container.ZIndex = 0;
+            container.ZIndex = highlighted ? 1 : 0;
 
         if (CoverControl != null)
-            CoverControl.IsPlayingAnimation = false;
+            CoverControl.IsPlayingAnimation = highlighted;
     }
 }

@@ -39,4 +39,15 @@ public partial class GamesRowView : UserControl
         if (DataContext is GamesCollectionViewModel vm && vm.SelectedGame is not null)
             vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
     }
+
+    private void OnListBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled) return;
+
+        if (e.Key == Key.Return && DataContext is GamesCollectionViewModel vm && vm.SelectedGame is not null)
+        {
+            vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
+            e.Handled = true;
+        }
+    }
 }

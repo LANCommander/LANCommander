@@ -7,7 +7,8 @@
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
              xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GameDetailView"
-             x:DataType="vm:GameDetailViewModel">
+             x:DataType="vm:GameDetailViewModel"
+>
 
     <UserControl.Resources>
         <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />

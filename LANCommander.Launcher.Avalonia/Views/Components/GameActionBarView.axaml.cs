@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Specialized;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Threading;
 using LANCommander.Launcher.Avalonia.ViewModels.Components;
 
@@ -15,6 +17,16 @@ public partial class GameActionBarView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        PlaySplitButton.KeyDown += OnSplitButtonKeyDown;
+    }
+
+    private void OnSplitButtonKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Down && sender is SplitButton sb && sb.Flyout != null)
+        {
+            sb.Flyout.ShowAt(sb);
+            e.Handled = true;
+        }
     }
 
     private MenuFlyout? PlayFlyout => PlaySplitButton.Flyout as MenuFlyout;

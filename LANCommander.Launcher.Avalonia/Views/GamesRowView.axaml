@@ -3,8 +3,10 @@
              xmlns:vm="using:LANCommander.Launcher.Avalonia.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.Avalonia.ViewModels.Components"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.GamesRowView"
-             x:DataType="vm:GamesCollectionViewModel">
+             x:DataType="vm:GamesCollectionViewModel"
+             controls:AutoFocus.IsEnabled="True">
 
     <UserControl.Styles>
         <Style Selector="ListBox.GamesList">
@@ -50,12 +52,8 @@
              Padding="0,56,0,0"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
              ScrollViewer.VerticalScrollBarVisibility="Auto"
-             Tapped="OnGameTapped">
-        <ListBox.KeyBindings>
-            <KeyBinding Gesture="Return"
-                        Command="{Binding ViewGameDetailsCommand}"
-                        CommandParameter="{Binding SelectedGame}" />
-        </ListBox.KeyBindings>
+             Tapped="OnGameTapped"
+             KeyDown="OnListBoxKeyDown">
         <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
                 <VirtualizingStackPanel />

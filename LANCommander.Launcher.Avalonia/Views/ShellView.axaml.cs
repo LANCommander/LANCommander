@@ -1,7 +1,10 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
+using LANCommander.Launcher.Avalonia.Services;
 using LANCommander.Launcher.Avalonia.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Avalonia.Views;
 
@@ -16,6 +19,8 @@ public partial class ShellView : UserControl
     {
         InitializeComponent();
 
+        KeyDown += OnKeyDown;
+
         DataContextChanged += (_, _) =>
         {
             if (_previousVm != null)
@@ -27,6 +32,19 @@ public partial class ShellView : UserControl
                 _previousVm = vm;
             }
         };
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && !e.Handled)
+        {
+            var nav = App.Services.GetService<INavigationService>();
+            if (nav is { CanGoBack: true })
+            {
+                nav.GoBack();
+                e.Handled = true;
+            }
+        }
     }
 
     private void OnOpenChatRequested(object? sender, System.EventArgs e)

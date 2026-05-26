@@ -99,7 +99,7 @@ public partial class App : Application
                 };
                 mainWindow.Closed += (_, _) => singleInstance.Dispose();
 
-                // Start gamepad navigation (gracefully disabled if SDL2 is absent)
+                // Start gamepad navigation (gracefully disabled if SDL3 is absent)
                 var gamepadService = Services.GetRequiredService<GamepadService>();
                 mainWindow.Closed += (_, _) => gamepadService.Stop();
                 gamepadService.Start();

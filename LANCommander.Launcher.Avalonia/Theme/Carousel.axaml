@@ -42,7 +42,9 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
                             Padding="8,6"
-                            ZIndex="1">
+                            ZIndex="1"
+                            Focusable="False"
+                            IsTabStop="False">
                         <Icon Type="Regular" Value="CaretLeft" Width="16" Height="16" />
                     </Button>
 
@@ -68,7 +70,9 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
                             Padding="8,6"
-                            ZIndex="1">
+                            ZIndex="1"
+                            Focusable="False"
+                            IsTabStop="False">
                         <Icon Type="Regular" Value="CaretRight" Width="16" Height="16" Color="White" />
                     </Button>
 

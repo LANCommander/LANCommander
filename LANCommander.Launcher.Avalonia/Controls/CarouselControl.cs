@@ -4,7 +4,9 @@ using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -167,6 +169,121 @@ public class CarouselControl : TemplatedControl
             _rightButton.Click += (_, __) => Move(1);
 
         RebuildInternalSource();
+    }
+
+    /// <summary>
+    /// When a child item gains focus (e.g. via gamepad), scroll to keep it visible.
+    /// </summary>
+    protected override void OnGotFocus(GotFocusEventArgs e)
+    {
+        base.OnGotFocus(e);
+
+        if (_itemsControl == null || e.Source is not Visual focusedVisual)
+            return;
+
+        var index = GetItemIndexForVisual(focusedVisual);
+        if (index >= 0)
+            ScrollToItemIndex(index);
+    }
+
+    /// <summary>
+    /// Handle Left/Right arrow keys to navigate between carousel items.
+    /// </summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled) return;
+
+        if (e.Key is not (Key.Left or Key.Right))
+            return;
+
+        if (_itemsControl == null)
+            return;
+
+        var focusedElement = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
+        if (focusedElement == null)
+            return;
+
+        var currentIndex = GetItemIndexForVisual(focusedElement);
+        if (currentIndex < 0)
+            return;
+
+        var itemCount = _itemsControl.ItemCount;
+        if (itemCount == 0)
+            return;
+
+        var newIndex = e.Key == Key.Right ? currentIndex + 1 : currentIndex - 1;
+
+        if (WrapItems)
+        {
+            newIndex = ((newIndex % itemCount) + itemCount) % itemCount;
+        }
+        else
+        {
+            if (newIndex < 0 || newIndex >= itemCount)
+                return; // Let the event bubble to navigate to adjacent controls
+        }
+
+        var container = _itemsControl.ContainerFromIndex(newIndex);
+        if (container == null)
+            return;
+
+        var focusTarget = container.GetVisualDescendants()
+            .OfType<InputElement>()
+            .FirstOrDefault(el => el.Focusable) ?? container as InputElement;
+
+        if (focusTarget != null)
+        {
+            focusTarget.Focus(NavigationMethod.Directional);
+            ScrollToItemIndex(newIndex);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Determines the item index for a visual that is (or is within) an item container.
+    /// </summary>
+    private int GetItemIndexForVisual(Visual visual)
+    {
+        if (_itemsControl == null) return -1;
+
+        var panel = _itemsControl.ItemsPanelRoot;
+        if (panel == null) return -1;
+
+        // Walk up the visual tree until we find a direct child of the items panel
+        var current = visual;
+        while (current != null)
+        {
+            if (current is Control control && current.GetVisualParent() == panel)
+            {
+                return _itemsControl.IndexFromContainer(control);
+            }
+            current = current.GetVisualParent() as Visual;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Scrolls the carousel so the item at the given index is visible.
+    /// </summary>
+    private void ScrollToItemIndex(int displayIndex)
+    {
+        var sourceCount = GetItemCount();
+        if (sourceCount == 0) return;
+
+        if (WrapItems)
+        {
+            // In wrap mode, items are tripled. Map display index to virtual index.
+            _virtualIndex = displayIndex;
+            SelectedIndex = displayIndex % sourceCount;
+            ScrollAnimated(Offset(-displayIndex * (ItemWidth + Gap)));
+        }
+        else
+        {
+            SelectedIndex = Math.Clamp(displayIndex, 0, sourceCount - 1);
+            ScrollAnimated(Offset(-ClampedOffset(SelectedIndex, sourceCount)));
+        }
     }
 
     private void RebuildInternalSource()

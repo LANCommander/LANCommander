@@ -1,17 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging;
+using SDL;
+using static SDL.SDL3;
 
 namespace LANCommander.Launcher.Avalonia.Input;
 
 /// <summary>
-/// Polls SDL2 for gamepad input on a background thread and injects
+/// Polls SDL3 for gamepad input on a background thread and injects
 /// the equivalent keyboard events into Avalonia's input pipeline.
 /// Only affects the app when it has focus — no OS-level input injection.
 /// </summary>
@@ -26,7 +31,7 @@ public sealed class GamepadService : IDisposable
     private CancellationTokenSource? _cts;
     private bool _sdlInitialized;
 
-    private readonly Dictionary<int, IntPtr> _controllers = new();
+    private readonly Dictionary<SDL_JoystickID, nint> _controllers = new();
 
     // Per-axis repeat state (Key.None = centered)
     private Key _axisXKey = Key.None;
@@ -52,25 +57,33 @@ public sealed class GamepadService : IDisposable
     // Background poll loop
     // -------------------------------------------------------------------------
 
-    private void PollLoop()
+    private unsafe void PollLoop()
     {
         try
         {
-            if (Sdl2.SDL_Init(Sdl2.SDL_INIT_GAMECONTROLLER) < 0)
+            if (!SDL_Init(SDL_InitFlags.SDL_INIT_GAMEPAD))
             {
                 _logger.LogWarning("SDL_Init failed — gamepad navigation disabled");
                 return;
             }
 
             _sdlInitialized = true;
-            _logger.LogInformation("SDL2 gamepad subsystem initialized");
+            _logger.LogInformation("SDL3 gamepad subsystem initialized");
 
-            for (var i = 0; i < Sdl2.SDL_NumJoysticks(); i++)
-                TryOpenController(i);
+            int count;
+            var gamepads = SDL_GetGamepads(&count);
+            if (gamepads != null)
+            {
+                for (var i = 0; i < count; i++)
+                    TryOpenController(gamepads[i]);
+
+                SDL_free(gamepads);
+            }
 
             while (!_cts!.IsCancellationRequested)
             {
-                while (Sdl2.SDL_PollEvent(out var ev) != 0)
+                SDL_Event ev;
+                while (SDL_PollEvent(&ev))
                     HandleEvent(ref ev);
 
                 TickAxisRepeat();
@@ -79,7 +92,7 @@ public sealed class GamepadService : IDisposable
         }
         catch (DllNotFoundException)
         {
-            _logger.LogWarning("SDL2 native library not found — gamepad navigation disabled");
+            _logger.LogWarning("SDL3 native library not found — gamepad navigation disabled");
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -89,12 +102,12 @@ public sealed class GamepadService : IDisposable
         finally
         {
             foreach (var handle in _controllers.Values)
-                Sdl2.SDL_GameControllerClose(handle);
+                unsafe { SDL_CloseGamepad((SDL_Gamepad*)handle); }
 
             _controllers.Clear();
 
             if (_sdlInitialized)
-                Sdl2.SDL_Quit();
+                SDL_Quit();
         }
     }
 
@@ -102,71 +115,72 @@ public sealed class GamepadService : IDisposable
     // SDL event dispatch
     // -------------------------------------------------------------------------
 
-    private void HandleEvent(ref Sdl2.SDL_Event ev)
+    private void HandleEvent(ref SDL_Event ev)
     {
-        switch (ev.type)
+        switch (ev.Type)
         {
-            case Sdl2.SDL_CONTROLLERDEVICEADDED:
-                TryOpenController(ev.cdevice.which);
+            case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED:
+                TryOpenController(ev.gdevice.which);
                 break;
 
-            case Sdl2.SDL_CONTROLLERDEVICEREMOVED:
-                CloseController(ev.cdevice.which);
+            case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED:
+                CloseController(ev.gdevice.which);
                 break;
 
-            case Sdl2.SDL_CONTROLLERBUTTONDOWN:
-                OnButton(ev.cbutton.button);
+            case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+                OnButton(ev.gbutton.Button);
                 break;
 
-            case Sdl2.SDL_CONTROLLERAXISMOTION:
-                OnAxis(ev.caxis.axis, ev.caxis.value);
+            case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION:
+                OnAxis(ev.gaxis.Axis, ev.gaxis.value);
                 break;
         }
     }
 
-    private void TryOpenController(int joystickIndex)
+    private unsafe void TryOpenController(SDL_JoystickID instanceId)
     {
-        if (!Sdl2.SDL_IsGameController(joystickIndex)) return;
+        if (!SDL_IsGamepad(instanceId)) return;
 
-        var handle = Sdl2.SDL_GameControllerOpen(joystickIndex);
-        if (handle == IntPtr.Zero) return;
+        var handle = SDL_OpenGamepad(instanceId);
+        if (handle == null) return;
 
-        _controllers[joystickIndex] = handle;
-        _logger.LogInformation("Gamepad {Index} connected", joystickIndex);
+        _controllers[instanceId] = (nint)handle;
+        _logger.LogInformation("Gamepad {InstanceId} connected", instanceId);
     }
 
-    private void CloseController(int instanceId)
+    private unsafe void CloseController(SDL_JoystickID instanceId)
     {
-        var handle = Sdl2.SDL_GameControllerFromInstanceID(instanceId);
-        if (handle != IntPtr.Zero)
-            Sdl2.SDL_GameControllerClose(handle);
+        if (_controllers.TryGetValue(instanceId, out var handle))
+        {
+            SDL_CloseGamepad((SDL_Gamepad*)handle);
+            _controllers.Remove(instanceId);
+        }
 
-        _controllers.Remove(instanceId);
         _logger.LogInformation("Gamepad {InstanceId} disconnected", instanceId);
     }
 
     // -------------------------------------------------------------------------
     // Button → key mapping
-    //   A / Start  → Enter   (confirm / activate)
-    //   B          → Escape  (back)
-    //   D-pad      → arrow keys
-    //   LB / RB    → Page Up / Page Down
+    //   South (A) / Start  → Enter   (confirm / activate)
+    //   East  (B)          → Escape  (back)
+    //   D-pad               → arrow keys
+    //   LB / RB             → Page Up / Page Down
     // -------------------------------------------------------------------------
 
-    private void OnButton(byte button)
+    private void OnButton(SDL_GamepadButton button)
     {
         var key = button switch
         {
-            Sdl2.SDL_CONTROLLER_BUTTON_A             => Key.Return,
-            Sdl2.SDL_CONTROLLER_BUTTON_START         => Key.Return,
-            Sdl2.SDL_CONTROLLER_BUTTON_B             => Key.Escape,
-            Sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP       => Key.Up,
-            Sdl2.SDL_CONTROLLER_BUTTON_DPAD_DOWN     => Key.Down,
-            Sdl2.SDL_CONTROLLER_BUTTON_DPAD_LEFT     => Key.Left,
-            Sdl2.SDL_CONTROLLER_BUTTON_DPAD_RIGHT    => Key.Right,
-            Sdl2.SDL_CONTROLLER_BUTTON_LEFTSHOULDER  => Key.PageUp,
-            Sdl2.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER => Key.PageDown,
-            _                                        => Key.None
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH            => Key.Return,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_START            => Key.Return,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST             => Key.Escape,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP          => Key.Up,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN        => Key.Down,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT        => Key.Left,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_RIGHT       => Key.Right,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_SHOULDER    => Key.PageUp,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER   => Key.PageDown,
+            _                                                     => Key.None
         };
 
         if (key != Key.None)
@@ -177,9 +191,9 @@ public sealed class GamepadService : IDisposable
     // Left-stick axes → arrow keys with initial delay + auto-repeat
     // -------------------------------------------------------------------------
 
-    private void OnAxis(byte axis, short value)
+    private void OnAxis(SDL_GamepadAxis axis, short value)
     {
-        if (axis == Sdl2.SDL_CONTROLLER_AXIS_LEFTX)
+        if (axis == SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX)
         {
             var key = value < -DeadZone ? Key.Left
                     : value >  DeadZone ? Key.Right
@@ -195,7 +209,7 @@ public sealed class GamepadService : IDisposable
                 }
             }
         }
-        else if (axis == Sdl2.SDL_CONTROLLER_AXIS_LEFTY)
+        else if (axis == SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY)
         {
             var key = value < -DeadZone ? Key.Up
                     : value >  DeadZone ? Key.Down
@@ -236,8 +250,6 @@ public sealed class GamepadService : IDisposable
 
     // -------------------------------------------------------------------------
     // Inject a key press into Avalonia's input pipeline via public interfaces.
-    // IInputManager and IKeyboardDevice are both public; only the concrete
-    // InputManager class and KeyboardDevice.Instance were internalized.
     // -------------------------------------------------------------------------
 
     private static void SimulateKey(Key key)
@@ -247,15 +259,69 @@ public sealed class GamepadService : IDisposable
             var window = (Application.Current?.ApplicationLifetime
                 as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
-            if (window is null) return;
+            if (window is null || !window.IsActive) return;
+
+            // If an overlay is open, constrain all interaction to it
+            var overlay = GetTopmostOverlay(window);
 
             var focused = window.FocusManager?.GetFocusedElement() as InputElement;
-            if (focused is null) return;
 
-            focused.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
-            focused.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyUpEvent,   Key = key });
+            // If focus is outside the active overlay, pull it back in
+            if (overlay != null && focused is Visual focusedVisual
+                && !overlay.IsVisualAncestorOf(focusedVisual))
+            {
+                focused = null;
+            }
 
-        }, DispatcherPriority.Input);
+            // If nothing is (validly) focused, find and focus the first content item
+            if (focused is null)
+            {
+                var searchRoot = overlay ?? (Control)window;
+
+                focused = searchRoot.GetVisualDescendants()
+                    .OfType<InputElement>()
+                    .FirstOrDefault(IsGamepadFocusCandidate);
+
+                if (focused is null) return;
+                focused.Focus(NavigationMethod.Directional);
+                return; // First press just establishes focus
+            }
+
+            focused.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyDeviceType = KeyDeviceType.Gamepad });
+            focused.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyUpEvent,   Key = key, KeyDeviceType = KeyDeviceType.Gamepad });
+
+        }, DispatcherPriority.Normal);
+    }
+
+    /// <summary>
+    /// Determines whether an element is a suitable target for initial gamepad focus.
+    /// Skips container controls and text inputs — we want interactive "content" items.
+    /// </summary>
+    private static bool IsGamepadFocusCandidate(InputElement e)
+    {
+        return e.Focusable && e.IsEffectivelyVisible
+            && e is not Window
+            && e is not ItemsControl  // ListBox, ComboBox, ItemsRepeater, etc.
+            && e is not ScrollViewer
+            && e is not TextBox;
+    }
+
+    /// <summary>
+    /// Returns the topmost overlay if one is open, otherwise null.
+    /// </summary>
+    private static Control? GetTopmostOverlay(Window window)
+    {
+        var layer = OverlayLayer.GetOverlayLayer(window);
+        if (layer is null) return null;
+
+        // Walk children in reverse to find the topmost actual overlay control
+        for (var i = layer.Children.Count - 1; i >= 0; i--)
+        {
+            if (layer.Children[i] is Control { IsVisible: true } child)
+                return child;
+        }
+
+        return null;
     }
 
     // -------------------------------------------------------------------------

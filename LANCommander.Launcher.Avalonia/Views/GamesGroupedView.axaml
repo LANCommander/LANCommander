@@ -46,7 +46,8 @@
                             <!-- Grid layout inside group -->
                             <ItemsRepeater ItemsSource="{Binding Items}"
                                            IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsGridView}"
-                                           ClipToBounds="False">
+                                           ClipToBounds="False"
+                                           controls:DirectionalNavigation.IsEnabled="True">
                                 <ItemsRepeater.Layout>
                                     <UniformGridLayout MinItemWidth="148" MinItemHeight="218"
                                                        MinColumnSpacing="12" MinRowSpacing="12"
@@ -66,7 +67,8 @@
 
                             <!-- List layout inside group -->
                             <ItemsRepeater ItemsSource="{Binding Items}"
-                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsListView}">
+                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsListView}"
+                                           controls:DirectionalNavigation.IsEnabled="True">
                                 <ItemsRepeater.Layout>
                                     <StackLayout Orientation="Vertical" Spacing="2" />
                                 </ItemsRepeater.Layout>
@@ -114,7 +116,8 @@
                             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Disabled"
                                           IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
-                                <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,10,0,16" ClipToBounds="False">
+                                <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,10,0,16" ClipToBounds="False"
+                                               controls:DirectionalNavigation.IsEnabled="True">
                                     <ItemsRepeater.Layout>
                                         <StackLayout Orientation="Horizontal" Spacing="8" />
                                     </ItemsRepeater.Layout>

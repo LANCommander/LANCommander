@@ -51,6 +51,30 @@
         <Style Selector="Button.CoverButton:pointerover Border.GlassOverlay">
             <Setter Property="Opacity" Value="1" />
         </Style>
+
+        <!-- Keyboard/gamepad focus: same visual treatment as hover -->
+        <Style Selector="Button.CoverButton:focus-visible">
+            <Setter Property="RenderTransform" Value="scale(1.1)" />
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.CoverShadow">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.GlassOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.CoverButton Border.FocusRing">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.FocusRing">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
     </UserControl.Styles>
 
     <Button Classes="CoverButton"
@@ -98,6 +122,13 @@
                     </Panel>
                 </local:Cover.Overlay>
             </local:Cover>
+            <Border Classes="FocusRing"
+                    BorderBrush="#994096FF"
+                    BorderThickness="2"
+                    CornerRadius="4"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
         </Panel>
     </Button>
 

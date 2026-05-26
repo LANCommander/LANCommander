@@ -53,17 +53,14 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                 BorderThickness="0,0,1,0"
                 Margin="0,48,0,0">
-            <ListBox Classes="CompactGamesList"
+            <ListBox x:Name="GameListBox"
+                     Classes="CompactGamesList"
                      ItemsSource="{Binding Games}"
                      SelectedItem="{Binding SelectedGame}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     Tapped="GameList_Tapped">
-                <ListBox.KeyBindings>
-                    <KeyBinding Gesture="Return"
-                                Command="{Binding ViewGameDetailsCommand}"
-                                CommandParameter="{Binding SelectedGame}" />
-                </ListBox.KeyBindings>
+                     Tapped="GameList_Tapped"
+                     KeyDown="GameList_KeyDown">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel />
@@ -156,7 +153,8 @@
                     </DockPanel>
                     <ItemsRepeater x:Name="LibraryGridItemsRepeater"
                                    ItemsSource="{Binding Games}"
-                                   ClipToBounds="False">
+                                   ClipToBounds="False"
+                                   controls:DirectionalNavigation.IsEnabled="True">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout MinItemWidth="105" MinItemHeight="158"
                                                MinColumnSpacing="12" MinRowSpacing="12"

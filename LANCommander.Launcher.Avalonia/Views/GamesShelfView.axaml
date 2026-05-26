@@ -10,7 +10,9 @@
     <ScrollViewer HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Disabled"
                   controls:ScrollPersistence.ViewModel="{Binding}">
-        <ItemsRepeater ItemsSource="{Binding Games}" Margin="12,52,12,24" ClipToBounds="False">
+        <ItemsRepeater ItemsSource="{Binding Games}" Margin="12,52,12,24" ClipToBounds="False"
+                       controls:DirectionalNavigation.IsEnabled="True"
+                       controls:AutoFocus.IsEnabled="True">
             <ItemsRepeater.Layout>
                 <StackLayout Orientation="Horizontal" Spacing="8" />
             </ItemsRepeater.Layout>

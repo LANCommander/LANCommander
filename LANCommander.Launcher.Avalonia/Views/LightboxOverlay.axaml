@@ -1,10 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:components="using:LANCommander.Launcher.Avalonia.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Avalonia.Controls"
              x:Class="LANCommander.Launcher.Avalonia.Views.LightboxOverlay"
              x:CompileBindings="False"
              Focusable="True"
-             KeyDown="OnKeyDown">
+             KeyDown="OnKeyDown"
+             controls:AutoFocus.IsEnabled="True">
 
     <Grid Background="#EE000000">
         <!-- Backdrop: click outside content to close -->

@@ -25,6 +25,17 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Primary7Brush}" />
   </Style>
 
+  <!-- Focus-visible: highlight with inset box-shadow so layout is not affected -->
+  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="inset 0 0 0 2 #994096FF" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="SplitButton:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="inset 0 0 0 2 #994096FF" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+
   <!-- ===================================================== -->
   <!-- BUTTONS — Solid variants                              -->
   <!-- ===================================================== -->

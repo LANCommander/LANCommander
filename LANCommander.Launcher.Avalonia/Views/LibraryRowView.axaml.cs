@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 using LANCommander.Launcher.Avalonia.ViewModels;
 
 namespace LANCommander.Launcher.Avalonia.Views;
@@ -30,6 +32,29 @@ public partial class LibraryRowView : UserControl
     public LibraryRowView()
     {
         InitializeComponent();
+        KeyDown += OnViewKeyDown;
+    }
+
+    private void OnViewKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.Key != Key.Left) return;
+
+        // If focus is somewhere in the right panel and Left was not handled,
+        // move focus back to the ListBox's selected item
+        var focusedElement = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
+        if (focusedElement == null) return;
+
+        if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+        {
+            GameListBox.Focus(NavigationMethod.Directional);
+            // Ensure the selected item gets focus
+            if (GameListBox.SelectedIndex >= 0)
+            {
+                var container = GameListBox.ContainerFromIndex(GameListBox.SelectedIndex);
+                (container as InputElement)?.Focus(NavigationMethod.Directional);
+            }
+            e.Handled = true;
+        }
     }
 
     private void RightPanelScrollViewer_SizeChanged(object? sender, SizeChangedEventArgs e)
@@ -68,6 +93,34 @@ public partial class LibraryRowView : UserControl
         if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
         {
             vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
+        }
+    }
+
+    private void GameList_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled) return;
+
+        if (e.Key == Key.Return)
+        {
+            if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
+            {
+                vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == Key.Right)
+        {
+            // Move focus from left list to right panel — skip containers/inputs
+            var target = RightPanelScrollViewer.GetVisualDescendants()
+                .OfType<InputElement>()
+                .FirstOrDefault(el => el.Focusable && el.IsEffectivelyVisible
+                    && el is not ItemsControl && el is not ScrollViewer && el is not TextBox);
+
+            if (target != null)
+            {
+                target.Focus(NavigationMethod.Directional);
+                e.Handled = true;
+            }
         }
     }
 }

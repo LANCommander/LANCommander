@@ -216,6 +216,12 @@ public class CarouselControl : TemplatedControl
 
         if (WrapItems)
         {
+            // At logical index 0 going left, let the event bubble
+            // so cross-pane navigation (e.g. to sidebar) can handle it
+            var sourceCount = GetItemCount();
+            if (e.Key == Key.Left && sourceCount > 0 && currentIndex % sourceCount == 0)
+                return;
+
             newIndex = ((newIndex % itemCount) + itemCount) % itemCount;
         }
         else

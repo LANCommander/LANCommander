@@ -95,7 +95,8 @@
             <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
 
                 <!-- ══ RECENTLY PLAYED ═══════════════════════════════════════════════ -->
-                <CarouselControl Title="Recently Played"
+                <CarouselControl x:Name="RecentlyPlayedCarousel"
+                                 Title="Recently Played"
                                  ItemsSource="{Binding RecentlyPlayedGames}"
                                  ItemWidth="160"
                                  VisibleItems="5"
@@ -117,7 +118,8 @@
                 </CarouselControl>
 
                 <!-- ══ COLLECTIONS ═══════════════════════════════════════════════════ -->
-                <CarouselControl Title="Collections"
+                <CarouselControl x:Name="CollectionsCarousel"
+                                 Title="Collections"
                                  WrapItems="True"
                                  ItemsSource="{Binding LibraryCollections}"
                                  ItemWidth="200"
@@ -145,6 +147,7 @@
                                 Content="✕"
                                 Classes="Text Error"
                                 Padding="8,4"
+                                Focusable="False"
                                 IsVisible="{Binding IsCollectionFiltered}" />
                         <TextBlock Text="All Games" FontSize="18" FontWeight="SemiBold"
                                    IsVisible="{Binding !IsCollectionFiltered}" />

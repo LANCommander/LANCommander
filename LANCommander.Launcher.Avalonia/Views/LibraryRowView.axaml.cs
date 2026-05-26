@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.VisualTree;
+using LANCommander.Launcher.Avalonia.Controls;
 using LANCommander.Launcher.Avalonia.ViewModels;
 
 namespace LANCommander.Launcher.Avalonia.Views;
@@ -32,30 +35,164 @@ public partial class LibraryRowView : UserControl
     public LibraryRowView()
     {
         InitializeComponent();
-        KeyDown += OnViewKeyDown;
+        AddHandler(KeyDownEvent, OnViewKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
     }
+
+    // ── Section navigation helpers ──────────────────────────────────────
+
+    /// <summary>
+    /// Returns the ordered list of visible right-panel sections
+    /// (carousels then grid) for Up/Down navigation.
+    /// </summary>
+    private List<Control> GetVisibleSections()
+    {
+        var sections = new List<Control>();
+        if (RecentlyPlayedCarousel.IsVisible) sections.Add(RecentlyPlayedCarousel);
+        if (CollectionsCarousel.IsVisible) sections.Add(CollectionsCarousel);
+        sections.Add(LibraryGridItemsRepeater); // always visible
+        return sections;
+    }
+
+    /// <summary>
+    /// Determines which right-panel section currently contains focus.
+    /// </summary>
+    private Control? GetFocusedSection(Visual focused)
+    {
+        if (RecentlyPlayedCarousel.IsVisible && RecentlyPlayedCarousel.IsVisualAncestorOf(focused))
+            return RecentlyPlayedCarousel;
+        if (CollectionsCarousel.IsVisible && CollectionsCarousel.IsVisualAncestorOf(focused))
+            return CollectionsCarousel;
+        if (LibraryGridItemsRepeater.IsVisualAncestorOf(focused))
+            return LibraryGridItemsRepeater;
+        return null;
+    }
+
+    /// <summary>
+    /// Focuses the first interactive item inside a section control.
+    /// Scrolls the right panel to the top when targeting the first section.
+    /// </summary>
+    private void FocusSectionFirstItem(Control section)
+    {
+        var target = section.GetVisualDescendants()
+            .OfType<InputElement>()
+            .FirstOrDefault(el => el.Focusable && el.IsEffectivelyVisible
+                && el is not ItemsControl && el is not ScrollViewer && el is not TextBox);
+
+        if (target != null)
+        {
+            target.Focus(NavigationMethod.Directional);
+
+            var sections = GetVisibleSections();
+            if (sections.Count > 0 && sections[0] == section)
+                RightPanelScrollViewer.Offset = new Vector(RightPanelScrollViewer.Offset.X, 0);
+            else
+                (target as Control)?.BringIntoView();
+        }
+    }
+
+    // ── Key handling ────────────────────────────────────────────────────
 
     private void OnViewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Handled || e.Key != Key.Left) return;
-
-        // If focus is somewhere in the right panel and Left was not handled,
-        // move focus back to the ListBox's selected item
         var focusedElement = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
         if (focusedElement == null) return;
 
-        if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+        var focusInList = GameListBox == focusedElement || GameListBox.IsVisualAncestorOf(focusedElement);
+
+        // Right from sidebar: must intercept even when the ListBox's internal
+        // directional navigation has already marked the event as handled.
+        if (e.Key == Key.Right && focusInList)
         {
-            GameListBox.Focus(NavigationMethod.Directional);
-            // Ensure the selected item gets focus
-            if (GameListBox.SelectedIndex >= 0)
+            var sections = GetVisibleSections();
+            if (sections.Count > 0)
             {
-                var container = GameListBox.ContainerFromIndex(GameListBox.SelectedIndex);
-                (container as InputElement)?.Focus(NavigationMethod.Directional);
+                FocusSectionFirstItem(sections[0]);
+                e.Handled = true;
             }
-            e.Handled = true;
+            return;
+        }
+
+        if (e.Handled) return;
+
+        switch (e.Key)
+        {
+            case Key.Left:
+                // If focus is in the right panel and Left was not consumed by a
+                // child (carousel at index 0, or grid leftmost column), move
+                // focus back to the sidebar list.
+                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+                {
+                    FocusListSelectedItem();
+                    e.Handled = true;
+                }
+                break;
+
+            case Key.Down:
+                // Navigate from current section to the next section below.
+                // For the grid, DirectionalNavigation handles internal Down;
+                // this only fires when the event bubbles (bottom row or carousel).
+                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+                {
+                    var sections = GetVisibleSections();
+                    var current = GetFocusedSection(focusedElement);
+                    if (current != null)
+                    {
+                        var idx = sections.IndexOf(current);
+                        if (idx >= 0 && idx < sections.Count - 1)
+                        {
+                            FocusSectionFirstItem(sections[idx + 1]);
+                            e.Handled = true;
+                        }
+                    }
+                }
+                break;
+
+            case Key.Up:
+                // Navigate from current section to the previous section above.
+                // For the grid, DirectionalNavigation handles internal Up;
+                // this only fires when the event bubbles (top row or carousel).
+                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+                {
+                    var sections = GetVisibleSections();
+                    var current = GetFocusedSection(focusedElement);
+                    if (current != null)
+                    {
+                        var idx = sections.IndexOf(current);
+                        if (idx > 0)
+                        {
+                            FocusSectionFirstItem(sections[idx - 1]);
+                            e.Handled = true;
+                        }
+                    }
+                }
+                break;
         }
     }
+
+    private void FocusListSelectedItem()
+    {
+        // Ensure there's a valid selection
+        if (GameListBox.SelectedIndex < 0 && GameListBox.ItemCount > 0)
+            GameListBox.SelectedIndex = 0;
+
+        if (GameListBox.SelectedIndex >= 0)
+        {
+            // Scroll the selected item into view so its container is realized
+            GameListBox.ScrollIntoView(GameListBox.SelectedIndex);
+
+            var container = GameListBox.ContainerFromIndex(GameListBox.SelectedIndex);
+            if (container is InputElement input)
+            {
+                input.Focus(NavigationMethod.Directional);
+                return;
+            }
+        }
+
+        // Fallback: focus the ListBox itself
+        GameListBox.Focus(NavigationMethod.Directional);
+    }
+
+    // ── Layout ──────────────────────────────────────────────────────────
 
     private void RightPanelScrollViewer_SizeChanged(object? sender, SizeChangedEventArgs e)
     {
@@ -88,6 +225,8 @@ public partial class LibraryRowView : UserControl
         layout.MinItemHeight = coverH;
     }
 
+    // ── List interactions ───────────────────────────────────────────────
+
     private void GameList_Tapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
@@ -105,20 +244,6 @@ public partial class LibraryRowView : UserControl
             if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
             {
                 vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
-                e.Handled = true;
-            }
-        }
-        else if (e.Key == Key.Right)
-        {
-            // Move focus from left list to right panel — skip containers/inputs
-            var target = RightPanelScrollViewer.GetVisualDescendants()
-                .OfType<InputElement>()
-                .FirstOrDefault(el => el.Focusable && el.IsEffectivelyVisible
-                    && el is not ItemsControl && el is not ScrollViewer && el is not TextBox);
-
-            if (target != null)
-            {
-                target.Focus(NavigationMethod.Directional);
                 e.Handled = true;
             }
         }

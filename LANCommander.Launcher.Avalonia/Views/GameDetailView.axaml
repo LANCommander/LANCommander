@@ -14,7 +14,14 @@
         <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <UserControl.Styles>
+        <Style Selector="Panel:focus-visible > Border#FocusBorder">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  GotFocus="OnScrollViewerGotFocus">
         <Grid RowDefinitions="Auto,*">
 
             <!-- ══ Hero Section (extends into title bar) ═══════════════════════ -->
@@ -114,7 +121,7 @@
             <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
 
                 <!-- Left: Action Bar, Metadata -->
-                <StackPanel Grid.Column="0" Margin="24,24,0,24" Spacing="16">
+                <StackPanel x:Name="LeftContent" Grid.Column="0" Margin="24,24,0,24" Spacing="16">
 
                     <!-- Game Action Bar Component -->
                     <components:GameActionBarView DataContext="{Binding ActionBar}" />
@@ -124,7 +131,7 @@
                                                  IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                     <!-- Screenshots / Videos carousel -->
-                    <StackPanel Spacing="8" IsVisible="{Binding HasMedia}">
+                    <StackPanel x:Name="MediaSection" Spacing="8" IsVisible="{Binding HasMedia}">
                         <TextBlock Text="Media" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
                         <CarouselControl ItemsSource="{Binding MediaItems}"
                                                   ItemWidth="384"
@@ -133,7 +140,9 @@
                             <CarouselControl.ItemTemplate>
                                 <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
                                     <Panel Width="384" Height="216"
+                                           Focusable="True"
                                            Tapped="MediaItem_Tapped"
+                                           KeyDown="MediaItem_KeyDown"
                                            Cursor="Hand">
                                         <!-- Skeleton placeholder -->
                                         <Border CornerRadius="4"
@@ -151,6 +160,12 @@
                                                 IsVisible="{Binding IsVideo}">
                                             <InlineVideoPlayer VideoPath="{Binding Path}" />
                                         </Border>
+                                        <!-- Focus indicator -->
+                                        <Border Name="FocusBorder"
+                                                CornerRadius="4"
+                                                BorderThickness="2"
+                                                BorderBrush="#994096FF"
+                                                IsVisible="False" />
                                     </Panel>
                                 </DataTemplate>
                             </CarouselControl.ItemTemplate>
@@ -160,7 +175,7 @@
                 </StackPanel>
 
                 <!-- Right: Cover Image + Metadata -->
-                <StackPanel Grid.Column="1"
+                <StackPanel x:Name="MetadataPanel" Grid.Column="1"
                             Width="280"
                             Margin="16,-100,24,24"
                             Spacing="16"

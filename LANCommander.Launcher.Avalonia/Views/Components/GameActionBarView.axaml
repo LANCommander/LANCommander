@@ -37,6 +37,12 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
+        <!-- Make the caret/secondary button independently focusable for gamepad navigation -->
+        <Style Selector="SplitButton /template/ Button#PART_SecondaryButton">
+            <Setter Property="Focusable" Value="True" />
+            <Setter Property="IsTabStop" Value="True" />
+        </Style>
+
         <!-- Hover: turn button red (error/danger) -->
         <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />

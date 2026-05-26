@@ -85,7 +85,7 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderHeading(HeadingBlock heading)
     {
-        var tb = new SelectableTextBlock
+        var tb = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize = heading.Level switch
@@ -108,7 +108,7 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderParagraph(ParagraphBlock para)
     {
-        var tb = new SelectableTextBlock
+        var tb = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize = FontSize,
@@ -130,7 +130,7 @@ public class MarkdownTextBlock : StackPanel
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(10, 6),
             Margin = new Thickness(0, 3, 0, 3),
-            Child = new SelectableTextBlock
+            Child = new TextBlock
             {
                 Text = code.TrimEnd('\n', '\r'),
                 FontFamily = new FontFamily("Cascadia Code,Consolas,Menlo,Courier New,monospace"),

@@ -108,6 +108,7 @@ namespace LANCommander.Launcher.Services
 
             await importContext.AddAsync(manifest);
             await importContext.ImportQueueAsync();
+            await importContext.DownloadPendingMediaAsync();
 
             await SyncPlaySessionsAsync([gameId]);
         }

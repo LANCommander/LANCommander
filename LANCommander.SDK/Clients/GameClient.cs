@@ -2085,11 +2085,55 @@ namespace LANCommander.SDK.Services
                 try
                 {
                     var cancellationTokenSource = new CancellationTokenSource();
-                    var task = context.ExecuteGameActionAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
-
                     _running[gameId] = cancellationTokenSource;
 
-                    await task;
+                    #region Run Wrapper Scripts
+                    bool runWrapperHandled = false;
+
+                    var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+                    var resolvedAction = action ?? gameManifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+
+                    if (resolvedAction != null && gameManifest.Redistributables != null)
+                    {
+                        var wrapperRedistributables = gameManifest.Redistributables
+                            .Where(r => r.Scripts != null && r.Scripts.Any(s => s.Type == Enums.ScriptType.RunWrapper))
+                            .ToList();
+
+                        if (wrapperRedistributables.Any())
+                        {
+                            if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                            {
+                                foreach (var customField in gameManifest.CustomFields)
+                                {
+                                    context.AddVariable(customField.Name, customField.Value);
+                                }
+                            }
+
+                            var executablePath = context.ExpandVariables(resolvedAction.Path, installDirectory);
+                            var arguments = context.ExpandVariables(resolvedAction.Arguments, installDirectory, skipSlashes: true);
+                            var workingDirectory = context.ExpandVariables(resolvedAction.WorkingDirectory, installDirectory);
+
+                            if (string.IsNullOrWhiteSpace(workingDirectory))
+                                workingDirectory = installDirectory;
+
+                            if (!string.IsNullOrWhiteSpace(args))
+                                arguments = string.IsNullOrWhiteSpace(arguments) ? args : arguments + " " + args;
+
+                            foreach (var redistributable in wrapperRedistributables)
+                            {
+                                runWrapperHandled = await scriptClient.Redistributable_RunRunWrapperScriptAsync(installDirectory, gameId, redistributable.Id, executablePath, arguments, workingDirectory, cancellationTokenSource.Token);
+
+                                if (runWrapperHandled)
+                                    break;
+                            }
+                        }
+                    }
+                    #endregion
+
+                    if (!runWrapperHandled)
+                    {
+                        await context.ExecuteGameActionAsync(installDirectory, gameId, action, args, cancellationTokenSource.Token);
+                    }
 
                     _running.Remove(gameId);
                     cancellationTokenSource.Dispose();

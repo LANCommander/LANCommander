@@ -144,6 +144,18 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        public void Stop()
+        {
+            try
+            {
+                Context?.Stop();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Error stopping PowerShell pipeline");
+            }
+        }
+
         public PowerShellScript AsAdmin()
         {
             RunAsAdmin = true;

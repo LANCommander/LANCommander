@@ -136,7 +136,7 @@
         (Options.ToolId.HasValue && Options.ToolId != Guid.Empty) ||
         (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty);
 
-    static readonly string[] GameClientScriptTypes = ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall"];
+    static readonly string[] GameClientScriptTypes = ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall", "RunWrapper"];
 
     static readonly Dictionary<string, string[]> VariablesByScriptType = new()
     {
@@ -154,6 +154,7 @@
         ["GameStopped"] = ["$WorkingDirectory", "$Server", "$Game", "$User", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId"],
         ["UserRegistration"] = ["$WorkingDirectory", "$User"],
         ["UserLogin"] = ["$WorkingDirectory", "$User"],
+        ["RunWrapper"] = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest", "$RedistributableManifest", "$ExecutablePath", "$Arguments"],
     };
 
     void UpdateVariables()

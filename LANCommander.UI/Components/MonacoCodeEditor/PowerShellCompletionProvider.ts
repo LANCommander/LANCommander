@@ -16,14 +16,14 @@ interface VariableDefinition {
 }
 
 // Variables available across all client-side game script types
-const gameClientScriptTypes = ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall"];
+const gameClientScriptTypes = ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall", "RunWrapper"];
 
 const variables: VariableDefinition[] = [
     { name: "$InstallDirectory", type: "string", description: "Root install directory for the game", scriptTypes: gameClientScriptTypes },
     { name: "$WorkingDirectory", type: "string", description: "Current working directory for the script" },
     { name: "$ServerAddress", type: "string", description: "Address of the LANCommander server", scriptTypes: gameClientScriptTypes },
     { name: "$DefaultInstallDirectory", type: "string", description: "Default installation directory", scriptTypes: gameClientScriptTypes },
-    { name: "$GameManifest", type: "GameManifest", description: "The game's manifest object containing metadata such as title, ID, sort title, description, notes, and related collections", scriptTypes: ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall"] },
+    { name: "$GameManifest", type: "GameManifest", description: "The game's manifest object containing metadata such as title, ID, sort title, description, notes, and related collections", scriptTypes: ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall", "RunWrapper"] },
     { name: "$PlayerAlias", type: "string", description: "Current player's alias/display name", scriptTypes: ["BeforeStart", "AfterStop"] },
     { name: "$NewPlayerAlias", type: "string", description: "New player alias (name change scripts)", scriptTypes: ["NameChange"] },
     { name: "$OldPlayerAlias", type: "string", description: "Previous player alias (name change scripts)", scriptTypes: ["NameChange"] },
@@ -34,7 +34,9 @@ const variables: VariableDefinition[] = [
     { name: "$User", type: "User", description: "User model object with properties: Id, UserName, and Alias", scriptTypes: ["GameStarted", "GameStopped", "UserRegistration", "UserLogin"] },
     { name: "$ToolManifest", type: "ToolManifest", description: "Tool manifest object containing metadata for the current tool", scriptTypes: ["Install", "BeforeStart", "AfterStop", "DetectInstall"] },
     { name: "$Tool", type: "Tool", description: "Tool model object with properties: Id, Name, and Description", scriptTypes: ["Package"] },
-    { name: "$RedistributableManifest", type: "RedistributableManifest", description: "Redistributable manifest object containing metadata for the current redistributable", scriptTypes: ["Install", "BeforeStart", "AfterStop", "NameChange", "DetectInstall"] },
+    { name: "$RedistributableManifest", type: "RedistributableManifest", description: "Redistributable manifest object containing metadata for the current redistributable", scriptTypes: ["Install", "BeforeStart", "AfterStop", "NameChange", "DetectInstall", "RunWrapper"] },
+    { name: "$ExecutablePath", type: "string", description: "Resolved path to the game executable", scriptTypes: ["RunWrapper"] },
+    { name: "$Arguments", type: "string", description: "Resolved command-line arguments for the executable", scriptTypes: ["RunWrapper"] },
     { name: "$Redistributable", type: "Redistributable", description: "Redistributable model object with properties: Id, Name, and Description", scriptTypes: ["Package"] },
     { name: "$DisplayWidth", type: "string", description: "Primary display width in pixels", scriptTypes: gameClientScriptTypes },
     { name: "$DisplayHeight", type: "string", description: "Primary display height in pixels", scriptTypes: gameClientScriptTypes },
@@ -454,6 +456,14 @@ const scriptTemplates: Record<string, string> = {
         "# After Stop Script",
         "# Runs after the game process stops.",
         "",
+    ].join("\n"),
+    RunWrapper: [
+        "# Run Wrapper Script",
+        "# Controls how the game executable is launched.",
+        "# This script runs instead of the normal process launch.",
+        "",
+        "# Launch the game",
+        "Start-Process -FilePath $ExecutablePath -ArgumentList $Arguments -WorkingDirectory $WorkingDirectory -Wait",
     ].join("\n"),
 };
 

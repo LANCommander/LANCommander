@@ -1,0 +1,1 @@
+Write-GameManifest -Path $InstallDirectory -Manifest $manifest

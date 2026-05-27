@@ -1,0 +1,1 @@
+$sanitized = Get-SanitizedPath -Path $PlayerAlias

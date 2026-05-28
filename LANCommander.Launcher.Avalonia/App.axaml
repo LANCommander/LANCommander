@@ -25,6 +25,14 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
+        <!-- Offset the vertical scrollbar so it doesn't overlap the floating titlebar -->
+        <Style Selector="ScrollViewer.TitlebarOffset /template/ ScrollBar#PART_VerticalScrollBar">
+            <Setter Property="Margin" Value="0,40,0,0" />
+        </Style>
+        <Style Selector="ListBox.TitlebarOffset /template/ ScrollViewer /template/ ScrollBar#PART_VerticalScrollBar">
+            <Setter Property="Margin" Value="0,40,0,0" />
+        </Style>
+
         <!-- Icon control template (PathIcon ControlTheme is not inherited by subclasses in Avalonia 11) -->
         <!-- Default: stroke-based rendering for Regular, Light, Thin, DuoTone, Bold variants -->
         <Style Selector="Icon">

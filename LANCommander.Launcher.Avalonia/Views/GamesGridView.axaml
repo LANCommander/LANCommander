@@ -9,6 +9,7 @@
              x:DataType="vm:GamesCollectionViewModel">
 
     <ScrollViewer x:Name="FlatGridScrollViewer"
+                  Classes="TitlebarOffset"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto"
                   controls:ScrollPersistence.ViewModel="{Binding}"

@@ -24,7 +24,8 @@
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+    <ScrollViewer Classes="TitlebarOffset"
+                  HorizontalScrollBarVisibility="Disabled"
                   controls:ScrollPersistence.ViewModel="{Binding}">
         <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
 

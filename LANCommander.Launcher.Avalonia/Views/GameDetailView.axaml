@@ -20,7 +20,8 @@
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+    <ScrollViewer Classes="TitlebarOffset"
+                  HorizontalScrollBarVisibility="Disabled"
                   GotFocus="OnScrollViewerGotFocus">
         <Grid RowDefinitions="Auto,*">
 

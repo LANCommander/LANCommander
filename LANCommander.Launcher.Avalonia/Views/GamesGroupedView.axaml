@@ -14,6 +14,7 @@
              so all group headers are always realized and A-Z index scrolling works.
              Inner per-group repeaters remain virtualizing for cover/list items. -->
         <ScrollViewer x:Name="GroupedScrollViewer"
+                      Classes="TitlebarOffset"
                       Grid.Column="0"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto"

@@ -46,7 +46,7 @@
     </UserControl.Styles>
 
     <ListBox x:Name="GamesListBox"
-             Classes="GamesList"
+             Classes="GamesList TitlebarOffset"
              ItemsSource="{Binding Games}"
              SelectedItem="{Binding SelectedGame}"
              Padding="0,56,0,0"

@@ -54,7 +54,7 @@
                 BorderThickness="0,0,1,0"
                 Margin="0,48,0,0">
             <ListBox x:Name="GameListBox"
-                     Classes="CompactGamesList"
+                     Classes="CompactGamesList TitlebarOffset"
                      ItemsSource="{Binding Games}"
                      SelectedItem="{Binding SelectedGame}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -88,6 +88,7 @@
 
         <!-- ═══ RIGHT PANEL: Carousels + Grid ═══ -->
         <ScrollViewer x:Name="RightPanelScrollViewer"
+                      Classes="TitlebarOffset"
                       Grid.Column="1"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto"

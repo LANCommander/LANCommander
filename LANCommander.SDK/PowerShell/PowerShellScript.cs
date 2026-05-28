@@ -184,6 +184,14 @@ namespace LANCommander.SDK.PowerShell
             {
                 runspace.Open();
 
+                // Ensure TLS 1.2 is available for web requests (GitHub, etc.)
+                using (var tls = System.Management.Automation.PowerShell.Create())
+                {
+                    tls.Runspace = runspace;
+                    tls.AddScript("[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12");
+                    tls.Invoke();
+                }
+
                 runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
 
                 foreach (var variable in Variables)
@@ -218,6 +226,12 @@ namespace LANCommander.SDK.PowerShell
                 Context.AddScript("Write-Host $Logo");
                 Context.AddScript(Contents);
 
+                Context.Streams.Information.DataAdded += Information_DataAdded;
+                Context.Streams.Verbose.DataAdded += Verbose_DataAdded;
+                Context.Streams.Debug.DataAdded += Debug_DataAdded;
+                Context.Streams.Warning.DataAdded += Warning_DataAdded;
+                Context.Streams.Error.DataAdded += Error_DataAdded;
+
                 if (Debug) {
                     Context.AddScript("Write-Host '--------- DEBUG ---------'");
                     Context.AddScript("Write-Host \"Script Type: $ScriptType\"");
@@ -231,37 +245,41 @@ namespace LANCommander.SDK.PowerShell
 
                     Context.AddScript("Write-Host ''");
                     Context.AddScript("Write-Host 'Enter \"exit\" to continue'");
-                    
-                    Context.Streams.Information.DataAdded += Information_DataAdded;
-                    Context.Streams.Verbose.DataAdded += Verbose_DataAdded;
-                    Context.Streams.Debug.DataAdded += Debug_DataAdded;
-                    Context.Streams.Warning.DataAdded += Warning_DataAdded;
-                    Context.Streams.Error.DataAdded += Error_DataAdded;
                 }
 
                 try
                 {
                     var results = await Context.InvokeAsync();
 
-                    await DebugAsync(async dbg =>
-                    {
-                        await dbg.BreakAsync(DebugContext);
-                    });
-
                     if (Context.HadErrors)
                     {
                         foreach (var error in Context.Streams.Error)
                         {
                             Logger.LogError("Script error: {InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+
+                            await DebugAsync(async dbg =>
+                            {
+                                await dbg.OutputAsync(DebugContext, LogLevel.Error, "{InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+                            });
                         }
                     }
 
                     var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
 
+                    if (returnValue == null && results != null && results.Count > 0)
+                        returnValue = results[results.Count - 1];
+
                     if (returnValue != null)
-                        result = (T)returnValue;
+                    {
+                        result = ConvertResult<T>(returnValue);
+
+                        if (result == null)
+                            Logger.LogWarning("Script returned a value but it could not be converted to {ExpectedType}", typeof(T).Name);
+                    }
                     else
-                        Logger.LogWarning("Script did not set $Return variable");
+                    {
+                        Logger.LogWarning("Script did not return a value via $Return or the pipeline");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -273,7 +291,15 @@ namespace LANCommander.SDK.PowerShell
                     {
                         await dbg.EndAsync(DebugContext);
                     });
-                    
+
+                    if (Debug)
+                    {
+                        await DebugAsync(async dbg =>
+                        {
+                            await dbg.BreakAsync(DebugContext);
+                        });
+                    }
+
                     Context.Dispose();
                 }
             }
@@ -283,11 +309,58 @@ namespace LANCommander.SDK.PowerShell
             return result;
         }
 
+        private static T ConvertResult<T>(object value)
+        {
+            // Unwrap PSObject wrapper
+            var psObj = value as PSObject;
+            var raw = psObj?.BaseObject ?? value;
+
+            // Direct cast if the underlying object is already the right type
+            if (raw is T typed)
+                return typed;
+
+            // Map PSObject properties onto a new instance of T by name
+            if (psObj != null)
+            {
+                try
+                {
+                    var instance = Activator.CreateInstance<T>();
+                    var targetProps = typeof(T).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+                    foreach (var targetProp in targetProps)
+                    {
+                        if (!targetProp.CanWrite)
+                            continue;
+
+                        var psProp = psObj.Properties[targetProp.Name];
+
+                        if (psProp == null)
+                            continue;
+
+                        var psValue = psProp.Value;
+
+                        if (psValue is PSObject psValObj)
+                            psValue = psValObj.BaseObject;
+
+                        if (psValue != null && targetProp.PropertyType.IsAssignableFrom(psValue.GetType()))
+                            targetProp.SetValue(instance, psValue);
+                        else if (psValue != null)
+                            targetProp.SetValue(instance, Convert.ChangeType(psValue, targetProp.PropertyType));
+                    }
+
+                    return instance;
+                }
+                catch
+                {
+                    return default;
+                }
+            }
+
+            return default;
+        }
+
         private async Task DebugAsync(Func<IScriptDebugger, Task> action)
         {
-            if (!Debug)
-                return;
-            
             if (Debuggers == null)
                 Debuggers = ServiceProvider.GetServices<IScriptDebugger>();
 

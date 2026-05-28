@@ -92,16 +92,16 @@ namespace LANCommander.Server.Services
 
                     if (package == null)
                     {
-                        logger?.LogError("Could not package redistributable {RedistributableName}, the package script did not return a result", redistributable.Name);
-                        continue;
+                        var message = $"Could not package redistributable {redistributable.Name}, the package script did not return a result";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
 
                     if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
-                        logger?.LogError(
-                            "Could not package redistributable {RedistributableName}, the path {Path} could not be found",
-                            redistributable.Name, package.Path);
-                        continue;
+                        var message = $"Could not package redistributable {redistributable.Name}, the path {package.Path} could not be found";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
 
                     var archive = new Archive
@@ -118,13 +118,17 @@ namespace LANCommander.Server.Services
                     var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                     
                     ZipFile.CreateFromDirectory(package.Path, destination);
-                    
-                    logger?.LogInformation("Successfully packaged {RedistributableName} and create new archive with version number {RedistributableVersion}", redistributable.Name, archive.Version);
+
+                    await archiveService.RecalculateFileSizeArchiveAsync(archive);
+
+                    logger?.LogInformation("Successfully packaged {RedistributableName} and created new archive with version number {RedistributableVersion}", redistributable.Name, archive.Version);
                 }
             }
             else
             {
-                logger?.LogWarning("Could not package redistributable {RedistributableName}, no packaging scripts are defined", redistributable.Name);
+                var message = $"Could not package redistributable {redistributable.Name}, no packaging scripts are defined";
+                logger?.LogWarning(message);
+                throw new Exception(message);
             }
         }
     }

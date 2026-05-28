@@ -27,11 +27,6 @@
     </TitleTemplate>
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
-            {
-                <Button OnClick="Package" Loading="_packaging">Package</Button>
-            }
-            
             @if (context != null && context.Id != Guid.Empty)
             {
                 <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
@@ -172,7 +167,6 @@
 
     bool _loaded;
     bool _success;
-    bool _packaging;
     bool _openingExportDialog;
 
     IEnumerable<Engine> Engines = new List<Engine>();
@@ -318,12 +312,4 @@
         await Task.Yield();
     }
 
-    private async Task Package()
-    {
-        _packaging = true;
-
-        await GameService.PackageAsync(Id);
-
-        _packaging = false;
-    }
 }

@@ -1,4 +1,8 @@
 ﻿@inject ArchiveService ArchiveService
+@inject ScriptService ScriptService
+@inject GameService GameService
+@inject ToolService ToolService
+@inject RedistributableService RedistributableService
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -13,6 +17,10 @@
     Responsive
     Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId) || (ToolId != Guid.Empty && a.ToolId == ToolId)">
     <RightToolbar>
+        @if (_hasPackageScript)
+        {
+            <Button OnClick="Package" Loading="_packaging">Package</Button>
+        }
         <Button OnClick="RecalculateFileSizes" Type="@ButtonType.Default">Recalculate File Sizes</Button>
         <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
     </RightToolbar>
@@ -65,10 +73,74 @@
     ArchiveUploader _uploader;
 
     bool _browsing;
+    bool _packaging;
+    bool _hasPackageScript;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+
+        if (GameId != Guid.Empty)
+            _hasPackageScript = (await ScriptService.GetAsync(s => s.GameId == GameId && s.Type == SDK.Enums.ScriptType.Package)).Any();
+        else if (RedistributableId != Guid.Empty)
+            _hasPackageScript = (await ScriptService.GetAsync(s => s.RedistributableId == RedistributableId && s.Type == SDK.Enums.ScriptType.Package)).Any();
+        else if (ToolId != Guid.Empty)
+            _hasPackageScript = (await ScriptService.GetAsync(s => s.ToolId == ToolId && s.Type == SDK.Enums.ScriptType.Package)).Any();
+    }
+
+    private async Task Package()
+    {
+        _packaging = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        string title = "Package";
+
+        if (GameId != Guid.Empty)
+        {
+            var game = await GameService.GetAsync(GameId);
+            title = $"Package {game.Title}";
+        }
+        else if (ToolId != Guid.Empty)
+        {
+            var tool = await ToolService.GetAsync(ToolId);
+            title = $"Package {tool.Name}";
+        }
+        else if (RedistributableId != Guid.Empty)
+        {
+            var redistributable = await RedistributableService.GetAsync(RedistributableId);
+            title = $"Package {redistributable.Name}";
+        }
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = title,
+            Maximizable = true,
+            DefaultMaximized = false,
+            Closable = true,
+            Footer = null,
+            Width = 800,
+        };
+
+        var options = new PackagingDialogOptions
+        {
+            GameId = GameId,
+            ToolId = ToolId,
+            RedistributableId = RedistributableId,
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<PackagingDialog, PackagingDialogOptions>(modalOptions, options);
+
+        modalRef.OnCancel = async () =>
+        {
+            await _table.ReloadAsync();
+        };
+
+        _packaging = false;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 
     private async Task RecalculateFileSizes()

@@ -281,14 +281,16 @@ namespace LANCommander.Server.Services
 
                     if (package == null)
                     {
-                        logger?.LogError("Could not package game {GameTitle}, the package script did not return a result", game.Title);
-                        continue;
+                        var message = $"Could not package game {game.Title}, the package script did not return a result";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
 
                     if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
-                        logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
-                        continue;
+                        var message = $"Could not package game {game.Title}, the path {package.Path} could not be found";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
                     
                     var archive = new Archive
@@ -305,13 +307,17 @@ namespace LANCommander.Server.Services
                     var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                     
                     ZipFile.CreateFromDirectory(package.Path, destination);
-                    
+
+                    await archiveService.RecalculateFileSizeArchiveAsync(archive);
+
                     logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }
             }
             else
             {
-                logger?.LogWarning("Could not package game {GameTitle}, no packaging scripts are defined", game.Title);
+                var message = $"Could not package game {game.Title}, no packaging scripts are defined";
+                logger?.LogWarning(message);
+                throw new Exception(message);
             }
         }
     }

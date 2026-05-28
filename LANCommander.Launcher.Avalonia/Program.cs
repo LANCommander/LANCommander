@@ -27,6 +27,7 @@ class Program
     // Used to pass the service provider and args into ScriptDebugApp
     internal static IServiceProvider? HeadlessServiceProvider;
     internal static string[]? HeadlessArgs;
+    internal static bool BigScreenMode;
 
     private static readonly string[] CliVerbs =
     [
@@ -56,6 +57,8 @@ class Program
                 return;
             }
         }
+
+        BigScreenMode = args.Any(a => a.Equals("--big-screen", StringComparison.OrdinalIgnoreCase));
 
         BuildAvaloniaApp()
 #if DEBUG

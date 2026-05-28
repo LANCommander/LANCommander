@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
@@ -27,8 +28,39 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isShellActive;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotBigScreenMode))]
+    private bool _isBigScreenMode;
+
+    public bool IsNotBigScreenMode => !IsBigScreenMode;
+
     public bool IsLogoVisible => CurrentView != ServerSelectionViewModel && CurrentView != LoginViewModel;
     public bool ShowTitlebarTint => !IsShellActive || ShellViewModel.IsTitlebarTinted;
+
+    public event EventHandler? BigScreenModeChanged;
+    public event EventHandler? ExitLauncherRequested;
+
+    [RelayCommand]
+    private void EnterBigScreenMode()
+    {
+        IsBigScreenMode = true;
+        _settingsProvider.Update(s => s.Window.BigScreenMode = true);
+        BigScreenModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void ExitBigScreenMode()
+    {
+        IsBigScreenMode = false;
+        _settingsProvider.Update(s => s.Window.BigScreenMode = false);
+        BigScreenModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void ExitLauncher()
+    {
+        ExitLauncherRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     partial void OnCurrentViewChanged(ViewModelBase value)
     {
@@ -73,6 +105,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Start with splash screen
         _currentView = SplashViewModel;
+
+        // Restore big screen mode from settings or command line
+        if (settingsProvider.CurrentValue.Window.BigScreenMode)
+            _isBigScreenMode = true;
+    }
+
+    /// <summary>
+    /// Enables big screen mode from an external source (e.g. command line).
+    /// Must be called before InitializeAsync so the event fires after the window is ready.
+    /// </summary>
+    public void SetBigScreenMode()
+    {
+        _isBigScreenMode = true;
     }
 
     public async Task InitializeAsync()

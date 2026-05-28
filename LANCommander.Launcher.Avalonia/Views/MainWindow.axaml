@@ -27,7 +27,8 @@
              always reachable; the center cell is empty so content is not blocked. -->
         <Grid ZIndex="15"
               ColumnDefinitions="6,*,6"
-              RowDefinitions="6,*,6">
+              RowDefinitions="6,*,6"
+              IsVisible="{Binding IsNotBigScreenMode}">
             <Border x:Name="ResizeNW" Grid.Row="0" Grid.Column="0" Cursor="TopLeftCorner"    Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
             <Border x:Name="ResizeN"  Grid.Row="0" Grid.Column="1" Cursor="SizeNorthSouth"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
             <Border x:Name="ResizeNE" Grid.Row="0" Grid.Column="2" Cursor="TopRightCorner"  Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
@@ -128,6 +129,12 @@
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                             <MenuItem Header="Settings"
                                       Command="{Binding ShellViewModel.ShowSettingsCommand}" />
+                            <MenuItem Header="Big Screen Mode"
+                                      Command="{Binding EnterBigScreenModeCommand}"
+                                      IsVisible="{Binding IsNotBigScreenMode}" />
+                            <MenuItem Header="Exit Big Screen Mode"
+                                      Command="{Binding ExitBigScreenModeCommand}"
+                                      IsVisible="{Binding IsBigScreenMode}" />
                             <MenuItem Header="Switch to Offline Mode"
                                       Command="{Binding ShellViewModel.GoOfflineCommand}"
                                       IsVisible="{Binding !ShellViewModel.IsOfflineMode}" />
@@ -136,6 +143,9 @@
                                       IsVisible="{Binding ShellViewModel.CanGoOnline}" />
                             <MenuItem Header="Logout"
                                       Command="{Binding ShellViewModel.LogoutCommand}" />
+                            <MenuItem Header="Exit Launcher"
+                                      Command="{Binding ExitLauncherCommand}"
+                                      IsVisible="{Binding IsBigScreenMode}" />
                         </MenuFlyout>
                     </Button.Flyout>
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -164,8 +174,9 @@
                 </Button>
             </Border>
 
-            <!-- Window Controls -->
-            <StackPanel Grid.Column="5" Orientation="Horizontal">
+            <!-- Window Controls (hidden in big screen mode) -->
+            <StackPanel Grid.Column="5" Orientation="Horizontal"
+                        IsVisible="{Binding IsNotBigScreenMode}">
                 <Button x:Name="MinimizeButton"
                         Width="46"
                         Height="40"

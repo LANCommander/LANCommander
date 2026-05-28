@@ -60,7 +60,10 @@ public partial class App : Application
                 desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
                 
                 var mainViewModel = Services.GetRequiredService<MainWindowViewModel>();
-                
+
+                if (Program.BigScreenMode)
+                    mainViewModel.SetBigScreenMode();
+
                 var mainWindow = new MainWindow
                 {
                     DataContext = mainViewModel

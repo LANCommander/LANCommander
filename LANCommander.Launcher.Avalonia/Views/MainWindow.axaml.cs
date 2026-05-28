@@ -1,14 +1,45 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Avalonia.ViewModels;
 
 namespace LANCommander.Launcher.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    private WindowState _stateBeforeBigScreen = WindowState.Normal;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.BigScreenModeChanged += OnBigScreenModeChanged;
+                vm.ExitLauncherRequested += (_, _) => Close();
+
+                // Apply big screen mode if it was persisted or set via command line
+                if (vm.IsBigScreenMode)
+                    WindowState = WindowState.FullScreen;
+            }
+        };
+    }
+
+    private void OnBigScreenModeChanged(object? sender, System.EventArgs e)
+    {
+        if (sender is not MainWindowViewModel vm) return;
+
+        if (vm.IsBigScreenMode)
+        {
+            _stateBeforeBigScreen = WindowState;
+            WindowState = WindowState.FullScreen;
+        }
+        else
+        {
+            WindowState = _stateBeforeBigScreen;
+        }
     }
 
     private void ResizeGrip_PointerPressed(object? sender, PointerPressedEventArgs e)

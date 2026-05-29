@@ -1,8 +1,38 @@
-﻿@page "/Files"
+@page "/Files"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ProtectedLocalStorage BrowserStorage
 
-<FileManager WorkingDirectory="@RootPath" />
+<FileManager WorkingDirectory="@RootPath" ColumnVisibility="ColumnVisibility" ColumnVisibilityChanged="OnColumnVisibilityChanged" />
 
 @code {
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+    Dictionary<string, bool> ColumnVisibility;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var stored = await BrowserStorage.GetAsync<Dictionary<string, bool>>("FileManager.ColumnVisibility");
+
+                if (stored.Success && stored.Value != null)
+                {
+                    ColumnVisibility = stored.Value;
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                ColumnVisibility = new Dictionary<string, bool>();
+            }
+        }
+    }
+
+    async Task OnColumnVisibilityChanged(Dictionary<string, bool> visibility)
+    {
+        ColumnVisibility = visibility;
+        await BrowserStorage.SetAsync("FileManager.ColumnVisibility", visibility);
+    }
 }

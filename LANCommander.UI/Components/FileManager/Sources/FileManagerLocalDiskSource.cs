@@ -1,4 +1,6 @@
-﻿namespace LANCommander.UI.Components
+using System.Runtime.InteropServices;
+
+namespace LANCommander.UI.Components
 {
     public class FileManagerLocalDiskSource : IFileManagerSource
     {
@@ -7,8 +9,6 @@
 
         public FileManagerLocalDiskSource(string path) {
             SetCurrentPath(GetDirectory(path));
-
-            //InitTree();
         }
 
         public FileManagerDirectory GetCurrentPath()
@@ -65,32 +65,42 @@
 
             if (CurrentPath != null && !String.IsNullOrWhiteSpace(CurrentPath.Path))
             {
-                var filePaths = Directory.EnumerateFileSystemEntries(CurrentPath.Path);
+                var dirInfo = new DirectoryInfo(CurrentPath.Path);
 
-                foreach (var filePath in filePaths)
+                try
                 {
-                    // Is directory
-                    if (Directory.Exists(filePath))
+                    foreach (var info in dirInfo.EnumerateFileSystemInfos())
                     {
                         try
                         {
-                            var directory = GetDirectory(filePath);
-
-                            entries.Add(directory);
-                        }
-                        catch { }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var file = GetFile(filePath);
-
-                            entries.Add(file);
+                            if (info is DirectoryInfo di)
+                            {
+                                entries.Add(new FileManagerDirectory
+                                {
+                                    Path = di.FullName,
+                                    Name = di.Name,
+                                    ModifiedOn = di.LastWriteTime,
+                                    CreatedOn = di.CreationTime,
+                                    Parent = CurrentPath
+                                });
+                            }
+                            else if (info is FileInfo fi)
+                            {
+                                entries.Add(new FileManagerFile
+                                {
+                                    Path = fi.FullName,
+                                    Name = fi.Name,
+                                    ModifiedOn = fi.LastWriteTime,
+                                    CreatedOn = fi.CreationTime,
+                                    Size = fi.Length,
+                                    Parent = CurrentPath
+                                });
+                            }
                         }
                         catch { }
                     }
                 }
+                catch { }
             }
 
             return entries;
@@ -130,10 +140,10 @@
 
         public string GetEntryName(IFileManagerEntry entry)
         {
-            if (!String.IsNullOrWhiteSpace(entry.Name) && Directory.Exists(entry.Path))
-                return entry.Path.TrimEnd(Path.DirectorySeparatorChar).Split(Path.DirectorySeparatorChar).Last();
-            else
-                return Path.GetFileName(entry.Path);
+            if (!String.IsNullOrWhiteSpace(entry.Name))
+                return entry.Name;
+
+            return Path.GetFileName(entry.Path.TrimEnd(Path.DirectorySeparatorChar));
         }
 
         public FileManagerDirectory CreateDirectory(string name)
@@ -153,21 +163,16 @@
                 File.Delete(entry.Path);
         }
 
-        public IEnumerable<FileManagerDirectory> GetDirectoryTree()
+        private FileManagerDirectory CreateRootDirectory(string name, string path)
         {
-            var roots = new List<FileManagerDirectory>();
-
-            #if WINDOWS
-            var drives = settings.GetDrives();
-
-            roots.AddRange(drives.Where(d => (d.DriveType == DriveType.Removable || d.DriveType == DriveType.Fixed) && d.IsReady).Select(d =>
+            var root = new FileManagerDirectory
             {
-                var root = new FileManagerDirectory
-                {
-                    Path = d.RootDirectory.FullName,
-                    Name = d.Name.TrimEnd('\\'),
-                };
+                Name = name,
+                Path = path,
+            };
 
+            try
+            {
                 var paths = Directory.EnumerateDirectories(root.Path, "*", new EnumerationOptions
                 {
                     IgnoreInaccessible = true,
@@ -176,16 +181,68 @@
                 }).ToArray();
 
                 root.Children = GetChildren(root, paths).ToHashSet();
+            }
+            catch { }
 
-                return root;
-            }));
-            #else
-            roots.Add(new FileManagerDirectory {
-                Name = "/",
-                Path = "/",
-                IsExpanded = true
-            });
-            #endif
+            return root;
+        }
+
+        public IEnumerable<FileManagerDirectory> GetDirectoryTree()
+        {
+            var roots = new List<FileManagerDirectory>();
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var drives = DriveInfo.GetDrives();
+
+                roots.AddRange(drives
+                    .Where(d => (d.DriveType == DriveType.Removable || d.DriveType == DriveType.Fixed) && d.IsReady)
+                    .Select(d => CreateRootDirectory(d.Name.TrimEnd('\\'), d.RootDirectory.FullName)));
+
+                var specialFolders = new (string Name, Environment.SpecialFolder Folder)[]
+                {
+                    ("Desktop", Environment.SpecialFolder.Desktop),
+                    ("Documents", Environment.SpecialFolder.MyDocuments),
+                };
+
+                foreach (var (name, folder) in specialFolders)
+                {
+                    var path = Environment.GetFolderPath(folder);
+
+                    if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                        roots.Add(CreateRootDirectory(name, path));
+                }
+
+                var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+                if (Directory.Exists(downloadsPath))
+                    roots.Add(CreateRootDirectory("Downloads", downloadsPath));
+            }
+            else
+            {
+                roots.Add(CreateRootDirectory("/", "/"));
+
+                var homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+                if (!string.IsNullOrEmpty(homePath) && Directory.Exists(homePath))
+                {
+                    roots.Add(CreateRootDirectory("Home", homePath));
+
+                    foreach (var subFolder in new[] { "Desktop", "Documents", "Downloads" })
+                    {
+                        var subPath = Path.Combine(homePath, subFolder);
+
+                        if (Directory.Exists(subPath))
+                            roots.Add(CreateRootDirectory(subFolder, subPath));
+                    }
+                }
+
+                foreach (var (name, path) in new[] { ("/etc", "/etc"), ("/tmp", "/tmp") })
+                {
+                    if (Directory.Exists(path))
+                        roots.Add(CreateRootDirectory(name, path));
+                }
+            }
 
             return roots;
         }

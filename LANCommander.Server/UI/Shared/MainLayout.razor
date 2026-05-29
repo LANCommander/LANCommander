@@ -1,7 +1,9 @@
-﻿@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.UI.Services
 @inherits LayoutComponentBase
 @inject IVersionProvider VersionProvider
 @inject NavigationManager NavigationManager
+@inject UploadTracker UploadTracker
 
 <Layout Class="layout">
     <Sidebar />
@@ -25,3 +27,13 @@
         </Footer>
     </Flex>
 </Layout>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await UploadTracker.InitializeAsync();
+        }
+    }
+}

@@ -1,0 +1,203 @@
+@using LANCommander.Server.Models
+@using LANCommander.UI.Services
+@inject UploadTracker UploadTracker
+@inject IMessageService MessageService
+@inject INotificationService NotificationService
+@inject ModalService ModalService
+@implements IDisposable
+
+@if (UploadTracker.ActiveUploads.Any())
+{
+    <Popover Trigger="@(new[] { Trigger.Click })" Placement="Placement.RightTop" OverlayClassName="upload-indicator-popover" @bind-Visible="_popoverVisible">
+        <ContentTemplate>
+            <div style="min-width: 300px; max-width: 400px;">
+                @foreach (var upload in UploadTracker.ActiveUploads.Values.ToList())
+                {
+                    <div style="margin-bottom: 12px;">
+                        <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center">
+                            <span style="font-size: 13px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @upload.FileName
+                            </span>
+                            <Flex Gap="FlexGap.Small">
+                                @if (upload.Status == UploadStatus.Complete && upload.Type == UploadType.Import && !string.IsNullOrEmpty(upload.CompletedObjectKey))
+                                {
+                                    <Button Type="ButtonType.Text" Size="ButtonSize.Small" OnClick="()=> OpenImportDialogFromPopup(upload)" Icon="@IconType.Outline.Import" />
+                                }
+                                @if (upload.Status == UploadStatus.Uploading)
+                                {
+                                    <Tooltip Title="Cancel Upload">
+                                        <Button Type="ButtonType.Text" Danger Size="ButtonSize.Small" Icon="@IconType.Outline.Close" OnClick="() => CancelUpload(upload.UploadId)" />
+                                    </Tooltip>
+                                }
+                                else
+                                {
+                                    <Tooltip Title="Dismiss">
+                                        <Button Type="ButtonType.Text" Size="ButtonSize.Small" Icon="@IconType.Outline.Close" OnClick="() => DismissUpload(upload.UploadId)" />
+                                    </Tooltip>
+                                }
+                            </Flex>
+                        </Flex>
+
+                        @if (upload.Status == UploadStatus.Uploading)
+                        {
+                            <Progress Percent="upload.Percent" Size="ProgressSize.Small" Status="ProgressStatus.Active" />
+                            @if (upload.Speed > 0)
+                            {
+                                <span style="font-size: 11px; color: rgba(255,255,255,0.45);">
+                                    @FormatSpeed(upload.Speed)
+                                </span>
+                            }
+                        }
+                        else if (upload.Status == UploadStatus.Complete)
+                        {
+                            <Progress Percent="100" Size="ProgressSize.Small" Status="ProgressStatus.Success" />
+                        }
+                        else if (upload.Status == UploadStatus.Error)
+                        {
+                            <Progress Percent="upload.Percent" Size="ProgressSize.Small" Status="ProgressStatus.Exception" />
+                            <span style="font-size: 11px; color: #ff4d4f;">
+                                @(upload.ErrorMessage ?? "Upload failed")
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </ContentTemplate>
+        <ChildContent>
+            <Menu Mode="MenuMode.Inline" Style="border-right: 0;">
+                <MenuItem>
+                    <Badge Count="@ActiveCount" Size="BadgeSize.Small" Offset="(8, -4)">
+                        <Icon Type="@IconType.Outline.CloudUpload"/>
+                        <span>Uploads</span>
+                    </Badge>
+                </MenuItem>
+            </Menu>
+        </ChildContent>
+    </Popover>
+}
+
+@code {
+    bool _popoverVisible;
+    NotificationRef? _activeNotificationRef;
+
+    int ActiveCount => UploadTracker.ActiveUploads.Values.Count(u => u.Status == UploadStatus.Uploading);
+
+    protected override void OnInitialized()
+    {
+        UploadTracker.OnStateChanged += HandleStateChanged;
+        UploadTracker.OnUploadCompleted += HandleUploadCompleted;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleUploadCompleted(BackgroundUploadInfo info)
+    {
+        if (info.Type == UploadType.Import && !string.IsNullOrEmpty(info.CompletedObjectKey))
+        {
+            var objectKey = info.CompletedObjectKey;
+
+            var notificationKey = $"import-ready-{objectKey}";
+
+            var config = new NotificationConfig
+            {
+                Key = notificationKey,
+                Message = "Import Ready",
+                Description = $"\"{info.FileName}\" has finished uploading and is ready to import.",
+                Duration = 0,
+                NotificationType = NotificationType.Success,
+                Btn = CreateImportNotificationButton(objectKey, notificationKey),
+            };
+
+            _activeNotificationRef = await NotificationService.Open(config);
+        }
+        else if (info.Type == UploadType.Archive)
+        {
+            MessageService.Success($"\"{info.FileName}\" uploaded successfully!");
+        }
+    }
+
+    private RenderFragment CreateImportNotificationButton(string objectKey, string notificationKey) => builder =>
+    {
+        builder.OpenComponent<Button>(0);
+        builder.AddAttribute(1, "Type", ButtonType.Primary);
+        builder.AddAttribute(2, "Size", ButtonSize.Small);
+        builder.AddAttribute(3, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => OpenImportDialogFromNotification(objectKey, notificationKey)));
+        builder.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Continue Import")));
+        builder.CloseComponent();
+    };
+
+    private async Task OpenImportDialogFromNotification(string objectKey, string notificationKey)
+    {
+        // Close the notification by key
+        await NotificationService.Close(notificationKey);
+        _activeNotificationRef = null;
+
+        OpenImportDialog(objectKey);
+    }
+
+    private void OpenImportDialogFromPopup(BackgroundUploadInfo info)
+    {
+        if (string.IsNullOrEmpty(info.CompletedObjectKey))
+            return;
+
+        var objectKey = info.CompletedObjectKey;
+
+        // Remove the completed upload from the list
+        UploadTracker.RemoveUpload(info.UploadId);
+
+        OpenImportDialog(objectKey);
+    }
+
+    private void OpenImportDialog(string objectKey)
+    {
+        var options = new ImportDialogOptions
+        {
+            Hint = "Select items to import",
+            PreUploadedObjectKey = objectKey,
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Import",
+            DestroyOnClose = true,
+            MaskClosable = false,
+            Footer = null,
+        };
+
+        ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+    }
+
+    private async Task CancelUpload(string uploadId)
+    {
+        await UploadTracker.CancelUploadAsync(uploadId);
+    }
+
+    private void DismissUpload(string uploadId)
+    {
+        UploadTracker.RemoveUpload(uploadId);
+    }
+
+    private string FormatSpeed(double bytesPerSecond)
+    {
+        string[] units = { "B/s", "KB/s", "MB/s", "GB/s" };
+        int unitIndex = 0;
+        double speed = bytesPerSecond;
+
+        while (speed >= 1024 && unitIndex < units.Length - 1)
+        {
+            speed /= 1024;
+            unitIndex++;
+        }
+
+        return $"{speed:F1} {units[unitIndex]}";
+    }
+
+    public void Dispose()
+    {
+        UploadTracker.OnStateChanged -= HandleStateChanged;
+        UploadTracker.OnUploadCompleted -= HandleUploadCompleted;
+    }
+}

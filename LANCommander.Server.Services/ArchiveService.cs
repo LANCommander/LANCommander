@@ -189,15 +189,32 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<Guid> CopyFromLocalFileAsync(string path)
+        public async Task<Guid> CopyFromLocalFileAsync(string path, Guid storageLocationId)
         {
-            Guid objectKey = Guid.NewGuid();
+            var storageLocation = await storageLocationService.GetAsync(storageLocationId);
 
-            var importArchivePath = await GetArchiveFileLocationAsync(objectKey.ToString());
+            if (!Directory.Exists(storageLocation.Path))
+                Directory.CreateDirectory(storageLocation.Path);
 
-            File.Copy(path, importArchivePath, true);
+            var archive = new Archive
+            {
+                ObjectKey = Guid.NewGuid().ToString(),
+                StorageLocationId = storageLocation.Id,
+                Version = ""
+            };
 
-            return objectKey;
+            archive = await AddAsync(archive);
+
+            var archivePath = await GetArchiveFileLocationAsync(archive);
+
+            var archiveDirectory = Path.GetDirectoryName(archivePath);
+
+            if (!string.IsNullOrEmpty(archiveDirectory) && !Directory.Exists(archiveDirectory))
+                Directory.CreateDirectory(archiveDirectory);
+
+            File.Copy(path, archivePath, true);
+
+            return Guid.Parse(archive.ObjectKey);
         }
 
         public async Task<IEnumerable<ZipArchiveEntry>> GetContentsAsync(Guid archiveId)

@@ -7,10 +7,15 @@
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
+@inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
 
 <PageHeader Title="Logs">
     <PageHeaderExtra>
+        @if (FileProvider != null)
+        {
+            <Button OnClick="DownloadLog" Icon="@IconType.Outline.Download">Download Log</Button>
+        }
         <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
     </PageHeaderExtra>
 </PageHeader>
@@ -52,6 +57,7 @@
 
 @code {
     List<LoggingProvider> Providers = new();
+    LoggingProvider? FileProvider => Providers.FirstOrDefault(p => p.Type == LoggingProviderType.File && p.Enabled);
 
     protected override void OnInitialized()
     {
@@ -91,5 +97,22 @@
     void RemoveProvider(LoggingProvider provider)
     {
         Providers.Remove(provider);
+    }
+
+    void DownloadLog()
+    {
+        if (FileProvider == null)
+            return;
+
+        var logFileName = $"log-{DateTime.Now:yyyy-MM-dd}.txt";
+        var logFilePath = Path.Combine(FileProvider.ConnectionString, logFileName);
+
+        if (!File.Exists(logFilePath))
+        {
+            MessageService.Warning("No log file exists for today.");
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/api/Logs/Download/{logFileName}", true);
     }
 }

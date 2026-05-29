@@ -127,7 +127,7 @@
 
                         foreach (var include in Includes)
                         {
-                            childrenQueryable.Include(include);
+                            childrenQueryable = childrenQueryable.Include(include);
                         }
 
                         foreach (var item in DataSource)

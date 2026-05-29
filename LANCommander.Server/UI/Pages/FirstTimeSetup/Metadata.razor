@@ -1,65 +1,212 @@
-﻿@page "/FirstTimeSetup/Metadata"
+@page "/FirstTimeSetup/Metadata"
 @using LANCommander.Server.Settings
+@using LANCommander.HQ.SDK
 @using Microsoft.Extensions.Options
+@implements IDisposable
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IOptions<Settings> Settings
+@inject HQClient HqClient
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject IJSRuntime JS
 @inject ILogger<Index> Logger
 
 <PageTitle>Metadata Connections - First Time Setup</PageTitle>
 
-<Form Model="@Settings.Value" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="FormLayout.Vertical">
-    <FormItem>
-        LANCommander has the ability to pull metadata and media from external sources. Required credentials can be added here, or can be set later in Settings.
-    </FormItem>
+@if (_metadataChoice == MetadataChoice.None)
+{
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
+        <Text>LANCommander can pull metadata and media from external sources. Choose how you'd like to get your metadata.</Text>
 
-    <Divider Text="LANCommander HQ (Recommended)" />
+        <Text>Connect your server to LANCommander HQ for access to expanded metadata providers, faster lookups, and premium features. All through one account.</Text>
 
-    <p>
-        <Text Type="TextElementType.Secondary">LANCommander HQ provides access to multiple metadata and media providers through a single connection. Connect your account in <a href="/Settings/Integrations/HQ">Settings &gt; Integrations &gt; LANCommander HQ</a> after setup.</Text>
-    </p>
+        <Flex Gap="FlexGap.Middle" Justify="FlexJustify.Center">
+            <Card Title="Basic" Class="hq-feature-card hq-feature-card-basic">
+                <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                        <Text>Access more metadata providers</Text>
+                    </Flex>
+                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                        <Text>Faster metadata lookups</Text>
+                    </Flex>
+                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                        <Text>One-time authentication</Text>
+                    </Flex>
+                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                        <Text>No additional server setup</Text>
+                    </Flex>
+                </Flex>
+            </Card>
 
-    <Divider Text="IGDB Credentials" />
+            <Card Title="Premium" Class="hq-feature-card hq-feature-card-premium">
+                <Extra>
+                    $5/mo
+                </Extra>
+                <ChildContent>
+                    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Everything in Basic</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Premium metadata providers</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Curated & enhanced metadata</Text>
+                        </Flex>
+                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                            <Icon Type="check" Theme="IconThemeType.Outline"/>
+                            <Text>Supports LANCommander development</Text>
+                        </Flex>
+                    </Flex>
+                </ChildContent>
+            </Card>
+        </Flex>
 
-    <p>
-        <Text Type="TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
-    </p>
+        <Flex Justify="FlexJustify.Center">
+            <Button Type="ButtonType.Primary" OnClick="() => _metadataChoice = MetadataChoice.HQ" Size="ButtonSize.Large">Use LANCommander HQ</Button>
+        </Flex>
 
-    <FormItem Label="Client ID">
-        <Input @bind-Value="context.Server.IGDB.ClientId" />
-    </FormItem>
-    <FormItem Label="Client Secret">
-        <InputPassword @bind-Value="context.Server.IGDB.ClientSecret" AutoComplete="false" />
-    </FormItem>
+        <Divider />
 
-    <Divider Text="SteamGridDB Credentials" />
+        <Flex Justify="FlexJustify.Center" Direction="FlexDirection.Vertical" Align="FlexAlign.Center" Gap="FlexGap.Small">
+            <Text Type="TextElementType.Secondary">Or configure IGDB and SteamGridDB with your own API keys.</Text>
+            <Button OnClick="() => _metadataChoice = MetadataChoice.OwnProviders">Use My Own Providers</Button>
+        </Flex>
 
-    <p>
-        <Text Type="TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
-    </p>
-
-    <FormItem Label="API Key">
-        <InputPassword @bind-Value="context.Server.Media.SteamGridDbApiKey" AutoComplete="false" />
-    </FormItem>
-
-    <FormItem>
-        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
+        <GridRow Justify="RowJustify.End" Style="margin-top: 8px;">
             <GridCol>
-                <Button Type="ButtonType.Primary" HtmlType="submit">
-                    Save
+                <Button Type="ButtonType.Default" OnClick="Skip">
+                    Skip
                 </Button>
             </GridCol>
         </GridRow>
-    </FormItem>
-</Form>
+    </Flex>
+}
+else if (_metadataChoice == MetadataChoice.HQ)
+{
+    <p>
+        Connect your server to LANCommander HQ.
+    </p>
+
+    @if (_hqConnected)
+    {
+        @if (_hqIsPremium)
+        {
+            <Result Status="ResultStatus.Success" Title="Premium Account" SubTitle="Thank you for supporting LANCommander!">
+                <Extra>
+                    <Button Danger OnClick="DisconnectHQ">Unlink</Button>
+                </Extra>
+            </Result>
+        }
+        else
+        {
+            <Result Status="ResultStatus.Success" Title="Connected" SubTitle="Your server is linked to LANCommander HQ.">
+                <Extra>
+                    <Button Danger OnClick="DisconnectHQ">Unlink</Button>
+                </Extra>
+            </Result>
+        }
+
+        <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
+            <GridCol>
+                <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
+            </GridCol>
+            <GridCol>
+                <Button Type="ButtonType.Primary" OnClick="Next">
+                    Next
+                </Button>
+            </GridCol>
+        </GridRow>
+    }
+    else
+    {
+        <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" Style="margin-bottom: 16px;" />
+
+        <Flex Justify="FlexJustify.Center" Style="margin-bottom: 16px;">
+            <Button Type="ButtonType.Primary" OnClick="ConnectHQ" Loading="_awaitingAuth" Size="ButtonSize.Large">Connect to HQ</Button>
+        </Flex>
+
+        <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
+            <GridCol>
+                <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
+            </GridCol>
+            <GridCol>
+                <Button Type="ButtonType.Default" OnClick="Next">
+                    Skip
+                </Button>
+            </GridCol>
+        </GridRow>
+    }
+}
+else if (_metadataChoice == MetadataChoice.OwnProviders)
+{
+    <Form Model="@Settings.Value" Loading="Loading" OnFinish="SaveOwnProviders" Layout="FormLayout.Vertical">
+        <Divider Text="IGDB Credentials" />
+
+        <p>
+            <Text Type="TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+        </p>
+
+        <FormItem Label="Client ID">
+            <Input @bind-Value="context.Server.IGDB.ClientId" />
+        </FormItem>
+        <FormItem Label="Client Secret">
+            <InputPassword @bind-Value="context.Server.IGDB.ClientSecret" AutoComplete="false" />
+        </FormItem>
+
+        <Divider Text="SteamGridDB Credentials" />
+
+        <p>
+            <Text Type="TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
+        </p>
+
+        <FormItem Label="API Key">
+            <InputPassword @bind-Value="context.Server.Media.SteamGridDbApiKey" AutoComplete="false" />
+        </FormItem>
+
+        <FormItem>
+            <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
+                <GridCol>
+                    <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
+                </GridCol>
+                <GridCol>
+                    <Button Type="ButtonType.Primary" HtmlType="submit">
+                        Save
+                    </Button>
+                </GridCol>
+            </GridRow>
+        </FormItem>
+    </Form>
+}
 
 @code {
     [CascadingParameter]
     FirstTimeSetupLayout Layout { get; set; }
 
     bool Loading = false;
+
+    MetadataChoice _metadataChoice = MetadataChoice.None;
+    bool _hqConnected;
+    bool _hqIsPremium;
+    bool _awaitingAuth;
+    Timer? _pollTimer;
+    bool _disposed;
+
+    enum MetadataChoice
+    {
+        None,
+        HQ,
+        OwnProviders
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,15 +219,84 @@
 
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
 
-        SettingsProvider.Update(s =>
-        {
-            s.Server.IGDB.ClientId = Settings.Value.Server.IGDB.ClientId;
-            s.Server.IGDB.ClientSecret = Settings.Value.Server.IGDB.ClientSecret;
-            s.Server.Media.SteamGridDbApiKey = Settings.Value.Server.Media.SteamGridDbApiKey;
-        });
+        await CheckHQStatus();
     }
 
-    async Task ValidateMetadataConnections()
+    async Task CheckHQStatus()
+    {
+        try
+        {
+            if (!SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            {
+                _hqConnected = false;
+                return;
+            }
+
+            var profile = await HqClient.Auth.GetCurrentUserAsync();
+
+            if (profile is not null)
+            {
+                _hqConnected = true;
+                _hqIsPremium = profile.IsPremium;
+            }
+            else
+                _hqConnected = false;
+        }
+        catch
+        {
+            _hqConnected = false;
+        }
+    }
+
+    async Task ConnectHQ()
+    {
+        var baseUrl = Settings.Value.Server.HQ.BaseUrl.TrimEnd('/');
+        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/hq/callback";
+        var loginUrl = $"{baseUrl}/auth/login?returnUrl={Uri.EscapeDataString(callbackUrl)}";
+
+        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
+
+        _awaitingAuth = true;
+
+        _pollTimer = new Timer(async _ =>
+        {
+            if (_disposed)
+                return;
+
+            if (SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (_disposed)
+                        return;
+
+                    _awaitingAuth = false;
+                    _hqConnected = true;
+                    StopPolling();
+
+                    MessageService.Success("Successfully connected to LANCommander HQ!");
+
+                    StateHasChanged();
+                });
+            }
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    async Task DisconnectHQ()
+    {
+        SettingsProvider.Update(s =>
+        {
+            s.Server.HQ.AccessToken = string.Empty;
+            s.Server.HQ.TokenExpiresAt = null;
+        });
+
+        _hqConnected = false;
+        _hqIsPremium = false;
+
+        MessageService.Success("Disconnected from LANCommander HQ.");
+    }
+
+    async Task SaveOwnProviders()
     {
         SettingsProvider.Update(s =>
         {
@@ -90,5 +306,27 @@
         });
 
         NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
+    }
+
+    void Skip()
+    {
+        NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
+    }
+
+    void Next()
+    {
+        NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
+    }
+
+    void StopPolling()
+    {
+        _pollTimer?.Dispose();
+        _pollTimer = null;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        StopPolling();
     }
 }

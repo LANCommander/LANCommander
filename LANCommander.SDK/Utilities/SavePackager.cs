@@ -148,10 +148,17 @@ public class SavePacker : IDisposable
             absoluteLocalWorkingDirectory = _installDirectory;
 
         var regex = new Regex(pathPattern);
-        
+
         var matchedFiles = Directory
             .GetFiles(absoluteLocalWorkingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
-            .Where(f => regex.IsMatch(f[absoluteLocalWorkingDirectory.Length..].TrimStart(Path.DirectorySeparatorChar)))
+            .Where(f =>
+            {
+                var relativePath = f[absoluteLocalWorkingDirectory.Length..]
+                    .TrimStart(Path.DirectorySeparatorChar)
+                    .Replace('\\', '/');
+
+                return regex.IsMatch(relativePath);
+            })
             .ToList();
 
         foreach (var file in matchedFiles)

@@ -326,16 +326,17 @@ namespace LANCommander.SDK.Services
                 if (string.IsNullOrWhiteSpace(workingDirectory))
                     workingDirectory = installDirectory;
 
-                if (Path.DirectorySeparatorChar == '\\')
-                {
-                    pattern = pattern.Replace("\\", "\\\\");
-                    pattern = pattern.Replace("/", "\\\\");
-                }
-
                 var regex = new Regex(pattern);
 
                 localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
-                    .Where(p => regex.IsMatch(p.Substring(workingDirectory.Length).TrimStart(Path.DirectorySeparatorChar)))
+                    .Where(p =>
+                    {
+                        var relativePath = p.Substring(workingDirectory.Length)
+                            .TrimStart(Path.DirectorySeparatorChar)
+                            .Replace('\\', '/');
+
+                        return regex.IsMatch(relativePath);
+                    })
                     .ToList();
             }
             else

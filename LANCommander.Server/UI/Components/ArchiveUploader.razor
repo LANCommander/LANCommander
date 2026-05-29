@@ -72,7 +72,7 @@
 
     string Filename;
 
-    string Status;
+    string Status = "";
 
     private async Task Start()
     {
@@ -191,7 +191,7 @@
     {
         try
         {
-            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path);
+            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, Archive.StorageLocation.Id);
 
             await OnUploadCompleted(objectKey.ToString());
         }

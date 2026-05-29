@@ -1,7 +1,7 @@
 ﻿@inject ArchiveService ArchiveService
 @inject ModalService ModalService
 
-@if (ArchiveId != Guid.Empty)
+@if (ArchiveId != null && ArchiveId != Guid.Empty)
 {
     <Button OnClick="BrowseForFile" Type="Type" Icon="@Icon" Disabled="@(!ArchiveExists || Disabled)" ChildContent="ChildContent" />
 }

@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.MetadataView">
+    <ScrollViewer>
+        <StackPanel Spacing="12" MaxWidth="500">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Title *" Opacity="0.7" />
+                <TextBox Name="TitleField" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Sort Title" Opacity="0.7" />
+                <TextBox Name="SortTitleField" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Version" Opacity="0.7" />
+                <TextBox Name="VersionField" Text="1.0" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Released On" Opacity="0.7" />
+                <CalendarDatePicker Name="ReleasedOnPicker" HorizontalAlignment="Left" />
+            </StackPanel>
+
+            <CheckBox Name="SingleplayerCheckbox" Content="Singleplayer" IsChecked="True" />
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Description" Opacity="0.7" />
+                <TextBox Name="DescriptionField" AcceptsReturn="True" Height="80"
+                         TextWrapping="Wrap" VerticalContentAlignment="Top" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Notes" Opacity="0.7" />
+                <TextBox Name="NotesField" AcceptsReturn="True" Height="80"
+                         TextWrapping="Wrap" VerticalContentAlignment="Top" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

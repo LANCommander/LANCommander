@@ -43,5 +43,6 @@
   <Project Path="LANCommander.Steam\LANCommander.Steam.csproj" />
   <Project Path="LANCommander.UI\LANCommander.UI.csproj" />
   <Project Path="LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj" />
+  <Project Path="LANCommander.Packager\LANCommander.Packager.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
 </Solution>

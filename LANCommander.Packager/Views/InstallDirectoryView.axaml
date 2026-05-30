@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.InstallDirectoryView">
+    <StackPanel Spacing="8">
+        <TextBlock Text="Detected install directory:" Opacity="0.7" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Name="DirectoryField" />
+            <Button Name="BrowseButton" Content="Browse..."
+                    Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Stretch" />
+        </Grid>
+    </StackPanel>
+</UserControl>

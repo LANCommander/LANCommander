@@ -165,6 +165,16 @@ jobs:
       build_platform: Windows
       build_configuration: Release
 
+  # Packager (Windows x86 only)
+  build_packager:
+    needs: [prep]
+    uses: ./.github/workflows/LANCommander.Packager.yml
+    with:
+      build_dotnet_version: '10.0.x'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_configuration: Release
+
   build_release:
     runs-on: ubuntu-latest
     needs:
@@ -179,6 +189,7 @@ jobs:
       - build_launcher_avalonia_osx_arm64
       - build_launcher_avalonia_osx_x64
       - build_launcher_avalonia_win_x64
+      - build_packager
 
     steps:
       - name: Create Temp Directory
@@ -245,6 +256,12 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      - name: Download Packager Windows x86
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
       - name: Debug - List Artifact Files
         run: |
           echo "Contents of ./artifacts:"
@@ -267,6 +284,7 @@ jobs:
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
 
       - name: Checkout Repo for Docker build
         uses: actions/checkout@v4

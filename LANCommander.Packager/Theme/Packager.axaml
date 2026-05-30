@@ -1,0 +1,85 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Button base -->
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Primary5Brush}" />
+  </Style>
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Primary7Brush}" />
+  </Style>
+
+  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="inset 0 0 0 2 #994096FF" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+
+  <!-- Primary button -->
+  <Style Selector="Button.Primary">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+  </Style>
+
+  <Style Selector="Button.Primary:disabled, Button.Success:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonDisabledTextBrush}" />
+  </Style>
+  <Style Selector="Button.Primary:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Success:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBgBrush}" />
+  </Style>
+
+  <!-- Success button -->
+  <Style Selector="Button.Success">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.Success:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessHoverBrush}" />
+  </Style>
+  <Style Selector="Button.Success:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+  </Style>
+
+  <!-- TextBox -->
+  <Style Selector="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+  <Style Selector="TextBox /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:pointerover /template/ Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:focus-within /template/ Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:disabled /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource Gray3Brush}" />
+  </Style>
+  <Style Selector="TextBox:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+  </Style>
+
+</Styles>

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PlatformTarget>x86</PlatformTarget>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
+    <Company>LANCommander</Company>
+    <Product>Packager</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="LANCommanderDark.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="LANCommander.Interposer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+  <!-- Copy both x64 and x86 native Interposer DLLs so we can inject into either arch.
+       Always use Release builds to avoid debug CRT dependencies (MSVCP140D.dll, ucrtbased.dll)
+       which are not present on target machines. -->
+  <ItemGroup>
+    <None Include="..\..\LANCommander.Interposer\x64\Release\LANCommander.Interposer.dll"
+          Condition="Exists('..\..\LANCommander.Interposer\x64\Release\LANCommander.Interposer.dll')"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="runtimes\win-x64\native\LANCommander.Interposer.dll" />
+    <None Include="..\..\LANCommander.Interposer\Release\Injector\x86\LANCommander.Interposer.dll"
+          Condition="Exists('..\..\LANCommander.Interposer\Release\Injector\x86\LANCommander.Interposer.dll')"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="runtimes\win-x86\native\LANCommander.Interposer.dll" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.OutputView">
+    <StackPanel Spacing="16">
+        <StackPanel Spacing="4">
+            <TextBlock Text="Output path" Opacity="0.7" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Name="OutputPathField" />
+                <Button Name="BrowseButton" Content="Browse..."
+                        Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Stretch" />
+            </Grid>
+        </StackPanel>
+
+        <Expander Header="Options" IsExpanded="False">
+            <StackPanel Spacing="16" Margin="0,12,0,0">
+
+                <!-- Patch GameSpy -->
+                <StackPanel Spacing="2">
+                    <CheckBox Name="PatchGameSpyCheck" Content="Patch GameSpy" />
+                    <TextBlock Text="On install, scan the install directory for any references to GameSpy and automatically patch for OpenSpy."
+                               Opacity="0.4" FontSize="11" TextWrapping="Wrap"
+                               Margin="28,0,0,0" />
+                </StackPanel>
+
+                <!-- Compression Level -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Compression Level" />
+                    <ComboBox Name="CompressionLevelCombo" SelectedIndex="0" Width="200"
+                              HorizontalAlignment="Left">
+                        <ComboBoxItem Content="Optimal" />
+                        <ComboBoxItem Content="Fastest" />
+                        <ComboBoxItem Content="No Compression" />
+                        <ComboBoxItem Content="Smallest Size" />
+                    </ComboBox>
+                    <TextBlock Text="Controls the trade-off between archive size and packaging speed. Optimal is recommended for most packages. Use Fastest for quick iteration during testing, or Smallest Size for large distributions."
+                               Opacity="0.4" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Write Summary Log -->
+                <StackPanel Spacing="2">
+                    <CheckBox Name="WriteSummaryLogCheck" Content="Write Summary Log" />
+                    <TextBlock Text="Write a .Package.log file alongside the .LCX output that documents the source installer, selected files, registry entries, metadata, and options used to create this package."
+                               Opacity="0.4" FontSize="11" TextWrapping="Wrap"
+                               Margin="28,0,0,0" />
+                </StackPanel>
+
+            </StackPanel>
+        </Expander>
+
+        <Button Name="GenerateButton" Content="Generate .LCX" Classes="Primary"
+                HorizontalAlignment="Center" Padding="32,12" FontSize="16"
+                Margin="0,8" />
+
+        <ProgressBar Name="Progress" Minimum="0" Maximum="1" Value="0" Height="8"
+                     IsVisible="False" />
+
+        <TextBlock Name="StatusLabel" TextWrapping="Wrap" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource TextSecondaryBrush}" />
+    </StackPanel>
+</UserControl>

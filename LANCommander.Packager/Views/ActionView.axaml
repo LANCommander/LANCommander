@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.ActionView">
+    <DockPanel>
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto"
+              Margin="0,16,0,0">
+            <TextBlock Text="Action Name" Opacity="0.7" Grid.Row="0" Grid.Column="0"
+                       Margin="0,0,0,4" />
+            <TextBlock Text="Arguments" Opacity="0.7" Grid.Row="0" Grid.Column="1"
+                       Margin="8,0,0,4" />
+            <TextBox Name="ActionNameField" Text="Play" Grid.Row="1" Grid.Column="0"
+                     Width="150" />
+            <TextBox Name="ArgumentsField" Grid.Row="1" Grid.Column="1"
+                     Margin="8,0,0,0" />
+        </Grid>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Select primary executable:" Opacity="0.7" />
+            <ListBox Name="ExeList"
+                     Background="Transparent"
+                     BorderThickness="1"
+                     BorderBrush="#2A2A2A"
+                     CornerRadius="4" />
+        </StackPanel>
+    </DockPanel>
+</UserControl>

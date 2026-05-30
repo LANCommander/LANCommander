@@ -29,11 +29,11 @@ public class EditPatchGameSpy : Cmdlet
     [Parameter(Mandatory = false, Position = 2, HelpMessage = "The replacement public key for server authentication. Must match the original key length. Defaults to the OpenSpy public key.")]
     public string PublicKey { get; set; } = OPENSPY_PUBLICKEY;
 
-    [Parameter(Mandatory = false, Position = 3, HelpMessage = "Glob patterns for binary files to scan and patch. Defaults to '*.dll', '*.exe', '*.ini'.")]
-    public string[] BinariesToPatch { get; set; } = { "*.dll", "*.exe", "*.ini" };
+    [Parameter(Mandatory = false, Position = 3, HelpMessage = "Glob patterns for binary files to scan and patch. Defaults to '*.dll', '*.exe'.")]
+    public string[] BinariesToPatch { get; set; } = { "*.dll", "*.exe" };
 
     [Parameter(Mandatory = false, Position = 4, HelpMessage = "Glob patterns for text files to scan and patch (e.g. Unreal Engine INI configs). Defaults to '*.ini'.")]
-    public string[] TextFilesToPatch { get; set; } = { "*.ini" };
+    public string[] TextFilesToPatch { get; set; } = { "*.ini", "*.cfg", "*.conf" };
 
     protected override void ProcessRecord()
     {

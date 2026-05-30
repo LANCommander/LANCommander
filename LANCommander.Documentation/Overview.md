@@ -25,5 +25,6 @@ This site serves as the main documentation platform for the project. As such, it
 - [Getting Started](/GettingStarted)
 - [Server](/Server/Overview)
 - [Launcher](/Launcher/Overview)
+- [Packager](/Packager/Overview)
 - [Scripting](/Scripting/Overview)
 - [SDK Documentation](/SDK/Overview)

@@ -1,7 +1,10 @@
 ﻿@using System.Text.Json
+@using LANCommander.Server.Services.Abstractions
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor _HttpContext
+@inject IVersionProvider VersionProvider
 @{
     _HttpContext.HttpContext.Response.Headers["Cache-Control"] = "no-store";
+    var v = VersionProvider.GetCurrentVersion();
 }
 
 <!DOCTYPE html>
@@ -10,9 +13,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - LANCommander</title>
-    <link href="~/css/tabler.min.css" rel="stylesheet" />
-    <link href="~/lib/selectize.js/css/selectize.bootstrap5.min.css" rel="stylesheet" />
-    <link href="~/lib/tabler-icons/iconfont/tabler-icons.min.css" rel="stylesheet" />
+    <link href="~/css/tabler.min.css?v=@v" rel="stylesheet" />
+    <link href="~/lib/selectize.js/css/selectize.bootstrap5.min.css?v=@v" rel="stylesheet" />
+    <link href="~/lib/tabler-icons/iconfont/tabler-icons.min.css?v=@v" rel="stylesheet" />
     <base href="~/"/>
 </head>
 <body>
@@ -120,12 +123,12 @@
         }
     </div>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/selectize.js/js/selectize.min.js"></script>
-    <script src="~/lib/tabler/core/dist/js/tabler.min.js"></script>
-    <script src="~/js/Modal.js"></script>
-    <script src="~/js/Select.js"></script>
-    <script src="~/_framework/blazor.server.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js?v=@v"></script>
+    <script src="~/lib/selectize.js/js/selectize.min.js?v=@v"></script>
+    <script src="~/lib/tabler/core/dist/js/tabler.min.js?v=@v"></script>
+    <script src="~/js/Modal.js?v=@v"></script>
+    <script src="~/js/Select.js?v=@v"></script>
+    <script src="~/_framework/blazor.server.js?v=@v"></script>
 
     <style>
         .alert-container {

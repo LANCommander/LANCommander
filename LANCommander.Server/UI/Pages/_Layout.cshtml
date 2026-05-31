@@ -1,8 +1,13 @@
 ﻿@using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
+@using LANCommander.Server.Services.Abstractions
 @namespace LANCommander.Server.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @inject IOptions<Settings> Settings
+@inject IVersionProvider VersionProvider
+@{
+    var v = VersionProvider.GetCurrentVersion();
+}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -11,13 +16,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <base href="~/" />
         
-        <link href="_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
-        <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css"  />
-        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
-        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
-        <link rel="stylesheet" href="_content/LANCommander.UI/ui.css" />
-        <link rel="stylesheet" href="~/css/site.css" />
-        <link rel="stylesheet" href="~/css/custom.css" />
+        <link href="_content/AntDesign/css/ant-design-blazor.dark.css?v=@v" rel="stylesheet" />
+        <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css?v=@v"  />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css?v=@v" />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css?v=@v" />
+        <link rel="stylesheet" href="_content/LANCommander.UI/ui.css?v=@v" />
+        <link rel="stylesheet" href="~/css/site.css?v=@v" />
+        <link rel="stylesheet" href="~/css/custom.css?v=@v" />
     </head>
     <body data-theme="dark">
         
@@ -26,16 +31,16 @@
             @RenderBody()
         </div>
 
-        <script src="~/lib/antv/g2plot/dist/g2plot.js"></script>
-        <script src="~/_content/AntDesign/js/ant-design-blazor.js"></script>
-        <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
-        <script src="~/_framework/blazor.server.js"></script>
+        <script src="~/lib/antv/g2plot/dist/g2plot.js?v=@v"></script>
+        <script src="~/_content/AntDesign/js/ant-design-blazor.js?v=@v"></script>
+        <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js?v=@v"></script>
+        <script src="~/_framework/blazor.server.js?v=@v"></script>
 
-        <script type="module" src="~/_content/LANCommander.UI/bundle.js"></script>
-        <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
-        <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
+        <script type="module" src="~/_content/LANCommander.UI/bundle.js?v=@v"></script>
+        <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js?v=@v"></script>
+        <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js?v=@v"></script>
 
-        <script src="~/_content/XtermBlazor/XtermBlazor.min.js"></script>
+        <script src="~/_content/XtermBlazor/XtermBlazor.min.js?v=@v"></script>
 
         <script>
             XtermBlazor.registerAddons({
@@ -44,9 +49,9 @@
             });
         </script>
 
-        <script src="~/_content/BlazorMonaco/jsInterop.js"></script>
-        <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
-        <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+        <script src="~/_content/BlazorMonaco/jsInterop.js?v=@v"></script>
+        <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js?v=@v"></script>
+        <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js?v=@v"></script>
 
         <script>
             Uploader.MaxChunkSize = @(Settings.Value.Server.Archives.MaxChunkSize * 1024 * 1024)

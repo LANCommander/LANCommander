@@ -27,6 +27,7 @@ jobs:
     outputs:
       version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
       version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
+      is_prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
       build_dotnet_version: 9.0.102
     steps:
       - name: Check out code
@@ -42,6 +43,16 @@ jobs:
           string: '${{ github.ref }}'
           pattern: 'refs/tags/v'
           replace-with: ''
+
+      - name: Check if pre-release
+        id: check_prerelease
+        run: |
+          VERSION="${{ steps.trim_tag_ref.outputs.replaced }}"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
   # Server
   build_server_linux_arm64:
@@ -273,6 +284,7 @@ jobs:
           name: v${{ needs.prep.outputs.version_tag }}
           generate_release_notes: true
           draft: true
+          prerelease: ${{ needs.prep.outputs.is_prerelease == 'true' }}
           files: |
             artifacts/LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
@@ -354,10 +366,9 @@ jobs:
           file: ./LANCommander.Server/Dockerfile
           push: true
           platforms: linux/amd64
-          # ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
+            ${{ needs.prep.outputs.is_prerelease == 'true' && format('{0}/{1}:prerelease', env.REGISTRY, env.IMAGE_NAME) || format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

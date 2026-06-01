@@ -32,11 +32,24 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
+        public IEnumerable<string> GetGrabberNames() => _grabbers.Select(g => g.Name);
+
         public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
             MediaType type, string keywords,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            await foreach (var batch in SearchStreamAsync(type, keywords, null, cancellationToken))
+                yield return batch;
+        }
+
+        public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
+            MediaType type, string keywords, string? grabberName,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
             var applicable = _grabbers.Where(g => g.SupportedMediaTypes.Contains(type)).ToList();
+
+            if (!string.IsNullOrEmpty(grabberName))
+                applicable = applicable.Where(g => g.Name == grabberName).ToList();
 
             if (applicable.Count == 0)
                 yield break;

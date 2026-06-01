@@ -6,6 +6,7 @@ namespace LANCommander.Server.Settings.Models;
     public class MediaSettings
     {
         public string SteamGridDbApiKey { get; set; } = String.Empty;
+        public bool AutoDownloadMedia { get; set; } = false;
 
         public IEnumerable<MediaTypeSettings> MediaTypes { get; set; } =
         [

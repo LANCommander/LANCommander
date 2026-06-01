@@ -25,6 +25,8 @@ public class IgdbMetadataProvider(
     }
 
     public string ProviderName => "IGDB";
+    public bool IsAvailable => !string.IsNullOrWhiteSpace(settingsProvider.CurrentValue.Server.IGDB.ClientId)
+                             && !string.IsNullOrWhiteSpace(settingsProvider.CurrentValue.Server.IGDB.ClientSecret);
     
     public async Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, int limit = 10, int offset = 0)
     {

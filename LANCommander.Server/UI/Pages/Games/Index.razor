@@ -3,6 +3,7 @@
 @using AntDesign.TableModels
 @attribute [Authorize]
 @inject GameService GameService
+@inject MetadataService MetadataService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -154,9 +155,33 @@
             return "/favicon.ico";
     }
 
-    void Add()
+    bool _hasMetadataProviders;
+
+    protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo("/Games/Add");
+        _hasMetadataProviders = MetadataService.GetProviderNames().Any();
+    }
+
+    async Task Add()
+    {
+        if (_hasMetadataProviders)
+        {
+            var modalOptions = new ModalOptions
+            {
+                Title = "Add Game",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<AddGameDialog, AddGameDialogOptions>(modalOptions, new AddGameDialogOptions());
+            modalRef.OnClose = Reload;
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/Games/Add");
+        }
     }
 
     async Task Delete(Game game)

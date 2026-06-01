@@ -14,6 +14,7 @@ public class HqMetadataProvider(
     private IReadOnlyList<ProviderInfo>? _cachedProviders;
 
     public string ProviderName => "LANCommander HQ";
+    public bool IsAvailable => settingsProvider.CurrentValue.Server.HQ.IsAuthenticated;
 
     public async Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync()
     {

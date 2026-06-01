@@ -5,6 +5,7 @@ namespace LANCommander.Server.Services.Providers.Metadata;
 public interface IMetadataProvider
 {
     public string ProviderName { get; }
+    bool IsAvailable => true;
     public Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, int limit = 10, int offset = 0);
     public Task<Game?> GetGameAsync(string gameId);
 

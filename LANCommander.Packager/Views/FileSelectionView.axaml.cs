@@ -15,6 +15,7 @@ public partial class FileSelectionView : UserControl
 
         SelectAllButton.Click += (_, _) => { _root.IsChecked = true; UpdateCount(); };
         SelectNoneButton.Click += (_, _) => { _root.IsChecked = false; UpdateCount(); };
+        RefreshButton.Click += (_, _) => PopulateFiles();
     }
 
     public void PopulateFiles()

@@ -37,10 +37,16 @@ public partial class InstallDirectoryView : UserControl
         if (monitor != null)
         {
             var detected = monitor.DetectInstallDirectory();
-            
+
             DirectoryField.Text = detected;
             _context.InstallDirectory = detected;
         }
+    }
+
+    public void PopulateFromDetectedPath(string detectedPath)
+    {
+        DirectoryField.Text = detectedPath;
+        _context.InstallDirectory = detectedPath;
     }
 
     public void ApplySelection()

@@ -4,11 +4,14 @@
              x:Class="LANCommander.Packager.Views.FileSelectionView">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+            <TextBlock Text="If you need to add, remove, or modify any files in the install directory, do so now before continuing."
+                       Opacity="0.5" FontSize="12" TextWrapping="Wrap" />
             <TextBlock Name="CountLabel" Text="0 files selected"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Name="SelectAllButton" Content="Select All" Padding="8,4" />
                 <Button Name="SelectNoneButton" Content="Select None" Padding="8,4" />
+                <Button Name="RefreshButton" Content="Refresh" Padding="8,4" />
             </StackPanel>
         </StackPanel>
 

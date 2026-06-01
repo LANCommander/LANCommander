@@ -7,10 +7,18 @@
 @inject ILogger<MediaGrabberDialog> Logger
 
 <GridRow Justify="RowJustify.SpaceBetween">
-    <GridCol Span="6">
-        <Search @bind-Value="Search" OnSearch="(x) => GetResults(Type, x)" DefaultValue="@Search" />
+    <GridCol Span="12">
+        <Flex Gap="FlexGap.Small">
+            <Search @bind-Value="Search" OnSearch="(x) => GetResults(Type, x)" DefaultValue="@Search" />
+            <Select Value="_selectedProvider"
+                    ValueChanged="OnProviderChanged"
+                    DataSource="_availableProviders"
+                    TItem="string"
+                    TItemValue="string"
+                    Style="min-width: 180px;" />
+        </Flex>
     </GridCol>
-    <GridCol Span="12"></GridCol>
+    <GridCol Span="6"></GridCol>
     <GridCol Span="6">
         <Slider TValue="double" @bind-Value="Size" DefaultValue="200" Min="50" Max="400" />
     </GridCol>
@@ -128,13 +136,27 @@
     List<MediaGrabberResult> _allResults = new();
     List<GroupedResults> _groupedResults = new();
 
+    string _selectedProvider = string.Empty;
+    string[] _availableProviders = [];
+
     protected override async Task OnFirstAfterRenderAsync()
     {
         Type = Options.Type;
         Search = Options.Search;
         MultiSelect = Options.MultiSelect;
 
+        _availableProviders = new[] { "All" }.Concat(MediaGrabberService.GetGrabberNames()).ToArray();
+        _selectedProvider = _availableProviders.First();
+
         await GetResults(Type, Search);
+    }
+
+    private async Task OnProviderChanged(string provider)
+    {
+        _selectedProvider = provider;
+
+        if (!string.IsNullOrWhiteSpace(Search))
+            await GetResults(Type, Search);
     }
 
     private async Task GetResults(MediaType type, string search)
@@ -155,7 +177,9 @@
             if (String.IsNullOrWhiteSpace(search))
                 return;
 
-            await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, token))
+            var grabberName = _selectedProvider == "All" ? null : _selectedProvider;
+
+            await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, grabberName, token))
             {
                 if (token.IsCancellationRequested)
                     break;

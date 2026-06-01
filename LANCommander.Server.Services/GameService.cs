@@ -273,11 +273,15 @@ namespace LANCommander.Server.Services
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
+            string latestArchivePath = null;
+            if (latestArchive != null)
+                latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
+
             if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
 
                     if (package == null)
                     {

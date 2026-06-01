@@ -209,6 +209,12 @@ namespace LANCommander.SDK.PowerShell
                 {
                     runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
                 }
+
+                var apiRequestFactory = ServiceProvider.GetService<ApiRequestFactory>();
+                if (apiRequestFactory != null)
+                {
+                    runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ApiRequestFactory", apiRequestFactory);
+                }
                 
                 // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
                 

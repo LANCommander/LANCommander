@@ -547,15 +547,18 @@ public partial class ScriptClient
         return result;
     }
 
-    public async Task<Package> Redistributable_RunPackageScriptAsync(Script packageScript, Redistributable redistributable)
+    public async Task<Package> Redistributable_RunPackageScriptAsync(Script packageScript, Redistributable redistributable, string latestArchivePath = null)
     {
         try
         {
-            using (var op = logger.BeginOperation("Executing game package script"))
+            using (var op = logger.BeginOperation("Executing redistributable package script"))
             {
                 var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
 
                 script.AddVariable("Redistributable", redistributable);
+
+                if (!string.IsNullOrEmpty(latestArchivePath))
+                    script.AddVariable("LatestArchivePath", latestArchivePath);
 
                 script.UseInline(packageScript.Contents);
                 

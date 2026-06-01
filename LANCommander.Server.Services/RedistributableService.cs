@@ -84,11 +84,15 @@ namespace LANCommander.Server.Services
             var latestArchive = redistributable.Archives?.OrderByDescending(r => r.CreatedOn).FirstOrDefault();
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
+            string latestArchivePath = null;
+            if (latestArchive != null)
+                latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
+
             if (redistributable.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
                 foreach (var script in redistributable.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable));
+                    var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable), latestArchivePath);
 
                     if (package == null)
                     {

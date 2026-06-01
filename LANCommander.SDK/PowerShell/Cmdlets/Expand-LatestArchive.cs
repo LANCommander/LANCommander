@@ -10,13 +10,13 @@ using SharpCompress.Readers;
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
 /// <summary>
-/// Extracts the latest archive for the current game from the LANCommander server.
+/// Extracts the latest archive for a game, redistributable, or tool from the LANCommander server.
 /// When run in a server-side packaging context, reads directly from the local archive file.
 /// When run in a client-side context, downloads the archive via the API.
 /// </summary>
-[Cmdlet(VerbsLifecycle.Install, "LatestArchive")]
+[Cmdlet("Expand", "LatestArchive")]
 [OutputType(typeof(DirectoryInfo))]
-public class InstallLatestArchiveCmdlet : AsyncCmdlet
+public class ExpandLatestArchiveCmdlet : AsyncCmdlet
 {
     private const string ApiRequestFactoryKey = "LANCommander.SDK.ApiRequestFactory";
 
@@ -27,6 +27,12 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
     [Parameter(Mandatory = false, HelpMessage = "The game ID to download. If not specified, uses the ID from the $GameManifest or $Game variable.")]
     public Guid? GameId { get; set; }
 
+    [Parameter(Mandatory = false, HelpMessage = "The redistributable ID to download. If not specified, uses the ID from the $Redistributable variable.")]
+    public Guid? RedistributableId { get; set; }
+
+    [Parameter(Mandatory = false, HelpMessage = "The tool ID to download. If not specified, uses the ID from the $Tool variable.")]
+    public Guid? ToolId { get; set; }
+
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
     {
         var destinationPath = string.IsNullOrEmpty(DestinationPath)
@@ -36,7 +42,7 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
         if (!Directory.Exists(destinationPath))
             Directory.CreateDirectory(destinationPath);
 
-        var progressRecord = new ProgressRecord(0, "Install-LatestArchive", "Resolving archive...");
+        var progressRecord = new ProgressRecord(0, "Expand-LatestArchive", "Resolving archive...");
         WriteProgress(progressRecord);
 
         // Check if we have a local archive path (server-side packaging context)
@@ -86,13 +92,13 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
 
     private async Task DownloadAndExtractAsync(string destinationPath, ProgressRecord progressRecord, CancellationToken cancellationToken)
     {
-        var gameId = ResolveGameId();
+        var (entityId, route, entityLabel) = ResolveDownloadTarget();
 
-        if (gameId == Guid.Empty)
+        if (entityId == Guid.Empty)
         {
             WriteError(new ErrorRecord(
-                new InvalidOperationException("Could not determine game ID. Ensure $GameManifest or $Game is available, or specify -GameId."),
-                "NoGameId", ErrorCategory.InvalidArgument, null));
+                new InvalidOperationException("Could not determine target ID. Ensure a context variable ($GameManifest, $Game, $Redistributable, or $Tool) is available, or specify -GameId, -RedistributableId, or -ToolId."),
+                "NoTargetId", ErrorCategory.InvalidArgument, null));
             return;
         }
 
@@ -108,7 +114,7 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
 
         try
         {
-            progressRecord.StatusDescription = $"Downloading latest archive for game {gameId}...";
+            progressRecord.StatusDescription = $"Downloading latest archive for {entityLabel} {entityId}...";
             progressRecord.PercentComplete = -1;
             WriteProgress(progressRecord);
 
@@ -116,7 +122,7 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{gameId}/Download")
+                .UseRoute(route)
                 .StreamAsync();
 
             progressRecord.StatusDescription = "Extracting archive...";
@@ -141,25 +147,42 @@ public class InstallLatestArchiveCmdlet : AsyncCmdlet
         }
         catch (Exception ex)
         {
-            WriteError(new ErrorRecord(ex, "InstallLatestArchiveError", ErrorCategory.NotSpecified, gameId));
+            WriteError(new ErrorRecord(ex, "ExpandLatestArchiveError", ErrorCategory.NotSpecified, entityId));
         }
     }
 
-    private Guid ResolveGameId()
+    private (Guid id, string route, string label) ResolveDownloadTarget()
     {
+        // Explicit parameters take priority
+        if (RedistributableId.HasValue && RedistributableId.Value != Guid.Empty)
+            return (RedistributableId.Value, $"/api/Redistributables/{RedistributableId.Value}/Download", "redistributable");
+
+        if (ToolId.HasValue && ToolId.Value != Guid.Empty)
+            return (ToolId.Value, $"/api/Tools/{ToolId.Value}/Download", "tool");
+
         if (GameId.HasValue && GameId.Value != Guid.Empty)
-            return GameId.Value;
+            return (GameId.Value, $"/api/Games/{GameId.Value}/Download", "game");
+
+        // Context variable resolution - check redistributable and tool first (more specific),
+        // then fall back to game context
+        var redistributable = SessionState.PSVariable.GetValue("Redistributable") as SDK.Models.Redistributable;
+        if (redistributable != null && redistributable.Id != Guid.Empty)
+            return (redistributable.Id, $"/api/Redistributables/{redistributable.Id}/Download", "redistributable");
+
+        var tool = SessionState.PSVariable.GetValue("Tool") as SDK.Models.Tool;
+        if (tool != null && tool.Id != Guid.Empty)
+            return (tool.Id, $"/api/Tools/{tool.Id}/Download", "tool");
 
         // Client-side scripts use $GameManifest
         var manifest = SessionState.PSVariable.GetValue("GameManifest") as SDK.Models.Manifest.Game;
         if (manifest != null && manifest.Id != Guid.Empty)
-            return manifest.Id;
+            return (manifest.Id, $"/api/Games/{manifest.Id}/Download", "game");
 
         // Server-side package scripts use $Game
         var game = SessionState.PSVariable.GetValue("Game") as SDK.Models.Game;
         if (game != null && game.Id != Guid.Empty)
-            return game.Id;
+            return (game.Id, $"/api/Games/{game.Id}/Download", "game");
 
-        return Guid.Empty;
+        return (Guid.Empty, null, null);
     }
 }

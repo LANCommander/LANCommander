@@ -291,7 +291,7 @@ public partial class ScriptClient
         return result;
     }
     
-    public async Task<Package> Tool_RunPackageScriptAsync(Script packageScript, Tool tool)
+    public async Task<Package> Tool_RunPackageScriptAsync(Script packageScript, Tool tool, string latestArchivePath = null)
     {
         try
         {
@@ -300,6 +300,9 @@ public partial class ScriptClient
                 var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
 
                 script.AddVariable("Tool", tool);
+
+                if (!string.IsNullOrEmpty(latestArchivePath))
+                    script.AddVariable("LatestArchivePath", latestArchivePath);
 
                 script.UseInline(packageScript.Contents);
                 

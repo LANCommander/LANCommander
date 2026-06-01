@@ -385,29 +385,37 @@ Write-Host $clean  # Returns "Game The Sequel"
 "Game: The Sequel?" | Get-SanitizedPath
 ```
 
-## `Install-LatestArchive`
-Downloads and extracts the latest archive for the current game.
+## `Expand-LatestArchive`
+Downloads and extracts the latest archive for a game, redistributable, or tool.
 
 ### Syntax
 ```powershell
-Install-LatestArchive
+Expand-LatestArchive
     -DestinationPath <string> (optional, defaults to current directory)
     -GameId <Guid> (optional, resolved from $GameManifest or $Game)
+    -RedistributableId <Guid> (optional, resolved from $Redistributable)
+    -ToolId <Guid> (optional, resolved from $Tool)
 ```
 
 ### Description
-The `Install-LatestArchive` cmdlet extracts the latest archive for a game. When run in a server-side packaging context (where `$LatestArchivePath` is set), it reads directly from the local archive file. When run in a client-side context, it downloads the archive from the LANCommander server via the API. The game ID is automatically resolved from the `$GameManifest` or `$Game` session variable if not explicitly provided. Returns a `DirectoryInfo` object pointing to the extraction destination.
+The `Expand-LatestArchive` cmdlet extracts the latest archive for a game, redistributable, or tool. When run in a server-side packaging context (where `$LatestArchivePath` is set), it reads directly from the local archive file. When run in a client-side context, it downloads the archive from the LANCommander server via the API. The target ID is automatically resolved from context variables (`$Redistributable`, `$Tool`, `$GameManifest`, or `$Game`) if not explicitly provided. Returns a `DirectoryInfo` object pointing to the extraction destination.
 
 ### Example
 ```powershell
-# Extract to the current directory using the game from context
-Install-LatestArchive
+# Extract to the current directory using the context variable
+Expand-LatestArchive
 
 # Extract to a specific directory
-Install-LatestArchive -DestinationPath "C:\Games\MyGame"
+Expand-LatestArchive -DestinationPath "C:\Games\MyGame"
 
 # Extract a specific game's archive
-Install-LatestArchive -GameId "a1b2c3d4-e5f6-7890-abcd-ef1234567890" -DestinationPath "C:\Staging"
+Expand-LatestArchive -GameId "a1b2c3d4-e5f6-7890-abcd-ef1234567890" -DestinationPath "C:\Staging"
+
+# Extract a redistributable's archive
+Expand-LatestArchive -RedistributableId "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+# Extract a tool's archive
+Expand-LatestArchive -ToolId "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 ```
 
 ## `New-Package`

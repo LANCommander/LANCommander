@@ -84,11 +84,15 @@ namespace LANCommander.Server.Services
             var latestArchive = tool.Archives?.OrderByDescending(r => r.CreatedOn).FirstOrDefault();
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
+            string latestArchivePath = null;
+            if (latestArchive != null)
+                latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
+
             if (tool.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
                 foreach (var script in tool.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
+                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool), latestArchivePath);
 
                     if (package == null)
                     {

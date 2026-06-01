@@ -17,6 +17,7 @@ public partial class MonitoringView : UserControl
     private volatile int _lastFileCount;
     private volatile int _lastRegistryCount;
     private volatile bool _installerExited;
+    private string _detectedInstallDirectory = string.Empty;
 
     public event Action? MonitoringCompleted;
 
@@ -132,6 +133,10 @@ public partial class MonitoringView : UserControl
             _installerExited = false;
             _updateTimer?.Stop();
 
+            // Detect install directory before disposing the monitor service
+            if (_monitorService != null)
+                _detectedInstallDirectory = _monitorService.DetectInstallDirectory();
+
             // Dispose the monitor service to stop all background Interposer activity
             _context.FileChanges = _monitorService?.FileChanges.ToList() ?? [];
             _context.RegistryChanges = _monitorService?.RegistryChanges.ToList() ?? [];
@@ -154,4 +159,5 @@ public partial class MonitoringView : UserControl
     }
 
     public InstallerMonitorService? GetMonitorService() => _monitorService;
+    public string GetDetectedInstallDirectory() => _detectedInstallDirectory;
 }

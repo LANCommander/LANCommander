@@ -177,7 +177,11 @@ public partial class MainWindow : Window
         switch (step)
         {
             case 1:
-                _installDirView.PopulateFromMonitor(_monitoringView.GetMonitorService());
+                var monitor = _monitoringView.GetMonitorService();
+                if (monitor != null)
+                    _installDirView.PopulateFromMonitor(monitor);
+                else
+                    _installDirView.PopulateFromDetectedPath(_monitoringView.GetDetectedInstallDirectory());
                 break;
             case 2:
                 _installDirView.ApplySelection();

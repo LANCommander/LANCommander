@@ -293,6 +293,7 @@ public class ApiRequestBuilder(
             .UseVersioning()
             .UseAuthenticationToken()
             .UseCancellationToken(_cancellationToken)
+            .AddBody(new UploadInitRequest())
             .PostAsync<UploadInitResponse>();
 
         if (initResponse == null || initResponse.Key == Guid.Empty)

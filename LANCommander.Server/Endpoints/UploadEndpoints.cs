@@ -17,13 +17,15 @@ public static class UploadEndpoints
     }
 
     internal static async Task<IResult> InitAsync(
-        SDK.Models.UploadInitRequest request,
+        SDK.Models.UploadInitRequest? request,
         [FromServices] StorageLocationService storageLocationService,
         [FromServices] ArchiveService archiveService,
         [FromServices] IFusionCache cache)
     {
+        var storageLocationId = request?.StorageLocationId;
+
         var storageLocation = await storageLocationService.GetOrDefaultAsync(
-            request.StorageLocationId == Guid.Empty ? null : request.StorageLocationId,
+            storageLocationId == null || storageLocationId == Guid.Empty ? null : storageLocationId,
             SDK.Enums.StorageLocationType.Archive);
 
         if (!Directory.Exists(storageLocation.Path))

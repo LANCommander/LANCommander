@@ -2,17 +2,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="LANCommander.Packager.Views.OutputView">
     <DockPanel>
-        <!-- Generate button and progress pinned to bottom -->
+        <!-- Generate button, upload button, and progress pinned to bottom -->
         <StackPanel DockPanel.Dock="Bottom" Spacing="8">
-            <Button Name="GenerateButton" Content="Generate .LCX" Classes="Primary"
-                    HorizontalAlignment="Center" Padding="32,12" FontSize="16"
-                    Margin="0,8" />
-
             <ProgressBar Name="Progress" Minimum="0" Maximum="1" Value="0" Height="8"
                          IsVisible="False" />
 
             <TextBlock Name="StatusLabel" TextWrapping="Wrap" HorizontalAlignment="Center"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12"
+                        Margin="0,8">
+                <Button Name="GenerateButton" Content="Generate .LCX" Classes="Primary"
+                        Padding="32,12" FontSize="16" />
+                <Button Name="UploadButton" Content="Upload to Server" Classes="Success"
+                        Padding="32,12" FontSize="16" IsVisible="False" />
+            </StackPanel>
         </StackPanel>
 
         <!-- Scrollable content area -->

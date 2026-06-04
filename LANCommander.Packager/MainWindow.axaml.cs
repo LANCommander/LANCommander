@@ -1,22 +1,30 @@
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using LANCommander.Packager.Models;
 using LANCommander.Packager.Views;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Clients;
+using LANCommander.SDK.Factories;
+using LANCommander.SDK.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Packager;
 
 public partial class MainWindow : Window
 {
     private readonly PackageContext _context;
+    private readonly IServiceProvider _services;
     private readonly UserControl[] _steps;
     private readonly string[] _stepTitles;
     private readonly string[] _stepHelps;
     private readonly ObservableCollection<WizardStepItem> _stepItems;
     private int _currentStep;
     private bool _monitoringComplete;
+    private bool _isAuthenticated;
 
     private readonly MonitoringView _monitoringView;
     private readonly InstallDirectoryView _installDirView;
@@ -26,20 +34,35 @@ public partial class MainWindow : Window
     private readonly ActionView _actionView;
     private readonly OutputView _outputView;
 
-    public MainWindow() : this(new PackageContext()) { }
+    private readonly AuthenticationClient _authClient;
+    private readonly IConnectionClient _connectionClient;
+    private readonly ISettingsProvider _settingsProvider;
+    private readonly ITokenProvider _tokenProvider;
+    private readonly MetadataClient _metadataClient;
+    private readonly ApiRequestFactory _apiRequestFactory;
 
-    public MainWindow(PackageContext context)
+    public MainWindow() : this(new PackageContext(), null!) { }
+
+    public MainWindow(PackageContext context, IServiceProvider services)
     {
         _context = context;
+        _services = services;
         InitializeComponent();
+
+        _authClient = _services.GetRequiredService<AuthenticationClient>();
+        _connectionClient = _services.GetRequiredService<IConnectionClient>();
+        _settingsProvider = _services.GetRequiredService<ISettingsProvider>();
+        _tokenProvider = _services.GetRequiredService<ITokenProvider>();
+        _metadataClient = _services.GetRequiredService<MetadataClient>();
+        _apiRequestFactory = _services.GetRequiredService<ApiRequestFactory>();
 
         _monitoringView = new MonitoringView(context);
         _installDirView = new InstallDirectoryView(context);
         _fileSelectionView = new FileSelectionView(context);
         _registrySelectionView = new RegistrySelectionView(context);
-        _metadataView = new MetadataView(context);
+        _metadataView = new MetadataView(context, _metadataClient);
         _actionView = new ActionView(context);
-        _outputView = new OutputView(context);
+        _outputView = new OutputView(context, _apiRequestFactory, _settingsProvider);
 
         _monitoringView.MonitoringCompleted += () =>
         {
@@ -80,6 +103,7 @@ public partial class MainWindow : Window
         BackButton.Click += OnBackClick;
         NextButton.Click += OnNextClick;
         CancelButton.Click += (_, _) => Close();
+        ConnectButton.Click += OnConnectClick;
 
         GoToStep(0);
     }
@@ -87,7 +111,71 @@ public partial class MainWindow : Window
     protected override async void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        await CheckExistingAuthAsync();
         await StartFirstStep();
+    }
+
+    private async Task CheckExistingAuthAsync()
+    {
+        try
+        {
+            var token = _tokenProvider.GetToken();
+
+            if (token == null || string.IsNullOrEmpty(token.AccessToken))
+                return;
+
+            var serverAddress = _settingsProvider.CurrentValue.Authentication.ServerAddress;
+
+            if (serverAddress != null)
+                await _connectionClient.UpdateServerAddressAsync(serverAddress);
+
+            var valid = await _authClient.ValidateTokenAsync();
+
+            if (valid)
+                SetAuthenticated(true);
+        }
+        catch
+        {
+            // Token expired or server unreachable - stay disconnected
+        }
+    }
+
+    private void SetAuthenticated(bool authenticated)
+    {
+        _isAuthenticated = authenticated;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (authenticated)
+            {
+                var address = _settingsProvider.CurrentValue.Authentication.ServerAddress;
+                AuthStatusLabel.Text = $"Connected to {address}";
+                AuthStatusLabel.Opacity = 0.8;
+                StatusDot.Fill = new SolidColorBrush(Color.Parse("#49AA19"));
+                ConnectButton.Content = "Server Settings";
+            }
+            else
+            {
+                AuthStatusLabel.Text = "Not connected";
+                AuthStatusLabel.Opacity = 0.5;
+                StatusDot.Fill = new SolidColorBrush(Color.Parse("#555555"));
+                ConnectButton.Content = "Connect to Server";
+            }
+
+            _metadataView.SetAuthenticated(authenticated);
+            _outputView.SetAuthenticated(authenticated);
+        });
+    }
+
+    private async void OnConnectClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new ConnectDialog(_authClient, _connectionClient, _settingsProvider);
+        var result = await dialog.ShowDialog<bool?>(this);
+
+        if (result == true && dialog.IsAuthenticated)
+            SetAuthenticated(true);
+        else if (!dialog.IsAuthenticated)
+            SetAuthenticated(false);
     }
 
     private async Task StartFirstStep()
@@ -166,7 +254,7 @@ public partial class MainWindow : Window
         }
 
         BackButton.IsVisible = step > 0;
-        NextButton.Content = step == _steps.Length - 1 ? "Finish" : "Next";
+        NextButton.IsVisible = step != _steps.Length - 1;
         NextButton.IsEnabled = step != 0 || _monitoringComplete;
 
         EnterStep(step);

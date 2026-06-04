@@ -9,9 +9,24 @@
         Background="{DynamicResource BackgroundBrush}"
         Icon="avares://LANCommander.Packager/LANCommanderDark.ico">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Server connection bar -->
+        <Border Grid.Row="0" Background="#1A1A1A" BorderBrush="#2A2A2A"
+                BorderThickness="0,0,0,1" Padding="12,6">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <Ellipse Name="StatusDot" Width="8" Height="8" Fill="#555555" VerticalAlignment="Center" />
+                    <TextBlock Name="AuthStatusLabel" Text="Not connected"
+                               VerticalAlignment="Center" Opacity="0.5"
+                               Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" />
+                </StackPanel>
+                <Button Name="ConnectButton" Content="Connect to Server"
+                        HorizontalAlignment="Right" FontSize="12" Padding="12,4" />
+            </Grid>
+        </Border>
+
         <!-- Main area -->
-        <Grid ColumnDefinitions="220,*">
+        <Grid Grid.Row="1" ColumnDefinitions="220,*">
             <!-- Step sidebar -->
             <Border Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="0,0,1,0">
                 <ItemsControl Name="StepList" Margin="24,0" VerticalAlignment="Center">
@@ -72,7 +87,7 @@
         </Grid>
 
         <!-- Bottom navigation -->
-        <Border Grid.Row="1" Background="#1A1A1A" BorderBrush="#2A2A2A"
+        <Border Grid.Row="2" Background="#1A1A1A" BorderBrush="#2A2A2A"
                 BorderThickness="0,1,0,0" Padding="20,12">
             <Grid>
                 <Button Name="CancelButton" Content="Cancel" HorizontalAlignment="Left" />

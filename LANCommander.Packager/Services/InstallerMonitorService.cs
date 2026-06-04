@@ -258,25 +258,41 @@ public class InstallerMonitorService : IDisposable
         if (filePaths.Count == 0)
             return string.Empty;
 
-        var directoryGroups = filePaths
-            .GroupBy(p => p, StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(g => g.Count())
-            .ToList();
+        // Filter to non-system, non-ignored paths first
+        var nonSystemPaths = filePaths.Where(p => !IsIgnoredPath(p) && !IsSystemPath(p)).ToList();
 
-        foreach (var group in directoryGroups)
+        if (nonSystemPaths.Count > 0)
         {
-            var dir = group.Key;
-            
-            if (!IsIgnoredPath(dir) && !IsSystemPath(dir))
-                return dir;
+            // Find the common ancestor of all game file paths. This handles
+            // installers that write many files into deep subdirectories
+            // (e.g. Sounds/, _CD/SETUP/) — picking the deepest single
+            // directory with the most files would miss the actual root.
+            var ancestor = FindCommonAncestor(nonSystemPaths);
+
+            // If the ancestor is meaningful (not just a drive root like "G:\"),
+            // use it. Otherwise fall back to the most-frequent directory.
+            if (!string.IsNullOrEmpty(ancestor) && !IsDriveRoot(ancestor))
+                return ancestor;
+
+            // Fall back: pick the most frequent non-system directory
+            var directoryGroups = nonSystemPaths
+                .GroupBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count())
+                .ToList();
+
+            if (directoryGroups.Count > 0)
+                return directoryGroups[0].Key;
         }
 
-        var nonSystemPaths = filePaths.Where(p => !IsIgnoredPath(p) && !IsSystemPath(p)).ToList();
-        
-        if (nonSystemPaths.Count > 0)
-            return FindCommonAncestor(nonSystemPaths);
-
         return filePaths.First();
+    }
+
+    private static bool IsDriveRoot(string path)
+    {
+        var root = Path.GetPathRoot(path);
+        return string.Equals(path.TrimEnd(Path.DirectorySeparatorChar),
+            root?.TrimEnd(Path.DirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindCommonAncestor(List<string> paths)

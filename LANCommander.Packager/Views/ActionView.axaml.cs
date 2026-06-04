@@ -35,6 +35,9 @@ public partial class ActionView : UserControl
             var bestGuess = FindBestExecutable();
             ExeList.SelectedIndex = bestGuess;
         }
+
+        var title = _context.Manifest.Title;
+        ActionNameField.Text = string.IsNullOrWhiteSpace(title) ? "Play" : $"Play {title}";
     }
 
     public void ApplyAction()

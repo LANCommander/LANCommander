@@ -5,21 +5,36 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using LANCommander.Packager.Models;
 using LANCommander.Packager.Services;
+using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Factories;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Packager.Views;
 
 public partial class OutputView : UserControl
 {
     private readonly PackageContext _context;
+    private readonly ApiRequestFactory? _apiRequestFactory;
+    private readonly ISettingsProvider? _settingsProvider;
+    private bool _packageGenerated;
 
-    public OutputView(PackageContext context)
+    public OutputView(PackageContext context) : this(context, null, null) { }
+
+    public OutputView(PackageContext context, ApiRequestFactory? apiRequestFactory, ISettingsProvider? settingsProvider)
     {
         _context = context;
+        _apiRequestFactory = apiRequestFactory;
+        _settingsProvider = settingsProvider;
         InitializeComponent();
 
         GenerateButton.Click += async (s, e) =>
         {
             await GeneratePackageAsync();
+        };
+
+        UploadButton.Click += async (s, e) =>
+        {
+            await UploadPackageAsync();
         };
 
         BrowseButton.Click += async (s, e) =>
@@ -38,6 +53,11 @@ public partial class OutputView : UserControl
             if (file != null)
                 OutputPathField.Text = file.Path.LocalPath;
         };
+    }
+
+    public void SetAuthenticated(bool authenticated)
+    {
+        UploadButton.IsVisible = authenticated && _apiRequestFactory != null;
     }
 
     public void SetDefaultOutputPath()
@@ -75,8 +95,10 @@ public partial class OutputView : UserControl
         ApplyOptions();
 
         GenerateButton.IsEnabled = false;
+        UploadButton.IsEnabled = false;
         Progress.IsVisible = true;
         Progress.Value = 0;
+        _packageGenerated = false;
 
         var progress = new Progress<string>(message =>
         {
@@ -106,10 +128,13 @@ public partial class OutputView : UserControl
             if (_context.WriteSummaryLog)
                 WriteSummaryLog(outputPath, sizeMb);
 
+            _packageGenerated = true;
+
             Dispatcher.UIThread.Post(() =>
             {
                 StatusLabel.Text = $"Package created successfully!\n{outputPath}\nSize: {sizeMb:F2} MB";
                 GenerateButton.IsEnabled = true;
+                UploadButton.IsEnabled = true;
                 Progress.IsVisible = false;
             });
         }
@@ -119,7 +144,95 @@ public partial class OutputView : UserControl
             {
                 StatusLabel.Text = $"Error: {ex.Message}";
                 GenerateButton.IsEnabled = true;
+                UploadButton.IsEnabled = true;
                 Progress.IsVisible = false;
+            });
+        }
+    }
+
+    private async Task UploadPackageAsync()
+    {
+        if (_apiRequestFactory == null || _settingsProvider == null)
+            return;
+
+        var outputPath = _context.OutputPath;
+
+        if (!_packageGenerated || string.IsNullOrWhiteSpace(outputPath) || !File.Exists(outputPath))
+        {
+            await GeneratePackageAsync();
+
+            if (!_packageGenerated)
+                return;
+
+            outputPath = _context.OutputPath;
+        }
+
+        UploadButton.IsEnabled = false;
+        GenerateButton.IsEnabled = false;
+        Progress.IsVisible = true;
+        Progress.Value = 0;
+
+        try
+        {
+            StatusLabel.Text = "Uploading package to server...";
+            Progress.IsIndeterminate = true;
+
+            var chunkSize = _settingsProvider.CurrentValue.Archives.UploadChunkSize;
+
+            var objectKey = await Task.Run(async () =>
+            {
+                using var fs = new FileStream(outputPath, FileMode.Open, FileAccess.Read);
+
+                return await _apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UploadInChunksAsync(chunkSize, fs);
+            });
+
+            if (objectKey == Guid.Empty)
+                throw new Exception("Upload failed. Check that the server is reachable and you have permission to import games.");
+
+            Dispatcher.UIThread.Post(() => StatusLabel.Text = "Importing package on server...");
+
+            await Task.Run(async () =>
+            {
+                await _apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Games/Import/{objectKey}")
+                    .PostAsync();
+            });
+
+            try
+            {
+                if (File.Exists(outputPath))
+                    File.Delete(outputPath);
+            }
+            catch { }
+
+            _packageGenerated = false;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                StatusLabel.Text = "Package uploaded and imported successfully!";
+                Progress.IsIndeterminate = false;
+                Progress.Value = 1;
+                Progress.IsVisible = false;
+                UploadButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                StatusLabel.Text = $"Upload failed: {ex.Message}";
+                Progress.IsIndeterminate = false;
+                Progress.IsVisible = false;
+                UploadButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
             });
         }
     }

@@ -3,6 +3,9 @@
              x:Class="LANCommander.Packager.Views.MetadataView">
     <ScrollViewer>
         <StackPanel Spacing="12" MaxWidth="500">
+            <Button Name="LookupButton" Content="Lookup Metadata..." IsEnabled="False"
+                    HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,4" />
+
             <StackPanel Spacing="4">
                 <TextBlock Text="Title *" Opacity="0.7" />
                 <TextBox Name="TitleField" />

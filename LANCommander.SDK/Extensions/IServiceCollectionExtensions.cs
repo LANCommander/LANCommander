@@ -53,6 +53,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<ServerClient>();
         services.AddSingleton<TagClient>();
         services.AddSingleton<ToolClient>();
+        services.AddSingleton<MetadataClient>();
 
         services.AddSingleton<MigrationHistoryService>();
         services.AddSingleton<MigrationService>();

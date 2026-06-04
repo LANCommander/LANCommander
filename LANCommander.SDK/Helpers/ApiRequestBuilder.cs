@@ -289,7 +289,7 @@ public class ApiRequestBuilder(
     public async Task<Guid> UploadInChunksAsync(long chunkSize, Stream data)
     {
         var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
-            .UseRoute("/Upload/Init")
+            .UseRoute("/api/Upload/Init")
             .UseVersioning()
             .UseAuthenticationToken()
             .UseCancellationToken(_cancellationToken)
@@ -318,7 +318,7 @@ public class ApiRequestBuilder(
             content.Add(new ByteArrayContent(buffer), "File", "chunk.bin");
 
             var chunkBuilder = new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider);
-            chunkBuilder.UseRoute("/Upload/Chunk");
+            chunkBuilder.UseRoute("/api/Upload/Chunk");
             chunkBuilder.UseVersioning();
             chunkBuilder.UseAuthenticationToken();
             chunkBuilder.UseCancellationToken(_cancellationToken);

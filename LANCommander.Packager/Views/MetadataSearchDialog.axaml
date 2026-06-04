@@ -29,14 +29,20 @@
                          SelectionMode="Single">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="*,Auto" Margin="4,6">
+                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="4,6">
                                 <TextBlock Text="{Binding Title}" FontSize="14"
                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1"
-                                           Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                           Text="{Binding Platforms}"
+                                           Opacity="0.4" FontSize="12"
+                                           VerticalAlignment="Center" Margin="12,0"
+                                           IsVisible="{Binding HasPlatforms}" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding ReleasedOn}"
                                            Opacity="0.5" FontSize="12"
-                                           VerticalAlignment="Center" />
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding HasReleasedOn}" />
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

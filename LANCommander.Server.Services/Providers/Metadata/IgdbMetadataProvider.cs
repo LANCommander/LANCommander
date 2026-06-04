@@ -37,6 +37,7 @@ public class IgdbMetadataProvider(
         fields.Add("involved_companies.developer");
         fields.Add("involved_companies.publisher");
         fields.Add("involved_companies.company.name");
+        fields.Add("platforms.*");
 
         var sb = new StringBuilder();
 
@@ -112,6 +113,13 @@ public class IgdbMetadataProvider(
             {
                 Name = igdbGame.GameEngines.Values.FirstOrDefault()?.Name ?? string.Empty
             };
+        }
+
+        if (igdbGame.Platforms?.Values?.Any() ?? false)
+        {
+            game.Platforms = igdbGame.Platforms.Values
+                .Select(p => new Platform { Name = p.Name })
+                .ToList();
         }
 
         if (igdbGame.Genres?.Values?.Any() ?? false)

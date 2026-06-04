@@ -38,8 +38,13 @@
 
             <Selection Key="@context.Id" Type="SelectionType.Radio"/>
             <PropertyColumn Property="g => g.Data.Title" Title="Title"/>
-            <PropertyColumn Property="g => g.Data.ReleasedOn" Format="MM/dd/yyyy" Title="Released"/>
-            <PropertyColumn Property="g => g.Data.Developers">
+            <PropertyColumn Property="g => g.Data.ReleasedOn" Title="Released">
+                @(context.Data.ReleasedOn != default ? context.Data.ReleasedOn.ToString("MM/dd/yyyy") : "—")
+            </PropertyColumn>
+            <PropertyColumn Property="g => g.Data.Platforms" Title="Platforms">
+                @string.Join(", ", context.Data.Platforms?.Select(p => p.Name) ?? [])
+            </PropertyColumn>
+            <PropertyColumn Property="g => g.Data.Developers" Title="Developers">
                 @string.Join(", ", context.Data.Developers?.Select(d => d.Name) ?? [])
             </PropertyColumn>
         </Table>

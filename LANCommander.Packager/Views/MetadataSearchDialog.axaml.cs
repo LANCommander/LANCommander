@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -12,7 +13,7 @@ namespace LANCommander.Packager.Views;
 public partial class MetadataSearchDialog : Window
 {
     private readonly MetadataClient _metadataClient;
-    private readonly ObservableCollection<Game> _results = new();
+    private readonly ObservableCollection<SearchResultItem> _results = new();
     private readonly List<MetadataSearchResult> _rawResults = new();
     private string? _selectedProvider;
     private int _offset;
@@ -128,7 +129,7 @@ public partial class MetadataSearchDialog : Window
                 foreach (var result in results.Results)
                 {
                     _rawResults.Add(result);
-                    _results.Add(result.Data);
+                    _results.Add(new SearchResultItem(result.Data));
                 }
 
                 _hasMore = results.More;
@@ -177,7 +178,7 @@ public partial class MetadataSearchDialog : Window
                 foreach (var result in results.Results)
                 {
                     _rawResults.Add(result);
-                    _results.Add(result.Data);
+                    _results.Add(new SearchResultItem(result.Data));
                 }
 
                 _hasMore = results.More;
@@ -220,5 +221,30 @@ public partial class MetadataSearchDialog : Window
             SelectButton.IsEnabled = true;
             SelectButton.Content = "Select";
         }
+    }
+}
+
+internal class SearchResultItem
+{
+    public string Title { get; }
+    public string? ReleasedOn { get; }
+    public bool HasReleasedOn { get; }
+    public string? Platforms { get; }
+    public bool HasPlatforms { get; }
+
+    public SearchResultItem(Game game)
+    {
+        Title = game.Title ?? string.Empty;
+
+        HasReleasedOn = game.ReleasedOn != default;
+        ReleasedOn = HasReleasedOn ? game.ReleasedOn.ToString("yyyy-MM-dd") : null;
+
+        var platformNames = game.Platforms?
+            .Select(p => p.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .ToList();
+
+        HasPlatforms = platformNames != null && platformNames.Count > 0;
+        Platforms = HasPlatforms ? string.Join(", ", platformNames!) : null;
     }
 }

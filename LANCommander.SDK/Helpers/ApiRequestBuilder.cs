@@ -288,52 +288,47 @@ public class ApiRequestBuilder(
 
     public async Task<Guid> UploadInChunksAsync(long chunkSize, Stream data)
     {
-        try
+        var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
+            .UseRoute("/Upload/Init")
+            .UseVersioning()
+            .UseAuthenticationToken()
+            .UseCancellationToken(_cancellationToken)
+            .PostAsync<UploadInitResponse>();
+
+        if (initResponse == null || initResponse.Key == Guid.Empty)
+            throw new Exception("Failed to initialize upload.");
+
+        var buffer = new byte[chunkSize];
+        var total = data.Length;
+
+        while (data.Position < total)
         {
-            var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
-                .UseRoute("/Upload/Init")
-                .UseVersioning()
-                .UseAuthenticationToken()
-                .UseCancellationToken(_cancellationToken)
-                .PostAsync<UploadInitResponse>();
+            var start = data.Position;
 
-            var buffer = new byte[chunkSize];
+            if (data.Position + chunkSize > total)
+                buffer = new byte[total - data.Position];
 
-            while (data.Position < data.Length)
-            {
-                var start = data.Position;
+            await data.ReadExactlyAsync(buffer, 0, buffer.Length, _cancellationToken);
 
-                if (data.Position + chunkSize > data.Length)
-                {
-                    var remainingBytes = data.Length - data.Position;
+            var content = new MultipartFormDataContent();
+            content.Add(new StringContent(start.ToString()), "Start");
+            content.Add(new StringContent(data.Position.ToString()), "End");
+            content.Add(new StringContent(total.ToString()), "Total");
+            content.Add(new StringContent(initResponse.Key.ToString()), "Key");
+            content.Add(new ByteArrayContent(buffer), "File", "chunk.bin");
 
-                    buffer = new byte[remainingBytes];
-                }
+            var chunkBuilder = new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider);
+            chunkBuilder.UseRoute("/Upload/Chunk");
+            chunkBuilder.UseVersioning();
+            chunkBuilder.UseAuthenticationToken();
+            chunkBuilder.UseCancellationToken(_cancellationToken);
+            chunkBuilder._request.Content = content;
+            chunkBuilder._request.Method = HttpMethod.Post;
 
-                await data.ReadExactlyAsync(buffer, 0, buffer.Length, _cancellationToken);
-
-                var chunkRequest = new UploadChunkRequest
-                {
-                    Start = start,
-                    End = data.Position,
-                    File = buffer,
-                    Key = initResponse.Key,
-                };
-
-                await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
-                    .AddBody(chunkRequest)
-                    .UseRoute("/Upload/Chunk")
-                    .UseVersioning()
-                    .UseAuthenticationToken()
-                    .UseCancellationToken(_cancellationToken)
-                    .PostAsync();
-            }
-
-            return initResponse.Key;
+            var response = await httpClient.SendAsync(chunkBuilder._request, _cancellationToken);
+            response.EnsureSuccessStatusCode();
         }
-        catch (Exception ex)
-        {
-            return default;
-        }
+
+        return initResponse.Key;
     } 
 }

@@ -22,7 +22,9 @@ public static class UploadEndpoints
         [FromServices] ArchiveService archiveService,
         [FromServices] IFusionCache cache)
     {
-        var storageLocation = await storageLocationService.GetAsync(request.StorageLocationId);
+        var storageLocation = await storageLocationService.GetOrDefaultAsync(
+            request.StorageLocationId == Guid.Empty ? null : request.StorageLocationId,
+            SDK.Enums.StorageLocationType.Archive);
 
         if (!Directory.Exists(storageLocation.Path))
             Directory.CreateDirectory(storageLocation.Path);
@@ -50,7 +52,7 @@ public static class UploadEndpoints
         else
             File.Delete(archivePath);
 
-        return TypedResults.Ok(archive.ObjectKey);
+        return TypedResults.Ok(new { Key = Guid.Parse(archive.ObjectKey) });
     }
 
     internal static async Task<IResult> ChunkAsync(

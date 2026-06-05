@@ -201,8 +201,8 @@ public partial class OutputView : UserControl
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UseRoute($"/api/Games/Import/{objectKey}")
-                    .PostAsync();
+                    .UseRoute($"/api/Games/{objectKey}/Import")
+                    .GetAsync<object>();
             });
 
             try

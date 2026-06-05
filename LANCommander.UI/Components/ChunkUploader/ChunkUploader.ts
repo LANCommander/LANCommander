@@ -41,9 +41,9 @@ export class ChunkUploader {
             request.storageLocationId = storageLocationId;
             request.key = objectKey;
 
-            const response = await axios.post<string>(this.InitRoute, request);
+            const response = await axios.post<{ key: string }>(this.InitRoute, request);
 
-            this.Key = response.data;
+            this.Key = response.data.key;
         }
         else
             this.Key = objectKey;

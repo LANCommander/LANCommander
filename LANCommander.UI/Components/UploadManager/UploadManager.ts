@@ -47,8 +47,8 @@ export class UploadManager {
             request.storageLocationId = storageLocationId;
             request.key = "";
 
-            const response = await axios.post<string>(this.InitRoute, request);
-            key = response.data;
+            const response = await axios.post<{ key: string }>(this.InitRoute, request);
+            key = response.data.key;
         }
 
         const totalChunks = Math.ceil(file.size / this.MaxChunkSize);

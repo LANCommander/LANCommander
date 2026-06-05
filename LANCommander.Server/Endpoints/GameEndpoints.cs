@@ -403,11 +403,11 @@ public static class GameEndpoints
         [FromServices] ArchiveService archiveService,
         [FromServices] ImportContext importContext,
         [FromServices] ILogger<Game> logger,
-        Guid objectKey)
+        Guid id)
     {
         try
         {
-            var path = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var path = await archiveService.GetArchiveFileLocationAsync(id.ToString());
 
             var result = await importContext.InitializeImportAsync(path);
 
@@ -415,7 +415,7 @@ public static class GameEndpoints
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", objectKey);
+            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", id);
             
             return TypedResults.BadRequest(ex.Message);
         }

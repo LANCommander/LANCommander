@@ -58,32 +58,33 @@ public static class UploadEndpoints
     }
 
     internal static async Task<IResult> ChunkAsync(
-        [FromForm] ChunkUpload chunk,
-        HttpRequest request,
+        [FromForm] long Start,
+        [FromForm] long End,
+        [FromForm] long Total,
+        [FromForm] Guid Key,
+        IFormFile File,
         [FromServices] IFusionCache cache)
     {
-        var filePath = await cache.GetOrDefaultAsync($"ChunkArchivePath/{chunk.Key}", string.Empty);
+        var filePath = await cache.GetOrDefaultAsync($"ChunkArchivePath/{Key}", string.Empty);
 
-        if (!File.Exists(filePath))
+        if (!System.IO.File.Exists(filePath))
             return TypedResults.BadRequest("Destination file not initialized.");
-
-        request.EnableBuffering();
 
         using (var ms = new MemoryStream())
         {
-            await chunk.File.CopyToAsync(ms);
+            await File.CopyToAsync(ms);
 
             var data = ms.ToArray();
 
             using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
-                fs.Position = chunk.Start;
+                fs.Position = Start;
                 fs.Write(data, 0, data.Length);
             }
         }
 
-        if (chunk.End == chunk.Total)
-            await cache.ExpireAsync($"ChunkArchivePath/{chunk.Key}");
+        if (End == Total)
+            await cache.ExpireAsync($"ChunkArchivePath/{Key}");
 
         return TypedResults.Ok();
     }

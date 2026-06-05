@@ -22,6 +22,8 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<SettingsProvider<TSettings>>();
         services.AddSingleton<ISettingsProvider>(sp =>
             sp.GetRequiredService<SettingsProvider<TSettings>>());
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService>(sp =>
+            sp.GetRequiredService<SettingsProvider<TSettings>>());
         
         services.TryAddSingleton<ITokenProvider, TokenProvider>();
         services.TryAddSingleton<INetworkInformationProvider, NetworkInformationProvider>();

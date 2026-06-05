@@ -138,13 +138,21 @@
     {
         try
         {
-            if (!SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            var hqSettings = SettingsProvider.CurrentValue.Server.HQ;
+
+            if (!hqSettings.IsAuthenticated)
             {
                 _connected = false;
                 return;
             }
 
-            var profile = await HqClient.Auth.GetCurrentUserAsync();
+            var client = new HQClient(new HQClientOptions
+            {
+                BaseAddress = new Uri(hqSettings.BaseUrl),
+                Token = hqSettings.AccessToken,
+            });
+
+            var profile = await client.Auth.GetCurrentUserAsync();
 
             if (profile is not null)
             {

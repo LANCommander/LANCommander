@@ -25,7 +25,7 @@ public static class HqEndpoints
         settingsProvider.Update(s =>
         {
             s.Server.HQ.AccessToken = token;
-            s.Server.HQ.TokenExpiresAt = DateTime.UtcNow.AddHours(24);
+            s.Server.HQ.TokenExpiresAt = null;
         });
 
         var html = """

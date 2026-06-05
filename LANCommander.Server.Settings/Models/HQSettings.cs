@@ -7,6 +7,5 @@ public class HQSettings
     public DateTime? TokenExpiresAt { get; set; }
 
     public bool IsAuthenticated =>
-        !string.IsNullOrWhiteSpace(AccessToken) &&
-        (!TokenExpiresAt.HasValue || TokenExpiresAt.Value >= DateTime.UtcNow);
+        !string.IsNullOrWhiteSpace(AccessToken);
 }

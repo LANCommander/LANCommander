@@ -3,12 +3,11 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/LANCommander.Launcher/">
-    <Project Path="LANCommander.Launcher.Avalonia/LANCommander.Launcher.Avalonia.csproj" />
+    <Project Path="LANCommander.Launcher/LANCommander.Launcher.csproj" />
     <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
     <Project Path="LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
     <Project Path="LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" Type="C#" />
-    <Project Path="LANCommander.Launcher\LANCommander.Launcher.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Server/">
     <Project Path="LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" Type="C#" />
@@ -23,8 +22,8 @@
     <Project Path="LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
   </Folder>
   <Folder Name="/LANCommander.Tests/">
-    <Project Path="LANCommander.Launcher.Avalonia.IntegrationTests\LANCommander.Launcher.Avalonia.IntegrationTests.csproj" />
-    <Project Path="LANCommander.Launcher.Avalonia.Tests\LANCommander.Launcher.Avalonia.Tests.csproj" />
+    <Project Path="LANCommander.Launcher.IntegrationTests\LANCommander.Launcher.IntegrationTests.csproj" />
+    <Project Path="LANCommander.Launcher.Tests\LANCommander.Launcher.Tests.csproj" />
     <Project Path="LANCommander.Launcher.Services.Tests\LANCommander.Launcher.Services.Tests.csproj" />
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
     <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="C#" />

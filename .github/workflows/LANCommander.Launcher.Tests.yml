@@ -52,14 +52,14 @@ jobs:
               run: dotnet restore
 
             # ---- Unit + integration test projects ---------------------------------
-            # Services.Tests and Avalonia.IntegrationTests build cleanly without the
-            # Server/UI npm+pwsh chain. Avalonia.Tests likewise just needs Skia.
+            # Services.Tests and IntegrationTests build cleanly without the
+            # Server/UI npm+pwsh chain. Launcher.Tests likewise just needs Skia.
 
             - name: Build test projects
               run: |
                   dotnet build LANCommander.Launcher.Services.Tests/LANCommander.Launcher.Services.Tests.csproj         -c Debug --no-restore
-                  dotnet build LANCommander.Launcher.Avalonia.IntegrationTests/LANCommander.Launcher.Avalonia.IntegrationTests.csproj -c Debug --no-restore
-                  dotnet build LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj         -c Debug --no-restore
+                  dotnet build LANCommander.Launcher.IntegrationTests/LANCommander.Launcher.IntegrationTests.csproj -c Debug --no-restore
+                  dotnet build LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj         -c Debug --no-restore
 
             - name: Run Services unit tests
               run: |
@@ -70,9 +70,9 @@ jobs:
                       --results-directory test-results \
                       --collect:"XPlat Code Coverage"
 
-            - name: Run Avalonia integration tests
+            - name: Run integration tests
               run: |
-                  dotnet test LANCommander.Launcher.Avalonia.IntegrationTests/LANCommander.Launcher.Avalonia.IntegrationTests.csproj \
+                  dotnet test LANCommander.Launcher.IntegrationTests/LANCommander.Launcher.IntegrationTests.csproj \
                       -c Debug --no-build --no-restore \
                       --logger "trx;LogFileName=integration.trx" \
                       --logger "console;verbosity=normal" \
@@ -82,11 +82,11 @@ jobs:
             # Visual tests are continued-on-error so a baseline regression doesn't
             # mask any earlier failure and so we always reach the artifact-upload
             # + summary steps below. The summary step re-asserts the failure for CI.
-            - name: Run Avalonia visual tests
+            - name: Run visual tests
               id: visual_tests
               continue-on-error: true
               run: |
-                  dotnet test LANCommander.Launcher.Avalonia.Tests/LANCommander.Launcher.Avalonia.Tests.csproj \
+                  dotnet test LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj \
                       -c Debug --no-build --no-restore \
                       --logger "trx;LogFileName=visual.trx" \
                       --logger "console;verbosity=normal" \
@@ -100,9 +100,9 @@ jobs:
               if: always()
               run: |
                   mkdir -p visual/screenshots visual/diffs visual/baselines
-                  cp -r LANCommander.Launcher.Avalonia.Tests/bin/Debug/net10.0/Screenshots/. visual/screenshots/ 2>/dev/null || true
-                  cp -r LANCommander.Launcher.Avalonia.Tests/bin/Debug/net10.0/Diffs/.       visual/diffs/       2>/dev/null || true
-                  cp -r LANCommander.Launcher.Avalonia.Tests/Baselines/.                     visual/baselines/   2>/dev/null || true
+                  cp -r LANCommander.Launcher.Tests/bin/Debug/net10.0/Screenshots/. visual/screenshots/ 2>/dev/null || true
+                  cp -r LANCommander.Launcher.Tests/bin/Debug/net10.0/Diffs/.       visual/diffs/       2>/dev/null || true
+                  cp -r LANCommander.Launcher.Tests/Baselines/.                     visual/baselines/   2>/dev/null || true
 
             - name: Summarize visual diffs
               id: summarize
@@ -166,5 +166,5 @@ jobs:
             - name: Fail if visual tests regressed
               if: always() && steps.visual_tests.outcome == 'failure'
               run: |
-                  echo "::error::Avalonia visual tests reported regressions. See the launcher-visual-artifacts artifact."
+                  echo "::error::Visual tests reported regressions. See the launcher-visual-artifacts artifact."
                   exit 1

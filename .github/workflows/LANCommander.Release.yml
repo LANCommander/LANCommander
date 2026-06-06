@@ -127,10 +127,22 @@ jobs:
       build_platform: Windows
       build_configuration: Release
 
-  # Avalonia Launcher
-  build_launcher_avalonia_linux_x64:
+  # Launcher
+  build_launcher_linux_arm64:
     needs: [prep]
-    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+      build_configuration: Release
+
+  build_launcher_linux_x64:
+    needs: [prep]
+    uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
       build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
@@ -140,9 +152,9 @@ jobs:
       build_platform: Linux
       build_configuration: Release
 
-  build_launcher_avalonia_osx_arm64:
+  build_launcher_osx_arm64:
     needs: [prep]
-    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
       build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
@@ -152,9 +164,9 @@ jobs:
       build_platform: macOS
       build_configuration: Release
 
-  build_launcher_avalonia_osx_x64:
+  build_launcher_osx_x64:
     needs: [prep]
-    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
       build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
@@ -164,9 +176,21 @@ jobs:
       build_platform: macOS
       build_configuration: Release
 
-  build_launcher_avalonia_win_x64:
+  build_launcher_win_arm64:
     needs: [prep]
-    uses: ./.github/workflows/LANCommander.Launcher.Avalonia.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
+      build_configuration: Release
+
+  build_launcher_win_x64:
+    needs: [prep]
+    uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
       build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
@@ -196,10 +220,12 @@ jobs:
       - build_server_osx_x64
       - build_server_win_arm64
       - build_server_win_x64
-      - build_launcher_avalonia_linux_x64
-      - build_launcher_avalonia_osx_arm64
-      - build_launcher_avalonia_osx_x64
-      - build_launcher_avalonia_win_x64
+      - build_launcher_linux_arm64
+      - build_launcher_linux_x64
+      - build_launcher_osx_arm64
+      - build_launcher_osx_x64
+      - build_launcher_win_arm64
+      - build_launcher_win_x64
       - build_packager
 
     steps:
@@ -242,26 +268,38 @@ jobs:
           name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      # Avalonia Launcher artifacts
-      - name: Download Avalonia Launcher Linux x64
+      # Launcher artifacts
+      - name: Download Launcher Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Linux x64
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      - name: Download Avalonia Launcher macOS ARM64
+      - name: Download Launcher macOS ARM64
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      - name: Download Avalonia Launcher macOS x64
+      - name: Download Launcher macOS x64
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      - name: Download Avalonia Launcher Windows x64
+      - name: Download Launcher Windows ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Windows x64
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
@@ -292,9 +330,11 @@ jobs:
             artifacts/LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
 

@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
+             xmlns:local="using:LANCommander.Launcher.Views.Components"
+             x:Class="LANCommander.Launcher.Views.Components.CoverButton"
+             x:DataType="vmComponents:GameItemViewModel"
+             ClipToBounds="False">
+
+    <UserControl.Styles>
+        <Style Selector="Button.CoverButton">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CoverButton:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)" />
+        </Style>
+        <Style Selector="Button.CoverButton Border.CoverShadow">
+            <Setter Property="BoxShadow" Value="0 0 64 32 #FF000000" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CoverButton:pointerover Border.CoverShadow">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.CoverButton Border.GlassOverlay">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CoverButton:pointerover Border.GlassOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <!-- Keyboard/gamepad focus: same visual treatment as hover -->
+        <Style Selector="Button.CoverButton:focus-visible">
+            <Setter Property="RenderTransform" Value="scale(1.1)" />
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.CoverShadow">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.GlassOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.CoverButton Border.FocusRing">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CoverButton:focus-visible Border.FocusRing">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Button Classes="CoverButton"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            ClipToBounds="False"
+            Command="{Binding $parent[local:CoverButton].Command}"
+            CommandParameter="{Binding $parent[local:CoverButton].CommandParameter}">
+        <Panel>
+            <Border Classes="CoverShadow"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Background="Transparent"
+                    IsHitTestVisible="False" />
+
+            <local:Cover x:Name="CoverControl"
+                         Source="{Binding CoverPath}"
+                         MimeType="{Binding CoverMimeType}"
+                         Title="{Binding Title}"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch"
+                         IsHitTestVisible="False">
+                <local:Cover.Overlay>
+                    <Panel IsHitTestVisible="False">
+                        <Border Classes="GlassOverlay" CornerRadius="0" IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="70%,100%">
+                                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                                    <GradientStop Color="#10FFFFFF" Offset="0.45" />
+                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <Border Background="#CC000000" CornerRadius="0"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Width="16" Height="16"
+                                Margin="6"
+                                IsVisible="{Binding ShowInLibraryBadge}">
+                            <Icon Type="Regular" Value="Check" Width="9" Height="9"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                    </Panel>
+                </local:Cover.Overlay>
+            </local:Cover>
+            <Border Classes="FocusRing"
+                    BorderBrush="#994096FF"
+                    BorderThickness="2"
+                    CornerRadius="4"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+        </Panel>
+    </Button>
+
+</UserControl>

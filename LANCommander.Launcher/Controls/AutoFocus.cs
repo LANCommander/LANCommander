@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using LANCommander.Launcher.Input;
 
 namespace LANCommander.Launcher.Controls;
 
@@ -37,8 +38,16 @@ public class AutoFocus : AvaloniaObject
     {
         if (sender is not Control control) return;
 
+        // Only auto-focus when a gamepad has been used; otherwise the focus
+        // ring appears immediately on every view load for mouse/keyboard users.
+        if (!GamepadService.HasReceivedInput)
+            return;
+
         Dispatcher.UIThread.Post(() =>
         {
+            if (!GamepadService.HasReceivedInput)
+                return;
+
             // Don't steal focus if something is already focused within this control
             var topLevel = TopLevel.GetTopLevel(control);
             var currentFocus = topLevel?.FocusManager?.GetFocusedElement() as Visual;

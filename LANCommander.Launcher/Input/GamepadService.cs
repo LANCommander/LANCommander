@@ -26,6 +26,12 @@ public sealed class GamepadService : IDisposable
     private static readonly TimeSpan RepeatInterval = TimeSpan.FromMilliseconds(120);
     private const short DeadZone = 8_000;
 
+    /// <summary>
+    /// True after any gamepad input has been received this session.
+    /// Used by AutoFocus to decide whether to auto-focus on view load.
+    /// </summary>
+    public static bool HasReceivedInput { get; private set; }
+
     private readonly ILogger<GamepadService> _logger;
     private Thread? _thread;
     private CancellationTokenSource? _cts;
@@ -254,6 +260,8 @@ public sealed class GamepadService : IDisposable
 
     private static void SimulateKey(Key key)
     {
+        HasReceivedInput = true;
+
         Dispatcher.UIThread.Post(() =>
         {
             var window = (Application.Current?.ApplicationLifetime

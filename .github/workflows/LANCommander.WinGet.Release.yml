@@ -33,7 +33,7 @@ jobs:
       # Install Inno Setup
       - name: Install Inno Setup
         run: |
-          curl -L -o innosetup.exe https://files.jrsoftware.org/is/6/innosetup-6.2.2.exe
+          curl -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
           .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
         shell: cmd
 

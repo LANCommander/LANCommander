@@ -178,6 +178,12 @@ public class CarouselControl : TemplatedControl
     {
         base.OnGotFocus(e);
 
+        // Only scroll when focus was gained via keyboard/gamepad navigation.
+        // Pointer-initiated focus should not scroll, as it moves the item out
+        // from under the cursor and prevents the click from registering.
+        if (e.NavigationMethod == NavigationMethod.Pointer)
+            return;
+
         if (_itemsControl == null || e.Source is not Visual focusedVisual)
             return;
 

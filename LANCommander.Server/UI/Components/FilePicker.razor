@@ -1,8 +1,4 @@
-﻿@using LANCommander.Server.Models
-@using System.IO.Compression
-@inject ModalService ModalService
-
-<Space Style="display: flex">
+﻿<Space Style="display: flex; flex-grow: 1;">
     <SpaceItem Style="flex-grow: 1">
         <Input TValue="string" Type="InputType.Text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" Disabled="@Disabled" />
     </SpaceItem>

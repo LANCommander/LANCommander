@@ -122,6 +122,16 @@ Server settings now include checks for ffmpeg and yt-dlp availability, with auto
 ## LANCommander Packager
 A new standalone Avalonia application, LANCommander Packager, has been added for building LCX package files outside of the server. The packager works by monitoring the files and registry entries created by a game's installer. You can then choose which files and registry keys are bundled into the final LCX file. If the tool is authenticated to a LANCommander server instance, the game can be directly uploaded to the server as well.
 
+<ScreenshotCarousel screenshots={[
+  { src: require('./_Assets/2.1.0 - Packager - Monitor.png').default, alt: 'Packager Monitor', label: 'Monitor', caption: 'The Packager application will monitor the files and registry entries created during installation' },
+  { src: require('./_Assets/2.1.0 - Packager - Select Files.png').default, alt: 'Packager Select Files', label: 'Select Files', caption: 'Files can be individually selected to include in the final import file' },
+  { src: require('./_Assets/2.1.0 - Packager - Registry.png').default, alt: 'Packager Registry Entries', label: 'Registry Entries', caption: 'Registry entries can be individually selected and will be included in install/uninstall scripts' },
+  { src: require('./_Assets/2.1.0 - Packager - Metadata.png').default, alt: 'Packager Metadata', label: 'Metadata', caption: 'Basic metadata can be defined before packaging' },
+  { src: require('./_Assets/2.1.0 - Packager - Metadata Lookup.png').default, alt: 'Packager Metadata Lookup', label: 'Metadata Lookup', caption: 'Metadata can also be pulled in from metadata providers' },
+  { src: require('./_Assets/2.1.0 - Packager - Select Executable.png').default, alt: 'Packager Select Executable', label: 'Select Executable', caption: 'The primary action can be defined before packaging' },
+  { src: require('./_Assets/2.1.0 - Packager - Generate Package.png').default, alt: 'Packager Generate Package', label: 'Generate Package', caption: 'The final package can be created as an .LCX file or uploaded directly to a server' },
+]} />
+
 ## C++ SDK & Legacy Launcher
 
 ### C++ SDK

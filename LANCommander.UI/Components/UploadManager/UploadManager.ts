@@ -57,7 +57,10 @@ export class UploadManager {
         for (let i = 1; i <= totalChunks; i++) {
             const start = (i - 1) * this.MaxChunkSize;
             let end = (i * this.MaxChunkSize) - 1;
-            if (i === totalChunks) end = file.size;
+
+            if (i === totalChunks)
+                end = file.size - 1;
+
             chunks.push(new Chunk(key, start, end, i));
         }
 
@@ -80,6 +83,7 @@ export class UploadManager {
 
     CancelUpload(uploadId: string) {
         const upload = this._uploads.get(uploadId);
+        
         if (upload) {
             upload.cancelSource.cancel('Upload cancelled by user');
             this._uploads.delete(uploadId);

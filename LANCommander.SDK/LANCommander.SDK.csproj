@@ -42,16 +42,10 @@
     <ItemGroup>
         <InternalsVisibleTo Include="LANCommander.Server.Tests" />
     </ItemGroup>
-    
+
     <ItemGroup>
-        <None Update="package-icon.png">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-        <None Update="README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
+        <None Include="package-icon.png" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
     
     <ItemGroup>

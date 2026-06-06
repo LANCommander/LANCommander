@@ -1,0 +1,300 @@
+---
+title: 2.1.0
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ScreenshotCarousel from '@site/src/components/ScreenshotCarousel';
+
+# LANCommander 2.1.0 Release Notes
+LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
+
+## Breaking Changes
+
+### .NET 10
+LANCommander has been upgraded from .NET 8 to .NET 10. This should be a seamless transition as all LANCommander binaries are self-contained and include the appropriate .NET runtime. However, if you are running an older version of Windows that does not support .NET 10, you may encounter issues running this version of LANCommander. The minimum supported Windows version is now Windows 10 version 1809.
+
+## Launching Into the Future
+To kick things off, LANCommander 2.1.0 introduces a new launcher. As a recap, the previous launcher was built using .NET Blazor and wrapped into a Webview2 chrome using the open source project [Photino](https://www.tryphotino.io/). This decision was originally made in an effort to maintain a somewhat shared codebase with the server web UI.
+
+Unfortunately, over time limitations of the platform made it apparent that a change had to be made. Community member [aaronpowell](https://github.com/aaronpowell) stepped up and built out a proof of concept for a launcher using Avalonia, an open-source native cross-platform UI framework for .NET. The potential was immediately clear and the decision was made to jump in head first. The following months saw the project refocus on building a new launcher with a major emphasis on performance, reliability, design, and feature parity.
+
+The result is, well, a project that went off a little off the rails in the best possible fashion:
+
+<ScreenshotCarousel screenshots={[
+  { src: require('./_Assets/2.1.0 - Launcher.jpg').default, alt: 'Launcher', label: 'Launcher', caption: 'The brand new Avalonia-based launcher' },
+  { src: require('./_Assets/2.1.0 - Shelf.jpg').default, alt: 'Shelf View', label: 'Shelf View', caption: 'Browse your library in the new shelf layout' },
+  { src: require('./_Assets/2.1.0 - Depot.jpg').default, alt: 'Depot', label: 'Depot', caption: 'The redesigned depot with categorization carousels' },
+  { src: require('./_Assets/2.1.0 - Screenshot.jpg').default, alt: 'Game Details', label: 'Game Details', caption: 'Screenshots and videos displayed right in the detail view' },
+  { src: require('./_Assets/2.1.0 - Downloads.png').default, alt: 'Download Queue', label: 'Download Queue', caption: 'Track every step of the installation process' },
+]} />
+
+I think the screenshots speak for themselves. Okay, not quite, there's a lot of fun stuff in this build so let's dive right in!
+
+### User Library
+Previous versions of the launcher attempted to bring the art of a game to the forefront. These views are where most players spend their time interacting with the application. However, everyone's tastes are different. As such the library now contains three main views; cover grid, list, and shelf.
+
+![Shelf View](./_Assets/2.1.0%20-%20Shelf.jpg)
+
+### Game Details
+Browsing the user library is great and all, but the detail view is where a game really gets to shine. Metadata has shifted to the right-hand side, descriptions now support more complex formatting with Markdown rendering support, and _finally_ videos and screenshots are displayed in a carousel. A lightbox viewer lets you zoom in on screenshots, watch videos, and even read game manuals right from the detail view thanks to the new built-in PDF viewer.
+
+![Game Screenshot Detail](./_Assets/2.1.0%20-%20Screenshot.jpg)
+
+This is really just the start of something new. Expect this part of the launcher to be built out more in the future with better publishing tools and metadata expansion.
+
+### Depot
+The depot has been overhauled too, probably more than any other part of the launcher. Previous iterations have been _fine_, but with large game sets it was hard to find just what you needed. The new depot puts a focus on categorization while maintaining granular filtering tools to get you exactly where you need to go.
+
+![Depot](./_Assets/2.1.0%20-%20Depot.jpg)
+
+As you can see, this section more than any other benefits from high quality metadata. We'll get into that later, but first let's talk about game installation.
+
+### Download Queue
+Game installation and downloading has been the hardest component to develop in the entire LANCommander platform. And rightly so! Without game installation, all you get is a fancy web UI and a pretty launcher that can't launch any games.
+
+The LANCommander launcher is essentially a UI wrapper for the LANCommander SDK. The SDK is a .NET library that provides all of the useful bits of communicating with a LANCommander server install. Authentication, script execution, save management, game installation and so much more are provided through this library. In previous iterations, the SDK had a very strict execution plan for installing games. Often times this would lead to deadlocks and outright failures.
+
+To resolve this in 2.1.0, the game install process has moved to a two-layer queuing system. The first layer of the queue manages what actually enters the download queue. This could be a game, redistributable, tool, or addon. The second layer handles any subprocessing step such as executing the different script types, save downloading, existing file verification, etc. The result is a system that is more transparent and reliable.
+
+This queuing system has been exposed somewhat in the download queue:
+
+![Download Queue](./_Assets/2.1.0%20-%20Downloads.png)
+
+Each entry in the download queue will now report each step of the process during a game installation. In addition to looking a bit less mystical, this should give users an idea of what _exactly_ is happening during a game installation.
+
+### Big Screen Mode & Gamepad Navigation
+The launcher now supports a big screen mode designed for use with TVs and handhelds. When enabled, the launcher switches to a fullscreen layout optimized for focused gaming. Gamepad support has been added as well. Controllers are detected and mapped using SDL2, and directional navigation has been implemented across the library views, carousels, game detail pages, and overlay dialogs. Focus management handles moving between UI elements naturally with a d-pad or analog stick, making it possible to browse, install, and launch games with a controller. This feature is pretty barebones for now, but adds a foundation for deeper integration in the future.
+
+### Discord Rich Presence
+The launcher now integrates with Discord Rich Presence. When you're playing a game through LANCommander, your Discord status will update to show what you're playing. By default this will show as LANCommander with the game name as the status. If the game is mapped to the correct Discord ID (via external IDs in the server), then the game's official Discord assets will be used for a more polished presentation.
+
+### Offline Mode
+Previous attempts at an offline mode in the launcher were pretty clunky and unreliable. In 2.1.0, the launcher now has a proper offline mode that allows you to launch previously installed games even when the server is unreachable.
+
+### Command Line Interface
+The Avalonia launcher now handles all CLI functionality directly, replacing the previous standalone CLI project. The full set of CLI verbs is supported: `RunScript`, `Install`, `Uninstall`, `Run`, `Sync`, `Import`, `Export`, `Upload`, `Login`, `Logout`, and `ChangeAlias`. The `--help` and `--version` flags are also recognized, and console logging has been added for headless execution.
+
+### Single Sign-On
+SSO was supported in the previous launcher, but it was a bit of an afterthought and not super reliable. In the new launcher it's been given more attention and should work as expected.
+
+### Chat
+As with the last version, the chat functionality remains pretty barebones. This is an area that will get more attention in the future, but it _is_ currently available in the new launcher. It might even work a little better.
+
+## Server Improvements
+This release should also be pretty exciting for server admins. With a new launcher and shiny new features brings a set of tools to manage them.
+
+### LANCommander HQ
+A new metadata provider has been added: LANCommander HQ. This gives server admins another option for sourcing game metadata and media alongside IGDB and SteamGridDB. In addition, support for external IDs beyond IGDB has been introduced, making it easier to cross-reference games across multiple platforms and services. To get started with the HQ, link your Discord account under "Integrations / HQ" in the server settings. The first time setup wizard now includes a step to log in to HQ directly during initial configuration, streamlining the onboarding experience. Existing metadata providers such as IGDB and SteamGridDB are still available as well, so no functionality has been lost from previous versions. We'll cover more about HQ later on in these notes.
+
+### Preview Tool
+A new "Preview" editing view has been added to the server for managing game art. Inspired by the launcher's presentation, this tool gives admins a better sense of how their media will look in the launcher before publishing. Screenshots and videos can now be uploaded in bulk, and the media grabber supports selecting multiple assets at once. Animated covers are now supported as well, APNG images grabbed from SteamGridDB are automatically converted to video and should display in the new launcher.
+
+![Preview Tool](./_Assets/2.1.0%20-%20Server%20-%20Preview.png)
+
+### Script Editor Improvements
+The script editor has received a significant upgrade. Context-aware code completions now suggest built-in PowerShell cmdlets, LANCommander-specific variables, and generated type definitions. Validation has been improved, and script errors are now logged rather than silently swallowed. A new `Set-GameDetails` cmdlet has been added for specifying package details from within scripts.
+
+### Variable Picker Dialog
+A new variable picker dialog has been added to the action editor and save path editor. When editing action arguments, working directories, or save paths, a new button opens a dialog that lets you browse and insert LANCommander variables (`{InstallDir}`, `{DisplayWidth}`, etc.), environment variables (`%APPDATA%`, `%LOCALAPPDATA%`, etc.), and special folder paths (`%MyDocuments%`, `%Desktop%`, etc.) with a single click.
+
+### Redistributable Options
+Redistributables now support configurable options. Options can be defined with a schema editor, given display names, and are preserved across import/export. Assigning redistributables to a game can now be accessed under the "Redistributables" section of the game editor. When selected, a redistributable with options will render as an easy-to-use form and per-game overrides can be defined.
+
+![Redistributable Options](./_Assets/2.1.0%20-%20Server%20-%20Redistributable%20Options.png)
+
+A new **RunWrapper** script type has been added as well, giving admins more control over how redistributables and games are executed. RunWrapper scripts now run alongside the game process with proper state tracking, cancellation support, and child process cleanup when the game exits. This should enhance redistributables to cover more use cases such as emulators, launchers, and compatibility shims like Proton or dgVoodoo.
+
+### Packaging Dialog
+The "Package" button has been moved from individual game, redistributable, and tool edit pages to the archive editor. A new packaging dialog provides a consolidated view of the packaging process, making it easier to build and manage archives directly from the archive list.
+
+### Background Uploading
+Archive uploads now continue in the background, allowing you to navigate away from the upload page without losing progress. An upload indicator in the sidebar tracks active uploads so you can continue working in other areas of the server while files transfer. This also applies to the import upload dialog.
+
+### File Manager Improvements
+The server file manager has received several usability improvements including faster enumeration of large directories, toggleable columns, new Created and Type columns, fixed breadcrumb navigation, and a properly built directory tree with support for cross-platform roots and special folders.
+
+### Key Management
+Key allocation has been improved. The allocation method on keys is now nullable, and a new manual key assignment dialog has been added. The logic for choosing the next available key has also been reworked.
+
+### Media & Tooling
+Server settings now include checks for ffmpeg and yt-dlp availability, with automatic installation support in Docker environments. A new streaming endpoint for media has been added, improving video playback in the launcher. Automatic downloads for Steam screenshots have been added as well. YouTube video support has been added to the media grabber, and ffmpeg is now used for video processing tasks such as APNG conversion and thumbnail generation.
+
+## LANCommander Packager
+A new standalone Avalonia application, LANCommander Packager, has been added for building LCX package files outside of the server. The packager works by monitoring the files and registry entries created by a game's installer. You can then choose which files and registry keys are bundled into the final LCX file. If the tool is authenticated to a LANCommander server instance, the game can be directly uploaded to the server as well.
+
+## C++ SDK & Legacy Launcher
+
+### C++ SDK
+A new C++ SDK (`LANCommander.SDK.Cpp`) has been introduced. Written in C++14, it provides maximum compatibility from Windows 95 through modern platforms. The SDK includes 16 API clients covering authentication, games, library, saves, media, tools, depot, and more. It ships with two HTTP backend implementations (WinINet for Windows and libcurl for cross-platform) and uses vendored cJSON for zero mandatory external dependencies. This SDK is the foundation that powers the legacy launcher.
+
+### Legacy Launcher
+
+:::note A Fun Detour
+The legacy launcher is a fun side project and detour from the main development track. It should not be regarded as a primary concern or a supported production launcher. Think of it as an experiment in seeing just how far back LANCommander's reach can extend.
+:::
+
+The legacy launcher is a native Win32 application written in C++ that targets Windows 9x (Windows 95/98/ME) and beyond. Built on Allegro 4 for rendering and GDI+ for image decoding (JPEG cover art, backgrounds, etc.), it provides a surprisingly full-featured LANCommander experience on vintage hardware. GDI+ is a requirement and must be available on the target system. For Windows 9x systems, this means installing the [GDI+ redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=18909).
+
+Features include:
+- **Library and Depot browsing** with cover art grid
+- **Game detail view** with metadata and screenshots
+- **Download queue** with progress tracking
+- **Login screen** with server authentication
+- **Settings screen** with configurable server address
+- **SQLite-backed local database** for offline game metadata
+- **Custom window chrome** with a themed UI
+- **Unicode support** for international character sets
+
+<ScreenshotCarousel screenshots={[
+  { src: require('./_Assets/2.1.0-rc2 - Legacy Launcher - Login.png').default, alt: 'Legacy Launcher Login', label: 'Login', caption: 'The login screen running on Windows 98' },
+  { src: require('./_Assets/2.1.0-rc2 - Legacy Launcher - Library.png').default, alt: 'Legacy Launcher Library', label: 'Library', caption: 'Browsing the game library with cover art' },
+  { src: require('./_Assets/2.1.0-rc2 - Legacy Launcher - Detail.png').default, alt: 'Legacy Launcher Detail', label: 'Game Detail', caption: 'Game detail view with metadata' },
+  { src: require('./_Assets/2.1.0-rc2 - Legacy Launcher - Downloads.png').default, alt: 'Legacy Launcher Downloads', label: 'Downloads', caption: 'The download queue in action' },
+  { src: require('./_Assets/2.1.0-rc2 - Legacy Launcher - Settings.png').default, alt: 'Legacy Launcher Settings', label: 'Settings', caption: 'Configuring server connection settings' },
+]} />
+
+## LANCommander HQ
+Last but far from least, this release coincides with the launch of [LANCommander HQ](https://hq.lancommander.com), a new metadata provider and community hub for LANCommander users. The HQ aims to provide a centralized platform for game metadata and media across multiple providers, while also normalizing and enhancing that data with a focus on the needs of LANCommander users. There's a bit to cover, so let's dive in!
+
+### Metadata
+LANCommander HQ aggregates metadata from multiple sources including IGDB, SteamGridDB, and user contributions. This data is then normalized and enhanced with a focus on the needs of LANCommander users. There are many metadata providers out there, and unfortunately they all have their own unique schemas and data quality issues. The HQ's goal is to provide a single source of truth for game metadata that can be consumed by LANCommander servers and launchers.
+
+There are a lot of exciting features in the works for the HQ, but for this release the focus is on building out the core infrastructure and integrating with the new launcher. Expect to see more features and improvements in the future as the HQ continues to evolve.
+
+### Community
+The main features of the HQ are currently focused on metadata, but there is the potential to expand it into a broader community hub for LANCommander users. This could include an area to share game configurations, scripts, and other resources. Additionally, there are some content moderation tools in place that should allow the HQ to host user-generated content and provide the best possible experience for all users. If you have a knack for curation and want to help out, there will likely be opportunities to get involved in the future!
+
+### Tiering / Subscriptions
+The HQ operates on a tiered subscription model. Currently there are only two tiers: Basic (Free) and Premium ($5/month). The Basic tier provides access to the core metadata features of the HQ, while the Premium tier provides access to additional features such as enhanced metadata, relaxed rate limiting, and more. More information will be provided in the near future and will be provided on this site under the [LANCommander HQ](/hq) section. All paid subscriptions on the HQ are handled by Stripe, so every transaction is secure and your personal information is protected.
+
+This subscription model is primarily in place to help cover the costs of running the HQ while also providing a sustainable path forward for continued development of LANCommander itself. This entire project is developed and maintained by essentially one person with some help from the community here and there. While this is a labor of love, there are real costs associated with running the infrastructure for the HQ and continued development of LANCommander. The subscription model is designed to be as accessible as possible while also providing a way for users to support the project if they find value in it.
+
+As such, this will probably mean that the Patreon page will be going away in the near future. For existing patrons, it is recommended to switch over to the new subscription model on the HQ as it provides a more direct way to support the project and access the benefits of the HQ _today_.
+
+## Contributions
+This release includes contributions from the following community members:
+
+**@aaronpowell | PR [#395](https://github.com/LANCommander/LANCommander/pull/395): Avalonia Launcher**
+A substantial 42-commit, 6,000-line PR that bootstrapped the cross-platform Avalonia launcher. Aaron built out the core application structure, service wiring, and async initialization, and then built out the UI with filtered depot browsing and grid layout, a download queue, install/uninstall flows, a settings page, PDF manual viewer, game action bars, and a full CI pipeline for Windows, Linux, and macOS builds. A lot of the foundation that the current launcher sits on came from this PR.
+
+**@akifreak | PR [#398](https://github.com/LANCommander/LANCommander/pull/398): Fix Game Archive Upload**
+Discovered that archive uploads through the web UI were silently broken after upgrading to v2.0.2, traced the problem through the JavaScript bundle, and submitted 11 targeted fixes rather than a single bug report. The fixes covered ES module loading, null-guards on DOM elements, a FileMode.Append seek conflict, incorrect archive ID passing, and error propagation throughout the upload pipeline. The uploading process should feel much more stable now!
+
+**@akifreak | PR [#403](https://github.com/LANCommander/LANCommander/pull/403): Fix Beacon Discovery**
+Back for another round of contributions, akifreak tracked down and fixed an issue where server discovery wasn't working reliably. In some cases the launcher was actually finding servers on the network but wasn't surfacing them in the UI. The fix spans the full discovery pipeline; making the probe socket more resilient to bad data, ensuring beacon responses actually reach the client, and refreshing the server list as soon as a new server is found.
+
+**@MasterMNB | PR [#400](https://github.com/LANCommander/LANCommander/pull/400): Avalonia Launcher Back Button**
+Improved the visibility and styling of the back button in the `GameDetailView`, which was previously hard to distinguish from the background. It's a small change, but it's a real usability improvement that makes navigation feel more intentional.
+
+## Changelog
+
+**Launcher**
+- Added: Brand new launcher built on Avalonia
+- Added: Screenshots and videos in game detail carousel with lightbox viewer
+- Added: Redesigned depot with categorization carousels and advanced filtering
+- Added: Tools support
+- Added: Download transfer speed graph
+- Added: OS notifications upon game installation completion
+- Added: Discord Rich Presence integration
+- Added: SSO/OIDC external authentication provider support
+- Added: Built-in PDF viewer for game manuals
+- Added: Splash screen on startup
+- Added: Verify files option in game dropdown
+- Added: Markdown rendering for game descriptions
+- Added: Big screen mode for fullscreen TV/controller use
+- Added: Gamepad navigation across library, carousels, detail views, and overlays
+- Added: Full set of CLI verbs (Install, Uninstall, Run, Sync, Import, Export, Upload, Login, Logout, ChangeAlias)
+- Added: Console logging for headless CLI execution
+- Changed: Refactored game/redistributable/tool install process to two-layer queue system
+- Changed: Imports should be faster and execute in the background without causing major UI hiccups
+- Changed: Improved memory management with proper disposal of HTTP clients, RPC clients, and cancellation tokens
+- Changed: Redistributable files are now tracked and cleaned up on uninstall
+- Changed: Redistributables without detect install scripts now always run the install script
+- Fixed: Installing games that already have files on disk will show the verification process during install
+- Fixed: Linux path variable expansion now preserves root prefix
+- Fixed: Script writing for all script types
+- Removed: Standalone CLI project (functionality merged into Avalonia launcher)
+
+**Server**
+- Added: LANCommander HQ metadata provider support
+- Added: Support for external IDs beyond IGDB
+- Added: New launcher-inspired "Preview" tool for managing art
+- Added: Context-aware script editor with code completions, validation, and PowerShell type definitions
+- Added: Redistributable options with schema editor and display names
+- Added: RunWrapper script type with full execution support
+- Added: Package versioning for archives
+- Added: Bulk upload for screenshots and videos
+- Added: Multiple select support in media grabber
+- Added: Animated cover support (APNG auto-conversion to video)
+- Added: Steam screenshot downloads
+- Added: YouTube video support in media grabber
+- Added: Media streaming endpoint
+- Added: ffmpeg/yt-dlp availability checks and auto-install in Docker
+- Added: Manual key assignment dialog and reworked key allocation
+- Added: `Set-GameDetails` cmdlet for package scripts
+- Added: Variable picker dialog for action editor and save path editor
+- Added: Packaging dialog on archive editor
+- Added: RunWrapper script type available for redistributable scripts
+- Added: Background uploading with sidebar progress indicator
+- Added: HQ login step in first time setup wizard
+- Added: Button to download current log file
+- Changed: Moved "Package" button from edit pages to archive editor
+- Changed: Updated PowerShell code snippets
+- Changed: Improved file manager with faster directory enumeration, toggleable columns, and cross-platform directory tree
+- Fixed: Media uploads should now behave as expected
+- Fixed: Game archive uploads in web UI
+- Fixed: Orphaned files tool
+- Fixed: Redistributable archive downloads
+- Fixed: Script working directory for games
+- Fixed: SteamCMD login when SteamGuard is enabled
+- Fixed: Import file cleanup after completion
+- Fixed: Package scripts are no longer exposed through API responses
+- Fixed: Script helper now correctly maps Package and RunWrapper script filenames
+- Fixed: Redistributable and tool importing
+- Fixed: Media settings page failing to render
+- Fixed: HQ metadata lookups
+- Fixed: Log viewer under Settings / Logs (#393)
+- Fixed: User approval menu item (#405)
+- Fixed: Archive processing for "Use Local File"
+- Fixed: "Use Local File" disabled button
+- Fixed: Standalone expansions/mods shown in nested game lists (#284)
+- Fixed: Missing nested game data
+
+**Packager**
+- Added: New standalone application for building LCX package files
+- Added: CI workflow for building and releasing the packager
+
+**Legacy Launcher**
+- Added: Complete native Win32 launcher targeting Windows 9x
+- Added: Library and depot browsing with cover art grid
+- Added: Game detail view with metadata display
+- Added: Download queue with SQLite-backed local database
+- Added: Settings screen with YAML configuration
+- Added: Custom themed window chrome
+- Added: Unicode support for Win9x targets
+- Added: CI workflow for automated builds
+
+**SDK**
+- Added: C++ SDK (LANCommander.SDK.Cpp) with C++14 compatibility
+- Added: WinINet and libcurl HTTP backend implementations
+- Added: 16 API clients covering full LANCommander API surface
+- Added: RunWrapper script execution for redistributables with process lifecycle management
+- Added: Logging in save packaging and upload pipeline
+- Changed: Game list filtering now shows only standalone mods/expansions and main games
+- Changed: Multi-target framework support
+- Changed: Source-generated cmdlet registration via new `CmdletRegistrationGenerator`
+- Fixed: Discovery probe socket resilience against malformed data
+- Fixed: Broadcast send reliability in DiscoveryProbe
+- Fixed: Beacon responses now forwarded to BeaconClient event
+- Fixed: Save client now checks for newer server saves before uploading
+- Fixed: Save path normalization to use forward slashes before regex matching (#266)
+
+**Infrastructure**
+- Upgraded to .NET 10
+- Added ARM64 build support
+- Removed legacy Photino launcher from CI
+- Added nightly builds for Avalonia launcher
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.0" />

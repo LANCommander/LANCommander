@@ -6,17 +6,19 @@
     @foreach (var redist in FilteredRedistributables)
     {
         <div class="@($"ant-list-item{(_selected == redist ? " ant-list-item-selected" : "")}")"
-             style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; background: @(_selected == redist ? "#e6f4ff" : "transparent");"
+             style="cursor: pointer;"
              @onclick="() => _selected = redist">
             <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center">
                 <div>
-                    <strong>@redist.Name</strong>
+                    <Text>@redist.Name</Text>
+                    
                     @if (!string.IsNullOrWhiteSpace(redist.Description))
                     {
                         <br />
-                        <span style="color: rgba(0,0,0,0.45);">@redist.Description</span>
+                        <Text Type="TextElementType.Secondary">@redist.Description</Text>
                     }
                 </div>
+                
                 @if (_selected == redist)
                 {
                     <Icon Type="@IconType.Outline.Check" Theme="IconThemeType.Outline" />

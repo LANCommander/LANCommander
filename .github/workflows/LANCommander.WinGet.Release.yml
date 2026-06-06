@@ -12,7 +12,7 @@ jobs:
         arch: ['x64', 'arm64']
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Get version
         id: get_version
         shell: pwsh
@@ -40,6 +40,12 @@ jobs:
       # Create Inno Setup script
       - name: Create installer script
         run: |
+          $appId = if ('${{ matrix.app }}' -eq 'Server') {
+            '2C58E237-1D69-42A0-B702-F995B75B8A5E'
+          } else {
+            'A3D4F8E1-7B2C-4E5D-9F1A-6C8B3D7E2F4A'
+          }
+
           @"
           #define MyAppName "LANCommander ${{ matrix.app }}"
           #define MyAppVersion "${{ env.VERSION }}"
@@ -49,7 +55,7 @@ jobs:
           #define Architecture "${{ matrix.arch }}"
 
           [Setup]
-          AppId={{$(New-Guid)}}
+          AppId={{$appId}
           AppName={#MyAppName}
           AppVersion={#MyAppVersion}
           AppPublisher={#MyAppPublisher}
@@ -94,7 +100,6 @@ jobs:
     strategy:
       matrix:
         app: ['Server', 'Launcher']
-        arch: ['x64', 'arm64']
     steps:
       - name: Get version
         shell: pwsh
@@ -103,8 +108,14 @@ jobs:
           $version = $tag.TrimStart('v')
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Install wingetcreate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
+
       - name: Submit package to Windows Package Manager Community Repository
         run: |
-          $installerUrl = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LANCommander.${{ matrix.app }}-${env:VERSION}-${{ matrix.arch }}-Setup.exe"
-          wingetcreate submit --token ${{ secrets.GITHUB_TOKEN }} --urls "$installerUrl" --version ${env:VERSION} LANCommander.LANCommander.${{ matrix.app }}.${{ matrix.arch }}
+          $x64Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LANCommander.${{ matrix.app }}-${env:VERSION}-x64-Setup.exe"
+          $arm64Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LANCommander.${{ matrix.app }}-${env:VERSION}-arm64-Setup.exe"
+          .\wingetcreate.exe update --submit --token "${{ secrets.WINGET_TOKEN }}" --urls $x64Url $arm64Url --version ${env:VERSION} LANCommander.${{ matrix.app }}
         shell: pwsh

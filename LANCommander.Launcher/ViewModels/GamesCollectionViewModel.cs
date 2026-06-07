@@ -50,6 +50,9 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isOfflineMode;
 
+    [ObservableProperty]
+    private bool _hasGames;
+
     // ── View appearance ───────────────────────────────────────────────────────
 
     /// <summary>Human-readable heading shown in the view header.</summary>
@@ -299,6 +302,8 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
             Games.Add(g);
 
         RebuildGroups(materialised);
+
+        HasGames = Games.Count > 0;
 
         var suffix = IsOfflineMode ? " (offline)" : string.Empty;
         StatusMessage = $"{Games.Count} of {_allGames.Count} games{suffix}";

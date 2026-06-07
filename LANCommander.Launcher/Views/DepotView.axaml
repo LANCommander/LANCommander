@@ -45,6 +45,23 @@
                 <TextBlock Text="{Binding StatusMessage}" Foreground="#FF4D4F" TextWrapping="Wrap" />
             </Border>
 
+            <!-- ══ Empty state ════════════════════════════════════════════════════ -->
+            <StackPanel Spacing="12"
+                        HorizontalAlignment="Center"
+                        Margin="0,40,0,0">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!IsLoading" />
+                        <Binding Path="!HasContent" />
+                        <Binding Path="!HasError" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <Icon Type="Regular" Value="Storefront" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
+                <TextBlock Text="Nothing Here Yet" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+                <TextBlock Text="Games will appear here once they're available on the server."
+                           FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
+            </StackPanel>
+
             <!-- ══ POPULAR ════════════════════════════════════════════════════════
                  Hero + logo cards in 16:9 boxes.
             ═══════════════════════════════════════════════════════════════════════ -->

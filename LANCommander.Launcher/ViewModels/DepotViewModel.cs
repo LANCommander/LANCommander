@@ -38,6 +38,7 @@ public partial class DepotViewModel : ViewModelBase
     [ObservableProperty] private bool _hasBrowseGenres;
     [ObservableProperty] private bool _hasBrowseTags;
     [ObservableProperty] private bool _hasBrowseCollections;
+    [ObservableProperty] private bool _hasContent;
 
     // ── Carousels ─────────────────────────────────────────────────────────────
 
@@ -267,6 +268,7 @@ public partial class DepotViewModel : ViewModelBase
             HasBrowseTags       = BrowseTags.Count > 0;
             HasBrowseCollections = BrowseCollections.Count > 0;
             HasBrowseData       = HasBrowseGenres || HasBrowseTags || HasBrowseCollections;
+            HasContent          = HasPopularGames || HasNewReleases || HasMultiplayerGames || HasBacklogGames || HasBrowseData;
 
             _logger.LogInformation(
                 "Depot home loaded — popular:{P} new:{N} mp:{M} backlog:{B}",
@@ -317,6 +319,7 @@ public partial class DepotViewModel : ViewModelBase
         HasBrowseGenres  = false;
         HasBrowseTags    = false;
         HasBrowseCollections = false;
+        HasContent       = HasPopularGames || HasBacklogGames;
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────

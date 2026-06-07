@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -488,7 +487,6 @@ public partial class GameDetailViewModel : ViewModelBase
         {
             using var scope = _serviceProvider.CreateScope();
             var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
-            using var httpClient = new HttpClient();
 
             for (var i = 0; i < carouselMedia.Count; i++)
             {
@@ -505,10 +503,16 @@ public partial class GameDetailViewModel : ViewModelBase
                         item.Path = mediaClient.GetAbsoluteStreamUrl(media);
                     else
                     {
-                        var url = mediaClient.GetAbsoluteUrl(media);
-                        var bytes = await httpClient.GetByteArrayAsync(url);
-                        using var ms = new MemoryStream(bytes);
-                        item.ImageSource = new Bitmap(ms);
+                        var localPath = mediaClient.GetLocalPath(media);
+
+                        if (!File.Exists(localPath))
+                        {
+                            var fileInfo = await mediaClient.DownloadAsync(media, localPath);
+                            localPath = fileInfo.FullName;
+                        }
+
+                        item.Path = localPath;
+                        item.ImageSource = await Task.Run(() => new Bitmap(localPath));
                     }
 
                     // Replace skeleton at the same position, or append if index is out of range

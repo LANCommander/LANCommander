@@ -164,7 +164,24 @@ public partial class LightboxOverlay : UserControl
         VideoBorder.IsVisible = true;
         TransportControls.IsVisible = true;
 
-        _renderer = new VideoFrameRenderer(maxWidth: 1920, maxHeight: 1080);
+        try
+        {
+            _renderer = new VideoFrameRenderer(maxWidth: 1920, maxHeight: 1080);
+        }
+        catch
+        {
+            // LibVLC may not be available (native libraries missing in deployment).
+            // Fall back to showing the image if one is available, otherwise leave blank.
+            LoadingIndicator.IsVisible = false;
+            VideoBorder.IsVisible = false;
+            TransportControls.IsVisible = false;
+
+            if (item.ImageSource != null || !string.IsNullOrEmpty(item.Path))
+                ShowImage(item);
+
+            return;
+        }
+
         _canvas = new VideoCanvas();
         VideoBorder.Child = _canvas;
 
@@ -182,7 +199,9 @@ public partial class LightboxOverlay : UserControl
 
         _endReachedHandler = (_, _) =>
             Dispatcher.UIThread.Post(() => PlayPauseIcon.Value = "Play");
-        _renderer.Player!.EndReached += _endReachedHandler;
+
+        if (_renderer.Player != null)
+            _renderer.Player.EndReached += _endReachedHandler;
 
         _renderer.Play(item.Path, muted: false, loop: false, startTimeMs: _videoStartTimeMs);
 

@@ -55,6 +55,7 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Install state
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayButton))]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
 
@@ -129,6 +130,12 @@ public partial class GameActionBarViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScriptDebuggingEnabled;
 
+    // Update available
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayButton))]
+    private bool _isUpdateAvailable;
+
     // Offline mode - disables install
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
@@ -138,6 +145,11 @@ public partial class GameActionBarViewModel : ViewModelBase
     /// Shows the simple play button when installed but has only one or zero actions
     /// </summary>
     public bool ShowSimplePlayButton => IsInstalled && !HasMultipleActions;
+
+    /// <summary>
+    /// Shows the play button when installed and no update is available
+    /// </summary>
+    public bool ShowPlayButton => IsInstalled && !IsUpdateAvailable;
 
     /// <summary>
     /// Can install only when online and not already installed
@@ -168,6 +180,9 @@ public partial class GameActionBarViewModel : ViewModelBase
         Title = game.Title ?? "Unknown";
         IsInstalled = game.Installed;
         InstallDirectory = game.InstallDirectory;
+        IsUpdateAvailable = game.Installed
+            && !string.IsNullOrWhiteSpace(game.LatestVersion)
+            && game.InstalledVersion != game.LatestVersion;
 
         using var scope = _serviceProvider.CreateScope();
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
@@ -204,6 +219,9 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
+            IsUpdateAvailable = localGame.Installed
+                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                && localGame.InstalledVersion != localGame.LatestVersion;
             await LoadPlayStatsAsync(localGame.Id);
             LoadManuals(localGame);
         }
@@ -211,6 +229,7 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             IsInstalled = false;
             InstallDirectory = null;
+            IsUpdateAvailable = false;
             PlayTime = "None";
             LastPlayed = "Never";
             Manuals.Clear();
@@ -299,6 +318,9 @@ public partial class GameActionBarViewModel : ViewModelBase
             {
                 IsInstalled = localGame.Installed;
                 InstallDirectory = localGame.InstallDirectory;
+                IsUpdateAvailable = localGame.Installed
+                    && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                    && localGame.InstalledVersion != localGame.LatestVersion;
                 IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
                 await LoadPlayStatsAsync(localGame.Id);
                 LoadManuals(localGame);
@@ -428,6 +450,43 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             PlayTime = "None";
             LastPlayed = "Never";
+        }
+    }
+
+    [RelayCommand]
+    private async Task UpdateGameAsync()
+    {
+        if (!IsInstalled || !IsUpdateAvailable || IsInstalling) return;
+
+        IsInstalling = true;
+        StatusMessage = "Preparing to update...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            _logger.LogInformation("Adding game {GameId} ({Title}) to update queue", GameId, Title);
+
+            await installService.Add(localGame, localGame.InstallDirectory);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start update for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to update: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Update", ex.Message);
+        }
+        finally
+        {
+            IsInstalling = false;
         }
     }
 

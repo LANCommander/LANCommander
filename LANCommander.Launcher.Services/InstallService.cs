@@ -482,31 +482,42 @@ namespace LANCommander.Launcher.Services
                     && !string.IsNullOrEmpty(localGame.InstallDirectory)
                     && ManifestHelper.Exists(localGame.InstallDirectory, localGame.Id))
                 {
-                    // update current local installed game first, might be moved afterwards
-                    await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                    // Check if this is an update (versions differ)
+                    var isUpdate = !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                        && localGame.InstalledVersion != localGame.LatestVersion;
 
-                    // Probably doing a modification of some sort
-                    if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
+                    if (isUpdate)
                     {
-                        var allAddons = remoteGame.DependentGames.ToArray();
-                        var removeAddons = allAddons.Except(queueItem.AddonIds ?? []).ToArray();
-                        var addAddons = allAddons.Intersect(queueItem.AddonIds ?? []).ToArray();
-
-                        var uninstallResult = await _gameClient.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
-                        var installResult = await _gameClient.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
-                        await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
-
-                        UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
-                        UpdateAddonStates(queueItem, localGame);
-                        await _gameService.UpdateAsync(localGame);
-
-                        queueItem.Status = InstallStatus.Complete;
-                        OnQueueChanged?.Invoke();
-                        OnInstallComplete?.Invoke(localGame);
+                        await Update(queueItem, localGame, remoteGame);
                     }
                     else
                     {
-                        await Move(queueItem, localGame, remoteGame);
+                        // update current local installed game first, might be moved afterwards
+                        await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+
+                        // Probably doing a modification of some sort
+                        if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
+                        {
+                            var allAddons = remoteGame.DependentGames.ToArray();
+                            var removeAddons = allAddons.Except(queueItem.AddonIds ?? []).ToArray();
+                            var addAddons = allAddons.Intersect(queueItem.AddonIds ?? []).ToArray();
+
+                            var uninstallResult = await _gameClient.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
+                            var installResult = await _gameClient.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
+                            await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
+
+                            UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
+                            UpdateAddonStates(queueItem, localGame);
+                            await _gameService.UpdateAsync(localGame);
+
+                            queueItem.Status = InstallStatus.Complete;
+                            OnQueueChanged?.Invoke();
+                            OnInstallComplete?.Invoke(localGame);
+                        }
+                        else
+                        {
+                            await Move(queueItem, localGame, remoteGame);
+                        }
                     }
 
                     await Next();
@@ -690,6 +701,111 @@ namespace LANCommander.Launcher.Services
             }
 
             await Next();
+        }
+
+        public async Task Update(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
+        {
+            using (var operation = Logger.BeginOperation("Updating game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
+            {
+                Logger?.LogInformation("[InstallQueue] Update(Game): Starting update of {Title} ({Id}) from version {InstalledVersion} to {LatestVersion}",
+                    currentItem.Title, currentItem.Id, localGame.InstalledVersion, localGame.LatestVersion);
+
+                currentItem.Status = InstallStatus.Downloading;
+                OnQueueChanged?.Invoke();
+
+                try
+                {
+                    // Get all archives newer than the installed version, ordered ascending by CreatedOn
+                    var updates = await _gameClient.GetUpdatesAsync(localGame.Id, localGame.InstalledVersion);
+                    var updateList = updates?.ToList() ?? [];
+
+                    if (updateList.Count == 0)
+                    {
+                        Logger?.LogInformation("[InstallQueue] Update(Game): No updates found for {Title} ({Id})", currentItem.Title, currentItem.Id);
+                        currentItem.Status = InstallStatus.Complete;
+                        OnQueueChanged?.Invoke();
+                        OnInstallComplete?.Invoke(localGame);
+                        operation.Complete();
+                        return;
+                    }
+
+                    Logger?.LogInformation("[InstallQueue] Update(Game): Found {Count} update(s) to apply sequentially: {Versions}",
+                        updateList.Count, string.Join(" → ", updateList.Select(a => a.Version)));
+
+                    // Apply each archive sequentially
+                    foreach (var archive in updateList)
+                    {
+                        Logger?.LogInformation("[InstallQueue] Update(Game): Applying archive {ArchiveId} version {Version} for {Title}",
+                            archive.Id, archive.Version, currentItem.Title);
+
+                        var success = await _gameClient.ApplyUpdateArchiveAsync(archive.Id, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
+
+                        if (!success)
+                            throw new InstallCanceledException("Game update was canceled");
+
+                        // Update version in local DB after each archive
+                        localGame.InstalledVersion = archive.Version;
+                        await _gameService.UpdateAsync(localGame);
+
+                        Logger?.LogInformation("[InstallQueue] Update(Game): Applied version {Version}, updated InstalledVersion in DB", archive.Version);
+                    }
+
+                    // Re-import game metadata (scripts, metadata changes)
+                    Logger?.LogInformation("[InstallQueue] Update(Game): Re-importing game metadata for {Title} ({Id})", currentItem.Title, currentItem.Id);
+                    await _importService.ImportGameAsync(localGame.Id);
+                    localGame = await _gameService.GetAsync(localGame.Id);
+
+                    // Update manifest and scripts on disk
+                    await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+
+                    // Update the queue item version to match
+                    currentItem.Version = localGame.InstalledVersion;
+                }
+                catch (InstallCanceledException)
+                {
+                    Logger?.LogError("Update canceled, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (InstallException ex)
+                {
+                    Logger?.LogError(ex, "An error occurred during update, removing from queue");
+                    currentItem.Status = InstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
+                    OnInstallFail?.Invoke(localGame);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred during update");
+                    currentItem.Status = InstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
+                    OnInstallFail?.Invoke(localGame);
+                    return;
+                }
+
+                currentItem.CompletedOn = DateTime.Now;
+                currentItem.Status = InstallStatus.Complete;
+                currentItem.Progress = 1;
+                currentItem.BytesDownloaded = currentItem.TotalBytes;
+
+                try
+                {
+                    await _gameService.UpdateAsync(localGame);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An error occurred while trying to write changes to the database after update of game {GameTitle} ({GameId})", localGame.Title, localGame.Id);
+                }
+
+                OnQueueChanged?.Invoke();
+
+                Logger?.LogTrace("Update of game {GameTitle} ({GameId}) complete!", localGame.Title, localGame.Id);
+
+                OnInstallComplete?.Invoke(localGame);
+
+                operation.Complete();
+            }
         }
 
         public async Task Install(InstallQueueTool currentItem, Tool localTool, SDK.Models.Tool remoteTool)

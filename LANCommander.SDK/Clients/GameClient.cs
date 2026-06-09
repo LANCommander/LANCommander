@@ -284,6 +284,173 @@ namespace LANCommander.SDK.Services
                 .GetAsync<bool>();
         }
 
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{gameId}/Updates?version={version}")
+                .GetAsync<IEnumerable<Archive>>();
+        }
+
+        private async Task<TrackableStream> StreamArchiveAsync(Guid archiveId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/Download/Archive/{archiveId}")
+                .StreamAsync();
+        }
+
+        /// <summary>
+        /// Downloads and extracts a specific archive for a game update.
+        /// </summary>
+        /// <returns>True if successful, false if canceled.</returns>
+        public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid gameId, string destination, CancellationToken cancellationToken = default)
+        {
+            var game = await GetAsync(gameId);
+
+            if (game == null)
+                throw new InstallException($"Could not fetch game info for game {gameId}");
+
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+
+            var result = await DownloadAndExtractArchiveAsync(archiveId, game, destination, cancellationToken);
+
+            if (result.Canceled)
+                return false;
+
+            if (!result.Success)
+                throw new InstallException("Could not extract the update archive. Retry the update or check your connection");
+
+            return true;
+        }
+
+        internal async Task<ExtractionResult> DownloadAndExtractArchiveAsync(Guid archiveId, Game game, string destination, CancellationToken cancellationToken = default)
+        {
+            if (game == null)
+                throw new ArgumentNullException(nameof(game), "No game was specified");
+
+            logger?.LogTrace("Downloading archive {ArchiveId} and extracting {Game} to path {Destination}", archiveId, game.Title, destination);
+
+            var extractionResult = new ExtractionResult
+            {
+                Canceled = false,
+            };
+
+            var fileManifest = new StringBuilder();
+            var files = new List<ExtractionResult.FileEntry>();
+
+            try
+            {
+                Directory.CreateDirectory(destination);
+
+                var stream = await StreamArchiveAsync(archiveId);
+
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _reader?.Cancel();
+                        _installProgress.Status = InstallStatus.Canceled;
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                        return;
+                    }
+
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
+
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = game,
+                    });
+                });
+
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                _installProgress.Status = InstallStatus.Downloading;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
+                {
+                    if (_reader.Cancelled)
+                        break;
+
+                    try
+                    {
+                        var entryKey = _reader.Entry.Key;
+                        var localFile = Path.Combine(destination, entryKey);
+
+                        fileManifest.AppendLine($"{entryKey} | {_reader.Entry.Crc.ToString("X")}");
+                        files.Add(new ExtractionResult.FileEntry
+                        {
+                            EntryPath = entryKey,
+                            LocalPath = localFile,
+                        });
+
+                        await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
+                        {
+                            ExtractFullPath = true,
+                            Overwrite = true,
+                            PreserveFileTime = true
+                        }, cancellationToken);
+                    }
+                    catch (IOException ex)
+                    {
+                        var errorCode = ex.HResult & 0xFFFF;
+
+                        if (errorCode == 87)
+                            throw;
+                        else
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
+
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
+                    }
+                }
+
+                await _reader.DisposeAsync();
+                await stream.DisposeAsync();
+            }
+            catch (ReaderCancelledException ex)
+            {
+                logger?.LogTrace(ex, "User cancelled the download");
+                extractionResult.Canceled = true;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not extract archive {ArchiveId} to path {Destination}", archiveId, destination);
+                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+            }
+
+            if (!extractionResult.Canceled)
+            {
+                extractionResult.Success = true;
+                extractionResult.Directory = destination;
+                extractionResult.Files = files;
+
+                var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
+
+                if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
+
+                File.WriteAllText(fileListDestination, fileManifest.ToString());
+            }
+
+            return extractionResult;
+        }
+
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)
         {
             try

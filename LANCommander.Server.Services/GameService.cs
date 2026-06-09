@@ -259,6 +259,33 @@ namespace LANCommander.Server.Services
             return latestArchive?.Version ?? String.Empty;
         }
 
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .GetAsync(gameId);
+
+            if (game?.Archives == null || !game.Archives.Any())
+                return [];
+
+            var orderedArchives = game.Archives.OrderBy(a => a.CreatedOn).ToList();
+
+            if (string.IsNullOrWhiteSpace(version))
+                return [orderedArchives.Last()];
+
+            var installedArchive = orderedArchives.FirstOrDefault(a => a.Version == version);
+
+            if (installedArchive == null)
+                return [orderedArchives.Last()];
+
+            var newerArchives = orderedArchives
+                .Where(a => a.CreatedOn > installedArchive.CreatedOn)
+                .ToList();
+
+            return newerArchives;
+        }
+
         public async Task PackageAsync(Guid id)
         {
             var game = await AsNoTracking()

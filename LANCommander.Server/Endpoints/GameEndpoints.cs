@@ -28,6 +28,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
+        group.MapGet("/{id:guid}/Updates", GetUpdatesAsync);
         group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync).AllowAnonymous();
         group.MapGet("/{id:guid}/Import", ImportAsync).RequireAuthorization(RoleService.AdministratorRoleName);
@@ -319,6 +320,27 @@ public static class GameEndpoints
         #endregion
         
         return TypedResults.Ok();
+    }
+
+    internal static async Task<IResult> GetUpdatesAsync(
+        [FromServices] GameService gameService,
+        [FromServices] IMapper mapper,
+        [FromServices] ILogger<Game> logger,
+        Guid id,
+        string version)
+    {
+        try
+        {
+            var archives = await gameService.GetUpdatesAsync(id, version);
+            var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
+
+            return TypedResults.Ok(mapped);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not get updates for game {GameId}", id);
+            return TypedResults.Ok(Enumerable.Empty<SDK.Models.Archive>());
+        }
     }
 
     internal static async Task<IResult> CheckForUpdateAsync(

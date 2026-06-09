@@ -59,6 +59,7 @@ public class GameImporter(
                 CreatedOn = importItemInfo.Record.CreatedOn,
                 UpdatedOn = importItemInfo.Record.UpdatedOn,
                 ImportedOn = DateTime.UtcNow,
+                LatestVersion = importItemInfo.Record.Version,
             };
             
             await gameService.AddAsync(game);

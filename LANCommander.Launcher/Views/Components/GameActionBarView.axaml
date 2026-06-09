@@ -78,53 +78,26 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Update SplitButton (installed + update available) -->
-                    <SplitButton Command="{Binding UpdateGameCommand}"
-                                 IsVisible="{Binding IsUpdateAvailable}"
-                                 Classes="Primary Large">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="Update" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
-                            <TextBlock Text="Updating..." IsVisible="{Binding IsInstalling}" />
-                        </StackPanel>
-
-                        <SplitButton.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem Header="Play Without Updating"
-                                          Command="{Binding PlayOrStopCommand}" />
-                                <Separator />
-                                <MenuItem Header="Browse Files"
-                                          Command="{Binding BrowseFilesCommand}" />
-                                <MenuItem Header="View Manual"
-                                          Command="{Binding OpenFirstManualCommand}"
-                                          IsVisible="{Binding HasManuals}" />
-                                <MenuItem Header="Modify"
-                                          Command="{Binding ModifyCommand}" />
-                                <Separator />
-                                <MenuItem Header="Verify Files"
-                                          Command="{Binding VerifyFilesCommand}"
-                                          IsEnabled="{Binding !IsVerifyingFiles}" />
-                                <MenuItem Header="Uninstall"
-                                          Command="{Binding UninstallCommand}"
-                                          IsEnabled="{Binding !IsUninstalling}" />
-                                <MenuItem Header="Remove from Library"
-                                          Command="{Binding RemoveFromLibraryCommand}"
-                                          IsEnabled="{Binding IsInLibrary}" />
-                            </MenuFlyout>
-                        </SplitButton.Flyout>
-                    </SplitButton>
-
-                    <!-- Play / Stop SplitButton (installed, no update available) -->
+                    <!-- Play / Update / Stop SplitButton (installed) -->
                     <SplitButton x:Name="PlaySplitButton"
-                                 Command="{Binding PlayOrStopCommand}"
-                                 IsVisible="{Binding ShowPlayButton}"
+                                 Command="{Binding PrimaryActionCommand}"
+                                 IsVisible="{Binding IsInstalled}"
                                  IsEnabled="{Binding PlayButtonIsEnabled}"
                                  Classes.Running="{Binding IsRunning}"
                                  Classes.Starting="{Binding IsStarting}"
                                  Classes.Stopping="{Binding IsStopping}"
                                  Classes="Primary Large">
                         <Panel>
-                            <!-- Not running: Play / Starting -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsRunning}">
+                            <!-- Idle + update available: Update -->
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        IsVisible="{Binding ShowUpdateLabel}">
+                                <TextBlock Text="Update" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
+                                <TextBlock Text="Updating..." IsVisible="{Binding IsInstalling}" />
+                            </StackPanel>
+
+                            <!-- Idle + no update: Play / Starting -->
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        IsVisible="{Binding ShowPlayLabel}">
                                 <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
@@ -146,6 +119,10 @@
 
                         <SplitButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Play Without Updating"
+                                          Command="{Binding PlayOrStopCommand}"
+                                          IsVisible="{Binding IsUpdateAvailable}" />
+                                <Separator IsVisible="{Binding IsUpdateAvailable}" />
                                 <MenuItem Header="Browse Files"
                                           Command="{Binding BrowseFilesCommand}" />
                                 <MenuItem Header="View Manual"

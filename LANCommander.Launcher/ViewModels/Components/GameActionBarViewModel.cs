@@ -55,7 +55,7 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Install state
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
-    [NotifyPropertyChangedFor(nameof(ShowPlayButton))]
+
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
 
@@ -74,9 +74,13 @@ public partial class GameActionBarViewModel : ViewModelBase
 
     // Play state
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
     private bool _isRunning;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
     private bool _isStarting;
 
     [ObservableProperty]
@@ -133,7 +137,9 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Update available
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
-    [NotifyPropertyChangedFor(nameof(ShowPlayButton))]
+
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
     private bool _isUpdateAvailable;
 
     // Offline mode - disables install
@@ -147,9 +153,14 @@ public partial class GameActionBarViewModel : ViewModelBase
     public bool ShowSimplePlayButton => IsInstalled && !HasMultipleActions;
 
     /// <summary>
-    /// Shows the play button when installed and no update is available
+    /// Shows "Update" label when update available and game is idle (not running/starting)
     /// </summary>
-    public bool ShowPlayButton => IsInstalled && !IsUpdateAvailable;
+    public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting;
+
+    /// <summary>
+    /// Shows "Play" label when no update available and game is idle (not running/starting)
+    /// </summary>
+    public bool ShowPlayLabel => !IsUpdateAvailable && !IsRunning && !IsStarting;
 
     /// <summary>
     /// Can install only when online and not already installed
@@ -195,6 +206,10 @@ public partial class GameActionBarViewModel : ViewModelBase
         LoadManuals(game);
         await LoadActionsAsync();
         StartRunningCheck();
+
+        // Check server for updates if installed and not already detected locally
+        if (game.Installed && !IsUpdateAvailable)
+            _ = CheckForUpdateFromServerAsync(game.Id, game.InstalledVersion);
     }
 
     /// <summary>
@@ -251,6 +266,10 @@ public partial class GameActionBarViewModel : ViewModelBase
 
         await LoadActionsAsync();
         StartRunningCheck();
+
+        // Check server for updates if installed and not already detected locally
+        if (localGame != null && localGame.Installed && !IsUpdateAvailable)
+            _ = CheckForUpdateFromServerAsync(localGame.Id, localGame.InstalledVersion);
     }
 
     private static string FormatBytes(long bytes)
@@ -453,6 +472,44 @@ public partial class GameActionBarViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Checks the server for available updates and updates local state if found.
+    /// Runs in the background (fire-and-forget) so it doesn't block UI loading.
+    /// </summary>
+    private async Task CheckForUpdateFromServerAsync(Guid gameId, string installedVersion)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+
+            var hasUpdate = await gameClient.CheckForUpdateAsync(gameId, installedVersion);
+
+            if (hasUpdate)
+            {
+                _logger.LogInformation("Server reports update available for game {GameId}", gameId);
+
+                // Re-import the game to pull latest version info into local DB
+                await importService.ImportGameAsync(gameId);
+
+                var localGame = await gameService.GetAsync(gameId);
+                if (localGame != null)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        IsUpdateAvailable = true;
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not check for updates for game {GameId}", gameId);
+        }
+    }
+
     [RelayCommand]
     private async Task UpdateGameAsync()
     {
@@ -488,6 +545,16 @@ public partial class GameActionBarViewModel : ViewModelBase
         {
             IsInstalling = false;
         }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task PrimaryActionAsync()
+    {
+        if (IsRunning)
+            return StopAsync();
+        if (IsUpdateAvailable)
+            return UpdateGameAsync();
+        return PlayAsync();
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]

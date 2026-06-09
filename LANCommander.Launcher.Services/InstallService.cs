@@ -227,6 +227,13 @@ namespace LANCommander.Launcher.Services
                                 a => a.Id,
                                 a => a.Archives?.OrderByDescending(ar => ar.CreatedOn).FirstOrDefault()?.Version);
                         }
+
+                        // Flag as update if game is already installed with a different version
+                        if (game.Installed && !string.IsNullOrWhiteSpace(queueItem.Version)
+                            && queueItem.Version != game.InstalledVersion)
+                        {
+                            ((InstallQueueGame)queueItem).IsUpdate = true;
+                        }
                         break;
 
                     case InstallPlanItemType.Redistributable:
@@ -483,8 +490,11 @@ namespace LANCommander.Launcher.Services
                     && ManifestHelper.Exists(localGame.InstallDirectory, localGame.Id))
                 {
                     // Check if this is an update (versions differ)
-                    var isUpdate = !string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                        && localGame.InstalledVersion != localGame.LatestVersion;
+                    var isUpdate = queueItem.IsUpdate
+                        || (!string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                            && localGame.InstalledVersion != localGame.LatestVersion)
+                        || (!string.IsNullOrWhiteSpace(queueItem.Version)
+                            && queueItem.Version != localGame.InstalledVersion);
 
                     if (isUpdate)
                     {

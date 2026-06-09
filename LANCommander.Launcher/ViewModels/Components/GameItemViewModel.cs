@@ -83,6 +83,9 @@ public partial class GameItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showInLibraryBadge;
 
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
     public GameItemViewModel() { }
 
     public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
@@ -127,6 +130,9 @@ public partial class GameItemViewModel : ViewModelBase
         HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
         MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
         IsInstalled = game.Installed;
+        IsUpdateAvailable = game.Installed
+            && !string.IsNullOrWhiteSpace(game.LatestVersion)
+            && game.InstalledVersion != game.LatestVersion;
         CoverPath = coverPath;
         CoverMimeType = coverMimeType;
         HasCover = !string.IsNullOrEmpty(coverPath);

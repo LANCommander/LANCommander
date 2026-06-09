@@ -229,25 +229,6 @@
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
         </Border>
 
-        <!-- ── Empty state ─────────────────────────────────────────────────── -->
-        <StackPanel DockPanel.Dock="Top"
-                    Spacing="12"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Margin="0,80,0,0">
-            <StackPanel.IsVisible>
-                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                    <Binding Path="!IsLoading" />
-                    <Binding Path="!HasGames" />
-                    <Binding Path="!HasError" />
-                </MultiBinding>
-            </StackPanel.IsVisible>
-            <Icon Type="Regular" Value="GameController" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
-            <TextBlock Text="No Games Found" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
-            <TextBlock Text="Try adjusting your filters or search terms."
-                       FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
-        </StackPanel>
-
         <!-- ── Sub-views ──────────────────────────────────────────────────── -->
         <Grid>
             <local:GamesGridView       IsVisible="{Binding IsGridViewFlat}" />
@@ -255,6 +236,23 @@
             <local:LibraryRowView      IsVisible="{Binding IsLibraryListViewFlat}" />
             <local:GamesShelfView      IsVisible="{Binding IsHorizontalViewFlat}" />
             <local:GamesGroupedView    IsVisible="{Binding IsGrouped}" />
+
+            <!-- ── Empty state ─────────────────────────────────────────── -->
+            <StackPanel Spacing="12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!IsLoading" />
+                        <Binding Path="!HasGames" />
+                        <Binding Path="!HasError" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <Icon Type="Regular" Value="GameController" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
+                <TextBlock Text="No Games Found" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+                <TextBlock Text="Try adjusting your filters or search terms."
+                           FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
+            </StackPanel>
         </Grid>
 
     </DockPanel>

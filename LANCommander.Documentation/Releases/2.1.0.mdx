@@ -6,6 +6,11 @@ import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
 import ScreenshotCarousel from '@site/src/components/ScreenshotCarousel';
 
 # LANCommander 2.1.0 Release Notes
+
+:::tip Latest Version
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.1** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+:::
+
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
 
 ## Breaking Changes
@@ -305,6 +310,41 @@ Improved the visibility and styling of the back button in the `GameDetailView`, 
 - Removed legacy Photino launcher from CI
 - Added nightly builds for Avalonia launcher
 
+## Patch Updates
+
+### 2.1.1
+<details>
+<summary>View 2.1.1 patch notes</summary>
+
+#### New Features
+
+##### User Registration in Launcher
+User registration has been added back into the launcher's login screen. This was a feature from the old launcher that was missed in the port to Avalonia.
+
+##### Game Update Support
+The Avalonia launcher's update functionality was only partially-implemented. This has been completed and moved over to the new installation workflow system. Additionally, updates for games can be ignored by clicking the dropdown next to the "Update" button and selecting "Play without updating".
+
+#### Improvements
+- Game titles are now dimmed in the library when not installed, making it easier to see what's ready to play at a glance
+- The games list view and depot now display a helpful message when there are no items, instead of showing a blank screen
+- The launcher now downloads media on demand if it doesn't exist locally, and gracefully falls back if LibVLC fails to load
+
+#### Bug Fixes
+- Fixed bundling of LibVLC on macOS and Windows
+- Fixed the display of the empty library view
+- Fixed game updating
+
+<ReleaseDownloads release="v2.1.1" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.1" />
+
+<details>
+<summary>View 2.1.0 downloads</summary>
+
 <ReleaseDownloads release="v2.1.0" />
+
+</details>

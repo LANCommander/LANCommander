@@ -1,0 +1,29 @@
+---
+title: 2.1.1
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+
+# LANCommander 2.1.1 Release Notes
+
+## New Features
+
+### User Registration in Launcher
+User registration has been added back into the launcher's login screen. This was a feature from the old launcher that was missed in the port to Avalonia.
+
+### Game Update Support
+The Avalonia launcher's update functionality was only partially-implemented. This has been completed and moved over to the new installation workflow system. Additionally, updates for games can be ignored by clicking the dropdown next to the "Update" button and selecting "Play without updating".
+
+## Improvements
+- Game titles are now dimmed in the library when not installed, making it easier to see what's ready to play at a glance
+- The games list view and depot now display a helpful message when there are no items, instead of showing a blank screen
+- The launcher now downloads media on demand if it doesn't exist locally, and gracefully falls back if LibVLC fails to load
+
+## Bug Fixes
+- Fixed bundling of LibVLC on macOS and Windows
+- Fixed the display of the empty library view
+- Fixed game updating
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.1" />

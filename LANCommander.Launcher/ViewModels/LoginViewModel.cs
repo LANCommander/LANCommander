@@ -1,12 +1,14 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
@@ -25,6 +27,12 @@ public partial class LoginViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _password = string.Empty;
+
+    [ObservableProperty]
+    private string _passwordConfirmation = string.Empty;
+
+    [ObservableProperty]
+    private bool _isRegistering;
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -126,6 +134,72 @@ public partial class LoginViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task RegisterAsync()
+    {
+        if (IsServerOffline)
+        {
+            StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            StatusMessage = "Please enter username and password";
+            HasError = true;
+            return;
+        }
+
+        if (Password != PasswordConfirmation)
+        {
+            StatusMessage = "Passwords do not match";
+            HasError = true;
+            return;
+        }
+
+        IsLoading = true;
+        HasError = false;
+        StatusMessage = "Registering...";
+
+        try
+        {
+            await _authenticationService.Register(Username, Password, PasswordConfirmation);
+
+            StatusMessage = "Registration successful!";
+            LoginSucceeded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (RegisterFailedException ex)
+        {
+            if (ex.ErrorData?.DetailsMessages?.Any() == true)
+                StatusMessage = string.Join(" ", ex.ErrorData.DetailsMessages);
+            else if (!string.IsNullOrWhiteSpace(ex.ErrorData?.Message))
+                StatusMessage = ex.ErrorData.Message;
+            else
+                StatusMessage = ex.Message;
+
+            HasError = true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Registration failed: {ex.Message}";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleMode()
+    {
+        IsRegistering = !IsRegistering;
+        HasError = false;
+        StatusMessage = string.Empty;
+        PasswordConfirmation = string.Empty;
     }
 
     [RelayCommand]

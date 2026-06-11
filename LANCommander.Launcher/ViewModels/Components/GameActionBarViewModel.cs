@@ -474,6 +474,7 @@ public partial class GameActionBarViewModel : ViewModelBase
 
     /// <summary>
     /// Checks the server for available updates and updates local state if found.
+    /// If no update is available, refreshes the on-disk manifest and scripts.
     /// Runs in the background (fire-and-forget) so it doesn't block UI loading.
     /// </summary>
     private async Task CheckForUpdateFromServerAsync(Guid gameId, string installedVersion)
@@ -502,6 +503,12 @@ public partial class GameActionBarViewModel : ViewModelBase
                         IsUpdateAvailable = true;
                     });
                 }
+            }
+            else if (!string.IsNullOrEmpty(InstallDirectory))
+            {
+                // No update available — refresh manifest and scripts to keep them in sync
+                _logger.LogDebug("Refreshing manifest and scripts for game {GameId}", gameId);
+                await gameClient.RefreshManifestAndScriptsAsync(InstallDirectory, gameId);
             }
         }
         catch (Exception ex)

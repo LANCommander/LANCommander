@@ -1711,6 +1711,28 @@ namespace LANCommander.SDK.Services
             await WriteScriptsAsync(installDirectory, game);
         }
 
+        /// <summary>
+        /// Refreshes the on-disk manifest and scripts for an installed game by fetching the latest
+        /// versions from the server and writing them to the game's install directory.
+        /// </summary>
+        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Guid gameId)
+        {
+            logger?.LogTrace("Refreshing manifest and scripts for game {GameId} in {InstallDirectory}", gameId, installDirectory);
+
+            var manifest = await GetManifestAsync(gameId);
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+
+            var scripts = await GetScriptsAsync(gameId);
+
+            if (scripts != null && scripts.Any())
+            {
+                var game = new Game { Id = gameId };
+
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(game, script, installDirectory);
+            }
+        }
+
         private async Task<Models.Manifest.Game> WriteManifestAsync(string installDirectory, Game game)
         {
             logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");

@@ -1,0 +1,39 @@
+---
+title: 2.1.2
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.2 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## New Features
+
+### Redistributable Update Checking
+The launcher now checks if installed redistributables are up to date and will re-run them when updates are available on the server. This ensures games always have the correct runtime dependencies.
+
+### Drag and Drop File Import in Script Editor
+The script editor now supports drag and drop for `.ps1`, `.reg`, `.ini`, and other text files. PowerShell scripts replace the editor contents, `.reg` files are automatically converted to PowerShell commands, and other text files are inserted as escaped strings.
+
+### Manifest and Script Refresh
+When a game has no update available, the launcher will now refresh the manifest and scripts on disk. This ensures local files stay in sync with server-side changes that don't trigger a full update.
+
+## Improvements
+- Entire row is now clickable in the compact library list view
+- Items per page selection is now persisted in data tables
+- Improved process termination handling with fallback for Windows and absolute pathing for `kill` on Linux/macOS
+
+## Bug Fixes
+- Fixed padding in the metadata lookup dialog
+- Fixed HQ token retrieval on the first-time setup and integrations settings pages
+- Fixed local server engine tracking (contributed by @Mavyre)
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.2" />
+
+<ContributorGrid from="v2.1.1" to="v2.1.2" />

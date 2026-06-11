@@ -76,11 +76,14 @@ function handleFile(editor: any, file: File): void {
         if (ext === ".reg") {
             const psCommands = ParseRegToPowerShell(content);
             insertTextAtCursor(editor, psCommands);
+        } else if (ext === ".ini") {
+            const psCommands = ParseIniToPowerShell(content);
+            insertTextAtCursor(editor, psCommands);
         } else if (ext === ".ps1") {
             editor.setValue(content);
         } else {
             const hereString = `@'\n${content}\n'@`;
-            
+
             insertTextAtCursor(editor, hereString);
         }
     };
@@ -241,4 +244,45 @@ function ParseRegFile(content: string): RegEntry[] {
     }
 
     return entries;
+}
+
+// --- .ini file parser ---
+
+function ParseIniToPowerShell(iniContent: string): string {
+    const normalized = iniContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const rawLines = normalized.split("\n");
+    const lines: string[] = [];
+
+    let currentSection = "";
+
+    for (const line of rawLines) {
+        const trimmed = line.trim();
+
+        if (!trimmed || trimmed.startsWith(";") || trimmed.startsWith("#"))
+            continue;
+
+        const sectionMatch = trimmed.match(/^\[(.+)\]$/);
+
+        if (sectionMatch) {
+            currentSection = sectionMatch[1];
+
+            if (lines.length > 0)
+                lines.push("");
+
+            lines.push(`# [${currentSection}]`);
+            continue;
+        }
+
+        const kvMatch = trimmed.match(/^([^=]+?)=(.*)$/);
+
+        if (kvMatch) {
+            const key = kvMatch[1].trim();
+            const value = kvMatch[2].trim();
+            const escapedValue = value.replace(/"/g, '`"');
+
+            lines.push(`Update-IniValue -Section "${currentSection}" -Key "${key}" -Value "${escapedValue}" -FilePath $FilePath`);
+        }
+    }
+
+    return lines.join("\n");
 }

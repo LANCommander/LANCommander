@@ -57,7 +57,7 @@ public class LocalServerEngine(
             var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
             var servers = await serverService.GetAsync(s =>
-                s.Engine == ServerEngine.Remote);
+                s.Engine == ServerEngine.Local);
 
             foreach (var server in servers)
             {

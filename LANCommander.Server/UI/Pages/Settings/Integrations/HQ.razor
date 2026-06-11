@@ -172,7 +172,8 @@
     {
         var baseUrl = Settings.Value.Server.HQ.BaseUrl.TrimEnd('/');
         var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/hq/callback";
-        var loginUrl = $"{baseUrl}/auth/login?returnUrl={Uri.EscapeDataString(callbackUrl)}";
+        var tokenRelayUrl = $"{baseUrl}/Auth/TokenRelay?returnUrl={Uri.EscapeDataString(callbackUrl)}";
+        var loginUrl = $"{baseUrl}/Auth/Login?returnUrl={Uri.EscapeDataString(tokenRelayUrl)}";
 
         await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
 

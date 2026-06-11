@@ -18,6 +18,8 @@ public static class RedistributablesEndpoints
         group.MapGet("/{id:guid}", GetByIdAsync);
         group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync);
+        group.MapGet("/{id:guid}/Updates", GetUpdatesAsync);
+        group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
         group.MapPost("/Import/{objectKey:guid}", ImportAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
         group.MapPost("/UploadArchive", UploadArchiveAsync)
@@ -93,6 +95,47 @@ public static class RedistributablesEndpoints
             new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read),
             "application/octet-stream",
             $"{redistributable.Name.SanitizeFilename()}.zip");
+    }
+
+    internal static async Task<IResult> GetUpdatesAsync(
+        [FromServices] RedistributableService redistributableService,
+        [FromServices] IMapper mapper,
+        [FromServices] ILogger<Redistributable> logger,
+        Guid id,
+        string version)
+    {
+        try
+        {
+            var archives = await redistributableService.GetUpdatesAsync(id, version);
+            var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
+
+            return TypedResults.Ok(mapped);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not get updates for redistributable {RedistributableId}", id);
+            return TypedResults.Ok(Enumerable.Empty<SDK.Models.Archive>());
+        }
+    }
+
+    internal static async Task<IResult> CheckForUpdateAsync(
+        [FromServices] RedistributableService redistributableService,
+        [FromServices] ILogger<Redistributable> logger,
+        Guid id,
+        string version)
+    {
+        try
+        {
+            var currentVersion = await redistributableService.GetVersionAsync(id);
+
+            return TypedResults.Ok(version != currentVersion);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Version could not be found for redistributable {RedistributableId}", id);
+        }
+
+        return TypedResults.Ok(false);
     }
 
     internal static async Task<IResult> ImportAsync(

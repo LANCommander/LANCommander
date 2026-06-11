@@ -70,6 +70,52 @@ namespace LANCommander.Server.Services
             return mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
         }
 
+        public async Task<Archive> GetLatestArchiveAsync(Guid id)
+        {
+            var redistributable = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(r => r.Archives)
+                .GetAsync(id);
+
+            var latestArchive = redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+            return latestArchive;
+        }
+
+        public async Task<string> GetVersionAsync(Guid id)
+        {
+            var latestArchive = await GetLatestArchiveAsync(id);
+
+            return latestArchive?.Version ?? String.Empty;
+        }
+
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid redistributableId, string version)
+        {
+            var redistributable = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(r => r.Archives)
+                .GetAsync(redistributableId);
+
+            if (redistributable?.Archives == null || !redistributable.Archives.Any())
+                return [];
+
+            var orderedArchives = redistributable.Archives.OrderBy(a => a.CreatedOn).ToList();
+
+            if (string.IsNullOrWhiteSpace(version))
+                return [orderedArchives.Last()];
+
+            var installedArchive = orderedArchives.FirstOrDefault(a => a.Version == version);
+
+            if (installedArchive == null)
+                return [orderedArchives.Last()];
+
+            var newerArchives = orderedArchives
+                .Where(a => a.CreatedOn > installedArchive.CreatedOn)
+                .ToList();
+
+            return newerArchives;
+        }
+
         public async Task PackageAsync(Guid id)
         {
             var redistributable = await AsNoTracking()

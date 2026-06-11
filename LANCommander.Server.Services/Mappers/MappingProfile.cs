@@ -26,6 +26,10 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Platform, SDK.Models.Platform>();
             CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
             CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
+                    src.Archives != null && src.Archives.Any()
+                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                        : null))
                 .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
             CreateMap<Data.Models.Server, SDK.Models.Server>();
             CreateMap<Data.Models.ServerConsole, SDK.Models.ServerConsole>();
@@ -123,6 +127,10 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Platform, SDK.Models.Manifest.Platform>().ReverseMap();
             CreateMap<Data.Models.PlaySession, SDK.Models.Manifest.PlaySession>().ReverseMap();
             CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
+                    src.Archives != null && src.Archives.Any()
+                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                        : null))
                 .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
                 .ReverseMap();
             CreateMap<Data.Models.GameSave, SDK.Models.Manifest.Save>().ReverseMap();

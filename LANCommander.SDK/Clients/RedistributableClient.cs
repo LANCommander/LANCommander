@@ -67,6 +67,26 @@ namespace LANCommander.SDK.Services
             }
         }
         
+        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributables/{id}/CheckForUpdate?version={currentVersion}")
+                .GetAsync<bool>();
+        }
+
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid redistributableId, string version)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributables/{redistributableId}/Updates?version={version}")
+                .GetAsync<IEnumerable<Archive>>();
+        }
+
         public async Task<Stream> Stream(Guid id)
         {
             return await apiRequestFactory
@@ -74,6 +94,16 @@ namespace LANCommander.SDK.Services
                 .UseAuthenticationToken()
                 .UseVersioning()
                 .UseRoute($"/api/Redistributables/{id}/Download")
+                .StreamAsync();
+        }
+
+        private async Task<TrackableStream> StreamArchiveAsync(Guid archiveId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/Download/Archive/{archiveId}")
                 .StreamAsync();
         }
 
@@ -165,6 +195,92 @@ namespace LANCommander.SDK.Services
             }
         }
         
+        public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid redistributableId, Game game, CancellationToken cancellationToken = default)
+        {
+            _installProgress = new InstallProgress();
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Title = game.Title;
+            _installProgress.Progress = 0;
+
+            OnInstallProgressUpdate?.Invoke(_installProgress);
+
+            var destination = Path.Combine(GameClient.GetMetadataDirectoryPath(game.InstallDirectory, redistributableId), "Files");
+
+            logger?.LogTrace("Downloading archive {ArchiveId} and extracting redistributable {RedistributableId} to path {Destination}", archiveId, redistributableId, destination);
+
+            try
+            {
+                Directory.CreateDirectory(destination);
+
+                using (var stream = await StreamArchiveAsync(archiveId))
+                {
+                    var monitor = new FileTransferMonitor(stream.Length);
+                    var progress = new Progress<ProgressReport>(report =>
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
+                        if (monitor.CanUpdate())
+                        {
+                            monitor.Update(stream.Position);
+
+                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                            _installProgress.TotalBytes = stream.Length;
+                            _installProgress.TransferSpeed = monitor.GetSpeed();
+                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+
+                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        }
+
+                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                        {
+                            Progress = report,
+                        });
+                    });
+
+                    await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+                    await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
+                    {
+                        ExtractFullPath = true,
+                        Overwrite = true
+                    }, cancellationToken);
+                }
+
+                logger?.LogTrace("Successfully applied update archive {ArchiveId} for redistributable {RedistributableId}", archiveId, redistributableId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not apply update archive {ArchiveId} for redistributable {RedistributableId}", archiveId, redistributableId);
+
+                if (Directory.Exists(destination))
+                {
+                    logger?.LogTrace("Cleaning up orphaned files after bad update");
+                    Directory.Delete(destination, true);
+                }
+
+                throw new InstallException("The redistributable update archive could not be extracted. Please try again");
+            }
+        }
+
+        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Redistributable redistributable)
+        {
+            logger?.LogTrace("Refreshing manifest and scripts for redistributable {RedistributableId} in {InstallDirectory}", redistributable.Id, installDirectory);
+
+            var manifest = await GetManifestAsync(redistributable.Id);
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+
+            var scripts = await GetScriptsAsync(redistributable.Id);
+
+            if (scripts != null && scripts.Any())
+            {
+                var game = new Game { InstallDirectory = installDirectory };
+
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(game, redistributable, script);
+            }
+        }
+
         private async Task RunPostInstallScripts(Game game, Redistributable redistributable)
         {
             if (redistributable.Scripts != null && redistributable.Scripts.Any())

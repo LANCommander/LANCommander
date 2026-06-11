@@ -485,8 +485,43 @@ public partial class GameActionBarViewModel : ViewModelBase
             var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
             var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var redistributableClient = scope.ServiceProvider.GetRequiredService<RedistributableClient>();
 
             var hasUpdate = await gameClient.CheckForUpdateAsync(gameId, installedVersion);
+
+            if (!hasUpdate && !string.IsNullOrEmpty(InstallDirectory))
+            {
+                // Check redistributables for updates
+                var localGame = await gameService.GetAsync(gameId);
+
+                if (localGame?.Redistributables != null)
+                {
+                    foreach (var redistributable in localGame.Redistributables)
+                    {
+                        try
+                        {
+                            var redistManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(InstallDirectory, redistributable.Id);
+
+                            if (redistManifest == null || string.IsNullOrWhiteSpace(redistManifest.Version))
+                                continue;
+
+                            var redistHasUpdate = await redistributableClient.CheckForUpdateAsync(redistributable.Id, redistManifest.Version);
+
+                            if (redistHasUpdate)
+                            {
+                                _logger.LogInformation("Redistributable {RedistName} ({RedistId}) has an update available for game {GameId}",
+                                    redistributable.Name, redistributable.Id, gameId);
+                                hasUpdate = true;
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "Could not check for redistributable {RedistId} updates", redistributable.Id);
+                        }
+                    }
+                }
+            }
 
             if (hasUpdate)
             {

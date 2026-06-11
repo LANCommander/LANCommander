@@ -6,6 +6,7 @@ namespace LANCommander.SDK.Models
     public class Redistributable : BaseModel
     {
         public string Name { get; set; }
+        public string Version { get; set; }
         public string Description { get; set; }
         public string Notes { get; set; }
         public string OptionSchema { get; set; }

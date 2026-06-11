@@ -505,6 +505,9 @@ namespace LANCommander.Launcher.Services
                         // update current local installed game first, might be moved afterwards
                         await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
 
+                        // Check for and apply redistributable updates
+                        await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables);
+
                         // Probably doing a modification of some sort
                         if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
                         {
@@ -596,7 +599,10 @@ namespace LANCommander.Launcher.Services
         {
             try
             {
-                await InstallRedistributable(queueItem);
+                if (queueItem.IsUpdate)
+                    await UpdateRedistributable(queueItem);
+                else
+                    await InstallRedistributable(queueItem);
             }
             catch (Exception ex)
             {
@@ -729,44 +735,44 @@ namespace LANCommander.Launcher.Services
                     var updates = await _gameClient.GetUpdatesAsync(localGame.Id, localGame.InstalledVersion);
                     var updateList = updates?.ToList() ?? [];
 
-                    if (updateList.Count == 0)
+                    if (updateList.Count > 0)
                     {
-                        Logger?.LogInformation("[InstallQueue] Update(Game): No updates found for {Title} ({Id})", currentItem.Title, currentItem.Id);
-                        currentItem.Status = InstallStatus.Complete;
-                        OnQueueChanged?.Invoke();
-                        OnInstallComplete?.Invoke(localGame);
-                        operation.Complete();
-                        return;
+                        Logger?.LogInformation("[InstallQueue] Update(Game): Found {Count} update(s) to apply sequentially: {Versions}",
+                            updateList.Count, string.Join(" → ", updateList.Select(a => a.Version)));
+
+                        // Apply each archive sequentially
+                        foreach (var archive in updateList)
+                        {
+                            Logger?.LogInformation("[InstallQueue] Update(Game): Applying archive {ArchiveId} version {Version} for {Title}",
+                                archive.Id, archive.Version, currentItem.Title);
+
+                            var success = await _gameClient.ApplyUpdateArchiveAsync(archive.Id, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
+
+                            if (!success)
+                                throw new InstallCanceledException("Game update was canceled");
+
+                            // Update version in local DB after each archive
+                            localGame.InstalledVersion = archive.Version;
+                            await _gameService.UpdateAsync(localGame);
+
+                            Logger?.LogInformation("[InstallQueue] Update(Game): Applied version {Version}, updated InstalledVersion in DB", archive.Version);
+                        }
+
+                        // Re-import game metadata (scripts, metadata changes)
+                        Logger?.LogInformation("[InstallQueue] Update(Game): Re-importing game metadata for {Title} ({Id})", currentItem.Title, currentItem.Id);
+                        await _importService.ImportGameAsync(localGame.Id);
+                        localGame = await _gameService.GetAsync(localGame.Id);
+
+                        // Update manifest and scripts on disk
+                        await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                    }
+                    else
+                    {
+                        Logger?.LogInformation("[InstallQueue] Update(Game): No game archive updates found for {Title} ({Id}), checking redistributables", currentItem.Title, currentItem.Id);
                     }
 
-                    Logger?.LogInformation("[InstallQueue] Update(Game): Found {Count} update(s) to apply sequentially: {Versions}",
-                        updateList.Count, string.Join(" → ", updateList.Select(a => a.Version)));
-
-                    // Apply each archive sequentially
-                    foreach (var archive in updateList)
-                    {
-                        Logger?.LogInformation("[InstallQueue] Update(Game): Applying archive {ArchiveId} version {Version} for {Title}",
-                            archive.Id, archive.Version, currentItem.Title);
-
-                        var success = await _gameClient.ApplyUpdateArchiveAsync(archive.Id, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
-
-                        if (!success)
-                            throw new InstallCanceledException("Game update was canceled");
-
-                        // Update version in local DB after each archive
-                        localGame.InstalledVersion = archive.Version;
-                        await _gameService.UpdateAsync(localGame);
-
-                        Logger?.LogInformation("[InstallQueue] Update(Game): Applied version {Version}, updated InstalledVersion in DB", archive.Version);
-                    }
-
-                    // Re-import game metadata (scripts, metadata changes)
-                    Logger?.LogInformation("[InstallQueue] Update(Game): Re-importing game metadata for {Title} ({Id})", currentItem.Title, currentItem.Id);
-                    await _importService.ImportGameAsync(localGame.Id);
-                    localGame = await _gameService.GetAsync(localGame.Id);
-
-                    // Update manifest and scripts on disk
-                    await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                    // Check for and apply redistributable updates
+                    await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables, currentItem.CancellationToken.Token);
 
                     // Update the queue item version to match
                     currentItem.Version = localGame.InstalledVersion;
@@ -928,6 +934,133 @@ namespace LANCommander.Launcher.Services
             Logger?.LogTrace("Install of redistributable {Title} complete!", currentItem.Title);
 
             await Next();
+        }
+
+        private async Task UpdateRedistributable(DownloadQueueRedistributable currentItem)
+        {
+            currentItem.Status = InstallStatus.Downloading;
+            OnQueueChanged?.Invoke();
+
+            try
+            {
+                // Read the installed version from the on-disk manifest
+                var installedManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(currentItem.InstallDirectory, currentItem.Id);
+                var installedVersion = installedManifest?.Version;
+
+                Logger?.LogInformation("[InstallQueue] UpdateRedistributable: Starting update of {Title} ({Id}) from version {InstalledVersion}",
+                    currentItem.Title, currentItem.Id, installedVersion);
+
+                var updates = await _redistributableClient.GetUpdatesAsync(currentItem.Id, installedVersion);
+                var updateList = updates?.ToList() ?? [];
+
+                if (updateList.Count == 0)
+                {
+                    Logger?.LogInformation("[InstallQueue] UpdateRedistributable: No updates found for {Title} ({Id})", currentItem.Title, currentItem.Id);
+                    currentItem.Status = InstallStatus.Complete;
+                    OnQueueChanged?.Invoke();
+                    await Next();
+                    return;
+                }
+
+                Logger?.LogInformation("[InstallQueue] UpdateRedistributable: Found {Count} update(s) to apply sequentially: {Versions}",
+                    updateList.Count, string.Join(" → ", updateList.Select(a => a.Version)));
+
+                var game = new SDK.Models.Game
+                {
+                    Id = currentItem.DependsOnId ?? Guid.Empty,
+                    InstallDirectory = currentItem.InstallDirectory
+                };
+
+                foreach (var archive in updateList)
+                {
+                    Logger?.LogInformation("[InstallQueue] UpdateRedistributable: Applying archive {ArchiveId} version {Version} for {Title}",
+                        archive.Id, archive.Version, currentItem.Title);
+
+                    await _redistributableClient.ApplyUpdateArchiveAsync(archive.Id, currentItem.Id, game, currentItem.CancellationToken.Token);
+
+                    Logger?.LogInformation("[InstallQueue] UpdateRedistributable: Applied version {Version}", archive.Version);
+                }
+
+                // Refresh manifest and scripts on disk
+                await _redistributableClient.RefreshManifestAndScriptsAsync(currentItem.InstallDirectory, currentItem.Redistributable);
+            }
+            catch (InstallCanceledException)
+            {
+                Logger?.LogError("Redistributable update canceled");
+                currentItem.Status = InstallStatus.Canceled;
+                OnQueueChanged?.Invoke();
+                await Next();
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Redistributable {Title} failed to update", currentItem.Title);
+                currentItem.Status = InstallStatus.Failed;
+                OnQueueChanged?.Invoke();
+                await Next();
+                return;
+            }
+
+            currentItem.CompletedOn = DateTime.Now;
+            currentItem.Status = InstallStatus.Complete;
+            currentItem.Progress = 1;
+
+            OnQueueChanged?.Invoke();
+
+            Logger?.LogTrace("Update of redistributable {Title} complete!", currentItem.Title);
+
+            await Next();
+        }
+
+        private async Task UpdateRedistributablesForGameAsync(string installDirectory, IEnumerable<SDK.Models.Redistributable> redistributables, CancellationToken cancellationToken = default)
+        {
+            if (redistributables == null)
+                return;
+
+            foreach (var redistributable in redistributables)
+            {
+                try
+                {
+                    var redistManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(installDirectory, redistributable.Id);
+                    var redistInstalledVersion = redistManifest?.Version;
+
+                    if (string.IsNullOrWhiteSpace(redistInstalledVersion))
+                        continue;
+
+                    var hasUpdate = await _redistributableClient.CheckForUpdateAsync(redistributable.Id, redistInstalledVersion);
+
+                    if (!hasUpdate)
+                    {
+                        // No archive update, but still refresh manifest and scripts
+                        await _redistributableClient.RefreshManifestAndScriptsAsync(installDirectory, redistributable);
+                        continue;
+                    }
+
+                    Logger?.LogInformation("Redistributable {RedistName} ({RedistId}) has an update available, applying...",
+                        redistributable.Name, redistributable.Id);
+
+                    var redistUpdates = await _redistributableClient.GetUpdatesAsync(redistributable.Id, redistInstalledVersion);
+                    var redistUpdateList = redistUpdates?.ToList() ?? [];
+
+                    var redistGame = new SDK.Models.Game
+                    {
+                        InstallDirectory = installDirectory
+                    };
+
+                    foreach (var archive in redistUpdateList)
+                    {
+                        await _redistributableClient.ApplyUpdateArchiveAsync(archive.Id, redistributable.Id, redistGame, cancellationToken);
+                        Logger?.LogInformation("Applied redistributable {RedistName} version {Version}", redistributable.Name, archive.Version);
+                    }
+
+                    await _redistributableClient.RefreshManifestAndScriptsAsync(installDirectory, redistributable);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Failed to update redistributable {RedistName} ({RedistId})",
+                        redistributable.Name, redistributable.Id);
+                }
+            }
         }
 
         private static void UpdateGameState(InstallQueueGame currentItem, Game localGame, string installDirectory)

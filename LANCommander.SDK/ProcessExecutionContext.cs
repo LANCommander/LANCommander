@@ -119,12 +119,12 @@ namespace LANCommander.SDK
                 Process.CloseMainWindow();
             else if (server.ProcessTerminationMethod == ProcessTerminationMethod.Kill)
                 Process.Kill();
+            else if (OperatingSystem.IsWindows())
+                Process.Kill();
             else
             {
                 int signal = 1;
                 int pid = Process.Id;
-
-                Process.Close();
 
                 switch (server.ProcessTerminationMethod)
                 {
@@ -142,9 +142,11 @@ namespace LANCommander.SDK
                         break;
                 }
 
+                Process.Close();
+
                 using (var terminator = new Process())
                 {
-                    terminator.StartInfo.FileName = "kill";
+                    terminator.StartInfo.FileName = "/bin/kill";
                     terminator.StartInfo.Arguments = $"-{signal} {pid}";
                     terminator.Start();
                     await terminator.WaitForExitAsync();

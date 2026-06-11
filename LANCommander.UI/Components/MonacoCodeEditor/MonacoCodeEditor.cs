@@ -67,6 +67,8 @@ public class MonacoCodeEditor : StandaloneCodeEditor
             _previousScriptType = ScriptType;
             await _module.InvokeVoidAsync("setScriptType", ScriptType);
         }
+
+        await _module.InvokeVoidAsync("SetupFileDropHandler");
     }
 
     private async Task OnChanged(ModelContentChangedEvent e)

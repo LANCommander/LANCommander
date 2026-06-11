@@ -9,3 +9,4 @@ export { DomHelper } from "./Components/DomHelper/DomHelper";
 export { registerPowerShellCompletions, setScriptType, validateScript, insertSnippet, getScriptTemplate } from "./Components/MonacoCodeEditor/PowerShellCompletionProvider";
 export { registerYamlCompletions } from "./Components/MonacoCodeEditor/YamlCompletionProvider";
 export { UploadManager } from "./Components/UploadManager/UploadManager";
+export { SetupFileDropHandler } from "./Components/CodeInput/FileDropHandler";

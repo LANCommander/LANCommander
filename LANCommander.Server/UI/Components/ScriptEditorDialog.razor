@@ -80,8 +80,6 @@
             <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
         }
 
-        <Button Icon="@IconType.Outline.Build" OnClick="() => _regToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
-
         @if (IsDebuggable && HasDebugTarget)
         {
             <Tooltip Title="Debug">
@@ -107,14 +105,12 @@
     </FormItem>
 </Form>
 
-<RegToPowerShell @ref="_regToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
     Guid _id = Guid.NewGuid();
 
     Form<Script>? _form;
     CodeInput? _codeInput;
-    RegToPowerShell? _regToPowerShell;
     PowerShellConsole? _console;
     IEnumerable<Snippet> Snippets { get; set; } = [];
     List<string> _variables = new();

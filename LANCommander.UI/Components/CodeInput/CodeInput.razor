@@ -96,6 +96,9 @@
             await _module.InvokeVoidAsync("setScriptType", ScriptType);
         }
 
+        if (Language.Id == "powershell")
+            await _module.InvokeVoidAsync("SetupFileDropHandler");
+
         if (OnReady.HasDelegate)
             await OnReady.InvokeAsync();
     }

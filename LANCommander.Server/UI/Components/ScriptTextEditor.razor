@@ -31,7 +31,6 @@
             <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
         }
 
-        <Button Icon="@IconType.Outline.Build" OnClick="() => RegToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
     </FormItem>
 
     <FormItem>
@@ -58,7 +57,6 @@
     </FormItem>
 </Form>
 
-<RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
     [Parameter] public Script Script { get; set; } = new();
@@ -70,7 +68,6 @@
     Guid Id = Guid.NewGuid();
     Form<Script> Form;
     MonacoCodeEditor? Editor;
-    RegToPowerShell RegToPowerShell;
     IEnumerable<Snippet> Snippets { get; set; }
 
     StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)

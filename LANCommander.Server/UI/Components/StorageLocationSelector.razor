@@ -1,12 +1,15 @@
 @using LANCommander.SDK.Enums
 @inject StorageLocationService StorageLocationService
 
-<Select
-    DataSource="StorageLocations"
-    ItemValue="l => l"
-    ItemLabel="l => l.Path"
-    @bind-Value="Value"
-    OnSelectedItemChanged="ValueChanged" />
+@if (StorageLocations.Any())
+{
+    <Select
+        DataSource="StorageLocations"
+        ItemValue="l => l"
+        ItemLabel="l => l.Path"
+        @bind-Value="Value"
+        OnSelectedItemChanged="ValueChanged" />
+}
 
 @code {
     [Parameter] public StorageLocation Value { get; set; } = new();

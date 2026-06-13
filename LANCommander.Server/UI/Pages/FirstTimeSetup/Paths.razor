@@ -146,38 +146,30 @@
 
         try
         {
-            SavesStorageLocation = await StorageLocationService
+            var existingSaves = await StorageLocationService
                 .AsNoTracking()
                 .FirstOrDefaultAsync(l => l.Type == StorageLocationType.Save && l.Default);
+
+            if (existingSaves != null)
+                SavesStorageLocation = existingSaves;
         }
         catch (Exception ex)
         {
             Logger?.LogError(ex, "Couldn't retrieve existing store locations");
-
-            SavesStorageLocation = new StorageLocation
-            {
-                Path = Path.Join(AppPaths.GetConfigDirectory(), "Saves"),
-                Type = StorageLocationType.Save,
-                Default = true,
-            };
         }
 
         try
         {
-            MediaStorageLocation = await StorageLocationService
+            var existingMedia = await StorageLocationService
                 .AsNoTracking()
                 .FirstOrDefaultAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
+
+            if (existingMedia != null)
+                MediaStorageLocation = existingMedia;
         }
         catch (Exception ex)
         {
             Logger?.LogError(ex, "Couldn't retrieve existing store locations");
-
-            MediaStorageLocation = new StorageLocation
-            {
-                Path = Path.Join(AppPaths.GetConfigDirectory(), "Media"),
-                Type = StorageLocationType.Media,
-                Default = true,
-            };
         }
     }
 

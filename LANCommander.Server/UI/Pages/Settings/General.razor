@@ -1,4 +1,4 @@
-﻿@page "/Settings"
+@page "/Settings"
 @page "/Settings/General"
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
@@ -13,21 +13,10 @@
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
-        <FormItem Label="Database Provider">
-            <Select @bind-Value="context.Server.Database.Provider" TItem="DatabaseProvider" TItemValue="DatabaseProvider" DataSource="Enum.GetValues<DatabaseProvider>()">
-                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-            </Select>
-        </FormItem>
-
-        <FormItem Label="Database Connection String">
-            <InputPassword @bind-Value="context.Server.Database.ConnectionString" />
-        </FormItem>
-
         <FormItem Label="Port">
             <AntDesign.InputNumber @bind-Value="context.Server.Http.Port" />
         </FormItem>
-        
+
         <Divider Text="SSL" />
 
         <FormItem Label="Use SSL">
@@ -61,10 +50,9 @@
         {
             SettingsProvider.Update(s =>
             {
-                s.Server.Database = Settings.Value.Server.Database;
                 s.Server.Http = Settings.Value.Server.Http;
             });
-            
+
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

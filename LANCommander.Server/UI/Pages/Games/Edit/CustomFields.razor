@@ -4,7 +4,7 @@
 <GameEditView Id="Id" Title="Custom Fields">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="_customFieldEditor.Save">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="() => _customFieldEditor?.Save()">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     

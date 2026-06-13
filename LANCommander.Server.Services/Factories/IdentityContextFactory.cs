@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -61,23 +61,33 @@ namespace LANCommander.Server.Services.Factories
 
         public void Dispose()
         {
+            UserManager.Dispose();
+            RoleManager.Dispose();
             DatabaseContext.Dispose();
         }
     }
+
     public class IdentityContextFactory
     {
-        private readonly DatabaseContext DatabaseContext;
+        private readonly IDbContextFactory<DatabaseContext> _dbContextFactory;
         private readonly IServiceProvider ServiceProvider;
 
-        public IdentityContextFactory(DatabaseContext databaseContext, IServiceProvider serviceProvider)
+        public IdentityContextFactory(IDbContextFactory<DatabaseContext> dbContextFactory, IServiceProvider serviceProvider)
         {
-            DatabaseContext = databaseContext;
+            _dbContextFactory = dbContextFactory;
             ServiceProvider = serviceProvider;
         }
 
         public IdentityContext Create()
         {
-            return new IdentityContext(DatabaseContext, ServiceProvider);
+            var context = _dbContextFactory.CreateDbContext();
+            return new IdentityContext(context, ServiceProvider);
+        }
+
+        public async Task<IdentityContext> CreateAsync()
+        {
+            var context = await _dbContextFactory.CreateDbContextAsync();
+            return new IdentityContext(context, ServiceProvider);
         }
     }
 }

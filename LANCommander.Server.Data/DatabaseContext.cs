@@ -36,11 +36,19 @@ namespace LANCommander.Server.Data
                         break;
 
                     case DatabaseProvider.MySQL:
-                        optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.MySQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
+                        });
                         break;
 
                     case DatabaseProvider.PostgreSQL:
-                        optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        optionsBuilder.UseNpgsql(ConnectionString, options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+                        });
                         break;
                 }
             }

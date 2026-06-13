@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
@@ -11,18 +11,20 @@ using System.Linq.Expressions;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Data;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
     public class UserService : BaseService, IBaseDatabaseService<User>
     {
-        private readonly IdentityContext IdentityContext;
+        private readonly IdentityContextFactory _identityContextFactory;
         private readonly CollectionService CollectionService;
         private readonly IDbContextFactory<DatabaseContext> ContextFactory;
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
-        
+        private readonly IOptions<IdentityOptions> _identityOptions;
+
         protected readonly List<Func<IQueryable<User>, IQueryable<User>>> _modifiers = new();
 
         public UserService(
@@ -32,19 +34,21 @@ namespace LANCommander.Server.Services
             IFusionCache cache,
             CollectionService collectionService,
             IDbContextFactory<DatabaseContext> contextFactory,
-            IdentityContextFactory identityContextFactory) : base(logger, settingsProvider)
+            IdentityContextFactory identityContextFactory,
+            IOptions<IdentityOptions> identityOptions) : base(logger, settingsProvider)
         {
-            IdentityContext = identityContextFactory.Create();
+            _identityContextFactory = identityContextFactory;
             CollectionService = collectionService;
             ContextFactory = contextFactory;
             Mapper = mapper;
             Cache = cache;
+            _identityOptions = identityOptions;
         }
 
         public void Reconfigure()
         {
-            var options = IdentityContext.UserManager.Options;
-            if (options == null) 
+            var options = _identityOptions.Value;
+            if (options == null)
                 return;
 
             options.Password.RequireNonAlphanumeric = _settingsProvider.CurrentValue.Server.Authentication.PasswordRequireNonAlphanumeric;
@@ -92,7 +96,7 @@ namespace LANCommander.Server.Services
         public async Task<bool> IsInRoleAsync(User user, string roleName)
         {
             var roles = await GetRolesAsync(user);
-            
+
             return roles.Any(r => r.Name == roleName);
         }
 
@@ -116,10 +120,11 @@ namespace LANCommander.Server.Services
                 return new List<Collection>();
             }
         }
-        
+
         public async Task<bool> ExistsAsync(Expression<Func<User, bool>> predicate)
         {
-            return await IdentityContext.DatabaseContext.Users.AnyAsync(predicate);
+            using var context = await ContextFactory.CreateDbContextAsync();
+            return await context.Users.AnyAsync(predicate);
         }
 
         public Task<User> AddAsync(User user)
@@ -148,11 +153,15 @@ namespace LANCommander.Server.Services
             }
             else
             {
-                result = await IdentityContext.UserManager.CreateAsync(user);
+                using var identityContext = await _identityContextFactory.CreateAsync();
+                result = await identityContext.UserManager.CreateAsync(user);
             }
 
             if (result.Succeeded)
-                return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
+            {
+                using var findContext = await _identityContextFactory.CreateAsync();
+                return await findContext.UserManager.FindByNameAsync(user.UserName);
+            }
             else
                 throw new UserRegistrationException(result, "Could not create user");
         }
@@ -161,15 +170,17 @@ namespace LANCommander.Server.Services
         {
             var user = await GetAsync(userName);
 
-            await IdentityContext.UserManager.AddToRoleAsync(user, roleName);
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            await identityContext.UserManager.AddToRoleAsync(user, roleName);
         }
 
         public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
         {
             var user = await GetAsync(userName);
 
-            var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
-            
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            var result = await identityContext.UserManager.AddToRolesAsync(user, roleNames);
+
             await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
 
             if (!result.Succeeded)
@@ -180,20 +191,24 @@ namespace LANCommander.Server.Services
         {
             var user = await GetAsync(userName);
 
-            await IdentityContext.UserManager.RemoveFromRoleAsync(user, roleName);
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            await identityContext.UserManager.RemoveFromRoleAsync(user, roleName);
         }
 
         public async Task<bool> CheckPassword(string userName, string password)
         {
             var user = await GetAsync(userName);
 
-            return await IdentityContext.UserManager.CheckPasswordAsync(user, password);
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            return await identityContext.UserManager.CheckPasswordAsync(user, password);
         }
 
         public async Task<IdentityResult> CheckRegister(User user, string password)
         {
             var registerErrors = new List<IdentityError>();
-            var userManager = IdentityContext.UserManager;
+
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            var userManager = identityContext.UserManager;
 
             foreach (var validator in userManager.UserValidators ?? [])
             {
@@ -222,7 +237,8 @@ namespace LANCommander.Server.Services
         {
             var user = await GetAsync(userName);
 
-            var result = await IdentityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            var result = await identityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
             return result;
         }
@@ -237,17 +253,19 @@ namespace LANCommander.Server.Services
             IdentityResult result;
             var user = await GetAsync(userName);
 
-            if (bypassPolicy && IdentityContext.UserManager.PasswordValidators.Any())
-            {
-                await IdentityContext.UserManager.RemovePasswordAsync(user);
+            using var identityContext = await _identityContextFactory.CreateAsync();
 
-                result = await IdentityContext.UserManager.AddPasswordAsync(user, newPassword);
+            if (bypassPolicy && identityContext.UserManager.PasswordValidators.Any())
+            {
+                await identityContext.UserManager.RemovePasswordAsync(user);
+
+                result = await identityContext.UserManager.AddPasswordAsync(user, newPassword);
             }
             else
             {
-                var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+                var token = await identityContext.UserManager.GeneratePasswordResetTokenAsync(user);
 
-                result = await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+                result = await identityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
             }
 
             return result;
@@ -285,11 +303,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext.UserManager.Users.AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable.ToListAsync();
             }
             finally
@@ -302,14 +321,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable
                     .ProjectTo<T>(Mapper.ConfigurationProvider)
                     .ToListAsync();
@@ -348,14 +365,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable.Where(predicate).ToListAsync();
             }
             finally
@@ -368,14 +383,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable
                     .Where(predicate)
                     .ProjectTo<T>(Mapper.ConfigurationProvider)
@@ -391,14 +404,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable.FirstOrDefaultAsync(predicate);
             }
             finally
@@ -411,14 +422,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable
                     .Where(predicate)
                     .ProjectTo<T>(Mapper.ConfigurationProvider)
@@ -434,14 +443,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable
                     .Where(predicate)
                     .OrderBy(orderKeySelector)
@@ -457,14 +464,12 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                var queryable = IdentityContext
-                    .UserManager
-                    .Users
-                    .AsQueryable();
-                
+                using var context = await ContextFactory.CreateDbContextAsync();
+                var queryable = context.Users.AsQueryable();
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
+
                 return await queryable
                     .Where(predicate)
                     .ProjectTo<T>(Mapper.ConfigurationProvider)
@@ -479,28 +484,23 @@ namespace LANCommander.Server.Services
 
         public async Task<bool> ExistsAsync(Guid id)
         {
-            var user = await IdentityContext
-                .UserManager
-                .FindByIdAsync(id.ToString());
-
-            return user != null;
+            using var context = await ContextFactory.CreateDbContextAsync();
+            return await context.Users.AnyAsync(u => u.Id == id);
         }
 
         public async Task<ExistingEntityResult<User>> AddMissingAsync(Expression<Func<User, bool>> predicate, User entity)
         {
             var result = new ExistingEntityResult<User>();
 
-            var user = await IdentityContext
-                .UserManager
-                .Users
-                .FirstOrDefaultAsync(predicate);
+            var user = await FirstOrDefaultAsync(predicate);
 
             if (user == null)
             {
-                await IdentityContext.UserManager.CreateAsync(entity);
+                using var identityContext = await _identityContextFactory.CreateAsync();
+                await identityContext.UserManager.CreateAsync(entity);
 
                 result.Existing = false;
-                result.Value = await IdentityContext.UserManager.FindByNameAsync(user.UserName);
+                result.Value = await identityContext.UserManager.FindByNameAsync(entity.UserName);
             }
             else
             {
@@ -513,9 +513,9 @@ namespace LANCommander.Server.Services
 
         public async Task<User> UpdateAsync(User entity)
         {
-            var user = await IdentityContext
-                .UserManager
-                .FindByIdAsync(entity.Id.ToString());
+            using var identityContext = await _identityContextFactory.CreateAsync();
+
+            var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
             user.UserName = entity.UserName;
             user.PhoneNumber = entity.PhoneNumber;
@@ -525,20 +525,20 @@ namespace LANCommander.Server.Services
             user.Approved = entity.Approved;
             user.ApprovedOn = entity.ApprovedOn;
 
-            await IdentityContext.UserManager.UpdateAsync(user);
+            await identityContext.UserManager.UpdateAsync(user);
 
             return user;
         }
 
         public async Task DeleteAsync(User entity)
         {
-            var user = await IdentityContext
-                .UserManager
-                .FindByIdAsync(entity.Id.ToString());
+            using var identityContext = await _identityContextFactory.CreateAsync();
 
-            await IdentityContext.UserManager.DeleteAsync(user);
+            var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
+
+            await identityContext.UserManager.DeleteAsync(user);
         }
-        
+
         public IBaseDatabaseService<User> AsNoTracking()
         {
             return Query((queryable) =>
@@ -592,7 +592,7 @@ namespace LANCommander.Server.Services
                     });
             }
         }
-        
+
         protected void Reset()
         {
             _modifiers.Clear();

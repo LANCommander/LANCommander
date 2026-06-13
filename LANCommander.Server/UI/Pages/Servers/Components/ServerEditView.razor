@@ -40,9 +40,12 @@
         </CascadingValue>
         
         <div class="panel-layout-content">
-            <CascadingValue Value="Server.Id" Name="ServerId">
-                @ChildContent?.Invoke(Server)
-            </CascadingValue>
+            @if (Server?.Id == Id)
+            {
+                <CascadingValue Value="Server.Id" Name="ServerId">
+                    @ChildContent?.Invoke(Server)
+                </CascadingValue>
+            }
         </div>
     </Content>
 </Layout>

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
@@ -20,25 +20,18 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         CollectionService collectionService,
-        IdentityContextFactory identityContextFactory,
-        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IdentityContextFactory identityContextFactory) : BaseDatabaseService<Role>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public const string AdministratorRoleName = "Administrator";
 
-        private IdentityContext _identityContext;
-
-        public override void Initialize()
-        {
-            _identityContext = identityContextFactory.Create();
-        }
-        
         public override async Task<Role> AddAsync(Role role)
         {
-            var result = await roleManager.CreateAsync(role);
+            using var identityContext = await identityContextFactory.CreateAsync();
+            var result = await identityContext.RoleManager.CreateAsync(role);
 
             if (result.Succeeded)
                 return await GetAsync(role.Name);
-            
+
             throw new AddRoleException(result, "Could not create role");
         }
 

@@ -271,7 +271,7 @@ namespace LANCommander.Server.Services
 
         public abstract Task<T> AddAsync(T entity);
         
-        protected async Task<T> AddAsync(T addedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
+        protected async Task<T> AddAsync(T addedEntity, Func<UpdateEntityContext<T>, Task> additionalMapping = null)
         {
             try
             {
@@ -290,7 +290,7 @@ namespace LANCommander.Server.Services
                 {
                     var updateContext = new UpdateEntityContext<T>(context, newEntity, addedEntity);
 
-                    additionalMapping?.Invoke(updateContext);
+                    await additionalMapping(updateContext);
                 }
 
                 newEntity = (await context.AddAsync(newEntity)).Entity;
@@ -339,7 +339,7 @@ namespace LANCommander.Server.Services
         
         public abstract Task<T> UpdateAsync(T entity);
 
-        protected async Task<T> UpdateAsync(T updatedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
+        protected async Task<T> UpdateAsync(T updatedEntity, Func<UpdateEntityContext<T>, Task> additionalMapping = null)
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
 
@@ -353,8 +353,8 @@ namespace LANCommander.Server.Services
             if (additionalMapping != null)
             {
                 var updateContext = new UpdateEntityContext<T>(context, existingEntity, updatedEntity);
-                
-                additionalMapping?.Invoke(updateContext);
+
+                await additionalMapping(updateContext);
             }
             
             var currentUser = await GetCurrentUserAsync(context);

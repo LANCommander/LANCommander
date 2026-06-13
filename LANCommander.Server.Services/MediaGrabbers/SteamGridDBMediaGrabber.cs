@@ -8,7 +8,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
 {
     public class SteamGridDBMediaGrabber : IMediaGrabberService
     {
-        SteamGridDb SteamGridDb { get; set; }
+        private readonly SettingsProvider<Settings.Settings> _settingsProvider;
 
         public string Name => "SteamGridDB";
 
@@ -31,12 +31,19 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public SteamGridDBMediaGrabber(SettingsProvider<Settings.Settings> settingsProvider)
         {
-            SteamGridDb = new SteamGridDb(settingsProvider.CurrentValue.Server.Media.SteamGridDbApiKey);
+            _settingsProvider = settingsProvider;
         }
 
         public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
         {
             var results = new List<MediaGrabberResult>();
+
+            var apiKey = _settingsProvider.CurrentValue.Server.Media.SteamGridDbApiKey;
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return results;
+
+            var SteamGridDb = new SteamGridDb(apiKey);
 
             var games = await SteamGridDb.SearchForGamesAsync(keywords);
 
@@ -45,23 +52,23 @@ namespace LANCommander.Server.Services.MediaGrabbers
                 switch (type)
                 {
                     case MediaType.Icon:
-                        results.AddRange(await GetIconsAsync(game));
+                        results.AddRange(await GetIconsAsync(SteamGridDb, game));
                         break;
 
                     case MediaType.Cover:
-                        results.AddRange(await GetCoversAsync(game));
+                        results.AddRange(await GetCoversAsync(SteamGridDb, game));
                         break;
 
                     case MediaType.Background:
-                        results.AddRange(await GetBackgroundsAsync(game));
+                        results.AddRange(await GetBackgroundsAsync(SteamGridDb, game));
                         break;
 
                     case MediaType.Logo:
-                        results.AddRange(await GetLogosAsync(game));
+                        results.AddRange(await GetLogosAsync(SteamGridDb, game));
                         break;
 
                     case MediaType.Grid:
-                        results.AddRange(await GetGridsAsync(game));
+                        results.AddRange(await GetGridsAsync(SteamGridDb, game));
                         break;
                 }
             }
@@ -90,7 +97,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             };
         }
 
-        private async Task<IEnumerable<MediaGrabberResult>> GetIconsAsync(SteamGridDbGame game)
+        private async Task<IEnumerable<MediaGrabberResult>> GetIconsAsync(SteamGridDb SteamGridDb, SteamGridDbGame game)
         {
             var results = new List<MediaGrabberResult>();
 
@@ -121,7 +128,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        private async Task<IEnumerable<MediaGrabberResult>> GetCoversAsync(SteamGridDbGame game)
+        private async Task<IEnumerable<MediaGrabberResult>> GetCoversAsync(SteamGridDb SteamGridDb, SteamGridDbGame game)
         {
             var results = new List<MediaGrabberResult>();
 
@@ -152,7 +159,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        private async Task<IEnumerable<MediaGrabberResult>> GetBackgroundsAsync(SteamGridDbGame game)
+        private async Task<IEnumerable<MediaGrabberResult>> GetBackgroundsAsync(SteamGridDb SteamGridDb, SteamGridDbGame game)
         {
             var results = new List<MediaGrabberResult>();
 
@@ -183,7 +190,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        private async Task<IEnumerable<MediaGrabberResult>> GetLogosAsync(SteamGridDbGame game)
+        private async Task<IEnumerable<MediaGrabberResult>> GetLogosAsync(SteamGridDb SteamGridDb, SteamGridDbGame game)
         {
             var results = new List<MediaGrabberResult>();
 
@@ -214,7 +221,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             return results;
         }
 
-        private async Task<IEnumerable<MediaGrabberResult>> GetGridsAsync(SteamGridDbGame game)
+        private async Task<IEnumerable<MediaGrabberResult>> GetGridsAsync(SteamGridDb SteamGridDb, SteamGridDbGame game)
         {
             var results = new List<MediaGrabberResult>();
 

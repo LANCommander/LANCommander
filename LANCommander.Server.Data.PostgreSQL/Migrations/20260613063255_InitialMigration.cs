@@ -93,6 +93,34 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ChatThreads",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Collections",
                 columns: table => new
                 {
@@ -125,11 +153,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -237,45 +265,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Pages",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    Route = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
-                    Contents = table.Column<string>(type: "text", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false),
-                    ParentId = table.Column<Guid>(type: "uuid", nullable: true),
-                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
-                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Pages", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Pages_Pages_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Pages_Users_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Pages_Users_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Platforms",
                 columns: table => new
                 {
@@ -311,6 +300,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
                     Notes = table.Column<string>(type: "text", nullable: true),
+                    OptionSchema = table.Column<string>(type: "text", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -420,6 +410,36 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tools",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    Notes = table.Column<string>(type: "text", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tools", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tools_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Tools_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserClaims",
                 columns: table => new
                 {
@@ -517,11 +537,69 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ChatMessages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ThreadId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Content = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatMessages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_ChatThreads_ThreadId",
+                        column: x => x.ThreadId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatThreadUser",
+                columns: table => new
+                {
+                    ChatThreadsId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ParticipantsId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreadUser", x => new { x.ChatThreadsId, x.ParticipantsId });
+                    table.ForeignKey(
+                        name: "FK_ChatThreadUser_ChatThreads_ChatThreadsId",
+                        column: x => x.ChatThreadsId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadUser_Users_ParticipantsId",
+                        column: x => x.ParticipantsId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Games",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    IGDBId = table.Column<long>(type: "bigint", nullable: true),
                     Title = table.Column<string>(type: "text", nullable: false),
                     SortTitle = table.Column<string>(type: "text", nullable: true),
                     DirectoryName = table.Column<string>(type: "text", nullable: true),
@@ -566,30 +644,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "PageRedistributable",
-                columns: table => new
-                {
-                    PageId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RedistributableId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PageRedistributable", x => new { x.PageId, x.RedistributableId });
-                    table.ForeignKey(
-                        name: "FK_PageRedistributable_Pages_PageId",
-                        column: x => x.PageId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_PageRedistributable_Redistributables_RedistributableId",
-                        column: x => x.RedistributableId,
-                        principalTable: "Redistributables",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -662,6 +716,82 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Pages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Slug = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Route = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
+                    Contents = table.Column<string>(type: "text", nullable: false),
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    ParentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ToolId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Pages_Pages_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Pages_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatThreadReadStatuses",
+                columns: table => new
+                {
+                    ThreadId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LastReadMessageId = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreadReadStatuses", x => new { x.ThreadId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_ChatMessages_LastReadMessageId",
+                        column: x => x.LastReadMessageId,
+                        principalTable: "ChatMessages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_ChatThreads_ThreadId",
+                        column: x => x.ThreadId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Archive",
                 columns: table => new
                 {
@@ -672,6 +802,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     StorageLocationId = table.Column<Guid>(type: "uuid", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: true),
                     RedistributableId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ToolId = table.Column<Guid>(type: "uuid", nullable: true),
                     LastVersionId = table.Column<Guid>(type: "uuid", nullable: true),
                     UncompressedSize = table.Column<long>(type: "bigint", nullable: false),
                     CompressedSize = table.Column<long>(type: "bigint", nullable: false),
@@ -704,6 +835,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_Archive_StorageLocations_StorageLocationId",
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Archive_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -826,6 +963,42 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "GameExternalIds",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Provider = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ExternalId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameExternalIds", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GameGenre",
                 columns: table => new
                 {
@@ -902,7 +1075,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 columns: table => new
                 {
                     GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RedistributableId = table.Column<Guid>(type: "uuid", nullable: false)
+                    RedistributableId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Options = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -995,6 +1169,30 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "GameTool",
+                columns: table => new
+                {
+                    GamesId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ToolsId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameTool", x => new { x.GamesId, x.ToolsId });
+                    table.ForeignKey(
+                        name: "FK_GameTool_Games_GamesId",
+                        column: x => x.GamesId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameTool_Tools_ToolsId",
+                        column: x => x.ToolsId,
+                        principalTable: "Tools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Issues",
                 columns: table => new
                 {
@@ -1043,7 +1241,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Value = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    AllocationMethod = table.Column<int>(type: "integer", nullable: false),
+                    AllocationMethod = table.Column<int>(type: "integer", nullable: true),
                     ClaimedByMacAddress = table.Column<string>(type: "character varying(17)", maxLength: 17, nullable: true),
                     ClaimedByIpv4Address = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: true),
                     ClaimedByComputerName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
@@ -1117,6 +1315,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     SourceUrl = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
                     MimeType = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     Crc32 = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: false),
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
                     ThumbnailId = table.Column<Guid>(type: "uuid", nullable: true),
                     StorageLocationId = table.Column<Guid>(type: "uuid", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -1208,30 +1407,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PageGame",
-                columns: table => new
-                {
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PageId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PageGame", x => new { x.GameId, x.PageId });
-                    table.ForeignKey(
-                        name: "FK_PageGame_Games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "Games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_PageGame_Pages_PageId",
-                        column: x => x.PageId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "PlaySessions",
                 columns: table => new
                 {
@@ -1272,6 +1447,42 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Ratings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Source = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    Value = table.Column<float>(type: "real", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Ratings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1318,11 +1529,16 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
+                    Engine = table.Column<int>(type: "integer", nullable: false),
                     Path = table.Column<string>(type: "text", nullable: false),
                     Arguments = table.Column<string>(type: "text", nullable: false),
                     WorkingDirectory = table.Column<string>(type: "text", nullable: false),
                     OnStartScriptPath = table.Column<string>(type: "text", nullable: false),
                     OnStopScriptPath = table.Column<string>(type: "text", nullable: false),
+                    DockerHostId = table.Column<Guid>(type: "uuid", nullable: true),
+                    RemoteHostId = table.Column<Guid>(type: "uuid", nullable: true),
+                    RemoteServerId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ContainerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     Host = table.Column<string>(type: "text", nullable: false),
                     Port = table.Column<int>(type: "integer", nullable: false),
                     UseShellExecute = table.Column<bool>(type: "boolean", nullable: false),
@@ -1360,6 +1576,54 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PageGame",
+                columns: table => new
+                {
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PageId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PageGame", x => new { x.GameId, x.PageId });
+                    table.ForeignKey(
+                        name: "FK_PageGame_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PageGame_Pages_PageId",
+                        column: x => x.PageId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PageRedistributable",
+                columns: table => new
+                {
+                    PageId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RedistributableId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PageRedistributable", x => new { x.PageId, x.RedistributableId });
+                    table.ForeignKey(
+                        name: "FK_PageRedistributable_Pages_PageId",
+                        column: x => x.PageId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PageRedistributable_Redistributables_RedistributableId",
+                        column: x => x.RedistributableId,
+                        principalTable: "Redistributables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Actions",
                 columns: table => new
                 {
@@ -1370,8 +1634,10 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     WorkingDirectory = table.Column<string>(type: "text", nullable: true),
                     PrimaryAction = table.Column<bool>(type: "boolean", nullable: false),
                     SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    OptionOverrides = table.Column<string>(type: "text", nullable: true),
                     GameId = table.Column<Guid>(type: "uuid", nullable: true),
                     ServerId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ToolId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -1390,6 +1656,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_Actions_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Actions_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -1442,6 +1714,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     RequiresAdmin = table.Column<bool>(type: "boolean", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: true),
                     RedistributableId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ToolId = table.Column<Guid>(type: "uuid", nullable: true),
                     ServerId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
@@ -1467,6 +1740,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_Scripts_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Scripts_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -1575,6 +1854,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Actions_ToolId",
+                table: "Actions",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Actions_UpdatedById",
                 table: "Actions",
                 column: "UpdatedById");
@@ -1605,6 +1889,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "StorageLocationId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Archive_ToolId",
+                table: "Archive",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Archive_UpdatedById",
                 table: "Archive",
                 column: "UpdatedById");
@@ -1628,6 +1917,46 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_CategoryGame_GamesId",
                 table: "CategoryGame",
                 column: "GamesId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_CreatedById",
+                table: "ChatMessages",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_ThreadId",
+                table: "ChatMessages",
+                column: "ThreadId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_UpdatedById",
+                table: "ChatMessages",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadReadStatuses_LastReadMessageId",
+                table: "ChatThreadReadStatuses",
+                column: "LastReadMessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadReadStatuses_UserId",
+                table: "ChatThreadReadStatuses",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreads_CreatedById",
+                table: "ChatThreads",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreads_UpdatedById",
+                table: "ChatThreads",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadUser_ParticipantsId",
+                table: "ChatThreadUser",
+                column: "ParticipantsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CollectionGame_GameId",
@@ -1683,6 +2012,21 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_GameDeveloper_DeveloperId",
                 table: "GameDeveloper",
                 column: "DeveloperId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_CreatedById",
+                table: "GameExternalIds",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_GameId",
+                table: "GameExternalIds",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_UpdatedById",
+                table: "GameExternalIds",
+                column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameGenre_GenresId",
@@ -1753,6 +2097,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_GameTag_TagsId",
                 table: "GameTag",
                 column: "TagsId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameTool_ToolsId",
+                table: "GameTool",
+                column: "ToolsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genres_CreatedById",
@@ -1892,6 +2241,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Pages_ToolId",
+                table: "Pages",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Pages_UpdatedById",
                 table: "Pages",
                 column: "UpdatedById");
@@ -1930,6 +2284,21 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_PlaySessions_UserId",
                 table: "PlaySessions",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_CreatedById",
+                table: "Ratings",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_GameId",
+                table: "Ratings",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_UpdatedById",
+                table: "Ratings",
+                column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Redistributables_CreatedById",
@@ -2003,6 +2372,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Scripts_ToolId",
+                table: "Scripts",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Scripts_UpdatedById",
                 table: "Scripts",
                 column: "UpdatedById");
@@ -2073,6 +2447,16 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tools_CreatedById",
+                table: "Tools",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tools_UpdatedById",
+                table: "Tools",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserClaims_UserId",
                 table: "UserClaims",
                 column: "UserId");
@@ -2137,6 +2521,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "CategoryGame");
 
             migrationBuilder.DropTable(
+                name: "ChatThreadReadStatuses");
+
+            migrationBuilder.DropTable(
+                name: "ChatThreadUser");
+
+            migrationBuilder.DropTable(
                 name: "CollectionGame");
 
             migrationBuilder.DropTable(
@@ -2144,6 +2534,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "GameDeveloper");
+
+            migrationBuilder.DropTable(
+                name: "GameExternalIds");
 
             migrationBuilder.DropTable(
                 name: "GameGenre");
@@ -2162,6 +2555,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "GameTag");
+
+            migrationBuilder.DropTable(
+                name: "GameTool");
 
             migrationBuilder.DropTable(
                 name: "Issues");
@@ -2189,6 +2585,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "PlaySessions");
+
+            migrationBuilder.DropTable(
+                name: "Ratings");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims");
@@ -2227,6 +2626,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "Categories");
 
             migrationBuilder.DropTable(
+                name: "ChatMessages");
+
+            migrationBuilder.DropTable(
                 name: "Genres");
 
             migrationBuilder.DropTable(
@@ -2258,6 +2660,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "Roles");
+
+            migrationBuilder.DropTable(
+                name: "ChatThreads");
+
+            migrationBuilder.DropTable(
+                name: "Tools");
 
             migrationBuilder.DropTable(
                 name: "Games");

@@ -41,9 +41,12 @@
         </CascadingValue>
         
         <div class="panel-layout-content">
-            <CascadingValue Value="Tool.Id" Name="ToolId">
-                @ChildContent?.Invoke(Tool)
-            </CascadingValue>
+            @if (Tool?.Id == Id)
+            {
+                <CascadingValue Value="Tool.Id" Name="ToolId">
+                    @ChildContent?.Invoke(Tool)
+                </CascadingValue>
+            }
         </div>
     </Content>
 </Layout>

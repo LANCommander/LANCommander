@@ -1,0 +1,123 @@
+@page "/Settings/Database"
+@using LANCommander.SDK
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Enums
+@using Microsoft.Data.Sqlite
+@using Microsoft.Extensions.Options
+@using MySqlConnector
+@using Npgsql
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
+@inject SetupService SetupService
+@inject IMessageService MessageService
+@inject ILogger<Database> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Database" />
+
+<PageContent>
+    <Form Model="Settings.Value" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="@FormLayout.Vertical">
+        <FormItem Label="Database Provider">
+            <Select
+                @bind-Value="context.Server.Database.Provider"
+                TItem="DatabaseProvider"
+                TItemValue="DatabaseProvider"
+                DataSource="Enum.GetValues<DatabaseProvider>()"
+                OnSelectedItemChanged="OnDatabaseProviderChanged">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <FormItem Label="Connection String">
+            <Input @bind-Value="context.Server.Database.ConnectionString" />
+        </FormItem>
+
+        <FormItem>
+            <Button Type="@ButtonType.Primary" HtmlType="submit">
+                Test &amp; Save
+            </Button>
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    bool Loading = false;
+
+    void OnDatabaseProviderChanged()
+    {
+        switch (Settings.Value.Server.Database.Provider)
+        {
+            case DatabaseProvider.SQLite:
+                var dbPath = AppPaths.GetConfigPath("LANCommander.db");
+                Settings.Value.Server.Database.ConnectionString = $"Data Source={dbPath};Cache=Shared";
+                break;
+
+            case DatabaseProvider.MySQL:
+                Settings.Value.Server.Database.ConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
+                break;
+
+            case DatabaseProvider.PostgreSQL:
+                Settings.Value.Server.Database.ConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password";
+                break;
+        }
+    }
+
+    async Task ValidateDatabaseConnection()
+    {
+        bool valid = false;
+
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            SetupService.ValidateConnectionString(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
+            valid = true;
+        }
+        catch (SqliteException ex)
+        {
+            Logger?.LogError(ex, "Could not use SQLite database connection");
+            MessageService.Error($"Could not use SQLite database: {ex.Message}", 10);
+        }
+        catch (MySqlException ex)
+        {
+            Logger?.LogError(ex, "Could not connect to MySQL database");
+            MessageService.Error($"Could not connect to MySQL database: {ex.Message}", 10);
+        }
+        catch (NpgsqlException ex)
+        {
+            Logger?.LogError(ex, "Could not connect to PostgreSQL database");
+            MessageService.Error($"Could not connect to PostgreSQL database: {ex.Message}", 10);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "An unknown error occurred trying to access the database");
+            MessageService.Error("Could not validate the connection string!");
+        }
+
+        if (valid)
+        {
+            try
+            {
+                await SetupService.ChangeProviderAsync(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
+
+                SettingsProvider.Update(s =>
+                {
+                    s.Server.Database.Provider = Settings.Value.Server.Database.Provider;
+                    s.Server.Database.ConnectionString = Settings.Value.Server.Database.ConnectionString;
+                });
+
+                MessageService.Success("Database settings saved!");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not initialize database!");
+                MessageService.Error($"Could not initialize database: {ex.Message}", 10);
+            }
+        }
+
+        Loading = false;
+    }
+}

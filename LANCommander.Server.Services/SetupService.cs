@@ -3,6 +3,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
@@ -17,7 +18,7 @@ namespace LANCommander.Server.Services
     public class SetupService(
         ILogger<SetupService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
-        UserManager<User> userManager,
+        IdentityContextFactory identityContextFactory,
         IServiceProvider serviceProvider) : BaseService(logger, settingsProvider), IDisposable
     {
         public async Task<bool> IsSetupInitialized()
@@ -26,15 +27,16 @@ namespace LANCommander.Server.Services
             {
                 if (DatabaseContext.Provider == DatabaseProvider.Unknown)
                     return false;
-                
-                var admins = await userManager.GetUsersInRoleAsync(RoleService.AdministratorRoleName);
+
+                using var identityContext = await identityContextFactory.CreateAsync();
+                var admins = await identityContext.UserManager.GetUsersInRoleAsync(RoleService.AdministratorRoleName);
 
                 return admins.Any();
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, ex.Message);
-                
+
                 return false;
             }
         }

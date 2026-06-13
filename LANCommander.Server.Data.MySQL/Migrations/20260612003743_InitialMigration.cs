@@ -109,6 +109,36 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "ChatThreads",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreads", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatThreads_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Collections",
                 columns: table => new
                 {
@@ -143,12 +173,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -262,50 +292,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "Pages",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Title = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Slug = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Route = table.Column<string>(type: "varchar(2048)", maxLength: 2048, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Contents = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    SortOrder = table.Column<int>(type: "int", nullable: false),
-                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Pages", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Pages_Pages_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Pages_Users_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Pages_Users_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "Platforms",
                 columns: table => new
                 {
@@ -345,6 +331,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     Description = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Notes = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    OptionSchema = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
@@ -464,6 +452,40 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "Tools",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Notes = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tools", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tools_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Tools_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "UserClaims",
                 columns: table => new
                 {
@@ -575,11 +597,72 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "ChatMessages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ThreadId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Content = table.Column<string>(type: "varchar(2000)", maxLength: 2000, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatMessages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_ChatThreads_ThreadId",
+                        column: x => x.ThreadId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ChatThreadUser",
+                columns: table => new
+                {
+                    ChatThreadsId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ParticipantsId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreadUser", x => new { x.ChatThreadsId, x.ParticipantsId });
+                    table.ForeignKey(
+                        name: "FK_ChatThreadUser_ChatThreads_ChatThreadsId",
+                        column: x => x.ChatThreadsId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadUser_Users_ParticipantsId",
+                        column: x => x.ParticipantsId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Games",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    IGDBId = table.Column<long>(type: "bigint", nullable: true),
                     Title = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SortTitle = table.Column<string>(type: "longtext", nullable: true)
@@ -630,31 +713,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "PageRedistributable",
-                columns: table => new
-                {
-                    PageId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    RedistributableId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PageRedistributable", x => new { x.PageId, x.RedistributableId });
-                    table.ForeignKey(
-                        name: "FK_PageRedistributable_Pages_PageId",
-                        column: x => x.PageId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_PageRedistributable_Redistributables_RedistributableId",
-                        column: x => x.RedistributableId,
-                        principalTable: "Redistributables",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -733,6 +791,88 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "Pages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Title = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Slug = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Route = table.Column<string>(type: "varchar(2048)", maxLength: 2048, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Contents = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ToolId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Pages_Pages_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Pages_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ChatThreadReadStatuses",
+                columns: table => new
+                {
+                    ThreadId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    LastReadMessageId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatThreadReadStatuses", x => new { x.ThreadId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_ChatMessages_LastReadMessageId",
+                        column: x => x.LastReadMessageId,
+                        principalTable: "ChatMessages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_ChatThreads_ThreadId",
+                        column: x => x.ThreadId,
+                        principalTable: "ChatThreads",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatThreadReadStatuses_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Archive",
                 columns: table => new
                 {
@@ -746,6 +886,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     StorageLocationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     RedistributableId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ToolId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     LastVersionId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UncompressedSize = table.Column<long>(type: "bigint", nullable: false),
                     CompressedSize = table.Column<long>(type: "bigint", nullable: false),
@@ -778,6 +919,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         name: "FK_Archive_StorageLocations_StorageLocationId",
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Archive_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -907,6 +1054,45 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "GameExternalIds",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    Provider = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ExternalId = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameExternalIds", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_GameExternalIds_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "GameGenre",
                 columns: table => new
                 {
@@ -986,7 +1172,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 columns: table => new
                 {
                     GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    RedistributableId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                    RedistributableId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Options = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -1082,6 +1270,31 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "GameTool",
+                columns: table => new
+                {
+                    GamesId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ToolsId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameTool", x => new { x.GamesId, x.ToolsId });
+                    table.ForeignKey(
+                        name: "FK_GameTool_Games_GamesId",
+                        column: x => x.GamesId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameTool_Tools_ToolsId",
+                        column: x => x.ToolsId,
+                        principalTable: "Tools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Issues",
                 columns: table => new
                 {
@@ -1133,7 +1346,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     Value = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    AllocationMethod = table.Column<int>(type: "int", nullable: false),
+                    AllocationMethod = table.Column<int>(type: "int", nullable: true),
                     ClaimedByMacAddress = table.Column<string>(type: "varchar(17)", maxLength: 17, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ClaimedByIpv4Address = table.Column<string>(type: "varchar(15)", maxLength: 15, nullable: true)
@@ -1216,6 +1429,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Crc32 = table.Column<string>(type: "varchar(8)", maxLength: 8, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
                     ThumbnailId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     StorageLocationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
@@ -1310,31 +1524,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "PageGame",
-                columns: table => new
-                {
-                    GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    PageId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PageGame", x => new { x.GameId, x.PageId });
-                    table.ForeignKey(
-                        name: "FK_PageGame_Games_GameId",
-                        column: x => x.GameId,
-                        principalTable: "Games",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_PageGame_Pages_PageId",
-                        column: x => x.PageId,
-                        principalTable: "Pages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "PlaySessions",
                 columns: table => new
                 {
@@ -1375,6 +1564,44 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Ratings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    Source = table.Column<string>(type: "varchar(128)", maxLength: 128, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Value = table.Column<float>(type: "float", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Ratings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Ratings_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -1426,6 +1653,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Name = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    Engine = table.Column<int>(type: "int", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Arguments = table.Column<string>(type: "longtext", nullable: false)
@@ -1435,6 +1663,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     OnStartScriptPath = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     OnStopScriptPath = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DockerHostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    RemoteHostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    RemoteServerId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ContainerId = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Host = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -1475,6 +1708,56 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "PageGame",
+                columns: table => new
+                {
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    PageId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PageGame", x => new { x.GameId, x.PageId });
+                    table.ForeignKey(
+                        name: "FK_PageGame_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PageGame_Pages_PageId",
+                        column: x => x.PageId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "PageRedistributable",
+                columns: table => new
+                {
+                    PageId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    RedistributableId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PageRedistributable", x => new { x.PageId, x.RedistributableId });
+                    table.ForeignKey(
+                        name: "FK_PageRedistributable_Pages_PageId",
+                        column: x => x.PageId,
+                        principalTable: "Pages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PageRedistributable_Redistributables_RedistributableId",
+                        column: x => x.RedistributableId,
+                        principalTable: "Redistributables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Actions",
                 columns: table => new
                 {
@@ -1489,8 +1772,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     PrimaryAction = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     SortOrder = table.Column<int>(type: "int", nullable: false),
+                    OptionOverrides = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     ServerId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ToolId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
@@ -1509,6 +1795,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         name: "FK_Actions_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Actions_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -1566,6 +1858,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     RequiresAdmin = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     RedistributableId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ToolId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     ServerId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
@@ -1594,6 +1887,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_Scripts_Tools_ToolId",
+                        column: x => x.ToolId,
+                        principalTable: "Tools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_Scripts_Users_CreatedById",
                         column: x => x.CreatedById,
                         principalTable: "Users",
@@ -1613,18 +1912,17 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    Name = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Type = table.Column<int>(type: "int", nullable: false),
-                    Path = table.Column<string>(type: "longtext", nullable: false)
+                    Path = table.Column<string>(type: "varchar(1024)", maxLength: 1024, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Host = table.Column<string>(type: "longtext", nullable: false)
+                    Host = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Port = table.Column<int>(type: "int", nullable: true),
-                    Password = table.Column<string>(type: "longtext", nullable: false)
+                    Password = table.Column<string>(type: "varchar(128)", maxLength: 128, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ServerId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    ServerId1 = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
@@ -1639,11 +1937,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ServerConsoles_Servers_ServerId1",
-                        column: x => x.ServerId1,
-                        principalTable: "Servers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ServerConsoles_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -1664,12 +1957,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    LocalPath = table.Column<string>(type: "longtext", nullable: false)
+                    LocalPath = table.Column<string>(type: "varchar(1024)", maxLength: 1024, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Path = table.Column<string>(type: "longtext", nullable: false)
+                    Path = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ServerId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    ServerId1 = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
@@ -1684,11 +1976,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ServerHttpPath_Servers_ServerId1",
-                        column: x => x.ServerId1,
-                        principalTable: "Servers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ServerHttpPath_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -1718,6 +2005,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_Actions_ServerId",
                 table: "Actions",
                 column: "ServerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Actions_ToolId",
+                table: "Actions",
+                column: "ToolId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Actions_UpdatedById",
@@ -1750,6 +2042,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 column: "StorageLocationId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Archive_ToolId",
+                table: "Archive",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Archive_UpdatedById",
                 table: "Archive",
                 column: "UpdatedById");
@@ -1773,6 +2070,46 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_CategoryGame_GamesId",
                 table: "CategoryGame",
                 column: "GamesId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_CreatedById",
+                table: "ChatMessages",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_ThreadId",
+                table: "ChatMessages",
+                column: "ThreadId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatMessages_UpdatedById",
+                table: "ChatMessages",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadReadStatuses_LastReadMessageId",
+                table: "ChatThreadReadStatuses",
+                column: "LastReadMessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadReadStatuses_UserId",
+                table: "ChatThreadReadStatuses",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreads_CreatedById",
+                table: "ChatThreads",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreads_UpdatedById",
+                table: "ChatThreads",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatThreadUser_ParticipantsId",
+                table: "ChatThreadUser",
+                column: "ParticipantsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CollectionGame_GameId",
@@ -1828,6 +2165,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_GameDeveloper_DeveloperId",
                 table: "GameDeveloper",
                 column: "DeveloperId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_CreatedById",
+                table: "GameExternalIds",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_GameId",
+                table: "GameExternalIds",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameExternalIds_UpdatedById",
+                table: "GameExternalIds",
+                column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameGenre_GenresId",
@@ -1898,6 +2250,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_GameTag_TagsId",
                 table: "GameTag",
                 column: "TagsId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameTool_ToolsId",
+                table: "GameTool",
+                column: "ToolsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genres_CreatedById",
@@ -2037,6 +2394,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Pages_ToolId",
+                table: "Pages",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Pages_UpdatedById",
                 table: "Pages",
                 column: "UpdatedById");
@@ -2075,6 +2437,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_PlaySessions_UserId",
                 table: "PlaySessions",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_CreatedById",
+                table: "Ratings",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_GameId",
+                table: "Ratings",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_UpdatedById",
+                table: "Ratings",
+                column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Redistributables_CreatedById",
@@ -2148,6 +2525,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Scripts_ToolId",
+                table: "Scripts",
+                column: "ToolId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Scripts_UpdatedById",
                 table: "Scripts",
                 column: "UpdatedById");
@@ -2163,11 +2545,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServerConsoles_ServerId1",
-                table: "ServerConsoles",
-                column: "ServerId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ServerConsoles_UpdatedById",
                 table: "ServerConsoles",
                 column: "UpdatedById");
@@ -2181,11 +2558,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_ServerHttpPath_ServerId",
                 table: "ServerHttpPath",
                 column: "ServerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ServerHttpPath_ServerId1",
-                table: "ServerHttpPath",
-                column: "ServerId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServerHttpPath_UpdatedById",
@@ -2225,6 +2597,16 @@ namespace LANCommander.Server.Data.MySQL.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Tags_UpdatedById",
                 table: "Tags",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tools_CreatedById",
+                table: "Tools",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tools_UpdatedById",
+                table: "Tools",
                 column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
@@ -2292,6 +2674,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "CategoryGame");
 
             migrationBuilder.DropTable(
+                name: "ChatThreadReadStatuses");
+
+            migrationBuilder.DropTable(
+                name: "ChatThreadUser");
+
+            migrationBuilder.DropTable(
                 name: "CollectionGame");
 
             migrationBuilder.DropTable(
@@ -2299,6 +2687,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "GameDeveloper");
+
+            migrationBuilder.DropTable(
+                name: "GameExternalIds");
 
             migrationBuilder.DropTable(
                 name: "GameGenre");
@@ -2317,6 +2708,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "GameTag");
+
+            migrationBuilder.DropTable(
+                name: "GameTool");
 
             migrationBuilder.DropTable(
                 name: "Issues");
@@ -2344,6 +2738,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "PlaySessions");
+
+            migrationBuilder.DropTable(
+                name: "Ratings");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims");
@@ -2382,6 +2779,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "Categories");
 
             migrationBuilder.DropTable(
+                name: "ChatMessages");
+
+            migrationBuilder.DropTable(
                 name: "Genres");
 
             migrationBuilder.DropTable(
@@ -2413,6 +2813,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "Roles");
+
+            migrationBuilder.DropTable(
+                name: "ChatThreads");
+
+            migrationBuilder.DropTable(
+                name: "Tools");
 
             migrationBuilder.DropTable(
                 name: "Games");

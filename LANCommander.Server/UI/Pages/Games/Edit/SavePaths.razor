@@ -4,7 +4,7 @@
 <GameEditView Id="Id" Title="Save Paths">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="_savePathEditor.Save">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="() => _savePathEditor?.Save()">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     

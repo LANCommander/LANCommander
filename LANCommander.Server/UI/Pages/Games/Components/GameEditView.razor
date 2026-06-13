@@ -56,9 +56,12 @@
         </CascadingValue>
 
         <div class="panel-layout-content">
-            <CascadingValue Value="Game.Id" Name="GameId">
-                @ChildContent?.Invoke(Game)
-            </CascadingValue>
+            @if (Game?.Id == Id)
+            {
+                <CascadingValue Value="Game.Id" Name="GameId">
+                    @ChildContent?.Invoke(Game)
+                </CascadingValue>
+            }
         </div>
     </Content>
 </Layout>

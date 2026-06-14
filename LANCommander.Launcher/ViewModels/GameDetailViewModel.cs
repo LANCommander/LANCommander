@@ -201,150 +201,6 @@ public partial class GameDetailViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Load game from local cache (Data.Models.Game)
-    /// Used when selecting from the library sidebar
-    /// </summary>
-    public async void LoadGame(Data.Models.Game game)
-    {
-        Id = game.Id;
-        Title = game.Title ?? "Unknown";
-        Description = game.Description ?? string.Empty;
-        ReleasedOn = game.ReleasedOn ?? DateTime.MinValue;
-        ReleaseYear = game.ReleasedOn?.Year > 1 ? game.ReleasedOn.Value.Year.ToString() : "Unknown";
-        Singleplayer = game.Singleplayer;
-
-        // Get media paths from local storage
-        using var scope = _serviceProvider.CreateScope();
-        var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
-
-        CoverPath = GetLocalMediaPath(game.Media, MediaType.Cover, mediaService);
-        CoverMimeType = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover)?.MimeType;
-        LogoPath = GetLocalMediaPath(game.Media, MediaType.Logo, mediaService);
-        BackgroundPath = GetLocalMediaPath(game.Media, MediaType.Background, mediaService);
-        IconPath = GetLocalMediaPath(game.Media, MediaType.Icon, mediaService);
-
-        // Collections
-        Genres = game.Genres != null
-            ? string.Join(", ", game.Genres.Select(g => g.Name))
-            : string.Empty;
-
-        Developers = game.Developers != null
-            ? string.Join(", ", game.Developers.Select(d => d.Name))
-            : string.Empty;
-
-        Publishers = game.Publishers != null
-            ? string.Join(", ", game.Publishers.Select(p => p.Name))
-            : string.Empty;
-
-        Platforms = game.Platforms != null
-            ? string.Join(", ", game.Platforms.Select(p => p.Name))
-            : string.Empty;
-
-        Tags = game.Tags != null
-            ? string.Join(", ", game.Tags.Select(t => t.Name))
-            : string.Empty;
-
-        // Multiplayer info
-        HasMultiplayer = game.MultiplayerModes != null && game.MultiplayerModes.Any();
-        MultiplayerModeDetails.Clear();
-        if (HasMultiplayer)
-        {
-            var modes = game.MultiplayerModes!
-                .Select(m => m.Type.ToString())
-                .Distinct();
-            MultiplayerModes = string.Join(", ", modes);
-            foreach (var mode in game.MultiplayerModes!)
-                MultiplayerModeDetails.Add(FormatMultiplayerMode(mode));
-        }
-        else
-            MultiplayerModes = string.Empty;
-
-        // Media items (screenshots / videos from local cache)
-        // Collect paths first, add skeletons for screenshots, then lazy-load bitmaps off the UI thread
-        MediaItems.Clear();
-        TagsExpanded = false;
-
-        var mediaEntries = new List<(string path, int index)>();
-        
-        if (game.Media != null)
-        {
-            foreach (var m in game.Media.Where(m =>
-                m.Type == MediaType.Screenshot || m.Type == MediaType.Video))
-            {
-                var path = mediaService.FileExists(m) ? mediaService.GetImagePath(m) : null;
-                
-                if (path == null)
-                    continue;
-
-                if (m.Type == MediaType.Video)
-                {
-                    MediaItems.Add(new GameMediaItemViewModel
-                    {
-                        Path = path,
-                        IsVideo = true,
-                        MimeType = string.Empty
-                    });
-                }
-                else
-                {
-                    var index = MediaItems.Count;
-                    MediaItems.Add(new GameMediaItemViewModel { IsSkeleton = true });
-                    mediaEntries.Add((path, index));
-                }
-            }
-        }
-        OnPropertyChanged(nameof(HasMedia));
-
-        // Tools
-        Tools.Clear();
-        if (game.Tools != null)
-        {
-            foreach (var tool in game.Tools)
-                Tools.Add(new ToolItemViewModel(tool));
-        }
-        OnPropertyChanged(nameof(HasTools));
-
-        // Load action bar state
-        await ActionBar.LoadFromLocalGameAsync(game);
-
-        // Load screenshot bitmaps on background thread, replacing skeletons as they complete
-        if (mediaEntries.Count > 0)
-            IsLoadingMedia = true;
-
-        foreach (var entry in mediaEntries)
-        {
-            try
-            {
-                var bitmap = await Task.Run(() => new Bitmap(entry.path));
-                
-                MediaItems[entry.index] = new GameMediaItemViewModel
-                {
-                    Path = entry.path,
-                    IsVideo = false,
-                    MimeType = string.Empty,
-                    ImageSource = bitmap
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load local screenshot {Path}", entry.path);
-            }
-        }
-
-        // Remove any skeletons that failed to load
-        for (var i = MediaItems.Count - 1; i >= 0; i--)
-        {
-            if (MediaItems[i].IsSkeleton)
-                MediaItems.RemoveAt(i);
-        }
-
-        OnPropertyChanged(nameof(HasMedia));
-
-        if (mediaEntries.Count > 0)
-            IsLoadingMedia = false;
-    }
-
-    /// <summary>
     /// Load game from server API (SDK.Models.Game)
     /// Used when selecting from the depot/all games list.
     /// Loads essential media (cover, logo, background, icon) and metadata inline,
@@ -443,9 +299,13 @@ public partial class GameDetailViewModel : ViewModelBase
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
 
-        // Load essential media (cover, logo, background, icon) — needed for page layout
         if (game.Media != null && game.Media.Any())
         {
+            // Start loading screenshots/videos in the background immediately so videos
+            // begin streaming without waiting on the essential media downloads below.
+            _ = LoadCarouselMediaAsync(game);
+
+            // Load essential media (cover, logo, background, icon) — needed for page layout
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -461,15 +321,14 @@ public partial class GameDetailViewModel : ViewModelBase
             {
                 _logger.LogError(ex, "Failed to load essential media for game {GameId}", game.Id);
             }
-
-            // Load screenshots/videos in the background — don't block navigation
-            _ = LoadCarouselMediaAsync(game);
         }
     }
 
     /// <summary>
     /// Loads screenshots and videos into the media carousel in the background.
-    /// Replaces skeleton placeholders with real items as they load.
+    /// Videos are set up immediately so they begin streaming right away; screenshots
+    /// are downloaded/decoded concurrently and pop in as each one finishes, so no item
+    /// blocks the others.
     /// </summary>
     private async Task LoadCarouselMediaAsync(SDK.Models.Game game)
     {
@@ -488,46 +347,31 @@ public partial class GameDetailViewModel : ViewModelBase
             using var scope = _serviceProvider.CreateScope();
             var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
+            var screenshotTasks = new List<Task>();
+
             for (var i = 0; i < carouselMedia.Count; i++)
             {
+                var index = i;
                 var media = carouselMedia[i];
-                try
+
+                if (media.Type == MediaType.Video)
                 {
-                    var item = new GameMediaItemViewModel
+                    // Videos only need a stream URL — set them immediately so they don't
+                    // wait behind screenshot downloads.
+                    ReplaceMediaItem(index, new GameMediaItemViewModel
                     {
-                        IsVideo  = media.Type == MediaType.Video,
-                        MimeType = media.MimeType ?? string.Empty
-                    };
-
-                    if (media.Type == MediaType.Video)
-                        item.Path = mediaClient.GetAbsoluteStreamUrl(media);
-                    else
-                    {
-                        var localPath = mediaClient.GetLocalPath(media);
-
-                        if (!File.Exists(localPath))
-                        {
-                            var fileInfo = await mediaClient.DownloadAsync(media, localPath);
-                            localPath = fileInfo.FullName;
-                        }
-
-                        item.Path = localPath;
-                        item.ImageSource = await Task.Run(() => new Bitmap(localPath));
-                    }
-
-                    // Replace skeleton at the same position, or append if index is out of range
-                    if (i < MediaItems.Count && MediaItems[i].IsSkeleton)
-                        MediaItems[i] = item;
-                    else
-                        MediaItems.Add(item);
-
-                    OnPropertyChanged(nameof(HasMedia));
+                        IsVideo  = true,
+                        MimeType = media.MimeType ?? string.Empty,
+                        Path     = mediaClient.GetAbsoluteStreamUrl(media)
+                    });
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogError(ex, "Failed to load media {MediaId} from server", media.Id);
+                    screenshotTasks.Add(LoadScreenshotAsync(index, media, mediaClient));
                 }
             }
+
+            await Task.WhenAll(screenshotTasks);
 
             // Remove any remaining skeletons (e.g. if some items failed to load)
             for (var i = MediaItems.Count - 1; i >= 0; i--)
@@ -546,6 +390,53 @@ public partial class GameDetailViewModel : ViewModelBase
         {
             IsLoadingMedia = false;
         }
+    }
+
+    /// <summary>
+    /// Downloads (if needed) and decodes a single screenshot, then swaps it into the
+    /// carousel in place of its skeleton. Runs concurrently with other screenshots.
+    /// </summary>
+    private async Task LoadScreenshotAsync(int index, SDK.Models.Media media, MediaClient mediaClient)
+    {
+        try
+        {
+            var localPath = mediaClient.GetLocalPath(media);
+
+            if (!File.Exists(localPath))
+            {
+                var fileInfo = await mediaClient.DownloadAsync(media, localPath);
+                localPath = fileInfo.FullName;
+            }
+
+            var bitmap = await Task.Run(() => new Bitmap(localPath));
+
+            ReplaceMediaItem(index, new GameMediaItemViewModel
+            {
+                IsVideo     = false,
+                MimeType    = media.MimeType ?? string.Empty,
+                Path        = localPath,
+                ImageSource = bitmap
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load media {MediaId} from server", media.Id);
+        }
+    }
+
+    /// <summary>
+    /// Replaces the skeleton at <paramref name="index"/> with the loaded item, or appends
+    /// it if the index no longer points at a skeleton. Always invoked on the UI thread via
+    /// awaited continuations, so collection access is serialized.
+    /// </summary>
+    private void ReplaceMediaItem(int index, GameMediaItemViewModel item)
+    {
+        if (index < MediaItems.Count && MediaItems[index].IsSkeleton)
+            MediaItems[index] = item;
+        else
+            MediaItems.Add(item);
+
+        OnPropertyChanged(nameof(HasMedia));
     }
 
     private static string FormatMultiplayerMode(Data.Models.MultiplayerMode mode) =>
@@ -573,18 +464,6 @@ public partial class GameDetailViewModel : ViewModelBase
         }
 
         return typeLabel;
-    }
-
-    private string? GetLocalMediaPath(System.Collections.Generic.ICollection<Data.Models.Media>? mediaCollection, MediaType type, MediaService mediaService)
-    {
-        var media = mediaCollection?.FirstOrDefault(m => m.Type == type);
-        
-        if (media == null)
-            return null;
-        
-        var path = mediaService.GetImagePath(media);
-        
-        return mediaService.FileExists(media) ? path : null;
     }
 
     private async Task<string?> GetOrDownloadMediaPathAsync(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)

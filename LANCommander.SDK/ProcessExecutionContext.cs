@@ -65,7 +65,7 @@ namespace LANCommander.SDK
             return Process;
         }
 
-        public async Task ExecuteServerAsync(Models.Server server,
+        public Task ExecuteServerAsync(Models.Server server,
             CancellationTokenSource cancellationTokenSource = default)
         {
             Process = new Process();
@@ -114,44 +114,10 @@ namespace LANCommander.SDK
                 Process.BeginOutputReadLine();
             
             cancellationTokenSource?.Token.WaitHandle.WaitOne();
-            
-            if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
-                Process.CloseMainWindow();
-            else if (server.ProcessTerminationMethod == ProcessTerminationMethod.Kill)
-                Process.Kill();
-            else if (OperatingSystem.IsWindows())
-                Process.Kill();
-            else
-            {
-                int signal = 1;
-                int pid = Process.Id;
 
-                switch (server.ProcessTerminationMethod)
-                {
-                    case ProcessTerminationMethod.SIGHUP:
-                        signal = 1;
-                        break;
-                    case ProcessTerminationMethod.SIGINT:
-                        signal = 2;
-                        break;
-                    case ProcessTerminationMethod.SIGKILL:
-                        signal = 9;
-                        break;
-                    case ProcessTerminationMethod.SIGTERM:
-                        signal = 15;
-                        break;
-                }
+            Process.Kill(server.ProcessTerminationMethod);
 
-                Process.Close();
-
-                using (var terminator = new Process())
-                {
-                    terminator.StartInfo.FileName = "/bin/kill";
-                    terminator.StartInfo.Arguments = $"-{signal} {pid}";
-                    terminator.Start();
-                    await terminator.WaitForExitAsync();
-                }
-            }
+            return Task.CompletedTask;
         }
 
         public async Task ExecuteGameActionAsync(string installDirectory, Guid gameId, Models.Manifest.Action action, string args = "", CancellationToken cancellationToken = default)

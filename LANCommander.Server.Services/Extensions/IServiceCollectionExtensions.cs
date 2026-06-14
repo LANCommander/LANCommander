@@ -98,6 +98,9 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<ServerManager>();
 
+        services.AddSingleton<PlaySessionKeepAliveTracker>();
+        services.AddHostedService<PlaySessionSweepService>();
+
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>
             sp.GetRequiredService<ScriptDebugger>());

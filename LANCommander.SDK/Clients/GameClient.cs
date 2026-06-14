@@ -2271,10 +2271,14 @@ namespace LANCommander.SDK.Services
                 }
                 #endregion
 
+                Task heartbeatTask = null;
+
                 try
                 {
                     var cancellationTokenSource = new CancellationTokenSource();
                     _running[gameId] = cancellationTokenSource;
+
+                    heartbeatTask = SendKeepAlivesAsync(gameId, cancellationTokenSource.Token);
 
                     #region Run Wrapper Scripts
                     bool runWrapperHandled = false;
@@ -2320,11 +2324,12 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     if (!runWrapperHandled)
-                    {
                         await context.ExecuteGameActionAsync(installDirectory, gameId, action, args, cancellationTokenSource.Token);
-                    }
 
                     _running.Remove(gameId);
+                    
+                    await StopHeartbeatAsync(cancellationTokenSource, heartbeatTask);
+                    
                     cancellationTokenSource.Dispose();
 
                     await UploadSavesAsync(manifests, installDirectory);
@@ -2334,6 +2339,7 @@ namespace LANCommander.SDK.Services
                     if (_running.TryGetValue(gameId, out var cts))
                     {
                         _running.Remove(gameId);
+                        await StopHeartbeatAsync(cts, heartbeatTask);
                         cts.Dispose();
                     }
                     logger?.LogError(ex, "Game failed to run");
@@ -2378,6 +2384,56 @@ namespace LANCommander.SDK.Services
             else
             {
                 logger?.LogDebug("Skipping save upload, not connected to server");
+            }
+        }
+
+        // Heartbeat interval while a game is running. Must stay well below the server's
+        // KeepAliveTimeout so a session isn't reaped between beats.
+        private const int KeepAliveIntervalSeconds = 30;
+
+        private async Task SendKeepAlivesAsync(Guid gameId, CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(KeepAliveIntervalSeconds), token);
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    if (!connectionClient.IsConnected() || RpcClient.Hub == null)
+                        continue;
+
+                    try
+                    {
+                        await RpcClient.Hub.GameKeepAliveAsync(gameId);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogTrace(ex, "Keepalive send failed for {GameId}", gameId);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the game exits and the token is cancelled.
+            }
+        }
+
+        private static async Task StopHeartbeatAsync(CancellationTokenSource cancellationTokenSource, Task heartbeatTask)
+        {
+            cancellationTokenSource.Cancel();
+
+            if (heartbeatTask != null)
+            {
+                try
+                {
+                    await heartbeatTask;
+                }
+                catch (OperationCanceledException)
+                {
+                }
             }
         }
 

@@ -95,7 +95,9 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<RemoteServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
-        
+
+        services.AddSingleton<ServerManager>();
+
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>
             sp.GetRequiredService<ScriptDebugger>());

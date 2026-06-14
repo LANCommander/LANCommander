@@ -239,6 +239,7 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] ServerService serverService,
+        [FromServices] ServerManager serverManager,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
@@ -261,7 +262,7 @@ public static class GameEndpoints
         #endregion
 
         #region Autostart Servers
-        await serverService.AutostartAsync(game.Id, ServerAutostartMethod.OnPlayerActivity);
+        await serverManager.AutostartAsync(game.Id, ServerAutostartMethod.OnPlayerActivity);
         #endregion
             
         #region Run server scripts
@@ -290,6 +291,7 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] ServerService serverService,
+        [FromServices] ServerManager serverManager,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
@@ -299,9 +301,19 @@ public static class GameEndpoints
 
         if (game == null || user == null)
             return TypedResults.BadRequest();
-        
+
         await playSessionService.EndSessionAsync(game.Id, user.Id);
-        
+
+        #region Autostop Servers
+        // Once the last player has stopped playing, debounce the stop so a quick relaunch
+        // doesn't cause the servers to thrash between stopped and started.
+        var activeSessions = await playSessionService
+            .GetAsync(ps => ps.GameId == game.Id && ps.End == null);
+
+        if (!activeSessions.Any())
+            serverManager.ScheduleStop(game.Id);
+        #endregion
+
         #region Run server scripts
         try
         {
@@ -318,7 +330,7 @@ public static class GameEndpoints
             logger?.LogError(ex, "Server scripts could not run");
         }
         #endregion
-        
+
         return TypedResults.Ok();
     }
 

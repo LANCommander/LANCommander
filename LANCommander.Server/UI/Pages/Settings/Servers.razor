@@ -19,6 +19,9 @@
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
+        <FormItem Label="Autostop Delay" Help="Seconds to wait after the last player stops a game before stopping its on-player-activity servers. Debounces stop/start thrash when players relaunch.">
+            <AntDesign.InputNumber @bind-Value="@context.Server.GameServers.AutostopDelay" Min="0" DefaultValue="300" />
+        </FormItem>
     </Form>
     
     <Divider Text="Server Engines" />

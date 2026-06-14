@@ -148,7 +148,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private Task OnProgress(InstallProgress progress)
     {
-        _taskbarProgressService.SetProgress(progress.Progress);
+        _taskbarProgressService.Report(progress);
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -167,16 +167,22 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
             // Format time remaining
             var bytesRemaining = progress.TotalBytes - progress.BytesTransferred;
-            
+
             if (progress.TransferSpeed > 0 && bytesRemaining > 0)
             {
                 var seconds = (double)bytesRemaining / progress.TransferSpeed;
                 var ts = TimeSpan.FromSeconds(seconds);
-                TimeRemainingText = ts.TotalHours >= 1
-                    ? $"{(int)ts.TotalHours}h {ts.Minutes}m remaining"
-                    : ts.TotalMinutes >= 1
-                        ? $"{ts.Minutes}m {ts.Seconds}s remaining"
-                        : $"{ts.Seconds}s remaining";
+
+                string remaining;
+
+                if (ts.TotalHours >= 1)
+                    remaining = $"{(int)ts.TotalHours}h {ts.Minutes}m";
+                else if (ts.TotalMinutes >= 1)
+                    remaining = $"{ts.Minutes}m {ts.Seconds}s";
+                else
+                    remaining = $"{ts.Seconds}s";
+
+                TimeRemainingText = Localize("TimeRemaining", remaining);
             }
             else
             {
@@ -608,8 +614,8 @@ public partial class InstallQueueItemViewModel : ViewModelBase
 
     public bool HasSpeedData => true;
     public string SpeedChartLabel => IsActive
-        ? Localization.Localize("TransferSpeed")
-        : Localization.Localize("TransferSpeedHistory");
+        ? Localize("TransferSpeed")
+        : Localize("TransferSpeedHistory");
 
     public InstallQueueItemViewModel()
     {
@@ -700,25 +706,25 @@ public partial class InstallQueueItemViewModel : ViewModelBase
 
         if (Status == InstallStatus.Complete)
         {
-            ProgressText = "Complete";
+            ProgressText = Localize("InstallStatusComplete");
             SpeedText = string.Empty;
             PercentText = string.Empty;
-            StatusText = "Complete";
+            StatusText = Localize("InstallStatusComplete");
             CompletedOnText = item.CompletedOn?.ToString("g");
         }
         else if (Status == InstallStatus.Failed)
         {
-            ProgressText = "Failed";
+            ProgressText = Localize("InstallStatusFailed");
             SpeedText = string.Empty;
             PercentText = string.Empty;
-            StatusText = "Failed";
+            StatusText = Localize("InstallStatusFailed");
         }
         else if (Status == InstallStatus.Queued)
         {
-            ProgressText = "Queued";
+            ProgressText = Localize("InstallStatusQueued");
             SpeedText = string.Empty;
             PercentText = string.Empty;
-            StatusText = "Queued";
+            StatusText = Localize("InstallStatusQueued");
         }
         else
         {

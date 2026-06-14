@@ -160,7 +160,7 @@ public partial class GameActionBarViewModel : ViewModelBase
     /// <summary>
     /// Shows "Play" label when no update available and game is idle (not running/starting)
     /// </summary>
-    public bool ShowPlayLabel => !IsUpdateAvailable && !IsRunning && !IsStarting;
+    public bool ShowPlayLabel => !IsRunning && (!IsUpdateAvailable || IsStarting);
 
     /// <summary>
     /// Can install only when online and not already installed

@@ -100,7 +100,7 @@
                                         IsVisible="{Binding ShowPlayLabel}">
                                 <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
-                                <TextBlock Text="Starting..." IsVisible="{Binding IsStarting}" />
+                                <TextBlock Text="Starting" IsVisible="{Binding IsStarting}" />
                             </StackPanel>
 
                             <!-- Running: overlapping "Running" and "Stop" labels -->

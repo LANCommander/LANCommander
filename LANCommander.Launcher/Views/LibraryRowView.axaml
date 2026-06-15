@@ -55,7 +55,7 @@
                 BorderThickness="0,0,1,0"
                 Margin="0,48,0,0">
             <ListBox x:Name="GameListBox"
-                     Classes="CompactGamesList TitlebarOffset"
+                     Classes="CompactGamesList"
                      ItemsSource="{Binding Games}"
                      SelectedItem="{Binding SelectedGame}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"

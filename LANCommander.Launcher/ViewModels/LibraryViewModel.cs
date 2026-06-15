@@ -70,6 +70,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 var items = await libraryService.GetItemsAsync();
                 var results = new List<GameItemViewModel>();
                 var gameModels = new List<LANCommander.Launcher.Data.Models.Game>();
+                var iconPaths = new Dictionary<Guid, string?>();
 
                 foreach (var item in items ?? [])
                 {
@@ -85,6 +86,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                         coverPath = mediaService.GetImagePath(coverMedia);
 
                     var iconPath = await GetOrDownloadIconPathAsync(game, mediaService, mediaClient);
+                    iconPaths[game.Id] = iconPath;
 
                     var vm = new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false);
                     vm.IconPath = iconPath;
@@ -117,7 +119,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                     if (coverMedia != null && mediaService.FileExists(coverMedia))
                         coverPath = mediaService.GetImagePath(coverMedia);
 
-                    recentItems.Add(new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false));
+                    var recentVm = new GameItemViewModel(game, coverPath, coverMedia?.MimeType, inLibrary: true, showInLibraryBadge: false);
+                    recentVm.IconPath = iconPaths.GetValueOrDefault(game.Id);
+                    recentItems.Add(recentVm);
                 }
 
                 // Collections: distinct collections from library games
@@ -133,7 +137,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                     // Use cover of first game in collection as background
                     string? bgPath = null;
                     var representativeGame = group.First().Game;
+                    
                     var bgMedia = representativeGame.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+                    
                     if (bgMedia != null && mediaService.FileExists(bgMedia))
                         bgPath = mediaService.GetImagePath(bgMedia);
 
@@ -155,6 +161,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
             AvailableTags.Clear();
             AvailableDevelopers.Clear();
             AvailablePublishers.Clear();
+            
             foreach (var vm in collected)
                 _allGames.Add(vm);
 
@@ -202,7 +209,8 @@ public partial class LibraryViewModel : GamesCollectionViewModel
 
     protected override async Task ViewGameDetailsAsync(GameItemViewModel? gameItem)
     {
-        if (gameItem == null) return;
+        if (gameItem == null)
+            return;
 
         try
         {
@@ -248,7 +256,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         MediaClient mediaClient)
     {
         var iconMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
-        if (iconMedia == null) return null;
+        
+        if (iconMedia == null)
+            return null;
 
         if (mediaService.FileExists(iconMedia))
             return mediaService.GetImagePath(iconMedia);

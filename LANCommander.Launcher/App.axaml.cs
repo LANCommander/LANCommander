@@ -8,6 +8,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using LANCommander.Launcher.Input;
+using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
@@ -99,6 +100,11 @@ public partial class App : Application
                 // If Opened already fired synchronously during Show(), the handler above missed
                 // it; bind now since the handle is available once the window is shown.
                 BindTaskbarProgress();
+
+                // System tray icon: the main window hides to tray on close, so the tray
+                // provides navigation and an exit path. See TrayIconExtensions.
+                var trayIcon = mainWindow.CreateTrayIcon(mainViewModel);
+                TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
 
                 // Single-instance pipe server: forward notification-click navigations
                 var singleInstance = Services.GetRequiredService<SingleInstanceService>();

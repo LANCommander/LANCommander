@@ -401,7 +401,8 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand]
     private void GoOffline()
     {
-        if (IsOfflineMode) return;
+        if (IsOfflineMode)
+            return;
 
         IsOfflineMode = true;
         DepotViewModel.IsOfflineMode           = true;
@@ -416,8 +417,11 @@ public partial class ShellViewModel : ViewModelBase
     private async Task LogoutAsync()
     {
         using var scope = _serviceProvider.CreateScope();
+        
         var authService = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
+        
         await authService.Logout();
+        
         LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -473,8 +477,10 @@ public partial class ShellViewModel : ViewModelBase
             }
 
             // Fallback: load from local database
-            var gameService = scope.ServiceProvider.GetRequiredService<LANCommander.Launcher.Services.GameService>();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            
             var localGame = await gameService.GetAsync(gameId);
+            
             if (localGame != null)
             {
                 var sdkGame = new SDK.Models.Game
@@ -485,12 +491,48 @@ public partial class ShellViewModel : ViewModelBase
                     Description = localGame.Description,
                     ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue,
                 };
+                
                 OnGameSelected(this, sdkGame);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to navigate to game {GameId}", gameId);
+        }
+    }
+
+    /// <summary>
+    /// Launches the game's primary action if it is installed. Used by the system tray
+    /// "recently played" shortcuts. Does nothing (beyond logging) if the game is not
+    /// installed or has no runnable action.
+    /// </summary>
+    public async Task RunGameByIdAsync(Guid gameId)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+            var localGame = await gameService.GetAsync(gameId);
+            
+            if (localGame is not { Installed: true })
+                return;
+
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, gameId);
+            var action = actions?.FirstOrDefault(a => a.IsPrimaryAction) ?? actions?.FirstOrDefault();
+
+            if (action == null)
+            {
+                _logger.LogWarning("No runnable action for game {GameId}", gameId);
+                return;
+            }
+
+            await gameService.Run(localGame, action);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run game {GameId}", gameId);
         }
     }
 
@@ -550,8 +592,10 @@ public partial class ShellViewModel : ViewModelBase
     private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null)
     {
         _lastDepotBrowseFilter = (genre, tag, collection, search);
+        
         DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search);
         IsDepotActive = true;
+        
         _navigationService.NavigateTo(DepotBrowseViewModel);
     }
 
@@ -560,6 +604,7 @@ public partial class ShellViewModel : ViewModelBase
         await LibraryViewModel.LoadGamesAsync();
         await GamesListViewModel.LoadGamesAsync();
         await DepotViewModel.LoadAsync();
+        
         // Re-initialize the browse view with fresh data so "in library" badges update
         if (_navigationService.CurrentView == DepotBrowseViewModel)
             DepotBrowseViewModel.Initialize(
@@ -598,6 +643,7 @@ public partial class ShellViewModel : ViewModelBase
     private void ShowSettings()
     {
         SettingsViewModel.Load();
+        
         _navigationService.NavigateTo(SettingsViewModel);
     }
 

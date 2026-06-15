@@ -25,6 +25,29 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
+        <!-- System tray menu. Avalonia's Win32 tray popup is a Window named
+             "AvaloniaTrayPopupRoot_<tooltip>"; our tooltip is "LANCommander"
+             (see TrayIconExtensions). The menu mixes icon items (recently played
+             games) with text-only items (Depot/Library/Settings/Exit). These styles
+             are scoped to that window so the in-app menus are unaffected. -->
+        <!-- Symmetric padding so item text is vertically centered. The Fluent default
+             (11,4,11,7) is bottom-heavy, which leaves the text a couple px above center. -->
+        <Style Selector="Window#AvaloniaTrayPopupRoot_LANCommander MenuItem">
+            <Setter Property="Padding" Value="11,6,11,6" />
+        </Style>
+        <!-- Text-only items have no icon, but Fluent reserves a shared icon column so
+             every item aligns. That column can't be removed from a style (the template
+             sets the shared-size scope as a local value), so instead pull icon-less
+             items' text left by the icon column width (icon 16 + 12 right margin = 28)
+             so they sit flush-left at the games' icon edge, not at the game titles. -->
+        <Style Selector="Window#AvaloniaTrayPopupRoot_LANCommander MenuItem:not(:icon) /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Margin" Value="-28,0,0,0" />
+        </Style>
+        <!-- Make the section separators span the full menu width. -->
+        <Style Selector="Window#AvaloniaTrayPopupRoot_LANCommander Separator">
+            <Setter Property="Margin" Value="0,4,0,4" />
+        </Style>
+
         <!-- Offset the vertical scrollbar so it doesn't overlap the floating titlebar -->
         <Style Selector="ScrollViewer.TitlebarOffset /template/ ScrollBar#PART_VerticalScrollBar">
             <Setter Property="Margin" Value="0,40,0,0" />

@@ -65,7 +65,10 @@
                     <div class="ant-form-item" style="margin-bottom: 0;">
                         <div class="ant-flex ant-flex-gap-small ant-flex-wrap-nowrap">
                             <button id="login-submit" type="submit" class="ant-btn ant-btn-primary">Login</button>
-                            <a href="~/Register" class="ant-btn ant-btn-default">Register</a>
+                            @if (SettingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
+                            {
+                                <a href="~/Register" class="ant-btn ant-btn-default">Register</a>
+                            }
                         </div>
                     </div>
                 </div>

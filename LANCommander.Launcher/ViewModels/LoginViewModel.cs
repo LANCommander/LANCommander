@@ -35,6 +35,9 @@ public partial class LoginViewModel : ViewModelBase
     private bool _isRegistering;
 
     [ObservableProperty]
+    private bool _allowRegistration = true;
+
+    [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
@@ -86,6 +89,11 @@ public partial class LoginViewModel : ViewModelBase
         {
             // External providers unavailable - username/password login still works
         }
+
+        AllowRegistration = await _authenticationClient.GetRegistrationAllowedAsync();
+
+        if (!AllowRegistration && IsRegistering)
+            IsRegistering = false;
     }
 
     [RelayCommand]

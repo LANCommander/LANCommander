@@ -154,7 +154,8 @@
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand"
-                        IsVisible="{Binding !IsLoading}">
+                        IsVisible="{Binding AllowRegistration}"
+                        IsEnabled="{Binding !IsLoading}">
                     <Panel>
                         <TextBlock Text="Don't have an account? Register"
                                    Foreground="White"

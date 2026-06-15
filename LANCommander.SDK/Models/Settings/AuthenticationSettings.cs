@@ -10,4 +10,5 @@ public class AuthenticationSettings
     public Uri ServerAddress { get; set; }
     public AuthToken Token { get; set; }
     public bool OfflineModeEnabled { get; set; }
+    public bool AllowRegistration { get; set; } = true;
 }

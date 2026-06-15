@@ -19,6 +19,10 @@
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <FormItem Label="Allow Registration">
+            <Switch @bind-Checked="context.Server.Authentication.AllowRegistration" />
+        </FormItem>
+
         <FormItem Label="Require Account Approval">
             <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
         </FormItem>

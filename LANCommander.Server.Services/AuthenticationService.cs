@@ -144,6 +144,9 @@ namespace LANCommander.Server.Services
 
         public async Task<AuthToken> RegisterAsync(string userName, string password)
         {
+            if (!settingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
+                throw new UserRegistrationException("User registration is disabled");
+
             if (string.IsNullOrWhiteSpace(password))
                 throw new UserRegistrationException("Password is empty");
 

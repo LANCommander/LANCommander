@@ -192,6 +192,24 @@ public class AuthenticationClient(
             .GetAsync<IEnumerable<AuthenticationProvider>>();
     }
     
+    public async Task<bool> GetRegistrationAllowedAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Authentication?.AllowRegistration ?? true;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to allowing registration
+            return true;
+        }
+    }
+
     public Uri GetAuthenticationProviderLoginUrl(string provider)
     {
         return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");

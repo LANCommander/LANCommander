@@ -148,10 +148,23 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private Task OnProgress(InstallProgress progress)
     {
-        _taskbarProgressService.Report(progress);
-
         Dispatcher.UIThread.Post(() =>
         {
+            var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
+
+            // Progress can arrive out-of-band when nothing is queued (e.g. a game-launch
+            // sub-operation). Treat the event as a real install only if it maps to a queue
+            // item, or if some item is already actively installing (covers addon/expansion
+            // sub-installs, whose progress carries the addon — not the base queue item).
+            // Otherwise ignore it so it can't drive the footer or taskbar.
+            if (item == null && !QueueItems.Any(i => i.IsActive))
+            {
+                _taskbarProgressService.ClearProgress();
+                return;
+            }
+
+            _taskbarProgressService.Report(progress);
+
             CurrentStatus = GetDisplayName(progress.Status);
             CurrentProgress = progress.Progress;
             CurrentTransferSpeed = progress.TransferSpeed;
@@ -159,7 +172,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             // Format progress text
             var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred);
             var totalBytes = ByteSize.FromBytes(progress.TotalBytes);
-            
+
             CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({progress.Progress:P0})";
 
             // Format transfer speed
@@ -189,8 +202,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
                 TimeRemainingText = string.Empty;
             }
 
-            // Update the matching queue item
-            var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
+            // Update the matching queue item. May be null for a sub-install (e.g. an addon)
+            // whose progress carries the addon rather than the active base queue item; the
+            // footer/taskbar above still reflect it.
             if (item != null)
             {
                 item.UpdateProgress(progress.Status, progress.Progress, progress.TransferSpeed, progress.BytesTransferred, progress.TotalBytes);
@@ -249,7 +263,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         _logger.LogError("Install failed for game {GameTitle}", game.Title);
 
-        _taskbarProgressService.ClearProgress();
+        _taskbarProgressService.SetError();
         _notificationService.NotifyInstallFailed(game.Title ?? "Game", game.Id);
 
         Dispatcher.UIThread.Post(RefreshQueue);
@@ -747,6 +761,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     {
         var member = typeof(InstallStatus).GetField(status.ToString());
         var display = member?.GetCustomAttribute<DisplayAttribute>();
+        
         return display?.Name ?? status.ToString();
     }
 }

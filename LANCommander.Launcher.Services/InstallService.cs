@@ -79,11 +79,13 @@ namespace LANCommander.Launcher.Services
                 OnProgress?.Invoke(e);
             };
 
-            _redistributableClient.OnInstallProgressUpdate += (e) =>
-            {
-                UpdateQueueItemFromProgress(e);
-                OnProgress?.Invoke(e);
-            };
+            // Note: RedistributableClient progress is intentionally NOT forwarded here.
+            // Its InstallProgress never carries a Game, so it can't be matched to a queue
+            // item, and redistributables are also installed/verified during game launch —
+            // forwarding those events would drive the queue footer and taskbar with
+            // out-of-band progress when nothing is actually queued. The game-level
+            // "Installing Redistributables" status (raised by GameClient with the owning
+            // game attached) still surfaces the redist phase of a queued install.
 
             // New task-level progress forwarding
             _gameClient.OnTaskProgress += OnSdkTaskProgress;

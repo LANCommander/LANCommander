@@ -1,112 +1,109 @@
 using System;
-using System.Runtime.InteropServices;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
+using Notify.NET.Abstractions;
 
 namespace LANCommander.Launcher.Services;
 
+/// <summary>
+/// Drives the OS taskbar/Dock progress indicator for the active download,
+/// backed by Notify.NET's cross-platform <see cref="ITaskbarProgressService"/>.
+/// </summary>
 public class TaskbarProgressService
 {
+    private readonly ITaskbarProgressService _taskbar;
     private readonly ILogger<TaskbarProgressService> _logger;
-    private ITaskbarList3? _taskbarList;
-    private IntPtr _hwnd;
 
-    public TaskbarProgressService(ILogger<TaskbarProgressService> logger)
+    public TaskbarProgressService(ITaskbarProgressService taskbar, ILogger<TaskbarProgressService> logger)
     {
+        _taskbar = taskbar;
         _logger = logger;
     }
 
     public void Initialize(IntPtr hwnd)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return;
+        _logger.LogInformation("TaskbarProgress.Initialize: IsSupported={IsSupported}, hwnd={Hwnd}", _taskbar.IsSupported, hwnd);
 
-        _hwnd = hwnd;
+        if (!_taskbar.IsSupported)
+            return;
 
         try
         {
-            _taskbarList = (ITaskbarList3)new TaskbarListInstance();
-            _taskbarList.HrInit();
+            _taskbar.SetWindow(hwnd);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to initialize ITaskbarList3");
-            _taskbarList = null;
+            _logger.LogWarning(ex, "Failed to bind taskbar progress to window handle");
         }
     }
 
-    public void SetProgress(float progress)
+    /// <summary>
+    /// Reflects the current install item's progress and status on the taskbar:
+    /// indeterminate phases pulse, active transfers show a value, failures turn red.
+    /// </summary>
+    public void Report(InstallProgress progress)
     {
-        if (_taskbarList == null || _hwnd == IntPtr.Zero) return;
+        if (!_taskbar.IsSupported)
+            return;
 
         try
         {
-            const ulong total = 100_000;
-            var completed = (ulong)(progress * total);
-            _taskbarList.SetProgressState(_hwnd, TBPFLAG.TBPF_NORMAL);
-            _taskbarList.SetProgressValue(_hwnd, completed, total);
+            _logger.LogDebug("TaskbarProgress.Report: Status={Status}, Indeterminate={Indeterminate}, Progress={Progress}", progress.Status, progress.Indeterminate, progress.Progress);
+
+            switch (progress.Status)
+            {
+                case InstallStatus.Failed:
+                    _taskbar.SetState(TaskbarProgressState.Error);
+                    break;
+                case InstallStatus.Canceled:
+                case InstallStatus.Complete:
+                    _taskbar.SetState(TaskbarProgressState.None);
+                    break;
+                default:
+                    // Progress is BytesTransferred/TotalBytes and is NaN before the total is
+                    // known (division by zero). Treat that—and any non-finite value—as an
+                    // indeterminate pulse rather than feeding NaN to the native indicator.
+                    if (progress.Indeterminate || float.IsNaN(progress.Progress) || float.IsInfinity(progress.Progress))
+                        _taskbar.SetState(TaskbarProgressState.Indeterminate);
+                    else
+                        _taskbar.SetProgress(progress.Progress);
+                    break;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to set taskbar progress");
+            _logger.LogWarning(ex, "Failed to update taskbar progress");
         }
     }
 
-    public void SetIndeterminate()
+    public void SetError()
     {
-        if (_taskbarList == null || _hwnd == IntPtr.Zero) return;
+        if (!_taskbar.IsSupported)
+            return;
 
         try
         {
-            _taskbarList.SetProgressState(_hwnd, TBPFLAG.TBPF_INDETERMINATE);
+            _taskbar.SetState(TaskbarProgressState.Error);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to set indeterminate taskbar progress");
+            _logger.LogWarning(ex, "Failed to set taskbar error state");
         }
     }
 
     public void ClearProgress()
     {
-        if (_taskbarList == null || _hwnd == IntPtr.Zero) return;
+        if (!_taskbar.IsSupported)
+            return;
 
         try
         {
-            _taskbarList.SetProgressState(_hwnd, TBPFLAG.TBPF_NOPROGRESS);
+            _taskbar.SetState(TaskbarProgressState.None);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to clear taskbar progress");
         }
     }
-
-    // ── COM interop ──────────────────────────────────────────────────────────
-
-    [Flags]
-    private enum TBPFLAG
-    {
-        TBPF_NOPROGRESS    = 0x00,
-        TBPF_INDETERMINATE = 0x01,
-        TBPF_NORMAL        = 0x02,
-        TBPF_ERROR         = 0x04,
-        TBPF_PAUSED        = 0x08,
-    }
-
-    [ComImport]
-    [Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface ITaskbarList3
-    {
-        void HrInit();
-        void AddTab(IntPtr hwnd);
-        void DeleteTab(IntPtr hwnd);
-        void ActivateTab(IntPtr hwnd);
-        void SetActiveAlt(IntPtr hwnd);
-        void MarkFullscreenWindow(IntPtr hwnd, [MarshalAs(UnmanagedType.Bool)] bool fullscreen);
-        void SetProgressValue(IntPtr hwnd, ulong completed, ulong total);
-        void SetProgressState(IntPtr hwnd, TBPFLAG state);
-    }
-
-    [ComImport]
-    [Guid("56fdf344-fd6d-11d0-958a-006097c9a090")]
-    [ClassInterface(ClassInterfaceType.None)]
-    private class TaskbarListInstance { }
 }

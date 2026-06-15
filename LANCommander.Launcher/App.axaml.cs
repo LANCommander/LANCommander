@@ -80,15 +80,25 @@ public partial class App : Application
                 };
                 
                 desktop.MainWindow = mainWindow;
-                mainWindow.Show();
 
-                // Initialize taskbar progress service with the window handle
-                mainWindow.Opened += (_, _) =>
+                // Bind the taskbar progress indicator to the main window handle. This must be
+                // wired BEFORE Show(): on Windows, Show() raises Opened synchronously, so a
+                // handler attached afterwards would never fire and the progress bar would stay
+                // bound to Notify.NET's default GetConsoleWindow() target instead of the app.
+                void BindTaskbarProgress()
                 {
                     var hwnd = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
                     if (hwnd != IntPtr.Zero)
                         Services.GetRequiredService<TaskbarProgressService>().Initialize(hwnd);
-                };
+                }
+
+                mainWindow.Opened += (_, _) => BindTaskbarProgress();
+
+                mainWindow.Show();
+
+                // If Opened already fired synchronously during Show(), the handler above missed
+                // it; bind now since the handle is available once the window is shown.
+                BindTaskbarProgress();
 
                 // Single-instance pipe server: forward notification-click navigations
                 var singleInstance = Services.GetRequiredService<SingleInstanceService>();
@@ -234,6 +244,10 @@ public partial class App : Application
         {
             opts.AppName = "LANCommander";
             opts.AppUserModelId = "LANCommander.Launcher";
+        });
+        services.AddTaskbarProgress(opts =>
+        {
+            opts.DesktopFileId = "LANCommander.Launcher";
         });
         services.AddSingleton<NotificationService>();
         services.AddSingleton<TaskbarProgressService>();

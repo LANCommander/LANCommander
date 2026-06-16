@@ -248,6 +248,7 @@ public class PcGamingWikiMetadataProvider : IMetadataProvider
                 {
                     Type = SavePathType.File,
                     Path = result.Value.Path,
+                    WorkingDirectory = result.Value.WorkingDirectory,
                     IsRegex = result.Value.IsRegex
                 });
             }
@@ -257,12 +258,12 @@ public class PcGamingWikiMetadataProvider : IMetadataProvider
         return windowsPaths.Count > 0 ? windowsPaths : dosPaths;
     }
 
-    private static (string Path, bool IsRegex)? BuildSavePath(HtmlNode pathSpan)
+    private static (string Path, string? WorkingDirectory, bool IsRegex)? BuildSavePath(HtmlNode pathSpan)
     {
         // Clone and strip footnote <sup> elements
         var clone = pathSpan.Clone();
         var sups = clone.SelectNodes(".//sup");
-        
+
         if (sups is not null)
             foreach (var sup in sups.ToList())
                 sup.Remove();
@@ -279,8 +280,20 @@ public class PcGamingWikiMetadataProvider : IMetadataProvider
         if (string.IsNullOrWhiteSpace(path))
             return null;
 
+        // No WorkingDirectory is supplied for these paths, so assume it from
+        // everything up to the second-to-last node, leaving the final node as
+        // the path itself.
+        string? workingDirectory = null;
+        var separatorIndex = path.LastIndexOfAny(['\\', '/']);
+
+        if (separatorIndex > 0)
+        {
+            workingDirectory = path[..separatorIndex];
+            path = path[(separatorIndex + 1)..];
+        }
+
         if (!path.Contains('#'))
-            return (path, false);
+            return (path, workingDirectory, false);
 
         // Convert # wildcards to \d+ regex, escaping everything else.
         // Split on {Variable} tokens first so they are preserved verbatim.
@@ -290,7 +303,7 @@ public class PcGamingWikiMetadataProvider : IMetadataProvider
                 ? part
                 : Regex.Escape(part).Replace("#", @"\d+")));
 
-        return (regexPath, true);
+        return (regexPath, workingDirectory, true);
     }
 
     private static List<MultiplayerMode> ParseMultiplayerModes(HtmlDocument htmlDoc)

@@ -23,7 +23,7 @@ public class MarkdownTextBlock : StackPanel
         AvaloniaProperty.Register<MarkdownTextBlock, string?>(nameof(Text));
 
     public static readonly StyledProperty<double> FontSizeProperty =
-        AvaloniaProperty.Register<MarkdownTextBlock, double>(nameof(FontSize), 13.0);
+        AvaloniaProperty.Register<MarkdownTextBlock, double>(nameof(FontSize), 14.0);
 
     private static readonly MarkdownPipeline Pipeline =
         new MarkdownPipelineBuilder()
@@ -46,6 +46,7 @@ public class MarkdownTextBlock : StackPanel
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        
         if (change.Property == TextProperty || change.Property == FontSizeProperty)
             Rebuild();
     }
@@ -55,6 +56,7 @@ public class MarkdownTextBlock : StackPanel
         Children.Clear();
 
         var markdown = Text;
+        
         if (string.IsNullOrEmpty(markdown))
             return;
 
@@ -90,13 +92,13 @@ public class MarkdownTextBlock : StackPanel
             TextWrapping = TextWrapping.Wrap,
             FontSize = heading.Level switch
             {
-                1 => FontSize * 1.6,
-                2 => FontSize * 1.4,
-                3 => FontSize * 1.2,
-                _ => FontSize * 1.1,
+                1 => FontSize * Scale("MarkdownHeading1Scale", 1.6),
+                2 => FontSize * Scale("MarkdownHeading2Scale", 1.4),
+                3 => FontSize * Scale("MarkdownHeading3Scale", 1.2),
+                _ => FontSize * Scale("MarkdownHeadingScale", 1.1),
             },
             FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 4, 0, 2),
+            Margin = Space("MarkdownHeadingMargin", new Thickness(0, 4, 0, 2)),
         };
 
         if (heading.Inline != null)
@@ -112,7 +114,8 @@ public class MarkdownTextBlock : StackPanel
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize = FontSize,
-            Margin = new Thickness(0, 1, 0, 1),
+            LineHeight = FontSize * Scale("MarkdownLineHeightScale", 1.4),
+            Margin = Space("MarkdownParagraphMargin", new Thickness(0, 1, 0, 1)),
         };
 
         if (para.Inline != null)
@@ -124,20 +127,26 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderCodeBlock(string code)
     {
-        return new Border
+        var text = new TextBlock
         {
-            Background = new SolidColorBrush(Color.Parse("#1AFFFFFF")),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(10, 6),
-            Margin = new Thickness(0, 3, 0, 3),
-            Child = new TextBlock
-            {
-                Text = code.TrimEnd('\n', '\r'),
-                FontFamily = new FontFamily("Cascadia Code,Consolas,Menlo,Courier New,monospace"),
-                FontSize = FontSize * 0.9,
-                TextWrapping = TextWrapping.Wrap,
-            },
+            Text = code.TrimEnd('\n', '\r'),
+            FontSize = FontSize * Scale("MarkdownCodeFontScale", 0.9),
+            TextWrapping = TextWrapping.Wrap,
         };
+        
+        text.Bind(TextBlock.FontFamilyProperty, this.GetResourceObservable("CodeFontFamily"));
+
+        var border = new Border
+        {
+            CornerRadius = Corner("MarkdownCodeCornerRadius", new CornerRadius(4)),
+            Padding = Space("MarkdownCodeBlockPadding", new Thickness(10, 6)),
+            Margin = Space("MarkdownCodeBlockMargin", new Thickness(0, 3, 0, 3)),
+            Child = text,
+        };
+        
+        border.Bind(Border.BackgroundProperty, this.GetResourceObservable("CodeSurfaceBrush"));
+
+        return border;
     }
 
     private Control RenderList(ListBlock list)
@@ -171,6 +180,7 @@ public class MarkdownTextBlock : StackPanel
             foreach (var block in listItem)
             {
                 var element = RenderBlock(block);
+                
                 if (element != null)
                     content.Children.Add(element);
             }
@@ -184,12 +194,15 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderThematicBreak()
     {
-        return new Border
+        var border = new Border
         {
             Height = 1,
-            Background = new SolidColorBrush(Color.Parse("#33FFFFFF")),
-            Margin = new Thickness(0, 6, 0, 6),
+            Margin = Space("MarkdownRuleMargin", new Thickness(0, 6, 0, 6)),
         };
+        
+        border.Bind(Border.BackgroundProperty, this.GetResourceObservable("InputBorderBrush"));
+        
+        return border;
     }
 
     private Control RenderQuote(QuoteBlock quote)
@@ -202,14 +215,17 @@ public class MarkdownTextBlock : StackPanel
                 inner.Children.Add(element);
         }
 
-        return new Border
+        var border = new Border
         {
-            BorderBrush = new SolidColorBrush(Color.Parse("#4488CC")),
             BorderThickness = new Thickness(3, 0, 0, 0),
-            Padding = new Thickness(8, 4),
-            Margin = new Thickness(0, 3, 0, 3),
+            Padding = Space("MarkdownQuotePadding", new Thickness(8, 4)),
+            Margin = Space("MarkdownQuoteMargin", new Thickness(0, 3, 0, 3)),
             Child = inner,
         };
+        
+        border.Bind(Border.BorderBrushProperty, this.GetResourceObservable("PrimaryBrush"));
+        
+        return border;
     }
 
     private IEnumerable<AvaloniaInline> RenderInlines(ContainerInline container)
@@ -230,13 +246,18 @@ public class MarkdownTextBlock : StackPanel
                 break;
 
             case CodeInline code:
-                yield return new Run(code.Content)
+            {
+                var run = new Run(code.Content)
                 {
-                    FontFamily = new FontFamily("Cascadia Code,Consolas,Menlo,Courier New,monospace"),
-                    Background = new SolidColorBrush(Color.Parse("#22FFFFFF")),
-                    FontSize = FontSize * 0.9,
+                    FontSize = FontSize * Scale("MarkdownCodeFontScale", 0.9),
                 };
+                
+                run.Bind(Run.FontFamilyProperty, this.GetResourceObservable("CodeFontFamily"));
+                run.Bind(Run.BackgroundProperty, this.GetResourceObservable("CodeSurfaceBrush"));
+                
+                yield return run;
                 break;
+            }
 
             case EmphasisInline emphasis:
             {
@@ -244,11 +265,15 @@ public class MarkdownTextBlock : StackPanel
                 var isBold   = emphasis.DelimiterCount >= 2;
                 var isItalic = emphasis.DelimiterCount == 1 || emphasis.DelimiterCount == 3;
 
-                if (isBold)   span.FontWeight = FontWeight.Bold;
-                if (isItalic) span.FontStyle  = FontStyle.Italic;
+                if (isBold)
+                    span.FontWeight = FontWeight.Bold;
+                
+                if (isItalic)
+                    span.FontStyle  = FontStyle.Italic;
 
                 foreach (var child in RenderInlines(emphasis))
                     span.Inlines.Add(child);
+                
                 yield return span;
                 break;
             }
@@ -258,10 +283,13 @@ public class MarkdownTextBlock : StackPanel
                 var linkSpan = new Span
                 {
                     TextDecorations = TextDecorations.Underline,
-                    Foreground = new SolidColorBrush(Color.Parse("#4488CC")),
                 };
+                
+                linkSpan.Bind(Span.ForegroundProperty, this.GetResourceObservable("PrimaryBrush"));
+                
                 foreach (var child in RenderInlines(link))
                     linkSpan.Inlines.Add(child);
+                
                 yield return linkSpan;
                 break;
             }
@@ -276,4 +304,13 @@ public class MarkdownTextBlock : StackPanel
                 break;
         }
     }
+
+    private double Scale(string key, double fallback)
+        => this.TryFindResource(key, out var v) && v is double d ? d : fallback;
+
+    private Thickness Space(string key, Thickness fallback)
+        => this.TryFindResource(key, out var v) && v is Thickness t ? t : fallback;
+
+    private CornerRadius Corner(string key, CornerRadius fallback)
+        => this.TryFindResource(key, out var v) && v is CornerRadius c ? c : fallback;
 }

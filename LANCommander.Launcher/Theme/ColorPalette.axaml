@@ -212,4 +212,33 @@
   <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBg}" />
   <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorder}" />
   <SolidColorBrush x:Key="ToastTextBrush" Color="{StaticResource ToastText}" />
+
+  <!-- ===================== -->
+  <!-- Markdown / Typography -->
+  <!-- ===================== -->
+
+  <!-- Code surface (shared by fenced code blocks and inline code) -->
+  <Color x:Key="CodeSurface">#1AFFFFFF</Color>
+  <SolidColorBrush x:Key="CodeSurfaceBrush" Color="{StaticResource CodeSurface}" />
+
+  <!-- Monospace font for code -->
+  <FontFamily x:Key="CodeFontFamily">Cascadia Code,Consolas,Menlo,Courier New,monospace</FontFamily>
+
+  <!-- Markdown heading scale factors (multiplied against base FontSize) -->
+  <x:Double x:Key="MarkdownHeading1Scale">1.6</x:Double>
+  <x:Double x:Key="MarkdownHeading2Scale">1.4</x:Double>
+  <x:Double x:Key="MarkdownHeading3Scale">1.2</x:Double>
+  <x:Double x:Key="MarkdownHeadingScale">1.1</x:Double> <!-- h4+ -->
+  <x:Double x:Key="MarkdownCodeFontScale">0.9</x:Double>
+  <x:Double x:Key="MarkdownLineHeightScale">1.6</x:Double>
+
+  <!-- Markdown whitespace (kept in the stylesheet so spacing is tunable globally) -->
+  <Thickness x:Key="MarkdownHeadingMargin">0,4,0,2</Thickness>
+  <Thickness x:Key="MarkdownParagraphMargin">0,4,0,4</Thickness>
+  <Thickness x:Key="MarkdownCodeBlockMargin">0,3,0,3</Thickness>
+  <Thickness x:Key="MarkdownCodeBlockPadding">10,6</Thickness>
+  <Thickness x:Key="MarkdownRuleMargin">0,6,0,6</Thickness>
+  <Thickness x:Key="MarkdownQuoteMargin">0,3,0,3</Thickness>
+  <Thickness x:Key="MarkdownQuotePadding">8,4</Thickness>
+  <CornerRadius x:Key="MarkdownCodeCornerRadius">4</CornerRadius>
 </ResourceDictionary>

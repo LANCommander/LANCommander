@@ -24,7 +24,7 @@
                     <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
                 }
             </BoundDataColumn>
-            <BoundDataColumn Property="ps => ps.CreatedBy.UserName" Sortable Include="CreatedBy"/>
+            <BoundDataColumn Property="ps => ps.User != null ? ps.User.UserName : String.Empty" Title="User" Sortable Include="User"/>
             <DataActions TData="string">
                 <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     <Popconfirm OnConfirm="() => Delete(session)" Title="Are you sure you want to delete this session?">

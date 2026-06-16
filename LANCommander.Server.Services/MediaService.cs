@@ -12,6 +12,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
@@ -353,6 +354,164 @@ namespace LANCommander.Server.Services
                 if (File.Exists(tempOutput))
                     File.Delete(tempOutput);
             }
+        }
+
+        public async Task<List<MediaOptimizationCandidate>> ScanOptimizationCandidatesAsync(MediaOptimizationOptions options)
+        {
+            var candidates = new List<MediaOptimizationCandidate>();
+            var allMedia = await Include(m => m.StorageLocation, m => m.Game).GetAsync();
+
+            foreach (var media in allMedia)
+            {
+                var path = GetMediaPath(media);
+
+                if (!File.Exists(path))
+                    continue;
+
+                var mime = media.MimeType?.ToLowerInvariant();
+                var isPng = mime == "image/png";
+                var isJpeg = mime == "image/jpeg" || mime == "image/jpg";
+
+                if (!isPng && !isJpeg)
+                    continue;
+
+                int width;
+                int height;
+
+                try
+                {
+                    var info = await Image.IdentifyAsync(path);
+                    width = info.Width;
+                    height = info.Height;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                var oversized = options.Downscale && Math.Max(width, height) > options.MaxLongEdge;
+                var willConvert = isPng && options.ConvertPngToJpeg && media.Type != MediaType.Logo && media.Type != MediaType.Icon;
+                var willRecompress = isJpeg && options.RecompressJpeg;
+
+                if (!willConvert && !oversized && !willRecompress)
+                    continue;
+
+                var actions = new List<string>();
+
+                if (willConvert)
+                    actions.Add("PNG → JPEG");
+                if (oversized)
+                    actions.Add($"Downscale to {options.MaxLongEdge}px");
+                if (willRecompress)
+                    actions.Add("Recompress");
+                if (options.StripMetadata)
+                    actions.Add("Strip metadata");
+
+                candidates.Add(new MediaOptimizationCandidate
+                {
+                    Id = media.Id,
+                    GameTitle = media.Game?.Title ?? media.Name ?? media.Type.ToString(),
+                    Type = media.Type,
+                    MimeType = media.MimeType,
+                    Width = width,
+                    Height = height,
+                    Size = new FileInfo(path).Length,
+                    PlannedAction = string.Join(", ", actions),
+                });
+            }
+
+            return candidates.OrderByDescending(c => c.Size).ToList();
+        }
+
+        public async Task<MediaOptimizationResult> OptimizeMediaAsync(Media media, MediaOptimizationOptions options)
+        {
+            var result = new MediaOptimizationResult();
+
+            if (media.StorageLocation == null)
+                media.StorageLocation = await storageLocationService.GetAsync(media.StorageLocationId);
+
+            var path = GetMediaPath(media);
+
+            if (!File.Exists(path))
+                return result;
+
+            var mime = media.MimeType?.ToLowerInvariant();
+            var isPng = mime == "image/png";
+            var isJpeg = mime == "image/jpeg" || mime == "image/jpg";
+
+            if (!isPng && !isJpeg)
+                return result;
+
+            result.BeforeBytes = new FileInfo(path).Length;
+
+            try
+            {
+                using (var image = await Image.LoadAsync<Rgba32>(path))
+                {
+                    var changed = false;
+
+                    if (options.Downscale && Math.Max(image.Width, image.Height) > options.MaxLongEdge)
+                    {
+                        image.Mutate(ctx => ctx.Resize(new ResizeOptions
+                        {
+                            Mode = ResizeMode.Max,
+                            Size = new Size(options.MaxLongEdge, options.MaxLongEdge),
+                            Sampler = KnownResamplers.Bicubic,
+                        }));
+
+                        changed = true;
+                    }
+
+                    var transparent = isPng && HasTransparentPixels(image);
+                    var convertToJpeg = isPng && options.ConvertPngToJpeg && !transparent && media.Type != MediaType.Logo && media.Type != MediaType.Icon;
+
+                    var hasMetadata = image.Metadata.ExifProfile != null
+                        || image.Metadata.IccProfile != null
+                        || image.Metadata.XmpProfile != null;
+
+                    if (options.StripMetadata && hasMetadata)
+                    {
+                        image.Metadata.ExifProfile = null;
+                        image.Metadata.IccProfile = null;
+                        image.Metadata.XmpProfile = null;
+
+                        changed = true;
+                    }
+
+                    var reencodeJpeg = isJpeg && (options.RecompressJpeg || changed);
+
+                    if (!convertToJpeg && !reencodeJpeg && !(isPng && changed))
+                        return result;
+
+                    var tempPath = path + ".optimizing";
+
+                    if (convertToJpeg || isJpeg)
+                        await image.SaveAsJpegAsync(tempPath, new JpegEncoder { Quality = options.JpegQuality });
+                    else
+                        await image.SaveAsPngAsync(tempPath);
+
+                    File.Delete(path);
+                    File.Move(tempPath, path);
+
+                    if (convertToJpeg)
+                        media.MimeType = MediaTypeNames.Image.Jpeg;
+                }
+
+                media.Crc32 = await SDK.Services.MediaClient.CalculateChecksumAsync(path);
+
+                await GenerateThumbnailAsync(media);
+
+                await UpdateAsync(media);
+
+                result.AfterBytes = new FileInfo(path).Length;
+                result.Changed = true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Could not optimize media with ID {MediaId}", media.Id);
+            }
+
+            return result;
         }
 
         public async Task<StorageLocation> GetDefaultStorageLocationAsync()

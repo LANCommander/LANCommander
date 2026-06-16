@@ -71,6 +71,12 @@
     <h3>Regenerate Thumbnails</h3>
     <p>Clear out the existing thumbnail cache and generate replacements.</p>
     <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
+
+    <Divider />
+
+    <h3>Optimize Images</h3>
+    <p>Convert opaque PNG art to JPEG, downscale oversized media, and strip metadata to reclaim disk space while preserving quality.</p>
+    <a href="/Settings/Tools/OptimizeImages" class="ant-btn ant-btn-primary">Optimize Images</a>
 </PageContent>
 
 @code {

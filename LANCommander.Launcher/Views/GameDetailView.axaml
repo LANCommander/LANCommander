@@ -37,7 +37,7 @@
                             IsHitTestVisible="False"
                             IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                         <Panel>
-                            <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                            <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=w1600}"
                                    Stretch="UniformToFill">
                                 <Image.Effect>
                                     <BlurEffect Radius="24" />
@@ -48,7 +48,7 @@
                     </Border>
 
                     <!-- Background image -->
-                    <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                    <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=w1600}"
                            Stretch="UniformToFill"
                            IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
@@ -155,12 +155,20 @@
                                             <Image Source="{Binding ImageSource}"
                                                    Stretch="UniformToFill" />
                                         </Border>
-                                        <!-- Video: muted autoplay, click to open lightbox -->
-                                        <Border CornerRadius="4" ClipToBounds="True"
-                                                Background="Black"
-                                                IsVisible="{Binding IsVideo}">
-                                            <InlineVideoPlayer VideoPath="{Binding Path}" />
-                                        </Border>
+                                        <!-- Video: muted autoplay, click to open lightbox.
+                                             A ContentControl whose Content is the video path (null
+                                             for screenshots) only realizes its template when non-null,
+                                             so screenshots never instantiate an InlineVideoPlayer/libvlc. -->
+                                        <ContentControl Content="{Binding VideoPath}">
+                                            <ContentControl.ContentTemplate>
+                                                <DataTemplate x:DataType="sys:String">
+                                                    <Border CornerRadius="4" ClipToBounds="True"
+                                                            Background="Black">
+                                                        <InlineVideoPlayer VideoPath="{Binding}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ContentControl.ContentTemplate>
+                                        </ContentControl>
                                         <!-- Focus indicator -->
                                         <Border Name="FocusBorder"
                                                 CornerRadius="4"

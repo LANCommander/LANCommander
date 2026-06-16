@@ -33,14 +33,17 @@ public class FilePathToBitmapConverter : IValueConverter
         if (value is not string path || string.IsNullOrEmpty(path))
             return null;
 
-        // ConverterParameter="full"   → full resolution (e.g. game detail view)
-        // ConverterParameter="h{N}"   → DecodeToHeight(N) (e.g. carousel backgrounds)
+        // ConverterParameter="full"   → full resolution
+        // ConverterParameter="h{N}"   → DecodeToHeight(N)
+        // ConverterParameter="w{N}"   → DecodeToWidth(N) (e.g. game detail background)
         // default                     → DecodeToWidth(320)
         bool fullRes = parameter is string p && p == "full";
         int? decodeHeight = parameter is string hp && hp.StartsWith("h") && int.TryParse(hp.AsSpan(1), out var h) ? h : null;
+        int? decodeWidth = parameter is string wp && wp.StartsWith("w") && int.TryParse(wp.AsSpan(1), out var w) ? w : null;
 
         var cacheKey = fullRes ? $"{path}|full"
             : decodeHeight.HasValue ? $"{path}|h{decodeHeight}"
+            : decodeWidth.HasValue ? $"{path}|w{decodeWidth}"
             : $"{path}|{DecodeWidth}";
 
         if (_cache.TryGetValue(cacheKey, out var weakRef) && weakRef.TryGetTarget(out var cached))
@@ -56,7 +59,7 @@ public class FilePathToBitmapConverter : IValueConverter
                 ? new Bitmap(stream)
                 : decodeHeight.HasValue
                     ? Bitmap.DecodeToHeight(stream, decodeHeight.Value, BitmapInterpolationMode.HighQuality)
-                    : Bitmap.DecodeToWidth(stream, DecodeWidth, BitmapInterpolationMode.HighQuality);
+                    : Bitmap.DecodeToWidth(stream, decodeWidth ?? DecodeWidth, BitmapInterpolationMode.HighQuality);
             _cache[cacheKey] = new WeakReference<Bitmap>(bitmap);
             return bitmap;
         }

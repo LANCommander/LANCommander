@@ -19,11 +19,14 @@ public partial class Cover : UserControl
 
     // Strong-reference bitmap cache keyed by "path|decodeWidth" so covers that
     // scroll back into view are displayed instantly without re-reading the file.
+    // Bounded by total decoded bytes (not entry count) because cover bitmap size
+    // scales with DPI — a 500-entry cap is ~300 MB at 100% but ~800 MB at 200%.
     private static readonly Dictionary<string, Bitmap> _bitmapCache = new();
     private static readonly LinkedList<string> _cacheOrder = new();
     private static readonly Dictionary<string, LinkedListNode<string>> _cacheNodes = new();
     private static readonly object _cacheLock = new();
-    private const int MaxCacheEntries = 500;
+    private static long _cacheBytes;
+    private const long MaxCacheBytes = 128L * 1024 * 1024;
 
     public static readonly StyledProperty<string?> SourceProperty =
         AvaloniaProperty.Register<Cover, string?>(nameof(Source));
@@ -279,40 +282,7 @@ public partial class Cover : UserControl
             }
 
             if (bitmap != null)
-            {
-                lock (_cacheLock)
-                {
-                    // Another Cover may have cached the same key while we were
-                    // decoding; prefer the existing entry to avoid duplicates.
-                    if (_bitmapCache.TryGetValue(cacheKey, out var existing))
-                    {
-                        bitmap.Dispose();
-                        bitmap = existing;
-                        if (_cacheNodes.TryGetValue(cacheKey, out var existingNode))
-                        {
-                            _cacheOrder.Remove(existingNode);
-                            _cacheOrder.AddLast(existingNode);
-                        }
-                    }
-                    else
-                    {
-                        _bitmapCache[cacheKey] = bitmap;
-                        var newNode = _cacheOrder.AddLast(cacheKey);
-                        _cacheNodes[cacheKey] = newNode;
-                    }
-
-                    // Evict oldest entries when the cache is full.
-                    while (_cacheOrder.Count > MaxCacheEntries)
-                    {
-                        var oldestNode = _cacheOrder.First!;
-                        var oldest = oldestNode.Value;
-                        _cacheOrder.RemoveFirst();
-                        _cacheNodes.Remove(oldest);
-                        if (_bitmapCache.Remove(oldest, out var evicted))
-                            evicted.Dispose();
-                    }
-                }
-            }
+                bitmap = CacheBitmap(cacheKey, bitmap);
 
             // Use Background priority so multiple covers completing together
             // coalesce into fewer layout passes instead of each forcing one.
@@ -362,35 +332,7 @@ public partial class Cover : UserControl
                 return;
             }
 
-            lock (_cacheLock)
-            {
-                if (_bitmapCache.TryGetValue(cacheKey, out var existing))
-                {
-                    bitmap.Dispose();
-                    bitmap = existing;
-                    if (_cacheNodes.TryGetValue(cacheKey, out var existingNode))
-                    {
-                        _cacheOrder.Remove(existingNode);
-                        _cacheOrder.AddLast(existingNode);
-                    }
-                }
-                else
-                {
-                    _bitmapCache[cacheKey] = bitmap;
-                    var newNode = _cacheOrder.AddLast(cacheKey);
-                    _cacheNodes[cacheKey] = newNode;
-                }
-
-                while (_cacheOrder.Count > MaxCacheEntries)
-                {
-                    var oldestNode = _cacheOrder.First!;
-                    var oldest = oldestNode.Value;
-                    _cacheOrder.RemoveFirst();
-                    _cacheNodes.Remove(oldest);
-                    if (_bitmapCache.Remove(oldest, out var evicted))
-                        evicted.Dispose();
-                }
-            }
+            bitmap = CacheBitmap(cacheKey, bitmap);
 
             await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap), DispatcherPriority.Background);
         }
@@ -400,6 +342,55 @@ public partial class Cover : UserControl
                 await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
         }
     }
+
+    /// <summary>
+    /// Inserts a freshly-decoded bitmap into the shared LRU cache, or returns the
+    /// already-cached instance if another <see cref="Cover"/> decoded the same key
+    /// concurrently (disposing the duplicate). Evicts least-recently-used entries
+    /// until the cache is back under its memory budget, disposing each evicted
+    /// bitmap so its native (Skia) memory is freed immediately.
+    /// </summary>
+    private static Bitmap CacheBitmap(string cacheKey, Bitmap bitmap)
+    {
+        lock (_cacheLock)
+        {
+            if (_bitmapCache.TryGetValue(cacheKey, out var existing))
+            {
+                bitmap.Dispose();
+                bitmap = existing;
+                if (_cacheNodes.TryGetValue(cacheKey, out var existingNode))
+                {
+                    _cacheOrder.Remove(existingNode);
+                    _cacheOrder.AddLast(existingNode);
+                }
+            }
+            else
+            {
+                _bitmapCache[cacheKey] = bitmap;
+                _cacheNodes[cacheKey] = _cacheOrder.AddLast(cacheKey);
+                _cacheBytes += BitmapBytes(bitmap);
+            }
+
+            // Evict least-recently-used entries until under the byte budget, but
+            // always keep the entry we just touched (the tail of the LRU list).
+            while (_cacheBytes > MaxCacheBytes && _cacheOrder.Count > 1)
+            {
+                var oldest = _cacheOrder.First!.Value;
+                _cacheOrder.RemoveFirst();
+                _cacheNodes.Remove(oldest);
+                if (_bitmapCache.Remove(oldest, out var evicted))
+                {
+                    _cacheBytes -= BitmapBytes(evicted);
+                    evicted.Dispose();
+                }
+            }
+
+            return bitmap;
+        }
+    }
+
+    private static long BitmapBytes(Bitmap bitmap) =>
+        (long)bitmap.PixelSize.Width * bitmap.PixelSize.Height * 4;
 
     // ── Animated cover support (video, APNG, GIF via LibVLC) ────────────
 

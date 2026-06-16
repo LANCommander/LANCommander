@@ -11,7 +11,7 @@ namespace LANCommander.Launcher.Controls;
 /// Avalonia render surface. The output preserves the source video's aspect
 /// ratio (uniform stretch, centred within the control bounds).
 /// </summary>
-public class InlineVideoPlayer : Control, IDisposable
+public class InlineVideoPlayer : Control, IDisposable, ICarouselPlaybackItem
 {
     public static readonly StyledProperty<string?> VideoPathProperty =
         AvaloniaProperty.Register<InlineVideoPlayer, string?>(nameof(VideoPath));
@@ -25,6 +25,12 @@ public class InlineVideoPlayer : Control, IDisposable
     private VideoFrameRenderer? _renderer;
     private bool _isAttached;
     private bool _disposed;
+
+    /// <summary>
+    /// Whether the carousel currently considers this item visible. Playback only
+    /// runs while both visible and attached, so off-screen videos don't decode.
+    /// </summary>
+    private bool _isActive;
 
     /// <summary>Current playback position in milliseconds.</summary>
     public long CurrentTimeMs => _renderer?.Player?.Time ?? 0;
@@ -49,7 +55,7 @@ public class InlineVideoPlayer : Control, IDisposable
             StopPlayback();
 
             var path = change.GetNewValue<string?>();
-            if (!string.IsNullOrEmpty(path) && _isAttached)
+            if (!string.IsNullOrEmpty(path) && _isAttached && _isActive)
                 StartPlayback(path);
         }
     }
@@ -59,8 +65,45 @@ public class InlineVideoPlayer : Control, IDisposable
         base.OnAttachedToVisualTree(e);
         _isAttached = true;
 
-        if (!string.IsNullOrEmpty(VideoPath) && _renderer == null)
+        // Playback is started by the carousel via SetCarouselActive once it has
+        // determined which items are on-screen.
+        if (_isActive && !string.IsNullOrEmpty(VideoPath) && _renderer == null)
             StartPlayback(VideoPath);
+    }
+
+    // ── Carousel visibility ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by the carousel to indicate whether this item is on-screen.
+    /// Visible items play (creating the renderer lazily); off-screen items pause
+    /// so they stop decoding frames and consuming CPU.
+    /// </summary>
+    public void SetCarouselActive(bool active)
+    {
+        if (_isActive == active)
+            return;
+
+        _isActive = active;
+
+        if (!_isAttached || _disposed)
+            return;
+
+        if (active)
+        {
+            if (_renderer == null)
+            {
+                if (!string.IsNullOrEmpty(VideoPath))
+                    StartPlayback(VideoPath);
+            }
+            else
+            {
+                _renderer.Player?.SetPause(false);
+            }
+        }
+        else
+        {
+            _renderer?.Player?.SetPause(true);
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

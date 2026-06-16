@@ -408,7 +408,14 @@ public partial class GameDetailViewModel : ViewModelBase
                 localPath = fileInfo.FullName;
             }
 
-            var bitmap = await Task.Run(() => new Bitmap(localPath));
+            // Decode downscaled: the carousel slot is 384 logical px, so ~2x covers
+            // HiDPI/UniformToFill without holding the full-resolution source in memory.
+            // The lightbox loads the full-res image from Path when it needs it.
+            var bitmap = await Task.Run(() =>
+            {
+                using var stream = File.OpenRead(localPath);
+                return Bitmap.DecodeToWidth(stream, 768, BitmapInterpolationMode.HighQuality);
+            });
 
             ReplaceMediaItem(index, new GameMediaItemViewModel
             {

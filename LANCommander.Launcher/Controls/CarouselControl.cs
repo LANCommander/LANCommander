@@ -6,14 +6,27 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Transformation;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Input;
 
 namespace LANCommander.Launcher.Controls;
+
+/// <summary>
+/// Implemented by carousel item content (e.g. inline video players) that should
+/// only run while on-screen. The carousel toggles activity as items scroll in
+/// and out of view to avoid wasting CPU on off-screen playback.
+/// </summary>
+public interface ICarouselPlaybackItem
+{
+    void SetCarouselActive(bool active);
+}
 
 public class CarouselControl : TemplatedControl
 {
@@ -124,6 +137,9 @@ public class CarouselControl : TemplatedControl
     private Transitions? _transitions;
     private RectangleGeometry? _clipGeometry;
     private int _virtualIndex = 0;
+    private double _currentOffsetX = 0;
+    private WindowBase? _hostWindow;
+    private bool _windowActive = true;
 
     static CarouselControl()
     {
@@ -142,6 +158,13 @@ public class CarouselControl : TemplatedControl
         _leftButton = e.NameScope.Find<Button>("PART_LeftButton");
         _rightButton = e.NameScope.Find<Button>("PART_RightButton");
 
+        if (_itemsControl != null)
+        {
+            // Items load progressively (e.g. media popping in), so recompute which
+            // items are on-screen whenever a container is realized.
+            _itemsControl.ContainerPrepared += (_, _) => UpdateItemVisibility();
+        }
+
         if (_clipPanel != null)
         {
             _clipPanel.SizeChanged += (_, _) => { UpdateClipGeometry(); SnapToCurrentIndex(); };
@@ -150,11 +173,13 @@ public class CarouselControl : TemplatedControl
 
         if (_itemsContainer != null)
         {
+            // Scroll via a composited RenderTransform rather than Margin so the
+            // animation doesn't trigger a layout pass over every item each frame.
             _transitions = new Transitions
             {
-                new ThicknessTransition
+                new TransformOperationsTransition
                 {
-                    Property = MarginProperty,
+                    Property = RenderTransformProperty,
                     Duration = TimeSpan.FromMilliseconds(350),
                     Easing = new CubicEaseOut()
                 }
@@ -169,6 +194,47 @@ public class CarouselControl : TemplatedControl
             _rightButton.Click += (_, __) => Move(1);
 
         RebuildInternalSource();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        // Pause playback items while the window is in the background — there's no
+        // point decoding video the user can't see.
+        _hostWindow = TopLevel.GetTopLevel(this) as WindowBase;
+        if (_hostWindow != null)
+        {
+            _windowActive = _hostWindow.IsActive;
+            _hostWindow.Activated += OnHostWindowActivated;
+            _hostWindow.Deactivated += OnHostWindowDeactivated;
+        }
+
+        UpdateItemVisibility();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_hostWindow != null)
+        {
+            _hostWindow.Activated -= OnHostWindowActivated;
+            _hostWindow.Deactivated -= OnHostWindowDeactivated;
+            _hostWindow = null;
+        }
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnHostWindowActivated(object? sender, EventArgs e)
+    {
+        _windowActive = true;
+        UpdateItemVisibility();
+    }
+
+    private void OnHostWindowDeactivated(object? sender, EventArgs e)
+    {
+        _windowActive = false;
+        UpdateItemVisibility();
     }
 
     /// <summary>
@@ -361,18 +427,67 @@ public class CarouselControl : TemplatedControl
         }
     }
 
-    private void ScrollAnimated(double leftMargin)
+    private void ScrollAnimated(double offsetX)
     {
         if (_itemsContainer == null) return;
-        _itemsContainer.Margin = new Thickness(leftMargin, 0, 0, 0);
+        _currentOffsetX = offsetX;
+        _itemsContainer.RenderTransform = TranslateX(offsetX);
+        UpdateItemVisibility();
     }
 
-    private void ScrollInstant(double leftMargin)
+    private void ScrollInstant(double offsetX)
     {
         if (_itemsContainer == null) return;
+        _currentOffsetX = offsetX;
         _itemsContainer.Transitions = null;
-        _itemsContainer.Margin = new Thickness(leftMargin, 0, 0, 0);
+        _itemsContainer.RenderTransform = TranslateX(offsetX);
         _itemsContainer.Transitions = _transitions;
+        UpdateItemVisibility();
+    }
+
+    private static ITransform TranslateX(double x) =>
+        TransformOperations.Parse(
+            $"translateX({x.ToString("F3", CultureInfo.InvariantCulture)}px)");
+
+    /// <summary>
+    /// Activates the carousel items whose horizontal span currently intersects the
+    /// viewport (and only while the host window is active) and deactivates the rest,
+    /// so off-screen or background playback items (e.g. inline videos) stop consuming
+    /// CPU. Deferred when containers aren't realized yet.
+    /// </summary>
+    private void UpdateItemVisibility()
+    {
+        if (_itemsControl == null || _clipPanel == null) return;
+
+        var count = _itemsControl.ItemCount;
+        if (count == 0) return;
+
+        var viewportWidth = _clipPanel.Bounds.Width;
+        if (viewportWidth <= 0)
+        {
+            // Layout hasn't run yet; retry once it has.
+            Dispatcher.UIThread.Post(UpdateItemVisibility, DispatcherPriority.Loaded);
+            return;
+        }
+
+        // _currentOffsetX is the (negative) translate applied to the container,
+        // which itself starts at -ItemOverflow (see Offset). The first visible
+        // pixel in item-space is therefore the inverse of that, minus the padding.
+        var scroll = -_currentOffsetX - ItemOverflow;
+        var step = ItemWidth + Gap;
+
+        for (var i = 0; i < count; i++)
+        {
+            var itemLeft = i * step;
+            var itemRight = itemLeft + ItemWidth;
+            var visible = _windowActive && itemRight > scroll && itemLeft < scroll + viewportWidth;
+
+            var container = _itemsControl.ContainerFromIndex(i);
+            if (container == null) continue;
+
+            foreach (var item in container.GetVisualDescendants().OfType<ICarouselPlaybackItem>())
+                item.SetCarouselActive(visible);
+        }
     }
 
     private void SnapToCurrentIndex()

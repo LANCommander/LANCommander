@@ -143,7 +143,9 @@ public partial class GameDetailView : UserControl
             {
                 Type = m.IsVideo ? LightboxItemType.Video : LightboxItemType.Image,
                 Path = m.Path,
-                ImageSource = m.ImageSource,
+                // The carousel bitmap is a downscaled thumbnail; let the lightbox
+                // load the full-resolution image from Path for fullscreen display.
+                ImageSource = m.IsVideo ? m.ImageSource : null,
             });
         }
 
@@ -153,12 +155,11 @@ public partial class GameDetailView : UserControl
 
         if (tappedVm.IsVideo)
         {
-            // Find the InlineVideoPlayer inside the tapped panel
-            var videoBorder = panel.Children
-                .OfType<Decorator>()
-                .FirstOrDefault(d => d.Child is InlineVideoPlayer);
+            // Find the InlineVideoPlayer inside the tapped panel. It lives inside a
+            // ContentControl's lazily-realized template, so search descendants.
+            var player = panel.GetVisualDescendants().OfType<InlineVideoPlayer>().FirstOrDefault();
 
-            if (videoBorder?.Child is InlineVideoPlayer player)
+            if (player != null)
             {
                 inlinePlayer = player;
                 videoStartTimeMs = player.CurrentTimeMs;

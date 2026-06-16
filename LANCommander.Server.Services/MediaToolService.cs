@@ -75,7 +75,16 @@ public class MediaToolService(ILogger<MediaToolService> logger)
             }
             else
             {
-                downloadUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+                // Use the self-contained binary (bundles its own Python) instead of the
+                // bare "yt-dlp" zipapp asset, which requires a system python3.
+                var asset = RuntimeInformation.OSArchitecture switch
+                {
+                    Architecture.Arm64 => "yt-dlp_linux_aarch64",
+                    Architecture.Arm => "yt-dlp_linux_armv7l",
+                    _ => "yt-dlp_linux",
+                };
+
+                downloadUrl = $"https://github.com/yt-dlp/yt-dlp/releases/latest/download/{asset}";
             }
 
             logger.LogInformation("Downloading yt-dlp from {Url}", downloadUrl);

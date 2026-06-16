@@ -65,8 +65,17 @@ install_ytdlp() {
   if [[ -x "/usr/local/bin/yt-dlp" ]]; then
     echo "yt-dlp already installed. Skipping download."
   else
-    echo "Downloading yt-dlp..."
-    curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" -o /usr/local/bin/yt-dlp
+    # Use the self-contained binary (bundles its own Python) instead of the
+    # bare "yt-dlp" zipapp asset, which requires a system python3.
+    case "$(uname -m)" in
+      x86_64|amd64)   ytdlp_asset="yt-dlp_linux" ;;
+      aarch64|arm64)  ytdlp_asset="yt-dlp_linux_aarch64" ;;
+      armv7l)         ytdlp_asset="yt-dlp_linux_armv7l" ;;
+      *)              ytdlp_asset="yt-dlp_linux" ;;
+    esac
+
+    echo "Downloading yt-dlp ($ytdlp_asset)..."
+    curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${ytdlp_asset}" -o /usr/local/bin/yt-dlp
     chmod +x /usr/local/bin/yt-dlp
     echo "yt-dlp installed."
   fi

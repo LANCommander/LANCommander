@@ -1,0 +1,111 @@
+@page "/Settings/Tools/LongSessions"
+@inject PlaySessionService PlaySessionService
+@inject IMessageService MessageService
+@inject ILogger<LongSessions> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Long Sessions" />
+
+<PageContent>
+    <p>
+        These play sessions lasted longer than the threshold below. Extremely long sessions are usually the result of a session that was never properly ended, which can skew playtime statistics. Adjust the threshold and delete any sessions that look incorrect.
+    </p>
+
+    <Space Align="SpaceAlign.Center" Style="margin-bottom: 16px">
+        <SpaceItem>Threshold (hours)</SpaceItem>
+        <SpaceItem>
+            <AntDesign.InputNumber @bind-Value="ThresholdHours" Min="1" />
+        </SpaceItem>
+        <SpaceItem>
+            <Button Type="ButtonType.Primary" OnClick="LoadData" Loading="@Loading">Search</Button>
+        </SpaceItem>
+        <SpaceItem>
+            <Popconfirm OnConfirm="DeleteAll" Title="Are you sure you want to delete all listed sessions?" Disabled="@(PlaySessions == null || !PlaySessions.Any())">
+                <Button Danger Disabled="@(PlaySessions == null || !PlaySessions.Any())">Delete All Listed</Button>
+            </Popconfirm>
+        </SpaceItem>
+    </Space>
+</PageContent>
+
+<Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
+    <PropertyColumn Property="ps => ps.Game.Title" Title="Game" />
+    <PropertyColumn Property="ps => ps.User" Title="User">
+        @context.User?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="ps => ps.Start" Format="MM/dd/yyyy hh:mm tt" />
+    <PropertyColumn Property="ps => ps.End" Format="MM/dd/yyyy hh:mm tt" />
+    <Column TData="TimeSpan?" Title="Duration">
+        @context.Duration?.ToString(@"d\.hh\:mm\:ss")
+    </Column>
+    <ActionColumn Title="" Style="text-align: right">
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
+
+@code {
+    ICollection<PlaySession> PlaySessions;
+    bool Loading = true;
+    int ThresholdHours = 24;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        Loading = true;
+
+        var threshold = TimeSpan.FromHours(ThresholdHours);
+
+        var completedSessions = await PlaySessionService.GetAsync(ps => ps.Start.HasValue && ps.End.HasValue);
+
+        PlaySessions = completedSessions
+            .Where(ps => ps.Duration.HasValue && ps.Duration.Value > threshold)
+            .OrderByDescending(ps => ps.Duration)
+            .ToList();
+
+        Loading = false;
+    }
+
+    async Task Delete(PlaySession playSession)
+    {
+        try
+        {
+            await PlaySessionService.DeleteAsync(playSession);
+
+            await LoadData();
+
+            MessageService.Success("Session deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Session could not be deleted.");
+            Logger.LogError(ex, "Session could not be deleted.");
+        }
+    }
+
+    async Task DeleteAll()
+    {
+        try
+        {
+            foreach (var playSession in PlaySessions.ToList())
+                await PlaySessionService.DeleteAsync(playSession);
+
+            await LoadData();
+
+            MessageService.Success("Sessions deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Sessions could not be deleted.");
+            Logger.LogError(ex, "Sessions could not be deleted.");
+        }
+    }
+}

@@ -444,6 +444,18 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      - name: Download Launcher Linux ARM64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
+      - name: Download Launcher Linux x64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
       - name: Create or update nightly release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

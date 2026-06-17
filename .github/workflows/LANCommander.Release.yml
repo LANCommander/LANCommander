@@ -305,6 +305,18 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      - name: Download Launcher Linux ARM64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
+      - name: Download Launcher Linux x64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
       - name: Download Packager Windows x86
         uses: actions/download-artifact@v4
         with:
@@ -336,6 +348,8 @@ jobs:
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
+            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
             artifacts/LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
 
       - name: Checkout Repo for Docker build

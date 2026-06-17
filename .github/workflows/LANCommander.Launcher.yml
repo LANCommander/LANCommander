@@ -159,7 +159,69 @@ jobs:
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
 
+    - name: Bundle macOS .app
+      if: inputs.build_platform == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Strip leading 'v' and reduce to numeric x.y.z for the bundle version keys.
+        RAW_VERSION="${{ inputs.version_tag }}"
+        SEMVER="${RAW_VERSION#v}"
+        NUMERIC="${SEMVER%%-*}"
+
+        APP_NAME="LANCommander Launcher"
+        EXECUTABLE="LANCommander.Launcher"
+        BUNDLE_ID="app.lancommander.launcher"
+        ICON_SRC="LANCommander.Launcher/Assets/icon.icns"
+
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        APP_DIR="${EXECUTABLE}.app"
+
+        # Lay out the bundle skeleton.
+        mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
+        cp -a "$PUBLISH_DIR/." "$APP_DIR/Contents/MacOS/"
+        cp "$ICON_SRC" "$APP_DIR/Contents/Resources/AppIcon.icns"
+
+        # Write Info.plist.
+        cat > "$APP_DIR/Contents/Info.plist" <<PLIST
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleDisplayName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleIdentifier</key>
+          <string>${BUNDLE_ID}</string>
+          <key>CFBundleExecutable</key>
+          <string>${EXECUTABLE}</string>
+          <key>CFBundleIconFile</key>
+          <string>AppIcon</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>CFBundleInfoDictionaryVersion</key>
+          <string>6.0</string>
+          <key>CFBundleShortVersionString</key>
+          <string>${NUMERIC}</string>
+          <key>CFBundleVersion</key>
+          <string>${SEMVER}</string>
+          <key>LSMinimumSystemVersion</key>
+          <string>11.0</string>
+          <key>NSHighResolutionCapable</key>
+          <true/>
+        </dict>
+        </plist>
+        PLIST
+
+        # Ensure the entrypoint is executable, then zip while preserving the
+        # permission bits (Compress-Archive drops the exec bit).
+        chmod +x "$APP_DIR/Contents/MacOS/${EXECUTABLE}"
+        zip -ry "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip" "$APP_DIR"
+
     - name: Compress Build Output
+      if: inputs.build_platform != 'macOS'
       shell: pwsh
       run: |
         $compress = @{

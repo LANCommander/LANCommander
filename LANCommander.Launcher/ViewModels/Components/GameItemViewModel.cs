@@ -86,6 +86,9 @@ public partial class GameItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isUpdateAvailable;
 
+    [ObservableProperty]
+    private GameType _type;
+
     public GameItemViewModel() { }
 
     public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
@@ -95,6 +98,7 @@ public partial class GameItemViewModel : ViewModelBase
         Description = game.Description ?? string.Empty;
         SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
         ReleasedOn = game.ReleasedOn;
+        Type = game.Type;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
@@ -119,6 +123,7 @@ public partial class GameItemViewModel : ViewModelBase
         Description = game.Description ?? string.Empty;
         SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
         ReleasedOn = game.ReleasedOn ?? DateTime.MinValue;
+        Type = game.Type;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;

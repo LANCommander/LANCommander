@@ -10,6 +10,7 @@ using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.Launcher.ViewModels;
 
@@ -232,6 +233,8 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     protected void ApplyFilters()
     {
         var filtered = _allGames.AsEnumerable();
+
+        filtered = filtered.Where(g => g.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
 
         if (!string.IsNullOrWhiteSpace(SearchText))
             filtered = filtered.Where(g =>

@@ -243,9 +243,8 @@ public static class GameEndpoints
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
-        [FromServices] ServerService serverService,
         [FromServices] ServerManager serverManager,
-        [FromServices] ILogger<Game> logger,
+        [FromServices] IServiceScopeFactory scopeFactory,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -269,35 +268,55 @@ public static class GameEndpoints
         #region Autostart Servers
         await serverManager.AutostartAsync(game.Id, ServerAutostartMethod.OnPlayerActivity);
         #endregion
-            
+
         #region Run server scripts
-
-        try
-        {
-            var servers = await serverService
-                .GetAsync(s => s.GameId == game.Id);
-
-            foreach (var server in servers)
-            {
-                await serverService.RunGameStartedScriptsAsync(server.Id, user.Id);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Server scripts could not run");
-        }
+        // Fire-and-forget: GameStarted scripts can launch long-lived processes that would
+        // otherwise block this request for the process's lifetime (the autostart launches above
+        // are detached for the same reason). Run them in their own scope so they survive request
+        // scope disposal.
+        RunServerScriptsAsync(scopeFactory, game.Id, user.Id, ScriptType.GameStarted);
         #endregion
 
         return TypedResults.Ok();
+    }
+
+    private static void RunServerScriptsAsync(
+        IServiceScopeFactory scopeFactory,
+        Guid gameId,
+        Guid userId,
+        ScriptType scriptType)
+    {
+        _ = Task.Run(async () =>
+        {
+            using var scope = scopeFactory.CreateScope();
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Game>>();
+
+            try
+            {
+                var servers = await serverService.GetAsync(s => s.GameId == gameId);
+
+                foreach (var server in servers)
+                {
+                    if (scriptType == ScriptType.GameStarted)
+                        await serverService.RunGameStartedScriptsAsync(server.Id, userId);
+                    else if (scriptType == ScriptType.GameStopped)
+                        await serverService.RunGameStoppedScriptsAsync(server.Id, userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Server scripts could not run");
+            }
+        });
     }
 
     internal static async Task<IResult> StoppedAsync(
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
-        [FromServices] ServerService serverService,
         [FromServices] ServerManager serverManager,
-        [FromServices] ILogger<Game> logger,
+        [FromServices] IServiceScopeFactory scopeFactory,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -320,20 +339,9 @@ public static class GameEndpoints
         #endregion
 
         #region Run server scripts
-        try
-        {
-            var servers = await serverService
-                .GetAsync(s => s.GameId == game.Id);
-
-            foreach (var server in servers)
-            {
-                await serverService.RunGameStoppedScriptsAsync(server.Id, user.Id);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Server scripts could not run");
-        }
+        // Fire-and-forget for the same reason as the started path: GameStopped scripts can block
+        // on long-lived processes. Run them in their own scope so they survive request disposal.
+        RunServerScriptsAsync(scopeFactory, game.Id, user.Id, ScriptType.GameStopped);
         #endregion
 
         return TypedResults.Ok();

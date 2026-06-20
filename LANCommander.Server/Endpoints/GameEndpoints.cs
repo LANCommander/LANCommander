@@ -179,6 +179,11 @@ public static class GameEndpoints
                 {
                     var mappedAction = mapper.Map<SDK.Models.Action>(serverAction);
 
+                    // Server actions are attached to the server, not the game, so their GameId is
+                    // empty. Stamp the owning game's id so the launcher associates the action with
+                    // the installed game instead of filtering it out.
+                    mappedAction.GameId = game.Id;
+
                     if (!String.IsNullOrWhiteSpace(server.Host))
                         mappedAction.Variables["ServerHost"] = server.Host;
 

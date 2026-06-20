@@ -8,21 +8,20 @@
   <!-- ===================================================== -->
 
   <Style Selector="Button, local|IconButton">
-    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBgBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="2" />
     <Setter Property="Padding" Value="12,6" />
   </Style>
 
-  <Style Selector="Button.Default:pointerover /template/ ContentPresenter#PART_ContentPresenter,
-                   local|IconButton.Default:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderBrush" Value="{DynamicResource Primary5Brush}" />
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDefaultHoverBrush}" />
   </Style>
-  <Style Selector="Button.Default:pressed /template/ ContentPresenter#PART_ContentPresenter,
-                   local|IconButton.Default:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderBrush" Value="{DynamicResource Primary7Brush}" />
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDefaultActiveBrush}" />
   </Style>
 
   <!-- Focus-visible: highlight with inset box-shadow so layout is not affected -->
@@ -528,6 +527,17 @@
   </Style>
 
   <!-- ===================================================== -->
+  <!-- BUTTONS — Dialog/overlay footer actions               -->
+  <!-- (OK, Cancel, Confirm, Save, etc.)                     -->
+  <!-- ===================================================== -->
+
+  <!-- Mark a footer container with Classes="DialogFooter"; its buttons inherit these -->
+  <Style Selector=".DialogFooter Button">
+    <Setter Property="MinWidth" Value="90" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- ===================================================== -->
   <!-- TEXT INPUTS                                           -->
   <!-- ===================================================== -->
 
@@ -556,6 +566,28 @@
   </Style>
   <Style Selector="TextBox:disabled">
     <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- COMBOBOX (SELECT)                                     -->
+  <!-- ===================================================== -->
+
+  <Style Selector="ComboBox">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ComboBox /template/ Border#Background">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- NUMERIC UP/DOWN                                       -->
+  <!-- ===================================================== -->
+
+  <Style Selector="NumericUpDown">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ ButtonSpinner">
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
 
   <!-- ===================================================== -->

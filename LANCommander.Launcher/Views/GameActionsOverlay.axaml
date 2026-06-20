@@ -52,9 +52,8 @@
                 </Border>
 
                 <!-- Footer -->
-                <Border Padding="20,12,20,16">
+                <Border Padding="20,12,20,16" Classes="DialogFooter">
                     <Button Content="Cancel"
-                            Width="90"
                             HorizontalAlignment="Right"
                             Click="Cancel_Click" />
                 </Border>

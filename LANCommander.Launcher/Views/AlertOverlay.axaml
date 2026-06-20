@@ -37,7 +37,7 @@
                 </Border>
 
                 <!-- Footer -->
-                <Border Padding="20,16,20,16">
+                <Border Padding="20,16,20,16" Classes="DialogFooter">
                     <Button Content="OK"
                             Classes="Primary"
                             HorizontalAlignment="Right"

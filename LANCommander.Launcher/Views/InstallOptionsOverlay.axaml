@@ -190,14 +190,11 @@
                 <Border Padding="20,16">
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right"
-                                Spacing="8">
+                                Spacing="8"
+                                Classes="DialogFooter">
                         <Button Content="Cancel"
-                                Width="90"
-                                HorizontalContentAlignment="Center"
                                 Click="Cancel_Click" />
                         <Button Content="{Binding ConfirmButtonText}"
-                                Width="90"
-                                HorizontalContentAlignment="Center"
                                 Classes="Primary"
                                 Click="Confirm_Click" />
                     </StackPanel>

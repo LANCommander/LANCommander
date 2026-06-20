@@ -72,7 +72,8 @@
                             <Button Content="+ Add Directory"
                                     Command="{Binding AddInstallDirectoryCommand}"
                                     HorizontalAlignment="Left"
-                                    Padding="12,8" />
+                                    Padding="12,8"
+                                    Classes="Primary" />
                         </StackPanel>
 
                         <StackPanel Spacing="4">

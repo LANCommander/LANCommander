@@ -32,7 +32,7 @@ public class ToolImporter(
         return
             record.UpdatedOn > existing.ImportedOn
             ||
-            record.Actions.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn);
+            (record.Actions?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
     }
 
     public override async Task<bool> AddAsync(ImportItemInfo<Tool> importItemInfo)

@@ -32,9 +32,9 @@ public class GameImporter(
         return
             record.UpdatedOn > existing.ImportedOn
             ||
-            record.Actions.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn)
+            (record.Actions?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false)
             ||
-            record.SavePaths.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn);
+            (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
     }
 
     public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)

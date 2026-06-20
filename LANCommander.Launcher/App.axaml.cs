@@ -112,10 +112,16 @@ public partial class App : Application
                 singleInstance.StartServer();
                 singleInstance.NavigateToGameRequested += async (_, gameId) =>
                 {
-                    mainWindow.Activate();
+                    // The window may be hidden in the tray; surface it on the UI thread
+                    // before navigating (this fires from the named-pipe listener thread).
+                    Avalonia.Threading.Dispatcher.UIThread.Post(mainWindow.RestoreFromTray);
                     var shell = Services.GetRequiredService<MainWindowViewModel>().ShellViewModel;
                     await shell.NavigateToGameByIdAsync(gameId).ConfigureAwait(false);
                 };
+                // A second launch (e.g. the user forgot it was hiding in the tray) asks the
+                // running instance to restore its window instead of opening a duplicate.
+                singleInstance.RestoreRequested += (_, _) =>
+                    Avalonia.Threading.Dispatcher.UIThread.Post(mainWindow.RestoreFromTray);
                 mainWindow.Closed += (_, _) => singleInstance.Dispose();
 
                 // Start gamepad navigation (gracefully disabled if SDL3 is absent)

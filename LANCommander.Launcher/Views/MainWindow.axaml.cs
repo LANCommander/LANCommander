@@ -117,6 +117,21 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Bring the window back to the foreground after it has been hidden to the
+    /// tray or minimized. Used by the tray and when a second launcher instance
+    /// asks the running one to surface.
+    /// </summary>
+    public void RestoreFromTray()
+    {
+        Show();
+
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+
+        Activate();
+    }
+
+    /// <summary>
     /// Fully exit the application, bypassing the close-to-tray behavior.
     /// </summary>
     public void ExitApplication()

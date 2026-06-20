@@ -21,15 +21,33 @@ public class SingleInstanceService : IDisposable
 {
     private const string PipeName       = "lancommander-launcher";
     private const string ProtocolScheme = "lancommander";
+    private const string MutexName      = "lancommander-launcher-singleton";
+
+    // Held for the lifetime of the process to mark this as the owning instance.
+    private static Mutex? _instanceMutex;
 
     private readonly ILogger<SingleInstanceService> _logger;
     private CancellationTokenSource? _cts;
 
     public event EventHandler<Guid>? NavigateToGameRequested;
 
+    /// <summary>Raised when a secondary instance asks the running one to surface.</summary>
+    public event EventHandler? RestoreRequested;
+
     public SingleInstanceService(ILogger<SingleInstanceService> logger)
     {
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Claims the single-instance lock for this process. Returns true when this is the first
+    /// instance, false when another instance already holds the lock. The mutex is intentionally
+    /// kept alive for the lifetime of the process and released by the OS on exit.
+    /// </summary>
+    public static bool TryAcquireInstanceLock()
+    {
+        _instanceMutex = new Mutex(initiallyOwned: true, MutexName, out var createdNew);
+        return createdNew;
     }
 
     // ── Server (first instance) ──────────────────────────────────────────────
@@ -71,6 +89,13 @@ public class SingleInstanceService : IDisposable
 
     private void HandleMessage(string message)
     {
+        if (message.Equals("restore", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Restore request received from a secondary instance");
+            RestoreRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (message.StartsWith("navigate-game:", StringComparison.OrdinalIgnoreCase))
         {
             var idStr = message["navigate-game:".Length..].Trim();

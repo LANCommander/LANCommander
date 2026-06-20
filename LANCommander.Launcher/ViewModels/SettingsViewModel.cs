@@ -24,6 +24,9 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<InstallDirectoryItem> _installDirectories = new();
 
+    [ObservableProperty]
+    private int _maxInstallAttempts = 10;
+
     // Media Settings
     [ObservableProperty]
     private string _mediaStoragePath = string.Empty;
@@ -123,6 +126,8 @@ public partial class SettingsViewModel : ViewModelBase
         else
             InstallDirectories.Add(new InstallDirectoryItem(string.Empty));
 
+        MaxInstallAttempts = settings.Games.MaxInstallAttempts;
+
         // Media settings
         MediaStoragePath = settings.Media.StoragePath ?? string.Empty;
 
@@ -169,6 +174,8 @@ public partial class SettingsViewModel : ViewModelBase
                     .Where(d => !string.IsNullOrWhiteSpace(d.Path))
                     .Select(d => d.Path)
                     .ToArray();
+
+                s.Games.MaxInstallAttempts = Math.Max(1, MaxInstallAttempts);
 
                 // Media settings
                 s.Media.StoragePath = MediaStoragePath;

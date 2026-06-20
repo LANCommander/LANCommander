@@ -1230,7 +1230,8 @@ namespace LANCommander.SDK.Services
 
                         case InstallTaskType.DownloadAndExtract:
                             var skipFiles = verifiedFiles;
-                            var result = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
+                            var maxAttempts = Math.Max(1, settingsProvider.CurrentValue.Games.MaxInstallAttempts);
+                            var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
                             {
                                 return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken, skipFiles));
                             });
@@ -1849,11 +1850,16 @@ namespace LANCommander.SDK.Services
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
 
+            // Tracked outside the try so the catch blocks can report exactly where extraction failed
+            TrackableStream stream = null;
+            string currentEntryKey = null;
+            var entriesProcessed = 0;
+
             try
             {
                 Directory.CreateDirectory(destination);
 
-                var stream = await StreamLatestArchiveAsync(game.Id);
+                stream = await StreamLatestArchiveAsync(game.Id);
 
                 var monitor = new FileTransferMonitor(stream.Length);
                 var progress = new Progress<ProgressReport>(report =>
@@ -1901,6 +1907,7 @@ namespace LANCommander.SDK.Services
                     try
                     {
                         var entryKey = _reader.Entry.Key;
+                        currentEntryKey = entryKey;
                         var localFile = Path.Combine(destination, entryKey);
 
                         fileManifest.AppendLine($"{entryKey} | {_reader.Entry.Crc.ToString("X")}");
@@ -1929,15 +1936,22 @@ namespace LANCommander.SDK.Services
                             {
                                 logger?.LogError("Could not skip to next entry in archive: {EntryKey}", entryKey);
                             }
+
+                        entriesProcessed++;
                     }
                     catch (IOException ex)
                     {
                         var errorCode = ex.HResult & 0xFFFF;
 
                         if (errorCode == 87)
+                        {
+                            logger?.LogError(ex, "Fatal IO error (HResult 0x{HResult:X8}, Win32 {ErrorCode}) writing entry {EntryKey} for game {GameTitle} ({GameId}) after {EntriesProcessed} entries at {Position}/{Length} bytes",
+                                ex.HResult, errorCode, currentEntryKey, game.Title, game.Id, entriesProcessed, stream?.Position, stream?.Length);
+
                             throw ex;
-                        else
-                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
+                        }
+
+                        logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} (HResult 0x{HResult:X8}) - {Message}", currentEntryKey, ex.HResult, ex.Message);
 
                         // Skip to next entry
                         await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
@@ -1963,7 +1977,8 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                logger?.LogError(ex, "Could not extract game {GameTitle} ({GameId}) to {Destination}. Failed on entry {EntryKey} (entry #{EntriesProcessed}) at {Position}/{Length} bytes with {ExceptionType} (HResult 0x{HResult:X8})",
+                    game.Title, game.Id, destination, currentEntryKey, entriesProcessed, stream?.Position, stream?.Length, ex.GetType().Name, ex.HResult);
 
                 if (Directory.Exists(destination))
                 {

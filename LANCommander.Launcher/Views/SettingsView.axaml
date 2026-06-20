@@ -74,9 +74,19 @@
                                     HorizontalAlignment="Left"
                                     Padding="12,8" />
                         </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Download Retry Attempts" Opacity="0.7" />
+                            <TextBlock Text="How many times to retry downloading and extracting a game before failing the install."
+                                       Opacity="0.5" FontSize="12" TextWrapping="Wrap" />
+                            <NumericUpDown Value="{Binding MaxInstallAttempts, Mode=TwoWay}"
+                                           Minimum="1" Maximum="100" Increment="1"
+                                           FormatString="0"
+                                           HorizontalAlignment="Left" Width="160" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
-                
+
                 <!-- Media Section -->
                 <Border Padding="16" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                     <StackPanel Spacing="12">

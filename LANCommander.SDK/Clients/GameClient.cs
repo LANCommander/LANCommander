@@ -1428,6 +1428,8 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
+                        await scriptClient.Redistributable_RunUninstallScriptAsync(installDirectory, gameId, redistributable.Id);
+
                         var redistFileListPath = GetMetadataFilePath(installDirectory, redistributable.Id, "FileList.txt");
 
                         if (File.Exists(redistFileListPath))

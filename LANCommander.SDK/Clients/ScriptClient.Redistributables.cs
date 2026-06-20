@@ -176,7 +176,80 @@ public partial class ScriptClient
 
         return result;
     }
-    
+
+    public async Task<int> Redistributable_RunUninstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+    {
+        int result = default;
+
+        var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+        var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+
+        var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Uninstall);
+
+        try
+        {
+            if (Path.Exists(path))
+            {
+                using (var op = logger.BeginOperation("Executing uninstall script"))
+                {
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.Uninstall);
+
+                    script.AddVariable("InstallDirectory", installDirectory);
+                    script.AddVariable("GameManifest", gameManifest);
+                    script.AddVariable("RedistributableManifest", redistributableManifest);
+                    script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
+                    script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+
+                    try
+                    {
+                        op
+                            .Enrich("InstallDirectory", installDirectory)
+                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                            .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                            .Enrich("ScriptPath", path)
+                            .Enrich("GameTitle", gameManifest.Title)
+                            .Enrich("GameId", gameManifest.Id)
+                            .Enrich("RedistributableName", redistributableManifest.Name)
+                            .Enrich("RedistributableId", redistributableManifest.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                    {
+                        foreach (var customField in gameManifest.CustomFields)
+                        {
+                            script.AddVariable(customField.Name, customField.Value);
+                        }
+                    }
+
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                    script.UseWorkingDirectory(extractionPath);
+                    script.UseFile(path);
+
+                    if (Debug)
+                        script.EnableDebug();
+
+                    var handled = await RunScriptExternallyAsync(script);
+
+                    if (!handled)
+                        result = await script.ExecuteAsync<int>();
+
+                    op.Complete();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Uninstall script");
+        }
+
+        return result;
+    }
+
     public async Task<int> Redistributable_RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
     {
         int result = default;

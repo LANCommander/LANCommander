@@ -104,6 +104,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         _installService.OnProgress += OnProgress;
         _installService.OnTaskProgressUpdate += OnTaskProgressUpdate;
         _installService.OnInstallComplete += OnInstallComplete;
+        _installService.OnInstallQueueComplete += OnInstallQueueComplete;
         _installService.OnInstallFail += OnInstallFail;
 
         RefreshQueue();
@@ -221,11 +222,24 @@ public partial class DownloadQueueViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    private async Task OnInstallComplete(Data.Models.Game game)
+    private Task OnInstallComplete(Data.Models.Game game)
     {
         _logger.LogInformation("Install complete for game {GameTitle}", game.Title);
 
         _taskbarProgressService.ClearProgress();
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            RefreshQueue();
+            InstallCompleted?.Invoke(this, game.Id);
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnInstallQueueComplete(Data.Models.Game game)
+    {
+        _logger.LogInformation("Install batch complete for game {GameTitle}", game.Title);
 
         // Resolve icon and grid art paths for the notification
         string? iconPath = null;
@@ -236,12 +250,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
 
             var icon = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Icon);
-            
+
             if (icon != null && mediaService.FileExists(icon))
                 iconPath = mediaService.GetImagePath(icon);
 
             var grid = await mediaService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == MediaType.Grid);
-            
+
             if (grid != null && mediaService.FileExists(grid))
                 gridPath = mediaService.GetImagePath(grid);
         }
@@ -251,12 +265,6 @@ public partial class DownloadQueueViewModel : ViewModelBase
         }
 
         _notificationService.NotifyInstallComplete(game.Title ?? "Game", iconPath, gridPath, game.Id);
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            RefreshQueue();
-            InstallCompleted?.Invoke(this, game.Id);
-        });
     }
 
     private Task OnInstallFail(Data.Models.Game game)

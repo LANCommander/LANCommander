@@ -41,8 +41,16 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnInstallCompleteHandler(Game game);
         public event OnInstallCompleteHandler OnInstallComplete;
 
+        public delegate Task OnInstallQueueCompleteHandler(Game game);
+        public event OnInstallQueueCompleteHandler OnInstallQueueComplete;
+
         public delegate Task OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
+
+        // Root game ids the user initiated this session that have not yet had a
+        // batch-complete notification fired. Used to scope notifications to active
+        // installs and to fire a single notification once a whole group settles.
+        private readonly HashSet<Guid> _pendingNotificationRoots = new();
 
         public InstallService(
             ILogger<InstallService> logger,
@@ -266,6 +274,10 @@ namespace LANCommander.Launcher.Services
                 Queue.Count,
                 string.Join(", ", Queue.Select(i => $"{i.Title}({i.Status}, depends={i.DependsOnId})")));
 
+            // Track this root so a single batch-complete notification fires once the
+            // whole group (base game + addons/redists/tools) has settled.
+            _pendingNotificationRoots.Add(game.Id);
+
             // Start processing if nothing active
             if (!Queue.Any(i => i.State))
             {
@@ -444,6 +456,68 @@ namespace LANCommander.Launcher.Services
             }
 
             Logger?.LogInformation("[InstallQueue] Next: No eligible items found to process");
+
+            // The queue has settled (nothing eligible to process). Fire a single
+            // batch-complete notification for any tracked root whose entire group has
+            // finished.
+            await NotifySettledGroups();
+        }
+
+        // Walks the DependsOnId chain up to the root install item (the base game with no
+        // dependency) so an item can be attributed to its install group.
+        private Guid ResolveRootId(IInstallQueueItem item)
+        {
+            var current = item;
+            var visited = new HashSet<Guid>();
+
+            while (current.DependsOnId.HasValue && visited.Add(current.Id))
+            {
+                var parent = Queue.FirstOrDefault(i => i.Id == current.DependsOnId.Value);
+
+                // Parent no longer in queue (assumed complete) — treat the dependency id as the root.
+                if (parent == null)
+                    return current.DependsOnId.Value;
+
+                current = parent;
+            }
+
+            return current.Id;
+        }
+
+        private async Task NotifySettledGroups()
+        {
+            foreach (var rootId in _pendingNotificationRoots.ToList())
+            {
+                var groupItems = Queue.Where(i => ResolveRootId(i) == rootId).ToList();
+
+                // No items map to this root (e.g. user installed an addon whose real root
+                // is its base game) — nothing to notify for, drop it.
+                if (groupItems.Count == 0)
+                {
+                    _pendingNotificationRoots.Remove(rootId);
+                    continue;
+                }
+
+                var allTerminal = groupItems.All(i =>
+                    i.Status.ValueIsIn(InstallStatus.Complete, InstallStatus.Failed, InstallStatus.Canceled));
+
+                var rootItem = groupItems.FirstOrDefault(i => i.Id == rootId);
+
+                // Wait until everything in the group has settled, and only announce
+                // completion when the base game itself actually installed.
+                if (!allTerminal || rootItem == null || rootItem.Status != InstallStatus.Complete)
+                    continue;
+
+                _pendingNotificationRoots.Remove(rootId);
+
+                var rootGame = await _gameService.GetAsync(rootId);
+
+                if (rootGame != null)
+                {
+                    Logger?.LogInformation("[InstallQueue] NotifySettledGroups: Install batch complete for {Title} ({Id}), firing notification", rootGame.Title, rootGame.Id);
+                    OnInstallQueueComplete?.Invoke(rootGame);
+                }
+            }
         }
 
         private async Task Next(InstallQueueGame queueItem)

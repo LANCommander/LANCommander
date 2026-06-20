@@ -77,6 +77,8 @@
 
     <Divider Text="External Providers" />
 
+    <Alert Type="@AlertType.Info" Message="A server restart is required for changes to authentication providers to take effect." ShowIcon="true" Style="margin-bottom: 16px;" />
+
     <ExternalProviderEditor @bind-Values="Settings.Value.Server.Authentication.AuthenticationProviders" />
 </PageContent>
 

@@ -13,6 +13,13 @@ Scopes:
     - email
 ```
 
+:::tip
+Because Authentik exposes an OpenID Connect configuration URL, you can use the **Discover**
+button on the provider to map the standard claims and add the base scopes automatically.
+See the [Authentication overview](/Server/Settings/Authentication/Overview#discovery-oidc)
+for details.
+:::
+
 Make sure to set your redirect URLs appropriately. LANCommander expects the following redirect URL scheme:
 ```http(s)://<ServerAddress>/SignInOIDC```
 

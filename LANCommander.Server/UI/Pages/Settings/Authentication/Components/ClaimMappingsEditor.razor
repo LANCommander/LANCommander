@@ -1,18 +1,49 @@
 ﻿@using LANCommander.Server.Settings.Models
+@using LANCommander.Server.Startup
+@inject IMessageService MessageService
+@inject ILogger<ClaimMappingsEditor> Logger
 <Flex Vertical Gap="@("16")">
+    <Alert Type="@AlertType.Info" ShowIcon="true" Message="Each mapping projects a provider claim (Value, a key in the provider's userinfo response such as preferred_username) onto a destination claim (Name) that is applied to the user on login." />
+
     <Table DataSource="ClaimMappings" Size="TableSize.Small" HidePagination>
-        <PropertyColumn Property="cm => cm.Name">
-            <Input @bind-Value="context.Name" OnBlur="Update" />
+        <PropertyColumn Property="cm => cm.Value" Title="Claim">
+            <AutoComplete TOption="string"
+                          Value="@context.Value"
+                          ValueChanged="@((string value) => OnClaimChanged(context, value))"
+                          Options="_suggestedClaims"
+                          Backfill
+                          Placeholder="@("e.g. preferred_username")" />
         </PropertyColumn>
-        <PropertyColumn Property="cm => cm.Value">
-            <Input @bind-Value="context.Value" OnBlur="Update" />
+        <PropertyColumn Property="cm => cm.Name" Title="Destination">
+            <Input @bind-Value="context.Name" OnBlur="Update" />
         </PropertyColumn>
         <ActionColumn>
             <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(context)" />
         </ActionColumn>
     </Table>
 
-    <Flex Justify="FlexJustify.End">
+    @if (_suggestedClaims.Any())
+    {
+        <Flex Vertical Gap="@("4")">
+            <span class="ant-typography ant-typography-secondary">Claims advertised by the provider (click to add a mapping):</span>
+            <Flex Wrap="FlexWrap.Wrap" Gap="@("4")">
+                @foreach (var claim in _suggestedClaims)
+                {
+                    var alreadyMapped = ClaimMappings.Any(cm => String.Equals(cm.Value, claim, StringComparison.OrdinalIgnoreCase));
+                    <Tag Color="@(alreadyMapped ? null : "blue")"
+                         Style="cursor: pointer;"
+                         OnClick="@(() => AddFromSuggestion(claim))">
+                        @claim
+                    </Tag>
+                }
+            </Flex>
+        </Flex>
+    }
+
+    <Flex Justify="FlexJustify.End" Gap="@("8")">
+        <Tooltip Title="@(String.IsNullOrWhiteSpace(ConfigurationUrl) ? "Only available for OpenID Connect providers with a configuration URL" : "Read claims and scopes from the provider's discovery document, mapping standard claims and adding base scopes automatically.")">
+            <Button OnClick="Discover" Loading="_discovering" Disabled="@String.IsNullOrWhiteSpace(ConfigurationUrl)">Discover</Button>
+        </Tooltip>
         <Button Type="ButtonType.Primary" OnClick="Add">Add Claim Mapping</Button>
     </Flex>
 </Flex>
@@ -20,13 +51,146 @@
 @code {
     [Parameter] public IEnumerable<ClaimMapping> Values { get; set; }
     [Parameter] public EventCallback<IEnumerable<ClaimMapping>> ValuesChanged { get; set; }
+    [Parameter] public IEnumerable<string> Scopes { get; set; }
+    [Parameter] public EventCallback<IEnumerable<string>> ScopesChanged { get; set; }
+    [Parameter] public string ConfigurationUrl { get; set; }
 
     List<ClaimMapping> ClaimMappings = new();
+    string[] _suggestedClaims = Array.Empty<string>();
+    bool _discovering;
 
     protected override void OnParametersSet()
     {
-        if (Values != null)
-            ClaimMappings = Values.Select(v => new ClaimMapping { Name = v.Name, Value = v.Value}).ToList();
+        var incoming = (Values ?? Enumerable.Empty<ClaimMapping>()).ToList();
+
+        // Only rebuild local state when the incoming values actually differ. Without
+        // this guard, the round-trip caused by our own ValuesChanged would clobber
+        // in-progress edits (the AutoComplete pushes a change on every keystroke).
+        var changed = incoming.Count != ClaimMappings.Count
+            || incoming.Where((c, i) => c.Name != ClaimMappings[i].Name || c.Value != ClaimMappings[i].Value).Any();
+
+        if (changed)
+            ClaimMappings = incoming.Select(v => new ClaimMapping { Name = v.Name, Value = v.Value}).ToList();
+    }
+
+    async Task OnClaimChanged(ClaimMapping claimMapping, string value)
+    {
+        claimMapping.Value = value;
+
+        await Update();
+    }
+
+    async Task AddFromSuggestion(string claim)
+    {
+        ClaimMappings.Add(new ClaimMapping { Value = claim });
+
+        await Update();
+    }
+
+    // Standard OpenID Connect claims mapped to LANCommander destinations, in priority
+    // order. For each destination, the first advertised source claim that isn't already
+    // mapped is used. Processed top-to-bottom so earlier destinations claim shared
+    // source names (e.g. "name") before later ones.
+    static readonly (string Destination, string[] Sources)[] StandardClaimMap =
+    {
+        (ProviderClaimTypes.NameId, new[] { "sub" }),
+        (ProviderClaimTypes.Email, new[] { "email" }),
+        (ProviderClaimTypes.Username, new[] { "preferred_username", "name", "username" }),
+        (ProviderClaimTypes.Alias, new[] { "nickname", "name" }),
+        (ProviderClaimTypes.Roles, new[] { "roles", "groups" }),
+    };
+
+    // Standard scopes to add when the provider advertises them. "openid" is required for
+    // the OpenID Connect flow, so it's always added regardless of what's advertised.
+    static readonly string[] StandardScopes = { "openid", "profile", "email", "roles", "groups" };
+
+    async Task Discover()
+    {
+        _discovering = true;
+
+        try
+        {
+            var (claims, scopes) = await AuthenticationService.GetDiscoveryMetadataAsync(ConfigurationUrl);
+
+            _suggestedClaims = claims.ToArray();
+
+            var autoMapped = AutoMapStandardClaims();
+
+            if (autoMapped > 0)
+                await Update();
+
+            var addedScopes = await AutoAddStandardScopes(scopes);
+
+            if (_suggestedClaims.Any() || scopes.Any())
+                MessageService.Success($"Mapped {autoMapped} standard claim(s) and added {addedScopes} scope(s) from the provider's configuration.");
+            else
+                MessageService.Info("The provider's configuration did not advertise any claims or scopes. You can still enter them manually.");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not read the provider's configuration.");
+            Logger.LogError(ex, "Discovery failed for {ConfigurationUrl}", ConfigurationUrl);
+        }
+        finally
+        {
+            _discovering = false;
+        }
+    }
+
+    async Task<int> AutoAddStandardScopes(IReadOnlyCollection<string> advertisedScopes)
+    {
+        var current = (Scopes ?? Enumerable.Empty<string>()).ToList();
+        var existing = new HashSet<string>(current, StringComparer.OrdinalIgnoreCase);
+        var advertised = new HashSet<string>(advertisedScopes, StringComparer.OrdinalIgnoreCase);
+
+        var added = 0;
+
+        foreach (var scope in StandardScopes)
+        {
+            // openid is mandatory for OIDC; the rest are only added if advertised.
+            if (scope != "openid" && !advertised.Contains(scope))
+                continue;
+
+            if (!existing.Add(scope))
+                continue;
+
+            current.Add(scope);
+            added++;
+        }
+
+        if (added > 0 && ScopesChanged.HasDelegate)
+            await ScopesChanged.InvokeAsync(current);
+
+        return added;
+    }
+
+    int AutoMapStandardClaims()
+    {
+        var added = 0;
+        var advertised = new HashSet<string>(_suggestedClaims, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (destination, sources) in StandardClaimMap)
+        {
+            // Leave any destination the admin has already mapped untouched.
+            if (ClaimMappings.Any(cm => String.Equals(cm.Name, destination, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            foreach (var source in sources)
+            {
+                if (!advertised.Contains(source))
+                    continue;
+
+                // Don't reuse a source claim that's already mapped to something else.
+                if (ClaimMappings.Any(cm => String.Equals(cm.Value, source, StringComparison.OrdinalIgnoreCase)))
+                    break;
+
+                ClaimMappings.Add(new ClaimMapping { Name = destination, Value = source });
+                added++;
+                break;
+            }
+        }
+
+        return added;
     }
 
     async Task Add()

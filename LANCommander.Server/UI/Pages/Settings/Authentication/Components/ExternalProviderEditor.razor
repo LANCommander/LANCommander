@@ -105,7 +105,7 @@
                         </FormItem>
 
                         <FormItem Label="Claim Mappings">
-                            <ClaimMappingsEditor @bind-Values="context.ClaimMappings"/>
+                            <ClaimMappingsEditor @bind-Values="context.ClaimMappings" @bind-Scopes="context.Scopes" ConfigurationUrl="@context.ConfigurationUrl"/>
                         </FormItem>
                     </Form>
                 </ChildContent>

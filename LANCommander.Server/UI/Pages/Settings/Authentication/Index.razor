@@ -27,6 +27,10 @@
             <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
         </FormItem>
 
+        <FormItem Label="Auto-redirect to external provider">
+            <Switch @bind-Checked="context.Server.Authentication.AutoRedirectToProvider" />
+        </FormItem>
+
         <FormItem Label="Token Secret">
             <InputPassword @bind-Value="context.Server.Authentication.TokenSecret" />
         </FormItem>

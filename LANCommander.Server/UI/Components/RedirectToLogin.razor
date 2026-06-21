@@ -1,8 +1,9 @@
-﻿@using LANCommander.Server.Data
+@using LANCommander.Server.Data
+@using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
-@@using LANCommander.Server.Settings.Enums
-using LANCommander.Server.Data
+@using Microsoft.Extensions.Options
 @inject NavigationManager NavigationManager
+@inject IOptions<Settings> Settings
 
 @code {
     protected override void OnInitialized()
@@ -10,12 +11,21 @@ using LANCommander.Server.Data
         if (DatabaseContext.Provider == DatabaseProvider.Unknown)
         {
             NavigationManager.NavigateTo("/FirstTimeSetup");
+            return;
         }
-        else
-        {
-            var currentUri = new Uri(NavigationManager.Uri);
 
-            NavigationManager.NavigateTo($"/Login?ReturnUrl={currentUri.AbsolutePath}", true);
-        }
+        var currentUri = new Uri(NavigationManager.Uri);
+        var returnUrl = currentUri.AbsolutePath;
+
+        var authentication = Settings.Value.Server.Authentication;
+        var providerCount = authentication.AuthenticationProviders?.Count() ?? 0;
+
+        // Only route through the external provider flow when auto-redirect is enabled and
+        // at least one provider is configured. The ExternalLogin page will challenge the
+        // single provider directly or present the list when multiple are available.
+        if (authentication.AutoRedirectToProvider && providerCount > 0)
+            NavigationManager.NavigateTo($"/ExternalLogin?ReturnUrl={returnUrl}", true);
+        else
+            NavigationManager.NavigateTo($"/Login?ReturnUrl={returnUrl}", true);
     }
 }

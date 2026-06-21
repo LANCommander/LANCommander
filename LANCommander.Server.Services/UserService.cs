@@ -168,17 +168,15 @@ namespace LANCommander.Server.Services
 
         public async Task AddToRoleAsync(string userName, string roleName)
         {
-            var user = await GetAsync(userName);
-
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
             await identityContext.UserManager.AddToRoleAsync(user, roleName);
         }
 
         public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
         {
-            var user = await GetAsync(userName);
-
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
             var result = await identityContext.UserManager.AddToRolesAsync(user, roleNames);
 
             await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
@@ -189,17 +187,15 @@ namespace LANCommander.Server.Services
 
         public async Task RemoveFromRole(string userName, string roleName)
         {
-            var user = await GetAsync(userName);
-
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
             await identityContext.UserManager.RemoveFromRoleAsync(user, roleName);
         }
 
         public async Task<bool> CheckPassword(string userName, string password)
         {
-            var user = await GetAsync(userName);
-
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
             return await identityContext.UserManager.CheckPasswordAsync(user, password);
         }
 
@@ -235,9 +231,8 @@ namespace LANCommander.Server.Services
 
         public async Task<IdentityResult> ChangePassword(string userName, string currentPassword, string newPassword)
         {
-            var user = await GetAsync(userName);
-
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
             var result = await identityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
             return result;
@@ -251,9 +246,9 @@ namespace LANCommander.Server.Services
         public async Task<IdentityResult> ChangePassword(string userName, string newPassword, bool bypassPolicy)
         {
             IdentityResult result;
-            var user = await GetAsync(userName);
 
             using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByNameAsync(userName);
 
             if (bypassPolicy && identityContext.UserManager.PasswordValidators.Any())
             {

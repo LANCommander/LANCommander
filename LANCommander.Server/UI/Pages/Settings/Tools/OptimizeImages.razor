@@ -24,11 +24,17 @@
         <FormItem Label="Recompress existing JPEGs (lossy)">
             <Switch @bind-Value="@Options.RecompressJpeg" />
         </FormItem>
+        <FormItem Label="Recompress existing WebP (lossy)">
+            <Switch @bind-Value="@Options.RecompressWebp" />
+        </FormItem>
         <FormItem Label="Strip metadata (EXIF/ICC/XMP)">
             <Switch @bind-Value="@Options.StripMetadata" />
         </FormItem>
         <FormItem Label="JPEG quality">
             <AntDesign.InputNumber @bind-Value="@Options.JpegQuality" Min="1" Max="100" />
+        </FormItem>
+        <FormItem Label="WebP quality">
+            <AntDesign.InputNumber @bind-Value="@Options.WebpQuality" Min="1" Max="100" />
         </FormItem>
         <FormItem Label="Max long edge (px)">
             <AntDesign.InputNumber @bind-Value="@Options.MaxLongEdge" Min="256" />

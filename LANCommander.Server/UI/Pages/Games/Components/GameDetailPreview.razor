@@ -34,7 +34,7 @@
         <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--hero">
             <div class="game-detail-preview__media-overlay-actions">
                 @{ var bgInputId = "bg-upload-" + Guid.NewGuid(); }
-                <InputFile id="@bgInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Background)" hidden accept=".jpg,.jpeg,.png,.gif" />
+                <InputFile id="@bgInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Background)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
                 <label class="game-detail-preview__overlay-btn" for="@bgInputId" title="Upload Background">
                     <Icon Type="@IconType.Outline.Upload" />
                 </label>
@@ -71,7 +71,7 @@
             <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--logo">
                 <div class="game-detail-preview__media-overlay-actions">
                     @{ var logoInputId = "logo-upload-" + Guid.NewGuid(); }
-                    <InputFile id="@logoInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Logo)" hidden accept=".jpg,.jpeg,.png,.gif" />
+                    <InputFile id="@logoInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Logo)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
                     <label class="game-detail-preview__overlay-btn" for="@logoInputId" title="Upload Logo">
                         <Icon Type="@IconType.Outline.Upload" />
                     </label>
@@ -106,7 +106,7 @@
                 <div class="game-detail-preview__media-section-header">
                     <span class="game-detail-preview__media-section-title">Media</span>
                     <div class="game-detail-preview__media-section-actions">
-                        <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif" multiple />
+                        <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" multiple />
                         <InputFile id="@_vidInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Video)" hidden accept=".mp4,.webm,.mkv" multiple />
 
                         <Dropdown>
@@ -208,7 +208,7 @@
                 <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--cover">
                     <div class="game-detail-preview__media-overlay-actions">
                         @{ var coverInputId = "cover-upload-" + Guid.NewGuid(); }
-                        <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.apng,.mp4,.webm,.mkv" />
+                        <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.apng,.mp4,.webm,.mkv" />
                         <label class="game-detail-preview__overlay-btn" for="@coverInputId" title="Upload Cover">
                             <Icon Type="@IconType.Outline.Upload" />
                         </label>
@@ -318,6 +318,7 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
+        MediaTypeNames.Image.Webp,
         "image/apng",
     ];
 
@@ -331,6 +332,7 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
+        MediaTypeNames.Image.Webp,
         "image/apng",
         "video/mp4",
         "video/webm",

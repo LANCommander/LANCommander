@@ -61,7 +61,9 @@ public class SteamClient
         var webAssetUri = GetWebAssetUri(appId, webAssetType);
         var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, webAssetUri));
 
-        var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg || response.Content.Headers.ContentType.MediaType == "image/png";
+        var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg
+            || response.Content.Headers.ContentType.MediaType == "image/png"
+            || response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Webp;
 
         return (exists, response.Content.Headers.ContentType.MediaType);
     }

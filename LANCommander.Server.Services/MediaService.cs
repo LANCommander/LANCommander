@@ -9,6 +9,7 @@ using ZiggyCreatures.Caching.Fusion;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
@@ -214,7 +215,7 @@ namespace LANCommander.Server.Services
 
                         image.Mutate(context => context.Resize(resizeOptions));
 
-                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png && HasTransparentPixels(image))
+                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && (media.MimeType == MediaTypeNames.Image.Png || media.MimeType == MediaTypeNames.Image.Webp) && HasTransparentPixels(image))
                         {
                             await image.SaveAsPngAsync(destination);
                         }
@@ -371,8 +372,9 @@ namespace LANCommander.Server.Services
                 var mime = media.MimeType?.ToLowerInvariant();
                 var isPng = mime == "image/png";
                 var isJpeg = mime == "image/jpeg" || mime == "image/jpg";
+                var isWebp = mime == "image/webp";
 
-                if (!isPng && !isJpeg)
+                if (!isPng && !isJpeg && !isWebp)
                     continue;
 
                 int width;
@@ -391,7 +393,7 @@ namespace LANCommander.Server.Services
 
                 var oversized = options.Downscale && Math.Max(width, height) > options.MaxLongEdge;
                 var willConvert = isPng && options.ConvertPngToJpeg && media.Type != MediaType.Logo && media.Type != MediaType.Icon;
-                var willRecompress = isJpeg && options.RecompressJpeg;
+                var willRecompress = (isJpeg && options.RecompressJpeg) || (isWebp && options.RecompressWebp);
 
                 if (!willConvert && !oversized && !willRecompress)
                     continue;
@@ -438,8 +440,9 @@ namespace LANCommander.Server.Services
             var mime = media.MimeType?.ToLowerInvariant();
             var isPng = mime == "image/png";
             var isJpeg = mime == "image/jpeg" || mime == "image/jpg";
+            var isWebp = mime == "image/webp";
 
-            if (!isPng && !isJpeg)
+            if (!isPng && !isJpeg && !isWebp)
                 return result;
 
             result.BeforeBytes = new FileInfo(path).Length;
@@ -479,14 +482,17 @@ namespace LANCommander.Server.Services
                     }
 
                     var reencodeJpeg = isJpeg && (options.RecompressJpeg || changed);
+                    var reencodeWebp = isWebp && (options.RecompressWebp || changed);
 
-                    if (!convertToJpeg && !reencodeJpeg && !(isPng && changed))
+                    if (!convertToJpeg && !reencodeJpeg && !reencodeWebp && !(isPng && changed))
                         return result;
 
                     var tempPath = path + ".optimizing";
 
                     if (convertToJpeg || isJpeg)
                         await image.SaveAsJpegAsync(tempPath, new JpegEncoder { Quality = options.JpegQuality });
+                    else if (isWebp)
+                        await image.SaveAsWebpAsync(tempPath, new WebpEncoder { Quality = options.WebpQuality });
                     else
                         await image.SaveAsPngAsync(tempPath);
 

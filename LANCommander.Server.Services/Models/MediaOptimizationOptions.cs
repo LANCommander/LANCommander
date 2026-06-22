@@ -10,6 +10,8 @@ namespace LANCommander.Server.Services.Models
         public bool Downscale { get; set; } = true;
         public int MaxLongEdge { get; set; } = 3840;
         public bool RecompressJpeg { get; set; } = false;
+        public bool RecompressWebp { get; set; } = false;
+        public int WebpQuality { get; set; } = 80;
         public bool StripMetadata { get; set; } = true;
     }
 

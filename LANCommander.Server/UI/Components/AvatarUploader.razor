@@ -6,7 +6,7 @@
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
 
-<InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
+<InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png,.webp" />
 
 <label for="AvatarUpload" style="cursor: pointer;">
     @if (String.IsNullOrWhiteSpace(AvatarUrl))
@@ -38,7 +38,8 @@
     string[] ValidMimeTypes = new string[]
     {
         "image/png",
-        "image/jpeg"
+        "image/jpeg",
+        "image/webp"
     };
 
     protected override async Task OnParametersSetAsync()

@@ -64,7 +64,7 @@
                     @{
                         var fileInputId = Guid.NewGuid();
                     }
-                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf,.ico,.mp4,.webm,.mkv"/>
+                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.ico,.mp4,.webm,.mkv"/>
                     <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
                         <Icon Type="@IconType.Outline.Upload"/>
                     </label>
@@ -120,6 +120,7 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
+        MediaTypeNames.Image.Webp,
         MediaTypeNames.Application.Pdf,
         MediaTypeNames.Image.Icon,
         "video/mp4",

@@ -88,10 +88,10 @@ public partial class GameActionBarViewModel : ViewModelBase
 
     // Stats
     [ObservableProperty]
-    private string _playTime = "None";
+    private string _playTime = Localize("PlayStatNone");
 
     [ObservableProperty]
-    private string _lastPlayed = "Never";
+    private string _lastPlayed = Localize("LastPlayedNever");
 
     // Status
     [ObservableProperty]
@@ -172,6 +172,12 @@ public partial class GameActionBarViewModel : ViewModelBase
     // Timer for checking running state
     private System.Threading.Timer? _runningCheckTimer;
 
+    // Timer for refreshing the "Last Played" relative time text
+    private System.Threading.Timer? _lastPlayedTimer;
+
+    // End time of the most recent play session, used to recompute the relative text
+    private DateTime? _lastSessionEnd;
+
     // Events
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
@@ -245,8 +251,8 @@ public partial class GameActionBarViewModel : ViewModelBase
             IsInstalled = false;
             InstallDirectory = null;
             IsUpdateAvailable = false;
-            PlayTime = "None";
-            LastPlayed = "Never";
+            PlayTime = Localize("PlayStatNone");
+            LastPlayed = Localize("LastPlayedNever");
             Manuals.Clear();
             HasManuals = false;
         }
@@ -362,12 +368,22 @@ public partial class GameActionBarViewModel : ViewModelBase
             null,
             TimeSpan.Zero,
             TimeSpan.FromMilliseconds(500));
+
+        _lastPlayedTimer?.Dispose();
+        _lastPlayedTimer = new System.Threading.Timer(
+            _ => Dispatcher.UIThread.Post(UpdateLastPlayedText),
+            null,
+            TimeSpan.FromMinutes(1),
+            TimeSpan.FromMinutes(1));
     }
 
     public void StopRunningCheck()
     {
         _runningCheckTimer?.Dispose();
         _runningCheckTimer = null;
+
+        _lastPlayedTimer?.Dispose();
+        _lastPlayedTimer = null;
     }
 
     private void CheckRunningState()
@@ -443,33 +459,59 @@ public partial class GameActionBarViewModel : ViewModelBase
                 .Sum(ts => ts.Ticks));
 
             if (totalTime.TotalMinutes < 1)
-                PlayTime = "None";
+                PlayTime = Localize("PlayStatNone");
             else if (totalTime.TotalHours < 1)
-                PlayTime = $"{totalTime.TotalMinutes:0} minutes";
+                PlayTime = Localize("PlayTimeMinutes", $"{totalTime.TotalMinutes:0}");
             else
-                PlayTime = $"{totalTime.TotalHours:0.#} hours";
+                PlayTime = Localize("PlayTimeHours", $"{totalTime.TotalHours:0.#}");
 
             var lastSession = playSessions
                 .OrderByDescending(ps => ps.End)
                 .First();
 
-            var elapsed = DateTime.Now - lastSession.End!.Value;
-            if (elapsed.TotalMinutes < 1)
-                LastPlayed = "Just now";
-            else if (elapsed.TotalHours < 1)
-                LastPlayed = $"{elapsed.TotalMinutes:0} minutes ago";
-            else if (elapsed.TotalDays < 1)
-                LastPlayed = $"{elapsed.TotalHours:0} hours ago";
-            else if (elapsed.TotalDays < 7)
-                LastPlayed = $"{elapsed.TotalDays:0} days ago";
-            else
-                LastPlayed = lastSession.End.Value.ToString("MMM d, yyyy");
+            _lastSessionEnd = lastSession.End!.Value;
+            UpdateLastPlayedText();
         }
         else
         {
-            PlayTime = "None";
-            LastPlayed = "Never";
+            PlayTime = Localize("PlayStatNone");
+            _lastSessionEnd = null;
+            LastPlayed = Localize("LastPlayedNever");
         }
+    }
+
+    /// <summary>
+    /// Recomputes the relative "Last Played" text from the cached last session end time.
+    /// Called on load and periodically so the text stays current without re-querying.
+    /// </summary>
+    private void UpdateLastPlayedText()
+    {
+        if (_lastSessionEnd is not { } end)
+        {
+            LastPlayed = Localize("LastPlayedNever");
+            return;
+        }
+
+        var elapsed = DateTime.Now - end;
+        if (elapsed.TotalMinutes < 1)
+            LastPlayed = Localize("LastPlayedJustNow");
+        else if (elapsed.TotalHours < 1)
+        {
+            var minutes = (int)elapsed.TotalMinutes;
+            LastPlayed = Localize(minutes == 1 ? "LastPlayedMinuteAgo" : "LastPlayedMinutesAgo", minutes);
+        }
+        else if (elapsed.TotalDays < 1)
+        {
+            var hours = (int)elapsed.TotalHours;
+            LastPlayed = Localize(hours == 1 ? "LastPlayedHourAgo" : "LastPlayedHoursAgo", hours);
+        }
+        else if (elapsed.TotalDays < 7)
+        {
+            var days = (int)elapsed.TotalDays;
+            LastPlayed = Localize(days == 1 ? "LastPlayedDayAgo" : "LastPlayedDaysAgo", days);
+        }
+        else
+            LastPlayed = end.ToString("MMM d, yyyy");
     }
 
     /// <summary>

@@ -121,6 +121,19 @@
     <sys:String x:Key="InstallStatusFailed">Failed</sys:String>
     <sys:String x:Key="InstallStatusQueued">Queued</sys:String>
 
+    <!-- ── Play Stats ────────────────────────────────────────────────────── -->
+    <sys:String x:Key="PlayStatNone">None</sys:String>
+    <sys:String x:Key="PlayTimeMinutes">{0} minutes</sys:String>
+    <sys:String x:Key="PlayTimeHours">{0} hours</sys:String>
+    <sys:String x:Key="LastPlayedNever">Never</sys:String>
+    <sys:String x:Key="LastPlayedJustNow">Just now</sys:String>
+    <sys:String x:Key="LastPlayedMinuteAgo">{0} minute ago</sys:String>
+    <sys:String x:Key="LastPlayedMinutesAgo">{0} minutes ago</sys:String>
+    <sys:String x:Key="LastPlayedHourAgo">{0} hour ago</sys:String>
+    <sys:String x:Key="LastPlayedHoursAgo">{0} hours ago</sys:String>
+    <sys:String x:Key="LastPlayedDayAgo">{0} day ago</sys:String>
+    <sys:String x:Key="LastPlayedDaysAgo">{0} days ago</sys:String>
+
     <!-- ── Game Detail ───────────────────────────────────────────────────── -->
     <sys:String x:Key="Singleplayer">Singleplayer</sys:String>
     <sys:String x:Key="Genres">Genres</sys:String>

@@ -20,7 +20,7 @@
             Accept=".lcx"
             @bind-File="File"
             @bind-Status="Status"
-            StorageLocationId="StorageLocation.Id"
+            StorageLocationId="@(StorageLocation?.Id ?? Guid.Empty)"
             UploadType="UploadType.Import"
             OnUploadError="OnUploadError">
             <Text>
@@ -189,7 +189,7 @@ else if (_stage == ImportStage.Failed)
         ImportContext.OnImportStatusUpdate.EventRaised += ImportStatusUpdate;
         ImportContext.OnImportError.EventRaised += ImportError;
 
-        StorageLocation = await StorageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
+        StorageLocation = await StorageLocationService.DefaultAsync(StorageLocationType.Archive) ?? StorageLocation;
 
         // If a pre-uploaded object key was provided, skip the upload stage.
         if (!string.IsNullOrWhiteSpace(Options.PreUploadedObjectKey))

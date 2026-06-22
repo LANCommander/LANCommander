@@ -4,6 +4,7 @@
 @using LANCommander.UI.Services
 @using Microsoft.Extensions.Options
 @inject ArchiveService ArchiveService
+@inject StorageLocationService StorageLocationService
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
 @inject ConfirmService ConfirmService
@@ -13,6 +14,9 @@
 @{
     RenderFragment Footer =
     @<Template>
+        <Tooltip Title="Moves the selected local file instead of copy">
+            <Checkbox @bind-Checked="MoveLocalFile" Disabled="@(Status != "")">Move</Checkbox>
+        </Tooltip>
         <FilePickerButton EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".zip"))"
                           OnSelected="OnLocalFileSelected"
                           Root="@RootPath"
@@ -75,6 +79,8 @@
     string Filename;
 
     string Status = "";
+
+    bool MoveLocalFile = false;
 
     private async Task Start()
     {
@@ -195,6 +201,9 @@
                 Archive.ToolId = ToolId;
         }
 
+        if (Archive.StorageLocation == null)
+            Archive.StorageLocation = await StorageLocationService.DefaultAsync(StorageLocationType.Archive) ?? new StorageLocation();
+
         Uploading = false;
         Visible = true;
 
@@ -216,7 +225,7 @@
     {
         try
         {
-            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, Archive.StorageLocation.Id);
+            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, Archive.StorageLocation.Id, MoveLocalFile);
 
             // For local files, run the completion logic directly.
             var gameId = Archive.GameId;

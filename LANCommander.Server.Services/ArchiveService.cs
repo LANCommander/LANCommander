@@ -189,7 +189,7 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<Guid> CopyFromLocalFileAsync(string path, Guid storageLocationId)
+        public async Task<Guid> CopyFromLocalFileAsync(string path, Guid storageLocationId, bool move = false)
         {
             var storageLocation = await storageLocationService.GetAsync(storageLocationId);
 
@@ -212,7 +212,23 @@ namespace LANCommander.Server.Services
             if (!string.IsNullOrEmpty(archiveDirectory) && !Directory.Exists(archiveDirectory))
                 Directory.CreateDirectory(archiveDirectory);
 
-            File.Copy(path, archivePath, true);
+            if (move)
+            {
+                try
+                {
+                    File.Move(path, archivePath, true);
+                }
+                catch (IOException ex)
+                {
+                    _logger.LogInformation(ex, "Could not move local file from {SourcePath} to {DestinationPath}, falling back to copy", path, archivePath);
+
+                    File.Copy(path, archivePath, true);
+                }
+            }
+            else
+            {
+                File.Copy(path, archivePath, true);
+            }
 
             return Guid.Parse(archive.ObjectKey);
         }

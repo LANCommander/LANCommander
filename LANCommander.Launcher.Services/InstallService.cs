@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
+using Microsoft.EntityFrameworkCore;
 using Game = LANCommander.Launcher.Data.Models.Game;
 using Tool = LANCommander.Launcher.Data.Models.Tool;
 
@@ -237,6 +238,9 @@ namespace LANCommander.Launcher.Services
                                 a => a.Id,
                                 a => a.Archives?.OrderByDescending(ar => ar.CreatedOn).FirstOrDefault()?.Version);
                         }
+
+                        if (planItem.Type == InstallPlanItemType.Game)
+                            ((InstallQueueGame)queueItem).ToolIds = toolIds ?? [];
 
                         // Flag as update if game is already installed with a different version
                         if (game.Installed && !string.IsNullOrWhiteSpace(queueItem.Version)
@@ -594,6 +598,32 @@ namespace LANCommander.Launcher.Services
                             var uninstallResult = await _gameClient.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
                             var installResult = await _gameClient.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
                             await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
+
+                            // Uninstall any tools that were deselected. Selected tools are installed
+                            // via their own queue items, so we only handle removal here.
+                            var selectedToolIds = queueItem.ToolIds ?? [];
+                            var toolsToRemove = await _toolService
+                                .Query(t => t.Installed && t.Games.Any(g => g.Id == localGame.Id))
+                                .ToListAsync();
+
+                            foreach (var localTool in toolsToRemove.Where(t => !selectedToolIds.Contains(t.Id)))
+                            {
+                                try
+                                {
+                                    await _toolClient.UninstallAsync(localGame.InstallDirectory, localTool.Id);
+
+                                    localTool.Installed = false;
+                                    localTool.InstallDirectory = null;
+                                    localTool.InstalledVersion = null;
+                                    localTool.InstalledOn = null;
+
+                                    await _toolService.UpdateAsync(localTool);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", localTool.Id, localGame.Id);
+                                }
+                            }
 
                             UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
                             UpdateAddonStates(queueItem, localGame);

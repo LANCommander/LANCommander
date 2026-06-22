@@ -54,7 +54,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}")
+                .UseRoute($"/api/Tools/{id}/Manifest")
                 .GetAsync<SDK.Models.Manifest.Tool>();
         }
         
@@ -120,6 +120,16 @@ namespace LANCommander.SDK.Services
                 ReportsProgress = true,
             });
 
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteManifest,
+                Title = "Write manifest",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = true,
+            });
+
             if (tool.Scripts != null && tool.Scripts.Any())
             {
                 toolItem.Tasks.Add(new InstallTaskDefinition
@@ -175,6 +185,11 @@ namespace LANCommander.SDK.Services
                             installResult.InstallDirectory = result.Directory;
                             break;
 
+                        case InstallTaskType.WriteManifest:
+                            var manifest = await GetManifestAsync(tool.Id);
+                            await ManifestHelper.WriteAsync(manifest, planItem.InstallDirectory);
+                            break;
+
                         case InstallTaskType.RunInstallScript:
                             await scriptClient.Tool_RunInstallScriptAsync(planItem.InstallDirectory, tool.Id);
                             break;
@@ -200,6 +215,59 @@ namespace LANCommander.SDK.Services
             }
 
             return installResult;
+        }
+
+        public async Task UninstallAsync(string installDirectory, Guid toolId)
+        {
+            logger?.LogTrace("Uninstalling tool {ToolId} from {InstallDirectory}", toolId, installDirectory);
+
+            try
+            {
+                await scriptClient.Tool_RunUninstallScriptAsync(installDirectory, toolId);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not run uninstall script for tool {ToolId}", toolId);
+            }
+
+            var fileListPath = GameClient.GetMetadataFilePath(installDirectory, toolId, "FileList.txt");
+
+            if (File.Exists(fileListPath))
+            {
+                var fileList = await File.ReadAllLinesAsync(fileListPath);
+                var files = fileList.Select(l => l.Split('|').FirstOrDefault()?.Trim());
+
+                foreach (var file in files.Where(f => !string.IsNullOrWhiteSpace(f) && !f.EndsWith("/")))
+                {
+                    var localPath = Path.Combine(installDirectory, file);
+
+                    try
+                    {
+                        if (File.Exists(localPath))
+                            File.Delete(localPath);
+
+                        logger?.LogTrace("Deleted tool file {LocalPath}", localPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not remove tool file {LocalPath}", localPath);
+                    }
+                }
+            }
+
+            var metadataPath = GameClient.GetMetadataDirectoryPath(installDirectory, toolId);
+
+            if (Directory.Exists(metadataPath))
+            {
+                try
+                {
+                    Directory.Delete(metadataPath, true);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Could not remove tool metadata directory {MetadataPath}", metadataPath);
+                }
+            }
         }
 
         public async Task InstallAsync(Game game)

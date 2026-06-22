@@ -62,6 +62,7 @@ namespace LANCommander.Server.Services
                 .Query(q =>
                 {
                     return q
+                        .Include(r => r.Actions)
                         .Include(r => r.Archives)
                         .Include(r => r.Scripts);
                 })

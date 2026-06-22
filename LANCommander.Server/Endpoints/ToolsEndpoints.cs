@@ -16,6 +16,7 @@ public static class ToolsEndpoints
 
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
+        group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync);
         group.MapPost("/Import/{objectKey:guid}", ImportAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
@@ -46,7 +47,19 @@ public static class ToolsEndpoints
 
         return TypedResults.Ok(mapper.Map<SDK.Models.Tool>(tool));
     }
-    
+
+    internal static async Task<IResult> GetManifestByIdAsync(
+        Guid id,
+        [FromServices] ToolService toolService)
+    {
+        var manifest = await toolService.GetManifestAsync(id);
+
+        if (manifest == null)
+            return TypedResults.NotFound();
+
+        return TypedResults.Ok(manifest);
+    }
+
     internal static async Task<IResult> GetScriptsByIdAsync(
         [FromServices] ScriptService scriptService,
         [FromServices] IFusionCache cache,

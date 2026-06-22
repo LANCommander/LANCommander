@@ -162,6 +162,66 @@ public partial class ScriptClient
         return result;
     }
     
+    public async Task<int> Tool_RunUninstallScriptAsync(string installDirectory, Guid toolId)
+    {
+        int result = default;
+
+        var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
+
+        var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.Uninstall);
+
+        try
+        {
+            if (Path.Exists(path))
+            {
+                using (var op = logger.BeginOperation("Executing uninstall script"))
+                {
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.Uninstall);
+
+                    script.AddVariable("InstallDirectory", installDirectory);
+                    script.AddVariable("ToolManifest", toolManifest);
+                    script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
+                    script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+
+                    try
+                    {
+                        op
+                            .Enrich("InstallDirectory", installDirectory)
+                            .Enrich("ToolManifestPath", ManifestHelper.GetPath(installDirectory, toolId))
+                            .Enrich("ScriptPath", path)
+                            .Enrich("ToolName", toolManifest.Name)
+                            .Enrich("ToolId", toolManifest.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
+
+                    script.UseWorkingDirectory(extractionPath);
+                    script.UseFile(path);
+
+                    if (Debug)
+                        script.EnableDebug();
+
+                    var handled = await RunScriptExternallyAsync(script);
+
+                    if (!handled)
+                        result = await script.ExecuteAsync<int>();
+
+                    op.Complete();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Uninstall script");
+        }
+
+        return result;
+    }
+
     public async Task<int> Tool_RunBeforeStartScriptAsync(string installDirectory, Guid toolId)
     {
         int result = default;

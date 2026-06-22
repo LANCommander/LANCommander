@@ -212,6 +212,32 @@ namespace LANCommander.SDK.Services
                     .ToList();
             }
 
+            // Merge in actions from tools that are actually installed. Tool actions are persisted to
+            // the game's install directory (its manifest) only when the tool is installed, so the
+            // presence of the tool manifest on disk gates whether its actions appear.
+            var mainManifest = manifests.FirstOrDefault(m => m.Id == id);
+
+            if (mainManifest?.Tools != null)
+            {
+                foreach (var tool in mainManifest.Tools)
+                {
+                    if (!ManifestHelper.Exists(installDirectory, tool.Id))
+                        continue;
+
+                    try
+                    {
+                        var toolManifest = await ManifestHelper.ReadAsync<Models.Manifest.Tool>(installDirectory, tool.Id);
+
+                        if (toolManifest?.Actions != null)
+                            actions.AddRange(toolManifest.Actions);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not load actions from installed tool {ToolId}", tool.Id);
+                    }
+                }
+            }
+
             if (manifests.Any(m => m.MultiplayerModes?.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
             {
                 var primaryAction = actions.First(a => a.IsPrimaryAction);
@@ -1050,7 +1076,7 @@ namespace LANCommander.SDK.Services
                 foreach (var toolId in toolIds)
                 {
                     var tool = await toolClient.GetAsync(toolId);
-                    var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, settingsProvider.CurrentValue.Tools.InstallDirectory);
+                    var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
 
                     foreach (var toolPlanItem in toolPlan.Items)
                     {

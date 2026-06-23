@@ -181,8 +181,12 @@ public partial class MainWindowViewModel : ViewModelBase
             
             if (serverOnline)
                 await LoginViewModel.LoadAuthenticationProvidersAsync();
-            
+
             CurrentView = LoginViewModel;
+
+            if (serverOnline)
+                await LoginViewModel.TryAutoRedirectToProviderAsync();
+
             return;
         }
         
@@ -196,6 +200,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LoginViewModel.IsServerOffline = false;
         await LoginViewModel.LoadAuthenticationProvidersAsync();
         CurrentView = LoginViewModel;
+        await LoginViewModel.TryAutoRedirectToProviderAsync();
     }
 
     private async void OnLoginSucceeded(object? sender, EventArgs e)

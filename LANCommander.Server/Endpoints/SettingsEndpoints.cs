@@ -32,6 +32,7 @@ public static class SettingsEndpoints
             Authentication = new
             {
                 AllowRegistration = settingsProvider.CurrentValue.Server.Authentication.AllowRegistration,
+                AutoRedirectToProvider = settingsProvider.CurrentValue.Server.Authentication.AutoRedirectToProvider,
             }
         };
 

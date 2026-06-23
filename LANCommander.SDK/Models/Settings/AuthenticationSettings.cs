@@ -11,4 +11,5 @@ public class AuthenticationSettings
     public AuthToken Token { get; set; }
     public bool OfflineModeEnabled { get; set; }
     public bool AllowRegistration { get; set; } = true;
+    public bool AutoRedirectToProvider { get; set; } = false;
 }

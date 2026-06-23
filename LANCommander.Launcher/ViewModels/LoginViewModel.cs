@@ -52,6 +52,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isServerOffline;
 
+    [ObservableProperty]
+    private bool _autoRedirectToProvider;
+
     public ObservableCollection<AuthenticationProvider> AuthenticationProviders { get; } = new();
 
     public event EventHandler? LoginSucceeded;
@@ -94,6 +97,18 @@ public partial class LoginViewModel : ViewModelBase
 
         if (!AllowRegistration && IsRegistering)
             IsRegistering = false;
+
+        AutoRedirectToProvider = await _authenticationClient.GetAutoRedirectToProviderAsync();
+    }
+
+    public async Task TryAutoRedirectToProviderAsync()
+    {
+        if (IsServerOffline || !AutoRedirectToProvider || IsLoading)
+            return;
+
+        // Mirror server behavior: only auto-challenge when exactly one provider exists.
+        if (AuthenticationProviders.Count == 1)
+            await LoginWithProviderAsync(AuthenticationProviders[0]);
     }
 
     [RelayCommand]

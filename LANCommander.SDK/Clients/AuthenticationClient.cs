@@ -210,6 +210,24 @@ public class AuthenticationClient(
         }
     }
 
+    public async Task<bool> GetAutoRedirectToProviderAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Authentication?.AutoRedirectToProvider ?? false;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to no auto-redirect
+            return false;
+        }
+    }
+
     public Uri GetAuthenticationProviderLoginUrl(string provider)
     {
         return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");

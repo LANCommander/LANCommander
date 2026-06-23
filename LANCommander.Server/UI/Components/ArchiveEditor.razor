@@ -7,8 +7,11 @@
 @inject NavigationManager Navigator
 @inject ModalService ModalService
 @inject IMessageService MessageService
+@inject ConfirmService ConfirmService
 @inject IJSRuntime JS
 @inject ILogger<ArchiveEditor> Logger
+@using Hangfire
+@using LANCommander.Server.Jobs.Background
 
 <DataTable
     @ref="_table"
@@ -45,6 +48,10 @@
                 <Button Icon="@IconType.Outline.Sync" Type="@ButtonType.Text" OnClick="() => RecalculateFileSize(context)"/>
             </Tooltip>
 
+            <Tooltip Title="Check Streaming Compatibility">
+                <Button Icon="@IconType.Outline.Safety" Type="@ButtonType.Text" OnClick="() => CheckStreamingCompatibility(context)" Loading="_checking"/>
+            </Tooltip>
+
             <Tooltip Title="Download">
                 <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                     <Icon Type="@IconType.Outline.Download"/>
@@ -74,6 +81,7 @@
 
     bool _browsing;
     bool _packaging;
+    bool _checking;
     bool _hasPackageScript;
 
     protected override async Task OnInitializedAsync()
@@ -181,6 +189,47 @@
             MessageService.Success("File sizes recalculated!");
         else
             MessageService.Error("Recalculating file sizes failed!");
+    }
+
+    private async Task CheckStreamingCompatibility(Archive archive)
+    {
+        _checking = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var report = await ArchiveService.InspectStreamingCompatibilityAsync(archive.Id);
+
+            if (report.IsStreamingSafe)
+            {
+                MessageService.Success("This archive is streaming-safe and can be installed by launchers.");
+                return;
+            }
+
+            var count = report.ProblemEntries.Count;
+
+            var result = await ConfirmService.Show(
+                $"This archive has {count} entr{(count == 1 ? "y" : "ies")} that launchers cannot extract reliably because they are stored uncompressed with a streaming data descriptor. Repack it into a streaming-safe layout? This runs in the background and may take a while for large archives.",
+                "Repack Archive?",
+                ConfirmButtons.YesNo,
+                ConfirmIcon.Warning);
+
+            if (result == ConfirmResult.Yes)
+            {
+                BackgroundJob.Enqueue<RepackArchiveBackgroundJob>(x => x.Execute(archive.Id));
+                MessageService.Info("Repack queued. The archive will be rewritten in the background.");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not inspect the archive.");
+            Logger.LogError(ex, "Could not inspect archive {ArchiveId} for streaming compatibility", archive.Id);
+        }
+        finally
+        {
+            _checking = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task ArchiveUploaded(Guid archiveId)

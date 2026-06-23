@@ -30,7 +30,7 @@ public class RoleManagementTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -41,8 +41,7 @@ public class RoleManagementTests : IAsyncLifetime
         var rolesPage = new RolesPage(_page);
         await rolesPage.NavigateAsync();
 
-        Assert.True(await rolesPage.IsRoleVisibleAsync("Administrator"),
-            "Administrator role should be visible in the roles table");
+        await Assertions.Expect(rolesPage.Role("Administrator")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -53,8 +52,7 @@ public class RoleManagementTests : IAsyncLifetime
 
         await rolesPage.AddRoleAsync("TestRole");
 
-        Assert.True(await rolesPage.IsRoleVisibleAsync("TestRole"),
-            "Newly added TestRole should appear in the roles table");
+        await Assertions.Expect(rolesPage.Role("TestRole")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -65,14 +63,12 @@ public class RoleManagementTests : IAsyncLifetime
 
         // Add a role to delete
         await rolesPage.AddRoleAsync("RoleToDelete");
-        Assert.True(await rolesPage.IsRoleVisibleAsync("RoleToDelete"),
-            "RoleToDelete should be visible before deletion");
+        await Assertions.Expect(rolesPage.Role("RoleToDelete")).ToBeVisibleAsync();
 
         // Delete the role
         await rolesPage.DeleteRoleAsync("RoleToDelete");
 
-        Assert.False(await rolesPage.IsRoleVisibleAsync("RoleToDelete"),
-            "RoleToDelete should no longer appear after deletion");
+        await Assertions.Expect(rolesPage.Role("RoleToDelete")).ToBeHiddenAsync();
     }
 
     [Fact]

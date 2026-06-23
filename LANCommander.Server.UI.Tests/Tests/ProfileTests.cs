@@ -6,7 +6,7 @@ namespace LANCommander.Server.UI.Tests.Tests;
 
 /// <summary>
 /// Tests for the user profile and change password pages.
-/// Uses IClassFixture to share the server instance across all tests in this class.
+/// Uses the shared "Server" collection fixture so the server instance is shared across the collection.
 /// </summary>
 [Collection("Server")]
 public class ProfileTests : IAsyncLifetime
@@ -29,7 +29,7 @@ public class ProfileTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -51,12 +51,10 @@ public class ProfileTests : IAsyncLifetime
         var profilePage = new ProfilePage(_page);
         await profilePage.NavigateAsync();
 
-        Assert.True(await profilePage.HasFieldAsync("Username"), "Username field should be visible");
-        Assert.True(await profilePage.HasFieldAsync("Alias"), "Alias field should be visible");
-        Assert.True(await profilePage.HasFieldAsync("Email Address"), "Email Address field should be visible");
-        Assert.True(
-            await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).IsVisibleAsync(),
-            "Save button should be visible");
+        await Assertions.Expect(profilePage.Field("Username")).ToBeVisibleAsync();
+        await Assertions.Expect(profilePage.Field("Alias")).ToBeVisibleAsync();
+        await Assertions.Expect(profilePage.Field("Email Address")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Save" })).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -88,12 +86,10 @@ public class ProfileTests : IAsyncLifetime
         var profilePage = new ProfilePage(_page);
         await profilePage.NavigateToChangePasswordAsync();
 
-        Assert.True(await profilePage.HasPasswordFieldAsync("Current Password"), "Current Password field should be visible");
-        Assert.True(await profilePage.HasPasswordFieldAsync("New Password"), "New Password field should be visible");
-        Assert.True(await profilePage.HasPasswordFieldAsync("Confirm Password"), "Confirm Password field should be visible");
-        Assert.True(
-            await _page.GetByRole(AriaRole.Button, new() { Name = "Change" }).IsVisibleAsync(),
-            "Change button should be visible");
+        await Assertions.Expect(profilePage.Field("Current Password")).ToBeVisibleAsync();
+        await Assertions.Expect(profilePage.Field("New Password")).ToBeVisibleAsync();
+        await Assertions.Expect(profilePage.Field("Confirm Password")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Change" })).ToBeVisibleAsync();
     }
 
     [Fact]

@@ -29,7 +29,7 @@ public class GameEditTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }

@@ -49,11 +49,12 @@ public class UsersPage
     }
 
     /// <summary>
-    /// Checks whether a given username appears in a table row.
+    /// Locator for a table row containing the given username.
+    /// Use with web-first assertions, e.g. Expect(page.User("admin")).ToBeVisibleAsync().
     /// </summary>
-    public async Task<bool> IsUserVisibleAsync(string username)
+    public ILocator User(string username)
     {
-        return await _page.Locator("tr.ant-table-row", new() { HasTextString = username }).CountAsync() > 0;
+        return _page.Locator("tr.ant-table-row", new() { HasTextString = username });
     }
 
     /// <summary>

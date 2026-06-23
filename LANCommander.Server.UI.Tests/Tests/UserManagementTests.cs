@@ -28,7 +28,7 @@ public class UserManagementTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -39,7 +39,7 @@ public class UserManagementTests : IAsyncLifetime
         var usersPage = new UsersPage(_page);
         await usersPage.NavigateAsync();
 
-        Assert.True(await usersPage.IsUserVisibleAsync(TestConstants.AdminUserName));
+        await Assertions.Expect(usersPage.User(TestConstants.AdminUserName)).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class UserManagementTests : IAsyncLifetime
 
         await usersPage.SearchUsersAsync(TestConstants.AdminUserName);
 
-        Assert.True(await usersPage.IsUserVisibleAsync(TestConstants.AdminUserName));
+        await Assertions.Expect(usersPage.User(TestConstants.AdminUserName)).ToBeVisibleAsync();
         // After searching for "admin", the admin user must be in the results
         var count = await usersPage.GetUserCountAsync();
         Assert.True(count >= 1, $"Expected at least 1 user matching 'admin', got {count}");
@@ -96,7 +96,7 @@ public class UserManagementTests : IAsyncLifetime
         var usersPage = new UsersPage(_page);
         await usersPage.NavigateAsync();
 
-        Assert.True(await usersPage.IsUserVisibleAsync(testUserName));
+        await Assertions.Expect(usersPage.User(testUserName)).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -129,12 +129,12 @@ public class UserManagementTests : IAsyncLifetime
         await usersPage.NavigateAsync();
 
         // Verify user exists before deletion
-        Assert.True(await usersPage.IsUserVisibleAsync(testUserName));
+        await Assertions.Expect(usersPage.User(testUserName)).ToBeVisibleAsync();
 
         // Delete the user
         await usersPage.DeleteUserAsync(testUserName);
 
         // Verify user is gone
-        Assert.False(await usersPage.IsUserVisibleAsync(testUserName));
+        await Assertions.Expect(usersPage.User(testUserName)).ToBeHiddenAsync();
     }
 }

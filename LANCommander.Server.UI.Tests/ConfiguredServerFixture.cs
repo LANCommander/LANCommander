@@ -11,8 +11,8 @@ namespace LANCommander.Server.UI.Tests;
 
 /// <summary>
 /// Shared fixture that starts the server via WebApplicationFactory, programmatically creates
-/// the admin user, and makes it available for all tests in a class.
-/// Used via IClassFixture&lt;ConfiguredServerFixture&gt;.
+/// the admin user, and makes it available for all tests in the collection.
+/// Shared across the "Server" collection via ICollectionFixture&lt;ConfiguredServerFixture&gt;.
 /// </summary>
 public class ConfiguredServerFixture : IAsyncLifetime
 {

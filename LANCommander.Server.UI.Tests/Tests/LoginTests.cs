@@ -7,7 +7,7 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// <summary>
 /// Tests for the login flow against a server that has already been configured.
 /// These tests assume the server is running with a known admin user.
-/// Uses IClassFixture to start the server once for all tests in this class.
+/// Uses the shared "Server" collection fixture so the server starts once for the whole collection.
 /// </summary>
 [Collection("Server")]
 public class LoginTests : IAsyncLifetime
@@ -30,7 +30,7 @@ public class LoginTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -54,7 +54,7 @@ public class LoginTests : IAsyncLifetime
 
         Assert.True(await loginPage.IsDisplayedAsync());
         Assert.True(await loginPage.HasRegisterLinkAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Login" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Login" })).ToBeVisibleAsync();
     }
 
     [Fact]

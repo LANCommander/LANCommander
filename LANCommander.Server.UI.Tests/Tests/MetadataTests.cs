@@ -31,7 +31,7 @@ public class MetadataTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -54,7 +54,7 @@ public class MetadataTests : IAsyncLifetime
         await tagsPage.NavigateAsync();
 
         Assert.Equal(0, await tagsPage.GetItemCountAsync());
-        Assert.True(await _page.GetByText("No data").IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("No data")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class MetadataTests : IAsyncLifetime
 
         await tagsPage.AddItemAsync("Action");
 
-        Assert.True(await tagsPage.IsItemVisibleAsync("Action"));
+        await Assertions.Expect(tagsPage.Item("Action")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -75,10 +75,10 @@ public class MetadataTests : IAsyncLifetime
         await tagsPage.NavigateAsync();
 
         await tagsPage.AddItemAsync("Puzzle");
-        Assert.True(await tagsPage.IsItemVisibleAsync("Puzzle"));
+        await Assertions.Expect(tagsPage.Item("Puzzle")).ToBeVisibleAsync();
 
         await tagsPage.EditItemAsync("Puzzle", "Puzzle Games");
-        Assert.True(await tagsPage.IsItemVisibleAsync("Puzzle Games"));
+        await Assertions.Expect(tagsPage.Item("Puzzle Games")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -88,10 +88,10 @@ public class MetadataTests : IAsyncLifetime
         await tagsPage.NavigateAsync();
 
         await tagsPage.AddItemAsync("Temporary");
-        Assert.True(await tagsPage.IsItemVisibleAsync("Temporary"));
+        await Assertions.Expect(tagsPage.Item("Temporary")).ToBeVisibleAsync();
 
         await tagsPage.DeleteItemAsync("Temporary");
-        Assert.False(await tagsPage.IsItemVisibleAsync("Temporary"));
+        await Assertions.Expect(tagsPage.Item("Temporary")).ToBeHiddenAsync();
     }
 
     // --- Genres ---
@@ -104,7 +104,7 @@ public class MetadataTests : IAsyncLifetime
 
         await genresPage.AddItemAsync("RPG");
 
-        Assert.True(await genresPage.IsItemVisibleAsync("RPG"));
+        await Assertions.Expect(genresPage.Item("RPG")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -114,10 +114,10 @@ public class MetadataTests : IAsyncLifetime
         await genresPage.NavigateAsync();
 
         await genresPage.AddItemAsync("Strategy");
-        Assert.True(await genresPage.IsItemVisibleAsync("Strategy"));
+        await Assertions.Expect(genresPage.Item("Strategy")).ToBeVisibleAsync();
 
         await genresPage.DeleteItemAsync("Strategy");
-        Assert.False(await genresPage.IsItemVisibleAsync("Strategy"));
+        await Assertions.Expect(genresPage.Item("Strategy")).ToBeHiddenAsync();
     }
 
     // --- Platforms ---
@@ -130,7 +130,7 @@ public class MetadataTests : IAsyncLifetime
 
         await platformsPage.AddItemAsync("Windows");
 
-        Assert.True(await platformsPage.IsItemVisibleAsync("Windows"));
+        await Assertions.Expect(platformsPage.Item("Windows")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -140,9 +140,9 @@ public class MetadataTests : IAsyncLifetime
         await platformsPage.NavigateAsync();
 
         await platformsPage.AddItemAsync("Linux");
-        Assert.True(await platformsPage.IsItemVisibleAsync("Linux"));
+        await Assertions.Expect(platformsPage.Item("Linux")).ToBeVisibleAsync();
 
         await platformsPage.DeleteItemAsync("Linux");
-        Assert.False(await platformsPage.IsItemVisibleAsync("Linux"));
+        await Assertions.Expect(platformsPage.Item("Linux")).ToBeHiddenAsync();
     }
 }

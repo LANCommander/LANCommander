@@ -29,7 +29,7 @@ public class SettingsTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -41,9 +41,9 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToGeneralAsync();
 
         Assert.Contains("/Settings/General", _page.Url);
-        Assert.True(await _page.GetByText("Database Provider").IsVisibleAsync());
-        Assert.True(await _page.GetByText("Port").First.IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Database Provider")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Port").First).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Save" })).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class SettingsTests : IAsyncLifetime
         // The admin user created during fixture setup should appear in the table
         var adminCell = _page.Locator("table").GetByText(TestConstants.AdminUserName).First;
         await adminCell.WaitForAsync(new() { Timeout = 15000 });
-        Assert.True(await adminCell.IsVisibleAsync());
+        await Assertions.Expect(adminCell).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -68,12 +68,12 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToRolesAsync();
 
         Assert.Contains("/Settings/Roles", _page.Url);
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Add Role" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Add Role" })).ToBeVisibleAsync();
         // Wait for the data table to render then check for the Administrator role
         await _page.Locator("table").First.WaitForAsync(new() { Timeout = 15000 });
         var adminRole = _page.Locator("table").GetByText("Administrator");
         await adminRole.WaitForAsync(new() { Timeout = 15000 });
-        Assert.True(await adminRole.IsVisibleAsync());
+        await Assertions.Expect(adminRole).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToAuthenticationAsync();
 
         Assert.Contains("/Settings/Authentication", _page.Url);
-        Assert.True(await _page.GetByText("Authentication").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Authentication").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToArchivesAsync();
 
         Assert.Contains("/Settings/Archives", _page.Url);
-        Assert.True(await _page.GetByText("Archives").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Archives").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToMediaAsync();
 
         Assert.Contains("/Settings/Media", _page.Url);
-        Assert.True(await _page.GetByText("Media").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Media").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToBeaconAsync();
 
         Assert.Contains("/Settings/Beacon", _page.Url);
-        Assert.True(await _page.GetByText("Beacon").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Beacon").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToUpdatesAsync();
 
         Assert.Contains("/Settings/Updates", _page.Url);
-        Assert.True(await _page.GetByText("Updates").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Updates").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -134,6 +134,6 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToAppearanceAsync();
 
         Assert.Contains("/Settings/Appearance", _page.Url);
-        Assert.True(await _page.GetByText("Appearance").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Appearance").First).ToBeVisibleAsync();
     }
 }

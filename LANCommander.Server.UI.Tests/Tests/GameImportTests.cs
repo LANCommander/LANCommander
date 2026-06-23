@@ -32,7 +32,7 @@ public class GameImportTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -44,8 +44,8 @@ public class GameImportTests : IAsyncLifetime
         await gamesPage.NavigateAsync();
 
         // Verify the page structure is correct (table area and buttons are present)
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Add Game" }).IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Import" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Add Game" })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Import" })).ToBeVisibleAsync();
 
         // The table should render (with "No data" if empty, or rows if a prior test imported)
         var count = await gamesPage.GetGameCountAsync();
@@ -59,7 +59,7 @@ public class GameImportTests : IAsyncLifetime
         await gamesPage.NavigateAsync();
 
         var importButton = _page.GetByRole(AriaRole.Button, new() { Name = "Import" });
-        Assert.True(await importButton.IsVisibleAsync());
+        await Assertions.Expect(importButton).ToBeVisibleAsync();
     }
 
     [Fact]

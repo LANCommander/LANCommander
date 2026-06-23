@@ -44,11 +44,14 @@ public class MetadataPage
         await _page.WaitForSelectorAsync(".ant-modal", new() { State = WaitForSelectorState.Hidden, Timeout = 5000 });
     }
 
-    public async Task<bool> IsItemVisibleAsync(string name)
+    /// <summary>
+    /// Locator for an item row's name cell within the table body.
+    /// Use with web-first assertions, e.g. Expect(page.Item("Action")).ToBeVisibleAsync().
+    /// </summary>
+    public ILocator Item(string name)
     {
         // Look for the name text within the table body
-        var cell = _page.Locator(".ant-table-tbody").GetByText(name, new() { Exact = true });
-        return await cell.IsVisibleAsync();
+        return _page.Locator(".ant-table-tbody").GetByText(name, new() { Exact = true });
     }
 
     public async Task EditItemAsync(string oldName, string newName)

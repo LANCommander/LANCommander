@@ -5,8 +5,10 @@ using Xunit.Abstractions;
 namespace LANCommander.Server.UI.Tests;
 
 /// <summary>
-/// Captures a full-page screenshot when a test fails.
-/// Screenshots are saved to a "Screenshots" directory that CI uploads as an artifact.
+/// Captures a full-page screenshot of the final page state at the end of each test.
+/// Screenshots are saved to a "Screenshots" directory that CI uploads as an artifact,
+/// making failures easy to diagnose. (xUnit v2 does not expose the test outcome to
+/// DisposeAsync, so we capture unconditionally and name each file after the test.)
 /// </summary>
 public static class ScreenshotHelper
 {
@@ -16,17 +18,14 @@ public static class ScreenshotHelper
         string.Empty);
 
     /// <summary>
-    /// Captures a screenshot of the current page state.
-    /// Call this in DisposeAsync — it extracts the test name from ITestOutputHelper.
+    /// Captures a screenshot of the current page state, named after the running test.
+    /// Call this from DisposeAsync — it extracts the test name from ITestOutputHelper.
     /// </summary>
-    public static async Task CaptureIfFailedAsync(IPage? page, ITestOutputHelper? output)
+    public static async Task CaptureAsync(IPage? page, ITestOutputHelper? output)
     {
         if (page == null || output == null)
             return;
 
-        // xUnit only writes to ITestOutputHelper when a test fails or produces output.
-        // We always capture since DisposeAsync doesn't know the test result,
-        // but name the file so it's easy to correlate.
         var testName = GetTestDisplayName(output) ?? $"Unknown_{Guid.NewGuid():N}";
 
         try

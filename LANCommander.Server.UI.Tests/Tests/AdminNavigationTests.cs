@@ -8,7 +8,7 @@ namespace LANCommander.Server.UI.Tests.Tests;
 /// Tests for navigating around key parts of the admin application.
 /// These tests verify that the main admin pages are accessible and render correctly
 /// after logging in as an administrator.
-/// Uses IClassFixture to start the server once for all tests in this class.
+/// Uses the shared "Server" collection fixture so the server starts once for the whole collection.
 /// </summary>
 [Collection("Server")]
 public class AdminNavigationTests : IAsyncLifetime
@@ -31,7 +31,7 @@ public class AdminNavigationTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -43,9 +43,9 @@ public class AdminNavigationTests : IAsyncLifetime
         Assert.True(await dashboard.IsDisplayedAsync());
 
         // Dashboard should show playtime charts
-        Assert.True(await _page.GetByText("Top 10 Total Playtime (By Player)").IsVisibleAsync());
-        Assert.True(await _page.GetByText("Top 10 Total Playtime (By Game)").IsVisibleAsync());
-        Assert.True(await _page.GetByText("Top Average Session Length (By Game)").IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Player)")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Game)")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Top Average Session Length (By Game)")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class AdminNavigationTests : IAsyncLifetime
         await dashboard.NavigateToGamesAsync();
 
         Assert.Contains("/Games", _page.Url);
-        Assert.True(await _page.GetByText("Games").First.IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Add Game" }).IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Button, new() { Name = "Import" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Games").First).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Add Game" })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Import" })).ToBeVisibleAsync();
         // Empty table should show "No data"
-        Assert.True(await _page.GetByText("No data").IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("No data")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class AdminNavigationTests : IAsyncLifetime
         await dashboard.NavigateToRedistributablesAsync();
 
         Assert.Contains("/Redistributables", _page.Url);
-        Assert.True(await _page.GetByText("Redistributables").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Redistributables").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class AdminNavigationTests : IAsyncLifetime
         await dashboard.NavigateToToolsAsync();
 
         Assert.Contains("/Tools", _page.Url);
-        Assert.True(await _page.GetByText("Tools").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Tools").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class AdminNavigationTests : IAsyncLifetime
         await dashboard.NavigateToServersAsync();
 
         Assert.Contains("/Servers", _page.Url);
-        Assert.True(await _page.GetByText("Servers").First.IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Servers").First).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class AdminNavigationTests : IAsyncLifetime
 
         Assert.Contains("/Settings/General", _page.Url);
         // Verify settings-specific content is visible (Database Provider is unique to General settings)
-        Assert.True(await _page.GetByText("Database Provider").IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Database Provider")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -151,9 +151,7 @@ public class AdminNavigationTests : IAsyncLifetime
 
         foreach (var setting in expectedSettings)
         {
-            Assert.True(
-                await _page.GetByRole(AriaRole.Link, new() { Name = setting, Exact = true }).IsVisibleAsync(),
-                $"Settings menu should contain '{setting}'");
+            await Assertions.Expect(_page.GetByRole(AriaRole.Link, new() { Name = setting, Exact = true })).ToBeVisibleAsync();
         }
     }
 }

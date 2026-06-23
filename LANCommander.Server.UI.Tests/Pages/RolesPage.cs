@@ -47,12 +47,12 @@ public class RolesPage
     }
 
     /// <summary>
-    /// Check whether a role with the given name appears in the table.
+    /// Locator for a role row with the given name.
+    /// Use with web-first assertions, e.g. Expect(page.Role("Administrator")).ToBeVisibleAsync().
     /// </summary>
-    public async Task<bool> IsRoleVisibleAsync(string name)
+    public ILocator Role(string name)
     {
-        var row = _page.Locator("table tbody tr").Filter(new() { HasText = name });
-        return await row.CountAsync() > 0;
+        return _page.Locator("table tbody tr").Filter(new() { HasText = name });
     }
 
     /// <summary>

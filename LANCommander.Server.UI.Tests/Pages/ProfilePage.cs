@@ -28,11 +28,14 @@ public class ProfilePage
         return await input.InputValueAsync();
     }
 
-    public async Task<bool> HasFieldAsync(string label)
+    /// <summary>
+    /// Locator for a form field (text or password) with the given label.
+    /// Use with web-first assertions, e.g. Expect(page.Field("Username")).ToBeVisibleAsync().
+    /// </summary>
+    public ILocator Field(string label)
     {
-        return await _page.Locator(".ant-form-item")
-            .Filter(new() { HasText = label })
-            .IsVisibleAsync();
+        return _page.Locator(".ant-form-item")
+            .Filter(new() { HasText = label });
     }
 
     public async Task SetAliasAsync(string alias)
@@ -67,13 +70,6 @@ public class ProfilePage
     {
         await _page.GotoAsync("/Profile/ChangePassword");
         await _page.WaitForSelectorAsync("text=Change Password", new() { Timeout = 10000 });
-    }
-
-    public async Task<bool> HasPasswordFieldAsync(string label)
-    {
-        return await _page.Locator(".ant-form-item")
-            .Filter(new() { HasText = label })
-            .IsVisibleAsync();
     }
 
     /// <summary>

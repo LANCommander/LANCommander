@@ -30,7 +30,7 @@ public class FirstTimeSetupTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await ScreenshotHelper.CaptureIfFailedAsync(_page, _output);
+        await ScreenshotHelper.CaptureAsync(_page, _output);
         if (_page != null) await _page.CloseAsync();
         if (_context != null) await _context.DisposeAsync();
     }
@@ -54,11 +54,11 @@ public class FirstTimeSetupTests : IAsyncLifetime
         await setupPage.NavigateAsync();
 
         // Verify all 4 steps are visible in the wizard
-        Assert.True(await _page.GetByText("Database").First.IsVisibleAsync());
-        Assert.True(await _page.GetByText("Paths").IsVisibleAsync());
+        await Assertions.Expect(_page.GetByText("Database").First).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Paths")).ToBeVisibleAsync();
         // "Metadata" may be truncated in UI to "Metad" but the text node still exists
-        Assert.True(await _page.Locator("text=/Metad/").First.IsVisibleAsync());
-        Assert.True(await _page.GetByText("Administrator").IsVisibleAsync());
+        await Assertions.Expect(_page.Locator("text=/Metad/").First).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Administrator")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -74,9 +74,9 @@ public class FirstTimeSetupTests : IAsyncLifetime
         await _page.WaitForSelectorAsync("[role='listbox']", new() { Timeout = 5000 });
 
         // Verify all expected providers are shown
-        Assert.True(await _page.GetByRole(AriaRole.Option, new() { Name = "SQLite" }).IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Option, new() { Name = "MySQL" }).IsVisibleAsync());
-        Assert.True(await _page.GetByRole(AriaRole.Option, new() { Name = "PostgreSQL" }).IsVisibleAsync());
+        await Assertions.Expect(_page.GetByRole(AriaRole.Option, new() { Name = "SQLite" })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Option, new() { Name = "MySQL" })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByRole(AriaRole.Option, new() { Name = "PostgreSQL" })).ToBeVisibleAsync();
     }
 
     [Fact(Skip = "Requires real database and file I/O - not supported with in-memory WebApplicationFactory")]

@@ -32,15 +32,18 @@ public partial class LoginViewModel : ViewModelBase
     private string _passwordConfirmation = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
     private bool _isRegistering;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
     private bool _allowRegistration = true;
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
     private bool _isLoading;
 
     [ObservableProperty]
@@ -53,9 +56,32 @@ public partial class LoginViewModel : ViewModelBase
     private bool _isServerOffline;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderSeparator))]
     private bool _autoRedirectToProvider;
 
     public ObservableCollection<AuthenticationProvider> AuthenticationProviders { get; } = new();
+
+    // When auto-redirect is enabled, the username/password login path is hidden entirely.
+    public bool ShowCredentialFields => !AutoRedirectToProvider;
+
+    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider;
+
+    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider;
+
+    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider;
+
+    // Hide provider buttons only in the case the launcher auto-redirects (auto-redirect on + exactly one provider).
+    public bool ShowProviderButtons => AutoRedirectToProvider
+        ? AuthenticationProviders.Count > 1
+        : AuthenticationProviders.Count >= 1;
+
+    // The "or" separator only makes sense when both credential fields and provider buttons are shown.
+    public bool ShowProviderSeparator => !AutoRedirectToProvider && ShowProviderButtons;
 
     public event EventHandler? LoginSucceeded;
     public event EventHandler? ChangeServerRequested;
@@ -70,6 +96,12 @@ public partial class LoginViewModel : ViewModelBase
         _authenticationService = authenticationService;
         _authenticationClient = authenticationClient;
         _settingsProvider = settingsProvider;
+
+        AuthenticationProviders.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ShowProviderButtons));
+            OnPropertyChanged(nameof(ShowProviderSeparator));
+        };
 
         ServerAddress = _connectionClient.GetServerAddress()?.ToString() ?? "Not connected";
     }

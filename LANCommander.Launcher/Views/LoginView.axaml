@@ -70,7 +70,7 @@
                     </Border>
                 </Grid>
 
-                <StackPanel Spacing="8">
+                <StackPanel Spacing="8" IsVisible="{Binding ShowCredentialFields}">
                     <TextBlock Text="Username" FontWeight="SemiBold" Foreground="White" />
                     <TextBox x:Name="UsernameTextBox"
                              Watermark="Enter your username"
@@ -83,7 +83,7 @@
                     </TextBox>
                 </StackPanel>
 
-                <StackPanel Spacing="8">
+                <StackPanel Spacing="8" IsVisible="{Binding ShowCredentialFields}">
                     <TextBlock Text="Password" FontWeight="SemiBold" Foreground="White" />
                     <TextBox Watermark="Enter your password"
                              Classes="Glass"
@@ -96,7 +96,7 @@
                     </TextBox>
                 </StackPanel>
 
-                <StackPanel Spacing="8" IsVisible="{Binding IsRegistering}">
+                <StackPanel Spacing="8" IsVisible="{Binding ShowPasswordConfirmation}">
                     <TextBlock Text="Confirm Password" FontWeight="SemiBold" Foreground="White" />
                     <TextBox Watermark="Confirm your password"
                              Classes="Glass"
@@ -109,7 +109,7 @@
                     </TextBox>
                 </StackPanel>
 
-                <Panel IsVisible="{Binding !IsLoading}">
+                <Panel IsVisible="{Binding ShowPrimaryButtons}">
                     <Button Command="{Binding LoginCommand}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
@@ -154,7 +154,7 @@
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand"
-                        IsVisible="{Binding AllowRegistration}"
+                        IsVisible="{Binding ShowRegisterToggle}"
                         IsEnabled="{Binding !IsLoading}">
                     <Panel>
                         <TextBlock Text="Don't have an account? Register"
@@ -173,8 +173,8 @@
                 </Button>
 
                 <StackPanel IsVisible="{Binding !IsRegistering}" Spacing="12">
-                    <StackPanel IsVisible="{Binding AuthenticationProviders.Count}" Spacing="12">
-                        <Grid ColumnDefinitions="*,Auto,*" Margin="0,4">
+                    <StackPanel IsVisible="{Binding ShowProviderButtons}" Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto,*" Margin="0,4" IsVisible="{Binding ShowProviderSeparator}">
                             <Separator Grid.Column="0" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Text="or" Foreground="White" Opacity="0.5" Margin="12,0" FontSize="12" />
                             <Separator Grid.Column="2" VerticalAlignment="Center" />

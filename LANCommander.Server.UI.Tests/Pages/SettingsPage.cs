@@ -39,7 +39,7 @@ public class SettingsPage
 
     public async Task NavigateToGeneralAsync()
     {
-        await NavigateToSettingsSubPageAsync("General", "General", "Database Provider");
+        await NavigateToSettingsSubPageAsync("General", "General", "Use SSL");
     }
 
     public async Task NavigateToUsersAsync()

@@ -41,7 +41,7 @@ public class SettingsTests : IAsyncLifetime
         await settings.NavigateToGeneralAsync();
 
         Assert.Contains("/Settings/General", _page.Url);
-        await Assertions.Expect(_page.GetByText("Database Provider")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Use SSL")).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByText("Port").First).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Save" })).ToBeVisibleAsync();
     }

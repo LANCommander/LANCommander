@@ -133,8 +133,8 @@ public class AdminNavigationTests : IAsyncLifetime
         await dashboard.NavigateToSettingsGeneralAsync();
 
         Assert.Contains("/Settings/General", _page.Url);
-        // Verify settings-specific content is visible (Database Provider is unique to General settings)
-        await Assertions.Expect(_page.GetByText("Database Provider")).ToBeVisibleAsync();
+        // Verify settings-specific content is visible ("Use SSL" is unique to General settings)
+        await Assertions.Expect(_page.GetByText("Use SSL")).ToBeVisibleAsync();
     }
 
     [Fact]

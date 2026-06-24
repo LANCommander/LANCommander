@@ -87,7 +87,7 @@ jobs:
               run: dotnet build LANCommander.Server.UI.Tests --no-restore --configuration Release
 
             - name: Install Playwright browsers
-              run: pwsh LANCommander.Server.UI.Tests/bin/Release/net9.0/playwright.ps1 install --with-deps chromium
+              run: pwsh LANCommander.Server.UI.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
             - name: Run UI tests
               run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults

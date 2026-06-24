@@ -39,7 +39,7 @@ public class AdminDashboardPage
         await _page.GetByRole(AriaRole.Link, new() { Name = "General" }).ClickAsync();
         await _page.WaitForURLAsync("**/Settings/General", new() { Timeout = 10000 });
         // Wait for Blazor to render the settings content
-        await _page.WaitForSelectorAsync("text=Database Provider", new() { Timeout = 10000 });
+        await _page.WaitForSelectorAsync("text=Use SSL", new() { Timeout = 10000 });
     }
 
     public async Task NavigateToRedistributablesAsync()

@@ -105,6 +105,12 @@ public class GamesPage
             await first.ClickAsync();
         }
 
+        // A background "Import Ready" notification (Duration=0, never auto-dismisses) is
+        // raised by the UploadTracker when the upload completes, even while this dialog is
+        // open. It overlays the modal's right-aligned Import button and intercepts the click,
+        // so dismiss any open notifications first.
+        await DismissNotificationsAsync();
+
         // Click the Import button inside the modal to start the import
         await modal.GetByRole(AriaRole.Button, new() { Name = "Import", Exact = true }).ClickAsync();
 
@@ -119,6 +125,33 @@ public class GamesPage
         await _page.WaitForTimeoutAsync(1000);
         await _page.GotoAsync(_page.Url.Split('?')[0]);
         await _page.WaitForSelectorAsync("text=Add Game", new() { Timeout = 10000 });
+    }
+
+    /// <summary>
+    /// Closes any open AntDesign notification toasts. These can render over the page and
+    /// intercept pointer events on elements underneath them.
+    /// </summary>
+    private async Task DismissNotificationsAsync()
+    {
+        var notices = _page.Locator(".ant-notification-notice");
+        var count = await notices.CountAsync();
+
+        // Dispatch the close directly so we don't race the toast's fade-out animation
+        // (a normal Click can fail with "element detached from the DOM" mid-animation).
+        for (var i = 0; i < count; i++)
+        {
+            try
+            {
+                await _page.Locator(".ant-notification-notice-close").First.DispatchEventAsync("click");
+            }
+            catch
+            {
+                // Notice already gone — nothing to close.
+            }
+        }
+
+        // Wait for the toasts to finish animating out so they no longer intercept clicks.
+        await Assertions.Expect(notices).ToHaveCountAsync(0, new() { Timeout = 5000 });
     }
 
     /// <summary>

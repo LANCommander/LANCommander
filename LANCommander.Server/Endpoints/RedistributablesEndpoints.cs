@@ -4,6 +4,7 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -15,7 +16,10 @@ public static class RedistributablesEndpoints
 
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
+        group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync);
+        group.MapGet("/{id:guid}/Updates", GetUpdatesAsync);
+        group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
         group.MapPost("/Import/{objectKey:guid}", ImportAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
         group.MapPost("/UploadArchive", UploadArchiveAsync)
@@ -45,6 +49,25 @@ public static class RedistributablesEndpoints
 
         return TypedResults.Ok(mapper.Map<SDK.Models.Redistributable>(redistributable));
     }
+    
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Redistributables/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.RedistributableId == id && s.Type != SDK.Enums.ScriptType.Package);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Redistributables/{id}/Scripts", "Redistributables", $"Redistributables/{id}"]);
+        
+        return TypedResults.Ok(scripts);
+    }
 
     internal static async Task<IResult> DownloadAsync(
         Guid id,
@@ -72,6 +95,47 @@ public static class RedistributablesEndpoints
             new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read),
             "application/octet-stream",
             $"{redistributable.Name.SanitizeFilename()}.zip");
+    }
+
+    internal static async Task<IResult> GetUpdatesAsync(
+        [FromServices] RedistributableService redistributableService,
+        [FromServices] IMapper mapper,
+        [FromServices] ILogger<Redistributable> logger,
+        Guid id,
+        string version)
+    {
+        try
+        {
+            var archives = await redistributableService.GetUpdatesAsync(id, version);
+            var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
+
+            return TypedResults.Ok(mapped);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not get updates for redistributable {RedistributableId}", id);
+            return TypedResults.Ok(Enumerable.Empty<SDK.Models.Archive>());
+        }
+    }
+
+    internal static async Task<IResult> CheckForUpdateAsync(
+        [FromServices] RedistributableService redistributableService,
+        [FromServices] ILogger<Redistributable> logger,
+        Guid id,
+        string version)
+    {
+        try
+        {
+            var currentVersion = await redistributableService.GetVersionAsync(id);
+
+            return TypedResults.Ok(version != currentVersion);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Version could not be found for redistributable {RedistributableId}", id);
+        }
+
+        return TypedResults.Ok(false);
     }
 
     internal static async Task<IResult> ImportAsync(

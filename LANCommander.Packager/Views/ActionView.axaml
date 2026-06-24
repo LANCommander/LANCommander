@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.ActionView">
+    <Grid RowDefinitions="*,Auto">
+        <!-- Executable list -->
+        <DockPanel Grid.Row="0">
+            <TextBlock DockPanel.Dock="Top" Text="Select primary executable:" Opacity="0.7"
+                       Margin="0,0,0,4" />
+            <ListBox Name="ExeList"
+                     Background="Transparent"
+                     BorderThickness="1"
+                     BorderBrush="#2A2A2A"
+                     CornerRadius="4" />
+        </DockPanel>
+
+        <!-- Action definition -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto"
+              Margin="0,16,0,0">
+            <TextBlock Text="Action Name" Opacity="0.7" Grid.Row="0" Grid.Column="0"
+                       Margin="0,0,0,4" />
+            <TextBlock Text="Arguments" Opacity="0.7" Grid.Row="0" Grid.Column="1"
+                       Margin="8,0,0,4" />
+            <TextBox Name="ActionNameField" Grid.Row="1" Grid.Column="0"
+                     Width="200" />
+            <TextBox Name="ArgumentsField" Grid.Row="1" Grid.Column="1"
+                     Margin="8,0,0,0" />
+        </Grid>
+    </Grid>
+</UserControl>

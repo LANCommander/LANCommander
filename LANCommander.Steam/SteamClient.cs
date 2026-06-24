@@ -1,10 +1,12 @@
 ﻿using HtmlAgilityPack;
+using LANCommander.Steam.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Mime;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace LANCommander.Steam;
@@ -59,7 +61,9 @@ public class SteamClient
         var webAssetUri = GetWebAssetUri(appId, webAssetType);
         var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, webAssetUri));
 
-        var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg || response.Content.Headers.ContentType.MediaType == "image/png";
+        var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg
+            || response.Content.Headers.ContentType.MediaType == "image/png"
+            || response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Webp;
 
         return (exists, response.Content.Headers.ContentType.MediaType);
     }
@@ -91,6 +95,58 @@ public class SteamClient
     public static Uri GetManualUri(int appId)
     {
         return new Uri($"https://store.steampowered.com/manual/{appId}");
+    }
+
+    public async Task<IEnumerable<SteamScreenshot>> GetScreenshotsAsync(int appId)
+    {
+        try
+        {
+            using var response = await HttpClient.GetAsync($"/api/appdetails?appids={appId}&filters=screenshots");
+            response.EnsureSuccessStatusCode();
+
+            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+            var root = document.RootElement.GetProperty(appId.ToString());
+
+            if (!root.GetProperty("success").GetBoolean())
+                return Enumerable.Empty<SteamScreenshot>();
+
+            var data = root.GetProperty("data");
+            if (!data.TryGetProperty("screenshots", out var screenshotsElement))
+                return Enumerable.Empty<SteamScreenshot>();
+
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+            return screenshotsElement.Deserialize<SteamScreenshot[]>(options) ?? Enumerable.Empty<SteamScreenshot>();
+        }
+        catch
+        {
+            return Enumerable.Empty<SteamScreenshot>();
+        }
+    }
+
+    public async Task<IEnumerable<SteamMovie>> GetMoviesAsync(int appId)
+    {
+        try
+        {
+            using var response = await HttpClient.GetAsync($"/api/appdetails?appids={appId}&filters=movies");
+            response.EnsureSuccessStatusCode();
+
+            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+            var root = document.RootElement.GetProperty(appId.ToString());
+
+            if (!root.GetProperty("success").GetBoolean())
+                return Enumerable.Empty<SteamMovie>();
+
+            var data = root.GetProperty("data");
+            if (!data.TryGetProperty("movies", out var moviesElement))
+                return Enumerable.Empty<SteamMovie>();
+
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+            return moviesElement.Deserialize<SteamMovie[]>(options) ?? Enumerable.Empty<SteamMovie>();
+        }
+        catch
+        {
+            return Enumerable.Empty<SteamMovie>();
+        }
     }
 
     public static Uri GetWebAssetUri(int appId, WebAssetType type)

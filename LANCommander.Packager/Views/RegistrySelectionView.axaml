@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:LANCommander.Packager.Models"
+             x:Class="LANCommander.Packager.Views.RegistrySelectionView">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+            <TextBlock Name="CountLabel" Text="0 entries selected"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Name="SelectAllButton" Content="Select All" Padding="8,4" />
+                <Button Name="SelectNoneButton" Content="Select None" Padding="8,4" />
+            </StackPanel>
+        </StackPanel>
+
+        <TreeView Name="RegistryTree"
+                  Background="Transparent"
+                  BorderThickness="1"
+                  BorderBrush="#2A2A2A"
+                  CornerRadius="4">
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinHeight" Value="22" />
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate DataType="models:CheckableTreeNode"
+                                  ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,-2">
+                        <CheckBox IsChecked="{Binding IsChecked}"
+                                  VerticalAlignment="Center"
+                                  MinWidth="0" Padding="0" Margin="0" />
+                        <!-- Create indicator (green +) -->
+                        <TextBlock Text="+" Foreground="#52C41A" FontWeight="Bold"
+                                   FontFamily="Consolas,monospace" FontSize="13"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCreate}" Width="12" />
+                        <!-- Update indicator (yellow ~) -->
+                        <TextBlock Text="~" Foreground="#D89614" FontWeight="Bold"
+                                   FontFamily="Consolas,monospace" FontSize="13"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsUpdate}" Width="12" />
+                        <TextBlock Text="{Binding Name}" FontSize="12"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>

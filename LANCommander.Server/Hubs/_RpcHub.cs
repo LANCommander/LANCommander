@@ -16,7 +16,8 @@ public partial class RpcHub(
     ServerService serverService,
     GameService gameService,
     ScriptDebugger scriptDebugger,
-    ScriptClient scriptClient) : Hub<IRpcSubscriber>, IRpcHub
+    ScriptClient scriptClient,
+    PlaySessionKeepAliveTracker keepAliveTracker) : Hub<IRpcSubscriber>, IRpcHub
 {
     private string GetConnectionsCacheKey(string userIdentifier) => $"RPC/Connections/{userIdentifier}";
     

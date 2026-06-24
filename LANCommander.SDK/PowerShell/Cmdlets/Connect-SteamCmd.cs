@@ -8,14 +8,14 @@ using LANCommander.Steam.Enums;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets;
 
-[Cmdlet(VerbsCommunications.Connect, "SteamCmd")]
+[Cmdlet(VerbsCommunications.Connect, "SteamCmd", HelpUri = "https://lancommander.app/Scripting/Cmdlets")]
 [OutputType(typeof(SteamCmdStatus))]
 public class ConnectSteamCmdCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam account username to log in with.")]
     public string Username { get; set; } = string.Empty;
 
-    [Parameter(Mandatory = false)]
+    [Parameter(Mandatory = false, HelpMessage = "The password for the Steam account. If omitted, an anonymous login is attempted.")]
     public SecureString? Password { get; set; }
 
     protected override async Task ProcessRecordAsync(CancellationToken token)

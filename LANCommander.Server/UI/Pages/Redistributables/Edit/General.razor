@@ -21,11 +21,6 @@
     </TitleTemplate>
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
-            {
-                <Button OnClick="Package" Loading="_packaging">Package</Button>
-            }
-            
             @if (context != null && context.Id != Guid.Empty)
             {
                 <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
@@ -67,11 +62,10 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
+
     ICollection<Game> Games;
     RedistributableEditView EditView;
 
-    bool _packaging;
     bool _openingExportDialog;
 
     protected override async Task OnInitializedAsync()
@@ -117,13 +111,5 @@
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
     }
-    
-    private async Task Package()
-    {
-        _packaging = true;
 
-        await RedistributableService.PackageAsync(Id);
-
-        _packaging = false;
-    }
 }

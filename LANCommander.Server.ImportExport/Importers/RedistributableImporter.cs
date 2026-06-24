@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
@@ -9,7 +8,6 @@ namespace LANCommander.Server.ImportExport.Importers;
 
 public class RedistributableImporter(
     ILogger<RedistributableImporter> logger,
-    IMapper mapper,
     RedistributableService redistributableService,
     UserService userService) : BaseImporter<Redistributable>
 {
@@ -28,7 +26,22 @@ public class RedistributableImporter(
 
     public override async Task<bool> AddAsync(Redistributable record)
     {
-        var redistributable = mapper.Map<Data.Models.Redistributable>(record);
+        var redistributable = new Data.Models.Redistributable
+        {
+            Id = record.Id,
+            Name = record.Name,
+            Description = record.Description,
+            Notes = record.Notes,
+            OptionSchema = record.OptionSchema,
+            CreatedOn = record.CreatedOn,
+            UpdatedOn = record.UpdatedOn,
+        };
+
+        if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+            redistributable.CreatedBy = await userService.GetAsync(record.CreatedBy);
+
+        if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+            redistributable.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
         try
         {
@@ -52,6 +65,7 @@ public class RedistributableImporter(
             existing.Name = record.Name;
             existing.Description = record.Description;
             existing.Notes = record.Notes;
+            existing.OptionSchema = record.OptionSchema;
             existing.CreatedOn = record.CreatedOn;
             existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.UpdatedOn = record.UpdatedOn;

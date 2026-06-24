@@ -37,6 +37,9 @@ public static class Endpoints
             endpoints.MapSaveEndpoints();
             endpoints.MapServerEndpoints();
             endpoints.MapSettingsEndpoints();
+            endpoints.MapLogEndpoints();
+            endpoints.MapHqEndpoints();
+            endpoints.MapMetadataEndpoints();
             endpoints.MapTagEndpoints();
             endpoints.MapControllers();
             endpoints.MapFallbackToPage("/_Host");

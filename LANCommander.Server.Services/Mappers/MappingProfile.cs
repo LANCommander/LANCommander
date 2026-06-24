@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
 
@@ -24,7 +25,12 @@ namespace LANCommander.Server
             CreateMap<Data.Models.MultiplayerMode, SDK.Models.MultiplayerMode>();
             CreateMap<Data.Models.Platform, SDK.Models.Platform>();
             CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
-            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
+                    src.Archives != null && src.Archives.Any()
+                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                        : null))
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
             CreateMap<Data.Models.Server, SDK.Models.Server>();
             CreateMap<Data.Models.ServerConsole, SDK.Models.ServerConsole>();
             CreateMap<Data.Models.ServerHttpPath, SDK.Models.ServerHttpPath>();
@@ -33,7 +39,13 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Tag, SDK.Models.Tag>().ReverseMap();
             CreateMap<Data.Models.User, SDK.Models.User>();
             CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
-            CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>().ReverseMap();
+            CreateMap<Data.Models.GameExternalId, SDK.Models.GameExternalId>();
+            CreateMap<Data.Models.ChatThread, SDK.Models.ChatThread>()
+                .ForMember(dest => dest.LastActivityOn, opt => opt.MapFrom(src =>
+                    src.Messages != null && src.Messages.Count > 0
+                        ? src.Messages.Max(m => m.CreatedOn)
+                        : src.UpdatedOn));
+            CreateMap<SDK.Models.ChatThread, Data.Models.ChatThread>();
 
             CreateMap<Data.Models.ChatMessage, SDK.Models.ChatMessage>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.CreatedBy.Id))
@@ -63,7 +75,10 @@ namespace LANCommander.Server
                 .MaxDepth(5)
                 .ForMember(dest =>
                     dest.DependentGames,
-                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));
+                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)))
+                .ForMember(dest =>
+                    dest.Scripts,
+                    opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null));
 
             CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
                 .ForMember(dest =>
@@ -91,8 +106,19 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Collection, SDK.Models.Manifest.Collection>().ReverseMap();
             CreateMap<Data.Models.Company, SDK.Models.Manifest.Company>().ReverseMap();
             CreateMap<Data.Models.Engine, SDK.Models.Manifest.Engine>().ReverseMap();
-            CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>().ReverseMap();
+            CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
+                    src.Archives != null && src.Archives.Any()
+                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                        : null))
+                .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
+                .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
+                .ReverseMap()
+                .ForMember(dest => dest.BaseGameId, opt => opt.Ignore())
+                .ForMember(dest => dest.BaseGame, opt => opt.Ignore());
             CreateMap<Data.Models.GameCustomField, SDK.Models.Manifest.GameCustomField>().ReverseMap();
+            CreateMap<Data.Models.GameExternalId, SDK.Models.Manifest.GameExternalId>().ReverseMap();
             CreateMap<Data.Models.Genre, SDK.Models.Manifest.Genre>().ReverseMap();
             CreateMap<Data.Models.Issue, SDK.Models.Manifest.Issue>().ReverseMap();
             CreateMap<Data.Models.Key, SDK.Models.Manifest.Key>().ReverseMap();
@@ -100,7 +126,13 @@ namespace LANCommander.Server
             CreateMap<Data.Models.MultiplayerMode, SDK.Models.Manifest.MultiplayerMode>().ReverseMap();
             CreateMap<Data.Models.Platform, SDK.Models.Manifest.Platform>().ReverseMap();
             CreateMap<Data.Models.PlaySession, SDK.Models.Manifest.PlaySession>().ReverseMap();
-            CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>().ReverseMap();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
+                    src.Archives != null && src.Archives.Any()
+                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                        : null))
+                .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
+                .ReverseMap();
             CreateMap<Data.Models.GameSave, SDK.Models.Manifest.Save>().ReverseMap();
             CreateMap<Data.Models.SavePath, SDK.Models.Manifest.SavePath>().ReverseMap();
             CreateMap<Data.Models.Script, SDK.Models.Manifest.Script>().ReverseMap();
@@ -108,6 +140,10 @@ namespace LANCommander.Server
             CreateMap<Data.Models.ServerConsole, SDK.Models.Manifest.ServerConsole>().ReverseMap();
             CreateMap<Data.Models.ServerHttpPath, SDK.Models.Manifest.ServerHttpPath>().ReverseMap();
             CreateMap<Data.Models.Tag, SDK.Models.Manifest.Tag>().ReverseMap();
+            CreateMap<Data.Models.Tool, SDK.Models.Manifest.Tool>()
+                .ForMember(dest => dest.Games, opt => opt.Ignore())
+                .ReverseMap()
+                .ForMember(dest => dest.Games, opt => opt.Ignore());
         }
 
         private void CreateEntityReferenceMap<TEntity>(Expression<Func<TEntity, string>> nameMember)

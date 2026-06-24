@@ -28,6 +28,11 @@ public static class SettingsEndpoints
             Library = new
             {
                 EnableUserLibraries = settingsProvider.CurrentValue.Server.Library.EnableUserLibraries,
+            },
+            Authentication = new
+            {
+                AllowRegistration = settingsProvider.CurrentValue.Server.Authentication.AllowRegistration,
+                AutoRedirectToProvider = settingsProvider.CurrentValue.Server.Authentication.AutoRedirectToProvider,
             }
         };
 

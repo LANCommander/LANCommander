@@ -12,6 +12,7 @@ namespace LANCommander.Server.Data.Models
         public string? WorkingDirectory { get; set; }
         public bool PrimaryAction { get; set; }
         public int SortOrder { get; set; }
+        public string? OptionOverrides { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]

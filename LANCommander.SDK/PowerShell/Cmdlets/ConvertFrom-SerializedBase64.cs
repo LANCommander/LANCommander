@@ -13,7 +13,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
     [OutputType(typeof(object))]
     public class ConvertFromSerializedBase64Cmdlet : Cmdlet
     {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true, HelpMessage = "A Base64-encoded string containing YAML-serialized data to deserialize.")]
         public string Input { get; set; }
 
         protected override void ProcessRecord()

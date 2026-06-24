@@ -83,11 +83,16 @@ namespace LANCommander.Server.UI.Pages.Account
         
         public string ScreenshotUrl { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string returnUrl = null, string code = null)
+        public async Task<IActionResult> OnGetAsync(string returnUrl = null, string code = null, string error = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
                 ModelState.AddModelError(string.Empty, ErrorMessage);
+            }
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                ModelState.AddModelError(string.Empty, error);
             }
 
             returnUrl ??= Url.Content("~/");

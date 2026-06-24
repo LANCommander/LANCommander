@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK;
 
@@ -14,25 +15,47 @@ public class TrackableStream : Stream
         _stream = stream;
         _length = length;
     }
-    
+
     private Stream _stream;
     private long _length;
     private long _position;
 
     public delegate void OnProgressDelegate(long Position, long Length);
     public event OnProgressDelegate OnProgress = delegate { };
-    
+
     public override void Flush()
         => _stream.Flush();
 
     public override int Read(byte[] buffer, int offset, int count)
     {
         var bytesRead = _stream.Read(buffer, offset, count);
-        
+
         _position += bytesRead;
-        
+
         OnProgress?.Invoke(_position, _length);
-        
+
+        return bytesRead;
+    }
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        var bytesRead = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+
+        _position += bytesRead;
+
+        OnProgress?.Invoke(_position, _length);
+
+        return bytesRead;
+    }
+
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        var bytesRead = await _stream.ReadAsync(buffer, cancellationToken);
+
+        _position += bytesRead;
+
+        OnProgress?.Invoke(_position, _length);
+
         return bytesRead;
     }
 

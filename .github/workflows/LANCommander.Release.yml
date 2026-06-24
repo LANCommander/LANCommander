@@ -27,6 +27,7 @@ jobs:
     outputs:
       version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
       version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
+      is_prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
       build_dotnet_version: 9.0.102
     steps:
       - name: Check out code
@@ -42,6 +43,16 @@ jobs:
           string: '${{ github.ref }}'
           pattern: 'refs/tags/v'
           replace-with: ''
+
+      - name: Check if pre-release
+        id: check_prerelease
+        run: |
+          VERSION="${{ steps.trim_tag_ref.outputs.replaced }}"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
   # Server
   build_server_linux_arm64:
@@ -189,6 +200,16 @@ jobs:
       build_platform: Windows
       build_configuration: Release
 
+  # Packager (Windows x86 only)
+  build_packager:
+    needs: [prep]
+    uses: ./.github/workflows/LANCommander.Packager.yml
+    with:
+      build_dotnet_version: '10.0.x'
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_configuration: Release
+
   build_release:
     runs-on: ubuntu-latest
     needs:
@@ -205,6 +226,7 @@ jobs:
       - build_launcher_osx_x64
       - build_launcher_win_arm64
       - build_launcher_win_x64
+      - build_packager
 
     steps:
       - name: Create Temp Directory
@@ -246,6 +268,7 @@ jobs:
           name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      # Launcher artifacts
       - name: Download Launcher Linux ARM64
         uses: actions/download-artifact@v4
         with:
@@ -282,6 +305,24 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      - name: Download Launcher Linux ARM64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
+      - name: Download Launcher Linux x64 AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
+          path: artifacts
+
+      - name: Download Packager Windows x86
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
       - name: Debug - List Artifact Files
         run: |
           echo "Contents of ./artifacts:"
@@ -293,6 +334,7 @@ jobs:
           name: v${{ needs.prep.outputs.version_tag }}
           generate_release_notes: true
           draft: true
+          prerelease: ${{ needs.prep.outputs.is_prerelease == 'true' }}
           files: |
             artifacts/LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
@@ -300,12 +342,15 @@ jobs:
             artifacts/LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
-            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
+            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
+            artifacts/LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
 
       - name: Checkout Repo for Docker build
         uses: actions/checkout@v4
@@ -375,9 +420,9 @@ jobs:
           file: ./LANCommander.Server/Dockerfile
           push: true
           platforms: linux/amd64
-          # ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
+            ${{ needs.prep.outputs.is_prerelease == 'true' && format('{0}/{1}:prerelease', env.REGISTRY, env.IMAGE_NAME) || format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

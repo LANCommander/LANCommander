@@ -130,6 +130,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("RedistributableId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Options")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("GameId", "RedistributableId");
 
                     b.HasIndex("RedistributableId");
@@ -187,6 +190,9 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionOverrides")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")
@@ -538,9 +544,6 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("TEXT");
 
-                    b.Property<long?>("IGDBId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("KeyAllocationMethod")
                         .HasColumnType("INTEGER");
 
@@ -625,6 +628,48 @@ namespace LANCommander.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("GameCustomField");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameExternalId", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("GameExternalIds");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.GameSave", b =>
@@ -753,7 +798,7 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("AllocationMethod")
+                    b.Property<int?>("AllocationMethod")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimedByComputerName")
@@ -870,6 +915,9 @@ namespace LANCommander.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2048)
@@ -1094,6 +1142,45 @@ namespace LANCommander.Migrations
                     b.ToTable("PlaySessions");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Rating", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<float>("Value")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Ratings");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Redistributable", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1114,6 +1201,9 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionSchema")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")
@@ -1369,6 +1459,12 @@ namespace LANCommander.Migrations
 
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
@@ -2321,6 +2417,30 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameExternalId", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("ExternalIds")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.GameSave", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2611,6 +2731,30 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Rating", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("Ratings")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Redistributable", b =>
@@ -3036,6 +3180,8 @@ namespace LANCommander.Migrations
 
                     b.Navigation("DependentGames");
 
+                    b.Navigation("ExternalIds");
+
                     b.Navigation("GameSaves");
 
                     b.Navigation("Issues");
@@ -3047,6 +3193,8 @@ namespace LANCommander.Migrations
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
+
+                    b.Navigation("Ratings");
 
                     b.Navigation("SavePaths");
 

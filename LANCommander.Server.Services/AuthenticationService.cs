@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
@@ -144,6 +146,9 @@ namespace LANCommander.Server.Services
 
         public async Task<AuthToken> RegisterAsync(string userName, string password)
         {
+            if (!settingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
+                throw new UserRegistrationException("User registration is disabled");
+
             if (string.IsNullOrWhiteSpace(password))
                 throw new UserRegistrationException("Password is empty");
 
@@ -287,6 +292,42 @@ namespace LANCommander.Server.Services
             }
 
             return externalProviders;
+        }
+
+        /// <summary>
+        /// Reads the provider's OpenID Connect discovery document (the well-known
+        /// configuration URL) and returns the advertised <c>claims_supported</c> and
+        /// <c>scopes_supported</c> values. These are advisory only: the fields are
+        /// optional in the spec and many providers under-report them, so they should be
+        /// treated as UI suggestions rather than an authoritative set.
+        /// </summary>
+        public static async Task<(IReadOnlyCollection<string> Claims, IReadOnlyCollection<string> Scopes)> GetDiscoveryMetadataAsync(string configurationUrl)
+        {
+            if (String.IsNullOrWhiteSpace(configurationUrl))
+                return (Array.Empty<string>(), Array.Empty<string>());
+
+            using var http = new HttpClient();
+            using var stream = await http.GetStreamAsync(configurationUrl);
+            using var document = await JsonDocument.ParseAsync(stream);
+
+            var claims = ReadStringArray(document.RootElement, "claims_supported");
+            var scopes = ReadStringArray(document.RootElement, "scopes_supported");
+
+            return (claims, scopes);
+        }
+
+        private static IReadOnlyCollection<string> ReadStringArray(JsonElement root, string propertyName)
+        {
+            if (!root.TryGetProperty(propertyName, out var array) || array.ValueKind != JsonValueKind.Array)
+                return Array.Empty<string>();
+
+            return array.EnumerateArray()
+                .Where(c => c.ValueKind == JsonValueKind.String)
+                .Select(c => c.GetString())
+                .Where(s => !String.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 }

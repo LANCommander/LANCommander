@@ -1,4 +1,4 @@
-﻿using MadMilkman.Ini;
+using LANCommander.SDK.Parsers.Ini;
 
 namespace LANCommander.SDK.Tests.IniHandling
 {
@@ -6,7 +6,7 @@ namespace LANCommander.SDK.Tests.IniHandling
 
     public class ConfigurationTest
     {
-        public required string Ini { get; set; } 
+        public required string Ini { get; set; }
 
         public IList<string> RequiredSections { get; set; } = [];
         public IList<KeyValuePair<string, int>> RequiredSectionsCount { get; set; } = [];
@@ -42,9 +42,9 @@ namespace LANCommander.SDK.Tests.IniHandling
             }
 
             public string Section { get; set; } = section;
-            public IniOptions? Options { get; set; }
+            public IniParseOptions? Options { get; set; }
 
-            public SectionKeyValue(string section, IniOptions options) : this(section) => Options = options;
+            public SectionKeyValue(string section, IniParseOptions options) : this(section) => Options = options;
 
             public IList<KeyValue> KeyValues { get; set; } = [];
         }
@@ -61,9 +61,9 @@ namespace LANCommander.SDK.Tests.IniHandling
             }
 
             public string Section { get; set; } = section;
-            public IniOptions? Options { get; set; }
+            public IniParseOptions? Options { get; set; }
 
-            public UpdateSectionKeyValue(string section, IniOptions options) : this(section) => Options = options;
+            public UpdateSectionKeyValue(string section, IniParseOptions options) : this(section) => Options = options;
 
             public IList<UpdateKeyValue> UpdateKeyValues { get; set; } = [];
             public IList<SectionKeyValue> CheckKeyValues { get; set; } = [];

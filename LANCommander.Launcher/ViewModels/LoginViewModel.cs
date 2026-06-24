@@ -1,0 +1,359 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Services;
+using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Providers;
+using LANCommander.SDK.Services;
+using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
+
+namespace LANCommander.Launcher.ViewModels;
+
+public partial class LoginViewModel : ViewModelBase
+{
+    private readonly IConnectionClient _connectionClient;
+    private readonly AuthenticationService _authenticationService;
+    private readonly AuthenticationClient _authenticationClient;
+    private readonly SettingsProvider<Settings.Settings> _settingsProvider;
+
+    [ObservableProperty]
+    private string _username = string.Empty;
+
+    [ObservableProperty]
+    private string _password = string.Empty;
+
+    [ObservableProperty]
+    private string _passwordConfirmation = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    private bool _isRegistering;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
+    private bool _allowRegistration = true;
+
+    [ObservableProperty]
+    private string _statusMessage = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
+    private bool _isLoading;
+
+    [ObservableProperty]
+    private bool _hasError;
+
+    [ObservableProperty]
+    private string _serverAddress = string.Empty;
+
+    [ObservableProperty]
+    private bool _isServerOffline;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderSeparator))]
+    private bool _autoRedirectToProvider;
+
+    public ObservableCollection<AuthenticationProvider> AuthenticationProviders { get; } = new();
+
+    // When auto-redirect is enabled, the username/password login path is hidden entirely.
+    public bool ShowCredentialFields => !AutoRedirectToProvider;
+
+    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider;
+
+    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider;
+
+    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider;
+
+    // Hide provider buttons only in the case the launcher auto-redirects (auto-redirect on + exactly one provider).
+    public bool ShowProviderButtons => AutoRedirectToProvider
+        ? AuthenticationProviders.Count > 1
+        : AuthenticationProviders.Count >= 1;
+
+    // The "or" separator only makes sense when both credential fields and provider buttons are shown.
+    public bool ShowProviderSeparator => !AutoRedirectToProvider && ShowProviderButtons;
+
+    public event EventHandler? LoginSucceeded;
+    public event EventHandler? ChangeServerRequested;
+
+    public LoginViewModel(
+        IConnectionClient connectionClient,
+        AuthenticationService authenticationService,
+        AuthenticationClient authenticationClient,
+        SettingsProvider<Settings.Settings> settingsProvider)
+    {
+        _connectionClient = connectionClient;
+        _authenticationService = authenticationService;
+        _authenticationClient = authenticationClient;
+        _settingsProvider = settingsProvider;
+
+        AuthenticationProviders.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ShowProviderButtons));
+            OnPropertyChanged(nameof(ShowProviderSeparator));
+        };
+
+        ServerAddress = _connectionClient.GetServerAddress()?.ToString() ?? "Not connected";
+    }
+
+    public async Task LoadAuthenticationProvidersAsync()
+    {
+        AuthenticationProviders.Clear();
+
+        try
+        {
+            var providers = await _authenticationClient.GetAuthenticationProvidersAsync();
+
+            if (providers != null)
+            {
+                foreach (var provider in providers)
+                    AuthenticationProviders.Add(provider);
+            }
+        }
+        catch
+        {
+            // External providers unavailable - username/password login still works
+        }
+
+        AllowRegistration = await _authenticationClient.GetRegistrationAllowedAsync();
+
+        if (!AllowRegistration && IsRegistering)
+            IsRegistering = false;
+
+        AutoRedirectToProvider = await _authenticationClient.GetAutoRedirectToProviderAsync();
+    }
+
+    public async Task TryAutoRedirectToProviderAsync()
+    {
+        if (IsServerOffline || !AutoRedirectToProvider || IsLoading)
+            return;
+
+        // Mirror server behavior: only auto-challenge when exactly one provider exists.
+        if (AuthenticationProviders.Count == 1)
+            await LoginWithProviderAsync(AuthenticationProviders[0]);
+    }
+
+    [RelayCommand]
+    private async Task LoginAsync()
+    {
+        if (IsServerOffline)
+        {
+            StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            StatusMessage = "Please enter username and password";
+            HasError = true;
+            return;
+        }
+
+        IsLoading = true;
+        HasError = false;
+        StatusMessage = "Logging in...";
+
+        try
+        {
+            var serverAddress = _connectionClient.GetServerAddress();
+            
+            if (serverAddress == null)
+            {
+                StatusMessage = "No server configured";
+                HasError = true;
+                return;
+            }
+
+            await _authenticationService.Login(serverAddress, Username, Password);
+
+            StatusMessage = "Login successful!";
+            LoginSucceeded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Login failed: {ex.Message}";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RegisterAsync()
+    {
+        if (IsServerOffline)
+        {
+            StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            StatusMessage = "Please enter username and password";
+            HasError = true;
+            return;
+        }
+
+        if (Password != PasswordConfirmation)
+        {
+            StatusMessage = "Passwords do not match";
+            HasError = true;
+            return;
+        }
+
+        IsLoading = true;
+        HasError = false;
+        StatusMessage = "Registering...";
+
+        try
+        {
+            await _authenticationService.Register(Username, Password, PasswordConfirmation);
+
+            StatusMessage = "Registration successful!";
+            LoginSucceeded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (RegisterFailedException ex)
+        {
+            if (ex.ErrorData?.DetailsMessages?.Any() == true)
+                StatusMessage = string.Join(" ", ex.ErrorData.DetailsMessages);
+            else if (!string.IsNullOrWhiteSpace(ex.ErrorData?.Message))
+                StatusMessage = ex.ErrorData.Message;
+            else
+                StatusMessage = ex.Message;
+
+            HasError = true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Registration failed: {ex.Message}";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleMode()
+    {
+        IsRegistering = !IsRegistering;
+        HasError = false;
+        StatusMessage = string.Empty;
+        PasswordConfirmation = string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task LoginWithProviderAsync(AuthenticationProvider provider)
+    {
+        if (IsServerOffline)
+        {
+            StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        IsLoading = true;
+        HasError = false;
+        StatusMessage = $"Signing in with {provider.Name}...";
+
+        try
+        {
+            var serverAddress = _connectionClient.GetServerAddress();
+            if (serverAddress == null)
+            {
+                StatusMessage = "No server configured";
+                HasError = true;
+                return;
+            }
+
+            var requestId = Guid.NewGuid().ToString();
+            var loginUrl = _authenticationClient.GetAuthenticationProviderLoginUrl(provider.Slug, requestId);
+
+            OpenBrowser(loginUrl);
+
+            var token = await PollForTokenAsync(requestId, TimeSpan.FromMinutes(5));
+
+            if (token != null)
+            {
+                await _authenticationService.Login(serverAddress, token);
+                StatusMessage = "Login successful!";
+                LoginSucceeded?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                StatusMessage = "Login timed out or was cancelled.";
+                HasError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Login failed: {ex.Message}";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private CancellationTokenSource? _pollCts;
+
+    private async Task<LANCommander.SDK.Models.AuthToken?> PollForTokenAsync(string requestId, TimeSpan timeout)
+    {
+        _pollCts?.Cancel();
+        _pollCts = new CancellationTokenSource(timeout);
+
+        try
+        {
+            while (!_pollCts.Token.IsCancellationRequested)
+            {
+                var token = await _authenticationClient.RedeemTokenAsync(requestId);
+
+                if (token != null)
+                    return token;
+
+                await Task.Delay(2000, _pollCts.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout or cancellation
+        }
+
+        return null;
+    }
+
+    private static void OpenBrowser(Uri url)
+    {
+        var urlString = url.ToString();
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            Process.Start(new ProcessStartInfo(urlString) { UseShellExecute = true });
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            Process.Start("xdg-open", urlString);
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            Process.Start("open", urlString);
+    }
+
+    [RelayCommand]
+    private void ChangeServer()
+    {
+        _pollCts?.Cancel();
+        ChangeServerRequested?.Invoke(this, EventArgs.Empty);
+    }
+}

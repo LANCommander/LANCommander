@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace LANCommander.SDK.Enums
 {
     public enum KeyAllocationMethod
     {
+        [Display(Name = "MAC Address")]
         MacAddress,
+        [Display(Name = "User Account")]
         UserAccount
     }
 }

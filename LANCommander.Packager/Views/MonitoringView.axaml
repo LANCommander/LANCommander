@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Packager.Views.MonitoringView">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="4">
+            <TextBlock Name="StatusLabel" Text="Waiting to start installer..."
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Name="FileCountLabel" Text="Files changed: 0"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock Name="RegistryCountLabel" Text="Registry entries: 0"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+
+        <TextBlock Text="Log:" Margin="0,16,0,4" Opacity="0.5" DockPanel.Dock="Top" />
+
+        <Border Background="#0C0C0C" BorderThickness="1" BorderBrush="#2A2A2A"
+                CornerRadius="4" ClipToBounds="True">
+            <TextBox Name="EventLog"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="Consolas,Courier New,monospace"
+                     FontSize="11"
+                     Foreground="#AACCAA"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="10,6"
+                     VerticalContentAlignment="Top" />
+        </Border>
+    </DockPanel>
+</UserControl>

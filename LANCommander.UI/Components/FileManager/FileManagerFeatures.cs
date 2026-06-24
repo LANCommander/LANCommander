@@ -1,15 +1,17 @@
-﻿namespace LANCommander.UI.Components
+namespace LANCommander.UI.Components
 {
     [Flags]
     public enum FileManagerFeatures
     {
-        NavigationBack = 0,
-        NavigationForward = 1,
-        UpALevel = 2,
-        Refresh = 4,
-        Breadcrumbs = 8,
-        NewFolder = 16,
-        UploadFile = 32,
-        Delete = 64,
+        None = 0,
+        NavigationBack = 1,
+        NavigationForward = 2,
+        UpALevel = 4,
+        Refresh = 8,
+        Breadcrumbs = 16,
+        NewFolder = 32,
+        UploadFile = 64,
+        Delete = 128,
+        ColumnPicker = 256,
     }
 }

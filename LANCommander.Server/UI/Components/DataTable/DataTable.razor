@@ -15,6 +15,7 @@
 @inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
 @inject NavigationManager NavigationManager
 @inject DrawerService DrawerService
+@inject IJSRuntime JSRuntime
 
 <CascadingValue Name="DataTable" Value="@this">
     @if (Searchable || ColumnPicker || LeftToolbar != null || RightToolbar != null)
@@ -127,7 +128,7 @@
 
                         foreach (var include in Includes)
                         {
-                            childrenQueryable.Include(include);
+                            childrenQueryable = childrenQueryable.Include(include);
                         }
 
                         foreach (var item in DataSource)
@@ -154,7 +155,14 @@
                 await Task.Yield();
             });
 
-
+        OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(this, async (args) =>
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "DataTablePageSize", args.PageSize.ToString());
+            }
+            catch { }
+        });
 
         await base.OnInitializedAsync();
     }
@@ -162,7 +170,18 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
+        {
+            try
+            {
+                var storedSize = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "DataTablePageSize");
+
+                if (!string.IsNullOrEmpty(storedSize) && int.TryParse(storedSize, out var size) && size > 0)
+                    PageSize = size;
+            }
+            catch { }
+
             await OnChange.InvokeAsync();
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -170,22 +189,23 @@
         if (Columns != null)
             ChildContent = Columns;
 
-        /*base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
-        this,
-            async (args) =>
-            {
-                PageSizeChanged(args);
-            });
-
-        base.OnPageIndexChange = EventCallback.Factory.Create<PaginationEventArgs>(
-        this,
-        async (args) =>
+        if (PaginationTemplate == null)
         {
-            PageIndexChanged(args);
-            });*/
+            PaginationTemplate = context => builder =>
+            {
+                builder.OpenComponent<Pagination>(0);
+                builder.AddAttribute(1, "Total", context.Total);
+                builder.AddAttribute(2, "PageSize", context.PageSize);
+                builder.AddAttribute(3, "Current", context.PageIndex);
+                builder.AddAttribute(4, "DefaultPageSize", 25);
+                builder.AddAttribute(5, "PageSizeOptions", new[] { 25, 50, 100, 200 });
+                builder.AddAttribute(6, "ShowSizeChanger", true);
+                builder.AddAttribute(7, "OnChange", context.HandlePageChange);
+                builder.CloseComponent();
+            };
+        }
 
-
-    await base.OnParametersSetAsync();
+        await base.OnParametersSetAsync();
     }
 
     Expression<Func<TItem, bool>> InjectParent<TItem>(

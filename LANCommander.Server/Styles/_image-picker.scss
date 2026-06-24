@@ -1,28 +1,27 @@
-.image-picker-images {
+.media-picker-items {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
 }
 
-.image-picker-image {
+.media-picker-item {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.image-picker-image img {
-    border: 4px solid transparent;
+.media-picker-item img {
     border-radius: 2px;
     max-height: 100%;
     max-width: 100%;
 }
 
-.image-picker-image input {
+.media-picker-item input {
     display: none;
 }
 
-.image-picker-image input + label {
+.media-picker-item input + label {
     display: block;
     position: absolute;
     top: 0;
@@ -30,8 +29,58 @@
     right: 0;
     bottom: 0;
     cursor: pointer;
+    z-index: 1;
+    border: 3px solid transparent;
+    border-radius: 2px;
 }
 
-.image-picker-image input:checked ~ img {
+.media-picker-item input:checked + label {
     border-color: #1890ff;
+}
+
+// ── Video items ──────────────────────────────────────────────
+.media-picker-item[data-type="video"] {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #000;
+    border-radius: 2px;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+// ── Play button (centered filled arrow) ──────────────────────
+.media-picker-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+
+    &::after {
+        content: "";
+        display: block;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 20px 0 20px 36px;
+        border-color: transparent transparent transparent #fff;
+        margin-left: 4px;
+    }
+
+    &:hover {
+        opacity: 1;
+    }
 }

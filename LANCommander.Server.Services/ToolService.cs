@@ -15,6 +15,7 @@ namespace LANCommander.Server.Services
     public sealed class ToolService(
         ILogger<SDK.Services.ToolClient> logger,
         ArchiveService archiveService,
+        StorageLocationService storageLocationService,
         SettingsProvider<Settings.Settings> settingsProvider,
         ScriptClient scriptClient,
         IFusionCache cache,
@@ -61,6 +62,7 @@ namespace LANCommander.Server.Services
                 .Query(q =>
                 {
                     return q
+                        .Include(r => r.Actions)
                         .Include(r => r.Archives)
                         .Include(r => r.Scripts);
                 })
@@ -81,19 +83,30 @@ namespace LANCommander.Server.Services
             logger?.LogInformation("Packaging tool {ToolName}", tool.Name);
 
             var latestArchive = tool.Archives?.OrderByDescending(r => r.CreatedOn).FirstOrDefault();
-            var storageLocationId = latestArchive?.StorageLocationId;
+            var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
+
+            string latestArchivePath = null;
+            if (latestArchive != null)
+                latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
 
             if (tool.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
                 foreach (var script in tool.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool));
+                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool), latestArchivePath);
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
                     {
-                        logger?.LogError(
-                            "Could not package tool {ToolName}, the path {Path} could not be found",
-                            tool.Name, package.Path);
+                        var message = $"Could not package tool {tool.Name}, the package script did not return a result";
+                        logger?.LogError(message);
+                        throw new Exception(message);
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
+                    {
+                        var message = $"Could not package tool {tool.Name}, the path {package.Path} could not be found";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
 
                     var archive = new Archive
@@ -102,7 +115,7 @@ namespace LANCommander.Server.Services
                         ToolId = tool.Id,
                         ObjectKey = Guid.NewGuid().ToString(),
                         LastVersion = latestArchive,
-                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                        StorageLocationId = storageLocation.Id,
                     };
 
                     archive = await archiveService.AddAsync(archive);
@@ -110,13 +123,17 @@ namespace LANCommander.Server.Services
                     var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                     
                     ZipFile.CreateFromDirectory(package.Path, destination);
-                    
-                    logger?.LogInformation("Successfully packaged {ToolName} and create new archive with version number {ToolVersion}", tool.Name, archive.Version);
+
+                    await archiveService.RecalculateFileSizeArchiveAsync(archive);
+
+                    logger?.LogInformation("Successfully packaged {ToolName} and created new archive with version number {ToolVersion}", tool.Name, archive.Version);
                 }
             }
             else
             {
-                logger?.LogWarning("Could not package tool {ToolName}, no packaging scripts are defined", tool.Name);
+                var message = $"Could not package tool {tool.Name}, no packaging scripts are defined";
+                logger?.LogWarning(message);
+                throw new Exception(message);
             }
         }
     }

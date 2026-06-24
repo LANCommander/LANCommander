@@ -1,4 +1,4 @@
-﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -10,5 +10,7 @@ namespace LANCommander.Server.Services.Models
         public string ThumbnailUrl { get; set; }
         public string Group { get; set; }
         public string MimeType { get; set; }
+        public string GrabberName { get; set; }
+        public string UniqueKey { get; set; }
     }
 }

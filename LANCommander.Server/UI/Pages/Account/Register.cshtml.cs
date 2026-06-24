@@ -85,36 +85,44 @@ namespace LANCommander.Server.UI.Pages.Account
         /// </summary>
         public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-        public async Task OnGetAsync(string returnUrl = null, string provider = null)
+        public async Task<IActionResult> OnGetAsync(string returnUrl = null, string provider = null)
         {
             ReturnUrl = returnUrl;
 
             if (!String.IsNullOrWhiteSpace(provider) && User.Identity != null && User.Identity.IsAuthenticated)
             {
                 Model.RegistrationType = RegistrationType.AuthenticationProvider;
-                
+
                 Model.UserName = User.Identity.Name ?? string.Empty;
                 Model.Email = User.FindFirst(ClaimTypes.Email)?.Value;
                 Model.Password = Guid.Empty.ToString();
                 Model.PasswordConfirmation = Model.Password;
-                
+
                 AuthenticationProvider = Settings.Value.Server.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
             }
             else
             {
+                if (!Settings.Value.Server.Authentication.AllowRegistration)
+                    return LocalRedirect("~/Login");
+
                 Model.RegistrationType = RegistrationType.Basic;
             }
-            
+
             var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
 
             if (screenshots.Any())
                 ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
+
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null, string provider = null)
         {
             returnUrl ??= Url.Content("~/");
-            
+
+            if (Model.RegistrationType != RegistrationType.AuthenticationProvider && !Settings.Value.Server.Authentication.AllowRegistration)
+                return LocalRedirect("~/Login");
+
             ExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             
             var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");

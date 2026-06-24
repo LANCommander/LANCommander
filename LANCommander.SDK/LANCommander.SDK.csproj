@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <Version>1.1.0</Version>
         <Authors>pathartl</Authors>
         <Company>LANCommander</Company>
@@ -18,12 +18,13 @@
     <ItemGroup>
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="Crc32.NET" />
+        <PackageReference Include="DiscordRichPresence" />
         <PackageReference Include="Facepunch.Steamworks" />
-        <PackageReference Include="MadMilkman.Ini" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
@@ -32,6 +33,7 @@
         <PackageReference Include="NetEscapades.Configuration.Yaml" />
         <PackageReference Include="PeanutButter.INI" />
         <PackageReference Include="Semver" />
+        <PackageReference Include="Superpower" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="System.Management.Automation" />
         <PackageReference Include="YamlDotNet" />
@@ -40,20 +42,17 @@
     <ItemGroup>
         <InternalsVisibleTo Include="LANCommander.Server.Tests" />
     </ItemGroup>
-    
+
     <ItemGroup>
-        <None Update="icon.png">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-        <None Update="README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
+        <None Include="package-icon.png" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
     
     <ItemGroup>
       <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
+      <ProjectReference Include="..\LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
     </ItemGroup>
 
 </Project>

@@ -25,8 +25,10 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
+        group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
+        group.MapGet("/{id:guid}/Updates", GetUpdatesAsync);
         group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync).AllowAnonymous();
         group.MapGet("/{id:guid}/Import", ImportAsync).RequireAuthorization(RoleService.AdministratorRoleName);
@@ -106,6 +108,7 @@ public static class GameEndpoints
                 .Include(g => g.Platforms)
                 .Include(g => g.Publishers)
                 .Query(q => q.Include(d => d.Redistributables).ThenInclude(r => r.Scripts))
+                .Query(q => q.Include(d => d.Redistributables).ThenInclude(r => r.Archives))
                 .Include(g => g.Scripts)
                 .Include(g => g.Tags)
                 .AsNoTracking()
@@ -163,13 +166,35 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
 
-            var actions = new List<Data.Models.Action>();
-                
-            actions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
-            actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
-            actions.AddRange(game.Servers.SelectMany(s => s.Actions));
-                
-            return mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
+            var dataActions = new List<Data.Models.Action>();
+
+            dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
+            dataActions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
+
+            var mappedActions = mapper.Map<List<SDK.Models.Action>>(dataActions);
+
+            foreach (var server in game.Servers)
+            {
+                foreach (var serverAction in server.Actions)
+                {
+                    var mappedAction = mapper.Map<SDK.Models.Action>(serverAction);
+
+                    // Server actions are attached to the server, not the game, so their GameId is
+                    // empty. Stamp the owning game's id so the launcher associates the action with
+                    // the installed game instead of filtering it out.
+                    mappedAction.GameId = game.Id;
+
+                    if (!String.IsNullOrWhiteSpace(server.Host))
+                        mappedAction.Variables["ServerHost"] = server.Host;
+
+                    if (server.Port > 0)
+                        mappedAction.Variables["ServerPort"] = server.Port.ToString();
+
+                    mappedActions.Add(mappedAction);
+                }
+            }
+
+            return mappedActions;
         }, tags: ["Games", $"Games/{id}"]);
             
         return TypedResults.Ok(actions);
@@ -195,12 +220,31 @@ public static class GameEndpoints
         return TypedResults.Ok(addons);
     }
 
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Games/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.GameId == id && s.Type != SDK.Enums.ScriptType.Package);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
+        
+        return TypedResults.Ok(scripts);
+    }
+
     internal static async Task<IResult> StartedAsync(
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
-        [FromServices] ServerService serverService,
-        [FromServices] ILogger<Game> logger,
+        [FromServices] ServerManager serverManager,
+        [FromServices] IServiceScopeFactory scopeFactory,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -222,36 +266,57 @@ public static class GameEndpoints
         #endregion
 
         #region Autostart Servers
-        await serverService.AutostartAsync(game.Id, ServerAutostartMethod.OnPlayerActivity);
+        await serverManager.AutostartAsync(game.Id, ServerAutostartMethod.OnPlayerActivity);
         #endregion
-            
+
         #region Run server scripts
-
-        try
-        {
-            var servers = await serverService
-                .GetAsync(s => s.GameId == game.Id);
-
-            foreach (var server in servers)
-            {
-                await serverService.RunGameStartedScriptsAsync(server.Id, user.Id);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Server scripts could not run");
-        }
+        // Fire-and-forget: GameStarted scripts can launch long-lived processes that would
+        // otherwise block this request for the process's lifetime (the autostart launches above
+        // are detached for the same reason). Run them in their own scope so they survive request
+        // scope disposal.
+        RunServerScriptsAsync(scopeFactory, game.Id, user.Id, ScriptType.GameStarted);
         #endregion
 
         return TypedResults.Ok();
+    }
+
+    private static void RunServerScriptsAsync(
+        IServiceScopeFactory scopeFactory,
+        Guid gameId,
+        Guid userId,
+        ScriptType scriptType)
+    {
+        _ = Task.Run(async () =>
+        {
+            using var scope = scopeFactory.CreateScope();
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Game>>();
+
+            try
+            {
+                var servers = await serverService.GetAsync(s => s.GameId == gameId);
+
+                foreach (var server in servers)
+                {
+                    if (scriptType == ScriptType.GameStarted)
+                        await serverService.RunGameStartedScriptsAsync(server.Id, userId);
+                    else if (scriptType == ScriptType.GameStopped)
+                        await serverService.RunGameStoppedScriptsAsync(server.Id, userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Server scripts could not run");
+            }
+        });
     }
 
     internal static async Task<IResult> StoppedAsync(
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] PlaySessionService playSessionService,
-        [FromServices] ServerService serverService,
-        [FromServices] ILogger<Game> logger,
+        [FromServices] ServerManager serverManager,
+        [FromServices] IServiceScopeFactory scopeFactory,
         ClaimsPrincipal userPrincipal,
         Guid id)
     {
@@ -260,27 +325,47 @@ public static class GameEndpoints
 
         if (game == null || user == null)
             return TypedResults.BadRequest();
-        
+
         await playSessionService.EndSessionAsync(game.Id, user.Id);
-        
+
+        #region Autostop Servers
+        // Once the last player has stopped playing, debounce the stop so a quick relaunch
+        // doesn't cause the servers to thrash between stopped and started.
+        var activeSessions = await playSessionService
+            .GetAsync(ps => ps.GameId == game.Id && ps.End == null);
+
+        if (!activeSessions.Any())
+            serverManager.ScheduleStop(game.Id);
+        #endregion
+
         #region Run server scripts
+        // Fire-and-forget for the same reason as the started path: GameStopped scripts can block
+        // on long-lived processes. Run them in their own scope so they survive request disposal.
+        RunServerScriptsAsync(scopeFactory, game.Id, user.Id, ScriptType.GameStopped);
+        #endregion
+
+        return TypedResults.Ok();
+    }
+
+    internal static async Task<IResult> GetUpdatesAsync(
+        [FromServices] GameService gameService,
+        [FromServices] IMapper mapper,
+        [FromServices] ILogger<Game> logger,
+        Guid id,
+        string version)
+    {
         try
         {
-            var servers = await serverService
-                .GetAsync(s => s.GameId == game.Id);
+            var archives = await gameService.GetUpdatesAsync(id, version);
+            var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
 
-            foreach (var server in servers)
-            {
-                await serverService.RunGameStoppedScriptsAsync(server.Id, user.Id);
-            }
+            return TypedResults.Ok(mapped);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Server scripts could not run");
+            logger?.LogError(ex, "Could not get updates for game {GameId}", id);
+            return TypedResults.Ok(Enumerable.Empty<SDK.Models.Archive>());
         }
-        #endregion
-        
-        return TypedResults.Ok();
     }
 
     internal static async Task<IResult> CheckForUpdateAsync(
@@ -365,11 +450,11 @@ public static class GameEndpoints
         [FromServices] ArchiveService archiveService,
         [FromServices] ImportContext importContext,
         [FromServices] ILogger<Game> logger,
-        Guid objectKey)
+        Guid id)
     {
         try
         {
-            var path = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var path = await archiveService.GetArchiveFileLocationAsync(id.ToString());
 
             var result = await importContext.InitializeImportAsync(path);
 
@@ -377,7 +462,7 @@ public static class GameEndpoints
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", objectKey);
+            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", id);
             
             return TypedResults.BadRequest(ex.Message);
         }

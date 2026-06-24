@@ -19,8 +19,16 @@
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <FormItem Label="Allow Registration">
+            <Switch @bind-Checked="context.Server.Authentication.AllowRegistration" />
+        </FormItem>
+
         <FormItem Label="Require Account Approval">
             <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
+        </FormItem>
+
+        <FormItem Label="Auto-redirect to external provider">
+            <Switch @bind-Checked="context.Server.Authentication.AutoRedirectToProvider" />
         </FormItem>
 
         <FormItem Label="Token Secret">
@@ -73,6 +81,8 @@
 
     <Divider Text="External Providers" />
 
+    <Alert Type="@AlertType.Info" Message="A server restart is required for changes to authentication providers to take effect." ShowIcon="true" Style="margin-bottom: 16px;" />
+
     <ExternalProviderEditor @bind-Values="Settings.Value.Server.Authentication.AuthenticationProviders" />
 </PageContent>
 
@@ -93,8 +103,8 @@
                     if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
                         authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
                 }
-                
-                s.Server.Authentication.AuthenticationProviders = Settings.Value.Server.Authentication.AuthenticationProviders;
+
+                s.Server.Authentication = Settings.Value.Server.Authentication;
             });
 
             MessageService.Success("Settings saved!");

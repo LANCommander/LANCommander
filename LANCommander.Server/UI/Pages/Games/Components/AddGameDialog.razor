@@ -1,0 +1,102 @@
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Models
+@using LANCommander.Server.Settings
+@inherits FeedbackComponent<AddGameDialogOptions>
+@inject IMediaGrabberService MediaGrabberService
+@inject MediaService MediaService
+@inject GameService GameService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject NavigationManager NavigationManager
+@inject ILogger<AddGameDialog> Logger
+
+<MetadataLookupPanel
+    @ref="_panel"
+    GameId="Guid.Empty"
+    AutoFocus="true"
+    ShowCancel="false"
+    OnImported="OnGameImported">
+    <Checkbox Checked="_autoDownloadMedia" CheckedChanged="OnAutoDownloadMediaChanged" Style="margin-top: 8px;">Automatically download art</Checkbox>
+</MetadataLookupPanel>
+
+@code {
+    MetadataLookupPanel _panel;
+    bool _autoDownloadMedia;
+
+    static readonly MediaType[] AutoDownloadTypes =
+    [
+        MediaType.Icon,
+        MediaType.Cover,
+        MediaType.Background,
+        MediaType.Logo,
+        MediaType.Grid
+    ];
+
+    protected override void OnInitialized()
+    {
+        _autoDownloadMedia = SettingsProvider.CurrentValue.Server.Media.AutoDownloadMedia;
+    }
+
+    private void OnAutoDownloadMediaChanged(bool value)
+    {
+        _autoDownloadMedia = value;
+        SettingsProvider.Update(s => s.Server.Media.AutoDownloadMedia = value);
+    }
+
+    private async Task OnGameImported(Guid gameId)
+    {
+        if (_autoDownloadMedia)
+        {
+            await DownloadMediaForGame(gameId);
+        }
+
+        await CloseFeedbackAsync();
+        NavigationManager.NavigateTo($"/Games/{gameId}");
+    }
+
+    private async Task DownloadMediaForGame(Guid gameId)
+    {
+        try
+        {
+            var game = await GameService.GetAsync(gameId);
+
+            if (game == null)
+                return;
+
+            foreach (var mediaType in AutoDownloadTypes)
+            {
+                try
+                {
+                    await _panel.UpdateStatusAsync($"Downloading {mediaType}...");
+
+                    var results = await MediaGrabberService.SearchAsync(mediaType, game.Title);
+                    var result = results.FirstOrDefault();
+
+                    if (result == null)
+                        continue;
+
+                    using var download = await MediaGrabberService.DownloadAsync(result);
+
+                    var media = new Media
+                    {
+                        GameId = gameId,
+                        Type = mediaType,
+                        SourceUrl = result.SourceUrl,
+                        MimeType = download.MimeType,
+                        StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
+                        Crc32 = string.Empty
+                    };
+
+                    await MediaService.WriteToFileAsync(media, download.Stream);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to auto-download {MediaType} for game {GameId}", mediaType, gameId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to auto-download media for game {GameId}", gameId);
+        }
+    }
+}

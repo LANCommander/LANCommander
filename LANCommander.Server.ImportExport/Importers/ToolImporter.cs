@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
@@ -9,7 +8,6 @@ namespace LANCommander.Server.ImportExport.Importers;
 
 public class ToolImporter(
     ILogger<ToolImporter> logger,
-    IMapper mapper,
     ToolService toolService,
     UserService userService) : BaseImporter<Tool>
 {
@@ -28,7 +26,21 @@ public class ToolImporter(
 
     public override async Task<bool> AddAsync(Tool record)
     {
-        var tool = mapper.Map<Data.Models.Tool>(record);
+        var tool = new Data.Models.Tool
+        {
+            Id = record.Id,
+            Name = record.Name,
+            Description = record.Description,
+            Notes = record.Notes,
+            CreatedOn = record.CreatedOn,
+            UpdatedOn = record.UpdatedOn,
+        };
+
+        if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+            tool.CreatedBy = await userService.GetAsync(record.CreatedBy);
+
+        if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+            tool.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
         try
         {

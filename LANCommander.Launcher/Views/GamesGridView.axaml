@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
+             xmlns:local="using:LANCommander.Launcher.Views"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             x:Class="LANCommander.Launcher.Views.GamesGridView"
+             x:DataType="vm:GamesCollectionViewModel">
+
+    <ScrollViewer x:Name="FlatGridScrollViewer"
+                  Classes="TitlebarOffset"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  controls:ScrollPersistence.ViewModel="{Binding}"
+                  SizeChanged="FlatGridScrollViewer_SizeChanged">
+        <ItemsRepeater x:Name="FlatGridItemsRepeater" ItemsSource="{Binding Games}" Margin="24,56,24,24" ClipToBounds="False"
+                       controls:DirectionalNavigation.IsEnabled="True"
+                       controls:AutoFocus.IsEnabled="True">
+            <ItemsRepeater.Layout>
+                <UniformGridLayout MinItemWidth="140" MinItemHeight="210"
+                                   MinColumnSpacing="12" MinRowSpacing="12"
+                                   ItemsStretch="None"
+                                   ItemsJustification="Start" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
+                <DataTemplate DataType="vmComponents:GameItemViewModel">
+                    <components:CoverButton
+                        Width="{Binding $parent[local:GamesGridView].CoverWidth}"
+                        Height="{Binding $parent[local:GamesGridView].CoverHeight}"
+                        Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                        CommandParameter="{Binding}" />
+                </DataTemplate>
+            </ItemsRepeater.ItemTemplate>
+        </ItemsRepeater>
+    </ScrollViewer>
+
+</UserControl>

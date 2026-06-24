@@ -1,0 +1,127 @@
+name: LANCommander Launcher Tests — PR Visual Diff Comment
+
+on:
+    workflow_call:
+        inputs:
+            pr_number:
+                description: 'Pull request number to comment on'
+                required: true
+                type: string
+            artifact_run_id:
+                description: 'Workflow run ID that produced the launcher-visual-artifacts artifact'
+                required: true
+                type: string
+
+permissions:
+    contents: write       # push diff PNGs to the gh-visual-diffs branch
+    pull-requests: write  # post / update the comment
+
+jobs:
+    comment:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout for branch push
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Download visual artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: launcher-visual-artifacts
+                  path: visual
+                  run-id: ${{ inputs.artifact_run_id }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Read regression manifest
+              id: manifest
+              run: |
+                  if [ ! -f visual/regressions.json ]; then
+                      echo "no manifest — assuming no visual run"
+                      echo "count=0" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+                  count=$(jq '.regressed_count' visual/regressions.json)
+                  echo "count=$count" >> "$GITHUB_OUTPUT"
+
+            - name: Skip when no regressions
+              if: steps.manifest.outputs.count == '0'
+              run: echo "No visual regressions; nothing to comment."
+
+            # Push diff/actual/baseline PNGs to an orphan branch so raw.githubusercontent.com
+            # URLs render inline in the PR comment. One folder per (PR, run).
+            - name: Push diffs to gh-visual-diffs branch
+              if: steps.manifest.outputs.count != '0'
+              env:
+                  PR: ${{ inputs.pr_number }}
+                  RUN: ${{ inputs.artifact_run_id }}
+              run: |
+                  set -euo pipefail
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  # Worktree off an orphan branch so we never touch the source tree.
+                  if git ls-remote --exit-code --heads origin gh-visual-diffs >/dev/null; then
+                      git fetch origin gh-visual-diffs
+                      git worktree add /tmp/visual gh-visual-diffs
+                  else
+                      git worktree add --detach /tmp/visual
+                      cd /tmp/visual
+                      git checkout --orphan gh-visual-diffs
+                      git rm -rf . 2>/dev/null || true
+                      cd -
+                  fi
+
+                  DEST="/tmp/visual/pr-${PR}/run-${RUN}"
+                  mkdir -p "$DEST"
+                  cp -r visual/diffs       "$DEST/" 2>/dev/null || true
+                  cp -r visual/screenshots "$DEST/" 2>/dev/null || true
+                  cp -r visual/baselines   "$DEST/" 2>/dev/null || true
+
+                  cd /tmp/visual
+                  git add -A
+                  git -c user.name=github-actions -c user.email=github-actions@github.com \
+                      commit -m "Visual diffs for PR #${PR} run ${RUN}"
+                  git push origin gh-visual-diffs
+
+            - name: Post / update PR comment
+              if: steps.manifest.outputs.count != '0'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  PR: ${{ inputs.pr_number }}
+                  RUN: ${{ inputs.artifact_run_id }}
+                  REPO: ${{ github.repository }}
+                  MARKER: '<!-- launcher-visual-diff-comment -->'
+              run: |
+                  set -euo pipefail
+                  base="https://raw.githubusercontent.com/${REPO}/gh-visual-diffs/pr-${PR}/run-${RUN}"
+
+                  body=$(mktemp)
+                  {
+                      echo "$MARKER"
+                      echo "## :art: Launcher visual regressions"
+                      echo
+                      echo "$(jq '.regressed_count' visual/regressions.json) baseline(s) drifted in [run ${RUN}](https://github.com/${REPO}/actions/runs/${RUN})."
+                      echo
+                      jq -r '.regressions[] | .name' visual/regressions.json | while read -r name; do
+                          echo "<details><summary><strong>${name}</strong></summary>"
+                          echo
+                          echo "| Baseline | Actual | Diff |"
+                          echo "| --- | --- | --- |"
+                          echo "| ![baseline](${base}/baselines/${name}.png) | ![actual](${base}/screenshots/${name}.png) | ![diff](${base}/diffs/${name}.diff.png) |"
+                          echo
+                          echo "</details>"
+                          echo
+                      done
+                      echo "_If these changes are intentional, run the **Update Visual Baselines** workflow to refresh._"
+                  } >> "$body"
+
+                  # Find an existing comment with our marker; update it if present.
+                  existing=$(gh api repos/${REPO}/issues/${PR}/comments --paginate \
+                      --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1)
+
+                  if [ -n "$existing" ]; then
+                      gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" --field "body=@${body}"
+                  else
+                      gh api -X POST "repos/${REPO}/issues/${PR}/comments" --field "body=@${body}"
+                  fi

@@ -19,6 +19,8 @@ namespace LANCommander.Server.Data.Models
         public string OnStopScriptPath { get; set; } = "";
 
         public Guid? DockerHostId { get; set; }
+        public Guid? RemoteHostId { get; set; }
+        public Guid? RemoteServerId { get; set; }
         [MaxLength(64)]
         public string ContainerId { get; set; } = "";
         public string Host { get; set; } = "";

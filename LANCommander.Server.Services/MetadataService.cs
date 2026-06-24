@@ -9,7 +9,7 @@ public class MetadataService(IServiceProvider serviceProvider)
     {
         var providers = serviceProvider.GetServices<IMetadataProvider>();
 
-        return providers.Select(p => p.ProviderName);
+        return providers.Where(p => p.IsAvailable).Select(p => p.ProviderName);
     }
 
     public IMetadataProvider? GetProvider(string providerName)

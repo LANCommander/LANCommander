@@ -22,6 +22,8 @@ namespace LANCommander.Server.Data.Models
         [MaxLength(8)]
         public string Crc32 { get; set; }
 
+        public int SortOrder { get; set; }
+
         public Media? Thumbnail { get; set; }
 
         [JsonIgnore]

@@ -10,6 +10,7 @@ public interface IChatClient
     Task<ChatThread> GetThreadAsync(Guid threadId);
     Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers);
     Task<IEnumerable<ChatThread>> GetThreadsAsync();
+    Task<IEnumerable<ChatThread>> LoadThreadsAsync();
     Task<IEnumerable<User>> GetUsersAsync();
     Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages);
     Task ReceiveMessageAsync(Guid threadId, ChatMessage message);

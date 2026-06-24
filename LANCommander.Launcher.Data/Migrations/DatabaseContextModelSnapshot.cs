@@ -271,9 +271,6 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("TEXT");
 
-                    b.Property<long?>("IGDBId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
@@ -321,6 +318,41 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasIndex("EngineId");
 
                     b.ToTable("Games");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameExternalId", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("GameExternalIds");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Genre", b =>
@@ -403,6 +435,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2048)
@@ -829,6 +864,16 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Navigation("Engine");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameExternalId", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", "Game")
+                        .WithMany("ExternalIds")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Game");
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Library", b =>
                 {
                     b.HasOne("LANCommander.Launcher.Data.Models.User", "User")
@@ -904,6 +949,8 @@ namespace LANCommander.Launcher.Data.Migrations
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Game", b =>
                 {
                     b.Navigation("DependentGames");
+
+                    b.Navigation("ExternalIds");
 
                     b.Navigation("Media");
 

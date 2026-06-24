@@ -11,7 +11,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(SteamCmdConnectionStatus))]
 public class GetSteamCmdConnectionStatusCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam account username to check the connection status for.")]
     public string Username { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

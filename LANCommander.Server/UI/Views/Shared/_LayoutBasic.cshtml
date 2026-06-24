@@ -1,16 +1,21 @@
-﻿<!DOCTYPE html>
+﻿@using LANCommander.Server.Services.Abstractions
+@inject IVersionProvider VersionProvider
+@{
+    var v = VersionProvider.GetCurrentVersion();
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - LANCommander</title>
     <base href="~/" />
-    
-    <link href="_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
-    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css" />
-    <link rel="stylesheet" href="css/site.css" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="stylesheet" href="css/custom.css" />
+
+    <link href="_content/AntDesign/css/ant-design-blazor.dark.css?v=@v" rel="stylesheet" />
+    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css?v=@v" />
+    <link rel="stylesheet" href="css/site.css?v=@v" />
+    <link rel="stylesheet" href="css/app.css?v=@v" />
+    <link rel="stylesheet" href="css/custom.css?v=@v" />
 </head>
 <body>
     <section class="layout ant-layout">
@@ -19,11 +24,11 @@
         </main>
     </section>
 
-    <script src="~/lib/antv/g2plot/dist/g2plot.js"></script>
-    <script src="~/_framework/blazor.server.js"></script>
-    <script src="~/_content/AntDesign/js/ant-design-blazor.js"></script>
-    <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
-    <script src="~/js/site.js"></script>
+    <script src="~/lib/antv/g2plot/dist/g2plot.js?v=@v"></script>
+    <script src="~/_framework/blazor.server.js?v=@v"></script>
+    <script src="~/_content/AntDesign/js/ant-design-blazor.js?v=@v"></script>
+    <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js?v=@v"></script>
+    <script src="~/js/site.js?v=@v"></script>
 
     <script>
         var checkboxes = document.querySelectorAll('.ant-checkbox-input');

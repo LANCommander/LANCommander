@@ -18,12 +18,25 @@ public class ChatHub(
     private async Task<List<string>> GetThreadParticipants(Guid threadId)
     {
         logger.LogDebug("Getting thread participants for {ThreadId}", threadId);
-        
+
         var cacheKey = GetThreadParticipantCacheKey(threadId);
 
         var participants = await cache.TryGetAsync<List<string>>(cacheKey);
 
-        return participants.GetValueOrDefault([]);
+        if (participants.HasValue && participants.Value.Count > 0)
+            return participants.Value;
+
+        // Cache miss — load from database and populate cache
+        var thread = await chatService.GetThreadAsync(threadId);
+
+        if (thread?.Participants != null && thread.Participants.Count > 0)
+        {
+            var participantIds = thread.Participants.Select(p => p.Id.ToString()).ToList();
+            await cache.SetAsync(cacheKey, participantIds);
+            return participantIds;
+        }
+
+        return [];
     }
     
     public async Task<Guid> StartThreadAsync(string[] userIdentifiers)

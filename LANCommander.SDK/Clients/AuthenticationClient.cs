@@ -187,14 +187,76 @@ public class AuthenticationClient(
     {
         return await apiRequestFactory
             .Create()
-            .UseRoute("/api/Auth/GetAuthenticationProviders")
+            .UseRoute("/api/Auth/AuthenticationProviders")
             .UseVersioning()
             .GetAsync<IEnumerable<AuthenticationProvider>>();
     }
     
+    public async Task<bool> GetRegistrationAllowedAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Authentication?.AllowRegistration ?? true;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to allowing registration
+            return true;
+        }
+    }
+
+    public async Task<bool> GetAutoRedirectToProviderAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Authentication?.AutoRedirectToProvider ?? false;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to no auto-redirect
+            return false;
+        }
+    }
+
     public Uri GetAuthenticationProviderLoginUrl(string provider)
     {
         return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");
+    }
+
+    public Uri GetAuthenticationProviderLoginUrl(string provider, string requestId)
+    {
+        return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}&requestId={requestId}");
+    }
+
+    public async Task<AuthToken?> RedeemTokenAsync(string code)
+    {
+        try
+        {
+            var result = await apiRequestFactory
+                .Create()
+                .UseRoute($"/api/Auth/Token/{code}")
+                .UseMethod(HttpMethod.Get)
+                .SendAsync<AuthToken>();
+
+            if (result.Response.IsSuccessStatusCode)
+                return result.Data;
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
     
     internal async Task<ErrorResponse> ParseErrorResponseAsync(HttpResponseMessage response, bool defaultToGenericResponse = false)

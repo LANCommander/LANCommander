@@ -1,0 +1,59 @@
+---
+title: 2.1.0-rc5
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.0 Release Candidate 5 Release Notes
+
+## LANCommander Packager
+A new standalone Avalonia application, LANCommander Packager, has been added for building LCX package files outside of the server. The packager works by monitoring the files and registry entries created by a game's installer. You can then choose which files / registry keys are bundled into the final LCX file.
+
+## Background Uploading
+Archive uploads now continue in the background, allowing you to navigate away from the upload page without losing progress. An upload indicator in the sidebar tracks active uploads so you can continue working in other areas of the server while files transfer. This also applies to the import upload dialog.
+
+## HQ Login in First Time Setup
+The first time setup wizard now includes a step to log in to LANCommander HQ directly during initial configuration. This streamlines connecting to HQ for metadata and media lookups without needing to visit the settings page after setup is complete.
+
+## File Manager Improvements
+The server file manager has received several usability improvements including faster enumeration of large directories, toggleable columns, new Created and Type columns, fixed breadcrumb navigation, and a properly built directory tree with support for cross-platform roots and special folders.
+
+## Bug Fixes
+- Fixed standalone expansions and mods appearing in nested game lists (#284)
+- Fixed missing nested game data
+- Fixed save path matching failing on Windows due to backslash normalization (#266)
+- Fixed log viewer not working under Settings / Logs (#393)
+- Fixed user approval menu item not functioning (#405)
+- Fixed archive processing when using "Use Local File"
+- Fixed "Use Local File" button being incorrectly disabled
+
+## Changelog
+
+**Server**
+- Added: Background uploading with sidebar progress indicator
+- Added: HQ login step in first time setup wizard
+- Added: Button to download current log file
+- Changed: Improved file manager with faster directory enumeration, toggleable columns, and cross-platform directory tree
+- Fixed: Log viewer under Settings / Logs (#393)
+- Fixed: User approval menu item (#405)
+- Fixed: Archive processing for "Use Local File"
+- Fixed: "Use Local File" disabled button
+- Fixed: Standalone expansions/mods shown in nested game lists (#284)
+- Fixed: Missing nested game data
+
+**Packager**
+- Added: New standalone application for building LCX package files
+- Added: CI workflow for building and releasing the packager
+- Added: Documentation for packager usage and LCX format
+
+**SDK**
+- Fixed: Save path normalization to use forward slashes before regex matching (#266)
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.0-rc5" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.0-rc4" to="v2.1.0-rc5" />

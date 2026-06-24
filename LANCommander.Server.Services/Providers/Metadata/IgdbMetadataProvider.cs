@@ -25,6 +25,8 @@ public class IgdbMetadataProvider(
     }
 
     public string ProviderName => "IGDB";
+    public bool IsAvailable => !string.IsNullOrWhiteSpace(settingsProvider.CurrentValue.Server.IGDB.ClientId)
+                             && !string.IsNullOrWhiteSpace(settingsProvider.CurrentValue.Server.IGDB.ClientSecret);
     
     public async Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, int limit = 10, int offset = 0)
     {
@@ -35,6 +37,7 @@ public class IgdbMetadataProvider(
         fields.Add("involved_companies.developer");
         fields.Add("involved_companies.publisher");
         fields.Add("involved_companies.company.name");
+        fields.Add("platforms.*");
 
         var sb = new StringBuilder();
 
@@ -79,10 +82,13 @@ public class IgdbMetadataProvider(
     {
         var game = new Game
         {
-            IGDBId = (long?)igdbGame.Id,
             Title = igdbGame.Name,
             Description = igdbGame.Summary,
             ReleasedOn = igdbGame.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
+            ExternalIds = new List<GameExternalId>
+            {
+                new GameExternalId { Provider = "IGDB", ExternalId = igdbGame.Id?.ToString() ?? string.Empty }
+            },
         };
         
         if (igdbGame.GameModes?.Values?.Any() ?? false)
@@ -107,6 +113,13 @@ public class IgdbMetadataProvider(
             {
                 Name = igdbGame.GameEngines.Values.FirstOrDefault()?.Name ?? string.Empty
             };
+        }
+
+        if (igdbGame.Platforms?.Values?.Any() ?? false)
+        {
+            game.Platforms = igdbGame.Platforms.Values
+                .Select(p => new Platform { Name = p.Name })
+                .ToList();
         }
 
         if (igdbGame.Genres?.Values?.Any() ?? false)

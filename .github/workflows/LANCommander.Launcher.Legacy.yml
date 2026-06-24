@@ -1,0 +1,125 @@
+name: LANCommander.Launcher.Legacy
+
+on:
+  push:
+    branches: [main, feature/legacy-launcher]
+    paths:
+      - 'LANCommander.Launcher.Legacy/**'
+      - 'LANCommander.SDK.Cpp/**'
+      - '.github/workflows/LANCommander.Launcher.Legacy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'LANCommander.Launcher.Legacy/**'
+      - 'LANCommander.SDK.Cpp/**'
+      - '.github/workflows/LANCommander.Launcher.Legacy.yml'
+  workflow_dispatch:
+
+jobs:
+  build-win9x:
+    name: Build (Win9x / MinGW-w64 i686)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # MSYS2 with MinGW32 (i686) toolchain
+      # ---------------------------------------------------------------
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: false
+          install: >-
+            mingw-w64-i686-gcc
+            mingw-w64-i686-cmake
+            mingw-w64-i686-make
+            make
+
+      # ---------------------------------------------------------------
+      # Vendor dependencies (cJSON, miniz, Allegro 4 source)
+      # ---------------------------------------------------------------
+      - name: Download vendor dependencies
+        shell: pwsh
+        run: ./setup-vendor.ps1
+
+      # ---------------------------------------------------------------
+      # Build Allegro 4 from source (static, no addons)
+      # ---------------------------------------------------------------
+      - name: Build Allegro 4
+        run: |
+          ALLEGRO_SRC="LANCommander.Launcher.Legacy/vendor/allegro4/allegro5-4.4.3.1"
+          ALLEGRO_BUILD="LANCommander.Launcher.Legacy/build-allegro-win9x"
+          ALLEGRO_PREFIX="$(pwd)/LANCommander.Launcher.Legacy/allegro4-win9x"
+
+          cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
+              -G "MinGW Makefiles" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX="$ALLEGRO_PREFIX" \
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+              -DSHARED=OFF \
+              -DWANT_EXAMPLES=OFF \
+              -DWANT_TOOLS=OFF \
+              -DWANT_TESTS=OFF \
+              -DWANT_ALLEGROGL=OFF \
+              -DWANT_LOADPNG=OFF \
+              -DWANT_LOGG=OFF \
+              -DWANT_JPGALLEG=OFF \
+              -DWANT_FRAMEWORKS=OFF
+
+          mingw32-make -C "$ALLEGRO_BUILD" -j$(nproc)
+          mingw32-make -C "$ALLEGRO_BUILD" install
+
+      # ---------------------------------------------------------------
+      # Build the launcher
+      # ---------------------------------------------------------------
+      - name: Build launcher
+        run: |
+          LAUNCHER_DIR="LANCommander.Launcher.Legacy"
+          LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x"
+          ALLEGRO_PREFIX="$(pwd)/$LAUNCHER_DIR/allegro4-win9x"
+
+          cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD" \
+              -G "MinGW Makefiles" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DALLEGRO_STATIC=ON \
+              -DTARGET_WIN9X=ON \
+              -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
+
+          mingw32-make -C "$LAUNCHER_BUILD" -j$(nproc)
+
+      # ---------------------------------------------------------------
+      # Package
+      # ---------------------------------------------------------------
+      - name: Package artifacts
+        run: |
+          mkdir -p out-win9x
+
+          LAUNCHER_EXE=$(find LANCommander.Launcher.Legacy/build-win9x -name "launcher.exe" | head -1)
+          cp "$LAUNCHER_EXE" out-win9x/LANCommander.exe
+          strip out-win9x/LANCommander.exe
+
+          # Bundle GDI+ redistributable (MinGW CRT is statically linked)
+          if [ -f "$MINGW_PREFIX/bin/gdiplus.dll" ]; then
+              cp "$MINGW_PREFIX/bin/gdiplus.dll" out-win9x/
+              echo "Bundled: gdiplus.dll"
+          fi
+
+          # Show PE info for verification
+          objdump -p out-win9x/LANCommander.exe | grep -i "Version\|Subsystem" || true
+
+          echo ""
+          ls -lh out-win9x/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-Legacy-Win9x
+          path: out-win9x/
+          if-no-files-found: error

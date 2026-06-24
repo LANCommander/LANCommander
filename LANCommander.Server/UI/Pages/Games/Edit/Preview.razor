@@ -1,0 +1,10 @@
+@page "/Games/{id:guid}/Preview"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Preview">
+    <GameDetailPreview />
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

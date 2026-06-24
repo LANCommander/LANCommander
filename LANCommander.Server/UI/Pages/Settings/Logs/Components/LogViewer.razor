@@ -17,8 +17,11 @@
         CursorStyle = CursorStyle.Bar,
     };
 
-    protected override async Task OnInitializedAsync()
+    async Task OnFirstRender()
     {
+        if (_terminal is not null)
+            await _terminal.FitAsync();
+
         try
         {
             await Connect();
@@ -28,12 +31,6 @@
             Logger.LogError(ex, "Log viewer failed to connect");
             MessageService.Error("Log viewer failed to connect");
         }
-    }
-
-    async Task OnFirstRender()
-    {
-        if (_terminal is not null)
-            await _terminal.FitAsync();
     }
 
     async Task Connect()

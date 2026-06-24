@@ -2,13 +2,10 @@
 using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
-using LANCommander.Server.Services.Abstractions;
-using LANCommander.Server.Services.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -21,14 +18,14 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        IServiceProvider serviceProvider,
+        ServerManager serverManager,
         UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
         {
             await cache.ExpireGameCacheAsync();
 
-            return await base.AddAsync(entity, async context =>
+            entity = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(s => s.Actions);
                 await context.UpdateRelationshipAsync(s => s.Game);
@@ -37,13 +34,18 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(s => s.Scripts);
                 await context.UpdateRelationshipAsync(s => s.ServerConsoles);
             });
+
+            // Update tracking, helpful if tracked server has changed engines
+            await serverManager.RefreshTrackingAsync();
+
+            return entity;
         }
 
         public override async Task<Data.Models.Server> UpdateAsync(Data.Models.Server entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
-
-            return await base.UpdateAsync(entity, async context =>
+            
+            entity = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(s => s.Actions);
                 await context.UpdateRelationshipAsync(s => s.Game);
@@ -52,6 +54,11 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(s => s.Scripts);
                 await context.UpdateRelationshipAsync(s => s.ServerConsoles);
             });
+
+            // Update tracking, helpful if tracked server has changed engines
+            await serverManager.RefreshTrackingAsync();
+
+            return entity;
         }
 
         public async Task<SDK.Models.Manifest.Server> GetManifestAsync(Guid serverId)
@@ -70,72 +77,6 @@ namespace LANCommander.Server.Services
                 .GetAsync(serverId);
 
             return mapper.Map<SDK.Models.Manifest.Server>(server);
-        }
-
-        public async Task StartAsync(Guid serverId)
-        {
-            var serverEngines = serviceProvider.GetServices<IServerEngine>();
-
-            foreach (var serverEngine in serverEngines)
-            {
-                if (serverEngine.IsManaging(serverId))
-                    await serverEngine.StartAsync(serverId);
-            }
-        }
-
-        public async Task StopAsync(Guid serverId)
-        {
-            var serverEngines = serviceProvider.GetServices<IServerEngine>();
-
-            foreach (var serverEngine in serverEngines)
-            {
-                if (serverEngine.IsManaging(serverId))
-                    await serverEngine.StopAsync(serverId);
-            }
-        }
-
-        public async Task AutostartAsync(Guid gameId, ServerAutostartMethod method)
-        {
-            try
-            {
-                var serverEngines = serviceProvider.GetServices<IServerEngine>();
-                var servers = await GetAsync(s =>
-                    s.GameId == gameId && s.Autostart && s.AutostartMethod == method);
-
-                foreach (var serverEngine in serverEngines)
-                {
-                    foreach (var server in servers)
-                    {
-                        try
-                        {
-                            var serverStatus = await serverEngine.GetStatusAsync(server.Id);
-                            if (serverEngine.IsManaging(server.Id) && serverStatus == ServerProcessStatus.Stopped)
-                                await serverEngine.StartAsync(server.Id);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Failed to start server {ServerName} ({ServerId})", server.Name, server.Id);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError(ex, "Servers could not be autostarted");
-            }
-        }
-
-        public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
-        {
-            var serverEngines = serviceProvider.GetServices<IServerEngine>();
-
-            foreach (var serverEngine in serverEngines)
-            {
-                if (serverEngine.IsManaging(serverId))
-                    return await serverEngine.GetStatusAsync(serverId);
-            }
-
-            return ServerProcessStatus.Stopped;
         }
 
         public async Task RunGameStartedScriptsAsync(Guid serverId, Guid userId)

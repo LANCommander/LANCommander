@@ -1,0 +1,217 @@
+@using LANCommander.SDK.PowerShell
+@using LANCommander.Server.Services.PowerShell
+@using XtermBlazor
+@using LogLevel = Microsoft.Extensions.Logging.LogLevel
+@inherits FeedbackComponent<PackagingDialogOptions>
+@inject ScriptDebugger ScriptDebugger
+@inject GameService GameService
+@inject ToolService ToolService
+@inject RedistributableService RedistributableService
+@inject ILogger<PackagingDialog> Logger
+@implements IDisposable
+
+<div class="packaging-dialog">
+    @if (_status == PackagingStatus.Complete)
+    {
+        <Result Status="ResultStatus.Success"
+                Title="Packaging Complete"
+                SubTitle="@($"Completed in {FormatTimeSpan(_elapsed)}")">
+        </Result>
+    }
+    else if (_status == PackagingStatus.Failed)
+    {
+        <Result Status="ResultStatus.Error"
+                Title="Packaging Failed"
+                SubTitle="@(_errorMessage ?? "The packaging script encountered an error.")">
+        </Result>
+    }
+    else if (_status == PackagingStatus.Stopped)
+    {
+        <Result Status="ResultStatus.Warning"
+                Title="Packaging Stopped"
+                SubTitle="The packaging script was stopped by the user.">
+        </Result>
+    }
+
+    <div class="packaging-terminal">
+        @if (_status == PackagingStatus.Running)
+        {
+            <Flex Justify="FlexJustify.SpaceBetween">
+                <span>@FormatElapsed()</span>
+                
+                <Tooltip Title="Stop">
+                    <Button Type="ButtonType.Text" Icon="@IconType.Outline.Stop"/>
+                </Tooltip>
+            </Flex>
+        }
+
+        <Terminal @ref="_terminal" Id="@_id.ToString()" Options="_terminalOptions" OnFirstRender="OnTerminalReady" />
+    </div>
+</div>
+
+@code {
+    enum PackagingStatus { Running, Complete, Failed, Stopped }
+
+    Guid _id = Guid.NewGuid();
+    Terminal? _terminal;
+    CancellationTokenSource? _cts;
+    DateTime? _startTime;
+    TimeSpan _elapsed;
+    System.Threading.Timer? _elapsedTimer;
+
+    PackagingStatus _status = PackagingStatus.Running;
+    bool _hasErrors;
+    string? _errorMessage;
+
+    readonly TerminalOptions _terminalOptions = new()
+    {
+        CursorBlink = false,
+        CursorStyle = CursorStyle.Bar,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _status = PackagingStatus.Running;
+        _hasErrors = false;
+        _errorMessage = null;
+
+        ScriptDebugger.OnStart = Start;
+        ScriptDebugger.OnEnd = End;
+        ScriptDebugger.OnOutput = Output;
+        ScriptDebugger.OnBreak = null;
+
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _startTime = DateTime.UtcNow;
+
+        _elapsedTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1));
+    }
+
+    async Task OnTerminalReady()
+    {
+        if (_terminal != null)
+            await _terminal.FitAsync();
+
+        await RunAsync();
+    }
+
+    async Task RunAsync()
+    {
+        try
+        {
+            if (Options.GameId != Guid.Empty)
+                await GameService.PackageAsync(Options.GameId);
+            else if (Options.ToolId != Guid.Empty)
+                await ToolService.PackageAsync(Options.ToolId);
+            else if (Options.RedistributableId != Guid.Empty)
+                await RedistributableService.PackageAsync(Options.RedistributableId);
+        }
+        catch (Exception ex)
+        {
+            _hasErrors = true;
+            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Packaging failed with an exception");
+
+            if (_terminal != null)
+                await _terminal.WriteLine(ex.Message, LogLevel.Error);
+
+            StopTimer();
+            _elapsed = _startTime.HasValue ? DateTime.UtcNow - _startTime.Value : TimeSpan.Zero;
+            _status = PackagingStatus.Failed;
+            await InvokeAsync(StateHasChanged);
+        }
+
+    }
+
+    async Task Start(IScriptDebugContext context)
+    {
+        if (_terminal == null)
+            return;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task End(IScriptDebugContext context)
+    {
+        StopTimer();
+        
+        _elapsed = _startTime.HasValue ? DateTime.UtcNow - _startTime.Value : TimeSpan.Zero;
+
+        if (_terminal != null)
+            await _terminal.WriteLine($"\nCompleted in {FormatTimeSpan(_elapsed)}", LogLevel.Information);
+
+        _status = _hasErrors ? PackagingStatus.Failed : PackagingStatus.Complete;
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Output(IScriptDebugContext context, LogLevel level, string message)
+    {
+        if (_terminal == null)
+            return;
+
+        if (level == LogLevel.Error)
+        {
+            _hasErrors = true;
+            _errorMessage ??= message;
+        }
+
+        try
+        {
+            await _terminal.WriteLine(message, level);
+        }
+        catch
+        {
+        }
+    }
+
+    async Task Stop()
+    {
+        _cts?.Cancel();
+        StopTimer();
+        
+        _elapsed = _startTime.HasValue ? DateTime.UtcNow - _startTime.Value : TimeSpan.Zero;
+
+        if (_terminal != null)
+            await _terminal.WriteLine("\nScript stopped by user.", LogLevel.Warning);
+
+        _status = PackagingStatus.Stopped;
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void StopTimer()
+    {
+        _elapsedTimer?.Dispose();
+        _elapsedTimer = null;
+    }
+
+    string FormatElapsed()
+    {
+        if (!_startTime.HasValue)
+            return "";
+
+        var elapsed = DateTime.UtcNow - _startTime.Value;
+        
+        return FormatTimeSpan(elapsed);
+    }
+
+    static string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return ts.ToString(@"h\:mm\:ss");
+
+        return ts.ToString(@"m\:ss");
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        StopTimer();
+    }
+}

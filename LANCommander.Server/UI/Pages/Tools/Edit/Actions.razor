@@ -6,7 +6,7 @@
     <TitleExtraTemplate>
         <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
-                <Button Type="ButtonType.Primary" OnClick="_actionEditor.Save">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => _actionEditor?.Save()">Save</Button>
             </SpaceItem>
         </Space>
     </TitleExtraTemplate>

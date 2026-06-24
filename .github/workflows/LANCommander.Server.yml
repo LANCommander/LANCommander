@@ -45,7 +45,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.build_platform == 'Linux' && inputs.build_arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,6 +85,9 @@ jobs:
         npm install --prefix ./LANCommander.UI
         npm install --prefix ./LANCommander.Server
 
+    - name: Generate PowerShell Completions
+      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+
     - name: Package Frontend
       run: |
         npm run package --prefix ./LANCommander.UI
@@ -113,6 +116,12 @@ jobs:
           -p:FileVersion="$ASSEMBLY_VERSION" \
           -p:InformationalVersion="$SEMVER"
 
+        # Disable NetBeauty on ARM64 runners — nbeauty2 only ships x64 native binaries
+        DISABLE_BEAUTY="False"
+        if [ "${{ inputs.build_arch }}" = "arm64" ] && [ "${{ inputs.build_platform }}" = "Linux" ]; then
+          DISABLE_BEAUTY="True"
+        fi
+
         dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" \
           -c "${{ inputs.build_configuration }}" \
           --self-contained \
@@ -120,13 +129,14 @@ jobs:
           -p:Version="$SEMVER" \
           -p:AssemblyVersion="$ASSEMBLY_VERSION" \
           -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
+          -p:InformationalVersion="$SEMVER" \
+          -p:DisableBeauty="$DISABLE_BEAUTY"
 
 
     - name: Bundle and Clean
       shell: pwsh
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/
         
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(
@@ -147,16 +157,78 @@ jobs:
           'Libraries/locales'
         )
         
-        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
         foreach ($path in $PathsToRemove) {
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
 
+    - name: Bundle macOS .app
+      if: inputs.build_platform == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Strip leading 'v' and reduce to numeric x.y.z for the bundle version keys.
+        RAW_VERSION="${{ inputs.version_tag }}"
+        SEMVER="${RAW_VERSION#v}"
+        NUMERIC="${SEMVER%%-*}"
+
+        APP_NAME="LANCommander Server"
+        EXECUTABLE="LANCommander.Server"
+        BUNDLE_ID="app.lancommander.server"
+        ICON_SRC="LANCommander.Server/icon.icns"
+
+        PUBLISH_DIR="LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        APP_DIR="${EXECUTABLE}.app"
+
+        # Lay out the bundle skeleton.
+        mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
+        cp -a "$PUBLISH_DIR/." "$APP_DIR/Contents/MacOS/"
+        cp "$ICON_SRC" "$APP_DIR/Contents/Resources/AppIcon.icns"
+
+        # Write Info.plist.
+        cat > "$APP_DIR/Contents/Info.plist" <<PLIST
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleDisplayName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleIdentifier</key>
+          <string>${BUNDLE_ID}</string>
+          <key>CFBundleExecutable</key>
+          <string>${EXECUTABLE}</string>
+          <key>CFBundleIconFile</key>
+          <string>AppIcon</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>CFBundleInfoDictionaryVersion</key>
+          <string>6.0</string>
+          <key>CFBundleShortVersionString</key>
+          <string>${NUMERIC}</string>
+          <key>CFBundleVersion</key>
+          <string>${SEMVER}</string>
+          <key>LSMinimumSystemVersion</key>
+          <string>11.0</string>
+          <key>NSHighResolutionCapable</key>
+          <true/>
+        </dict>
+        </plist>
+        PLIST
+
+        # Ensure the entrypoint is executable, then zip while preserving the
+        # permission bits (Compress-Archive drops the exec bit).
+        chmod +x "$APP_DIR/Contents/MacOS/${EXECUTABLE}"
+        zip -ry "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip" "$APP_DIR"
+
     - name: Compress Build Output
+      if: inputs.build_platform != 'macOS'
       shell: pwsh
       run: |
         $compress = @{
-          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/*"
           DestinationPath = "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }

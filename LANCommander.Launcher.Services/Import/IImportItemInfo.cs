@@ -9,4 +9,6 @@ public interface IImportItemInfo
     string Name { get; set; }
     bool Processed { get; set; }
     BaseManifest Manifest { get; set; }
+    int DeferCount { get; set; }
+    Guid? GameId { get; set; }
 }

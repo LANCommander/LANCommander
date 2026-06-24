@@ -25,7 +25,7 @@ public sealed class ServerConfigurationSource : IConfigurationSource
     public IConfigurationProvider Build(IConfigurationBuilder builder) => Provider = new ServerConfigurationProvider(this); 
 }
 
-public sealed class ServerConfigurationProvider : ConfigurationProvider
+public sealed class ServerConfigurationProvider : ConfigurationProvider, IDisposable
 {
     private readonly ServerConfigurationSource _source;
     private readonly HttpClient _httpClient;
@@ -33,7 +33,7 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
     public ServerConfigurationProvider(ServerConfigurationSource source)
     {
         var settings = new Settings();
-        
+
         _source = source;
         _source.Configuration.Bind(settings);
 
@@ -41,6 +41,11 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
         {
             BaseAddress = settings.Authentication.ServerAddress
         };
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
     }
 
     public override void Load() => RefreshAsync().GetAwaiter().GetResult();
@@ -69,12 +74,13 @@ public sealed class ServerConfigurationProvider : ConfigurationProvider
                 request.Headers.Add("Authorization", $"Bearer {settings.Authentication.Token.AccessToken}");
             }
             
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            // Use ConfigureAwait(false) to prevent deadlocks when called from UI threads
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var payload = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken) ?? new JsonObject();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            var payload = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false) ?? new JsonObject();
 
             var prefix = "";
             var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);

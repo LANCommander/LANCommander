@@ -13,6 +13,7 @@
 @inject ServerService ServerService
 @inject GameService GameService
 @inject DockerServerEngine DockerServerEngine
+@inject RemoteServerEngine RemoteServerEngine
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -83,7 +84,7 @@
                         @bind-Value="context.DockerHostId"
                         OnSelectedItemChanged="ChangeDockerHost"></Select>
                 </FormItem>
-                
+
                 <FormItem Label="Container">
                     <Select
                         TItem="DockerContainer"
@@ -95,36 +96,65 @@
                         @bind-Value="context.ContainerId"></Select>
                 </FormItem>
             }
-            
-            <FormItem Label="Executable Path">
-                <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
-            </FormItem>
-            <FormItem Label="Arguments">
-                <Input @bind-Value="@context.Arguments" />
-            </FormItem>
-            <FormItem Label="Working Directory">
-                <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
-            </FormItem>
+
+            @if (context.Engine == ServerEngine.Remote)
+            {
+                <FormItem Label="Remote Host">
+                    <Select TItem="ServerEngineConfiguration"
+                            TItemValue="Guid?"
+                            DataSource="@Settings.Value.Server.GameServers.ServerEngines.Where(e => e.Type == ServerEngine.Remote)"
+                            LabelName="Name"
+                            ValueName="Id"
+                            @bind-Value="context.RemoteHostId"
+                            OnSelectedItemChanged="ChangeRemoteHost" />
+                </FormItem>
+
+                <FormItem Label="Remote Server">
+                    <Select TItem="SDK.Models.Server"
+                            TItemValue="Guid?"
+                            DataSource="RemoteServers"
+                            Disabled="!RemoteServers.Any()"
+                            LabelName="Name"
+                            ValueName="Id"
+                            @bind-Value="context.RemoteServerId" />
+                </FormItem>
+            }
+
+            @if (context.Engine != ServerEngine.Remote)
+            {
+                <FormItem Label="Executable Path">
+                    <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
+                </FormItem>
+                <FormItem Label="Arguments">
+                    <Input @bind-Value="@context.Arguments" />
+                </FormItem>
+                <FormItem Label="Working Directory">
+                    <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
+                </FormItem>
+            }
             <FormItem Label="Host">
                 <Input @bind-Value="@context.Host" />
             </FormItem>
             <FormItem Label="Port" HasFeedback="@PortInUse" Help="@(PortInUse ? "Another server may already be bound to this port" : "")" ValidateStatus="@(PortInUse ? FormValidateStatus.Warning : FormValidateStatus.Default)">
                 <ServerPortInput @bind-Value="@context.Port" @bind-PortInUse="PortInUse" ServerId="context.Id" />
             </FormItem>
-            <FormItem>
-                <LabelTemplate>
-                    Use Shell Execute
-                    <Tooltip Title="This option specifies whether you would like to run the server using the shell. Some servers may require this as they will have a UI or won't output logs to stdout">
-                        <Icon Type="@IconType.Outline.QuestionCircle" Theme="@IconThemeType.Outline" />
-                    </Tooltip>
-                </LabelTemplate>
-                <ChildContent>
-                    <Switch @bind-Checked="context.UseShellExecute" />
-                </ChildContent>
-            </FormItem>
-            <FormItem Label="Termination Method">
-                <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
-            </FormItem>
+            @if (context.Engine != ServerEngine.Remote)
+            {
+                <FormItem>
+                    <LabelTemplate>
+                        Use Shell Execute
+                        <Tooltip Title="This option specifies whether you would like to run the server using the shell. Some servers may require this as they will have a UI or won't output logs to stdout">
+                            <Icon Type="@IconType.Outline.QuestionCircle" Theme="@IconThemeType.Outline" />
+                        </Tooltip>
+                    </LabelTemplate>
+                    <ChildContent>
+                        <Switch @bind-Checked="context.UseShellExecute" />
+                    </ChildContent>
+                </FormItem>
+                <FormItem Label="Termination Method">
+                    <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
+                </FormItem>
+            }
         </Form>
     </ChildContent>
 </ServerEditView>
@@ -134,6 +164,7 @@
     
     IEnumerable<Game> Games = new List<Game>();
     IEnumerable<DockerContainer> Containers = new List<DockerContainer>();
+    IEnumerable<SDK.Models.Server> RemoteServers = new List<SDK.Models.Server>();
 
     Guid GameId;
     
@@ -171,6 +202,11 @@
     async Task ChangeDockerHost(ServerEngineConfiguration hostConfiguration)
     {
         Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);
+    }
+
+    async Task ChangeRemoteHost(ServerEngineConfiguration hostConfiguration)
+    {
+        RemoteServers = await RemoteServerEngine.GetRemoteServersAsync(hostConfiguration.Id);
     }
     
     async Task Save(Server server)

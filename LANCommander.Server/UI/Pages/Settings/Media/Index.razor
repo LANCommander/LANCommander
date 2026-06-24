@@ -1,10 +1,11 @@
-﻿@page "/Settings/Media"
+@page "/Settings/Media"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Models
 @using LANCommander.Server.UI.Pages.Settings.Media.Components
 @using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
+@inject MediaToolService MediaToolService
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
@@ -18,11 +19,88 @@
 </PageHeader>
 
 <PageContent>
+    <h3>Required Tools</h3>
+    <p>yt-dlp and ffmpeg are required for downloading and processing video media.</p>
+
+    <table class="ant-table" style="width: 100%; margin-bottom: 16px;">
+        <thead class="ant-table-thead">
+            <tr>
+                <th>Tool</th>
+                <th>Status</th>
+                <th>Version</th>
+                <th>Path</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody class="ant-table-tbody">
+            <tr>
+                <td><strong>yt-dlp</strong></td>
+                <td>
+                    @if (_ytDlpStatus == null)
+                    {
+                        <Spin Spinning="true" Size="SpinSize.Small" />
+                    }
+                    else if (_ytDlpStatus.Installed)
+                    {
+                        <Tag Color="TagColor.Success">Installed</Tag>
+                    }
+                    else
+                    {
+                        <Tag Color="TagColor.Error">Not Installed</Tag>
+                    }
+                </td>
+                <td>@(_ytDlpStatus?.Version ?? "—")</td>
+                <td style="word-break: break-all;">@(_ytDlpStatus?.Path ?? "—")</td>
+                <td>
+                    @if (_ytDlpStatus != null && !_ytDlpStatus.Installed)
+                    {
+                        <Button Type="@ButtonType.Primary" Size="ButtonSize.Small" Loading="_installingYtDlp" OnClick="InstallYtDlp">Install</Button>
+                    }
+                    else
+                    {
+                        <Button Size="ButtonSize.Small" OnClick="RefreshToolStatus">Refresh</Button>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td><strong>ffmpeg</strong></td>
+                <td>
+                    @if (_ffmpegStatus == null)
+                    {
+                        <Spin Spinning="true" Size="SpinSize.Small" />
+                    }
+                    else if (_ffmpegStatus.Installed)
+                    {
+                        <Tag Color="TagColor.Success">Installed</Tag>
+                    }
+                    else
+                    {
+                        <Tag Color="TagColor.Error">Not Installed</Tag>
+                    }
+                </td>
+                <td>@(_ffmpegStatus?.Version ?? "—")</td>
+                <td style="word-break: break-all;">@(_ffmpegStatus?.Path ?? "—")</td>
+                <td>
+                    @if (_ffmpegStatus != null && !_ffmpegStatus.Installed)
+                    {
+                        <Button Type="@ButtonType.Primary" Size="ButtonSize.Small" Loading="_installingFfmpeg" OnClick="InstallFfmpeg">Install</Button>
+                    }
+                    else
+                    {
+                        <Button Size="ButtonSize.Small" OnClick="RefreshToolStatus">Refresh</Button>
+                    }
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <Divider />
+
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@StorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
-        
+
         <CascadingValue Value="Settings">
             <Collapse Style="margin-bottom: 24px;">
                 @foreach (var mediaType in Enum.GetValues<MediaType>())
@@ -44,23 +122,96 @@
 
     Dictionary<MediaType, MediaTypeSettings> _mediaTypeSettings = new();
 
+    MediaToolService.ToolStatus? _ytDlpStatus;
+    MediaToolService.ToolStatus? _ffmpegStatus;
+    bool _installingYtDlp;
+    bool _installingFfmpeg;
+
     protected override async Task OnInitializedAsync()
     {
-        StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
+        var location = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
 
-        if (StorageLocation == null)
+        if (location == null)
         {
-            StorageLocation = new StorageLocation
+            location = new StorageLocation
             {
                 Default = true,
                 Path = "Media",
                 Type = StorageLocationType.Media
             };
 
-            StorageLocation = await StorageLocationService.AddAsync(StorageLocation);
+            location = await StorageLocationService.AddAsync(location);
         }
 
+        StorageLocation = location;
+
         _mediaTypeSettings = Settings.Value.Server.Media.MediaTypes.DistinctBy(m => m.Type).ToDictionary(m => m.Type, m => m);
+
+        _ = Task.Run(async () =>
+        {
+            _ytDlpStatus = await MediaToolService.GetYtDlpStatusAsync();
+            _ffmpegStatus = await MediaToolService.GetFfmpegStatusAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    async Task RefreshToolStatus()
+    {
+        _ytDlpStatus = null;
+        _ffmpegStatus = null;
+        StateHasChanged();
+
+        try
+        {
+            _ytDlpStatus = await MediaToolService.GetYtDlpStatusAsync();
+            _ffmpegStatus = await MediaToolService.GetFfmpegStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to check tool status");
+        }
+
+        StateHasChanged();
+    }
+
+    async Task InstallYtDlp()
+    {
+        _installingYtDlp = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await MediaToolService.InstallYtDlpAsync();
+            MessageService.Success("yt-dlp installed successfully!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to install yt-dlp");
+            MessageService.Error("Failed to install yt-dlp. Check logs for details.");
+        }
+
+        _installingYtDlp = false;
+        await RefreshToolStatus();
+    }
+
+    async Task InstallFfmpeg()
+    {
+        _installingFfmpeg = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await MediaToolService.InstallFfmpegAsync();
+            MessageService.Success("ffmpeg installed successfully!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to install ffmpeg");
+            MessageService.Error("Failed to install ffmpeg. Check logs for details.");
+        }
+
+        _installingFfmpeg = false;
+        await RefreshToolStatus();
     }
 
     async Task Save()
@@ -68,14 +219,14 @@
         try
         {
             Settings.Value.Server.Media.MediaTypes = _mediaTypeSettings.Values;
-            
+
             SettingsProvider.Update(s =>
             {
                 s.Server.Media = Settings.Value.Server.Media;
             });
 
             await StorageLocationService.UpdateAsync(StorageLocation);
-            
+
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

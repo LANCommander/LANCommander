@@ -56,6 +56,12 @@
 
     <Divider />
 
+    <h3>Long Sessions</h3>
+    <p>Find and delete any play sessions that ran longer than a configurable threshold.</p>
+    <a href="/Settings/Tools/LongSessions" class="ant-btn ant-btn-primary">View Long Sessions</a>
+
+    <Divider />
+
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
     <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
@@ -65,6 +71,12 @@
     <h3>Regenerate Thumbnails</h3>
     <p>Clear out the existing thumbnail cache and generate replacements.</p>
     <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
+
+    <Divider />
+
+    <h3>Optimize Images</h3>
+    <p>Convert opaque PNG art to JPEG, downscale oversized media, and strip metadata to reclaim disk space while preserving quality.</p>
+    <a href="/Settings/Tools/OptimizeImages" class="ant-btn ant-btn-primary">Optimize Images</a>
 </PageContent>
 
 @code {

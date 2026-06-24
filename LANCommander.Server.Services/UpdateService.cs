@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Settings.Enums;
-using Microsoft.Extensions.DependencyInjection;
 using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
@@ -18,10 +17,9 @@ namespace LANCommander.Server.Services
         ILogger<UpdateService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IHostApplicationLifetime applicationLifetime,
-        IServiceProvider serviceProvider,
         IVersionProvider versionProvider,
         IGitHubService gitHubService,
-        ServerService serverService) : BaseService(logger, settingsProvider)
+        ServerManager serverManager) : BaseService(logger, settingsProvider)
     {
         public const string ArtifactUrlBase = "/download/Launcher/";
 
@@ -30,9 +28,7 @@ namespace LANCommander.Server.Services
             List<LauncherArtifact> launchers = [];
 
             if (_settingsProvider.CurrentValue.Server.Launcher.HostUpdates)
-            {
                 launchers.AddRange(GetLauncherArtifactsFromLocalFiles());
-            }
 
             if (launchers.Count == 0 || _settingsProvider.CurrentValue.Server.Launcher.IncludeOnlineUpdates)
             {
@@ -141,16 +137,7 @@ namespace LANCommander.Server.Services
 
             _logger?.LogInformation("Stopping all servers");
 
-            var servers = await serverService.GetAsync();
-
-            foreach (var engine in serviceProvider.GetServices<IServerEngine>())
-            {
-                foreach (var server in servers)
-                {
-                    if (engine.IsManaging(server.Id))
-                        await engine.StopAsync(server.Id);
-                }
-            }
+            await serverManager.StopAllAsync();
 
             _logger?.LogInformation("Servers stopped");
             _logger?.LogInformation("Downloading release version {Version}", release.TagName);

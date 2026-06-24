@@ -63,7 +63,7 @@ namespace LANCommander.SDK.Extensions
 
             path = Environment.ExpandEnvironmentVariables(path);
 
-            return path.Trim(Path.DirectorySeparatorChar);
+            return path.TrimEnd(Path.DirectorySeparatorChar);
         }
 
         public static string DeflateEnvironmentVariables(this string path, string installDirectory)

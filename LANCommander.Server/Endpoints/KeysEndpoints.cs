@@ -185,9 +185,7 @@ public static class KeysEndpoints
                     return TypedResults.NotFound();
             }
 
-            var availableKey = game.Keys.FirstOrDefault(k =>
-                (k.AllocationMethod == KeyAllocationMethod.MacAddress && string.IsNullOrWhiteSpace(k.ClaimedByMacAddress)) ||
-                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null));
+            var availableKey = game.Keys.FirstOrDefault(k => k.IsAvailable());
 
             if (availableKey == null && key != null)
                 return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
@@ -231,9 +229,7 @@ public static class KeysEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
 
         var keys = await keyService.GetAsync(k => k.GameId == id);
-        var availableKey = keys.FirstOrDefault(k =>
-            (k.AllocationMethod == KeyAllocationMethod.MacAddress && string.IsNullOrWhiteSpace(k.ClaimedByMacAddress)) ||
-            (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null));
+        var availableKey = keys.FirstOrDefault(k => k.IsAvailable());
 
         if (availableKey == null)
             return null;

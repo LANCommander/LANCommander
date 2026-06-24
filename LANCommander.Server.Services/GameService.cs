@@ -23,6 +23,7 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
         MediaService mediaService,
+        StorageLocationService storageLocationService,
         SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
@@ -49,6 +50,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.SavePaths);
                 await context.UpdateRelationshipAsync(g => g.Scripts);
                 await context.UpdateRelationshipAsync(g => g.Tags);
+                await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
         }
 
@@ -89,6 +91,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.SavePaths);
                 await context.UpdateRelationshipAsync(g => g.Scripts);
                 await context.UpdateRelationshipAsync(g => g.Tags);
+                await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
 
             return update;
@@ -140,22 +143,73 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Platforms)
                     .Include(g => g.Publishers)
                     .Include(g => g.Redistributables)
+                    .Include(g => g.Tools)
                     .Include(g => g.SavePaths)
                     .Include(g => g.Scripts)
-                    .Include(g => g.Tags);
+                    .Include(g => g.Tags)
+                    .Include(g => g.ExternalIds);
             }).GetAsync(id);
 
-            return GetManifest(game);
+            return await GetManifestAsync(game);
         }
         
-        public SDK.Models.Manifest.Game GetManifest(Game game)
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
         {
             if (game == null)
                 return null;
 
             var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
 
+            if (game.Redistributables != null && game.Redistributables.Any())
+            {
+                using var context = await contextFactory.CreateDbContextAsync();
+
+                foreach (var redistributable in manifest.Redistributables)
+                {
+                    var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                        .FirstOrDefaultAsync(e =>
+                            EF.Property<Guid>(e, "GameId") == game.Id &&
+                            EF.Property<Guid>(e, "RedistributableId") == redistributable.Id);
+
+                    if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson && !string.IsNullOrWhiteSpace(optionsJson))
+                    {
+                        redistributable.Options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson);
+                    }
+                }
+            }
+
             return manifest;
+        }
+
+        public async Task<string> GetRedistributableOptionsAsync(Guid gameId, Guid redistributableId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                .FirstOrDefaultAsync(e =>
+                    EF.Property<Guid>(e, "GameId") == gameId &&
+                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
+
+            if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson)
+                return optionsJson;
+
+            return null;
+        }
+
+        public async Task SetRedistributableOptionsAsync(Guid gameId, Guid redistributableId, string optionsJson)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                .FirstOrDefaultAsync(e =>
+                    EF.Property<Guid>(e, "GameId") == gameId &&
+                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
+
+            if (joinEntry != null)
+            {
+                joinEntry["Options"] = optionsJson;
+                await context.SaveChangesAsync();
+            }
         }
 
         public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)
@@ -205,6 +259,33 @@ namespace LANCommander.Server.Services
             return latestArchive?.Version ?? String.Empty;
         }
 
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .GetAsync(gameId);
+
+            if (game?.Archives == null || !game.Archives.Any())
+                return [];
+
+            var orderedArchives = game.Archives.OrderBy(a => a.CreatedOn).ToList();
+
+            if (string.IsNullOrWhiteSpace(version))
+                return [orderedArchives.Last()];
+
+            var installedArchive = orderedArchives.FirstOrDefault(a => a.Version == version);
+
+            if (installedArchive == null)
+                return [orderedArchives.Last()];
+
+            var newerArchives = orderedArchives
+                .Where(a => a.CreatedOn > installedArchive.CreatedOn)
+                .ToList();
+
+            return newerArchives;
+        }
+
         public async Task PackageAsync(Guid id)
         {
             var game = await AsNoTracking()
@@ -217,18 +298,30 @@ namespace LANCommander.Server.Services
             logger?.LogInformation("Packaging game {GameTitle}", game.Title);
 
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-            var storageLocationId = latestArchive?.StorageLocationId;
+            var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
+
+            string latestArchivePath = null;
+            if (latestArchive != null)
+                latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
 
             if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
 
-                    if (!Directory.Exists(package.Path))
+                    if (package == null)
                     {
-                        logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
-                        continue;
+                        var message = $"Could not package game {game.Title}, the package script did not return a result";
+                        logger?.LogError(message);
+                        throw new Exception(message);
+                    }
+
+                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
+                    {
+                        var message = $"Could not package game {game.Title}, the path {package.Path} could not be found";
+                        logger?.LogError(message);
+                        throw new Exception(message);
                     }
                     
                     var archive = new Archive
@@ -237,7 +330,7 @@ namespace LANCommander.Server.Services
                         GameId = game.Id,
                         ObjectKey = Guid.NewGuid().ToString(),
                         LastVersion = latestArchive,
-                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                        StorageLocationId = storageLocation.Id,
                     };
 
                     archive = await archiveService.AddAsync(archive);
@@ -245,13 +338,17 @@ namespace LANCommander.Server.Services
                     var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                     
                     ZipFile.CreateFromDirectory(package.Path, destination);
-                    
+
+                    await archiveService.RecalculateFileSizeArchiveAsync(archive);
+
                     logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }
             }
             else
             {
-                logger?.LogWarning("Could not package game {GameTitle}, no packaging scripts are defined", game.Title);
+                var message = $"Could not package game {game.Title}, no packaging scripts are defined";
+                logger?.LogWarning(message);
+                throw new Exception(message);
             }
         }
     }

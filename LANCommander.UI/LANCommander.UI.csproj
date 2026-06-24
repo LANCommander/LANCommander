@@ -1,10 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
+    <Message Text="Generating PowerShell completion data" Importance="high" />
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
+  </Target>
 
   <Target Name="CompileFrontendResources" BeforeTargets="Compile">
     <Message Text="Compiling frontend" Importance="high" />

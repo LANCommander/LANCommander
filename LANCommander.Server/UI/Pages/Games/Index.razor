@@ -3,6 +3,7 @@
 @using AntDesign.TableModels
 @attribute [Authorize]
 @inject GameService GameService
+@inject MetadataService MetadataService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -20,7 +21,7 @@
     ColumnPicker
     Searchable
     SearchProperty="g => g.Title"
-    Children="(g, dg) => dg.BaseGameId == g.Id"
+    Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
     Query="g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod)">
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
@@ -154,9 +155,33 @@
             return "/favicon.ico";
     }
 
-    void Add()
+    bool _hasMetadataProviders;
+
+    protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo("/Games/Add");
+        _hasMetadataProviders = MetadataService.GetProviderNames().Any();
+    }
+
+    async Task Add()
+    {
+        if (_hasMetadataProviders)
+        {
+            var modalOptions = new ModalOptions
+            {
+                Title = "Add Game",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<AddGameDialog, AddGameDialogOptions>(modalOptions, new AddGameDialogOptions());
+            modalRef.OnClose = Reload;
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/Games/Add");
+        }
     }
 
     async Task Delete(Game game)
@@ -205,7 +230,8 @@
     {
         var options = new ImportDialogOptions
         {
-            Hint = "Only LCX files are supported for importing games"
+            Hint = "Only LCX files are supported for importing games",
+            ManifestType = ManifestType.Game,
         };
 
         var modalOptions = new ModalOptions

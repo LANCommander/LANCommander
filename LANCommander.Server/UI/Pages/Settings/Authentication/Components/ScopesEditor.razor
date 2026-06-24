@@ -6,8 +6,8 @@
 
     @foreach (var scope in Scopes)
     {
-        <Flex>
-            <Input @bind-Value="scope.Name" OnBlur="Update" />
+        <Flex @key="scope">
+            <Input Value="@scope.Name" ValueChanged="@((string value) => OnScopeChanged(scope, value))" BindOnInput />
             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(scope)" />
         </Flex>
     }
@@ -25,29 +25,39 @@
 
     protected override void OnParametersSet()
     {
-        if (Values != null)
-            Scopes = Values.Select(v => new ExternalProviderScope { Name = v }).ToList();
+        var incoming = (Values ?? Enumerable.Empty<string>()).ToList();
+
+        // Only rebuild local state when the incoming values actually differ. Without
+        // this guard, the round-trip caused by our own ValuesChanged would clobber
+        // in-progress edits on every re-render.
+        if (!incoming.SequenceEqual(Scopes.Select(s => s.Name)))
+            Scopes = incoming.Select(v => new ExternalProviderScope { Name = v }).ToList();
+    }
+
+    async Task OnScopeChanged(ExternalProviderScope scope, string value)
+    {
+        scope.Name = value;
+
+        await Update();
     }
 
     async Task Add()
     {
         Scopes.Add(new ExternalProviderScope());
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+        await Update();
     }
 
     async Task Remove(ExternalProviderScope scope)
     {
         Scopes.Remove(scope);
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+        await Update();
     }
 
     async Task Update()
     {
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name).ToList());
     }
 }

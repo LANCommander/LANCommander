@@ -15,6 +15,7 @@ using Force.Crc32;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Factories;
+using Action = System.Action;
 
 namespace LANCommander.SDK.Services
 {
@@ -22,8 +23,7 @@ namespace LANCommander.SDK.Services
         ILogger<ToolClient> logger,
         ISettingsProvider settingsProvider,
         ApiRequestFactory apiRequestFactory,
-        ScriptClient scriptClient,
-        ProfileClient profileClient)
+        ScriptClient scriptClient)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -33,9 +33,8 @@ namespace LANCommander.SDK.Services
         
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
-
-        private TrackableStream _transferStream;
-        private IReader _reader;
+        
+        private IAsyncReader _reader;
         
         private InstallProgress _installProgress;
         
@@ -55,8 +54,31 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}")
+                .UseRoute($"/api/Tools/{id}/Manifest")
                 .GetAsync<SDK.Models.Manifest.Tool>();
+        }
+        
+        public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Tool/{id}/Scripts")
+                .GetAsync<IEnumerable<Script>>();
+        }
+
+        public async Task WriteScriptsAsync(Tool tool, string installDirectory)
+        {
+            var scripts = await GetScriptsAsync(tool.Id);
+
+            if (scripts != null && scripts.Any())
+            {
+                logger?.LogTrace($"Saving scripts for tool {tool.Name} ({tool.Id}) into {installDirectory}");
+                
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
+            }
         }
         
         public async Task<Stream> Stream(Guid id)
@@ -67,6 +89,185 @@ namespace LANCommander.SDK.Services
                 .UseVersioning()
                 .UseRoute($"/api/Tool/{id}/Download")
                 .StreamAsync();
+        }
+
+        public delegate void OnTaskProgressHandler(InstallTaskProgress progress);
+        public event OnTaskProgressHandler OnTaskProgress;
+
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Tool tool, string installDirectory)
+        {
+            var plan = new InstallPlan();
+
+            var toolItem = new InstallPlanItem
+            {
+                EntityId = tool.Id,
+                Title = tool.Name,
+                Type = InstallPlanItemType.Tool,
+                InstallDirectory = installDirectory,
+                Order = 0,
+            };
+
+            int taskOrder = 0;
+
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadAndExtract,
+                Title = $"Download {tool.Name}",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = true,
+                ReportsProgress = true,
+            });
+
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteManifest,
+                Title = "Write manifest",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = true,
+            });
+
+            if (tool.Scripts != null && tool.Scripts.Any())
+            {
+                toolItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunInstallScript,
+                    Title = "Run install script",
+                    Order = taskOrder++,
+                    TargetId = tool.Id,
+                    TargetName = tool.Name,
+                    IsCritical = false,
+                });
+            }
+
+            plan.Items.Add(toolItem);
+
+            return plan;
+        }
+
+        public async Task<InstallResult> ExecuteInstallPlanItemAsync(InstallPlanItem planItem, CancellationToken cancellationToken = default)
+        {
+            var tool = await GetAsync(planItem.EntityId);
+            var installResult = new InstallResult();
+
+            foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var taskProgress = new InstallTaskProgress
+                {
+                    QueueItemId = planItem.EntityId,
+                    TaskId = taskDef.Id,
+                    TaskType = taskDef.Type,
+                    TaskTitle = taskDef.Title,
+                    TaskStatus = InstallTaskStatus.Running,
+                };
+
+                OnTaskProgress?.Invoke(taskProgress);
+
+                try
+                {
+                    switch (taskDef.Type)
+                    {
+                        case InstallTaskType.DownloadAndExtract:
+                            var result = await RetryHelper.RetryOnExceptionAsync(10,
+                                TimeSpan.FromMilliseconds(500), new ExtractionResult(),
+                                async () => await Task.Run(async () => await DownloadAndExtractAsync(tool, planItem.InstallDirectory, cancellationToken)));
+
+                            if (!result.Success && !result.Canceled)
+                                throw new InstallException("Could not extract the tool. Retry the install or check your connection");
+                            else if (result.Canceled)
+                                throw new InstallCanceledException("Tool install was canceled");
+
+                            installResult.InstallDirectory = result.Directory;
+                            break;
+
+                        case InstallTaskType.WriteManifest:
+                            var manifest = await GetManifestAsync(tool.Id);
+                            await ManifestHelper.WriteAsync(manifest, planItem.InstallDirectory);
+                            break;
+
+                        case InstallTaskType.RunInstallScript:
+                            await scriptClient.Tool_RunInstallScriptAsync(planItem.InstallDirectory, tool.Id);
+                            break;
+                    }
+
+                    taskProgress.TaskStatus = InstallTaskStatus.Completed;
+                    taskProgress.Progress = 1.0f;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+                catch (InstallCanceledException)
+                {
+                    taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                    OnTaskProgress?.Invoke(taskProgress);
+                    throw;
+                }
+                catch (Exception ex) when (!taskDef.IsCritical)
+                {
+                    logger?.LogError(ex, "Non-critical task {TaskTitle} failed for tool {ToolName}", taskDef.Title, tool.Name);
+                    taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                    taskProgress.ErrorMessage = ex.Message;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+            }
+
+            return installResult;
+        }
+
+        public async Task UninstallAsync(string installDirectory, Guid toolId)
+        {
+            logger?.LogTrace("Uninstalling tool {ToolId} from {InstallDirectory}", toolId, installDirectory);
+
+            try
+            {
+                await scriptClient.Tool_RunUninstallScriptAsync(installDirectory, toolId);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not run uninstall script for tool {ToolId}", toolId);
+            }
+
+            var fileListPath = GameClient.GetMetadataFilePath(installDirectory, toolId, "FileList.txt");
+
+            if (File.Exists(fileListPath))
+            {
+                var fileList = await File.ReadAllLinesAsync(fileListPath);
+                var files = fileList.Select(l => l.Split('|').FirstOrDefault()?.Trim());
+
+                foreach (var file in files.Where(f => !string.IsNullOrWhiteSpace(f) && !f.EndsWith("/")))
+                {
+                    var localPath = Path.Combine(installDirectory, file);
+
+                    try
+                    {
+                        if (File.Exists(localPath))
+                            File.Delete(localPath);
+
+                        logger?.LogTrace("Deleted tool file {LocalPath}", localPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not remove tool file {LocalPath}", localPath);
+                    }
+                }
+            }
+
+            var metadataPath = GameClient.GetMetadataDirectoryPath(installDirectory, toolId);
+
+            if (Directory.Exists(metadataPath))
+            {
+                try
+                {
+                    Directory.Delete(metadataPath, true);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Could not remove tool metadata directory {MetadataPath}", metadataPath);
+                }
+            }
         }
 
         public async Task InstallAsync(Game game)
@@ -83,15 +284,16 @@ namespace LANCommander.SDK.Services
 
             var installResult = new InstallResult();
             
-            _installProgress = new InstallProgress();
-            
-            _installProgress.Status = InstallStatus.Downloading;
-            _installProgress.Title = tool.Name;
-            _installProgress.Progress = 0;
-            _installProgress.TransferSpeed = 0;
-            _installProgress.TotalBytes = 0;
-            _installProgress.BytesTransferred = 0;
-            
+            _installProgress = new InstallProgress
+            {
+                Status = InstallStatus.Downloading,
+                Title = tool.Name,
+                Progress = 0,
+                TransferSpeed = 0,
+                TotalBytes = 0,
+                BytesTransferred = 0
+            };
+
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
             try
@@ -103,9 +305,8 @@ namespace LANCommander.SDK.Services
                 await ManifestHelper.WriteAsync(manifest, installDirectory);
                 
                 logger?.LogTrace("Saving scripts");
-                    
-                foreach (var script in tool.Scripts)
-                    await ScriptHelper.SaveScriptAsync(tool, script.Type, installDirectory);
+                
+                await WriteScriptsAsync(tool, installDirectory);
                 
                 if (tool.Archives?.Any() ?? false)
                 {
@@ -239,45 +440,42 @@ namespace LANCommander.SDK.Services
 
                 var stream = await StreamLatestArchiveAsync(tool.Id);
 
-                _reader = ReaderFactory.Open(stream);
-
-                using (var monitor = new FileTransferMonitor(stream.Length))
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
                 {
-                    _reader.EntryExtractionProgress += (sender, e) =>
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            _reader.Cancel();
+                        _reader?.Cancel();
 
-                            _installProgress.Status = InstallStatus.Canceled;
+                        _installProgress.Status = InstallStatus.Canceled;
 
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
 
-                            return;
-                        }
+                        return;
+                    }
 
-                        if (monitor.CanUpdate())
-                        {
-                            monitor.Update(stream.Position);
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
 
-                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = stream.Length;
-                            _installProgress.TransferSpeed = monitor.GetSpeed();
-                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
 
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
-                        }
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
 
-                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                        {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
-                            Game = null,
-                        });
-                    };
-                }
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = null,
+                    });
+                });
 
-                while (_reader.MoveToNextEntry())
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
                         break;
@@ -290,19 +488,17 @@ namespace LANCommander.SDK.Services
 
                         if (File.Exists(localFile))
                         {
-                            using (FileStream fs = File.Open(localFile, FileMode.Open))
+                            await using FileStream fs = File.Open(localFile, FileMode.Open);
+                            var buffer = new byte[65536];
+
+                            while (true)
                             {
-                                var buffer = new byte[65536];
+                                var count = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
 
-                                while (true)
-                                {
-                                    var count = fs.Read(buffer, 0, buffer.Length);
+                                if (count == 0)
+                                    break;
 
-                                    if (count == 0)
-                                        break;
-
-                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
-                                }
+                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
                             }
                         }
 
@@ -314,20 +510,20 @@ namespace LANCommander.SDK.Services
                         });
 
                         if (crc == 0 || crc != _reader.Entry.Crc)
-                            _reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                            await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
-                            });
+                            }, cancellationToken);
                         else // Skip to next entry
                             try
                             {
-                                _reader.OpenEntryStream().Dispose();
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
                             catch
                             {
-                                logger?.LogError("Could not skip to next entry in archive");
+                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", _reader.Entry.Key);
                             }
                     }
                     catch (IOException ex)
@@ -337,14 +533,14 @@ namespace LANCommander.SDK.Services
                         if (errorCode == 87)
                             throw ex;
                         else
-                            logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
 
                         // Skip to next entry
-                        _reader.OpenEntryStream().Dispose();
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                     }
                 }
 
-                _reader.Dispose();
+                await _reader.DisposeAsync();
                 await stream.DisposeAsync();
             }
             catch (ReaderCancelledException ex)
@@ -355,7 +551,7 @@ namespace LANCommander.SDK.Services
 
                 if (Directory.Exists(destination))
                 {
-                    logger?.LogTrace("Cleaning up ophaned files after cancelled install");
+                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
 
                     Directory.Delete(destination, true);
                 }
@@ -385,7 +581,7 @@ namespace LANCommander.SDK.Services
                 if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
                     Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
 
-                File.WriteAllText(fileListDestination, fileManifest.ToString());
+                await File.WriteAllTextAsync(fileListDestination, fileManifest.ToString(), cancellationToken);
 
                 logger?.LogTrace("Tool {Tool} successfully downloaded and extracted to {Destination}", tool.Name, destination);
             }
@@ -424,22 +620,21 @@ namespace LANCommander.SDK.Services
 
         public async Task ImportAsync(string archivePath)
         {
-            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            {
-                var objectKey = await apiRequestFactory
+            await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            
+            var objectKey = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+
+            if (objectKey != Guid.Empty)
+                await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
-
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute($"/api/Tools/Import/{objectKey}")
-                        .PostAsync();
-            }
+                    .UseRoute($"/api/Tools/Import/{objectKey}")
+                    .PostAsync();
         }
 
         [Obsolete("Exporter no longer provides \"full\" exports")]
@@ -455,29 +650,28 @@ namespace LANCommander.SDK.Services
 
         public async Task UploadArchiveAsync(string archivePath, Guid toolId, string version, string changelog = "")
         {
-            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            {
-                var objectKey = await apiRequestFactory
+            await using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            
+            var objectKey = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+
+            if (objectKey != Guid.Empty)
+                await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
-
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute("/api/Tools/UploadArchive")
-                        .AddBody(new UploadArchiveRequest
-                        {
-                            Id = toolId,
-                            ObjectKey = objectKey,
-                            Version = version,
-                            Changelog = changelog,
-                        })
-                        .PostAsync();
-            }
+                    .UseRoute("/api/Tools/UploadArchive")
+                    .AddBody(new UploadArchiveRequest
+                    {
+                        Id = toolId,
+                        ObjectKey = objectKey,
+                        Version = version,
+                        Changelog = changelog,
+                    })
+                    .PostAsync();
         }
     }
 }

@@ -32,9 +32,9 @@ public class GameImporter(
         return
             record.UpdatedOn > existing.ImportedOn
             ||
-            record.Actions.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn)
+            (record.Actions?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false)
             ||
-            record.SavePaths.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn);
+            (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
     }
 
     public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)
@@ -51,10 +51,15 @@ public class GameImporter(
                 ReleasedOn = importItemInfo.Record.ReleasedOn,
                 Singleplayer = importItemInfo.Record.Singleplayer,
                 Type = importItemInfo.Record.Type,
-                IGDBId = importItemInfo.Record.IGDBId,
+                ExternalIds = importItemInfo.Record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+                {
+                    Provider = e.Provider,
+                    ExternalId = e.ExternalId,
+                }).ToList(),
                 CreatedOn = importItemInfo.Record.CreatedOn,
                 UpdatedOn = importItemInfo.Record.UpdatedOn,
                 ImportedOn = DateTime.UtcNow,
+                LatestVersion = importItemInfo.Record.Version,
             };
             
             await gameService.AddAsync(game);
@@ -72,7 +77,8 @@ public class GameImporter(
 
     public override async Task<bool> UpdateAsync(ImportItemInfo<Game> importItemInfo)
     {
-        var existing = await gameService.GetAsync(importItemInfo.Record.Id);
+        var existing = importItemInfo.ExistingEntity as Data.Models.Game
+            ?? await gameService.GetAsync(importItemInfo.Record.Id);
 
         try
         {
@@ -83,14 +89,13 @@ public class GameImporter(
             existing.ReleasedOn = importItemInfo.Record.ReleasedOn;
             existing.Singleplayer = importItemInfo.Record.Singleplayer;
             existing.Type = importItemInfo.Record.Type;
-            existing.IGDBId = importItemInfo.Record.IGDBId;
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
-            
+
             await gameService.UpdateAsync(existing);
-            await UpdateRelationships(importItemInfo.Record);
-            
+            await UpdateRelationships(importItemInfo.Record, existing);
+
             if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
                 await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
@@ -102,9 +107,9 @@ public class GameImporter(
         }
     }
 
-    private async Task UpdateRelationships(Game manifest)
+    private async Task UpdateRelationships(Game manifest, Data.Models.Game? cachedGame = null)
     {
-        var game = await gameService.GetAsync(manifest.Id);
+        var game = cachedGame ?? await gameService.GetAsync(manifest.Id);
 
         await gameService.SyncRelatedCollectionAsync(
             game,
@@ -141,7 +146,27 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        await gameService.SyncOwnedCollectionAsync(
+            game,
+            g => g.ExternalIds,
+            manifest.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }) ?? [],
+            (existing, incoming) => existing.Provider == incoming.Provider,
+            (existing, incoming) => existing.ExternalId = incoming.ExternalId);
     }
 
-    public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo) => await gameService.ExistsAsync(importItemInfo.Record.Id);
+    public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo)
+    {
+        var existing = await gameService.GetAsync(importItemInfo.Record.Id);
+        if (existing != null)
+        {
+            importItemInfo.ExistingEntity = existing;
+            return true;
+        }
+        return false;
+    }
 }

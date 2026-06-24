@@ -167,6 +167,13 @@ namespace LANCommander.Launcher.Services
             return Items.Any(i => i.Key == itemId);
         }
 
+        public async Task<bool> IsInLibraryAsync(Guid gameId)
+        {
+            var userId = AuthenticationService.GetUserId();
+            return await Context.Games
+                .AnyAsync(g => g.Id == gameId && g.Libraries.Any(l => l.UserId == userId));
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();

@@ -2,7 +2,7 @@
 @using System.IO.Compression;
 @using LANCommander.Server.Models;
 
-<FileManager ArchiveId="@Options.ArchiveId" WorkingDirectory="@Options.Root" @bind-CurrentPath="CurrentPath" @bind-Selected="SelectedFiles" EntrySelectable="Options.EntrySelectable" EntryVisible="Options.EntryVisible" SelectMultiple="Options.Multiple" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Breadcrumbs)" />
+<FileManager ArchiveId="@Options.ArchiveId" WorkingDirectory="@Options.Root" @bind-CurrentPath="CurrentPath" @bind-Selected="SelectedFiles" EntrySelectable="Options.EntrySelectable" EntryVisible="Options.EntryVisible" SelectMultiple="Options.Multiple" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs)" />
 
 @code {
     private FileManagerDirectory CurrentPath { get; set; }

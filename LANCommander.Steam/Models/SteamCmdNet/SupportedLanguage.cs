@@ -6,7 +6,10 @@ public sealed class SupportedLanguage
 {
     [JsonPropertyName("supported")]
     public string? Supported { get; set; }
-    
+
     [JsonPropertyName("full_audio")]
     public string? FullAudio { get; set; }
+
+    [JsonPropertyName("subtitles")]
+    public string? Subtitles { get; set; }
 }

@@ -1,4 +1,3 @@
-using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Hubs;
@@ -22,49 +21,19 @@ public static class Servers
     {
         if (DatabaseContext.Provider != DatabaseProvider.Unknown)
         {
-            // Autostart any server processes
             using var scope = app.Services.CreateScope();
-            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
-
-            var serverEngines = scope.ServiceProvider.GetServices<IServerEngine>();
-
-            foreach (var engine in serverEngines)
-            {
-                await engine.InitializeAsync();
-            }
-            
+            var serverManager = scope.ServiceProvider.GetRequiredService<ServerManager>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            
+
+            // Initialize engines and prime tracking before starting anything.
+            await serverManager.InitializeAsync();
+
             logger.LogDebug("Autostarting Servers");
-        
+
             // Autostart IPX relay
             scope.ServiceProvider.GetService<IPXRelayService>();
 
-            foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
-            {
-                try
-                {
-                    logger.LogDebug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
-
-                    Task.Run(() =>
-                    {
-                        if (server.Autostart && server.AutostartDelay > 0)
-                            Task.Delay(TimeSpan.FromSeconds(server.AutostartDelay)).Wait();
-
-                        foreach (var engine in serverEngines)
-                        {
-                            if (engine.IsManaging(server.Id))
-                                return engine.StartAsync(server.Id);
-                        }
-
-                        return Task.CompletedTask;
-                    });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
-                }
-            }
+            await serverManager.AutostartApplicationServersAsync();
         }
     }
 

@@ -1,9 +1,12 @@
 ﻿@using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
 @inject MediaService MediaService
 @inject GameService GameService
+@inject IMediaGrabberService MediaGrabberService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -37,6 +40,10 @@
                     {
                         <Image Width="100px" Src="@thumbnailPath" PreviewVisible="false" OnClick="() => OpenManual(row)" />
                     }
+                    else if (row.Type == MediaType.Video)
+                    {
+                        <video width="100" src="@originalPath" style="max-width: 100px; max-height: 60px;" controls />
+                    }
                     else
                     {
                         <Image Width="100px" Src="@thumbnailPath" PreviewSrc="@originalPath" />
@@ -57,12 +64,14 @@
                     @{
                         var fileInputId = Guid.NewGuid();
                     }
-                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf,.ico"/>
+                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.ico,.mp4,.webm,.mkv"/>
                     <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
                         <Icon Type="@IconType.Outline.Upload"/>
                     </label>
 
-                    @if (String.IsNullOrWhiteSpace(Settings.Value.Server.Media.SteamGridDbApiKey))
+                    @if (String.IsNullOrWhiteSpace(Settings.Value.Server.Media.SteamGridDbApiKey)
+                        && row.Type != MediaType.Video
+                        && row.Type != MediaType.Screenshot)
                     {
                         <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
                             <Button Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
@@ -99,8 +108,11 @@
         MediaType.Icon,
         MediaType.Cover,
         MediaType.Background,
+        MediaType.Grid,
         MediaType.Logo,
-        MediaType.Manual
+        MediaType.Manual,
+        MediaType.Screenshot,
+        MediaType.Video
     ];
 
     string[] ValidMimeTypes =
@@ -108,8 +120,12 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
+        MediaTypeNames.Image.Webp,
         MediaTypeNames.Application.Pdf,
-        MediaTypeNames.Image.Icon
+        MediaTypeNames.Image.Icon,
+        "video/mp4",
+        "video/webm",
+        "video/x-matroska"
     ];
 
     List<Media> _media = new();
@@ -189,29 +205,32 @@
             Search = _game.Title
         };
 
-        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
+        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
 
-        modalRef.OnOk = async (result) =>
+        modalRef.OnOk = async (downloadResult) =>
         {
-            modalRef.Config.ConfirmLoading = true;
+            using var download = downloadResult.Download;
 
-            media.SourceUrl = result.SourceUrl;
-            media.MimeType = result.MimeType; 
-            
+            media.SourceUrl = downloadResult.Result.SourceUrl;
+            media.MimeType = download.MimeType;
+
             if (media.Id == Guid.Empty)
             {
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
-
-                await MediaService.AddAsync(media);
+                media = await MediaService.WriteToFileAsync(media, download.Stream);
             }
             else
             {
                 MediaService.DeleteLocalMediaFile(media);
-
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
+                media = await MediaService.WriteToFileAsync(media, download.Stream);
             }
 
             _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+
+            await InvokeAsync(() =>
+            {
+                ResultsTable?.ReloadData();
+                StateHasChanged();
+            });
         };
     }
 
@@ -251,6 +270,8 @@
         }
 
         _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+
+        ResultsTable?.ReloadData();
     }
 
     async Task DeleteAll()

@@ -40,10 +40,10 @@
 
             @if (Features.HasFlag(FileManagerFeatures.Breadcrumbs))
             {
-                <Breadcrumb Separator="@FileSource.DirectorySeparatorCharacter" Style="flex-grow: 1">
+                <Breadcrumb Separator="/" Style="flex-grow: 1">
                     @foreach (var breadcrumb in Breadcrumbs)
                     {
-                        <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
+                        <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@(breadcrumb.Parent == null ? breadcrumb.Name : breadcrumb.Name.TrimEnd('/', '\\'))</BreadcrumbItem>
                     }
                 </Breadcrumb>
             }
@@ -74,6 +74,33 @@
                         </ChildContent>
                     </Popconfirm>
                 </Tooltip>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.ColumnPicker))
+            {
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            <MenuItem OnClick="() => ToggleColumn(ColumnSize)">
+                                <Checkbox Checked="IsColumnVisible(ColumnSize)" /> Size
+                            </MenuItem>
+                            <MenuItem OnClick="() => ToggleColumn(ColumnType)">
+                                <Checkbox Checked="IsColumnVisible(ColumnType)" /> Type
+                            </MenuItem>
+                            <MenuItem OnClick="() => ToggleColumn(ColumnModified)">
+                                <Checkbox Checked="IsColumnVisible(ColumnModified)" /> Modified
+                            </MenuItem>
+                            <MenuItem OnClick="() => ToggleColumn(ColumnCreated)">
+                                <Checkbox Checked="IsColumnVisible(ColumnCreated)" /> Created
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Tooltip Title="Columns" MouseEnterDelay="2">
+                            <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.Setting" />
+                        </Tooltip>
+                    </ChildContent>
+                </Dropdown>
             }
         </Flex>
     </GridRow>
@@ -110,7 +137,8 @@
         <Pane Size="75%">
             <Table TItem="IFileManagerEntry"
                    DataSource="Entries"
-                   HidePagination="true"
+                   HidePagination="@(Entries != null && Entries.Count <= PageSize)"
+                   PageSize="PageSize"
                    Loading="Entries == null"
                    OnRow="OnRow"
                    SelectedRowsChanged="SelectedChanged"
@@ -129,10 +157,36 @@
                 <PropertyColumn Property="e => e.Path" Sortable Title="Name">
                      @FileSource.GetEntryName(context)
                 </PropertyColumn>
-                <PropertyColumn Property="e => e.Size" Sortable Title="Size">
-                    <ByteSize Value="context.Size" />
-                </PropertyColumn>
-                <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
+                @if (IsColumnVisible(ColumnSize))
+                {
+                    <PropertyColumn Property="e => e.Size" Sortable Title="Size">
+                        @if (context is FileManagerFile)
+                        {
+                            <ByteSize Value="context.Size" />
+                        }
+                    </PropertyColumn>
+                }
+                @if (IsColumnVisible(ColumnType))
+                {
+                    <PropertyColumn Property="e => e.Name" Sortable Title="Type">
+                        @if (context is FileManagerFile file)
+                        {
+                            @file.Extension.ToUpperInvariant()
+                        }
+                        else
+                        {
+                            <text>Folder</text>
+                        }
+                    </PropertyColumn>
+                }
+                @if (IsColumnVisible(ColumnModified))
+                {
+                    <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
+                }
+                @if (IsColumnVisible(ColumnCreated))
+                {
+                    <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Created" />
+                }
              </Table>
         </Pane>
     </SplitPane>
@@ -148,11 +202,19 @@
     [Parameter] public bool IncludeDirectories { get; set; } = true;
     [Parameter] public FileManagerDirectory CurrentPath { get; set; }
     [Parameter] public EventCallback<FileManagerDirectory> CurrentPathChanged { get; set; }
-    [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete;
+    [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete | FileManagerFeatures.ColumnPicker;
     [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
     [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+    [Parameter] public Dictionary<string, bool> ColumnVisibility { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, bool>> ColumnVisibilityChanged { get; set; }
+
+    const string ColumnSize = "Size";
+    const string ColumnType = "Type";
+    const string ColumnModified = "Modified";
+    const string ColumnCreated = "Created";
+    const int PageSize = 100;
 
     IFileManagerSource FileSource;
 
@@ -186,7 +248,10 @@
         Directories = FileSource.GetDirectoryTree().ToHashSet();
 
         if (FileSource is FileManagerLocalDiskSource)
-            await ChangeDirectory(FileSource.GetDirectory(WorkingDirectory), true);
+        {
+            var target = BuildDirectoryChain(WorkingDirectory);
+            await ChangeDirectory(target, true);
+        }
         else if (FileSource is FileManagerArchiveSource)
             await ChangeDirectory(Directories.First(), true);
 
@@ -315,5 +380,81 @@
         }
 
         await Refresh();
+    }
+
+    FileManagerDirectory BuildDirectoryChain(string path)
+    {
+        var segments = new List<string>();
+        var current = path;
+
+        while (!string.IsNullOrEmpty(current))
+        {
+            segments.Add(current);
+            var parentPath = Path.GetDirectoryName(current);
+
+            if (parentPath == current)
+                break;
+
+            current = parentPath;
+        }
+
+        segments.Reverse();
+
+        FileManagerDirectory parent = null;
+
+        // Try to match the first segment to a tree root
+        foreach (var root in Directories)
+        {
+            if (string.Equals(root.Path.TrimEnd(Path.DirectorySeparatorChar), segments[0].TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            {
+                parent = root;
+                break;
+            }
+        }
+
+        // If no tree root matched, create one
+        if (parent == null)
+        {
+            parent = FileSource.GetDirectory(segments[0]);
+            parent.Parent = null;
+        }
+
+        // Build the chain for remaining segments
+        for (int i = 1; i < segments.Count; i++)
+        {
+            var dir = FileSource.GetDirectory(segments[i]);
+            dir.Parent = parent;
+            parent = dir;
+        }
+
+        return parent;
+    }
+
+    static readonly Dictionary<string, bool> ColumnDefaults = new()
+    {
+        { ColumnSize, true },
+        { ColumnType, false },
+        { ColumnModified, true },
+        { ColumnCreated, false },
+    };
+
+    bool IsColumnVisible(string column)
+    {
+        if (ColumnVisibility != null && ColumnVisibility.TryGetValue(column, out var visible))
+            return visible;
+
+        return ColumnDefaults.GetValueOrDefault(column, true);
+    }
+
+    async Task ToggleColumn(string column)
+    {
+        ColumnVisibility ??= new Dictionary<string, bool>();
+
+        ColumnVisibility[column] = !IsColumnVisible(column);
+
+        if (ColumnVisibilityChanged.HasDelegate)
+            await ColumnVisibilityChanged.InvokeAsync(ColumnVisibility);
+
+        StateHasChanged();
     }
 }

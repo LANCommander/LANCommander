@@ -1,11 +1,14 @@
-﻿@using LANCommander.SDK.Enums
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.ImportExport
 @using LANCommander.Server.ImportExport.Factories
 @using LANCommander.Server.ImportExport.Models
+@using LANCommander.UI.Services
 @inherits FeedbackComponent<ImportDialogOptions>
 @inject ArchiveService ArchiveService
 @inject StorageLocationService StorageLocationService
 @inject ImportContextFactory ImportContextFactory
+@inject UploadTracker UploadTracker
+@inject ConfirmService ConfirmService
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
@@ -17,8 +20,8 @@
             Accept=".lcx"
             @bind-File="File"
             @bind-Status="Status"
-            StorageLocationId="StorageLocation.Id"
-            OnUploadCompleted="OnUploadCompleted"
+            StorageLocationId="@(StorageLocation?.Id ?? Guid.Empty)"
+            UploadType="UploadType.Import"
             OnUploadError="OnUploadError">
             <Text>
                 <p>Drag and Drop</p>
@@ -32,7 +35,7 @@
 
         <StorageLocationSelector @bind-Value="StorageLocation" Type="StorageLocationType.Archive"/>
     </Flex>
-    
+
     <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
         <FilePickerButton
             EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
@@ -55,14 +58,14 @@ else if (_stage == ImportStage.RecordSelection)
         @foreach (var group in ImportItems.GroupBy(i => i.Type))
         {
             var size = group.Sum(i => i.Size);
-            
+
             <TreeNode Title="@($"{group.Key} ({group.Count()})")">
                 <TitleTemplate>
                     <GridRow>
                         <GridCol Flex=@("auto")>
                             @group.Key.GetDisplayName() (@group.Count())
                         </GridCol>
-                        
+
                         @if (size > 0)
                         {
                             <GridCol Flex=@("none")>
@@ -105,12 +108,12 @@ else if (_stage == ImportStage.Importing)
 {
     <Flex Align="FlexAlign.Center" Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
         <Progress Type="ProgressType.Circle" Percent="_importProgress" />
-        
+
         @if (!String.IsNullOrWhiteSpace(_currentImportItemName))
         {
             <Text>Importing @_currentImportItemName</Text>
         }
-        
+
         <Flex Gap="FlexGap.Small" Direction="FlexDirection.Vertical">
             @foreach (var error in _errors)
             {
@@ -136,7 +139,7 @@ else if (_stage == ImportStage.Failed)
                 {
                     <Alert Type="AlertType.Error" Message="@error" />
                 }
-                
+
                 <Button Type="ButtonType.Primary" OnClick="CloseFeedbackAsync">Close</Button>
             </Flex>
         </Extra>
@@ -157,14 +160,16 @@ else if (_stage == ImportStage.Failed)
     ChunkUploader ChunkUploader;
     StorageLocation StorageLocation = new();
     ImportContext ImportContext;
+    string _uploadObjectKey;
 
     IEnumerable<IImportItemInfo> ImportItems = new List<IImportItemInfo>();
-    
+
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     bool IsValid = false;
     string Filename;
-    string Status;
+    string Status = "";
+    bool _uploading = false;
 
     ImportStage _stage = ImportStage.Upload;
     string[] _selectedKeys;
@@ -178,36 +183,43 @@ else if (_stage == ImportStage.Failed)
     protected override async Task OnInitializedAsync()
     {
         ImportContext = ImportContextFactory.Create();
-        
+
         ImportContext.OnImportStarted.EventRaised += ImportStarted;
         ImportContext.OnImportComplete.EventRaised += ImportComplete;
         ImportContext.OnImportStatusUpdate.EventRaised += ImportStatusUpdate;
         ImportContext.OnImportError.EventRaised += ImportError;
 
-        StorageLocation = await StorageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
+        StorageLocation = await StorageLocationService.DefaultAsync(StorageLocationType.Archive) ?? StorageLocation;
+
+        // If a pre-uploaded object key was provided, skip the upload stage.
+        if (!string.IsNullOrWhiteSpace(Options.PreUploadedObjectKey))
+        {
+            await OnUploadCompleted(Options.PreUploadedObjectKey);
+        }
     }
 
     private async Task ImportStarted(ImportStatusUpdate status)
     {
         _stage = ImportStage.Importing;
         _importProgress = -1;
-        
+
         await Task.Yield();
         await InvokeStateHasChangedAsync();
     }
-    
+
     private async Task ImportComplete(ImportStatusUpdate status)
     {
         _stage = ImportStage.Complete;
         _importProgress = 100;
-        
+
         await Clear();
         ImportContext.Dispose();
-        
+        await CleanupUploadArchiveAsync();
+
         await Task.Yield();
         await InvokeStateHasChangedAsync();
     }
-    
+
     private async Task ImportStatusUpdate(ImportStatusUpdate status) => await UpdateProgress(status);
 
     private async Task ImportError(ImportStatusUpdate status)
@@ -218,14 +230,14 @@ else if (_stage == ImportStage.Failed)
         await Task.Yield();
         await InvokeStateHasChangedAsync();
     }
-    
+
     private async Task UpdateProgress(ImportStatusUpdate? status)
     {
         if (status != null)
         {
             _importProgress = status.Total > 0 ? (int)Math.Floor(status.Index / (decimal)status.Total * 100) : 100;
             _currentImportItemName = $"{status.CurrentItem?.Type.GetDisplayName()}: {status.CurrentItem?.Name}";
-            
+
             await Task.Yield();
             await InvokeStateHasChangedAsync();
         }
@@ -233,7 +245,20 @@ else if (_stage == ImportStage.Failed)
 
     async Task Upload()
     {
-        await ChunkUploader.Start();
+        _uploading = true;
+        await ChunkUploader.Start(async (objectKey) =>
+        {
+            // When the dialog is still open, transition to RecordSelection.
+            // When it was closed (background upload), the UploadIndicator notification handles it.
+            try
+            {
+                await OnUploadCompleted(objectKey);
+            }
+            catch
+            {
+                // Component may be disposed if dialog was closed; ignore.
+            }
+        });
     }
 
     async Task Import()
@@ -244,7 +269,7 @@ else if (_stage == ImportStage.Failed)
             .Select(k => Guid.TryParse(k, out var id) ? (Guid?)id : null)
             .Where(id => id.HasValue)
             .Select(g => g!.Value);
-        
+
         try
         {
             await ImportContext.PrepareImportQueueAsync(selectedGuids, StorageLocation.Id);
@@ -254,34 +279,65 @@ else if (_stage == ImportStage.Failed)
         {
             _stage = ImportStage.Failed;
             Logger?.LogError(ex, "An unknown error occurred while trying to import");
+            ImportContext.Dispose();
+            await CleanupUploadArchiveAsync();
         }
     }
 
     async Task Clear()
     {
-        await ChunkUploader.Clear();
+        if (ChunkUploader != null)
+            await ChunkUploader.Clear();
     }
 
     async Task Cancel()
     {
-        await ChunkUploader.Clear();
-        await CloseFeedbackAsync();
+        if (_uploading && ChunkUploader?.IsUploading == true)
+        {
+            var result = await ConfirmService.Show(
+                "The upload will continue in the background. You will be notified when it's ready for import.",
+                "Continue in Background?",
+                ConfirmButtons.OKCancel,
+                ConfirmIcon.Info);
+
+            if (result == ConfirmResult.OK)
+            {
+                await CloseFeedbackAsync();
+            }
+        }
+        else
+        {
+            if (ChunkUploader != null)
+                await ChunkUploader.Clear();
+
+            await CloseFeedbackAsync();
+        }
     }
 
     public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
     {
+        // If uploading in background, don't clean up - let it continue.
+        if (_uploading && ChunkUploader?.IsUploading == true)
+        {
+            await base.OnFeedbackCancelAsync(args);
+            return;
+        }
+
         await Clear();
 
         ImportContext.Dispose();
+        await CleanupUploadArchiveAsync();
 
         await base.OnFeedbackCancelAsync(args);
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        await ChunkUploader.Clear();
-        
+        if (ChunkUploader != null)
+            await ChunkUploader.Clear();
+
         ImportContext.Dispose();
+        await CleanupUploadArchiveAsync();
 
         await base.OnFeedbackOkAsync(args);
     }
@@ -292,13 +348,16 @@ else if (_stage == ImportStage.Failed)
         {
             try
             {
-                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+                _uploadObjectKey = objectKey.ToString();
 
-                ImportItems = await ImportContext.InitializeImportAsync(archivePath);
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(_uploadObjectKey);
+
+                ImportItems = await ImportContext.InitializeImportAsync(archivePath, Options.ManifestType);
 
                 _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
-                
+
                 _stage = ImportStage.RecordSelection;
+                _uploading = false;
 
                 await InvokeAsync(StateHasChanged);
             }
@@ -318,12 +377,12 @@ else if (_stage == ImportStage.Failed)
             await (base.OkCancelRef?.OnCancel?.Invoke() ?? Task.CompletedTask);
             await CloseFeedbackAsync();
         }
-
-        await Clear();
     }
 
     public async Task OnUploadError(string message)
     {
+        _uploading = false;
+
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
@@ -332,14 +391,34 @@ else if (_stage == ImportStage.Failed)
         await CloseFeedbackAsync();
     }
 
+    async Task CleanupUploadArchiveAsync()
+    {
+        if (!string.IsNullOrEmpty(_uploadObjectKey))
+        {
+            try
+            {
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == _uploadObjectKey);
+
+                if (archive != null)
+                    await ArchiveService.DeleteAsync(archive);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Could not clean up upload archive record for {ObjectKey}", _uploadObjectKey);
+            }
+
+            _uploadObjectKey = null;
+        }
+    }
+
     public async Task OnLocalFileSelected(string path)
     {
         try
         {
-            ImportItems = await ImportContext.InitializeImportAsync(path);
-            
+            ImportItems = await ImportContext.InitializeImportAsync(path, Options.ManifestType);
+
             _selectedKeys = ImportItems.Select(i => i.Key).ToArray();
-            
+
             _stage = ImportStage.RecordSelection;
 
             await InvokeAsync(StateHasChanged);

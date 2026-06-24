@@ -52,6 +52,12 @@ namespace LANCommander.SDK.Services
         public string GetDownloadPath(Media media)
             => $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
 
+        public string GetStreamPath(Media media)
+            => $"/api/Media/{media.Id}/Stream";
+
+        public string GetAbsoluteStreamUrl(Media media)
+            => connectionClient.GetServerAddress().Join(GetStreamPath(media)).ToString();
+
         public string GetAbsoluteThumbnailUrl(Media media)
             => connectionClient.GetServerAddress().Join(GetThumbnailPath(media)).ToString();
 

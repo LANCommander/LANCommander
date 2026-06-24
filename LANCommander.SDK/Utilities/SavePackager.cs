@@ -12,7 +12,7 @@ using LANCommander.SDK.Models;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
-using SharpCompress.Writers;
+using SharpCompress.Writers.Zip;
 
 namespace LANCommander.SDK.Utilities;
 
@@ -20,7 +20,7 @@ public class SavePacker : IDisposable
 {
     private readonly string _installDirectory;
     private readonly MemoryStream _stream;
-    private readonly ZipArchive _archive;
+    private readonly IWritableArchive<ZipWriterOptions> _archive;
 
     /// <summary>
     /// Initialize the save packer, relying on the manifest for paths
@@ -30,7 +30,7 @@ public class SavePacker : IDisposable
     {
         _installDirectory = installDirectory;
         _stream = new MemoryStream();
-        _archive = ZipArchive.Create();
+        _archive = ZipArchive.CreateArchive();
     }
 
     public SavePacker AddPath(SDK.Models.Manifest.SavePath path)
@@ -87,8 +87,10 @@ public class SavePacker : IDisposable
 
     public bool HasEntries()
     {
-        return _archive.Entries.Count != 0;
+        return _archive.Entries.Any();
     }
+
+    public int EntryCount => _archive.Entries.Count();
 
     public bool HasManifest()
     {
@@ -97,7 +99,7 @@ public class SavePacker : IDisposable
 
     public async Task<Stream> PackAsync()
     {
-        _archive.SaveTo(_stream, new WriterOptions(CompressionType.None)
+        _archive.SaveTo(_stream, new ZipWriterOptions(CompressionType.None)
         {
             ArchiveEncoding = new ArchiveEncoding() { Default = Encoding.UTF8 },
             LeaveStreamOpen = true,
@@ -146,10 +148,17 @@ public class SavePacker : IDisposable
             absoluteLocalWorkingDirectory = _installDirectory;
 
         var regex = new Regex(pathPattern);
-        
+
         var matchedFiles = Directory
             .GetFiles(absoluteLocalWorkingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
-            .Where(f => regex.IsMatch(f[absoluteLocalWorkingDirectory.Length..].TrimStart(Path.DirectorySeparatorChar)))
+            .Where(f =>
+            {
+                var relativePath = f[absoluteLocalWorkingDirectory.Length..]
+                    .TrimStart(Path.DirectorySeparatorChar)
+                    .Replace('\\', '/');
+
+                return regex.IsMatch(relativePath);
+            })
             .ToList();
 
         foreach (var file in matchedFiles)

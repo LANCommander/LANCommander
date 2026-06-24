@@ -1,0 +1,1622 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
+using Avalonia.Data;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Views;
+using LANCommander.SDK.Clients;
+using LANCommander.Launcher.Data.Models;
+using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.PowerShell;
+using LANCommander.SDK.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace LANCommander.Launcher.ViewModels.Components;
+
+/// <summary>
+/// ViewModel for the game action bar component.
+/// Handles play, install, uninstall, and library management actions.
+/// </summary>
+public partial class GameActionBarViewModel : ViewModelBase
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<GameActionBarViewModel> _logger;
+
+    [ObservableProperty]
+    private Guid _gameId;
+
+    [ObservableProperty]
+    private string _title = string.Empty;
+
+    // Library state
+    [ObservableProperty]
+    private bool _isInLibrary;
+
+    [ObservableProperty]
+    private bool _isAddingToLibrary;
+
+    [ObservableProperty]
+    private bool _isRemovingFromLibrary;
+
+    // Install state
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    private bool _isInstalled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    private bool _isInstalling;
+
+    [ObservableProperty]
+    private bool _isUninstalling;
+
+    [ObservableProperty]
+    private bool _isVerifyingFiles;
+
+    [ObservableProperty]
+    private string? _installDirectory;
+
+    // Play state
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    private bool _isRunning;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    private bool _isStarting;
+
+    [ObservableProperty]
+    private bool _isStopping;
+
+    // Stats
+    [ObservableProperty]
+    private string _playTime = Localize("PlayStatNone");
+
+    [ObservableProperty]
+    private string _lastPlayed = Localize("LastPlayedNever");
+
+    // Status
+    [ObservableProperty]
+    private string? _statusMessage;
+
+    // Download size (from server archive metadata)
+    [ObservableProperty]
+    private string _downloadSizeText = string.Empty;
+
+    // Available game actions
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _actions = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+    private bool _hasMultipleActions;
+
+    // Non-primary (secondary) actions shown in the split-button dropdown
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _secondaryActions = new();
+
+    [ObservableProperty]
+    private bool _hasSecondaryActions;
+
+    // Manuals
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
+    private ObservableCollection<ManualViewModel> _manuals = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
+    private bool _hasManuals;
+
+    /// <summary>
+    /// Command to open the first manual. Returns null if no manuals exist.
+    /// </summary>
+    public IRelayCommand? OpenFirstManualCommand => Manuals.FirstOrDefault()?.OpenCommand;
+
+    // Script debugging
+    [ObservableProperty]
+    private bool _isScriptDebuggingEnabled;
+
+    // Update available
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
+
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    private bool _isUpdateAvailable;
+
+    // Offline mode - disables install
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    private bool _isOfflineMode;
+
+    /// <summary>
+    /// Shows the simple play button when installed but has only one or zero actions
+    /// </summary>
+    public bool ShowSimplePlayButton => IsInstalled && !HasMultipleActions;
+
+    /// <summary>
+    /// Shows "Update" label when update available and game is idle (not running/starting)
+    /// </summary>
+    public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting;
+
+    /// <summary>
+    /// Shows "Play" label when no update available and game is idle (not running/starting)
+    /// </summary>
+    public bool ShowPlayLabel => !IsRunning && (!IsUpdateAvailable || IsStarting);
+
+    /// <summary>
+    /// Can install only when online and not already installed
+    /// </summary>
+    public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling;
+
+    public bool PlayButtonIsEnabled => !IsStopping && !IsStarting;
+
+    // Timer for checking running state
+    private System.Threading.Timer? _runningCheckTimer;
+
+    // Timer for refreshing the "Last Played" relative time text
+    private System.Threading.Timer? _lastPlayedTimer;
+
+    // End time of the most recent play session, used to recompute the relative text
+    private DateTime? _lastSessionEnd;
+
+    // Events
+    public event EventHandler? LibraryChanged;
+    public event EventHandler? InstallRequested;
+
+    public GameActionBarViewModel(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        _logger = serviceProvider.GetRequiredService<ILogger<GameActionBarViewModel>>();
+    }
+
+    /// <summary>
+    /// Loads the action bar state for a game from local database
+    /// </summary>
+    public async Task LoadFromLocalGameAsync(Game game)
+    {
+        GameId = game.Id;
+        Title = game.Title ?? "Unknown";
+        IsInstalled = game.Installed;
+        InstallDirectory = game.InstallDirectory;
+        IsUpdateAvailable = game.Installed
+            && !string.IsNullOrWhiteSpace(game.LatestVersion)
+            && game.InstalledVersion != game.LatestVersion;
+
+        using var scope = _serviceProvider.CreateScope();
+        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+        IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
+        IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
+
+        await LoadPlayStatsAsync(game.Id);
+        LoadManuals(game);
+        await LoadActionsAsync();
+        StartRunningCheck();
+
+        // Check server for updates if installed and not already detected locally
+        if (game.Installed && !IsUpdateAvailable)
+            _ = CheckForUpdateFromServerAsync(game.Id, game.InstalledVersion);
+    }
+
+    /// <summary>
+    /// Loads the action bar state for a game from SDK model
+    /// </summary>
+    public async Task LoadFromSdkGameAsync(SDK.Models.Game game)
+    {
+        GameId = game.Id;
+        Title = game.Title ?? "Unknown";
+
+        using var scope = _serviceProvider.CreateScope();
+        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+        IsInLibrary = await libraryService.IsInLibraryAsync(game.Id);
+        IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
+
+        // Check if installed from local database
+        var localGame = await gameService.GetAsync(game.Id);
+        if (localGame != null)
+        {
+            IsInstalled = localGame.Installed;
+            InstallDirectory = localGame.InstallDirectory;
+            IsUpdateAvailable = localGame.Installed
+                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                && localGame.InstalledVersion != localGame.LatestVersion;
+            await LoadPlayStatsAsync(localGame.Id);
+            LoadManuals(localGame);
+        }
+        else
+        {
+            IsInstalled = false;
+            InstallDirectory = null;
+            IsUpdateAvailable = false;
+            PlayTime = Localize("PlayStatNone");
+            LastPlayed = Localize("LastPlayedNever");
+            Manuals.Clear();
+            HasManuals = false;
+        }
+
+        // Download size from latest archive (only show when not installed)
+        if (!IsInstalled)
+        {
+            var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+            DownloadSizeText = latestArchive?.CompressedSize > 0
+                ? FormatBytes(latestArchive.CompressedSize)
+                : string.Empty;
+        }
+        else
+        {
+            DownloadSizeText = string.Empty;
+        }
+
+        await LoadActionsAsync();
+        StartRunningCheck();
+
+        // Check server for updates if installed and not already detected locally
+        if (localGame != null && localGame.Installed && !IsUpdateAvailable)
+            _ = CheckForUpdateFromServerAsync(localGame.Id, localGame.InstalledVersion);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1) { order++; size /= 1024; }
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    /// <summary>
+    /// Loads available actions for the current game
+    /// </summary>
+    private async Task LoadActionsAsync()
+    {
+        Actions.Clear();
+        SecondaryActions.Clear();
+        HasMultipleActions = false;
+        HasSecondaryActions = false;
+
+        if (!IsInstalled || string.IsNullOrEmpty(InstallDirectory))
+            return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            var actions = await gameClient.GetActionsAsync(InstallDirectory, GameId);
+            if (actions != null && actions.Any())
+            {
+                foreach (var action in actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+                    Actions.Add(new GameActionViewModel(action, RunActionAsync));
+
+                foreach (var action in actions.Where(a => !a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+                    SecondaryActions.Add(new GameActionViewModel(action, RunActionAsync));
+
+                HasMultipleActions = Actions.Count > 1;
+                HasSecondaryActions = SecondaryActions.Count > 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load actions for game {GameId}", GameId);
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the state from the database.
+    /// Called after an installation completes.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        if (GameId == Guid.Empty) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame != null)
+            {
+                IsInstalled = localGame.Installed;
+                InstallDirectory = localGame.InstallDirectory;
+                IsUpdateAvailable = localGame.Installed
+                    && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                    && localGame.InstalledVersion != localGame.LatestVersion;
+                IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
+                await LoadPlayStatsAsync(localGame.Id);
+                LoadManuals(localGame);
+                await LoadActionsAsync();
+                StatusMessage = IsInstalled ? "Installation complete!" : null;
+                _logger.LogInformation("Refreshed action bar for {Title}: Installed={Installed}", Title, IsInstalled);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh action bar for {GameId}", GameId);
+        }
+    }
+
+    public void StartRunningCheck()
+    {
+        _runningCheckTimer?.Dispose();
+        _runningCheckTimer = new System.Threading.Timer(
+            _ => CheckRunningState(),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(500));
+
+        _lastPlayedTimer?.Dispose();
+        _lastPlayedTimer = new System.Threading.Timer(
+            _ => Dispatcher.UIThread.Post(UpdateLastPlayedText),
+            null,
+            TimeSpan.FromMinutes(1),
+            TimeSpan.FromMinutes(1));
+    }
+
+    public void StopRunningCheck()
+    {
+        _runningCheckTimer?.Dispose();
+        _runningCheckTimer = null;
+
+        _lastPlayedTimer?.Dispose();
+        _lastPlayedTimer = null;
+    }
+
+    private void CheckRunningState()
+    {
+        if (GameId == Guid.Empty) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            var wasRunning = IsRunning;
+            var nowRunning = gameClient.IsRunning(GameId);
+
+            // If game stopped running, reset states and refresh stats
+            if (wasRunning && !nowRunning)
+            {
+                // Dispatch UI updates to the UI thread
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    IsRunning = false;
+                    IsStarting = false;
+                    IsStopping = false;
+
+                    // Refresh play stats
+                    await RefreshPlayStatsAsync();
+                });
+            }
+            else if (nowRunning != IsRunning)
+            {
+                // Update running state on UI thread
+                Dispatcher.UIThread.Post(() => IsRunning = nowRunning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking running state");
+        }
+    }
+
+    private async Task RefreshPlayStatsAsync()
+    {
+        try
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                await LoadPlayStatsAsync(GameId);
+            }
+            else
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => LoadPlayStatsAsync(GameId));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh play stats");
+        }
+    }
+
+    private async Task LoadPlayStatsAsync(Guid gameId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+        var playSessions = await dbContext.Set<Data.Models.PlaySession>()
+            .Where(ps => ps.GameId == gameId && ps.Start != null && ps.End != null)
+            .ToListAsync();
+
+        if (playSessions.Any())
+        {
+            var totalTime = new TimeSpan(playSessions
+                .Select(ps => ps.End!.Value.Subtract(ps.Start!.Value))
+                .Sum(ts => ts.Ticks));
+
+            if (totalTime.TotalMinutes < 1)
+                PlayTime = Localize("PlayStatNone");
+            else if (totalTime.TotalHours < 1)
+                PlayTime = Localize("PlayTimeMinutes", $"{totalTime.TotalMinutes:0}");
+            else
+                PlayTime = Localize("PlayTimeHours", $"{totalTime.TotalHours:0.#}");
+
+            var lastSession = playSessions
+                .OrderByDescending(ps => ps.End)
+                .First();
+
+            _lastSessionEnd = lastSession.End!.Value;
+            UpdateLastPlayedText();
+        }
+        else
+        {
+            PlayTime = Localize("PlayStatNone");
+            _lastSessionEnd = null;
+            LastPlayed = Localize("LastPlayedNever");
+        }
+    }
+
+    /// <summary>
+    /// Recomputes the relative "Last Played" text from the cached last session end time.
+    /// Called on load and periodically so the text stays current without re-querying.
+    /// </summary>
+    private void UpdateLastPlayedText()
+    {
+        if (_lastSessionEnd is not { } end)
+        {
+            LastPlayed = Localize("LastPlayedNever");
+            return;
+        }
+
+        var elapsed = DateTime.Now - end;
+        if (elapsed.TotalMinutes < 1)
+            LastPlayed = Localize("LastPlayedJustNow");
+        else if (elapsed.TotalHours < 1)
+        {
+            var minutes = (int)elapsed.TotalMinutes;
+            LastPlayed = Localize(minutes == 1 ? "LastPlayedMinuteAgo" : "LastPlayedMinutesAgo", minutes);
+        }
+        else if (elapsed.TotalDays < 1)
+        {
+            var hours = (int)elapsed.TotalHours;
+            LastPlayed = Localize(hours == 1 ? "LastPlayedHourAgo" : "LastPlayedHoursAgo", hours);
+        }
+        else if (elapsed.TotalDays < 7)
+        {
+            var days = (int)elapsed.TotalDays;
+            LastPlayed = Localize(days == 1 ? "LastPlayedDayAgo" : "LastPlayedDaysAgo", days);
+        }
+        else
+            LastPlayed = end.ToString("MMM d, yyyy");
+    }
+
+    /// <summary>
+    /// Checks the server for available updates and updates local state if found.
+    /// If no update is available, refreshes the on-disk manifest and scripts.
+    /// Runs in the background (fire-and-forget) so it doesn't block UI loading.
+    /// </summary>
+    private async Task CheckForUpdateFromServerAsync(Guid gameId, string installedVersion)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var redistributableClient = scope.ServiceProvider.GetRequiredService<RedistributableClient>();
+
+            var hasUpdate = await gameClient.CheckForUpdateAsync(gameId, installedVersion);
+
+            if (!hasUpdate && !string.IsNullOrEmpty(InstallDirectory))
+            {
+                // Check redistributables for updates
+                var localGame = await gameService.GetAsync(gameId);
+
+                if (localGame?.Redistributables != null)
+                {
+                    foreach (var redistributable in localGame.Redistributables)
+                    {
+                        try
+                        {
+                            var redistManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(InstallDirectory, redistributable.Id);
+
+                            if (redistManifest == null || string.IsNullOrWhiteSpace(redistManifest.Version))
+                                continue;
+
+                            var redistHasUpdate = await redistributableClient.CheckForUpdateAsync(redistributable.Id, redistManifest.Version);
+
+                            if (redistHasUpdate)
+                            {
+                                _logger.LogInformation("Redistributable {RedistName} ({RedistId}) has an update available for game {GameId}",
+                                    redistributable.Name, redistributable.Id, gameId);
+                                hasUpdate = true;
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "Could not check for redistributable {RedistId} updates", redistributable.Id);
+                        }
+                    }
+                }
+            }
+
+            if (hasUpdate)
+            {
+                _logger.LogInformation("Server reports update available for game {GameId}", gameId);
+
+                // Re-import the game to pull latest version info into local DB
+                await importService.ImportGameAsync(gameId);
+
+                var localGame = await gameService.GetAsync(gameId);
+                if (localGame != null)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        IsUpdateAvailable = true;
+                    });
+                }
+            }
+            else if (!string.IsNullOrEmpty(InstallDirectory))
+            {
+                // No update available — refresh manifest and scripts to keep them in sync
+                _logger.LogDebug("Refreshing manifest and scripts for game {GameId}", gameId);
+                await gameClient.RefreshManifestAndScriptsAsync(InstallDirectory, gameId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not check for updates for game {GameId}", gameId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task UpdateGameAsync()
+    {
+        if (!IsInstalled || !IsUpdateAvailable || IsInstalling) return;
+
+        IsInstalling = true;
+        StatusMessage = "Preparing to update...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            _logger.LogInformation("Adding game {GameId} ({Title}) to update queue", GameId, Title);
+
+            await installService.Add(localGame, localGame.InstallDirectory);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start update for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to update: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Update", ex.Message);
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task PrimaryActionAsync()
+    {
+        if (IsRunning)
+            return StopAsync();
+        if (IsUpdateAvailable)
+            return UpdateGameAsync();
+        return PlayAsync();
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task PlayOrStopAsync() => IsRunning ? StopAsync() : PlayAsync();
+
+    [RelayCommand]
+    private async Task PlayAsync()
+    {
+        if (!IsInstalled || IsStarting || IsRunning) return;
+
+        // If we have actions loaded, either pick directly or show a chooser
+        if (Actions.Any())
+        {
+            SDK.Models.Manifest.Action? chosen;
+
+            if (HasMultipleActions)
+            {
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<SDK.Models.Manifest.Action?>();
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var overlayVm = new GameActionsOverlayViewModel(Title, Actions);
+                    var overlay = new Views.GameActionsOverlay
+                    {
+                        DataContext = overlayVm,
+                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                        VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                    };
+
+                    overlay.ActionSelected += (_, action) => tcs.TrySetResult(action);
+
+                    var mainWindow = (Application.Current?.ApplicationLifetime
+                        as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                    var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                    if (layer is not null)
+                    {
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty,
+                            new Binding("Bounds.Width") { Source = layer });
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty,
+                            new Binding("Bounds.Height") { Source = layer });
+                        layer.Children.Add(overlay);
+                    }
+                    else
+                    {
+                        // No overlay layer available — fall back to first action
+                        tcs.TrySetResult(Actions.First().Action);
+                    }
+                });
+
+                chosen = await tcs.Task;
+            }
+            else
+            {
+                chosen = Actions.First().Action;
+            }
+
+            if (chosen != null)
+                await RunActionAsync(chosen);
+
+            return;
+        }
+
+        // Fallback: load actions on demand and run the first primary one
+        IsStarting = true;
+        {
+            StatusMessage = "Starting...";
+
+            var discordClient = _serviceProvider.GetRequiredService<DiscordClient>();
+
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+                var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+                var localGame = await gameService.GetAsync(GameId);
+                if (localGame == null)
+                {
+                    throw new InvalidOperationException("Game not found in local database");
+                }
+
+                // Get available actions
+                var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, GameId);
+                if (actions == null || !actions.Any())
+                {
+                    throw new InvalidOperationException("No actions available for this game");
+                }
+
+                // Find primary action or first action
+                var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction) ?? actions.First();
+
+                _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
+
+                var discordAppId = localGame.ExternalIds?
+                    .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
+                    ?.ExternalId;
+                discordClient.UpdatePresence(localGame.Title, discordAppId);
+
+                // Run the game
+                await gameService.Run(localGame, primaryAction);
+
+                StatusMessage = null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to play game {GameId}", GameId);
+                StatusMessage = $"Failed to start: {ex.Message}";
+                await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
+            }
+            finally
+            {
+                discordClient.ClearPresence();
+                IsStarting = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs a specific action for the game
+    /// </summary>
+    public async Task RunActionAsync(SDK.Models.Manifest.Action action)
+    {
+        if (!IsInstalled || IsStarting || IsRunning) return;
+
+        IsStarting = true;
+        StatusMessage = $"Starting {action.Name}...";
+
+        var discordClient = _serviceProvider.GetRequiredService<DiscordClient>();
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+            {
+                throw new InvalidOperationException("Game not found in local database");
+            }
+
+            _logger.LogInformation("Running action {ActionName} for game {GameId}", action.Name, GameId);
+
+            var discordAppId = localGame.ExternalIds?
+                .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
+                ?.ExternalId;
+            discordClient.UpdatePresence(localGame.Title, discordAppId);
+
+            // Run the game with the specific action
+            await gameService.Run(localGame, action);
+
+            StatusMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run action {ActionName} for game {GameId}", action.Name, GameId);
+            StatusMessage = $"Failed to start: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Launch", ex.Message);
+        }
+        finally
+        {
+            discordClient.ClearPresence();
+            IsStarting = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StopAsync()
+    {
+        if (!IsRunning || IsStopping) return;
+
+        IsStopping = true;
+        StatusMessage = "Stopping...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            gameClient.Stop(GameId);
+            _logger.LogInformation("Stop requested for game {GameId}", GameId);
+
+            // Wait briefly for process to stop
+            await Task.Delay(500);
+
+            StatusMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop game {GameId}", GameId);
+            StatusMessage = $"Failed to stop: {ex.Message}";
+        }
+        finally
+        {
+            IsStopping = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallAsync()
+    {
+        if (IsInstalling) return;
+
+        IsInstalling = true;
+        StatusMessage = "Preparing to install...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var importService      = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var libraryService     = scope.ServiceProvider.GetRequiredService<LibraryService>();
+            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+            // Ensure game is in library
+            if (!IsInLibrary)
+            {
+                _logger.LogInformation("Game {GameId} ({Title}) not in library, adding first", GameId, Title);
+                StatusMessage = "Adding to library...";
+
+                await importService.ImportGameAsync(GameId);
+                await libraryService.AddToLibraryAsync(GameId);
+                await libraryService.RefreshItemsAsync();
+
+                IsInLibrary = true;
+                LibraryChanged?.Invoke(this, EventArgs.Empty);
+            }
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database after import");
+
+            // ── Gather options ─────────────────────────────────────────────────
+            StatusMessage = "Checking available options...";
+
+            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+            var availableAddons    = Array.Empty<SDK.Models.Game>();
+            var availableTools     = Array.Empty<SDK.Models.Tool>();
+
+            try
+            {
+                var addons = await gameClient.GetAddonsAsync(GameId);
+                availableAddons = addons?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
+            }
+
+            try
+            {
+                var tools = await gameClient.GetToolsAsync(GameId);
+                availableTools = tools?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+            }
+
+            var needsDialog = availableAddons.Length > 0 || availableTools.Length > 0 || installDirectories.Length > 1;
+
+            // ── Build options VM ───────────────────────────────────────────────
+            var optionsVm = new InstallOptionsViewModel();
+
+            foreach (var dir in installDirectories)
+                optionsVm.InstallDirectories.Add(dir);
+
+            optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+            optionsVm.GameTitle = Title ?? "Game";
+            optionsVm.DialogTitle = $"Install {optionsVm.GameTitle}";
+            optionsVm.ConfirmButtonText = "Install";
+
+            // Fetch base game archive sizes
+            try
+            {
+                var game = await gameClient.GetAsync(GameId);
+                var archives = game?.Archives?.ToArray() ?? [];
+                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
+                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+            }
+            catch { /* sizes will show as 0 */ }
+
+            // Add addons sorted by type, then name
+            foreach (var addon in availableAddons
+                         .OrderBy(a => a.Type)
+                         .ThenBy(a => a.Title ?? string.Empty))
+                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: false));
+
+            // Add tools sorted by name
+            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: false));
+
+            // ── Show dialog if needed ──────────────────────────────────────────
+            if (needsDialog)
+            {
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var overlay = new Views.InstallOptionsOverlay
+                    {
+                        DataContext = optionsVm,
+                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                        VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                    };
+                    
+                    overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                    var mainWindow = (Application.Current?.ApplicationLifetime
+                        as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                    var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                    if (layer is not null)
+                    {
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                        overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                        layer.Children.Add(overlay);
+                    }
+                });
+
+                var confirmed = await tcs.Task;
+
+                if (confirmed != true)
+                {
+                    StatusMessage = null;
+                    return;
+                }
+            }
+
+            // ── Queue the install ──────────────────────────────────────────────
+            StatusMessage = "Starting installation...";
+            _logger.LogInformation("Adding game {GameId} ({Title}) to install queue", GameId, Title);
+
+            await installService.Add(
+                localGame,
+                optionsVm.SelectedInstallDirectory,
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start installation for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to install: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Install", ex.Message);
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ModifyAsync()
+    {
+        if (!IsInstalled) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+            var localGame = await dbContext.Set<Data.Models.Game>()
+                .Include(g => g.DependentGames)
+                .Include(g => g.Tools)
+                .FirstOrDefaultAsync(g => g.Id == GameId);
+
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            // ── Gather options ─────────────────────────────────────────────────
+            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+            var availableAddons    = Array.Empty<SDK.Models.Game>();
+            var availableTools     = Array.Empty<SDK.Models.Tool>();
+
+            try
+            {
+                var addons = await gameClient.GetAddonsAsync(GameId);
+                availableAddons = addons?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
+            }
+
+            try
+            {
+                var tools = await gameClient.GetToolsAsync(GameId);
+                availableTools = tools?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+            }
+
+            // Build set of currently installed addon IDs
+            var installedAddonIds = new HashSet<Guid>(
+                (localGame.DependentGames ?? [])
+                    .Where(a => a.Installed)
+                    .Select(a => a.Id));
+
+            // Build set of currently installed tool IDs
+            var installedToolIds = new HashSet<Guid>(
+                (localGame.Tools ?? [])
+                    .Where(t => t.Installed)
+                    .Select(t => t.Id));
+
+            // ── Build options VM ───────────────────────────────────────────────
+            var optionsVm = new InstallOptionsViewModel();
+
+            foreach (var dir in installDirectories)
+                optionsVm.InstallDirectories.Add(dir);
+
+            // If current install directory isn't in the list, add it
+            if (!string.IsNullOrEmpty(localGame.InstallDirectory))
+            {
+                var currentDir = System.IO.Path.GetDirectoryName(localGame.InstallDirectory) ?? localGame.InstallDirectory;
+
+                if (!optionsVm.InstallDirectories.Contains(currentDir))
+                    optionsVm.InstallDirectories.Insert(0, currentDir);
+
+                optionsVm.SelectedInstallDirectory = currentDir;
+            }
+            else
+            {
+                optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+            }
+
+            optionsVm.GameTitle = Title ?? "Game";
+            optionsVm.DialogTitle = $"Modify {optionsVm.GameTitle}";
+            optionsVm.ConfirmButtonText = "Apply";
+            optionsVm.AlwaysShowDirectory = true;
+
+            // Fetch base game archive sizes
+            try
+            {
+                var game = await gameClient.GetAsync(GameId);
+                var archives = game?.Archives?.ToArray() ?? [];
+                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
+                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+            }
+            catch { /* sizes will show as 0 */ }
+
+            // Add addons sorted by type, then name; pre-select currently installed ones
+            foreach (var addon in availableAddons
+                         .OrderBy(a => a.Type)
+                         .ThenBy(a => a.Title ?? string.Empty))
+                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: installedAddonIds.Contains(addon.Id)));
+
+            // Add tools sorted by name; pre-select currently installed ones
+            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: installedToolIds.Contains(tool.Id)));
+
+            // ── Show dialog ───────────────────────────────────────────────────
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.InstallOptionsOverlay
+                {
+                    DataContext = optionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+            });
+
+            var confirmed = await tcs.Task;
+
+            if (confirmed != true)
+                return;
+
+            // ── Queue the modification ────────────────────────────────────────
+            _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}, tools={ToolCount}",
+                GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length, optionsVm.SelectedTools.Length);
+
+            await installService.Add(
+                localGame,
+                optionsVm.SelectedInstallDirectory,
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to modify game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to modify: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task UninstallAsync()
+    {
+        if (!IsInstalled || IsUninstalling) return;
+
+        IsUninstalling = true;
+        StatusMessage = "Uninstalling...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+            {
+                throw new InvalidOperationException("Game not found in local database");
+            }
+
+            _logger.LogInformation("Uninstalling game {GameId} ({Title})", GameId, Title);
+
+            await gameService.UninstallAsync(localGame);
+
+            IsInstalled = false;
+            InstallDirectory = null;
+            StatusMessage = "Uninstalled";
+            _logger.LogInformation("Game {GameId} ({Title}) uninstalled", GameId, Title);
+
+            // Notify that library has changed (install status changed)
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to uninstall game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to uninstall: {ex.Message}";
+        }
+        finally
+        {
+            IsUninstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task VerifyFilesAsync()
+    {
+        if (!IsInstalled || IsVerifyingFiles || string.IsNullOrEmpty(InstallDirectory)) return;
+
+        IsVerifyingFiles = true;
+        StatusMessage = "Verifying files...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            var conflicts = await gameClient.ValidateFilesAsync(InstallDirectory, GameId);
+            var conflictList = conflicts?.ToList() ?? new();
+
+            if (conflictList.Count == 0)
+            {
+                StatusMessage = "All files verified successfully";
+                _logger.LogInformation("File verification passed for game {GameId} ({Title})", GameId, Title);
+            }
+            else
+            {
+                StatusMessage = $"{conflictList.Count} file(s) need repair, restoring...";
+                _logger.LogInformation("File verification found {Count} conflict(s) for game {GameId} ({Title}), restoring", conflictList.Count, GameId, Title);
+
+                await gameClient.RestoreFilesAsync(InstallDirectory, GameId, conflictList.Select(c => c.FullName));
+
+                StatusMessage = $"{conflictList.Count} file(s) restored";
+                _logger.LogInformation("File restoration complete for game {GameId} ({Title})", GameId, Title);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify files for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Verification failed: {ex.Message}";
+        }
+        finally
+        {
+            IsVerifyingFiles = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddToLibraryAsync()
+    {
+        if (IsInLibrary || IsAddingToLibrary) return;
+
+        IsAddingToLibrary = true;
+        StatusMessage = "Adding to library...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            await importService.ImportGameAsync(GameId);
+            await libraryService.AddToLibraryAsync(GameId);
+            await libraryService.RefreshItemsAsync();
+
+            IsInLibrary = true;
+            StatusMessage = "Added to library";
+            _logger.LogInformation("Game {GameId} ({Title}) added to library", GameId, Title);
+
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add game {GameId} ({Title}) to library", GameId, Title);
+            StatusMessage = $"Failed to add: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Add to Library", ex.Message);
+        }
+        finally
+        {
+            IsAddingToLibrary = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveFromLibraryAsync()
+    {
+        if (!IsInLibrary || IsRemovingFromLibrary) return;
+
+        IsRemovingFromLibrary = true;
+        StatusMessage = "Removing from library...";
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+
+            await libraryService.RemoveFromLibraryAsync(GameId);
+            await libraryService.RefreshItemsAsync();
+
+            IsInLibrary = false;
+            StatusMessage = "Removed from library";
+            _logger.LogInformation("Game {GameId} ({Title}) removed from library", GameId, Title);
+
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove game {GameId} ({Title}) from library", GameId, Title);
+            StatusMessage = $"Failed to remove: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Remove from Library", ex.Message);
+        }
+        finally
+        {
+            IsRemovingFromLibrary = false;
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseFiles()
+    {
+        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+        {
+            StatusMessage = "Install directory not found";
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = InstallDirectory,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open install directory");
+            StatusMessage = $"Failed to open folder: {ex.Message}";
+        }
+    }
+
+    private void LoadManuals(Game game)
+    {
+        Manuals.Clear();
+
+        if (game.Media == null || !game.Media.Any())
+        {
+            HasManuals = false;
+            return;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+        var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+
+        var manualMedia = game.Media
+            .Where(m => m.Type == SDK.Enums.MediaType.Manual)
+            .ToList();
+
+        foreach (var manual in manualMedia)
+        {
+            var filePath = mediaService.GetImagePath(manual);
+            if (File.Exists(filePath))
+            {
+                var title = string.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name;
+                Manuals.Add(new ManualViewModel(title, filePath, OpenManual));
+            }
+        }
+
+        HasManuals = Manuals.Count > 0;
+    }
+
+    private void OpenManual(ManualViewModel manual)
+    {
+        try
+        {
+            var items = new List<LightboxItem>();
+            int startIndex = 0;
+
+            for (int i = 0; i < Manuals.Count; i++)
+            {
+                items.Add(new LightboxItem
+                {
+                    Type = LightboxItemType.Pdf,
+                    Path = Manuals[i].FilePath,
+                    Title = Manuals[i].Title,
+                });
+
+                if (Manuals[i] == manual)
+                    startIndex = i;
+            }
+
+            LightboxOverlay.ShowOverlay(items, startIndex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open manual {Title}", manual.Title);
+            StatusMessage = $"Failed to open manual: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Opens a PowerShell console in the game's install directory
+    /// </summary>
+    [RelayCommand]
+    private void OpenPowerShellConsole()
+    {
+        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+        {
+            StatusMessage = "Game is not installed";
+            return;
+        }
+
+        try
+        {
+            // Open a standalone PowerShell window for the install directory
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoLogo -NoExit -WorkingDirectory \"{InstallDirectory}\"",
+                UseShellExecute = true
+            };
+            Process.Start(processInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open PowerShell console for {Title}", Title);
+            StatusMessage = $"Failed to open console: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Opens a console window, runs the specified script type using the SDK's script execution, then stays interactive
+    /// </summary>
+    private async Task OpenScriptTerminalAsync(ScriptType scriptType, string scriptTypeName)
+    {
+        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
+        {
+            StatusMessage = "Game is not installed";
+            return;
+        }
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var scriptClient = scope.ServiceProvider.GetRequiredService<ScriptClient>();
+            var scriptDebugger = _serviceProvider.GetRequiredService<ScriptDebugger>();
+
+            // Create and show the console window
+            var viewModel = new PowerShellConsoleViewModel($"{scriptTypeName} Scripts - {Title}", InstallDirectory);
+            var window = new Views.PowerShellConsoleWindow
+            {
+                DataContext = viewModel
+            };
+
+            viewModel.CloseAction = () => window.Close();
+
+            // Wire up the debugger events to the console control
+            var console = window.ConsoleControl;
+
+            scriptDebugger.OnDebugStart = context =>
+            {
+                console.OnDebugStart(context);
+                return Task.CompletedTask;
+            };
+
+            scriptDebugger.OnOutput = (level, message) =>
+            {
+                console.OnOutput(level, message);
+                return Task.CompletedTask;
+            };
+
+            scriptDebugger.OnDebugBreak = async context =>
+            {
+                await console.OnDebugBreakAsync(context);
+            };
+
+            scriptDebugger.OnDebugEnd = context =>
+            {
+                console.OnDebugEnd(context);
+                return Task.CompletedTask;
+            };
+
+            // Show the window
+            window.Show();
+
+            // Run the appropriate script type
+            // The script client already handles debug mode when EnableScriptDebugging is true
+            scriptClient.Debug = true; // Force debug mode for this execution
+
+            StatusMessage = $"Running {scriptTypeName} scripts...";
+
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var manifests = await gameClient.GetManifestsAsync(InstallDirectory, GameId);
+
+            foreach (var manifest in manifests)
+            {
+                switch (scriptType)
+                {
+                    case ScriptType.Install:
+                        await scriptClient.Game_RunInstallScriptAsync(InstallDirectory, GameId);
+                        break;
+                    case ScriptType.Uninstall:
+                        await scriptClient.Game_RunUninstallScriptAsync(InstallDirectory, GameId);
+                        break;
+                    case ScriptType.NameChange:
+                        var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+                        var user = await userService.GetCurrentUser();
+                        await scriptClient.Game_RunNameChangeScriptAsync(InstallDirectory, GameId, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
+
+                        break;
+                    case ScriptType.KeyChange:
+                        var key = await gameClient.GetAllocatedKeyAsync(manifest.Id);
+                        await scriptClient.Game_RunKeyChangeScriptAsync(InstallDirectory, GameId, key);
+                        break;
+                }
+            }
+
+            StatusMessage = $"{scriptTypeName} scripts completed";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run {ScriptType} scripts for {Title}", scriptTypeName, Title);
+            StatusMessage = $"Script error: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Runs install scripts in a debug console
+    /// </summary>
+    [RelayCommand]
+    private Task RunInstallScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.Install, "Install");
+    }
+
+    /// <summary>
+    /// Runs uninstall scripts in a debug console
+    /// </summary>
+    [RelayCommand]
+    private Task RunUninstallScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.Uninstall, "Uninstall");
+    }
+
+    /// <summary>
+    /// Runs name change scripts
+    /// </summary>
+    [RelayCommand]
+    private Task RunNameChangeScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.NameChange, "Name Change");
+    }
+
+    /// <summary>
+    /// Runs key change scripts
+    /// </summary>
+    [RelayCommand]
+    private Task RunKeyChangeScriptsAsync()
+    {
+        return OpenScriptTerminalAsync(ScriptType.KeyChange, "Key Change");
+    }
+}
+
+/// <summary>
+/// ViewModel for a game action (used in the Play dropdown)
+/// </summary>
+public partial class GameActionViewModel : ViewModelBase
+{
+    public SDK.Models.Manifest.Action Action { get; }
+
+    public string Name => Action.Name;
+
+    private readonly Func<SDK.Models.Manifest.Action, Task> _runAction;
+
+    public GameActionViewModel(SDK.Models.Manifest.Action action, Func<SDK.Models.Manifest.Action, Task> runAction)
+    {
+        Action = action;
+        _runAction = runAction;
+    }
+
+    [RelayCommand]
+    private async Task RunAsync()
+    {
+        await _runAction(Action);
+    }
+}
+
+/// <summary>
+/// ViewModel for a game manual (used in the Manuals menu)
+/// </summary>
+public partial class ManualViewModel : ViewModelBase
+{
+    public string Title { get; }
+    public string FilePath { get; }
+
+    private readonly Action<ManualViewModel> _openManual;
+
+    public ManualViewModel(string title, string filePath, Action<ManualViewModel> openManual)
+    {
+        Title = title;
+        FilePath = filePath;
+        _openManual = openManual;
+    }
+
+    [RelayCommand]
+    private void Open()
+    {
+        _openManual(this);
+    }
+}
+
+/// <summary>
+/// ViewModel for the "choose a primary action" overlay shown when a game
+/// has more than one primary action configured.
+/// </summary>
+public class GameActionsOverlayViewModel
+{
+    public string GameTitle { get; }
+    public IReadOnlyList<GameActionViewModel> Actions { get; }
+
+    public GameActionsOverlayViewModel(string gameTitle, IEnumerable<GameActionViewModel> actions)
+    {
+        GameTitle = gameTitle;
+        Actions = actions.ToList();
+    }
+}

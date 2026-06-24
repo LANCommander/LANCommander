@@ -4,6 +4,7 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -15,6 +16,7 @@ public static class ToolsEndpoints
 
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
+        group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync);
         group.MapPost("/Import/{objectKey:guid}", ImportAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
@@ -44,6 +46,37 @@ public static class ToolsEndpoints
             return TypedResults.NotFound();
 
         return TypedResults.Ok(mapper.Map<SDK.Models.Tool>(tool));
+    }
+
+    internal static async Task<IResult> GetManifestByIdAsync(
+        Guid id,
+        [FromServices] ToolService toolService)
+    {
+        var manifest = await toolService.GetManifestAsync(id);
+
+        if (manifest == null)
+            return TypedResults.NotFound();
+
+        return TypedResults.Ok(manifest);
+    }
+
+    internal static async Task<IResult> GetScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var scripts = await cache.GetOrSetAsync($"Tools/{id}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.RedistributableId == id && s.Type != SDK.Enums.ScriptType.Package);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Tools/{id}/Scripts", "Tools", $"Tools/{id}"]);
+        
+        return TypedResults.Ok(scripts);
     }
 
     internal static async Task<IResult> DownloadAsync(

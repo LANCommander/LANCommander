@@ -45,27 +45,18 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.build_platform == 'Linux' && inputs.build_arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-    - uses: frabert/replace-string-action@v2
-      name: Swap Path Backslashes
-      id: swap_path_backslashes
-      with:
-        string: '${{ github.workspace }}'
-        pattern: '\\'
-        replace-with: '/'
-        flags: g
-
     # Checkout code
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
-    # .NET Setup and Caching
+    # .NET Setup
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -74,23 +65,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore --locked-mode
 
-    # Node.js Setup and Caching
-    - name: Setup Node.js
-      uses: actions/setup-node@v3.8.1
-      with:
-        node-version: '20'
-
-    - name: Install Node Packages
-      run: |
-        npm install --prefix ./LANCommander.UI
-        npm install --prefix ./LANCommander.Launcher
-
-    - name: Package Frontend
-      run: |
-        npm run package --prefix ./LANCommander.UI
-        npm run package --prefix ./LANCommander.Launcher
-
-    - name: Publish Updater and Launcher
+    - name: Publish Launcher
       run: |
         # Strip leading 'v' if present
         RAW_VERSION="${{ inputs.version_tag }}"       # e.g. v2.0.0-rc1
@@ -103,15 +78,6 @@ jobs:
         echo "SEMVER=$SEMVER"
         echo "ASSEMBLY_VERSION=$ASSEMBLY_VERSION"
 
-        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" \
-          -c "${{ inputs.build_configuration }}" \
-          --self-contained \
-          --runtime "${{ inputs.build_runtime }}" \
-          -p:Version="$SEMVER" \
-          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
-          -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
-
         dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" \
           -c "${{ inputs.build_configuration }}" \
           --self-contained \
@@ -119,52 +85,223 @@ jobs:
           -p:Version="$SEMVER" \
           -p:AssemblyVersion="$ASSEMBLY_VERSION" \
           -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
+          -p:InformationalVersion="$SEMVER" \
+          -p:PublishSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true \
+          -p:IncludeAllContentForSelfExtract=true \
+          -p:EnableCompressionInSingleFile=true \
+          -p:DebugType=embedded
 
-        dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" \
-          -c "${{ inputs.build_configuration }}" \
-          --self-contained \
-          --runtime "${{ inputs.build_runtime }}" \
-          -p:Version="$SEMVER" \
-          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
-          -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
+    - name: Bundle libvlc (Linux)
+      if: inputs.build_platform == 'Linux'
+      shell: bash
+      run: |
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        VLC_DIR="$PUBLISH_DIR/libvlc/${{ inputs.build_runtime }}"
+        mkdir -p "$VLC_DIR"
+
+        if [ "${{ inputs.build_arch }}" = "arm64" ]; then
+          # Enable arm64 multiarch and add Ubuntu Ports repository so apt can
+          # download arm64 packages on this x64 runner.
+          sudo dpkg --add-architecture arm64
+          CODENAME=$(lsb_release -cs)
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME} main restricted universe" \
+            | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-updates main restricted universe" \
+            | sudo tee -a /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
+          sudo apt-get update -qq
+
+          sudo apt-get download libvlc5:arm64 libvlccore9:arm64 vlc-plugin-base:arm64
+
+          mkdir -p vlc-extracted
+          for deb in libvlc5_*arm64.deb libvlccore9_*arm64.deb vlc-plugin-base_*arm64.deb; do
+            dpkg -x "$deb" vlc-extracted/
+          done
+
+          LIB_DIR="vlc-extracted/usr/lib/aarch64-linux-gnu"
+          PLUGINS_SRC="$LIB_DIR/vlc/plugins"
+        else
+          sudo apt-get install -y --no-install-recommends libvlc5 libvlccore9 vlc-plugin-base
+          LIB_DIR="/usr/lib/x86_64-linux-gnu"
+          PLUGINS_SRC="$LIB_DIR/vlc/plugins"
+        fi
+
+        # Copy the two core shared libraries, dereferencing symlinks so their
+        # content is preserved correctly when zipped.
+        for lib in libvlc.so.5 libvlccore.so.9; do
+          src=$(find "$LIB_DIR" -maxdepth 1 -name "${lib}*" | sort | head -1)
+          if [ -n "$src" ]; then
+            cp -L "$src" "$VLC_DIR/$lib"
+            echo "Bundled: $lib"
+          else
+            echo "WARNING: $lib not found in $LIB_DIR" >&2
+          fi
+        done
+
+        # Copy VLC plugins (vlc-plugin-base covers common codecs and demuxers)
+        if [ -d "$PLUGINS_SRC" ]; then
+          mkdir -p "$VLC_DIR/plugins"
+          cp -rL "$PLUGINS_SRC/." "$VLC_DIR/plugins/"
+          echo "Bundled $(find "$VLC_DIR/plugins" -name "*.so" | wc -l) plugin(s)"
+        fi
 
     - name: Bundle and Clean
       shell: pwsh
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
-        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
-        
-        # Remove unnecessary files in a single operation
+        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+
+        # Remove unnecessary files
         $PathsToRemove = @(
-          'wwwroot/_content/BootstrapBlazor.PdfReader/compat',
-          'wwwroot/_content/BootstrapBlazor.PdfReader/2.*',
-          'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
-          'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
-          'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
-          'wwwroot/_content/AntDesign/less',
-          'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
-          'wwwroot/Identity/lib/bootstrap',
-          'LANCommander.ico',
-          'LANCommanderDark.ico',
-          'package-lock.json',
-          'package.json',
-          '*.pdb',
-          'hostfxr.dll.bak',
-          'Libraries/locales'
+          '*.pdb'
         )
-        
-        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+
         foreach ($path in $PathsToRemove) {
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
 
+    - name: Bundle macOS .app
+      if: inputs.build_platform == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Strip leading 'v' and reduce to numeric x.y.z for the bundle version keys.
+        RAW_VERSION="${{ inputs.version_tag }}"
+        SEMVER="${RAW_VERSION#v}"
+        NUMERIC="${SEMVER%%-*}"
+
+        APP_NAME="LANCommander Launcher"
+        EXECUTABLE="LANCommander.Launcher"
+        BUNDLE_ID="app.lancommander.launcher"
+        ICON_SRC="LANCommander.Launcher/Assets/icon.icns"
+
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        APP_DIR="${EXECUTABLE}.app"
+
+        # Lay out the bundle skeleton.
+        mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
+        cp -a "$PUBLISH_DIR/." "$APP_DIR/Contents/MacOS/"
+        cp "$ICON_SRC" "$APP_DIR/Contents/Resources/AppIcon.icns"
+
+        # Write Info.plist.
+        cat > "$APP_DIR/Contents/Info.plist" <<PLIST
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleDisplayName</key>
+          <string>${APP_NAME}</string>
+          <key>CFBundleIdentifier</key>
+          <string>${BUNDLE_ID}</string>
+          <key>CFBundleExecutable</key>
+          <string>${EXECUTABLE}</string>
+          <key>CFBundleIconFile</key>
+          <string>AppIcon</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>CFBundleInfoDictionaryVersion</key>
+          <string>6.0</string>
+          <key>CFBundleShortVersionString</key>
+          <string>${NUMERIC}</string>
+          <key>CFBundleVersion</key>
+          <string>${SEMVER}</string>
+          <key>LSMinimumSystemVersion</key>
+          <string>11.0</string>
+          <key>NSHighResolutionCapable</key>
+          <true/>
+        </dict>
+        </plist>
+        PLIST
+
+        # Ensure the entrypoint is executable, then zip while preserving the
+        # permission bits (Compress-Archive drops the exec bit).
+        chmod +x "$APP_DIR/Contents/MacOS/${EXECUTABLE}"
+        zip -ry "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip" "$APP_DIR"
+
+    - name: Build AppImage (Linux)
+      if: inputs.build_platform == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        APP_NAME="LANCommander.Launcher"
+        APPDIR="AppDir"
+
+        # appimagetool / runtime architecture identifiers
+        if [ "${{ inputs.build_arch }}" = "arm64" ]; then
+          AI_ARCH="aarch64"
+        else
+          AI_ARCH="x86_64"
+        fi
+        export ARCH="$AI_ARCH"
+
+        # --- Assemble the AppDir ---------------------------------------------
+        rm -rf "$APPDIR"
+        mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" \
+                 "$APPDIR/usr/share/icons/hicolor/scalable/apps"
+
+        cp -r "$PUBLISH_DIR/." "$APPDIR/usr/bin/"
+        chmod +x "$APPDIR/usr/bin/$APP_NAME"
+
+        # Icon (use the prebuilt 256x256 project icon)
+        ICON_SRC="LANCommander.Launcher/Assets/icon.png"
+        ICON_DIR="$APPDIR/usr/share/icons/hicolor/256x256/apps"
+        mkdir -p "$ICON_DIR"
+        cp "$ICON_SRC" "$ICON_DIR/lancommander.png"
+
+        cp "$ICON_DIR/lancommander.png" "$APPDIR/lancommander.png"
+        ln -sf lancommander.png "$APPDIR/.DirIcon"
+
+        # Desktop entry
+        cat > "$APPDIR/usr/share/applications/lancommander.desktop" <<'EOF'
+        [Desktop Entry]
+        Type=Application
+        Name=LANCommander Launcher
+        Comment=LANCommander Launcher
+        Exec=LANCommander.Launcher
+        Icon=lancommander
+        Categories=Game;
+        Terminal=false
+        EOF
+        cp "$APPDIR/usr/share/applications/lancommander.desktop" "$APPDIR/lancommander.desktop"
+
+        # AppRun entry point
+        cat > "$APPDIR/AppRun" <<'EOF'
+        #!/bin/bash
+        HERE="$(dirname "$(readlink -f "${0}")")"
+        export PATH="${HERE}/usr/bin:${PATH}"
+        export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH:-}"
+        exec "${HERE}/usr/bin/LANCommander.Launcher" "$@"
+        EOF
+        chmod +x "$APPDIR/AppRun"
+
+        # --- Fetch appimagetool ----------------------------------------------
+        TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${AI_ARCH}.AppImage"
+        curl -L -o appimagetool "$TOOL_URL"
+        chmod +x appimagetool
+
+        # --- Build the AppImage ----------------------------------------------
+        OUT="LANCommander.Launcher-Linux-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.AppImage"
+        ./appimagetool --appimage-extract-and-run "$APPDIR" "$OUT"
+
+        echo "Produced $OUT"
+
+    - name: Upload AppImage Artifact (Linux)
+      if: inputs.build_platform == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        path: LANCommander.Launcher-Linux-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.AppImage
+        name: LANCommander.Launcher-Linux-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.AppImage
+
     - name: Compress Build Output
+      if: inputs.build_platform != 'macOS'
       shell: pwsh
       run: |
         $compress = @{
-          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/*"
           DestinationPath = "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }

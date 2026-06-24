@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -83,11 +85,14 @@ namespace LANCommander.SDK.Services
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
+        public delegate void OnTaskProgressHandler(InstallTaskProgress progress);
+        public event OnTaskProgressHandler OnTaskProgress;
+
         private const string PlayerAliasFilename = "PlayerAlias";
         private const string KeyFilename = "Key";
 
         private TrackableStream _transferStream;
-        private IReader _reader;
+        private IAsyncReader _reader;
 
         private readonly InstallProgress _installProgress = new();
 
@@ -161,26 +166,41 @@ namespace LANCommander.SDK.Services
         {
             var actions = new List<Models.Manifest.Action>();
 
+            var manifests = await GetManifestsAsync(installDirectory, id);
+            var installedIds = manifests.Select(m => m.Id).ToHashSet();
+
             try
             {
-                if (connectionClient.IsConnected())
+                if (connectionClient.IsConnected() && !connectionClient.IsOfflineMode())
                 {
-                    actions.AddRange(
-                        await apiRequestFactory
-                            .Create()
-                            .UseRoute($"/api/Games/{id}/Actions")
-                            .UseAuthenticationToken()
-                            .UseVersioning()
-                            .GetAsync<IEnumerable<Models.Manifest.Action>>()
-                        );
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+                    var serverActions = await apiRequestFactory
+                        .Create()
+                        .UseRoute($"/api/Games/{id}/Actions")
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseCancellationToken(cts.Token)
+                        .GetAsync<IEnumerable<SDK.Models.Action>>();
+
+                    actions.AddRange(serverActions
+                        .Where(a => installedIds.Contains(a.GameId))
+                        .Select(a => new Models.Manifest.Action
+                        {
+                            Name = a.Name,
+                            Arguments = a.Arguments,
+                            Path = a.Path,
+                            WorkingDirectory = a.WorkingDirectory,
+                            IsPrimaryAction = a.IsPrimaryAction,
+                            SortOrder = a.SortOrder,
+                            Variables = a.Variables
+                        }));
                 }
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Could not get actions from server");
             }
-            
-            var manifests = await GetManifestsAsync(installDirectory, id);
 
             if (!actions.Any())
             {
@@ -191,11 +211,36 @@ namespace LANCommander.SDK.Services
                     .ThenBy(a => a.SortOrder)
                     .ToList();
             }
-            
-            /*
-            if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
+
+            // Merge in actions from tools that are actually installed. Tool actions are persisted to
+            // the game's install directory (its manifest) only when the tool is installed, so the
+            // presence of the tool manifest on disk gates whether its actions appear.
+            var mainManifest = manifests.FirstOrDefault(m => m.Id == id);
+
+            if (mainManifest?.Tools != null)
             {
-                var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
+                foreach (var tool in mainManifest.Tools)
+                {
+                    if (!ManifestHelper.Exists(installDirectory, tool.Id))
+                        continue;
+
+                    try
+                    {
+                        var toolManifest = await ManifestHelper.ReadAsync<Models.Manifest.Tool>(installDirectory, tool.Id);
+
+                        if (toolManifest?.Actions != null)
+                            actions.AddRange(toolManifest.Actions);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not load actions from installed tool {ToolId}", tool.Id);
+                    }
+                }
+            }
+
+            if (manifests.Any(m => m.MultiplayerModes?.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
+            {
+                var primaryAction = actions.First(a => a.IsPrimaryAction);
 
                 try
                 {
@@ -203,13 +248,12 @@ namespace LANCommander.SDK.Services
 
                     foreach (var lobby in lobbies)
                     {
-                        var lobbyAction = new Models.Action
+                        var lobbyAction = new Models.Manifest.Action
                         {
                             Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
                             IsPrimaryAction = true,
                             Name = $"Join {lobby.ExternalUsername}'s lobby",
                             SortOrder = actions.Count,
-                            Variables = primaryAction.Variables,
                             Path = primaryAction.Path,
                             WorkingDirectory = primaryAction.WorkingDirectory
                         };
@@ -222,11 +266,10 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not get lobbies");
                 }
             }
-            */
 
             return actions;
         }
-
+        
         public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
         {
             return await apiRequestFactory
@@ -247,6 +290,16 @@ namespace LANCommander.SDK.Services
                 .GetAsync<IEnumerable<Tool>>();
         }
 
+        public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Scripts")
+                .GetAsync<IEnumerable<Script>>();
+        }
+
         public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
         {
             return await apiRequestFactory
@@ -257,6 +310,172 @@ namespace LANCommander.SDK.Services
                 .GetAsync<bool>();
         }
 
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{gameId}/Updates?version={version}")
+                .GetAsync<IEnumerable<Archive>>();
+        }
+
+        private async Task<TrackableStream> StreamArchiveAsync(Guid archiveId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/Download/Archive/{archiveId}")
+                .StreamAsync();
+        }
+
+        /// <summary>
+        /// Downloads and extracts a specific archive for a game update.
+        /// </summary>
+        /// <returns>True if successful, false if canceled.</returns>
+        public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid gameId, string destination, CancellationToken cancellationToken = default)
+        {
+            var game = await GetAsync(gameId);
+
+            if (game == null)
+                throw new InstallException($"Could not fetch game info for game {gameId}");
+
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+
+            var result = await DownloadAndExtractArchiveAsync(archiveId, game, destination, cancellationToken);
+
+            if (result.Canceled)
+                return false;
+
+            if (!result.Success)
+                throw new InstallException("Could not extract the update archive. Retry the update or check your connection");
+
+            return true;
+        }
+
+        internal async Task<ExtractionResult> DownloadAndExtractArchiveAsync(Guid archiveId, Game game, string destination, CancellationToken cancellationToken = default)
+        {
+            if (game == null)
+                throw new ArgumentNullException(nameof(game), "No game was specified");
+
+            logger?.LogTrace("Downloading archive {ArchiveId} and extracting {Game} to path {Destination}", archiveId, game.Title, destination);
+
+            var extractionResult = new ExtractionResult
+            {
+                Canceled = false,
+            };
+
+            var fileManifest = new StringBuilder();
+            var files = new List<ExtractionResult.FileEntry>();
+
+            try
+            {
+                Directory.CreateDirectory(destination);
+
+                var stream = await StreamArchiveAsync(archiveId);
+
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _reader?.Cancel();
+                        _installProgress.Status = InstallStatus.Canceled;
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                        return;
+                    }
+
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
+
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = game,
+                    });
+                });
+
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                _installProgress.Status = InstallStatus.Downloading;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
+                {
+                    if (_reader.Cancelled)
+                        break;
+
+                    try
+                    {
+                        var entryKey = _reader.Entry.Key;
+                        var localFile = Path.Combine(destination, entryKey);
+
+                        fileManifest.AppendLine($"{entryKey} | {_reader.Entry.Crc.ToString("X")}");
+                        files.Add(new ExtractionResult.FileEntry
+                        {
+                            EntryPath = entryKey,
+                            LocalPath = localFile,
+                        });
+
+                        await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
+                        {
+                            ExtractFullPath = true,
+                            Overwrite = true,
+                            PreserveFileTime = true
+                        }, cancellationToken);
+                    }
+                    catch (IOException ex)
+                    {
+                        var errorCode = ex.HResult & 0xFFFF;
+
+                        if (errorCode == 87)
+                            throw;
+                        else
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
+
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
+                    }
+                }
+
+                await _reader.DisposeAsync();
+                await stream.DisposeAsync();
+            }
+            catch (ReaderCancelledException ex)
+            {
+                logger?.LogTrace(ex, "User cancelled the download");
+                extractionResult.Canceled = true;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not extract archive {ArchiveId} to path {Destination}", archiveId, destination);
+                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+            }
+
+            if (!extractionResult.Canceled)
+            {
+                extractionResult.Success = true;
+                extractionResult.Directory = destination;
+                extractionResult.Files = files;
+
+                var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
+
+                if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
+
+                File.WriteAllText(fileListDestination, fileManifest.ToString());
+            }
+
+            return extractionResult;
+        }
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)
         {
@@ -502,7 +721,7 @@ namespace LANCommander.SDK.Services
             #endregion
 
             #region Download Latest Save
-            logger?.LogTrace("Attempting to download the latest save");
+            logger?.LogInformation("Downloading latest save for game {GameTitle} ({GameId}) during install", game.Title, game.Id);
 
             _installProgress.Status = InstallStatus.DownloadingSaves;
 
@@ -646,6 +865,552 @@ namespace LANCommander.SDK.Services
             return installResult;
         }
 
+        /// <summary>
+        /// Generates an install plan for a game, producing a list of queue items and their tasks
+        /// without executing anything.
+        /// </summary>
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null, Guid[] toolIds = null)
+        {
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: gameId={GameId}, installDir={InstallDir}, addonIds={AddonIds}",
+                gameId, installDirectory, addonIds != null ? string.Join(",", addonIds) : "none");
+
+            var plan = new InstallPlan();
+            var game = await GetAsync(gameId);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Fetched game {Title} ({Id}), type={Type}, baseGameId={BaseGameId}, redistCount={RedistCount}, scriptCount={ScriptCount}",
+                game?.Title, game?.Id, game?.Type, game?.BaseGameId, game?.Redistributables?.Count() ?? 0, game?.Scripts?.Count() ?? 0);
+
+            if (string.IsNullOrWhiteSpace(installDirectory))
+                installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
+
+            var destination = await GetInstallDirectory(game, installDirectory);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
+
+            // Handle standalone mods — need base game first
+            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
+            {
+                var baseGame = await GetAsync(game.BaseGameId);
+                var baseDestination = await GetInstallDirectory(baseGame, installDirectory);
+
+                if (!Directory.Exists(baseDestination))
+                {
+                    var basePlan = await GenerateInstallPlanAsync(game.BaseGameId, installDirectory);
+                    plan.Items.AddRange(basePlan.Items);
+                }
+
+                destination = baseDestination;
+            }
+
+            // Base game item
+            var gameItem = new InstallPlanItem
+            {
+                EntityId = game.Id,
+                Title = game.Title,
+                Type = InstallPlanItemType.Game,
+                InstallDirectory = destination,
+                Order = plan.Items.Count,
+            };
+
+            int taskOrder = 0;
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.VerifyFiles,
+                Title = "Verify local files",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadAndExtract,
+                Title = $"Download {game.Title}",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = true,
+                ReportsProgress = true,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteManifest,
+                Title = "Write manifest",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = true,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteScripts,
+                Title = "Save scripts",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+            });
+
+            gameItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.DownloadSaves,
+                Title = "Download saves",
+                Order = taskOrder++,
+                TargetId = game.Id,
+                TargetName = game.Title,
+                IsCritical = false,
+                ReportsProgress = true,
+            });
+
+            if (game.Scripts != null && game.Scripts.Any())
+            {
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunInstallScript,
+                    Title = "Run install script",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunKeyChangeScript,
+                    Title = "Apply key",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.RunNameChangeScript,
+                    Title = "Apply player name",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                });
+            }
+
+            if (game.Media != null && game.Media.Any(m => m.Type == MediaType.Manual))
+            {
+                var manualIds = game.Media
+                    .Where(m => m.Type == MediaType.Manual)
+                    .Select(m => m.Id.ToString());
+
+                gameItem.Tasks.Add(new InstallTaskDefinition
+                {
+                    Type = InstallTaskType.DownloadManual,
+                    Title = "Download manuals",
+                    Order = taskOrder++,
+                    TargetId = game.Id,
+                    TargetName = game.Title,
+                    IsCritical = false,
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["ManualIds"] = string.Join(",", manualIds),
+                    },
+                });
+            }
+
+            plan.Items.Add(gameItem);
+
+            // Redistributable items
+            if (game.Redistributables != null)
+            {
+                foreach (var redist in game.Redistributables)
+                {
+                    var redistItem = new InstallPlanItem
+                    {
+                        EntityId = redist.Id,
+                        Title = redist.Name,
+                        Type = InstallPlanItemType.Redistributable,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {redist.Name}",
+                        Order = 0,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.RunRedistributableInstallScript,
+                        Title = $"Install {redist.Name}",
+                        Order = 1,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = false,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    plan.Items.Add(redistItem);
+                }
+            }
+
+            // Tool items
+            if (toolIds != null)
+            {
+                foreach (var toolId in toolIds)
+                {
+                    var tool = await toolClient.GetAsync(toolId);
+                    var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
+
+                    foreach (var toolPlanItem in toolPlan.Items)
+                    {
+                        toolPlanItem.Order = plan.Items.Count;
+                        toolPlanItem.DependsOnId = game.Id;
+                        plan.Items.Add(toolPlanItem);
+                    }
+                }
+            }
+
+            // Addon items
+            if (addonIds != null)
+            {
+                foreach (var addonId in addonIds)
+                {
+                    var addon = await GetAsync(addonId);
+
+                    var addonItem = new InstallPlanItem
+                    {
+                        EntityId = addon.Id,
+                        Title = addon.Title,
+                        Type = InstallPlanItemType.Addon,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    int addonTaskOrder = 0;
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {addon.Title}",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                    });
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.WriteManifest,
+                        Title = "Write manifest",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = true,
+                    });
+
+                    addonItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.WriteScripts,
+                        Title = "Save scripts",
+                        Order = addonTaskOrder++,
+                        TargetId = addon.Id,
+                        TargetName = addon.Title,
+                        IsCritical = false,
+                    });
+
+                    if (addon.Scripts != null && addon.Scripts.Any())
+                    {
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunInstallScript,
+                            Title = "Run install script",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunKeyChangeScript,
+                            Title = "Apply key",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+
+                        addonItem.Tasks.Add(new InstallTaskDefinition
+                        {
+                            Type = InstallTaskType.RunNameChangeScript,
+                            Title = "Apply player name",
+                            Order = addonTaskOrder++,
+                            TargetId = addon.Id,
+                            TargetName = addon.Title,
+                            IsCritical = false,
+                        });
+                    }
+
+                    plan.Items.Add(addonItem);
+                }
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// Executes a single install plan item's tasks in order, firing OnTaskProgress events for each.
+        /// </summary>
+        public async Task<InstallResult> ExecuteInstallPlanItemAsync(InstallPlanItem planItem, CancellationToken cancellationToken = default)
+        {
+            var installResult = new InstallResult(planItem.InstallDirectory, planItem.EntityId);
+
+            switch (planItem.Type)
+            {
+                case InstallPlanItemType.Game:
+                case InstallPlanItemType.Addon:
+                    await ExecuteGamePlanItemAsync(planItem, installResult, cancellationToken);
+                    break;
+
+                case InstallPlanItemType.Redistributable:
+                    await ExecuteRedistributablePlanItemAsync(planItem, installResult, cancellationToken);
+                    break;
+
+                case InstallPlanItemType.Tool:
+                    var toolResult = await toolClient.ExecuteInstallPlanItemAsync(planItem, cancellationToken);
+                    installResult.InstallDirectory = toolResult.InstallDirectory;
+                    break;
+            }
+
+            return installResult;
+        }
+
+        private async Task ExecuteGamePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
+        {
+            logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: Starting for {Title} ({EntityId}), type={Type}, installDir={InstallDir}, taskCount={TaskCount}",
+                planItem.Title, planItem.EntityId, planItem.Type, planItem.InstallDirectory, planItem.Tasks?.Count ?? 0);
+
+            var game = await GetAsync(planItem.EntityId);
+
+            if (game == null)
+            {
+                logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: ERROR - Could not fetch game {EntityId} from server", planItem.EntityId);
+                throw new InstallException($"Could not fetch game info for {planItem.Title}");
+            }
+
+            // Set the progress context so OnInstallProgressUpdate events carry the game reference
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+
+            var gameFileList = installResult.FileList;
+            SDK.Models.Manifest.Game manifest = null;
+
+            // Files confirmed to exist locally and match FileList.txt — skip during extraction
+            HashSet<string> verifiedFiles = null;
+
+            foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: Running task [{Order}] {Type}: {Title} (critical={IsCritical})",
+                    taskDef.Order, taskDef.Type, taskDef.Title, taskDef.IsCritical);
+
+                var taskProgress = new InstallTaskProgress
+                {
+                    QueueItemId = planItem.EntityId,
+                    TaskId = taskDef.Id,
+                    TaskType = taskDef.Type,
+                    TaskTitle = taskDef.Title,
+                    TaskStatus = InstallTaskStatus.Running,
+                };
+
+                OnTaskProgress?.Invoke(taskProgress);
+
+                try
+                {
+                    switch (taskDef.Type)
+                    {
+                        case InstallTaskType.VerifyFiles:
+                            verifiedFiles = await VerifyLocalFilesAsync(planItem.InstallDirectory, game.Id, cancellationToken);
+                            logger?.LogInformation("[InstallQueue] VerifyFiles: {Count} files verified as present", verifiedFiles?.Count ?? 0);
+                            break;
+
+                        case InstallTaskType.DownloadAndExtract:
+                            var skipFiles = verifiedFiles;
+                            var maxAttempts = Math.Max(1, settingsProvider.CurrentValue.Games.MaxInstallAttempts);
+                            var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
+                            {
+                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken, skipFiles));
+                            });
+
+                            if (!result.Success && !result.Canceled)
+                                throw new InstallException("Could not extract the installer. Retry the install or check your connection");
+                            
+                            if (result.Canceled)
+                                throw new InstallCanceledException("Game install was canceled");
+
+                            game.InstallDirectory = result.Directory;
+                            installResult.InstallDirectory = result.Directory;
+                            planItem.InstallDirectory = result.Directory;
+
+                            gameFileList.BaseGame.AddFiles(result.Files?
+                                .Where(x => !x.EntryPath.EndsWith("/"))
+                                .Select(x => new GameInstallationFileListEntry.FileEntry
+                                {
+                                    EntryPath = x.EntryPath,
+                                    LocalPath = x.LocalPath,
+                                }) ?? []);
+                            break;
+
+                        case InstallTaskType.WriteManifest:
+                            manifest = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), (SDK.Models.Manifest.Game)null, async () =>
+                            {
+                                return await WriteManifestAsync(planItem.InstallDirectory, game);
+                            });
+
+                            if (manifest == null)
+                                throw new InstallException("Could not grab the manifest file. Retry the install or check your connection");
+
+                            gameFileList.BaseGame.Manifest = manifest;
+                            break;
+
+                        case InstallTaskType.WriteScripts:
+                            await WriteScriptsAsync(planItem.InstallDirectory, game);
+                            break;
+
+                        case InstallTaskType.DownloadSaves:
+                            await saveClient.DownloadAsync(planItem.InstallDirectory, game.Id);
+                            break;
+
+                        case InstallTaskType.RunInstallScript:
+                            await scriptClient.Game_RunInstallScriptAsync(planItem.InstallDirectory, game.Id);
+                            break;
+
+                        case InstallTaskType.RunKeyChangeScript:
+                            var allocatedKey = await GetAllocatedKeyAsync(game.Id);
+                            await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            break;
+
+                        case InstallTaskType.RunNameChangeScript:
+                            var alias = await profileClient.GetAliasAsync();
+                            await scriptClient.Game_RunNameChangeScriptAsync(planItem.InstallDirectory, game.Id, alias);
+                            break;
+
+                        case InstallTaskType.DownloadManual:
+                            // Manual download handled by caller (InstallService) since it needs MediaClient
+                            break;
+                    }
+
+                    taskProgress.TaskStatus = InstallTaskStatus.Completed;
+                    taskProgress.Progress = 1.0f;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+                catch (InstallCanceledException)
+                {
+                    taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                    OnTaskProgress?.Invoke(taskProgress);
+                    throw;
+                }
+                catch (Exception ex) when (!taskDef.IsCritical)
+                {
+                    logger?.LogError(ex, "Non-critical task {TaskTitle} failed for {GameTitle} ({GameId})", taskDef.Title, game.Title, game.Id);
+                    taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                    taskProgress.ErrorMessage = ex.Message;
+                    OnTaskProgress?.Invoke(taskProgress);
+                }
+            }
+        }
+
+        private async Task ExecuteRedistributablePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
+        {
+            // RedistributableClient.InstallAsync bundles download + install into one operation.
+            // We fire task progress for both tasks but execute them as one call.
+            var firstTask = planItem.Tasks.OrderBy(t => t.Order).FirstOrDefault();
+            
+            if (firstTask == null)
+                return;
+
+            // Get parent game context from task parameters
+            var parentGameId = Guid.Empty;
+            
+            if (firstTask.Parameters.TryGetValue("ParentGameId", out var parentGameIdStr))
+                Guid.TryParse(parentGameIdStr, out parentGameId);
+
+            var taskProgress = new InstallTaskProgress
+            {
+                QueueItemId = planItem.EntityId,
+                TaskId = firstTask.Id,
+                TaskType = firstTask.Type,
+                TaskTitle = firstTask.Title,
+                TaskStatus = InstallTaskStatus.Running,
+            };
+
+            OnTaskProgress?.Invoke(taskProgress);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var game = parentGameId != Guid.Empty ? await GetAsync(parentGameId) : null;
+
+                if (game != null)
+                {
+                    game.InstallDirectory = planItem.InstallDirectory;
+
+                    var redist = game.Redistributables?.FirstOrDefault(r => r.Id == planItem.EntityId);
+
+                    if (redist != null)
+                        await redistributableClient.InstallAsync(redist, game);
+                }
+
+                // Mark all tasks as completed
+                foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
+                {
+                    OnTaskProgress?.Invoke(new InstallTaskProgress
+                    {
+                        QueueItemId = planItem.EntityId,
+                        TaskId = taskDef.Id,
+                        TaskType = taskDef.Type,
+                        TaskTitle = taskDef.Title,
+                        TaskStatus = InstallTaskStatus.Completed,
+                        Progress = 1.0f,
+                    });
+                }
+            }
+            catch (InstallCanceledException)
+            {
+                taskProgress.TaskStatus = InstallTaskStatus.Canceled;
+                OnTaskProgress?.Invoke(taskProgress);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Redistributable {RedistName} failed to install", planItem.Title);
+                taskProgress.TaskStatus = InstallTaskStatus.Failed;
+                taskProgress.ErrorMessage = ex.Message;
+                OnTaskProgress?.Invoke(taskProgress);
+            }
+        }
+
         public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)
         {
             var installResult = new InstallResult(installDirectory, gameId);
@@ -678,6 +1443,52 @@ namespace LANCommander.SDK.Services
                     catch (Exception ex)
                     {
                         logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
+                    }
+                }
+            }
+            #endregion
+
+            #region Delete Redistributable Files
+            if (manifest.Redistributables != null)
+            {
+                foreach (var redistributable in manifest.Redistributables)
+                {
+                    try
+                    {
+                        await scriptClient.Redistributable_RunUninstallScriptAsync(installDirectory, gameId, redistributable.Id);
+
+                        var redistFileListPath = GetMetadataFilePath(installDirectory, redistributable.Id, "FileList.txt");
+
+                        if (File.Exists(redistFileListPath))
+                        {
+                            var redistFiles = await File.ReadAllLinesAsync(redistFileListPath);
+
+                            foreach (var file in redistFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
+                            {
+                                var localPath = Path.Combine(installDirectory, file);
+
+                                try
+                                {
+                                    if (File.Exists(localPath))
+                                        File.Delete(localPath);
+
+                                    logger?.LogTrace("Deleted redistributable file {LocalPath}", localPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger?.LogWarning(ex, "Could not remove redistributable file {LocalPath}", localPath);
+                                }
+                            }
+                        }
+
+                        var redistMetadataPath = GetMetadataDirectoryPath(installDirectory, redistributable.Id);
+
+                        if (Directory.Exists(redistMetadataPath))
+                            Directory.Delete(redistMetadataPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not clean up redistributable {RedistributableId}", redistributable.Id);
                     }
                 }
             }
@@ -750,6 +1561,7 @@ namespace LANCommander.SDK.Services
             var gameFileList = installResult.FileList;
 
             var baseManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, baseGameId);
+            
             if (baseManifest == null)
             {
                 logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
@@ -761,6 +1573,7 @@ namespace LANCommander.SDK.Services
             gameFileList.InstallDirectory = installDirectory;
 
             addonIds ??= [];
+            
             foreach (var addon in baseManifest.Addons)
             {
                 if (!addonIds.Contains(addon.Id))
@@ -927,6 +1740,28 @@ namespace LANCommander.SDK.Services
             await WriteScriptsAsync(installDirectory, game);
         }
 
+        /// <summary>
+        /// Refreshes the on-disk manifest and scripts for an installed game by fetching the latest
+        /// versions from the server and writing them to the game's install directory.
+        /// </summary>
+        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Guid gameId)
+        {
+            logger?.LogTrace("Refreshing manifest and scripts for game {GameId} in {InstallDirectory}", gameId, installDirectory);
+
+            var manifest = await GetManifestAsync(gameId);
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+
+            var scripts = await GetScriptsAsync(gameId);
+
+            if (scripts != null && scripts.Any())
+            {
+                var game = new Game { Id = gameId };
+
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(game, script, installDirectory);
+            }
+        }
+
         private async Task<Models.Manifest.Game> WriteManifestAsync(string installDirectory, Game game)
         {
             logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
@@ -942,14 +1777,14 @@ namespace LANCommander.SDK.Services
 
         private async Task WriteScriptsAsync(string installDirectory, Game game)
         {
-            if (game.Scripts != null)
+            var scripts = await GetScriptsAsync(game.Id);
+
+            if (scripts != null && scripts.Any())
             {
                 logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
                 
-                foreach (var script in game.Scripts)
-                {
-                    await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
-                }
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(game, script, installDirectory);
             }
         }
 
@@ -976,7 +1811,45 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Reads the existing FileList.txt and checks which files are present on disk.
+        /// Returns a set of entry paths (relative) that exist locally and can be skipped during extraction.
+        /// </summary>
+        private async Task<HashSet<string>> VerifyLocalFilesAsync(string installDirectory, Guid gameId, CancellationToken cancellationToken)
+        {
+            var verified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var fileListPath = GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
+
+            if (!File.Exists(fileListPath))
+                return verified;
+
+            var lines = await File.ReadAllLinesAsync(fileListPath, cancellationToken);
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                // Format: "path/to/file | CRC32HEX"
+                var separatorIndex = line.IndexOf('|');
+                var entryPath = separatorIndex >= 0
+                    ? line.Substring(0, separatorIndex).Trim()
+                    : line.Trim();
+
+                if (string.IsNullOrEmpty(entryPath) || entryPath.EndsWith("/"))
+                    continue;
+
+                var localPath = Path.Combine(installDirectory, entryPath);
+
+                if (File.Exists(localPath))
+                    verified.Add(entryPath);
+            }
+
+            return verified;
+        }
+
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default, HashSet<string> skipFiles = null)
         {
             if (game == null)
             {
@@ -1003,119 +1876,115 @@ namespace LANCommander.SDK.Services
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
 
+            // Tracked outside the try so the catch blocks can report exactly where extraction failed
+            TrackableStream stream = null;
+            string currentEntryKey = null;
+            var entriesProcessed = 0;
+
             try
             {
                 Directory.CreateDirectory(destination);
 
-                var stream = await StreamLatestArchiveAsync(game.Id);
+                stream = await StreamLatestArchiveAsync(game.Id);
 
-                _reader = ReaderFactory.Open(stream);
-
-                using (var monitor = new FileTransferMonitor(stream.Length))
+                var monitor = new FileTransferMonitor(stream.Length);
+                var progress = new Progress<ProgressReport>(report =>
                 {
-                    _reader.EntryExtractionProgress += (sender, e) =>
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            _reader.Cancel();
-                            
-                            _installProgress.Status = InstallStatus.Canceled;
-                            
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        _reader?.Cancel();
 
-                            return;
-                        }
-                        
-                        if (monitor.CanUpdate())
-                        {
-                            monitor.Update(stream.Position);
+                        _installProgress.Status = InstallStatus.Canceled;
 
-                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                            _installProgress.TotalBytes = stream.Length;
-                            _installProgress.TransferSpeed = monitor.GetSpeed();
-                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
-                            
-                            OnInstallProgressUpdate?.Invoke(_installProgress);
-                        }
-                        
-                        // Do we need this granular of control? If so, invocations should be rate limited
-                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                        {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
-                            Game = game,
-                        });
-                    };
-                }
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
 
-                while (_reader.MoveToNextEntry())
+                        return;
+                    }
+
+                    if (monitor.CanUpdate())
+                    {
+                        monitor.Update(stream.Position);
+
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
+
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
+                    {
+                        Progress = report,
+                        Game = game,
+                    });
+                });
+
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+
+                _installProgress.Status = InstallStatus.Downloading;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
+
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
                         break;
 
                     try
                     {
-                        var localFile = Path.Combine(destination, _reader.Entry.Key);
+                        var entryKey = _reader.Entry.Key;
+                        currentEntryKey = entryKey;
+                        var localFile = Path.Combine(destination, entryKey);
 
-                        uint crc = 0;
-
-                        if (File.Exists(localFile))
-                        {
-                            using (FileStream fs = File.Open(localFile, FileMode.Open))
-                            {
-                                var buffer = new byte[65536];
-
-                                while (true)
-                                {
-                                    var count = fs.Read(buffer, 0, buffer.Length);
-
-                                    if (count == 0)
-                                        break;
-
-                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
-                                }
-                            }
-                        }
-
-                        fileManifest.AppendLine($"{_reader.Entry.Key} | {_reader.Entry.Crc.ToString("X")}");
+                        fileManifest.AppendLine($"{entryKey} | {_reader.Entry.Crc.ToString("X")}");
                         files.Add(new ExtractionResult.FileEntry
                         {
-                            EntryPath = _reader.Entry.Key,
+                            EntryPath = entryKey,
                             LocalPath = localFile,
                         });
 
-                        if (crc == 0 || crc != _reader.Entry.Crc)
-                            _reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                        // If pre-flight verification confirmed this file exists locally, skip it
+                        bool shouldSkip = skipFiles != null && skipFiles.Contains(entryKey);
+
+                        if (!shouldSkip)
+                            await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
-                            });
+                            }, cancellationToken);
                         else // Skip to next entry
                             try
                             {
-                                _reader.OpenEntryStream().Dispose();
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
                             catch
                             {
-                                logger?.LogError("Could not skip to next entry in archive");
+                                logger?.LogError("Could not skip to next entry in archive: {EntryKey}", entryKey);
                             }
+
+                        entriesProcessed++;
                     }
                     catch (IOException ex)
                     {
                         var errorCode = ex.HResult & 0xFFFF;
 
                         if (errorCode == 87)
+                        {
+                            logger?.LogError(ex, "Fatal IO error (HResult 0x{HResult:X8}, Win32 {ErrorCode}) writing entry {EntryKey} for game {GameTitle} ({GameId}) after {EntriesProcessed} entries at {Position}/{Length} bytes",
+                                ex.HResult, errorCode, currentEntryKey, game.Title, game.Id, entriesProcessed, stream?.Position, stream?.Length);
+
                             throw ex;
-                        else
-                            logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                        }
+
+                        logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} (HResult 0x{HResult:X8}) - {Message}", currentEntryKey, ex.HResult, ex.Message);
 
                         // Skip to next entry
-                        _reader.OpenEntryStream().Dispose();
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                     }
                 }
 
-                _reader.Dispose();
+                await _reader.DisposeAsync();
                 await stream.DisposeAsync();
                 // _transferStream.Dispose();
             }
@@ -1134,7 +2003,8 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                logger?.LogError(ex, "Could not extract game {GameTitle} ({GameId}) to {Destination}. Failed on entry {EntryKey} (entry #{EntriesProcessed}) at {Position}/{Length} bytes with {ExceptionType} (HResult 0x{HResult:X8})",
+                    game.Title, game.Id, destination, currentEntryKey, entriesProcessed, stream?.Position, stream?.Length, ex.GetType().Name, ex.HResult);
 
                 if (Directory.Exists(destination))
                 {
@@ -1263,11 +2133,13 @@ namespace LANCommander.SDK.Services
             var gameArchives = new GameInstallationArchiveEntries();
 
             var manifests = await GetManifestsAsync(installDirectory, gameId);
+            
             if (manifests == null || !manifests.Any())
                 return gameArchives;
 
             // Retrieves and processes the base game manifest and its archive entries.
             var baseManifest = gameArchives.BaseGame.Manifest = manifests.FirstOrDefault(mf => mf.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+            
             if (baseManifest != null)
             {
                 var entries = await GetGameInstallationArchiveEntries(gameId, baseManifest);
@@ -1293,6 +2165,7 @@ namespace LANCommander.SDK.Services
                 depArchiveInfo.Entries.AddRange(depEntries);
 
                 var savePathEntries = depManifest.SavePaths?.SelectMany(p => saveClient.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                
                 depArchiveInfo.SavePaths = savePathEntries;
             }
 
@@ -1330,6 +2203,12 @@ namespace LANCommander.SDK.Services
                 catch (Exception ex)
                 {
                     logger?.LogError(ex, "Could not connect to IPXRelay host");
+                }
+
+                if (action.Variables != null)
+                {
+                    foreach (var variable in action.Variables)
+                        context.AddVariable(variable.Key, variable.Value);
                 }
 
                 #region Run Scripts
@@ -1376,15 +2255,48 @@ namespace LANCommander.SDK.Services
                     {
                         await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                         {
-                            logger?.LogTrace("Attempting to download save");
+                            logger?.LogTrace("Checking for latest save for game {GameId}", manifest.Id);
 
-                            var latestSave = await saveClient.GetLatestAsync(manifest.Id);
+                            try
+                            {
+                                var latestSave = await saveClient.GetLatestAsync(manifest.Id);
 
-                            if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
-                                await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                if (latestSave == null)
+                                {
+                                    logger?.LogDebug("No saves found on server for game {GameId}", manifest.Id);
+                                }
+                                else if (lastRun == null)
+                                {
+                                    logger?.LogInformation("Downloading save for game {GameId} (first run, save date: {SaveDate})", manifest.Id, latestSave.CreatedOn);
+                                    await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                }
+                                else if (latestSave.CreatedOn > lastRun)
+                                {
+                                    logger?.LogInformation("Downloading newer save for game {GameId} (save date: {SaveDate}, last run: {LastRun})", manifest.Id, latestSave.CreatedOn, lastRun);
+                                    await saveClient.DownloadAsync(installDirectory, manifest.Id);
+                                }
+                                else
+                                {
+                                    logger?.LogDebug("Save for game {GameId} is up to date (save date: {SaveDate}, last run: {LastRun})", manifest.Id, latestSave.CreatedOn, lastRun);
+                                }
+                            }
+                            catch (HttpRequestException ex)
+                            {
+                                if (ex.StatusCode == HttpStatusCode.NotFound)
+                                {
+                                    logger?.LogDebug("No saves found on server for game {GameId} (404)", manifest.Id);
+                                    return true;
+                                }
+
+                                throw;
+                            }
 
                             return true;
                         });
+                    }
+                    else
+                    {
+                        logger?.LogDebug("Skipping save download for game {GameId}, not connected to server", manifest.Id);
                     }
                     #endregion
 
@@ -1402,22 +2314,79 @@ namespace LANCommander.SDK.Services
                 }
                 #endregion
 
+                Task heartbeatTask = null;
+
                 try
                 {
                     var cancellationTokenSource = new CancellationTokenSource();
-                    var task = context.ExecuteGameActionAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
-
                     _running[gameId] = cancellationTokenSource;
 
-                    await task;
+                    heartbeatTask = SendKeepAlivesAsync(gameId, cancellationTokenSource.Token);
+
+                    #region Run Wrapper Scripts
+                    bool runWrapperHandled = false;
+
+                    var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+                    var resolvedAction = action ?? gameManifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+
+                    if (resolvedAction != null && gameManifest.Redistributables != null)
+                    {
+                        var wrapperRedistributables = gameManifest.Redistributables
+                            .Where(r => r.Scripts != null && r.Scripts.Any(s => s.Type == Enums.ScriptType.RunWrapper))
+                            .ToList();
+
+                        if (wrapperRedistributables.Any())
+                        {
+                            if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                            {
+                                foreach (var customField in gameManifest.CustomFields)
+                                {
+                                    context.AddVariable(customField.Name, customField.Value);
+                                }
+                            }
+
+                            var executablePath = context.ExpandVariables(resolvedAction.Path, installDirectory);
+                            var arguments = context.ExpandVariables(resolvedAction.Arguments, installDirectory, skipSlashes: true);
+                            var workingDirectory = context.ExpandVariables(resolvedAction.WorkingDirectory, installDirectory);
+
+                            if (string.IsNullOrWhiteSpace(workingDirectory))
+                                workingDirectory = installDirectory;
+
+                            if (!string.IsNullOrWhiteSpace(args))
+                                arguments = string.IsNullOrWhiteSpace(arguments) ? args : arguments + " " + args;
+
+                            foreach (var redistributable in wrapperRedistributables)
+                            {
+                                runWrapperHandled = await scriptClient.Redistributable_RunRunWrapperScriptAsync(installDirectory, gameId, redistributable.Id, executablePath, arguments, workingDirectory, cancellationTokenSource.Token);
+
+                                if (runWrapperHandled)
+                                    break;
+                            }
+                        }
+                    }
+                    #endregion
+
+                    if (!runWrapperHandled)
+                        await context.ExecuteGameActionAsync(installDirectory, gameId, action, args, cancellationTokenSource.Token);
 
                     _running.Remove(gameId);
+                    
+                    await StopHeartbeatAsync(cancellationTokenSource, heartbeatTask);
+                    
+                    cancellationTokenSource.Dispose();
 
                     await UploadSavesAsync(manifests, installDirectory);
                 }
                 catch (Exception ex)
                 {
+                    if (_running.TryGetValue(gameId, out var cts))
+                    {
+                        _running.Remove(gameId);
+                        await StopHeartbeatAsync(cts, heartbeatTask);
+                        cts.Dispose();
+                    }
                     logger?.LogError(ex, "Game failed to run");
+                    throw;
                 }
 
                 foreach (var manifest in manifests)
@@ -1445,12 +2414,68 @@ namespace LANCommander.SDK.Services
                 {
                     await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                     {
-                        logger?.LogTrace("Attempting to upload save");
+                        logger?.LogDebug("Uploading save for game {GameId}", manifest.Id);
 
                         await saveClient.UploadAsync(installDirectory, manifest.Id);
 
+                        logger?.LogInformation("Save uploaded successfully for game {GameId}", manifest.Id);
+
                         return true;
                     });
+                }
+            }
+            else
+            {
+                logger?.LogDebug("Skipping save upload, not connected to server");
+            }
+        }
+
+        // Heartbeat interval while a game is running. Must stay well below the server's
+        // KeepAliveTimeout so a session isn't reaped between beats.
+        private const int KeepAliveIntervalSeconds = 30;
+
+        private async Task SendKeepAlivesAsync(Guid gameId, CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(KeepAliveIntervalSeconds), token);
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    if (!connectionClient.IsConnected() || RpcClient.Hub == null)
+                        continue;
+
+                    try
+                    {
+                        await RpcClient.Hub.GameKeepAliveAsync(gameId);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogTrace(ex, "Keepalive send failed for {GameId}", gameId);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the game exits and the token is cancelled.
+            }
+        }
+
+        private static async Task StopHeartbeatAsync(CancellationTokenSource cancellationTokenSource, Task heartbeatTask)
+        {
+            cancellationTokenSource.Cancel();
+
+            if (heartbeatTask != null)
+            {
+                try
+                {
+                    await heartbeatTask;
+                }
+                catch (OperationCanceledException)
+                {
                 }
             }
         }
@@ -1540,7 +2565,6 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
             var archives = await GetGameInstallationArchivesEntries(installDirectory, gameId);
-            var manifest = archives?.BaseGame?.Entries;
             var entries = archives?.BaseGame?.Entries?.ToList() ?? [];
 
             foreach ((var dependentGameId, var dependentGameInfo) in archives?.Addons ?? [])
@@ -1652,66 +2676,62 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The directory where the game is installed.</param>
         /// <param name="gameId">The unique identifier of the game.</param>
         /// <param name="entries">A collection of file paths to download.</param>
-        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries)
+        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, CancellationToken cancellationToken = default)
         {
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
-            await Task.Run(async () =>
+            try
             {
-                try
-                {
-                    var stream = await StreamLatestArchiveAsync(gameId);
-                    _reader = ReaderFactory.Open(stream);
+                var stream = await StreamLatestArchiveAsync(gameId);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
 
-                    while (_reader.MoveToNextEntry())
+                while (await _reader.MoveToNextEntryAsync(cancellationToken))
+                {
+                    if (_reader.Cancelled)
+                        break;
+
+                    try
                     {
-                        if (_reader.Cancelled)
-                            break;
-
-                        try
+                        if (entries.Contains(_reader.Entry.Key))
                         {
-                            if (entries.Contains(_reader.Entry.Key))
+                            await _reader.WriteEntryToDirectoryAsync(installDirectory, new ExtractionOptions
                             {
-                                var destination = Path.Combine(installDirectory, _reader.Entry.Key?.Replace('/', Path.DirectorySeparatorChar) ?? string.Empty);
-
-                                _reader.WriteEntryToFile(destination, new ExtractionOptions
-                                {
-                                    Overwrite = true,
-                                    PreserveFileTime = true,
-                                });
+                                ExtractFullPath = true,
+                                Overwrite = true,
+                                PreserveFileTime = true,
+                            }, cancellationToken);
+                        }
+                        else // Skip to next entry
+                            try
+                            {
+                                await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
                             }
-                            else // Skip to next entry
-                                try
-                                {
-                                    _reader.OpenEntryStream().Dispose();
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger?.LogError(ex, "Could not skip to the next entry in the archive");
-                                }
-                        }
-                        catch (IOException ex)
-                        {
-                            var errorCode = ex.HResult & 0xFFFF;
-
-                            if (errorCode == 87)
-                                throw;
-                            else
-                                logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
-
-                            // Skip to next entry
-                            _reader.OpenEntryStream().Dispose();
-                        }
+                            catch (Exception ex)
+                            {
+                                logger?.LogError(ex, "Could not skip to the next entry in the archive: {EntryKey}", _reader.Entry.Key);
+                            }
                     }
+                    catch (IOException ex)
+                    {
+                        var errorCode = ex.HResult & 0xFFFF;
 
-                    _reader.Dispose();
-                    _transferStream.Dispose();
+                        if (errorCode == 87)
+                            throw;
+                        else
+                            logger?.LogTrace("Not replacing existing file/folder on disk: {EntryKey} - {Message}", _reader.Entry.Key, ex.Message);
+
+                        // Skip to next entry
+                        await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
-                }
-            });
+
+                await _reader.DisposeAsync();
+                await stream.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+            }
         }
 
         public Task RestoreFilesAsync(string installDirectory, Guid gameId, GameInstallationFileList fileListRemoved, GameInstallationFileList fileListAdded)
@@ -1721,6 +2741,7 @@ namespace LANCommander.SDK.Services
 
             var uniqueList = listRemoved.ExceptBy(listAdded.Select(x => x.EntryPath), x => x.EntryPath, StringComparer.OrdinalIgnoreCase);
             var possibleRestoreEntries = uniqueList.Select(x => x.EntryPath).ToArray();
+            
             return RestoreFilesAsync(installDirectory, gameId, possibleRestoreEntries);
         }
 
@@ -1766,8 +2787,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(aliasFilePath))
                 return File.ReadAllText(aliasFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static async Task<string> GetPlayerAliasAsync(string installDirectory, Guid gameId)
@@ -1776,8 +2797,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(aliasFilePath))
                 return await File.ReadAllTextAsync(aliasFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static void UpdatePlayerAlias(string installDirectory, Guid gameId, string newName)
@@ -1796,8 +2817,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(keyFilePath))
                 return File.ReadAllText(keyFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static async Task<string> GetCurrentKeyAsync(string installDirectory, Guid gameId)
@@ -1806,8 +2827,8 @@ namespace LANCommander.SDK.Services
 
             if (File.Exists(keyFilePath))
                 return await File.ReadAllTextAsync(keyFilePath);
-            else
-                return string.Empty;
+            
+            return string.Empty;
         }
 
         public static void UpdateCurrentKey(string installDirectory, Guid gameId, string newKey)

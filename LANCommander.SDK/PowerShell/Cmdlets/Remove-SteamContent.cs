@@ -11,7 +11,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(SteamCmdStatus))]
 public class RemoveSteamContentCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The directory path of the installed Steam content to remove.")]
     public string InstallDirectory { get; set; } = string.Empty;
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

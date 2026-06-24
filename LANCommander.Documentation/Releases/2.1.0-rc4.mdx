@@ -1,0 +1,57 @@
+---
+title: 2.1.0-rc4
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.0 Release Candidate 4 Release Notes
+
+## Big Screen Mode
+The Avalonia launcher now supports a big screen mode designed for use with TVs and handhelds. When enabled, the launcher switches to a fullscreen layout optimized for focused gaming. This pairs with the new gamepad navigation support to make LANCommander usable from the sofa or a handheld without a keyboard or mouse.
+
+## Gamepad Navigation
+Full gamepad support has been added to the Avalonia launcher. Controllers are detected and mapped using SDL2, and directional navigation has been implemented across the library views, carousels, game detail pages, and overlay dialogs. Focus management handles moving between UI elements naturally with a d-pad or analog stick, making it possible to browse, install, and launch games entirely with a controller. This feature is still a bit rough around the edges, but should improve in future releases.
+
+## RunWrapper Scripts for Redistributables
+RunWrapper scripts were previously defined as a script type but never actually executed. This release adds full execution support during game launch. RunWrapper scripts now run alongside the game process with proper state tracking, cancellation support, and child process cleanup when the game exits.
+
+## Packaging Dialog
+The "Package" button has been moved from individual game, redistributable, and tool edit pages to the archive editor. A new packaging dialog provides a consolidated view of the packaging process, making it easier to build and manage archives directly from the archive list.
+
+## Bug Fixes
+- Fixed scrollbar being overlapped by the titlebar in the launcher
+- Fixed HQ metadata lookups by updating the HQ SDK dependency
+- Fixed media downloads failing during game import
+- Fixed icon downloading
+- Fixed server save check incorrectly determining newer saves were available
+
+## Changelog
+
+**Launcher**
+- Added: Big screen mode for fullscreen TV/controller use
+- Added: Gamepad navigation across library, carousels, detail views, and overlays
+- Fixed: Scrollbar overlapped by titlebar
+- Fixed: Media download on import
+- Fixed: Icon downloading
+
+**Server**
+- Added: Packaging dialog on archive editor
+- Added: RunWrapper script type available for redistributable scripts
+- Changed: Moved "Package" button from edit pages to archive editor
+- Changed: Updated PowerShell code snippets
+- Fixed: HQ metadata lookups
+
+**SDK**
+- Added: RunWrapper script execution for redistributables with process lifecycle management
+- Changed: Multi-target framework support
+- Changed: Source-generated cmdlet registration via new `CmdletRegistrationGenerator`
+- Fixed: Save client check for newer saves on server
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.0-rc4" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.0-rc3" to="v2.1.0-rc4" />

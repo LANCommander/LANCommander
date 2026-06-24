@@ -238,7 +238,7 @@ public class SteamCmdService(
                 ? $"+login {username}" 
                 : $"+login {username} {password}";
 
-            var result = await ExecuteSteamCmdCommandAsync($"{loginCommand} +quit", TimeSpan.FromSeconds(30));
+            var result = await ExecuteSteamCmdCommandAsync($"{loginCommand} +quit", TimeSpan.FromSeconds(120));
 
             if (result.Output.Contains("Invalid Password"))
                 return SteamCmdStatus.InvalidPassword;
@@ -763,6 +763,7 @@ public class SteamCmdService(
                 FileName = executablePath,
                 Arguments = arguments,
                 UseShellExecute = false,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,

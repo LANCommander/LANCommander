@@ -1,0 +1,38 @@
+@page "/ExternalLogin"
+@using LANCommander.Server.Extensions
+@model LANCommander.Server.UI.Pages.Account.ExternalLoginModel
+@{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
+
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="login-container">
+    <div class="login-container-background" style="background-image: url('@Model.ScreenshotUrl')"></div>
+    <div class="ant-row login-box">
+        <div class="ant-col ant-col-xs-24 ant-col-md-8 ant-col-lg-6 ant-col-md-push-4 ant-col-lg-push-6 login-form-pane">
+            <div class="login-box-logo">
+                <img src="~/static/logo-dark.svg"/>
+            </div>
+
+            @foreach (var error in ModelState.SelectMany(x => x.Value.Errors))
+            {
+                <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 16px">
+                    <div class="ant-alert-content">
+                        <div class="ant-alert-message">@error.ErrorMessage</div>
+                    </div>
+                </div>
+            }
+
+            <partial name="_ProviderButtons" model="@(new LANCommander.Server.Models.ProviderButtonsModel { Providers = Model.Providers, ReturnUrl = Model.ReturnUrl })"/>
+
+            <div class="ant-flex ant-flex-justify-center" style="margin-top: 16px;">
+                <a href="~/Login?ReturnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/")">Sign in with a password</a>
+            </div>
+        </div>
+
+        <div class="ant-col ant-col-xs-24 ant-col-md-8 ant-col-lg-6 ant-col-md-push-4 ant-col-lg-push-6 login-download-pane" style="background-image: url('@Model.ScreenshotUrl')">
+            @(await Html.RenderComponentAsync<LANCommander.Server.UI.Pages.Account.Components.LauncherDownloadButton>(RenderMode.Server))
+        </div>
+    </div>
+</div>

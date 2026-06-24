@@ -1,0 +1,101 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:LANCommander.Packager.Models"
+        x:Class="LANCommander.Packager.MainWindow"
+        Title="LANCommander Packager"
+        Width="950" Height="650"
+        MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}"
+        Icon="avares://LANCommander.Packager/LANCommanderDark.ico">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Server connection bar -->
+        <Border Grid.Row="0" Background="#1A1A1A" BorderBrush="#2A2A2A"
+                BorderThickness="0,0,0,1" Padding="12,6">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <Ellipse Name="StatusDot" Width="8" Height="8" Fill="#555555" VerticalAlignment="Center" />
+                    <TextBlock Name="AuthStatusLabel" Text="Not connected"
+                               VerticalAlignment="Center" Opacity="0.5"
+                               Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" />
+                </StackPanel>
+                <Button Name="ConnectButton" Content="Connect to Server"
+                        HorizontalAlignment="Right" FontSize="12" Padding="12,4" />
+            </Grid>
+        </Border>
+
+        <!-- Main area -->
+        <Grid Grid.Row="1" ColumnDefinitions="220,*">
+            <!-- Step sidebar -->
+            <Border Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="0,0,1,0">
+                <ItemsControl Name="StepList" Margin="24,0" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:WizardStepItem">
+                            <Grid ColumnDefinitions="20,*" Height="36">
+                                <!-- Top connecting line -->
+                                <Border Grid.Column="0" Width="2" Height="18"
+                                        Background="#333333"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        IsVisible="{Binding ShowTopLine}" />
+                                <!-- Bottom connecting line -->
+                                <Border Grid.Column="0" Width="2" Height="18"
+                                        Background="#333333"
+                                        HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                        IsVisible="{Binding ShowBottomLine}" />
+
+                                <!-- Completed dot -->
+                                <Ellipse Grid.Column="0" Width="10" Height="10"
+                                         Fill="{DynamicResource PrimaryBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                         IsVisible="{Binding IsCompleted}" />
+                                <!-- Current dot -->
+                                <Ellipse Grid.Column="0" Width="12" Height="12"
+                                         Fill="{DynamicResource PrimaryBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                         IsVisible="{Binding IsCurrent}" />
+                                <!-- Pending dot -->
+                                <Ellipse Grid.Column="0" Width="10" Height="10"
+                                         Fill="Transparent"
+                                         Stroke="#555555" StrokeThickness="1.5"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                         IsVisible="{Binding IsPending}" />
+
+                                <!-- Step title -->
+                                <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0"
+                                           FontSize="13"
+                                           Opacity="{Binding TextOpacity}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- Content area -->
+            <DockPanel Grid.Column="1" Margin="28,24">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
+                    <TextBlock Name="StepTitle" FontSize="22" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Name="StepHelp" FontSize="13" Opacity="0.5"
+                               TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+                <ContentControl Name="ContentArea" />
+            </DockPanel>
+        </Grid>
+
+        <!-- Bottom navigation -->
+        <Border Grid.Row="2" Background="#1A1A1A" BorderBrush="#2A2A2A"
+                BorderThickness="0,1,0,0" Padding="20,12">
+            <Grid>
+                <Button Name="CancelButton" Content="Cancel" HorizontalAlignment="Left" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button Name="BackButton" Content="Back" />
+                    <Button Name="NextButton" Content="Next" Classes="Primary" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

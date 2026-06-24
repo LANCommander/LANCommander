@@ -39,7 +39,10 @@ public class DockerServerEngine(
             if (serverEngineConfig != null && !String.IsNullOrWhiteSpace(serverEngineConfig.Address) && Uri.TryCreate(serverEngineConfig.Address, UriKind.Absolute, out var hostAddress))
                 _dockerClients[serverEngineConfig.Id] = new DockerClientConfiguration(hostAddress).CreateClient();
         }
-        
+    }
+
+    public async Task RefreshTrackingAsync()
+    {
         using (var scope = serviceProvider.CreateScope())
         {
             var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
@@ -56,6 +59,8 @@ public class DockerServerEngine(
                         Id = server.ContainerId,
                         Name = server.Name,
                     };
+                else
+                    _tracked.Remove(server.Id);
             }
         }
     }

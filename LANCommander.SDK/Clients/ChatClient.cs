@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Services;
 
-public class ChatClient : IChatClient, HubChatClient
+public class ChatClient : IChatClient, HubChatClient, IDisposable
 {
     private HubConnection? _connection;
     private IChatHub? _hub;
@@ -21,6 +21,8 @@ public class ChatClient : IChatClient, HubChatClient
     private readonly IConnectionClient _connectionClient;
     private readonly ILogger<ChatClient> _logger;
     private readonly Dictionary<Guid, ChatThread> _threads = new();
+    private readonly EventHandler _onConnect;
+    private readonly EventHandler _onDisconnect;
 
     public ChatClient(
         ITokenProvider tokenProvider,
@@ -32,8 +34,16 @@ public class ChatClient : IChatClient, HubChatClient
         _logger = logger;
 
         // Subscribe to connection events to manage chat hub connection
-        _connectionClient.OnConnect += async (sender, e) => await EnsureConnectedAsync();
-        _connectionClient.OnDisconnect += async (sender, e) => await DisconnectAsync();
+        _onConnect = async (sender, e) => await EnsureConnectedAsync();
+        _onDisconnect = async (sender, e) => await DisconnectAsync();
+        _connectionClient.OnConnect += _onConnect;
+        _connectionClient.OnDisconnect += _onDisconnect;
+    }
+
+    public void Dispose()
+    {
+        _connectionClient.OnConnect -= _onConnect;
+        _connectionClient.OnDisconnect -= _onDisconnect;
     }
 
     private async Task EnsureConnectedAsync()

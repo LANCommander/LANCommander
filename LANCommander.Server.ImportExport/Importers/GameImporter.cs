@@ -9,6 +9,7 @@ namespace LANCommander.Server.ImportExport.Importers;
 public class GameImporter(
     ILogger<GameImporter> logger,
     GameService gameService,
+    RedistributableService redistributableService,
     UserService userService) : BaseImporter<Game>
 {
     public override string GetKey(Game record)
@@ -38,7 +39,11 @@ public class GameImporter(
             ReleasedOn = record.ReleasedOn,
             Singleplayer = record.Singleplayer,
             Type = record.Type,
-            IGDBId = record.IGDBId,
+            ExternalIds = record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }).ToList(),
             CreatedOn = record.CreatedOn,
             UpdatedOn = record.UpdatedOn,
             DirectoryName = record.DirectoryName,
@@ -77,7 +82,11 @@ public class GameImporter(
             existing.ReleasedOn = record.ReleasedOn;
             existing.Singleplayer = record.Singleplayer;
             existing.Type = record.Type;
-            existing.IGDBId = record.IGDBId;
+            existing.ExternalIds = record.ExternalIds?.Select(e => new Data.Models.GameExternalId
+            {
+                Provider = e.Provider,
+                ExternalId = e.ExternalId,
+            }).ToList();
             existing.CreatedOn = record.CreatedOn;
             existing.DirectoryName = record.DirectoryName;
             
@@ -157,5 +166,45 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        if (manifest.Redistributables != null && manifest.Redistributables.Any())
+        {
+            await gameService.SyncRelatedCollectionAsync(
+                game,
+                g => g.Redistributables,
+                manifest.Redistributables,
+                r => rd => rd.Id == r.Id || rd.Name == r.Name);
+
+            foreach (var redistributable in manifest.Redistributables)
+            {
+                if (redistributable.Options != null && redistributable.Options.Any())
+                {
+                    var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == redistributable.Id || r.Name == redistributable.Name);
+
+                    if (existing != null)
+                    {
+                        var optionsJson = System.Text.Json.JsonSerializer.Serialize(redistributable.Options);
+                        await gameService.SetRedistributableOptionsAsync(game.Id, existing.Id, optionsJson);
+                    }
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(manifest.BaseGame) || manifest.BaseGameId != Guid.Empty)
+        {
+            Data.Models.Game? baseGame = null;
+
+            if (manifest.BaseGameId != Guid.Empty)
+                baseGame = await gameService.FirstOrDefaultAsync(g => g.Id == manifest.BaseGameId);
+
+            if (baseGame == null && !String.IsNullOrWhiteSpace(manifest.BaseGame))
+                baseGame = await gameService.FirstOrDefaultAsync(g => g.Title == manifest.BaseGame);
+
+            if (baseGame != null && game.BaseGameId != baseGame.Id)
+            {
+                game.BaseGameId = baseGame.Id;
+                await gameService.UpdateAsync(game);
+            }
+        }
     }
 }

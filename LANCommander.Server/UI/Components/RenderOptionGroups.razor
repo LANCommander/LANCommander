@@ -1,0 +1,86 @@
+@using LANCommander.SDK.Models
+
+@RenderOptions(Schema?.Options, "")
+
+@code {
+    [Parameter] public OptionSchema Schema { get; set; }
+    [Parameter] public Guid RedistId { get; set; }
+    [Parameter] public Dictionary<Guid, Dictionary<string, string>> Options { get; set; }
+    [Parameter] public EventCallback<(Guid redistId, string optionName, string value)> OnOptionChanged { get; set; }
+
+    RenderFragment RenderOptions(Dictionary<string, OptionDefinition> options, string prefix) => __builder =>
+    {
+        if (options == null)
+            return;
+
+        var groups = options.Where(kvp => string.IsNullOrWhiteSpace(kvp.Value.Type) && kvp.Value.Options != null && kvp.Value.Options.Any()).ToList();
+        var leafOptions = options.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value.Type)).ToList();
+
+        // Render leaf options as form items
+        if (leafOptions.Any())
+        {
+            <Form Model="Schema" Layout="FormLayout.Vertical">
+            @foreach (var kvp in leafOptions)
+            {
+                var optionKey = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+                var option = kvp.Value;
+                var label = !string.IsNullOrWhiteSpace(option.DisplayName) ? option.DisplayName
+                    : !string.IsNullOrWhiteSpace(option.Description) ? option.Description
+                    : kvp.Key;
+
+                <FormItem Label="@label">
+                    @if (!string.IsNullOrWhiteSpace(option.Description) && !string.IsNullOrWhiteSpace(option.DisplayName))
+                    {
+                        <p style="color: rgba(255,255,255,0.45); font-size: 12px; margin: -8px 0 8px;">@option.Description</p>
+                    }
+                    @if (option.IsList)
+                    {
+                        <RenderListOption Definition="option"
+                                          Value="@GetOptionValue(optionKey, option.GetDefaultAsString())"
+                                          ValueChanged="(string v) => SetValue(optionKey, v)" />
+                    }
+                    else
+                    {
+                        <RenderOptionInput Definition="option"
+                                           Value="@GetOptionValue(optionKey, option.GetDefaultAsString())"
+                                           Placeholder="@option.GetDefaultAsString()"
+                                           ValueChanged="(string v) => SetValue(optionKey, v)" />
+                    }
+                </FormItem>
+            }
+            </Form>
+        }
+
+        // Render groups as collapsible panels
+        if (groups.Any())
+        {
+            <Collapse>
+                @foreach (var kvp in groups)
+                {
+                    var groupPrefix = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+                    var groupLabel = !string.IsNullOrWhiteSpace(kvp.Value.DisplayName) ? kvp.Value.DisplayName
+                        : !string.IsNullOrWhiteSpace(kvp.Value.Description) ? kvp.Value.Description
+                        : kvp.Key;
+
+                    <Panel Header="@groupLabel">
+                        @RenderOptions(kvp.Value.Options, groupPrefix)
+                    </Panel>
+                }
+            </Collapse>
+        }
+    };
+
+    string GetOptionValue(string optionName, string defaultValue = "")
+    {
+        if (Options.TryGetValue(RedistId, out var opts) && opts.TryGetValue(optionName, out var value))
+            return value;
+
+        return defaultValue ?? "";
+    }
+
+    async Task SetValue(string optionName, string value)
+    {
+        if (OnOptionChanged.HasDelegate)
+            await OnOptionChanged.InvokeAsync((RedistId, optionName, value));
+    }
+}

@@ -8,7 +8,7 @@
             {
                 <ServerControl ServerId="context.Id"/>
                 
-                <Button Type="ButtonType.Primary" OnClick="_actionEditor.Save">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => _actionEditor?.Save()">Save</Button>
             }
         </Flex>
     </TitleExtraTemplate>

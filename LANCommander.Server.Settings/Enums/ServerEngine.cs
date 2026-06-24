@@ -4,4 +4,5 @@ public enum ServerEngine
 {
     Local,
     Docker,
+    Remote = 2,
 }

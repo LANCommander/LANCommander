@@ -1,2 +1,7 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+@using LANCommander.Server.Services.Abstractions
+@inject IVersionProvider VersionProvider
+@{
+    var v = VersionProvider.GetCurrentVersion();
+}
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js?v=@v"></script>
+<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js?v=@v"></script>

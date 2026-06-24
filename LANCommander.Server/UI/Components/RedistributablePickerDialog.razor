@@ -1,0 +1,50 @@
+@inherits FeedbackComponent<IEnumerable<Redistributable>, Redistributable>
+
+<Search Placeholder="Search redistributables..." @bind-Value="_search" Style="margin-bottom: 12px;" />
+
+<div style="max-height: 400px; overflow-y: auto;">
+    @foreach (var redist in FilteredRedistributables)
+    {
+        <div class="@($"ant-list-item{(_selected == redist ? " ant-list-item-selected" : "")}")"
+             style="cursor: pointer;"
+             @onclick="() => _selected = redist">
+            <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center">
+                <div>
+                    <Text>@redist.Name</Text>
+                    
+                    @if (!string.IsNullOrWhiteSpace(redist.Description))
+                    {
+                        <br />
+                        <AntDesign.Text Type="TextElementType.Secondary">@redist.Description</AntDesign.Text>
+                    }
+                </div>
+                
+                @if (_selected == redist)
+                {
+                    <Icon Type="@IconType.Outline.Check" Theme="IconThemeType.Outline" />
+                }
+            </Flex>
+        </div>
+    }
+</div>
+
+@code {
+    string _search = "";
+    Redistributable? _selected;
+
+    IEnumerable<Redistributable> FilteredRedistributables =>
+        string.IsNullOrWhiteSpace(_search)
+            ? Options
+            : Options.Where(r => r.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        if (_selected == null)
+        {
+            args.Reject();
+            return;
+        }
+
+        await base.OkCancelRefWithResult!.OnOk(_selected);
+    }
+}

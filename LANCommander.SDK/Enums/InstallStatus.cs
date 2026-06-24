@@ -23,6 +23,8 @@ namespace LANCommander.SDK.Enums
         InstallingExpansions,
         [Display(Name = "Installing Addons")]
         InstallingAddons,
+        [Display(Name = "Verifying Files")]
+        VerifyingFiles,
         [Display(Name = "Running Scripts")]
         RunningScripts,
         [Display(Name = "Downloading Saves")]

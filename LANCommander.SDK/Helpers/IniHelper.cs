@@ -1,49 +1,31 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
-using MadMilkman.Ini;
+using LANCommander.SDK.Parsers.Ini;
 
 namespace LANCommander.SDK.Helpers
 {
     public static class IniHelper
     {
-        public static readonly IniOptions DefaultIniOptions = new()
-        {
-        };
+        public static readonly IniParseOptions DefaultOptions = new();
 
-        public static IniFile FromString(string iniFileContent)
+        public static IniDocument FromString(string iniFileContent)
         {
-            return FromString(iniFileContent, DefaultIniOptions);
+            return IniParser.Parse(iniFileContent, DefaultOptions);
         }
 
-        public static IniFile FromString(string iniFileContent, IniOptions options)
+        public static IniDocument FromString(string iniFileContent, IniParseOptions options)
         {
-            IniFile file = new(options);
-
-            using (var stream = new MemoryStream(options.Encoding.GetBytes(iniFileContent)))
-                file.Load(stream);
-
-            return file;
+            return IniParser.Parse(iniFileContent, options);
         }
 
-        public static string ToString(IniFile file, IniOptions options)
+        public static string ToString(IniDocument document)
         {
-            return ToString(file, options.Encoding);
+            return document.Serialize();
         }
 
-        public static string ToString(IniFile file, Encoding encoding)
+        public static string ToString(IniDocument document, Encoding encoding)
         {
-            string iniFileContent;
-            using (var stream = new MemoryStream())
-            using (var reader = new StreamReader(stream, encoding))
-            {
-                file.Save(stream);
-                stream.Flush();
-                stream.Seek(0, SeekOrigin.Begin);
-
-                iniFileContent = reader.ReadToEnd();
-            }
-
-            return iniFileContent;
+            return document.Serialize();
         }
     }
 }

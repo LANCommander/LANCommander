@@ -1,0 +1,372 @@
+.game-detail-preview {
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    color: #fff;
+
+    // ── Hero Section ─────────────────────────────────────────────
+    &__hero {
+        position: relative;
+        height: 340px;
+        background: #111;
+        overflow: hidden;
+    }
+
+    &__hero-bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__hero-gradient-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.33), transparent);
+        pointer-events: none;
+    }
+
+    &__hero-gradient-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 128px;
+        background: linear-gradient(to bottom, transparent, #000);
+        pointer-events: none;
+    }
+
+    &__logo-area {
+        position: absolute;
+        bottom: 48px;
+        left: 48px;
+        max-width: 33%;
+        max-height: 50%;
+    }
+
+    &__logo-img {
+        max-width: 100%;
+        max-height: 160px;
+        object-fit: contain;
+    }
+
+    &__title-fallback {
+        font-size: 32px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    // ── Content Grid ─────────────────────────────────────────────
+    &__content {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 16px;
+        padding: 24px;
+    }
+
+    &__left {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        min-width: 0;
+    }
+
+    &__right {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: -100px;
+        z-index: 1;
+    }
+
+    &__description {
+        line-height: 1.6;
+        opacity: 0.85;
+        margin: 0;
+        white-space: pre-wrap;
+    }
+
+    // ── Cover ────────────────────────────────────────────────────
+    &__cover-wrapper {
+        position: relative;
+        aspect-ratio: 2 / 3;
+        border-radius: 8px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #3D1A6B, #0F3460);
+    }
+
+    &__cover-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__cover-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 16px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+        opacity: 0.7;
+    }
+
+    // ── Badge sections ───────────────────────────────────────────
+    &__badge-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__badge-header {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.5;
+    }
+
+    &__badge-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    &__badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.13);
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    // ── Media overlay (hover-to-edit) ────────────────────────────
+    &__media-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(0,0,0,0.55);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    &__media-overlay--hero {
+        // Only show in top-right corner to avoid blocking logo
+        inset: auto;
+        top: 12px;
+        right: 12px;
+        width: auto;
+        border-radius: 6px;
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.7);
+        flex-direction: row;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+
+        .game-detail-preview__hero:hover & {
+            opacity: 1;
+        }
+    }
+
+    &__media-overlay--logo {
+        border-radius: 6px;
+        background: rgba(0,0,0,0.65);
+        padding: 6px 10px;
+        flex-direction: row;
+        position: absolute;
+        inset: auto;
+        bottom: -36px;
+        left: 0;
+        width: auto;
+
+        .game-detail-preview__logo-area:hover & {
+            opacity: 1;
+        }
+    }
+
+    &__media-overlay--cover {
+        border-radius: 8px;
+
+        .game-detail-preview__cover-wrapper:hover & {
+            opacity: 1;
+        }
+    }
+
+    &__media-overlay-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    &__media-overlay-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.8;
+    }
+
+    &__overlay-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        font-size: 14px;
+
+        &:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        &--danger {
+            border-color: rgba(255,77,79,0.5);
+            color: #ff4d4f;
+
+            &:hover {
+                background: rgba(255,77,79,0.25);
+            }
+        }
+    }
+
+    // ── Screenshots / Videos carousel ────────────────────────────
+    &__media-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    &__media-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__media-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.7;
+    }
+
+    &__media-section-actions {
+        display: flex;
+        gap: 4px;
+
+        .ant-btn {
+            color: rgba(255,255,255,0.65) !important;
+
+            &:hover {
+                color: #fff !important;
+            }
+        }
+
+        label.ant-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+    }
+
+    &__carousel {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+
+        // Scrollbar styling
+        &::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+    }
+
+    &__carousel-item {
+        position: relative;
+        flex: 0 0 384px;
+        height: 216px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #111;
+    }
+
+    &__carousel-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__carousel-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__carousel-video-badge {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        background: rgba(0,0,0,0.7);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 16px;
+        pointer-events: none;
+    }
+
+    &__carousel-item-overlay {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+
+        .game-detail-preview__carousel-item:hover & {
+            opacity: 1;
+        }
+    }
+
+    &__carousel-empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px;
+
+        .ant-empty-description {
+            color: rgba(255,255,255,0.45);
+        }
+    }
+}

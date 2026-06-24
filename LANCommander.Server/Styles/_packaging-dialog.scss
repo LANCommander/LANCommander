@@ -1,0 +1,16 @@
+.packaging-dialog {
+    .ant-result {
+        padding: 24px 16px;
+    }
+}
+
+.packaging-terminal {
+    border-radius: 4px;
+    overflow: hidden;
+    min-height: 300px;
+    background: #1e1e1e;
+
+    .xterm {
+        padding: 8px;
+    }
+}

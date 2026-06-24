@@ -1,6 +1,8 @@
 ﻿using LANCommander.SDK.PowerShell.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -88,35 +90,174 @@ namespace LANCommander.SDK.Helpers
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var process = new System.Diagnostics.Process();
+                // Try each source in order of reliability.
+                // xrandr works on X11 and XWayland; xdpyinfo is a lighter X11 fallback;
+                // /sys/class/drm works without a display server and covers Wayland-only setups.
+                if (!TryGetScreenFromXrandr(out bounds, out var refreshRate, out var bitsPerPixel) &&
+                    !TryGetScreenFromXdpyinfo(out bounds) &&
+                    !TryGetScreenFromDrm(out bounds))
+                {
+                    // Nothing worked — leave bounds at zero so callers can detect the failure.
+                }
 
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.FileName = "xrandr";
-
-                process.Start();
-
-                var output = process.StandardOutput.ReadToEnd();
-
-                process.WaitForExit();
-
-                var match = Regex.Match(output, @"^\s+(\d+)x(\d+)\s+(\d+\.?\d+)\*\+$");
-
-                var w = match.Groups[1].Value;
-                var h = match.Groups[2].Value;
-                var r = match.Groups[3].Value;
-
-                bounds.Width = int.Parse(w);
-                bounds.Height = int.Parse(h);
-                screen.RefreshRate = (int)float.Parse(r);
+                screen.RefreshRate  = refreshRate;
+                screen.BitsPerPixel = bitsPerPixel;
             }
 
             screen.Primary = true;
-            screen.Bounds = bounds;
-            screen.Width = bounds.Width;
-            screen.Height = bounds.Height;
+            screen.Bounds  = bounds;
+            screen.Width   = bounds.Width;
+            screen.Height  = bounds.Height;
 
             return screen;
+        }
+
+        // ── Linux helpers ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Parses <c>xrandr</c> output to find the active resolution and refresh rate.
+        /// Works on X11 and XWayland.
+        ///
+        /// Example xrandr output:
+        /// <code>
+        /// Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 16384 x 16384
+        /// DP-1 connected primary 1920x1080+0+0 ...
+        ///    1920x1080     60.00*+  50.00   59.94
+        ///    1280x720      60.00    59.94
+        /// </code>
+        /// </summary>
+        private static bool TryGetScreenFromXrandr(out Bounds bounds, out int refreshRate, out int bitsPerPixel)
+        {
+            bounds       = new Bounds();
+            refreshRate  = 0;
+            bitsPerPixel = 24; // xrandr does not report bit depth; 24 is the near-universal default
+
+            try
+            {
+                var output = RunProcess("xrandr", "");
+                if (string.IsNullOrWhiteSpace(output))
+                    return false;
+
+                // "Screen 0: ... current 1920 x 1080 ..."
+                var screenMatch = Regex.Match(output, @"current\s+(\d+)\s*x\s*(\d+)");
+                if (!screenMatch.Success)
+                    return false;
+
+                bounds.Width  = int.Parse(screenMatch.Groups[1].Value);
+                bounds.Height = int.Parse(screenMatch.Groups[2].Value);
+
+                // A mode line looks like:  "   1920x1080     60.00*+  50.00  59.94"
+                // The active refresh rate is the one immediately followed by '*'.
+                var refreshMatch = Regex.Match(output, @"(\d+\.\d+)\*");
+                if (refreshMatch.Success &&
+                    float.TryParse(refreshMatch.Groups[1].Value,
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var rate))
+                {
+                    refreshRate = (int)Math.Round(rate);
+                }
+
+                return bounds.Width > 0 && bounds.Height > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Parses <c>xdpyinfo</c> output to find the screen dimensions.
+        /// Lighter than xrandr; does not provide refresh rate.
+        ///
+        /// Example relevant line:
+        /// <code>
+        ///   dimensions:    1920x1080 pixels (508x286 millimeters)
+        /// </code>
+        /// </summary>
+        private static bool TryGetScreenFromXdpyinfo(out Bounds bounds)
+        {
+            bounds = new Bounds();
+
+            try
+            {
+                var output = RunProcess("xdpyinfo", "");
+                if (string.IsNullOrWhiteSpace(output))
+                    return false;
+
+                var match = Regex.Match(output, @"dimensions:\s+(\d+)x(\d+)\s+pixels");
+                if (!match.Success)
+                    return false;
+
+                bounds.Width  = int.Parse(match.Groups[1].Value);
+                bounds.Height = int.Parse(match.Groups[2].Value);
+
+                return bounds.Width > 0 && bounds.Height > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reads the preferred/current mode from the kernel DRM subsystem.
+        /// Works without any display server — covers pure Wayland and headless setups.
+        ///
+        /// Each connected output exposes its mode list at
+        /// <c>/sys/class/drm/card*-*/modes</c>; the first line is the preferred mode.
+        /// </summary>
+        private static bool TryGetScreenFromDrm(out Bounds bounds)
+        {
+            bounds = new Bounds();
+
+            try
+            {
+                var modeFiles = Directory.GetFiles("/sys/class/drm", "modes", SearchOption.AllDirectories);
+
+                foreach (var file in modeFiles)
+                {
+                    var firstLine = File.ReadLines(file).FirstOrDefault();
+                    if (string.IsNullOrWhiteSpace(firstLine))
+                        continue;
+
+                    // Format: "1920x1080"
+                    var match = Regex.Match(firstLine.Trim(), @"^(\d+)x(\d+)$");
+                    if (!match.Success)
+                        continue;
+
+                    bounds.Width  = int.Parse(match.Groups[1].Value);
+                    bounds.Height = int.Parse(match.Groups[2].Value);
+
+                    if (bounds.Width > 0 && bounds.Height > 0)
+                        return true;
+                }
+            }
+            catch
+            {
+                // /sys may not be accessible in all environments
+            }
+
+            return false;
+        }
+
+        private static string RunProcess(string fileName, string arguments)
+        {
+            var psi = new ProcessStartInfo(fileName, arguments)
+            {
+                UseShellExecute        = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true,
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null)
+                return string.Empty;
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            return process.ExitCode == 0 ? output : string.Empty;
         }
     }
 }

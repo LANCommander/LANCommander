@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
@@ -28,123 +29,156 @@ public class LocalServerEngine(
 {
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
-    
-    private Dictionary<Guid, CancellationTokenSource> _running { get; set; } = new();
-    private Dictionary<Guid, ServerProcessStatus> _status { get; set; } = new();
-    private Dictionary<Guid, LogFileMonitor> _logFileMonitors { get; set; } = new();
 
-    public async Task InitializeAsync()
+    private sealed class ServerRuntimeState
     {
-        using (var scope = serviceProvider.CreateScope())
+        public ServerProcessStatus Status { get; set; } = ServerProcessStatus.Stopped;
+        public CancellationTokenSource? Cancellation { get; set; }
+    }
+
+    private readonly ConcurrentDictionary<Guid, ServerRuntimeState> _servers = new();
+    private readonly Dictionary<Guid, LogFileMonitor> _logFileMonitors = new();
+    private readonly HashSet<Guid> _tracked = new();
+
+    // Guards status transitions and the tracked set so concurrent start/stop/refresh
+    // calls (the engine is a singleton) can't race into a double-start or lost update.
+    private readonly object _lock = new();
+
+    public Task InitializeAsync()
+    {
+        return RefreshTrackingAsync();
+    }
+
+    public async Task RefreshTrackingAsync()
+    {
+        using var scope = serviceProvider.CreateScope();
+        var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+        var servers = await serverService.GetAsync(s => s.Engine == ServerEngine.Local);
+        var localServerIds = servers.Select(s => s.Id).ToHashSet();
+
+        lock (_lock)
         {
-            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
-
-            var servers = await serverService.GetAsync(s =>
-                s.Engine == ServerEngine.Local);
-
-            foreach (var server in servers)
+            // Track every local server so freshly added/edited servers are immediately
+            // manageable (and therefore autostartable) without needing a restart.
+            foreach (var serverId in localServerIds)
             {
-                _status[server.Id] = ServerProcessStatus.Stopped;
+                _tracked.Add(serverId);
+                _servers.GetOrAdd(serverId, _ => new ServerRuntimeState());
             }
+
+            // Drop servers that are no longer local engine servers.
+            foreach (var serverId in _tracked.Where(id => !localServerIds.Contains(id)).ToList())
+                _tracked.Remove(serverId);
         }
     }
 
     public bool IsManaging(Guid serverId)
     {
-        return _running.ContainsKey(serverId) || _status.ContainsKey(serverId);
+        lock (_lock)
+            return _tracked.Contains(serverId);
     }
 
     public async Task StartAsync(Guid serverId)
     {
-        Data.Models.Server server;
+        using var scope = serviceProvider.CreateScope();
+        var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
-        using (var scope = serviceProvider.CreateScope())
+        var server = await serverService
+            .Query(q =>
+            {
+                return q
+                    .Include(s => s.Scripts)
+                    .Include(s => s.Game)
+                    .Include(s => s.ServerConsoles);
+            }).GetAsync(serverId);
+
+        // Server not found
+        if (server == null)
+            return;
+
+        CancellationTokenSource cancellationTokenSource;
+
+        // Atomic gate: only the call that transitions a stopped server into the "claimed"
+        // state (Cancellation set) is allowed to proceed. Any concurrent start — e.g. two
+        // players launching the same game at once — sees the claim and bails, so the
+        // process is never launched twice.
+        lock (_lock)
         {
-            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+            var state = _servers.GetOrAdd(serverId, _ => new ServerRuntimeState());
 
-            server = await serverService
-                .Query(q =>
-                {
-                    return q
-                        .Include(s => s.Scripts)
-                        .Include(s => s.Game)
-                        .Include(s => s.ServerConsoles);
-                }).GetAsync(serverId);
-
-            // Server not found
-            if (server == null)
+            if (state.Status != ServerProcessStatus.Stopped || state.Cancellation != null)
                 return;
 
-            // Don't start the server if it's already started
-            if (await GetStatusAsync(serverId) != ServerProcessStatus.Stopped)
-                return;
-            
-            UpdateStatus(server, ServerProcessStatus.Starting);
+            cancellationTokenSource = new CancellationTokenSource();
+            state.Cancellation = cancellationTokenSource;
+        }
 
-            logger?.LogInformation("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+        EmitStatus(server, ServerProcessStatus.Starting);
 
-            foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+        logger?.LogInformation("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+
+        foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+        {
+            try
             {
-                try
-                {
-                    var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
+                var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
 
-                    script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
+                script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
 
-                    script.UseWorkingDirectory(server.WorkingDirectory);
-                    script.UseInline(serverScript.Contents);
-                    script.UseShellExecute();
+                script.UseWorkingDirectory(server.WorkingDirectory);
+                script.UseInline(serverScript.Contents);
+                script.UseShellExecute();
 
-                    logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
+                logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                    await script.ExecuteAsync<int>();
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                }
+                await script.ExecuteAsync<int>();
             }
-
-            using (var executionContext = processExecutionContextFactory.Create())
+            catch (Exception ex)
             {
-                try
+                logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+            }
+        }
+
+        using (var executionContext = processExecutionContextFactory.Create())
+        {
+            try
+            {
+                executionContext.AddVariable("ServerId", server.Id.ToString());
+                executionContext.AddVariable("ServerName", server.Name);
+                executionContext.AddVariable("ServerHost", server.Host);
+                executionContext.AddVariable("ServerPort", server.Port.ToString());
+
+                if (server.Game != null)
                 {
-                    executionContext.AddVariable("ServerId", server.Id.ToString());
-                    executionContext.AddVariable("ServerName", server.Name);
-                    executionContext.AddVariable("ServerHost", server.Host);
-                    executionContext.AddVariable("ServerPort", server.Port.ToString());
-
-                    if (server.Game != null)
-                    {
-                        executionContext.AddVariable("GameTitle", server.Game?.Title);
-                        executionContext.AddVariable("GameId", server.Game?.Id.ToString());   
-                    }
-                
-                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
-                    {
-                        StartMonitoringLog(logFile, server);
-                    }
-                
-                    UpdateStatus(server, ServerProcessStatus.Running);
-                    
-                    var cancellationTokenSource = new CancellationTokenSource();
-                    
-                    _running[server.Id] = cancellationTokenSource;
-
-                    await executionContext.ExecuteServerAsync(mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
-                    
-                    if (_running.ContainsKey(server.Id))
-                        _running.Remove(server.Id);
-                    
-                    UpdateStatus(server, ServerProcessStatus.Stopped);
-                }
-                catch (Exception ex)
-                {
-                    UpdateStatus(server, ServerProcessStatus.Error, ex);
-
-                    logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
+                    executionContext.AddVariable("GameTitle", server.Game?.Title);
+                    executionContext.AddVariable("GameId", server.Game?.Id.ToString());
                 }
 
+                foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                {
+                    StartMonitoringLog(logFile, server);
+                }
+
+                EmitStatus(server, ServerProcessStatus.Running);
+
+                await executionContext.ExecuteServerAsync(mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
+
+                EmitStatus(server, ServerProcessStatus.Stopped);
+            }
+            catch (Exception ex)
+            {
+                EmitStatus(server, ServerProcessStatus.Error, ex);
+
+                logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
+            }
+            finally
+            {
+                lock (_lock)
+                {
+                    if (_servers.TryGetValue(serverId, out var state))
+                        state.Cancellation = null;
+                }
             }
         }
     }
@@ -164,16 +198,23 @@ public class LocalServerEngine(
                         .Include(s => s.ServerConsoles);
                 }).GetAsync(serverId);
 
+            if (server == null)
+                return;
+
             logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-            UpdateStatus(server, ServerProcessStatus.Stopping);
+            EmitStatus(server, ServerProcessStatus.Stopping);
 
-            if (_running.ContainsKey(server.Id))
+            CancellationTokenSource cancellationTokenSource;
+
+            lock (_lock)
             {
-                await _running[server.Id].CancelAsync();
-
-                _running.Remove(server.Id);
+                _servers.TryGetValue(server.Id, out var state);
+                cancellationTokenSource = state?.Cancellation;
             }
+
+            if (cancellationTokenSource != null)
+                await cancellationTokenSource.CancelAsync();
 
             if (_logFileMonitors.ContainsKey(server.Id))
             {
@@ -206,39 +247,36 @@ public class LocalServerEngine(
                 }
             }
 
-            UpdateStatus(server, ServerProcessStatus.Stopped);
+            EmitStatus(server, ServerProcessStatus.Stopped);
         }
     }
 
-    public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
+    public Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
     {
-        var status = ServerProcessStatus.Stopped;
-        
-        if (_running.ContainsKey(serverId) && _running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Stopping;
-        else if (_running.ContainsKey(serverId) && !_running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Running;
+        var status = _servers.TryGetValue(serverId, out var state)
+            ? state.Status
+            : ServerProcessStatus.Stopped;
 
-        return await Task.FromResult(status);
+        return Task.FromResult(status);
     }
-    
-    private void UpdateStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)
+
+    private void EmitStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)
     {
-        if (ex != null)
+        var effectiveStatus = ex != null ? ServerProcessStatus.Error : status;
+        bool changed;
+
+        lock (_lock)
         {
-            _status[server.Id] = ServerProcessStatus.Error;
-            OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
+            var state = _servers.GetOrAdd(server.Id, _ => new ServerRuntimeState());
+
+            // Always surface errors; otherwise only fire on an actual transition so we
+            // don't spam SignalR subscribers with duplicate statuses.
+            changed = ex != null || state.Status != effectiveStatus;
+            state.Status = effectiveStatus;
         }
-        else if (!_status.ContainsKey(server.Id))
-        {
-            _status[server.Id] = status;
-            OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
-        }
-        else if (_status[server.Id] != status)
-        {
-            _status[server.Id] = status;
-            OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
-        }
+
+        if (changed)
+            OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, effectiveStatus, ex));
     }
     
     private void StartMonitoringLog(ServerConsole log, Data.Models.Server server)

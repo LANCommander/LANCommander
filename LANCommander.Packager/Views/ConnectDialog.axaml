@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LANCommander.Packager.Views.ConnectDialog"
+        Title="Connect to Server"
+        Width="400" Height="320"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource BackgroundBrush}">
+
+    <StackPanel Margin="24" Spacing="16">
+        <TextBlock Text="Connect to LANCommander Server" FontSize="16" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Server Address" Opacity="0.7" />
+            <TextBox Name="ServerAddressField" Watermark="http://192.168.1.100:1337" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Username" Opacity="0.7" />
+            <TextBox Name="UsernameField" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Password" Opacity="0.7" />
+            <TextBox Name="PasswordField" PasswordChar="*" />
+        </StackPanel>
+
+        <TextBlock Name="ErrorLabel" Foreground="{DynamicResource ErrorBrush}"
+                   TextWrapping="Wrap" IsVisible="False" />
+
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
+            <Button Name="DisconnectButton" Content="Disconnect" Grid.Column="0"
+                    HorizontalAlignment="Left" IsVisible="False" />
+            <Button Name="CancelButton" Content="Cancel" Grid.Column="1" Margin="0,0,8,0" />
+            <Button Name="ConnectButton" Content="Connect" Grid.Column="2" Classes="Primary" />
+        </Grid>
+    </StackPanel>
+</Window>

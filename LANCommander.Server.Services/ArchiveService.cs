@@ -189,15 +189,48 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<Guid> CopyFromLocalFileAsync(string path)
+        public async Task<Guid> CopyFromLocalFileAsync(string path, Guid storageLocationId, bool move = false)
         {
-            Guid objectKey = Guid.NewGuid();
+            var storageLocation = await storageLocationService.GetAsync(storageLocationId);
 
-            var importArchivePath = await GetArchiveFileLocationAsync(objectKey.ToString());
+            if (!Directory.Exists(storageLocation.Path))
+                Directory.CreateDirectory(storageLocation.Path);
 
-            File.Copy(path, importArchivePath, true);
+            var archive = new Archive
+            {
+                ObjectKey = Guid.NewGuid().ToString(),
+                StorageLocationId = storageLocation.Id,
+                Version = ""
+            };
 
-            return objectKey;
+            archive = await AddAsync(archive);
+
+            var archivePath = await GetArchiveFileLocationAsync(archive);
+
+            var archiveDirectory = Path.GetDirectoryName(archivePath);
+
+            if (!string.IsNullOrEmpty(archiveDirectory) && !Directory.Exists(archiveDirectory))
+                Directory.CreateDirectory(archiveDirectory);
+
+            if (move)
+            {
+                try
+                {
+                    File.Move(path, archivePath, true);
+                }
+                catch (IOException ex)
+                {
+                    _logger.LogInformation(ex, "Could not move local file from {SourcePath} to {DestinationPath}, falling back to copy", path, archivePath);
+
+                    File.Copy(path, archivePath, true);
+                }
+            }
+            else
+            {
+                File.Copy(path, archivePath, true);
+            }
+
+            return Guid.Parse(archive.ObjectKey);
         }
 
         public async Task<IEnumerable<ZipArchiveEntry>> GetContentsAsync(Guid archiveId)
@@ -210,6 +243,103 @@ namespace LANCommander.Server.Services
             {
                 return zip.Entries;
             }
+        }
+
+        /// <summary>
+        /// Inspects an archive for entries the launcher's streaming extractor cannot read reliably
+        /// (stored uncompressed entries written with a streaming data descriptor).
+        /// </summary>
+        public async Task<ArchiveStreamingReport> InspectStreamingCompatibilityAsync(Guid archiveId)
+        {
+            var archive = await Include(a => a.StorageLocation).GetAsync(archiveId);
+            var path = await GetArchiveFileLocationAsync(archive);
+
+            var report = new ArchiveStreamingReport();
+
+            if (!File.Exists(path))
+            {
+                _logger?.LogWarning("Cannot inspect archive {ArchiveId}; file not found at {Path}", archiveId, path);
+                return report;
+            }
+
+            var entries = ZipStreamingInspector.ReadCentralDirectory(path);
+            report.TotalEntries = entries.Count;
+
+            foreach (var entry in entries.Where(e => e.IsStreamingUnsafe))
+            {
+                report.ProblemEntries.Add(new ArchiveStreamingProblemEntry
+                {
+                    Name = entry.Name,
+                    UncompressedSize = entry.UncompressedSize,
+                    Reason = "Stored (uncompressed) entry written with a streaming data descriptor",
+                });
+            }
+
+            return report;
+        }
+
+        /// <summary>
+        /// Rewrites an archive into a streaming-safe layout. Writing through System.IO.Compression
+        /// to a seekable file back-patches real sizes into the local file headers and omits the
+        /// streaming data descriptors, so the launcher's forward-only reader can extract every
+        /// entry without scanning. Original compression is preserved per entry (stored entries stay
+        /// stored) to avoid needlessly re-deflating already-compressed payloads.
+        /// </summary>
+        public async Task RepackArchiveAsync(Guid archiveId)
+        {
+            var archive = await Include(a => a.StorageLocation).GetAsync(archiveId);
+            var path = await GetArchiveFileLocationAsync(archive);
+
+            if (!File.Exists(path))
+                throw new FileNotFoundException("Archive file not found", path);
+
+            var storedEntryNames = ZipStreamingInspector.ReadCentralDirectory(path)
+                .Where(e => e.IsStored)
+                .Select(e => e.Name)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var tempPath = path + ".repack.tmp";
+
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+
+            try
+            {
+                using (var source = ZipFile.OpenRead(path))
+                using (var destStream = new FileStream(tempPath, FileMode.Create, FileAccess.ReadWrite))
+                using (var dest = new ZipArchive(destStream, ZipArchiveMode.Create))
+                {
+                    foreach (var sourceEntry in source.Entries)
+                    {
+                        var level = storedEntryNames.Contains(sourceEntry.FullName)
+                            ? CompressionLevel.NoCompression
+                            : CompressionLevel.Optimal;
+
+                        var destEntry = dest.CreateEntry(sourceEntry.FullName, level);
+                        destEntry.LastWriteTime = sourceEntry.LastWriteTime;
+
+                        using var sourceEntryStream = sourceEntry.Open();
+                        using var destEntryStream = destEntry.Open();
+                        await sourceEntryStream.CopyToAsync(destEntryStream);
+                    }
+                }
+
+                File.Delete(path);
+                File.Move(tempPath, path);
+
+                _logger?.LogInformation("Repacked archive {ArchiveId} into a streaming-safe layout", archiveId);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Could not repack archive {ArchiveId}", archiveId);
+
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+
+                throw;
+            }
+
+            await RecalculateFileSizeArchiveAsync(archive);
         }
 
         public async Task<long> GetCompressedSizeAsync(Archive archive)

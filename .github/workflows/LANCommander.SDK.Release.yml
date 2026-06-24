@@ -1,9 +1,8 @@
 name: LANCommander SDK Release
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -13,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
-      version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
+      version_semver: ${{ steps.extract_semver.outputs.replaced }}
     steps:
       - uses: frabert/replace-string-action@v2
         name: Trim Tag Ref
@@ -21,6 +20,14 @@ jobs:
         with:
           string: '${{ github.ref }}'
           pattern: 'refs/tags/v'
+          replace-with: ''
+
+      - uses: frabert/replace-string-action@v2
+        name: Extract SemVer (strip prerelease suffix for AssemblyVersion)
+        id: extract_semver
+        with:
+          string: '${{ steps.trim_tag_ref.outputs.replaced }}'
+          pattern: '-.*$'
           replace-with: ''
 
   publish:

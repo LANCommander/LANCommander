@@ -15,6 +15,7 @@ public static class MediaEndpoints
         group.MapGet("/{id:guid}", GetByIdAsync);
         group.MapGet("/{id:guid}/Thumbnail", ThumbnailAsync).AllowAnonymous();
         group.MapGet("/{id:guid}/Download", DownloadAsync).AllowAnonymous();
+        group.MapGet("/{id:guid}/Stream", StreamAsync).AllowAnonymous();
     }
 
     internal static async Task<Ok<IEnumerable<SDK.Models.Media>>> GetAsync(
@@ -96,6 +97,39 @@ public static class MediaEndpoints
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception raised reading media item {Id}.", id);
+            return TypedResults.InternalServerError();
+        }
+    }
+
+    internal static async Task<IResult> StreamAsync(
+        Guid id,
+        [FromServices] MediaService mediaService,
+        [FromServices] ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger(nameof(MediaEndpoints));
+        try
+        {
+            var media = await mediaService.GetAsync(id);
+            var path = MediaService.GetMediaPath(media);
+
+            if (!File.Exists(path))
+                return TypedResults.NotFound();
+
+            return TypedResults.PhysicalFile(path, media.MimeType, enableRangeProcessing: true);
+        }
+        catch (FileNotFoundException)
+        {
+            logger.LogWarning("Media file {Id} does not exist", id);
+            return TypedResults.NotFound();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            logger.LogWarning("Media file {Id} does not exist.", id);
+            return TypedResults.NotFound();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unhandled exception raised streaming media item {Id}.", id);
             return TypedResults.InternalServerError();
         }
     }

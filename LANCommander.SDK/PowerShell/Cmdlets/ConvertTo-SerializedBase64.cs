@@ -11,10 +11,10 @@ using YamlDotNet.Serialization;
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.ConvertTo, "SerializedBase64")]
-    [OutputType(typeof(object))]
+    [OutputType(typeof(string))]
     public class ConvertToSerializedBase64Cmdlet : Cmdlet
     {
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The object to serialize to YAML and encode as a Base64 string.")]
         public object Input { get; set; }
 
         protected override void ProcessRecord()

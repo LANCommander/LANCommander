@@ -4,6 +4,8 @@ using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -174,7 +176,80 @@ public partial class ScriptClient
 
         return result;
     }
-    
+
+    public async Task<int> Redistributable_RunUninstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+    {
+        int result = default;
+
+        var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+        var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+
+        var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Uninstall);
+
+        try
+        {
+            if (Path.Exists(path))
+            {
+                using (var op = logger.BeginOperation("Executing uninstall script"))
+                {
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.Uninstall);
+
+                    script.AddVariable("InstallDirectory", installDirectory);
+                    script.AddVariable("GameManifest", gameManifest);
+                    script.AddVariable("RedistributableManifest", redistributableManifest);
+                    script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
+                    script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+
+                    try
+                    {
+                        op
+                            .Enrich("InstallDirectory", installDirectory)
+                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                            .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                            .Enrich("ScriptPath", path)
+                            .Enrich("GameTitle", gameManifest.Title)
+                            .Enrich("GameId", gameManifest.Id)
+                            .Enrich("RedistributableName", redistributableManifest.Name)
+                            .Enrich("RedistributableId", redistributableManifest.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                    {
+                        foreach (var customField in gameManifest.CustomFields)
+                        {
+                            script.AddVariable(customField.Name, customField.Value);
+                        }
+                    }
+
+                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                    script.UseWorkingDirectory(extractionPath);
+                    script.UseFile(path);
+
+                    if (Debug)
+                        script.EnableDebug();
+
+                    var handled = await RunScriptExternallyAsync(script);
+
+                    if (!handled)
+                        result = await script.ExecuteAsync<int>();
+
+                    op.Complete();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Uninstall script");
+        }
+
+        return result;
+    }
+
     public async Task<int> Redistributable_RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
     {
         int result = default;
@@ -425,15 +500,138 @@ public partial class ScriptClient
         return result;
     }
     
-    public async Task<Package> Redistributable_RunPackageScriptAsync(Script packageScript, Redistributable redistributable)
+    public async Task<bool> Redistributable_RunRunWrapperScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, string executablePath, string arguments, string workingDirectory, CancellationToken cancellationToken = default)
+    {
+        bool result = false;
+
+        try
+        {
+            var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+            var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.RunWrapper);
+
+            using (var op = logger.BeginOperation("Executing run wrapper script"))
+            {
+                if (File.Exists(path))
+                {
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.RunWrapper);
+
+                    script.AddVariable("InstallDirectory", installDirectory);
+                    script.AddVariable("GameManifest", gameManifest);
+                    script.AddVariable("RedistributableManifest", redistributableManifest);
+                    script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
+                    script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    script.AddVariable("ExecutablePath", executablePath);
+                    script.AddVariable("Arguments", arguments);
+                    script.AddVariable("WorkingDirectory", workingDirectory);
+
+                    try
+                    {
+                        op
+                            .Enrich("InstallDirectory", installDirectory)
+                            .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                            .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                            .Enrich("ScriptPath", path)
+                            .Enrich("ExecutablePath", executablePath)
+                            .Enrich("GameTitle", gameManifest.Title)
+                            .Enrich("GameId", gameManifest.Id)
+                            .Enrich("RedistributableName", redistributableManifest.Name)
+                            .Enrich("RedistributableId", redistributableManifest.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                    {
+                        foreach (var customField in gameManifest.CustomFields)
+                        {
+                            script.AddVariable(customField.Name, customField.Value);
+                        }
+                    }
+
+                    script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, redistributableId)));
+                    script.UseFile(path);
+
+                    if (Debug)
+                        script.EnableDebug();
+
+                    var handled = await RunScriptExternallyAsync(script);
+
+                    if (!handled)
+                    {
+                        // Snapshot existing process IDs so we can identify child processes on stop
+                        var existingPids = new HashSet<int>(Process.GetProcesses().Select(p => p.Id));
+
+                        using (var registration = cancellationToken.Register(() =>
+                        {
+                            logger?.LogTrace("Stopping run wrapper script due to cancellation");
+                            script.Stop();
+
+                            // Kill any processes spawned during script execution
+                            try
+                            {
+                                var currentProcesses = Process.GetProcesses();
+
+                                foreach (var proc in currentProcesses)
+                                {
+                                    try
+                                    {
+                                        if (!existingPids.Contains(proc.Id) && !proc.HasExited)
+                                        {
+                                            logger?.LogTrace("Killing child process {ProcessId} ({ProcessName})", proc.Id, proc.ProcessName);
+                                            proc.Kill(true);
+                                        }
+                                    }
+                                    catch { }
+                                    finally
+                                    {
+                                        proc.Dispose();
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger?.LogWarning(ex, "Error killing child processes after run wrapper cancellation");
+                            }
+                        }))
+                        {
+                            await script.ExecuteAsync<int>();
+                        }
+                    }
+
+                    result = true;
+                }
+                else
+                {
+                    logger?.LogTrace("No run wrapper script found");
+                }
+
+                op.Complete();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Run Wrapper script");
+        }
+
+        return result;
+    }
+
+    public async Task<Package> Redistributable_RunPackageScriptAsync(Script packageScript, Redistributable redistributable, string latestArchivePath = null)
     {
         try
         {
-            using (var op = logger.BeginOperation("Executing game package script"))
+            using (var op = logger.BeginOperation("Executing redistributable package script"))
             {
                 var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
 
                 script.AddVariable("Redistributable", redistributable);
+
+                if (!string.IsNullOrEmpty(latestArchivePath))
+                    script.AddVariable("LatestArchivePath", latestArchivePath);
 
                 script.UseInline(packageScript.Contents);
                 

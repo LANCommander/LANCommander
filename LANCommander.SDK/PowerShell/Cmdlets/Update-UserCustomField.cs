@@ -7,10 +7,10 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
     [OutputType(typeof(string))]
     public class UpdateUserCustomFieldCmdlet(ProfileClient profileClient) : Cmdlet
     {
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The name of the custom field to update.")]
         public string Name { get; set; }
 
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The new value to set for the custom field.")]
         public string Value { get; set; }
 
         protected override void ProcessRecord()

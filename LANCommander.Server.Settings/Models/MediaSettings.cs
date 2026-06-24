@@ -6,6 +6,7 @@ namespace LANCommander.Server.Settings.Models;
     public class MediaSettings
     {
         public string SteamGridDbApiKey { get; set; } = String.Empty;
+        public bool AutoDownloadMedia { get; set; } = false;
 
         public IEnumerable<MediaTypeSettings> MediaTypes { get; set; } =
         [
@@ -22,7 +23,7 @@ namespace LANCommander.Server.Settings.Models;
             new()
             {
                 Type = MediaType.Cover,
-                MaxFileSize = 6 * ByteSize.BytesInMegabyte,
+                MaxFileSize = 50 * ByteSize.BytesInMegabyte,
                 Thumbnails = new MediaTypeThumbnailSettings
                 {
                     MinSize = new ThumbnailSize(240, 360),
@@ -77,6 +78,35 @@ namespace LANCommander.Server.Settings.Models;
                 {
                     MinSize = new ThumbnailSize(480, 480),
                     MaxSize = new ThumbnailSize(1920, 1920),
+                }
+            },
+            new()
+            {
+                Type = MediaType.Grid,
+                MaxFileSize = 6 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    MinSize = new ThumbnailSize(460, 215),
+                    MaxSize = new ThumbnailSize(920, 430),
+                }
+            },
+            new()
+            {
+                Type = MediaType.Screenshot,
+                MaxFileSize = 8 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    MinSize = new ThumbnailSize(480, 270),
+                    MaxSize = new ThumbnailSize(1920, 1080),
+                }
+            },
+            new()
+            {
+                Type = MediaType.Video,
+                MaxFileSize = 500 * ByteSize.BytesInMegabyte,
+                Thumbnails = new MediaTypeThumbnailSettings
+                {
+                    Enabled = false
                 }
             },
         ];

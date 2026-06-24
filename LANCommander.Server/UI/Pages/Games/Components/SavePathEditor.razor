@@ -1,5 +1,6 @@
 ﻿@inject SavePathService SavePathService
 @inject ArchiveService ArchiveService
+@inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<SavePathEditor> Logger
 
@@ -18,11 +19,17 @@
             }
             else
             {
-                <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories="true" />
+                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                    <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories="true" />
+                    <Button Icon="@IconType.Outline.Code" Type="ButtonType.Text" OnClick="() => OpenVariablePicker(context, nameof(SavePath.Path))" Size="ButtonSize.Small" />
+                </Flex>
             }
         </PropertyColumn>
         <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories Title="Select Working Directory" />
+            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories Title="Select Working Directory" />
+                <Button Icon="@IconType.Outline.Code" Type="ButtonType.Text" OnClick="() => OpenVariablePicker(context, nameof(SavePath.WorkingDirectory))" Disabled="@(context.Type == SavePathType.Registry)" Size="ButtonSize.Small" />
+            </Flex>
         </PropertyColumn>
         <PropertyColumn Property="p => p.IsRegex" Title="Regex">
             <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
@@ -69,6 +76,48 @@
         await SavePathService.DeleteAsync(path);
 
         await LoadPaths();
+    }
+
+    async Task OpenVariablePicker(SavePath savePath, string fieldName)
+    {
+        var currentValue = fieldName switch
+        {
+            nameof(SavePath.Path) => savePath.Path ?? "",
+            nameof(SavePath.WorkingDirectory) => savePath.WorkingDirectory ?? "",
+            _ => ""
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = $"Edit {fieldName}",
+            Maximizable = false,
+            Closable = true,
+            OkText = "Apply"
+        };
+
+        var pickerOptions = new VariablePickerOptions
+        {
+            Value = currentValue,
+            FieldName = fieldName
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<VariablePickerDialog, VariablePickerOptions, string>(modalOptions, pickerOptions);
+
+        modalRef.OnOk = (result) =>
+        {
+            switch (fieldName)
+            {
+                case nameof(SavePath.Path):
+                    savePath.Path = result;
+                    break;
+                case nameof(SavePath.WorkingDirectory):
+                    savePath.WorkingDirectory = result;
+                    break;
+            }
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
     }
 
     public async Task Save()

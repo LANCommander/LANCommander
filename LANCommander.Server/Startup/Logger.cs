@@ -29,6 +29,9 @@ public static class Logger
 
             foreach (var provider in settings.Value.Server.Logs.Providers)
             {
+                if (!provider.Enabled)
+                    continue;
+
                 var minimumLevel = provider.MinimumLevel;
 
                 switch (provider.Type)

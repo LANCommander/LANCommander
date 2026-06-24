@@ -1,4 +1,6 @@
-﻿@inject KeyService KeyService
+﻿@using LANCommander.SDK.Enums
+@inject KeyService KeyService
+@inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<KeysEditor> Logger
 
@@ -17,7 +19,7 @@
             </GridCol>
         </GridRow>
         
-        <DataTable
+        <DataTable @ref="_dataTable"
             TItem="Key"
             Responsive
             Query="k => k.GameId == GameId">
@@ -29,7 +31,12 @@
                 <BoundDataColumn Property="k => k.Value">
                     <InputPassword @bind-Value="@context.Value"/>
                 </BoundDataColumn>
-                <BoundDataColumn Property="k => k.AllocationMethod" Title="Allocation Method"/>
+                <DataColumn TData="string" Title="Allocation Method">
+                    @if (context.AllocationMethod.HasValue)
+                    {
+                        @context.AllocationMethod.Value.GetDisplayName()
+                    }
+                </DataColumn>
                 <DataColumn TData="string" Title="Claimed By" Include="ClaimedByUser">
                     @switch (context.AllocationMethod)
                     {
@@ -43,13 +50,32 @@
                     }
                 </DataColumn>
                 <BoundDataColumn Property="s => s.ClaimedOn" Title="Claimed" Sortable>
-                    <LocalTime Value="context.CreatedOn" Relative />
+                    @if (context.ClaimedOn.HasValue)
+                    {
+                        <LocalTime Value="context.ClaimedOn" Relative />
+                    }
                 </BoundDataColumn>
                 <DataActions TData="string">
-                    @if (context.IsAllocated())
-                    {
-                        <Button OnClick="() => Release(context)">Release</Button>
-                    }
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                @if (!context.IsAllocated())
+                                {
+                                    <MenuItem OnClick="() => Assign(context)">Assign</MenuItem>
+                                }
+                                @if (context.IsAllocated())
+                                {
+                                    <MenuItem OnClick="() => Release(context)">Release</MenuItem>
+                                }
+                                <Popconfirm Title="Are you sure you want to remove this key?" OnConfirm="() => Remove(context)">
+                                    <MenuItem>Remove</MenuItem>
+                                </Popconfirm>
+                            </Menu>
+                        </Overlay>
+                        <ChildContent>
+                            <Button Icon="@IconType.Outline.Ellipsis" />
+                        </ChildContent>
+                    </Dropdown>
                 </DataActions>
             </Columns>
         </DataTable>
@@ -74,6 +100,7 @@
     int _allocatedKeys;
     bool _editModalVisible = false;
     
+    DataTable<Key>? _dataTable;
     StandaloneCodeEditor? _editor;
 
     StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
@@ -102,9 +129,54 @@
         _editModalVisible = true;
     }
 
+    async Task Assign(Key key)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Assign Key",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            OkText = "Assign"
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<AssignKeyDialog, Guid, bool>(modalOptions, key.Id);
+
+        modalRef.OnOk = async (result) =>
+        {
+            _keys = await KeyService.GetAsync(k => k.GameId == GameId);
+            _allocatedKeys = _keys.Count(k => k.IsAllocated());
+
+            if (_dataTable != null)
+                await _dataTable.ReloadAsync();
+
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    async Task Remove(Key key)
+    {
+        await KeyService.DeleteAsync(key);
+
+        _keys = await KeyService.GetAsync(k => k.GameId == GameId);
+        _allocatedKeys = _keys.Count(k => k.IsAllocated());
+
+        if (_dataTable != null)
+            await _dataTable.ReloadAsync();
+
+        await MessageService.SuccessAsync("Key was removed!");
+    }
+
     async Task Release(Key key)
     {
         await KeyService.ReleaseAsync(key);
+
+        _keys = await KeyService.GetAsync(k => k.GameId == GameId);
+        _allocatedKeys = _keys.Count(k => k.IsAllocated());
+
+        if (_dataTable != null)
+            await _dataTable.ReloadAsync();
 
         await MessageService.SuccessAsync("Key was unallocated!");
     }
@@ -130,7 +202,13 @@
                 });
 
             _editModalVisible = false;
-            
+
+            _keys = await KeyService.GetAsync(k => k.GameId == GameId);
+            _allocatedKeys = _keys.Count(k => k.IsAllocated());
+
+            if (_dataTable != null)
+                await _dataTable.ReloadAsync();
+
             MessageService.Success("Keys updated!");
         }
         catch (Exception ex)

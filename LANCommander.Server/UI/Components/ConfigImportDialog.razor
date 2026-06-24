@@ -1,0 +1,78 @@
+@using BlazorMonaco.Editor
+@inject ConfigToOptionSchemaService ConfigToOptionSchemaService
+@inject IMessageService MessageService
+@inject ILogger<ConfigImportDialog> Logger
+
+<Modal Visible="_visible" OkText="@("Import")" OnOk="Parse" OnCancel="Close" Width="800" Title="Import Configuration">
+    <Select @bind-Value="_format" Style="margin-bottom: 12px;" TItemValue="string" TItem="string">
+        <SelectOption Value="@("auto")" Label="Auto-detect" />
+        <SelectOption Value="@("ini")" Label="INI" />
+        <SelectOption Value="@("json")" Label="JSON" />
+        <SelectOption Value="@("xml")" Label="XML" />
+    </Select>
+
+    <StandaloneCodeEditor @ref="_editor" ConstructionOptions="EditorConstructionOptions" />
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<string> OnImported { get; set; }
+
+    bool _visible;
+    string _format = "auto";
+    StandaloneCodeEditor? _editor;
+
+    StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor) => new()
+    {
+        AutomaticLayout = true,
+        Language = "plaintext",
+        Value = "",
+        Theme = "vs-dark",
+        Dimension = new Dimension { Height = 400 },
+        Minimap = new EditorMinimapOptions { Enabled = false },
+    };
+
+    public async Task Open()
+    {
+        _visible = true;
+        StateHasChanged();
+
+        // Allow the modal to render, then trigger Monaco re-layout
+        await Task.Delay(100);
+        if (_editor != null)
+            await _editor.Layout(new Dimension { Width = 0, Height = 400 });
+    }
+
+    void Close()
+    {
+        _visible = false;
+    }
+
+    async Task Parse()
+    {
+        if (_editor == null)
+            return;
+
+        var content = await _editor.GetValue();
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            MessageService.Warning("Please paste configuration content first.");
+            return;
+        }
+
+        try
+        {
+            var yaml = ConfigToOptionSchemaService.Convert(content, _format);
+
+            if (OnImported.HasDelegate)
+                await OnImported.InvokeAsync(yaml);
+
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Failed to parse configuration: {ex.Message}");
+            Logger.LogError(ex, "Failed to parse configuration");
+        }
+    }
+}

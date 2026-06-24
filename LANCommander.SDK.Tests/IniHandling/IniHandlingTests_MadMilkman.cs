@@ -1,10 +1,11 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text;
 using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Parsers.Ini;
 
 namespace LANCommander.SDK.Tests.IniHandling
 {
-    public class IniHandlingTests_MadMilkman
+    public class IniHandlingTests
     {
         [Theory]
         [InlineData(nameof(ConfigurationTests.Test_SingleSection))]
@@ -140,7 +141,7 @@ namespace LANCommander.SDK.Tests.IniHandling
 
             foreach (var requiredSection in configuration.UpdateKeyValues)
             {
-                var options = requiredSection.Options ?? IniHelper.DefaultIniOptions;
+                var options = requiredSection.Options ?? IniHelper.DefaultOptions;
                 ini = IniHelper.FromString(configuration.Ini, options);
                 var section = ini.Sections[requiredSection.Section];
                 Assert.NotNull(section);
@@ -195,7 +196,7 @@ namespace LANCommander.SDK.Tests.IniHandling
 
                 // compare newly generated INI
 
-                string iniContentNew = IniHelper.ToString(ini, Encoding.Default);
+                string iniContentNew = IniHelper.ToString(ini);
                 var iniNew = IniHelper.FromString(iniContentNew, options);
                 Assert.NotNull(iniNew);
 

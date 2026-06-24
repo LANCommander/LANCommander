@@ -142,7 +142,7 @@ public static class SaveEndpoints
         if (latestSave == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(mapper.Map<SDK.Models.Save>(latestSave));
+        return TypedResults.Ok(mapper.Map<SDK.Models.GameSave>(latestSave));
     }
 
     public static async Task<IResult> DownloadLatestSaveByGameAsync(

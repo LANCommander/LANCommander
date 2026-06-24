@@ -1,0 +1,61 @@
+---
+title: 2.1.4
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.4 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## New Features
+
+### External Auth Provider Enhancements
+External authentication providers received a major overhaul. The provider editor now supports auto-discovery of scopes and claim mappings, and claims can be mapped to roles so users are automatically assigned the correct roles when logging in over external auth. Users logging in through an external provider are also auto-provisioned.
+
+### Auto Redirect to External Provider
+A new "Auto Redirect to Provider" setting switches authentication challenges to redirect straight to your external auth provider instead of showing the password login form. If more than one external provider is configured, a minimal provider selection page is shown instead.
+
+### Repack Non-Streamable ZIP Archives
+A new server-side tool in the archive editor can now be used to repack archives that were not created in a streamable format. More information about why this is an issue can be found under the [Archives](/Server/Archives) documentation page.
+
+### WebP Media Support
+Media uploads now support the WebP image format.
+
+### Redistributable Uninstall Scripts
+Redistributables can now define an uninstall script, allowing their runtime dependencies to be cleanly removed.
+
+### Single Instance Launcher
+The launcher now ensures only a single instance can run at a time, preventing conflicts from accidentally opening multiple copies.
+
+## Improvements
+- Local files selected for archive upload can now be moved instead of copied, saving disk space.
+- Reworked tool installation and action resolution.
+- Install notifications now only display once the entire install chain is complete.
+- The "Last Played" text now updates every minute and has been localized.
+- Added more logging to archive extraction and made the number of install retry attempts configurable.
+- A message is now shown indicating the server needs to be restarted after changes are made to authentication providers.
+- Game started/stopped server scripts now run as fire and forget and will not prevent servers from starting.
+- Adjusted styling for buttons and dropdowns in the launcher.
+- Updated SharpCompress to 0.49.1.
+- macOS builds now generate a proper `.app` bundle, and Linux builds now produce an AppImage bundled into the normal workflows.
+
+## Bug Fixes
+- Fixed some situations where saves were not being uploaded/downloaded.
+- Fixed an error in the launcher when tool actions were not defined.
+- Fixed server game actions not loading correctly from the server.
+- Fixed non-standalone addons appearing in the library compact list.
+- HQ authentication errors are no longer swallowed.
+- Fixed user promotion / role assignment.
+- Fixed application icons.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.4" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.3" to="v2.1.4" />

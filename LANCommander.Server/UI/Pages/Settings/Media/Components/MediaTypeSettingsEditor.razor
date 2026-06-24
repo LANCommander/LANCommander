@@ -1,3 +1,4 @@
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings.Models
 @if (Value != null)
 {
@@ -10,30 +11,40 @@
                 <ByteSizeInput @bind-Value="context.MaxFileSize" />
             </FormItem>
 
+            <Divider Text="Animated Images"/>
+
+            <FormItem Label="Convert APNG to Video">
+                <Switch @bind-Value="context.AnimatedImage.ConvertToVideo" />
+            </FormItem>
+
+            <FormItem Label="Video Quality (CRF — lower = higher quality, 0 lossless, 23 default, 51 worst)">
+                <AntDesign.InputNumber @bind-Value="context.AnimatedImage.Quality" Min="0" Max="51" />
+            </FormItem>
+
             <Divider Text="Thumbnails"/>
 
             <FormItem Label="Minimum Size">
                 <InputGroup Compact>
-                    <Input @bind-Value="context.Thumbnails.MinSize.Width"/>
+                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MinSize.Width"/>
                     <Input TValue="string" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled />
-                    <Input @bind-Value="context.Thumbnails.MinSize.Height"/>
+                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MinSize.Height"/>
                 </InputGroup>
             </FormItem>
 
             <FormItem Label="Maximum Size">
                 <InputGroup Compact>
-                    <Input @bind-Value="context.Thumbnails.MaxSize.Width"/>
+                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MaxSize.Width"/>
                     <Input TValue="string" Style="width: 38px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled/>
-                    <Input @bind-Value="context.Thumbnails.MaxSize.Height"/>
+                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MaxSize.Height"/>
                 </InputGroup>
             </FormItem>
-                
+
             <FormItem Label="Scale">
-                <Input @bind-Value="context.Thumbnails.Scale" />
+                <AntDesign.InputNumber @bind-Value="context.Thumbnails.Scale" />
             </FormItem>
-                
+
             <FormItem Label="Quality">
-                <Input @bind-Value="context.Thumbnails.Quality" />
+                <AntDesign.InputNumber @bind-Value="context.Thumbnails.Quality" />
             </FormItem>
         </Form>
     </Panel>

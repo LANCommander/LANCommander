@@ -56,7 +56,7 @@
                     <Menu>
                         @if (Settings.Value.Server.Authentication.RequireApproval && !context.Approved)
                         {
-                            <MenuItem OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</MenuItem>
+                            <MenuItem OnClick="() => ApproveUser(context)">Approve</MenuItem>
                         }
                         
                         <MenuItem OnClick="() => ManageRoles(context)">Manage Roles</MenuItem>
@@ -114,9 +114,9 @@
 
             await UserService.UpdateAsync(dbUser);
 
-            user.Approved = true;
-
             await MessageService.SuccessAsync($"Approved {user.UserName}!");
+
+            await Table.ReloadAsync();
         }
     }
 

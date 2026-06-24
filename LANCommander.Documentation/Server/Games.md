@@ -45,6 +45,9 @@ The "General" panel of the game editor contains most of the metadata fields for 
 | Collections           | The list of collections that the game belongs to                                                     | Tag List     |
 | Redistributables      | A selectable list of redistributables that the game requires to be installed                         | Multi Select |
 
+#### Redistributable Options
+When a game has redistributables assigned that define an [Option Schema](/Server/Redistributables#option-schema), additional form fields appear below the Redistributables selection. These fields are generated from the schema and allow you to configure per-game option values for each compatibility shim. For example, you might set the `GAMEID` for umu-launcher or the `PROTONPATH` for a specific Proton version. See [Redistributables - Compatibility Shims](/Server/Redistributables#compatibility-shims) for details.
+
 ### Game Types
 If you have a game that requires another game to be installed, you may have to specify the game type to modify the behavior of the installation.
 
@@ -79,6 +82,9 @@ As indicated by `{InstallDir}`, actions can make use of some variables. The foll
 In addition to these variables, any [environment variables](https://ss64.com/nt/syntax-variables.html) (`%TEMP%`, `%AppData%`, etc.) and [special folders](https://learn.microsoft.com/en-us/dotnet/api/system.environment.specialfolder?view=net-8.0) (as `%MyDocuments%`, `%CommonPrograms%`, etc) will be expanded as well.
 
 Servers may also define custom variables in order to provide direct connection details such as IP and port. For more information, see [Servers](/Server/Servers).
+
+#### Option Overrides
+If the game has redistributables with an [Option Schema](/Server/Redistributables#option-schema), each action can override specific option values. This is useful when different actions need different compatibility settings. For example, a "Dedicated Server" action might need a different Proton verb than the "Play" action. Click the **Option Overrides** button on an action to configure overrides. Any field left empty will use the game-level value. See [Redistributables - Per-Action Overrides](/Server/Redistributables#per-action-overrides) for details.
 
 ### Multiplayer
 The multiplayer panel is used to denote the types of multiplayer available for the game. This is purely additional metadata. Defining these can make it extremely useful in LAN scenarios where you can find the right game for your session's player count. Enter the following modes for *Call of Duty*:
@@ -163,10 +169,3 @@ New-ItemProperty -Path "registry::\HKEY_CURRENT_USER\Software\Classes\VirtualSto
 The final, but most important, step of creating a game in LANCommander is uploading the archive for the game. You will need to make a ZIP archive from the game files from a *Call of Duty* installation. At this point in the process it is worth checking out the wonderful [PCGamingWiki](https://pcgamingwiki.com) for any patches or game fixes that might be needed for modern systems.
 
 Once you have your ZIP archive, click on the Upload Archive button. A modal will pop up where you can specify the version of the archive, a changelog (if needed), and then you can select your archive. Once a valid file is chosen, click the Upload button and your archive will begin uploading to the server.
-
-## Final Steps
-This tutorial has walked you through how to take a game and add it to LANCommander. If you have done everything correctly, you should now be able to see the game listed in Playnite after a library sync.
-
-This tutorial used a fairly basic example of the type of game that LANCommander was built to work for. Games can get complicated depending on their use of configs and registry entries. On this site we have a fairly extensive list of [games](/games) that you can use as reference. If you're adding a game that's not on our list, feel free to contribute!
-
-Also feel free to check out any other [tutorials](/tutorials)! Over time this section will become more populated with useful tools, script development tips, and common practices used by game installers. 

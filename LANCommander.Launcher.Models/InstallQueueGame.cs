@@ -1,9 +1,5 @@
 ﻿using LANCommander.SDK.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Launcher.Models
 {
@@ -11,6 +7,7 @@ namespace LANCommander.Launcher.Models
     {
         public Guid Id { get; set; }
         public Guid[] AddonIds { get; set; }
+        public Guid[] ToolIds { get; set; }
         public Dictionary<Guid, string?> AddonVersions { get; set; }
         public string Title { get; set; }
         public string Version { get; set; }
@@ -32,6 +29,7 @@ namespace LANCommander.Launcher.Models
                     case InstallStatus.InstallingMods:
                     case InstallStatus.InstallingExpansions:
                     case InstallStatus.InstallingAddons:
+                    case InstallStatus.VerifyingFiles:
                     case InstallStatus.RunningScripts:
                     case InstallStatus.DownloadingSaves:
                         return true;
@@ -43,10 +41,17 @@ namespace LANCommander.Launcher.Models
         }
         public InstallStatus Status { get; set; }
         public SDK.Models.Game Game { get; set; }
+        public InstallPlanItemType ItemType => InstallPlanItemType.Game;
+        public Guid? DependsOnId { get; set; }
+        public List<InstallTaskDefinition> Tasks { get; set; } = new();
+        public Guid? CurrentTaskId { get; set; }
         public float Progress {
             get
             {
-                return BytesDownloaded / (float)TotalBytes;
+                if (Tasks != null && Tasks.Count > 0)
+                    return BytesDownloaded / (float)Math.Max(TotalBytes, 1);
+
+                return BytesDownloaded / (float)Math.Max(TotalBytes, 1);
             }
             set { }
         }
@@ -60,19 +65,26 @@ namespace LANCommander.Launcher.Models
             Game = game;
             Id = game.Id;
             Title = game.Title;
-            Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
+            Version = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
             QueuedOn = DateTime.Now;
             Status = InstallStatus.Queued;
 
-            var cover = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
+            var cover = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
 
             if (cover != null)
                 CoverId = cover.Id;
 
-            var icon = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+            var icon = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
             if (icon != null)
                 IconId = icon.Id;
+        }
+
+        public InstallQueueGame(InstallPlanItem planItem, SDK.Models.Game game) : this(game)
+        {
+            InstallDirectory = planItem.InstallDirectory;
+            DependsOnId = planItem.DependsOnId;
+            Tasks = planItem.Tasks;
         }
     }
 }

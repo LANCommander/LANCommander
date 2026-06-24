@@ -4,9 +4,16 @@
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.0" />
-    <PackageVersion Include="EasyMDE.Blazor" Version="1.0.4" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.1" />
+    <PackageVersion Include="DiscordRichPresence" Version="1.6.1.70" />
+    <PackageVersion Include="EasyMDE.Blazor" Version="1.0.5" />
+    <PackageVersion Include="HotAvalonia" Version="3.1.0" />
+    <PackageVersion Include="LiveChartsCore" Version="2.0.0-rc5.4" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView" Version="2.0.0-rc5.4" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
     <PackageVersion Include="Markdig" Version="0.44.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="9.0.8" />
+    <PackageVersion Include="Notify.NET" Version="1.1.0" />
     <PackageVersion Include="Svrooij.PowerShell.DI" Version="1.3.4" />
   </ItemGroup>
   <ItemGroup Label="AutoMapper">
@@ -17,7 +24,7 @@
     <PackageVersion Include="AntDesign.Charts" Version="0.8.0" />
   </ItemGroup>
   <ItemGroup Label="Blazor">
-    <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
+    <PackageVersion Include="BlazorMonaco" Version="3.4.0" />
     <PackageVersion Include="BootstrapBlazor.PdfReader" Version="9.0.1" />
     <PackageVersion Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
     <PackageVersion Include="Razor.Templating.Core" Version="2.1.0" />
@@ -30,8 +37,8 @@
     <PackageVersion Include="HtmlAgilityPack" Version="1.11.72" />
     <PackageVersion Include="Crc32.NET" Version="1.2.0" />
     <PackageVersion Include="Emzi0767.NtfsDataStreams" Version="1.0.0" />
-    <PackageVersion Include="MadMilkman.Ini" Version="1.0.6" />
     <PackageVersion Include="PeanutButter.INI" Version="3.0.396" />
+    <PackageVersion Include="Superpower" Version="3.1.0" />
     <PackageVersion Include="RegParserDotNet" Version="1.1.1" />
     <PackageVersion Include="nulastudio.NetBeauty" Version="2.1.4.6" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
@@ -79,16 +86,19 @@
   </ItemGroup>
   <ItemGroup Label="External">
     <PackageVersion Include="CoreRCON" Version="5.0.5" />
+    <PackageVersion Include="LANCommander.HQ.SDK" Version="1.0.1" />
     <PackageVersion Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
+    <PackageVersion Include="YoutubeExplode" Version="6.4.3" />
     <PackageVersion Include="Docker.DotNet.Enhanced" Version="3.129.0" />
     <PackageVersion Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageVersion Include="IGDB" Version="6.1.0" />
     <PackageVersion Include="IPXRelayDotNet" Version="1.1.3" />
+    <PackageVersion Include="LANCommander.Interposer" Version="1.0.7" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="RestSharp" Version="112.1.0" />
     <PackageVersion Include="rix0rrr.BeaconLib" Version="1.0.2" />
     <PackageVersion Include="Semver" Version="3.0.0" />
-    <PackageVersion Include="SharpCompress" Version="0.40.0" />
+    <PackageVersion Include="SharpCompress" Version="0.49.1" />
     <PackageVersion Include="SteamWebAPI2" Version="4.4.1" />
   </ItemGroup>
   <ItemGroup Label="Entity Framework Core">
@@ -113,6 +123,8 @@
   <ItemGroup Label="Microsoft Extensions">
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.1" />
@@ -120,11 +132,12 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.4.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.4.0" />
   </ItemGroup>
   <ItemGroup Label="OpenTelemetry">
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
@@ -133,7 +146,28 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
   </ItemGroup>
+  <ItemGroup Label="LibVLC">
+    <PackageVersion Include="LibVLCSharp" Version="3.8.5" />
+    <PackageVersion Include="LibVLCSharp.Avalonia" Version="3.8.5" />
+    <PackageVersion Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
+    <PackageVersion Include="VideoLAN.LibVLC.Mac" Version="3.1.3.1" />
+  </ItemGroup>
+  <ItemGroup Label="SDL">
+    <PackageVersion Include="ppy.SDL3-CS" Version="2026.520.0" />
+  </ItemGroup>
   <ItemGroup Label="Photino">
+    <PackageVersion Include="AsyncImageLoader.Avalonia" Version="3.3.0" />
+    <PackageVersion Include="Avalonia" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Headless" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.2.3" />
+    <PackageVersion Include="Avalonia.Controls.ItemsRepeater" Version="11.1.5" />
+    <PackageVersion Include="Avalonia.Svg.Skia" Version="11.2.0.2" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="PDFtoImage" Version="4.1.1" />
     <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
     <PackageVersion Include="Photino.Blazor.CustomWindow" Version="1.3.1" />
     <PackageVersion Include="Photino.NET" Version="4.0.16" />
@@ -141,11 +175,16 @@
   <ItemGroup Label="System">
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
-    <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.0" />
     <PackageVersion Include="System.Text.Json" Version="9.0.1" />
   </ItemGroup>
   <ItemGroup Label="Caching">
     <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+  </ItemGroup>
+  <ItemGroup Label="Overlay">
+    <PackageVersion Include="Avalonia.Skia" Version="11.2.3" />
+    <PackageVersion Include="Reloaded.Hooks" Version="4.3.0" />
+    <PackageVersion Include="DNNE" Version="2.1.0" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
   </ItemGroup>
 </Project>

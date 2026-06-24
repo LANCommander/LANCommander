@@ -1,0 +1,100 @@
+name: LANCommander Packager Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version_semver:
+        description: "Semantic Version"
+        required: true
+        type: string
+      version_tag:
+        description: 'Version Tag'
+        required: true
+        type: string
+      build_dotnet_version:
+        description: 'Build .NET Version'
+        required: false
+        type: string
+        default: '10.0.x'
+      build_configuration:
+        description: 'Build Configuration (Debug/Release)'
+        required: false
+        type: string
+        default: 'Release'
+
+permissions:
+  contents: write
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/package
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.build_dotnet_version }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Publish Packager
+      shell: pwsh
+      run: |
+        # Strip leading 'v' if present
+        $RawVersion = "${{ inputs.version_tag }}"
+        $Semver = $RawVersion -replace '^v', ''
+
+        # Numeric part only for Assembly/FileVersion
+        $Numeric = ($Semver -split '-')[0]
+        $AssemblyVersion = "$Numeric.0"
+
+        Write-Host "SEMVER=$Semver"
+        Write-Host "ASSEMBLY_VERSION=$AssemblyVersion"
+
+        dotnet publish "./LANCommander.Packager/LANCommander.Packager.csproj" `
+          -c "${{ inputs.build_configuration }}" `
+          --self-contained `
+          --runtime win-x86 `
+          -p:Version="$Semver" `
+          -p:AssemblyVersion="$AssemblyVersion" `
+          -p:FileVersion="$AssemblyVersion" `
+          -p:InformationalVersion="$Semver" `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:IncludeAllContentForSelfExtract=true `
+          -p:EnableCompressionInSingleFile=true `
+          -p:DebugType=embedded
+
+    - name: Clean
+      shell: pwsh
+      run: |
+        $BasePath = "LANCommander.Packager/bin/${{ inputs.build_configuration }}/net10.0/win-x86/publish"
+        Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/*.pdb"
+
+    - name: Compress Build Output
+      shell: pwsh
+      run: |
+        $compress = @{
+          Path = "LANCommander.Packager/bin/${{ inputs.build_configuration }}/net10.0/win-x86/publish/*"
+          DestinationPath = "LANCommander.Packager-Windows-x86-v${{ inputs.version_tag }}.zip"
+          CompressionLevel = "Fastest"
+        }
+        Compress-Archive @compress
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: LANCommander.Packager-Windows-x86-v${{ inputs.version_tag }}.zip
+        name: LANCommander.Packager-Windows-x86-v${{ inputs.version_tag }}.zip

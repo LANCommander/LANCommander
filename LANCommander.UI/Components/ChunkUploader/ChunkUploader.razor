@@ -1,11 +1,8 @@
-﻿@using LANCommander.UI.Providers
+@using LANCommander.UI.Services
 @using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.JSInterop
-@inject HttpClient HttpClient
-@inject NavigationManager Navigator
-@inject ScriptProvider ScriptProvider
+@inject UploadTracker UploadTracker
 @inject IMessageService MessageService
-@implements IAsyncDisposable
+@implements IDisposable
 @namespace LANCommander.UI.Components
 
 <div class="ant-upload ant-upload-select-text ant-upload-drag ant-upload-select chunk-uploader" data-status="@CurrentProgressStatus">
@@ -13,9 +10,9 @@
 
     <span class="uploader-progress-rate"></span>
 
-    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput" role="button">
+    <label tabindex="0" class="ant-upload" style="display: grid;" for="@($"ChunkFileInput-{_uploaderId}")" role="button">
         <InputFile @ref="_fileInput" @key="@_uploaderId" id="@($"ChunkFileInput-{_uploaderId}")" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
-        
+
         <div class="ant-upload-drag-container">
             <p class="ant-upload-drag-icon">
                 <Icon Type="@IconType.Outline.Upload" />
@@ -68,17 +65,20 @@
     [Parameter] public Guid StorageLocationId { get; set; }
     [Parameter] public EventCallback<Guid> StorageLocationIdChanged { get; set; }
 
+    /// <summary>
+    /// The type of upload for tracking purposes.
+    /// </summary>
+    [Parameter] public UploadType UploadType { get; set; } = UploadType.Archive;
+
     readonly Guid _uploaderId = Guid.NewGuid();
 
     InputFile? _fileInput;
+    string? _currentUploadId;
 
     int _progress = 0;
     bool _uploading = false;
     bool _finished = false;
-    bool _clearInput = false;
     double _speed = 0;
-
-    IJSObjectReference? _uploaderInterop;
 
     ProgressStatus CurrentProgressStatus
     {
@@ -98,56 +98,78 @@
 
     protected override void OnInitialized()
     {
-        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+        UploadTracker.OnStateChanged += HandleUploadStateChanged;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    /// <summary>
+    /// Starts the upload. The onCompleted callback is invoked when the upload finishes
+    /// and survives component disposal.
+    /// </summary>
+    public async Task Start(Func<string, Task>? onCompleted = null)
     {
-        if (firstRender)
-            _uploaderInterop ??= await ScriptProvider.ImportModuleAsync<ChunkUploader>();
-    }
-
-    public async Task Start()
-    {
-        if (_uploaderInterop is null)
-            return;
-        
         _uploading = true;
 
         await ChangeStatus("Uploading");
 
-        ushort i = 0;
+        var fileName = File?.Name ?? "Unknown";
 
-        while (i < 20)
-        {
-            if (_fileInput != null)
-            {
-                if (!String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString())
-                    await _uploaderInterop.InvokeVoidAsync("Init", $"ChunkFileInput-{_uploaderId}", StorageLocationId, ObjectKey);
-                else
-                    await _uploaderInterop.InvokeVoidAsync("Init", $"ChunkFileInput-{_uploaderId}", StorageLocationId, "");
-
-                break;
-            }
-
-            i++;
-
-            await Task.Delay(500);
-        }
-
-        var dotNetReference = DotNetObjectReference.Create(this);
-
-        await _uploaderInterop.InvokeVoidAsync("Upload", dotNetReference);
+        _currentUploadId = await UploadTracker.StartUploadAsync(
+            $"ChunkFileInput-{_uploaderId}",
+            StorageLocationId,
+            fileName,
+            UploadType,
+            (!string.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString()) ? ObjectKey : null,
+            onCompleted);
 
         await InvokeAsync(StateHasChanged);
     }
 
+    private void HandleUploadStateChanged()
+    {
+        if (_currentUploadId != null && UploadTracker.ActiveUploads.TryGetValue(_currentUploadId, out var info))
+        {
+            _progress = info.Percent;
+            _speed = info.Speed;
+
+            if (info.Status == UploadStatus.Complete)
+            {
+                _uploading = false;
+                _finished = true;
+                _ = ChangeStatus("Complete");
+            }
+            else if (info.Status == UploadStatus.Error)
+            {
+                _uploading = false;
+                _ = ChangeStatus("");
+                try
+                {
+                    if (OnUploadError.HasDelegate)
+                        _ = OnUploadError.InvokeAsync(info.ErrorMessage ?? "Upload failed");
+                }
+                catch
+                {
+                    // Component may be disposed; ignore.
+                }
+            }
+        }
+
+        try
+        {
+            InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Component may be disposed; ignore.
+        }
+    }
+
     public async Task Clear()
     {
-        if (_uploaderInterop is null)
-            return;
-        
-        await _uploaderInterop.InvokeVoidAsync("Clear");
+        if (_currentUploadId != null)
+        {
+            await UploadTracker.CancelUploadAsync(_currentUploadId);
+            _currentUploadId = null;
+        }
 
         File = null;
 
@@ -194,44 +216,12 @@
             await StatusChanged.InvokeAsync(Status);
     }
 
-    [JSInvokable]
-    public async Task JSOnUploadComplete(string objectKey)
+    public string FileInputId => $"ChunkFileInput-{_uploaderId}";
+
+    public bool IsUploading => _uploading;
+
+    public void Dispose()
     {
-        _uploading = false;
-        _finished = true;
-        await ChangeStatus("Complete");
-
-        if (OnUploadCompleted.HasDelegate)
-            await OnUploadCompleted.InvokeAsync(objectKey);
+        UploadTracker.OnStateChanged -= HandleUploadStateChanged;
     }
-
-    [JSInvokable]
-    public async Task JSOnUploadError(string message)
-    {
-        if (OnUploadError.HasDelegate)
-            await OnUploadError.InvokeAsync(message);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_fileInput is not null)
-            await CastAndDispose(_fileInput);
-        
-        if (_uploaderInterop is not null)
-            await _uploaderInterop.DisposeAsync();
-        
-        if (HttpClient is not null)
-            await CastAndDispose(HttpClient);
-
-        return;
-
-        static async ValueTask CastAndDispose(IDisposable resource)
-        {
-            if (resource is IAsyncDisposable resourceAsyncDisposable)
-                await resourceAsyncDisposable.DisposeAsync();
-            else
-                resource.Dispose();
-        }
-    }
-
 }

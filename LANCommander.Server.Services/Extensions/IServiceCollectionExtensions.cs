@@ -9,6 +9,7 @@ using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
+using LANCommander.HQ.SDK;
 using LANCommander.Server.Services.Providers;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
@@ -47,8 +48,24 @@ public static class IServiceCollectionExtensions
         services.AddScoped<PlaySessionService>();
         services.AddScoped<MediaService>();
         services.AddScoped<RedistributableService>();
+        services.AddScoped<ConfigToOptionSchemaService>();
         services.AddScoped<ToolService>();
-        services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
+        services.AddScoped(sp =>
+        {
+            var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var hqSettings = settings.CurrentValue.Server.HQ;
+            return new HQClient(new HQClientOptions
+            {
+                BaseAddress = new Uri(hqSettings.BaseUrl),
+                Token = hqSettings.IsAuthenticated ? hqSettings.AccessToken : null,
+            });
+        });
+        services.AddScoped<HqMediaGrabber>();
+        services.AddScoped<SteamMediaGrabber>();
+        services.AddScoped<SteamGridDBMediaGrabber>();
+        services.AddScoped<YouTubeMediaGrabber>();
+        services.AddScoped<IMediaGrabberService, CompositeMediaGrabberService>();
+        services.AddScoped<MediaToolService>();
         services.AddScoped<UpdateService>();
         services.AddScoped<IssueService>();
         services.AddScoped<PageService>();
@@ -60,10 +77,13 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ChatMessageService>();
         services.AddScoped<ChatThreadService>();
         services.AddScoped<ChatThreadReadStatusService>();
+        services.AddScoped<DepotService>();
+        services.AddScoped<RatingService>();
         services.AddTransient<SetupService>();
         
         // Register metadata providers
         services.AddScoped<MetadataService>();
+        services.AddScoped<IMetadataProvider, HqMetadataProvider>();
         services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
         services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
         
@@ -72,7 +92,15 @@ public static class IServiceCollectionExtensions
         
         services.AddSingleton<DockerServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
-        
+
+        services.AddSingleton<RemoteServerEngine>();
+        services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
+
+        services.AddSingleton<ServerManager>();
+
+        services.AddSingleton<PlaySessionKeepAliveTracker>();
+        services.AddHostedService<PlaySessionSweepService>();
+
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>
             sp.GetRequiredService<ScriptDebugger>());

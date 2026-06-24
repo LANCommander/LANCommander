@@ -1,6 +1,8 @@
 ﻿@using LANCommander.Server.Data
 @using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Services.Abstractions
 @inject NavigationManager NavigationManager
+@inject IVersionProvider VersionProvider
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,13 +11,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     
-    <link href="/_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
-    <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css"  />
-    <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
-    <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
-    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="stylesheet" href="css/custom.css" />
+    <link href="/_content/AntDesign/css/ant-design-blazor.dark.css?v=@v" rel="stylesheet" />
+    <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css?v=@v"  />
+    <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css?v=@v" />
+    <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css?v=@v" />
+    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css?v=@v" />
+    <link rel="stylesheet" href="css/app.css?v=@v" />
+    <link rel="stylesheet" href="css/custom.css?v=@v" />
 </head>
 <body data-theme="dark">
 
@@ -28,23 +30,25 @@
     </div>
 
     <script antblazor-js></script>
-    <script src="lib/antv/g2plot/dist/g2plot.js"></script>
-    <script src="_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
-    <script src="_framework/blazor.web.js"></script>
+    <script src="lib/antv/g2plot/dist/g2plot.js?v=@v"></script>
+    <script src="_content/AntDesign.Charts/ant-design-charts-blazor.js?v=@v"></script>
+    <script src="_framework/blazor.web.js?v=@v"></script>
 
-    <script src="_content/LANCommander.UI/bundle.js"></script>
-    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
-    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
+    <script type="module" src="_content/LANCommander.UI/bundle.js?v=@v"></script>
+    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js?v=@v"></script>
+    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js?v=@v"></script>
 
-    <script src="_content/XtermBlazor/XtermBlazor.min.js"></script>
+    <script src="_content/XtermBlazor/XtermBlazor.min.js?v=@v"></script>
 
-    <script src="_content/BlazorMonaco/jsInterop.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <script src="_content/BlazorMonaco/jsInterop.js?v=@v"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js?v=@v"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js?v=@v"></script>
 </body>
 </html>
 
 @code {
+    private string v => VersionProvider.GetCurrentVersion().ToString();
+
     protected override async Task OnInitializedAsync()
     {
         if (DatabaseContext.Provider == DatabaseProvider.Unknown && !NavigationManager.Uri.Contains("/FirstTimeSetup"))

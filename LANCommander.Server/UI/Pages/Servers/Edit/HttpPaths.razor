@@ -11,7 +11,7 @@
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
                 
-                <Button Type="ButtonType.Primary" OnClick="_httpPathEditor.Save">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => _httpPathEditor?.Save()">Save</Button>
             </Flex>
         }
     </TitleExtraTemplate>

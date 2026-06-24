@@ -3,12 +3,14 @@
     flex-direction: column;
     background: #141414;
     height: 100%;
+    overflow: hidden;
 
     &-nav {
         border-bottom: 1px solid #303030;
         padding-left: 8px;
         padding-right: 8px;
         height: 58px;
+        flex-shrink: 0;
         background: #141414;
 
         .ant-space,
@@ -79,5 +81,7 @@
     
     .split-pane {
         height: 100%;
+        min-height: 0;
+        overflow: auto;
     }
 }

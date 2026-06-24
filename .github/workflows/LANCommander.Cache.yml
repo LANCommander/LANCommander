@@ -55,6 +55,9 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Generate PowerShell Completions
+      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+
     # Parallel UI builds
     - name: Build UI Components
       run: |

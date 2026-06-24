@@ -14,6 +14,9 @@ namespace LANCommander.SDK.Enums
         Manual,
         [Obsolete("Thumbnails are no longer stored in the database")]
         Thumbnail,
-        PageImage
+        PageImage,
+        Grid,
+        Screenshot,
+        Video
     }
 }

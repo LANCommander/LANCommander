@@ -10,16 +10,16 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
     }
 
     [Cmdlet(VerbsData.Convert, "AspectRatio")]
-    [OutputType(typeof(string))]
+    [OutputType(typeof(DisplayResolution))]
     public class ConvertAspectRatioCmdlet : Cmdlet
     {
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The base display width in pixels.")]
         public int Width { get; set; }
 
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The base display height in pixels.")]
         public int Height { get; set; }
 
-        [Parameter(Mandatory = true, Position = 2)]
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "The target aspect ratio as a decimal (e.g. 1.7778 for 16:9).")]
         public double AspectRatio { get; set; }
 
         protected override void ProcessRecord()

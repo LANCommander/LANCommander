@@ -22,6 +22,8 @@ namespace LANCommander.Launcher.Data.Models
         [MaxLength(8)]
         public string Crc32 { get; set; }
 
+        public int SortOrder { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

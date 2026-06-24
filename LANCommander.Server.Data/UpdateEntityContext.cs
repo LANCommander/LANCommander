@@ -96,10 +96,22 @@ public class UpdateEntityContext<TEntity>
                 // Get the list of tracked entities from the context
                 var trackedEntities = _context.Set<TRelatedEntity>().Local;
 
-                // Replace entities with tracked instances to avoid duplicate tracking
-                var updatedTrackedEntities = updatedEntities
-                    .Select(e => trackedEntities.FirstOrDefault(t => t.Id == e.Id) ?? e)
-                    .ToList();
+                // Replace entities with tracked instances to avoid duplicate tracking.
+                // For entities that aren't already tracked locally, fetch the tracked
+                // instance from the database instead of attaching the detached incoming
+                // instance. Attaching a detached instance would pull in its nested
+                // navigation graph (e.g. Archive.StorageLocation), and two entities that
+                // share the same related key would trigger an identity-conflict.
+                var updatedTrackedEntities = new List<TRelatedEntity>();
+
+                foreach (var updatedEntity in updatedEntities)
+                {
+                    var trackedEntity = trackedEntities.FirstOrDefault(t => t.Id == updatedEntity.Id)
+                        ?? await _context.Set<TRelatedEntity>().FirstOrDefaultAsync(t => t.Id == updatedEntity.Id)
+                        ?? updatedEntity;
+
+                    updatedTrackedEntities.Add(trackedEntity);
+                }
 
                 // Update values for existing entities first
                 foreach (var existingEntity in existingEntities)

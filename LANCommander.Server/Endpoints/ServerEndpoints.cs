@@ -42,19 +42,19 @@ public static class ServerEndpoints
 
     public static async Task<IResult> GetStatusAsync(
         Guid id,
-        [FromServices] ServerService serverService)
+        [FromServices] ServerManager serverManager)
     {
-        return TypedResults.Ok(await serverService.GetStatusAsync(id));
+        return TypedResults.Ok(await serverManager.GetStatusAsync(id));
     }
 
     public static async Task<IResult> StartAsync(
         Guid id,
-        [FromServices] ServerService serverService)
+        [FromServices] ServerManager serverManager)
     {
         try
         {
-            await serverService.StartAsync(id);
-            
+            await serverManager.StartAsync(id);
+
             return TypedResults.Ok();
         }
         catch (Exception ex)
@@ -62,15 +62,15 @@ public static class ServerEndpoints
             return TypedResults.BadRequest(ex);
         }
     }
-    
+
     public static async Task<IResult> StopAsync(
         Guid id,
-        [FromServices] ServerService serverService)
+        [FromServices] ServerManager serverManager)
     {
         try
         {
-            await serverService.StopAsync(id);
-            
+            await serverManager.StopAsync(id);
+
             return TypedResults.Ok();
         }
         catch (Exception ex)

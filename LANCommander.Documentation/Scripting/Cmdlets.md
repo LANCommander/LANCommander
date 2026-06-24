@@ -200,6 +200,36 @@ This cmdlet can be useful if you have a game that might require a persistent ID 
 Get-UserCustomField -Name "SteamId"
 ```
 
+## `Get-RedistributableOptions`
+Retrieves the resolved options for a redistributable assigned to a game.
+
+### Syntax
+```powershell
+Get-RedistributableOptions
+    -Path <string>
+    -Id <Guid>
+    -Name <string>
+```
+
+### Description
+The `Get-RedistributableOptions` cmdlet reads the game manifest and returns the resolved option values for the specified redistributable as a nested `PSObject`. Options are resolved in order: schema defaults, then per-game configured values. Nested options in the schema are represented as nested properties on the returned object.
+
+This cmdlet is useful in [Install](/Scripting/Script Types/Install), [Before Start](/Scripting/Script Types/Before Start), and [Run Wrapper](/Scripting/Script Types/Run Wrapper) scripts where you need to access compatibility shim configuration.
+
+### Example
+```powershell
+$options = Get-RedistributableOptions -Path $InstallDirectory -Id $GameManifest.Id -Name "umu-launcher"
+
+# Access nested options
+Write-Host $options.Game.GAMEID        # "umu-default" or admin-configured value
+Write-Host $options.Proton.PROTONPATH  # "GE-Proton" or admin-configured value
+
+# Use in a script
+if ($options.Proton.PROTONPATH -eq "GE-Proton") {
+    Write-Host "Using default Proton version"
+}
+```
+
 ## `Update-UserCustomField`
 Updates the value of a custom field on a users profile.
 
@@ -216,6 +246,216 @@ The companion to `Get-UserCustomField`, this cmdlet lets you update or set the v
 ### Example
 ```powershell
 Update-UserCustomField -Name "SteamId" -Value "34950494"
+```
+
+## `ConvertFrom-SerializedBase64`
+Deserializes a Base64-encoded YAML string back into an object.
+
+### Syntax
+```powershell
+ConvertFrom-SerializedBase64
+    -Input <string>
+```
+
+### Description
+The `ConvertFrom-SerializedBase64` cmdlet takes a Base64-encoded string containing YAML-serialized data, decodes it, and deserializes it back into a PowerShell object. This is the companion to `ConvertTo-SerializedBase64` and is useful for reading data that was previously serialized and encoded for storage or transport. Accepts pipeline input.
+
+### Example
+```powershell
+$data = ConvertFrom-SerializedBase64 -Input "TmFtZTogSGVsbG8="
+
+# Or via pipeline
+"TmFtZTogSGVsbG8=" | ConvertFrom-SerializedBase64
+```
+
+## `ConvertTo-SerializedBase64`
+Serializes an object to YAML and encodes it as a Base64 string.
+
+### Syntax
+```powershell
+ConvertTo-SerializedBase64
+    -Input <object>
+```
+
+### Description
+The `ConvertTo-SerializedBase64` cmdlet takes any object, serializes it to YAML, and then encodes the result as a Base64 string. This is useful for storing or transmitting structured data in a compact, text-safe format. Accepts pipeline input.
+
+### Example
+```powershell
+$obj = @{ Name = "Hello"; Value = 42 }
+$encoded = ConvertTo-SerializedBase64 -Input $obj
+
+# Or via pipeline
+$obj | ConvertTo-SerializedBase64
+```
+
+## `Edit-PatchGameSpy`
+Patches GameSpy master server references in game files to point to a replacement server.
+
+### Syntax
+```powershell
+Edit-PatchGameSpy
+    -Path <string>
+    -Hostname <string> (optional, default: "openspy.net")
+    -PublicKey <string> (optional, default: OpenSpy public key)
+    -BinariesToPatch <string[]> (optional, default: "*.dll", "*.exe")
+    -TextFilesToPatch <string[]> (optional, default: "*.ini", "*.cfg", "*.conf")
+```
+
+### Description
+The `Edit-PatchGameSpy` cmdlet scans a game's directory for binary and text files that reference GameSpy master servers and patches them to use a replacement server (OpenSpy by default). For binary files, it replaces the `gamespy.com` hostname and public key at the byte level. For text files, it handles Unreal Engine configuration patterns including UT99 and Unreal 2 master server list entries. The replacement hostname must be exactly 12 characters to match the original `gamespy.com` length.
+
+### Example
+```powershell
+# Patch all GameSpy references to use OpenSpy (default)
+Edit-PatchGameSpy -Path "$InstallDirectory"
+
+# Patch with custom hostname and file patterns
+Edit-PatchGameSpy -Path "$InstallDirectory" -Hostname "openspy.net" -BinariesToPatch "*.dll","*.exe","*.so"
+```
+
+## `Get-HorizontalFov`
+Calculates a horizontal field of view scaled for the current display's aspect ratio.
+
+### Syntax
+```powershell
+Get-HorizontalFov
+    -Width <int> (optional, defaults to primary display width)
+    -Height <int> (optional, defaults to primary display height)
+    -BaseFov <int> (optional, default: 90)
+```
+
+### Description
+The `Get-HorizontalFov` cmdlet calculates a scaled horizontal field of view based on the display's aspect ratio relative to a 4:3 baseline. Many older games use a default 90-degree horizontal FOV designed for 4:3 displays. This cmdlet computes the correct horizontal FOV for wider aspect ratios so that the visible area matches what was intended. If `-Width` and `-Height` are not specified, the primary display's resolution is used automatically.
+
+### Example
+```powershell
+# Get FOV for the current display with default 90-degree base
+$fov = Get-HorizontalFov
+Write-Host "Horizontal FOV: $fov"
+
+# Get FOV for a specific resolution with a custom base FOV
+$fov = Get-HorizontalFov -Width 2560 -Height 1440 -BaseFov 90
+Write-Host "Horizontal FOV: $fov"  # Returns 106
+```
+
+## `Get-VerticalFov`
+Calculates a vertical field of view scaled for the current display's aspect ratio.
+
+### Syntax
+```powershell
+Get-VerticalFov
+    -Width <int> (optional, defaults to primary display width)
+    -Height <int> (optional, defaults to primary display height)
+    -BaseFov <int> (optional, default: 75)
+```
+
+### Description
+The `Get-VerticalFov` cmdlet calculates a scaled vertical field of view based on the display's aspect ratio relative to a 4:3 baseline. Some games use vertical FOV for their configuration. This cmdlet computes the correct vertical FOV for wider aspect ratios. If `-Width` and `-Height` are not specified, the primary display's resolution is used automatically.
+
+### Example
+```powershell
+# Get vertical FOV for the current display
+$fov = Get-VerticalFov
+Write-Host "Vertical FOV: $fov"
+
+# Get vertical FOV for a specific resolution
+$fov = Get-VerticalFov -Width 1920 -Height 1080 -BaseFov 75
+Write-Host "Vertical FOV: $fov"  # Returns 59
+```
+
+## `Get-SanitizedPath`
+Removes invalid filename characters from a path string.
+
+### Syntax
+```powershell
+Get-SanitizedPath
+    -Path <string>
+```
+
+### Description
+The `Get-SanitizedPath` cmdlet strips invalid filename characters from the provided path string. This is useful when constructing file paths from user input or game titles that may contain characters not allowed in file names. Accepts pipeline input.
+
+### Example
+```powershell
+$clean = Get-SanitizedPath -Path "Game: The Sequel?"
+Write-Host $clean  # Returns "Game The Sequel"
+
+# Or via pipeline
+"Game: The Sequel?" | Get-SanitizedPath
+```
+
+## `Expand-LatestArchive`
+Downloads and extracts the latest archive for a game, redistributable, or tool.
+
+### Syntax
+```powershell
+Expand-LatestArchive
+    -DestinationPath <string> (optional, defaults to current directory)
+    -GameId <Guid> (optional, resolved from $GameManifest or $Game)
+    -RedistributableId <Guid> (optional, resolved from $Redistributable)
+    -ToolId <Guid> (optional, resolved from $Tool)
+```
+
+### Description
+The `Expand-LatestArchive` cmdlet extracts the latest archive for a game, redistributable, or tool. When run in a server-side packaging context (where `$LatestArchivePath` is set), it reads directly from the local archive file. When run in a client-side context, it downloads the archive from the LANCommander server via the API. The target ID is automatically resolved from context variables (`$Redistributable`, `$Tool`, `$GameManifest`, or `$Game`) if not explicitly provided. Returns a `DirectoryInfo` object pointing to the extraction destination.
+
+### Example
+```powershell
+# Extract to the current directory using the context variable
+Expand-LatestArchive
+
+# Extract to a specific directory
+Expand-LatestArchive -DestinationPath "C:\Games\MyGame"
+
+# Extract a specific game's archive
+Expand-LatestArchive -GameId "a1b2c3d4-e5f6-7890-abcd-ef1234567890" -DestinationPath "C:\Staging"
+
+# Extract a redistributable's archive
+Expand-LatestArchive -RedistributableId "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+# Extract a tool's archive
+Expand-LatestArchive -ToolId "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+```
+
+## `New-Package`
+Creates a package result object for the packaging pipeline.
+
+### Syntax
+```powershell
+New-Package
+    -Path <string>
+    -Version <string>
+    -Changelog <string> (optional)
+```
+
+### Description
+The `New-Package` cmdlet creates a `Package` object with the specified path, version, and optional changelog, and sets it as the script's return value. This cmdlet is used in [Package](/Scripting/Script Types/Package) scripts to define the output of the packaging process. The `-Path` parameter should point to the directory containing the package contents to be archived.
+
+### Example
+```powershell
+# Create a package from a build output directory
+New-Package -Path "C:\Build\Output" -Version "1.0.0" -Changelog "Initial release"
+
+# Minimal usage
+New-Package -Path "$BuildDirectory" -Version "2.1.0"
+```
+
+## `Out-PlayerAvatar`
+Downloads the current player's avatar from the server.
+
+### Syntax
+```powershell
+Out-PlayerAvatar
+```
+
+### Description
+The `Out-PlayerAvatar` cmdlet retrieves the current authenticated player's avatar from the LANCommander server. Returns the avatar file path as a string. This cmdlet takes no parameters and must be run within a LANCommander script context where the player is authenticated.
+
+### Example
+```powershell
+$avatarPath = Out-PlayerAvatar
+Write-Host "Avatar saved to: $avatarPath"
 ```
 
 # Steam-Related Cmdlets

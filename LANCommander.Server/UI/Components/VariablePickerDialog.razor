@@ -1,0 +1,108 @@
+@inherits FeedbackComponent<VariablePickerOptions, string>
+
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <Input @ref="_input" @bind-Value="_value" />
+
+    <Collapse DefaultActiveKey="@(new[] { "lancommander" })">
+        <Panel Header="Variables" Key="lancommander">
+            <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap">
+                @foreach (var variable in LanCommanderVariables)
+                {
+                    <Tooltip Title="@variable.Description">
+                        <Tag Class="variable-tag" Style="cursor: pointer" OnClick="() => InsertVariable(variable.Value)">@variable.Value</Tag>
+                    </Tooltip>
+                }
+            </Flex>
+        </Panel>
+
+        <Panel Header="Environment Variables" Key="environment">
+            <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap">
+                @foreach (var variable in EnvironmentVariables)
+                {
+                    <Tag Class="variable-tag" Style="cursor: pointer" OnClick="() => InsertVariable(variable)">@variable</Tag>
+                }
+            </Flex>
+        </Panel>
+
+        <Panel Header="Special Folders" Key="specialfolders">
+            <Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap">
+                @foreach (var variable in SpecialFolderVariables)
+                {
+                    <Tag Class="variable-tag" Style="cursor: pointer" OnClick="() => InsertVariable(variable)">@variable</Tag>
+                }
+            </Flex>
+        </Panel>
+    </Collapse>
+</Flex>
+
+@code {
+    Input<string>? _input;
+    string _value = "";
+
+    static readonly (string Value, string Description)[] LanCommanderVariables =
+    [
+        ("{InstallDir}", "The game's installation directory"),
+        ("{DisplayWidth}", "Primary display width in pixels"),
+        ("{DisplayHeight}", "Primary display height in pixels"),
+        ("{DisplayRefreshRate}", "Primary display refresh rate in Hz"),
+        ("{DisplayBitDepth}", "Primary display bit depth in bpp"),
+        ("{ServerAddress}", "LANCommander server address"),
+        ("{IPXRelayHost}", "IPX relay host address"),
+        ("{IPXRelayPort}", "IPX relay port"),
+    ];
+
+    static readonly string[] EnvironmentVariables =
+    [
+        "%TEMP%",
+        "%TMP%",
+        "%LOCALAPPDATA%",
+        "%APPDATA%",
+        "%USERPROFILE%",
+        "%PUBLIC%",
+        "%ProgramData%",
+        "%CommonProgramFiles(x86)%",
+        "%CommonProgramFiles%",
+        "%ProgramFiles(x86)%",
+        "%ProgramFiles%",
+        "%SystemRoot%",
+        "%windir%",
+        "%USERNAME%",
+        "%SystemDrive%",
+    ];
+
+    static readonly string[] SpecialFolderVariables =
+    [
+        "%MyDocuments%",
+        "%Desktop%",
+        "%MyMusic%",
+        "%MyPictures%",
+        "%MyVideos%",
+        "%CommonApplicationData%",
+        "%CommonDesktopDirectory%",
+        "%CommonDocuments%",
+        "%CommonMusic%",
+        "%CommonPictures%",
+        "%CommonPrograms%",
+        "%CommonStartMenu%",
+        "%CommonStartup%",
+        "%CommonVideos%",
+        "%Fonts%",
+        "%StartMenu%",
+    ];
+
+    protected override void OnInitialized()
+    {
+        _value = Options?.Value ?? "";
+    }
+
+    void InsertVariable(string variable)
+    {
+        _value += variable;
+        StateHasChanged();
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await base.OkCancelRefWithResult!.OnOk(_value);
+    }
+}

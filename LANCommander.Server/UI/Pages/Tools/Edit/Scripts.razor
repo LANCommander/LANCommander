@@ -5,7 +5,9 @@
 @inject NavigationManager NavigationManager
 
 <ToolEditView Id="Id">
-    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+    <CascadingValue Name="ToolId" Value="context.Id">
+        <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+    </CascadingValue>
 </ToolEditView>
 
 @code {

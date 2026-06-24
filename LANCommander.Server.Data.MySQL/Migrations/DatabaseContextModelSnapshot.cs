@@ -17,7 +17,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -35,6 +35,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("GamesId");
 
                     b.ToTable("CategoryGame");
+                });
+
+            modelBuilder.Entity("ChatThreadUser", b =>
+                {
+                    b.Property<Guid>("ChatThreadsId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ParticipantsId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("ChatThreadsId", "ParticipantsId");
+
+                    b.HasIndex("ParticipantsId");
+
+                    b.ToTable("ChatThreadUser");
                 });
 
             modelBuilder.Entity("CollectionGame", b =>
@@ -120,6 +135,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("RedistributableId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("Options")
+                        .HasColumnType("longtext");
+
                     b.HasKey("GameId", "RedistributableId");
 
                     b.HasIndex("RedistributableId");
@@ -140,6 +158,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("TagsId");
 
                     b.ToTable("GameTag");
+                });
+
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.Property<Guid>("GamesId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ToolsId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("GamesId", "ToolsId");
+
+                    b.HasIndex("ToolsId");
+
+                    b.ToTable("GameTool");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Action", b =>
@@ -164,6 +197,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("OptionOverrides")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Path")
                         .HasColumnType("longtext");
 
@@ -175,6 +211,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
@@ -192,6 +231,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("GameId");
 
                     b.HasIndex("ServerId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -232,6 +273,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
+
                     b.Property<long>("UncompressedSize")
                         .HasColumnType("bigint");
 
@@ -256,6 +300,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("RedistributableId");
 
                     b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -296,6 +342,94 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("ThreadId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("ChatThreads");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThreadReadStatus", b =>
+                {
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("LastReadMessageId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("ThreadId", "UserId");
+
+                    b.HasIndex("LastReadMessageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatThreadReadStatuses");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Collection", b =>
@@ -415,9 +549,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("char(36)");
 
-                    b.Property<long?>("IGDBId")
-                        .HasColumnType("bigint");
-
                     b.Property<int>("KeyAllocationMethod")
                         .HasColumnType("int");
 
@@ -502,6 +633,48 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("GameCustomField");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameExternalId", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("GameExternalIds");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.GameSave", b =>
@@ -630,7 +803,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("AllocationMethod")
+                    b.Property<int?>("AllocationMethod")
                         .HasColumnType("int");
 
                     b.Property<string>("ClaimedByComputerName")
@@ -747,6 +920,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2048)
@@ -875,6 +1051,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
 
@@ -886,6 +1065,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -966,6 +1147,45 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("PlaySessions");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Rating", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<float>("Value")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Ratings");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Redistributable", b =>
                 {
                     b.Property<Guid>("Id")
@@ -986,6 +1206,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OptionSchema")
                         .HasColumnType("longtext");
 
                     b.Property<Guid?>("UpdatedById")
@@ -1044,6 +1267,30 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Roles", (string)null);
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.RoleClaim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("RoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.SavePath", b =>
@@ -1126,6 +1373,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -1144,6 +1394,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("RedistributableId");
 
                     b.HasIndex("ServerId");
+
+                    b.HasIndex("ToolId");
 
                     b.HasIndex("UpdatedById");
 
@@ -1169,11 +1421,22 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<int>("AutostartMethod")
                         .HasColumnType("int");
 
+                    b.Property<string>("ContainerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("DockerHostId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Engine")
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("char(36)");
@@ -1203,6 +1466,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<int>("ProcessTerminationMethod")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("RemoteHostId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("RemoteServerId")
+                        .HasColumnType("char(36)");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
@@ -1396,6 +1665,43 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Tools");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1492,6 +1798,30 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserClaim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserClaims", (string)null);
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.UserCustomField", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1534,70 +1864,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("UserCustomField");
                 });
 
-            modelBuilder.Entity("LibraryGame", b =>
-                {
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("LibraryId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("GameId", "LibraryId");
-
-                    b.HasIndex("LibraryId");
-
-                    b.ToTable("LibraryGame");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("RoleClaims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserClaims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserLogin", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("varchar(255)");
@@ -1618,7 +1885,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("UserLogins", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
@@ -1633,7 +1900,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserToken", b =>
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
@@ -1650,6 +1917,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("UserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("LibraryGame", b =>
+                {
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("GameId", "LibraryId");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("LibraryGame");
                 });
 
             modelBuilder.Entity("PageGame", b =>
@@ -1723,6 +2005,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.Game", null)
                         .WithMany()
                         .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ChatThreadUser", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.ChatThread", null)
+                        .WithMany()
+                        .HasForeignKey("ChatThreadsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1832,6 +2129,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", null)
+                        .WithMany()
+                        .HasForeignKey("ToolsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Action", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -1849,6 +2161,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Actions")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -1859,6 +2176,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Server");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -1890,6 +2209,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Archives")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -1904,6 +2228,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Redistributable");
 
                     b.Navigation("StorageLocation");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -1929,6 +2255,74 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Parent");
 
                     b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatMessage", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.ChatThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThread", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThreadReadStatus", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.ChatMessage", "LastReadMessage")
+                        .WithMany()
+                        .HasForeignKey("LastReadMessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.ChatThread", "Thread")
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LastReadMessage");
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Collection", b =>
@@ -2024,6 +2418,30 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameExternalId", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("ExternalIds")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -2259,6 +2677,10 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", null)
+                        .WithMany("Pages")
+                        .HasForeignKey("ToolId");
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2320,6 +2742,30 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Rating", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("Ratings")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Redistributable", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2352,6 +2798,15 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.RoleClaim", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.SavePath", b =>
@@ -2400,6 +2855,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Tool", "Tool")
+                        .WithMany("Scripts")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2412,6 +2872,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Redistributable");
 
                     b.Navigation("Server");
+
+                    b.Navigation("Tool");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2522,6 +2984,23 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2537,6 +3016,15 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserClaim", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.UserCustomField", b =>
@@ -2564,6 +3052,43 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserLogin", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserRole", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.UserToken", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LibraryGame", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.Game", null)
@@ -2575,57 +3100,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.Library", null)
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
-                {
-                    b.HasOne("LANCommander.Server.Data.Models.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.HasOne("LANCommander.Server.Data.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
-                {
-                    b.HasOne("LANCommander.Server.Data.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
-                {
-                    b.HasOne("LANCommander.Server.Data.Models.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LANCommander.Server.Data.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
-                {
-                    b.HasOne("LANCommander.Server.Data.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -2695,6 +3169,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Children");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ChatThread", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Engine", b =>
                 {
                     b.Navigation("Games");
@@ -2710,6 +3189,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Navigation("DependentGames");
 
+                    b.Navigation("ExternalIds");
+
                     b.Navigation("GameSaves");
 
                     b.Navigation("Issues");
@@ -2721,6 +3202,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
+
+                    b.Navigation("Ratings");
 
                     b.Navigation("SavePaths");
 
@@ -2746,6 +3229,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Scripts");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Role", b =>
+                {
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Server", b =>
                 {
                     b.Navigation("Actions");
@@ -2766,6 +3254,17 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Media");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Tool", b =>
+                {
+                    b.Navigation("Actions");
+
+                    b.Navigation("Archives");
+
+                    b.Navigation("Pages");
+
+                    b.Navigation("Scripts");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>
                 {
                     b.Navigation("CustomFields");
@@ -2778,6 +3277,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Media");
 
                     b.Navigation("PlaySessions");
+
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

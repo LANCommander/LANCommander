@@ -10,6 +10,9 @@ public sealed class Branch
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
+    [JsonPropertyName("timebuildupdated")]
+    public string? TimeBuildUpdated { get; set; }
+
     [JsonPropertyName("timeupdated")]
     public string? TimeUpdated { get; set; }
 }

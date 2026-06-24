@@ -1,4 +1,4 @@
-﻿@using LANCommander.SDK.PowerShell
+@using LANCommander.SDK.PowerShell
 @using LANCommander.SDK.Services
 @using LANCommander.Server.Services.PowerShell
 @using XtermBlazor
@@ -6,8 +6,18 @@
 @inject ScriptDebugger ScriptDebugger
 @inject ScriptClient ScriptClient
 @inject GameService GameService
+@inject ToolService ToolService
+@inject RedistributableService RedistributableService
 
 <div class="terminal @(Active ? "" : "hidden")">
+    @if (Active)
+    {
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #1e1e1e; border-bottom: 1px solid #333; color: #ccc; font-size: 12px; font-family: monospace;">
+            <span>@FormatElapsed()</span>
+            <button @onclick="Stop" title="Stop script" style="background: #c0392b; color: white; border: none; padding: 2px 10px; cursor: pointer; font-size: 12px;">Stop</button>
+        </div>
+    }
+
     <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" />
 </div>
 
@@ -15,8 +25,11 @@
     [Parameter] public Guid Id { get; set; }
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
-    
+
     private Terminal? _terminal;
+    private CancellationTokenSource? _cts;
+    private DateTime? _startTime;
+    private System.Threading.Timer? _elapsedTimer;
 
     private readonly TerminalOptions _options = new()
     {
@@ -30,9 +43,9 @@
 
         if (ActiveChanged.HasDelegate)
             await ActiveChanged.InvokeAsync(Active);
-    } 
+    }
 
-    public async Task DebugPackagingScript(Guid gameId)
+    private void InitializeDebugger()
     {
         ScriptDebugger.OnBreak = Break;
         ScriptDebugger.OnStart = Start;
@@ -41,14 +54,40 @@
 
         ScriptClient.Debug = true;
 
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _startTime = DateTime.UtcNow;
+
+        _elapsedTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1));
+    }
+
+    public async Task DebugPackagingScript(Guid gameId)
+    {
+        InitializeDebugger();
         await GameService.PackageAsync(gameId);
+    }
+
+    public async Task DebugToolPackagingScript(Guid toolId)
+    {
+        InitializeDebugger();
+        await ToolService.PackageAsync(toolId);
+    }
+
+    public async Task DebugRedistributablePackagingScript(Guid redistributableId)
+    {
+        InitializeDebugger();
+        await RedistributableService.PackageAsync(redistributableId);
     }
 
     public async Task Start(IScriptDebugContext context)
     {
         if (_terminal is null)
             return;
-        
+
         await _terminal.Clear();
         await SetActive(true);
         await InvokeAsync(StateHasChanged);
@@ -59,6 +98,14 @@
 
     public async Task End(IScriptDebugContext context)
     {
+        StopTimer();
+
+        if (_terminal != null && _startTime.HasValue)
+        {
+            var elapsed = DateTime.UtcNow - _startTime.Value;
+            await _terminal.WriteLine($"\nCompleted in {FormatTimeSpan(elapsed)}", LogLevel.Information);
+        }
+
         await SetActive(false);
         await InvokeAsync(StateHasChanged);
     }
@@ -67,7 +114,7 @@
     {
         if (_terminal is null)
             return;
-        
+
         while (true)
         {
             var input = await _terminal.ReadLineAsync();
@@ -86,14 +133,49 @@
     {
         if (_terminal is null)
             return;
-        
+
         try
         {
             await _terminal.WriteLine(message, level);
         }
         catch (Exception ex)
         {
-            
+
         }
+    }
+
+    async Task Stop()
+    {
+        _cts?.Cancel();
+        StopTimer();
+
+        if (_terminal != null)
+            await _terminal.WriteLine("\nScript stopped by user.", LogLevel.Warning);
+
+        await SetActive(false);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void StopTimer()
+    {
+        _elapsedTimer?.Dispose();
+        _elapsedTimer = null;
+    }
+
+    string FormatElapsed()
+    {
+        if (!_startTime.HasValue)
+            return "";
+
+        var elapsed = DateTime.UtcNow - _startTime.Value;
+        return FormatTimeSpan(elapsed);
+    }
+
+    static string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return ts.ToString(@"h\:mm\:ss");
+
+        return ts.ToString(@"m\:ss");
     }
 }

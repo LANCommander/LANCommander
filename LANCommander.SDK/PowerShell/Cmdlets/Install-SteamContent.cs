@@ -11,13 +11,13 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(SteamCmdInstallJob))]
 public class InstallSteamContentCmdlet : AsyncCmdlet
 {
-    [Parameter(Mandatory = true, Position = 0)]
+    [Parameter(Mandatory = true, Position = 0, HelpMessage = "The Steam application ID to install.")]
     public uint AppId { get; set; }
 
-    [Parameter(Mandatory = true, Position = 1)]
+    [Parameter(Mandatory = true, Position = 1, HelpMessage = "The directory path where the content should be installed.")]
     public string InstallDirectory { get; set; } = string.Empty;
 
-    [Parameter(Mandatory = false)]
+    [Parameter(Mandatory = false, HelpMessage = "The Steam account username to use for downloading. If omitted, the default or anonymous account is used.")]
     public string? Username { get; set; }
 
     protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)

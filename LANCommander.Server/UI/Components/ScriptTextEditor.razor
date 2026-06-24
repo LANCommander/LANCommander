@@ -31,11 +31,10 @@
             <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
         }
 
-        <Button Icon="@IconType.Outline.Build" OnClick="() => RegToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
     </FormItem>
 
     <FormItem>
-        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="OnSave" />
+        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="OnSave" ScriptType="@context.Type.ToString()" />
     </FormItem>
 
     <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
@@ -58,7 +57,6 @@
     </FormItem>
 </Form>
 
-<RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
     [Parameter] public Script Script { get; set; } = new();
@@ -70,7 +68,6 @@
     Guid Id = Guid.NewGuid();
     Form<Script> Form;
     MonacoCodeEditor? Editor;
-    RegToPowerShell RegToPowerShell;
     IEnumerable<Snippet> Snippets { get; set; }
 
     StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
@@ -81,6 +78,10 @@
             Language = "powershell",
             Value = Script.Contents,
             Theme = "vs-dark",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+            WordWrap = "on",
+            FixedOverflowWidgets = true,
         };
     }
 
@@ -122,10 +123,10 @@
 
     async Task InsertText(string text)
     {
-        var line = await Editor.GetPosition();
-        var range = new BlazorMonaco.Range(line.LineNumber, 1, line.LineNumber, 1);
-
-        var currentSelections = await Editor.GetSelections();
+        var selection = await Editor.GetSelection();
+        var range = new BlazorMonaco.Range(
+            selection.StartLineNumber, selection.StartColumn,
+            selection.EndLineNumber, selection.EndColumn);
 
         await Editor.ExecuteEdits("ScriptEditor", new List<IdentifiedSingleEditOperation>()
         {
@@ -135,11 +136,12 @@
                 Text = text,
                 ForceMoveMarkers = true
             }
-        }, currentSelections);
+        }, (List<BlazorMonaco.Selection>)null);
     }
 
     async Task InsertSnippet(Snippet snippet)
     {
-        await InsertText(snippet.Content);
+        if (Editor != null)
+            await Editor.InsertSnippetAsync(snippet.Content);
     }
 }

@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using LANCommander.SDK.Services;
-using Microsoft.AspNetCore.SignalR.Client;
 
 namespace LANCommander.SDK.Models;
 
@@ -12,6 +11,7 @@ public class ChatThread
 {
     public required Guid Id { get; init; }
     public string Name { get; init; }
+    public DateTimeOffset LastActivityOn { get; set; }
     public ObservableCollection<ChatMessageGroup> MessageGroups { get; init; } = new();
     public List<User> Participants { get; init; } = new();
     
@@ -20,11 +20,20 @@ public class ChatThread
     public Func<string, Task> OnStartTypingAsync { get; set; }
     public Func<string, Task> OnStopTypingAsync { get; set; }
 
+    /// <summary>
+    /// Optional dispatcher for marshalling collection changes to the UI thread.
+    /// When set, AddToMessageGroups will be invoked through this delegate.
+    /// </summary>
+    public Func<System.Action, Task> DispatcherInvoke { get; set; }
+
     public string Title => String.IsNullOrWhiteSpace(Name) ? String.Join(", ", Participants.Select(p => p.Name)) : Name;
 
     public async Task MessagesReceivedAsync(IEnumerable<ChatMessage> messages)
     {
-        AddToMessageGroups(messages);
+        if (DispatcherInvoke != null)
+            await DispatcherInvoke(() => AddToMessageGroups(messages));
+        else
+            AddToMessageGroups(messages);
 
         if (OnMessagesReceivedAsync != null)
             await OnMessagesReceivedAsync.Invoke(messages);
@@ -32,9 +41,14 @@ public class ChatThread
 
     public async Task MessageReceivedAsync(ChatMessage message)
     {
+        LastActivityOn = message.SentOn;
+
         // Use 5 minute time gap for grouping messages
-        AddToMessageGroups([message], TimeSpan.FromMinutes(5));
-        
+        if (DispatcherInvoke != null)
+            await DispatcherInvoke(() => AddToMessageGroups(new[] { message }, TimeSpan.FromMinutes(5)));
+        else
+            AddToMessageGroups([message], TimeSpan.FromMinutes(5));
+
         if (OnMessageReceivedAsync != null)
             await OnMessageReceivedAsync.Invoke(message);
     }
@@ -104,7 +118,7 @@ public class ChatThread
                         Id = Guid.NewGuid(),
                         UserId = message.UserId,
                         UserName = message.UserName,
-                        Messages = [message],
+                        Messages = new ObservableCollection<ChatMessage> { message },
                     };
                 }
                 else

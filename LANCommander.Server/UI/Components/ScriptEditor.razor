@@ -1,4 +1,4 @@
-﻿@using System.Linq.Expressions
+@using System.Linq.Expressions
 @using LANCommander.SDK.Extensions
 @using LANCommander.SDK.Enums
 @inject ScriptService ScriptService
@@ -34,7 +34,22 @@
     </DataTable>
 
     <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-        <Button OnClick="() => Edit()" Type="ButtonType.Primary">Add Script</Button>
+        <Dropdown>
+            <Overlay>
+                <Menu>
+                    @foreach (var type in GetAllowedTypes())
+                    {
+                        <MenuItem OnClick="() => Add(type)">
+                            @type.GetDisplayName()
+                        </MenuItem>
+                    }
+                </Menu>
+            </Overlay>
+
+            <ChildContent>
+                <Button Type="ButtonType.Primary">Add Script</Button>
+            </ChildContent>
+        </Dropdown>
     </Flex>
 </Flex>
 
@@ -49,7 +64,7 @@
     [CascadingParameter(Name = "RedistributableId")] public Guid? RedistributableId { get; set; }
     [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
     [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
-    
+
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
     Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty && s.ToolId == Guid.Empty;
@@ -58,21 +73,29 @@
 
     Archive _archive;
 
+    IEnumerable<ScriptType> GetAllowedTypes()
+    {
+        if (AllowedTypes != null)
+            return AllowedTypes;
+
+        return Enum.GetValues<ScriptType>();
+    }
+
     Expression<Func<Script, bool>> GetQueryExpression()
     {
         if (GameId.HasValue)
             return s => s.GameId == GameId;
-        
+
         if (RedistributableId.HasValue)
             return s => s.RedistributableId == RedistributableId;
-        
+
         if (ServerId.HasValue)
             return s => s.ServerId == ServerId;
 
         if (ToolId.HasValue)
             return s => s.ToolId == ToolId;
-        
-        return s => 
+
+        return s =>
             (s.GameId == null || s.GameId == Guid.Empty)
             &&
             (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
@@ -82,20 +105,51 @@
             (s.ToolId == null || s.ToolId == Guid.Empty);
     }
 
-    async void Edit(Guid? scriptId = null)
+    async void Add(ScriptType scriptType)
     {
         var modalOptions = new ModalOptions()
         {
-            Title = scriptId == null ? "Add Script" : "Edit Script",
+            Title = $"Add {scriptType.GetDisplayName()} Script",
             Maximizable = false,
             DefaultMaximized = true,
             Closable = true,
+            MaskClosable = false,
             OkText = "Save"
         };
 
         var options = new ScriptEditorOptions()
         {
-            ScriptId = scriptId ?? default,
+            ScriptType = scriptType,
+            AllowedTypes = AllowedTypes,
+            GameId = GameId,
+            RedistributableId = RedistributableId,
+            ServerId = ServerId,
+            ToolId = ToolId,
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ScriptEditorDialog, ScriptEditorOptions, Script>(modalOptions, options);
+
+        modalRef.OnOk = async (script) =>
+        {
+            await Table.ReloadAsync();
+        };
+    }
+
+    async void Edit(Guid scriptId)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Edit Script",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            MaskClosable = false,
+            OkText = "Save"
+        };
+
+        var options = new ScriptEditorOptions()
+        {
+            ScriptId = scriptId,
             AllowedTypes = AllowedTypes,
             GameId = GameId,
             RedistributableId = RedistributableId,

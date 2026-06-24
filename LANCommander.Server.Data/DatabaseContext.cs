@@ -36,11 +36,19 @@ namespace LANCommander.Server.Data
                         break;
 
                     case DatabaseProvider.MySQL:
-                        optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.MySQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
+                        });
                         break;
 
                     case DatabaseProvider.PostgreSQL:
-                        optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        optionsBuilder.UseNpgsql(ConnectionString, options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+                        });
                         break;
                 }
             }
@@ -85,6 +93,8 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
             builder.ConfigureBaseRelationships<Page>();
+            builder.ConfigureBaseRelationships<Rating>();
+            builder.ConfigureBaseRelationships<GameExternalId>();
             builder.ConfigureBaseRelationships<Role>();
             builder.ConfigureBaseRelationships<User>();
             builder.ConfigureBaseRelationships<UserCustomField>();
@@ -225,7 +235,8 @@ namespace LANCommander.Server.Data
                 .UsingEntity<Dictionary<string, object>>(
                     "GameRedistributable",
                     gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId").OnDelete(DeleteBehavior.Cascade),
-                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
+                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    j => j.Property<string>("Options")
                 );
 
             builder.Entity<Game>()
@@ -239,6 +250,18 @@ namespace LANCommander.Server.Data
                 .WithMany(e => e.Games)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Ratings)
+                .WithOne(g => g.Game)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.ExternalIds)
+                .WithOne(e => e.Game)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Media Relationships

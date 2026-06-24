@@ -1,5 +1,6 @@
 using System.Data.Common;
 using LANCommander.Server.Data;
+using Microsoft.Data.Sqlite;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Hosting;
@@ -25,6 +26,7 @@ namespace LANCommander.Server.UI.Tests;
 public class UITestApplicationFactory : WebApplicationFactory<Program>
 {
     private IHost? _realHost;
+    private string? _dbPath;
     public string BaseAddress { get; private set; } = default!;
     public IServiceProvider RealServices => _realHost!.Services;
 
@@ -48,9 +50,19 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
                 d => d.ServiceType == typeof(DbConnection));
             if (dbConnectionDescriptor != null) services.Remove(dbConnectionDescriptor);
 
+            // Use a file-based SQLite database rather than the EF InMemory provider.
+            // The app's DataTable queries use relational features (AsSplitQuery, Include,
+            // and a translated punctuation-stripping search expression) that the InMemory
+            // provider cannot translate — on CI this surfaced as a native stack overflow in
+            // CountAsync that crashed the in-process server and cascaded into timeouts.
+            // A real SQLite file supports those queries and concurrent connections.
+            _dbPath = Path.Combine(Path.GetTempPath(), $"LANCommander_UITest_{Guid.NewGuid():N}.db");
+
             services.AddDbContextFactory<DatabaseContext>(optionsBuilder =>
             {
-                optionsBuilder.UseInMemoryDatabase($"UITest_{Guid.NewGuid()}");
+                optionsBuilder.UseSqlite(
+                    $"Data Source={_dbPath}",
+                    options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
             });
 
             // Mock IVersionProvider
@@ -87,6 +99,15 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
         });
         _realHost = builder.Build();
         _realHost.Start();
+
+        // Create the SQLite schema from the current model before any requests run.
+        using (var scope = _realHost.Services.CreateScope())
+        {
+            var contextFactory = scope.ServiceProvider
+                .GetRequiredService<IDbContextFactory<DatabaseContext>>();
+            using var context = contextFactory.CreateDbContext();
+            context.Database.EnsureCreated();
+        }
 
         // Get the dynamically assigned port
         var server = _realHost.Services.GetRequiredService<IServer>();
@@ -127,6 +148,21 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
         }
 
         try { await base.DisposeAsync(); } catch { }
+
+        // Release pooled SQLite connections so the temp database file can be deleted.
+        if (_dbPath != null)
+        {
+            try
+            {
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(_dbPath))
+                    File.Delete(_dbPath);
+            }
+            catch
+            {
+                // Best-effort cleanup of the temp database file.
+            }
+        }
 
         GC.SuppressFinalize(this);
     }

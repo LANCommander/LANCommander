@@ -80,6 +80,12 @@ jobs:
                   npm install --prefix ./LANCommander.UI
                   npm install --prefix ./LANCommander.Server
 
+            # The Monaco editor's PowerShell completions are generated (gitignored) and
+            # required by the frontend webpack build. The in-build MSBuild target uses
+            # Windows-style paths, so generate explicitly here for the Linux runner.
+            - name: Generate PowerShell Completions
+              run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+
             - name: Restore dependencies
               run: dotnet restore LANCommander.Server.UI.Tests
 

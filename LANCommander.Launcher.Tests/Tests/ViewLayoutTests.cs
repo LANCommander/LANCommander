@@ -31,6 +31,15 @@ public class ViewLayoutTests
     private const int WindowWidth  = 1200;
     private const int WindowHeight = 800;
 
+    static ViewLayoutTests()
+    {
+        // The Login, Splash and ServerSelection views pick a random full-screen
+        // background on load. Disable that here so the captured screenshots — and the
+        // committed baselines — are deterministic; otherwise every run compares against
+        // a different photo and reports a spurious regression.
+        ViewBackground.Enabled = false;
+    }
+
     // ---------------------------------------------------------------------------
     // Service provider shared by all tests that need ViewModels with DI dependencies.
     // Minimal: just logging — no real SDK services needed for layout-only rendering.

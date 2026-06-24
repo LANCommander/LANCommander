@@ -77,25 +77,17 @@ public class GamesPage
             Timeout = 15000
         });
 
-        // Use the label click → FileChooser approach. Clicking the upload label opens
-        // the native file dialog, which Playwright intercepts with WaitForFileChooserAsync.
-        // This is the most reliable method because it triggers a real browser file selection
-        // that Blazor's InputFile component always recognizes (unlike SetInputFilesAsync
-        // which creates synthetic FileList objects that Blazor Server may not process).
-        var fileChooserTask = _page.WaitForFileChooserAsync();
-        await modal.Locator("label.ant-upload").ClickAsync();
-        var fileChooser = await fileChooserTask;
-        await fileChooser.SetFilesAsync(filePath);
+        // Set the file directly on the ChunkUploader's hidden <InputFile>. The input is
+        // overlaid (opacity 0) inside the upload label and has a GUID-suffixed id
+        // ("ChunkFileInput-{guid}"), so we match it by prefix. SetInputFilesAsync drives
+        // Blazor's InputFile OnChange, which propagates File and enables the Upload button.
+        await modal.Locator("input[id^='ChunkFileInput-']").SetInputFilesAsync(filePath);
 
-        // Wait for the Upload button to become enabled
+        // Wait for Blazor to process the selection and enable the actual Upload button.
+        // (Located by role+name so we don't accidentally match the always-enabled "Browse"
+        // primary button that also lives in this modal stage.)
         var uploadBtn = modal.GetByRole(AriaRole.Button, new() { Name = "Upload", Exact = true });
-        await uploadBtn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
-
-        // Wait for Blazor to process the file selection and enable the button
-        await _page.WaitForFunctionAsync(@"() => {
-            const btn = document.querySelector('.ant-modal-wrap button.ant-btn-primary');
-            return btn && !btn.disabled;
-        }", null, new() { Timeout = 15000 });
+        await Assertions.Expect(uploadBtn).ToBeEnabledAsync(new() { Timeout = 15000 });
 
         await uploadBtn.ClickAsync();
 

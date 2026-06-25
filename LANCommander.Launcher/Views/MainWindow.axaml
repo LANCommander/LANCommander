@@ -143,9 +143,8 @@
                                       IsVisible="{Binding ShellViewModel.CanGoOnline}" />
                             <MenuItem Header="Logout"
                                       Command="{Binding ShellViewModel.LogoutCommand}" />
-                            <MenuItem Header="Exit Launcher"
-                                      Command="{Binding ExitLauncherCommand}"
-                                      IsVisible="{Binding IsBigScreenMode}" />
+                            <MenuItem Header="Exit"
+                                      Command="{Binding ExitLauncherCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                     <StackPanel Orientation="Horizontal" Spacing="8">

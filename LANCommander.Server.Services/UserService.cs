@@ -139,6 +139,10 @@ namespace LANCommander.Server.Services
             {
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.ConcurrencyStamp = Guid.NewGuid().ToString();
+                user.NormalizedUserName = user.UserName.ToUpperInvariant();
+
+                if (!string.IsNullOrEmpty(user.Email))
+                    user.NormalizedEmail = user.Email.ToUpperInvariant();
 
                 // hash & set password
                 var hasher = new PasswordHasher<User>();

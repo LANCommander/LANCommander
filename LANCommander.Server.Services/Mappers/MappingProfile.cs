@@ -114,6 +114,7 @@ namespace LANCommander.Server
                 .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
                 .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))
                 .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))
+                .ForMember(dest => dest.Options, opt => opt.Ignore())
                 .ReverseMap()
                 .ForMember(dest => dest.BaseGameId, opt => opt.Ignore())
                 .ForMember(dest => dest.BaseGame, opt => opt.Ignore());

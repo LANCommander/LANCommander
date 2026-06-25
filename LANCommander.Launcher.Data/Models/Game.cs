@@ -25,6 +25,10 @@ namespace LANCommander.Launcher.Data.Models
         public DateTime? ReleasedOn { get; set; }
 
         public GameType Type { get; set; }
+
+        public string? OptionSchema { get; set; }
+        public string? Options { get; set; }
+
         public Guid? BaseGameId { get; set; }
         [ForeignKey(nameof(BaseGameId))]
         public virtual Game? BaseGame { get; set; }

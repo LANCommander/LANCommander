@@ -51,6 +51,7 @@ public class GameImporter(
                 ReleasedOn = importItemInfo.Record.ReleasedOn,
                 Singleplayer = importItemInfo.Record.Singleplayer,
                 Type = importItemInfo.Record.Type,
+                OptionSchema = importItemInfo.Record.OptionSchema,
                 ExternalIds = importItemInfo.Record.ExternalIds?.Select(e => new Data.Models.GameExternalId
                 {
                     Provider = e.Provider,
@@ -89,6 +90,7 @@ public class GameImporter(
             existing.ReleasedOn = importItemInfo.Record.ReleasedOn;
             existing.Singleplayer = importItemInfo.Record.Singleplayer;
             existing.Type = importItemInfo.Record.Type;
+            existing.OptionSchema = importItemInfo.Record.OptionSchema;
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;

@@ -555,6 +555,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("timestamp with time zone");
 

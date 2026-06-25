@@ -1,0 +1,37 @@
+@page "/Games/{id:guid}/Options"
+@using LANCommander.Server.UI.Pages.Games.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject GameService GameService
+@inject IMessageService MessageService
+@inject ILogger<Options> Logger
+
+<GameEditView Id="Id">
+    <TitleTemplate>
+        <Text>Options</Text>
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+    </TitleExtraTemplate>
+    <ChildContent>
+        <OptionSchemaEditor @bind-Value="context.OptionSchema" OnSave="() => Save(context)" />
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    async Task Save(Game game)
+    {
+        try
+        {
+            await GameService.UpdateAsync(game);
+
+            MessageService.Success("Options saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save options!");
+            Logger.LogError(ex, "Could not save options!");
+        }
+    }
+}

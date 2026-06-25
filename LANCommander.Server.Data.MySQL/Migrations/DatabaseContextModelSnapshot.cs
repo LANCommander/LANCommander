@@ -555,6 +555,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("datetime(6)");
 

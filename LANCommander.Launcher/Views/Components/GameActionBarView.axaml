@@ -130,6 +130,9 @@
                                           IsVisible="{Binding HasManuals}" />
                                 <MenuItem Header="Modify"
                                           Command="{Binding ModifyCommand}" />
+                                <MenuItem Header="Game Options"
+                                          Command="{Binding OpenGameOptionsCommand}"
+                                          IsVisible="{Binding HasGameOptions}" />
                                 <Separator />
                                 <MenuItem Header="Verify Files"
                                           Command="{Binding VerifyFilesCommand}"

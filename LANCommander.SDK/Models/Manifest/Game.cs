@@ -21,6 +21,8 @@ namespace LANCommander.SDK.Models.Manifest
         public string BaseGame { get; set; }
         public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
+        public string OptionSchema { get; set; }
+        public Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
         public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
         public virtual ICollection<Archive> Archives { get; set; } = new List<Archive>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();

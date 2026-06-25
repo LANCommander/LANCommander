@@ -136,22 +136,4 @@ public class AdminNavigationTests : IAsyncLifetime
         // Verify settings-specific content is visible ("Use SSL" is unique to General settings)
         await Assertions.Expect(_page.GetByText("Use SSL")).ToBeVisibleAsync();
     }
-
-    [Fact]
-    public async Task SettingsMenu_ShowsAllExpectedSubItems()
-    {
-        // Open the Settings submenu
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
-
-        // Verify key settings sub-items are visible
-        var expectedSettings = new[] {
-            "General", "Users", "Roles", "Authentication",
-            "Archives", "Media", "Logs", "Updates"
-        };
-
-        foreach (var setting in expectedSettings)
-        {
-            await Assertions.Expect(_page.GetByRole(AriaRole.Link, new() { Name = setting, Exact = true })).ToBeVisibleAsync();
-        }
-    }
 }

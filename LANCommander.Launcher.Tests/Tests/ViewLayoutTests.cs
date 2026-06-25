@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Tests.Helpers;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
@@ -31,12 +32,23 @@ public class ViewLayoutTests
     private const int WindowWidth  = 1200;
     private const int WindowHeight = 800;
 
+    static ViewLayoutTests()
+    {
+        // The Login, Splash and ServerSelection views pick a random full-screen
+        // background on load. Disable that here so the captured screenshots — and the
+        // committed baselines — are deterministic; otherwise every run compares against
+        // a different photo and reports a spurious regression.
+        ViewBackground.Enabled = false;
+    }
+
     // ---------------------------------------------------------------------------
     // Service provider shared by all tests that need ViewModels with DI dependencies.
-    // Minimal: just logging — no real SDK services needed for layout-only rendering.
+    // Minimal: logging plus navigation — GameDetailViewModel resolves INavigationService
+    // in its constructor. No real SDK services needed for layout-only rendering.
     // ---------------------------------------------------------------------------
     private static readonly IServiceProvider _testServices = new ServiceCollection()
         .AddLogging(b => b.AddConsole().SetMinimumLevel(LogLevel.Warning))
+        .AddSingleton<INavigationService, NavigationService>()
         .BuildServiceProvider();
 
     // ---------------------------------------------------------------------------

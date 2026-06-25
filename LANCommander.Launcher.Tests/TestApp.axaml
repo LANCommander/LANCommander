@@ -1,8 +1,16 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:LANCommander.Launcher.Converters"
              x:Class="LANCommander.Launcher.Tests.TestApp"
              RequestedThemeVariant="Dark">
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+
+    <!-- Converters that views resolve from the application's resource scope.
+         The real App.axaml declares these globally; mirror only what the views
+         under test require so unstyled baselines stay otherwise unchanged. -->
+    <Application.Resources>
+        <converters:MultiplyConverter x:Key="MultiplyConverter" />
+    </Application.Resources>
 </Application>

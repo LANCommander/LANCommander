@@ -25,6 +25,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
+        group.MapGet("/{id:guid}/Tools", GetToolsByIdAsync);
         group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
@@ -218,6 +219,26 @@ public static class GameEndpoints
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(addons);
+    }
+
+    internal static async Task<IResult> GetToolsByIdAsync(
+        [FromServices] ToolService toolService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var tools = await cache.GetOrSetAsync($"Games/{id}/Tools", async _ =>
+        {
+            var results = await toolService
+                .Include(t => t.Archives)
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(t => t.Games.Any(g => g.Id == id));
+
+            return mapper.Map<IEnumerable<SDK.Models.Tool>>(results);
+        }, tags: ["Tools", "Games", $"Games/{id}"]);
+
+        return TypedResults.Ok(tools);
     }
 
     internal static async Task<IResult> GetScriptsByIdAsync(

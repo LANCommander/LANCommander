@@ -37,6 +37,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.SavePath, SDK.Models.SavePath>();
             CreateMap<Data.Models.Script, SDK.Models.Script>();
             CreateMap<Data.Models.Tag, SDK.Models.Tag>().ReverseMap();
+            CreateMap<Data.Models.Tool, SDK.Models.Tool>();
             CreateMap<Data.Models.User, SDK.Models.User>();
             CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
             CreateMap<Data.Models.GameExternalId, SDK.Models.GameExternalId>();

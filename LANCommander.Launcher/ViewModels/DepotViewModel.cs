@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,11 @@ public partial class DepotViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DepotViewModel> _logger;
+
+    // Serializes loads so overlapping invocations (e.g. a depot load still in flight
+    // when LibraryChanged fires on install/uninstall) never mutate the carousels
+    // concurrently, which corrupts the ObservableCollections.
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -78,6 +84,20 @@ public partial class DepotViewModel : ViewModelBase
 
     [RelayCommand]
     private async Task LoadInternalAsync()
+    {
+        await _loadLock.WaitAsync();
+
+        try
+        {
+            await LoadCoreAsync();
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
+    }
+
+    private async Task LoadCoreAsync()
     {
         IsLoading = true;
         HasError  = false;

@@ -169,6 +169,7 @@ public sealed class GamepadService : IDisposable
     // Button → key mapping
     //   South (A) / Start  → Enter   (confirm / activate)
     //   East  (B)          → Escape  (back)
+    //   North (Y)          → Apps    (open game context menu)
     //   D-pad               → arrow keys
     //   LB / RB             → Page Up / Page Down
     // -------------------------------------------------------------------------
@@ -180,6 +181,7 @@ public sealed class GamepadService : IDisposable
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH            => Key.Return,
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_START            => Key.Return,
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST             => Key.Escape,
+            SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH            => Key.Apps,
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP          => Key.Up,
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN        => Key.Down,
             SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT        => Key.Left,

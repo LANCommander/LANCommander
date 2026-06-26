@@ -26,6 +26,7 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="controls:GameContextMenu.IsEnabled" Value="True" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <ContentPresenter Name="PART_ContentPresenter"
@@ -119,6 +120,7 @@
                     <CarouselControl.ItemTemplate>
                         <DataTemplate x:DataType="vmComponents:GameItemViewModel">
                             <components:CoverButton Width="160" Height="240"
+                                controls:GameContextMenu.IsEnabled="True"
                                 Command="{Binding $parent[local:LibraryRowView].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
                                 CommandParameter="{Binding}" />
                         </DataTemplate>
@@ -177,6 +179,7 @@
                                 <components:CoverButton
                                     Width="{Binding $parent[local:LibraryRowView].SmallCoverWidth}"
                                     Height="{Binding $parent[local:LibraryRowView].SmallCoverHeight}"
+                                    controls:GameContextMenu.IsEnabled="True"
                                     Command="{Binding $parent[ItemsRepeater].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
                                     CommandParameter="{Binding}" />
                             </DataTemplate>

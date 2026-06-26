@@ -67,16 +67,17 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Buttons (left side) -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
-                    <!-- Install button (not installed) -->
-                    <Button Command="{Binding InstallCommand}"
-                            IsVisible="{Binding !IsInstalled}"
-                            IsEnabled="{Binding CanInstall}"
-                            Classes="Primary Large">
+                    <!-- Install SplitButton (not installed). Flyout assigned in code-behind. -->
+                    <SplitButton x:Name="InstallSplitButton"
+                                 Command="{Binding InstallCommand}"
+                                 IsVisible="{Binding !IsInstalled}"
+                                 IsEnabled="{Binding CanInstall}"
+                                 Classes="Primary Large">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
                             <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
                         </StackPanel>
-                    </Button>
+                    </SplitButton>
 
                     <!-- Play / Update / Stop SplitButton (installed) -->
                     <SplitButton x:Name="PlaySplitButton"
@@ -116,32 +117,7 @@
                                 </StackPanel>
                             </Panel>
                         </Panel>
-
-                        <SplitButton.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem Header="Play Without Updating"
-                                          Command="{Binding PlayOrStopCommand}"
-                                          IsVisible="{Binding IsUpdateAvailable}" />
-                                <Separator IsVisible="{Binding IsUpdateAvailable}" />
-                                <MenuItem Header="Browse Files"
-                                          Command="{Binding BrowseFilesCommand}" />
-                                <MenuItem Header="View Manual"
-                                          Command="{Binding OpenFirstManualCommand}"
-                                          IsVisible="{Binding HasManuals}" />
-                                <MenuItem Header="Modify"
-                                          Command="{Binding ModifyCommand}" />
-                                <Separator />
-                                <MenuItem Header="Verify Files"
-                                          Command="{Binding VerifyFilesCommand}"
-                                          IsEnabled="{Binding !IsVerifyingFiles}" />
-                                <MenuItem Header="Uninstall"
-                                          Command="{Binding UninstallCommand}"
-                                          IsEnabled="{Binding !IsUninstalling}" />
-                                <MenuItem Header="Remove from Library"
-                                          Command="{Binding RemoveFromLibraryCommand}"
-                                          IsEnabled="{Binding IsInLibrary}" />
-                            </MenuFlyout>
-                        </SplitButton.Flyout>
+                        <!-- Flyout assigned in code-behind (consolidated game menu). -->
                     </SplitButton>
 
                     <!-- Debug Scripts button (when script debugging is enabled and installed) -->

@@ -28,6 +28,7 @@
                     <components:CoverButton
                         Width="{Binding $parent[local:GamesGridView].CoverWidth}"
                         Height="{Binding $parent[local:GamesGridView].CoverHeight}"
+                        controls:GameContextMenu.IsEnabled="True"
                         Command="{Binding $parent[ItemsRepeater].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
                         CommandParameter="{Binding}" />
                 </DataTemplate>

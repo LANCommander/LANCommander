@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Specialized;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.Threading;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.ViewModels.Components;
 
 namespace LANCommander.Launcher.Views.Components;
@@ -11,7 +8,8 @@ namespace LANCommander.Launcher.Views.Components;
 public partial class GameActionBarView : UserControl
 {
     private GameActionBarViewModel? _vm;
-    private int _injectedItemCount;
+    private MenuFlyout? _installFlyout;
+    private MenuFlyout? _playFlyout;
 
     public GameActionBarView()
     {
@@ -19,45 +17,34 @@ public partial class GameActionBarView : UserControl
         DataContextChanged += OnDataContextChanged;
     }
 
-    private MenuFlyout? PlayFlyout => PlaySplitButton.Flyout as MenuFlyout;
-
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (_vm != null)
-            _vm.SecondaryActions.CollectionChanged -= OnSecondaryActionsChanged;
+        // Tear down any flyouts built for the previous view model.
+        if (_installFlyout != null)
+        {
+            GameContextMenu.DetachBinder(_installFlyout);
+            InstallSplitButton.Flyout = null;
+            _installFlyout = null;
+        }
+
+        if (_playFlyout != null)
+        {
+            GameContextMenu.DetachBinder(_playFlyout);
+            PlaySplitButton.Flyout = null;
+            _playFlyout = null;
+        }
 
         _vm = DataContext as GameActionBarViewModel;
 
-        if (_vm != null)
-            _vm.SecondaryActions.CollectionChanged += OnSecondaryActionsChanged;
+        if (_vm == null)
+            return;
 
-        RefreshSecondaryItems();
-    }
+        // Both split buttons share the same consolidated, state-driven menu; only one is ever
+        // visible at a time, but each needs its own flyout instance.
+        _installFlyout = GameContextMenu.CreateFlyout(_vm);
+        _playFlyout = GameContextMenu.CreateFlyout(_vm);
 
-    private void OnSecondaryActionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => Dispatcher.UIThread.Post(RefreshSecondaryItems);
-
-    private void RefreshSecondaryItems()
-    {
-        var flyout = PlayFlyout;
-        if (flyout is null || _vm is null) return;
-
-        // Remove previously injected items (always at the front of the flyout)
-        for (var i = 0; i < _injectedItemCount; i++)
-            flyout.Items.RemoveAt(0);
-        _injectedItemCount = 0;
-
-        if (_vm.SecondaryActions.Count == 0) return;
-
-        var idx = 0;
-        foreach (var action in _vm.SecondaryActions)
-        {
-            flyout.Items.Insert(idx++, new MenuItem { Header = action.Name, Command = action.RunCommand });
-            _injectedItemCount++;
-        }
-
-        // Separator between secondary actions and static items
-        flyout.Items.Insert(idx, new Separator());
-        _injectedItemCount++;
+        InstallSplitButton.Flyout = _installFlyout;
+        PlaySplitButton.Flyout = _playFlyout;
     }
 }

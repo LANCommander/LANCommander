@@ -34,6 +34,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="Margin" Value="8,2" />
+            <Setter Property="controls:GameContextMenu.IsEnabled" Value="True" />
         </Style>
         <Style Selector="ListBox.GamesList ListBoxItem:pointerover Border.ListRowInner">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />

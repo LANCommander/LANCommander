@@ -17,7 +17,8 @@ namespace LANCommander.Launcher.Services
         LibraryClient libraryClient,
         PlaySessionClient playSessionClient,
         DatabaseContext dbContext,
-        GameService gameService) : BaseService(logger)
+        GameService gameService,
+        AuthenticationService authenticationService) : BaseService(logger)
     {
         private const int MaxConcurrentManifestFetches = 8;
 
@@ -96,8 +97,47 @@ namespace LANCommander.Launcher.Services
             await importContext.ImportQueueAsync();
             await importContext.DownloadPendingMediaAsync();
 
+            // Remove games from the local library that are no longer in the remote library
+            await ReconcileRemovedGamesAsync(remoteLibrary.Select(g => g.Id).ToList());
+
             // Sync play sessions for all library games
             await SyncPlaySessionsAsync(remoteLibrary.Select(g => g.Id));
+        }
+
+        internal async Task ReconcileRemovedGamesAsync(IReadOnlyCollection<Guid> remoteGameIds)
+        {
+            // The library endpoint returns an empty list both when the library is genuinely
+            // empty and when it fails server-side. Treating an empty result as authoritative
+            // would wipe the entire local library on a transient error, so skip reconciliation
+            // in that case.
+            if (remoteGameIds.Count == 0)
+            {
+                Logger?.LogDebug("Skipping library reconciliation because the remote library returned no games");
+                return;
+            }
+
+            var userId = authenticationService.GetUserId();
+
+            var library = await dbContext.Libraries
+                .Include(l => l.Games)
+                .FirstOrDefaultAsync(l => l.UserId == userId);
+
+            if (library == null)
+                return;
+
+            var staleGames = library.Games
+                .Where(g => !remoteGameIds.Contains(g.Id))
+                .ToList();
+
+            if (staleGames.Count == 0)
+                return;
+
+            foreach (var staleGame in staleGames)
+                library.Games.Remove(staleGame);
+
+            await dbContext.SaveChangesAsync();
+
+            Logger?.LogInformation("Removed {Count} game(s) from the local library that are no longer present on the server", staleGames.Count);
         }
 
         public async Task ImportGameAsync(Guid gameId)

@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Launcher.Services.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />

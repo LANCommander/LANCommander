@@ -31,7 +31,7 @@ namespace LANCommander.Launcher.ViewModels.Components;
 /// ViewModel for the game action bar component.
 /// Handles play, install, uninstall, and library management actions.
 /// </summary>
-public partial class GameActionBarViewModel : ViewModelBase
+public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<GameActionBarViewModel> _logger;
@@ -202,6 +202,7 @@ public partial class GameActionBarViewModel : ViewModelBase
             && game.InstalledVersion != game.LatestVersion;
 
         using var scope = _serviceProvider.CreateScope();
+        
         var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
         var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
 
@@ -216,6 +217,44 @@ public partial class GameActionBarViewModel : ViewModelBase
         // Check server for updates if installed and not already detected locally
         if (game.Installed && !IsUpdateAvailable)
             _ = CheckForUpdateFromServerAsync(game.Id, game.InstalledVersion);
+    }
+
+    /// <summary>
+    /// Loads action bar state for a transient context menu (right-click / gamepad) without
+    /// starting the running-state polling timers. Seeds from the list item, then enriches
+    /// from the local database when the game is present locally.
+    /// </summary>
+    public async Task LoadForMenuAsync(GameItemViewModel item)
+    {
+        GameId = item.Id;
+        Title = item.Title;
+        IsInstalled = item.IsInstalled;
+        IsInLibrary = item.InLibrary;
+        IsUpdateAvailable = item.IsUpdateAvailable;
+
+        using var scope = _serviceProvider.CreateScope();
+        
+        var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+
+        IsInLibrary = await libraryService.IsInLibraryAsync(item.Id);
+        IsScriptDebuggingEnabled = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
+
+        var localGame = await gameService.GetAsync(item.Id);
+        
+        if (localGame != null)
+        {
+            IsInstalled = localGame.Installed;
+            InstallDirectory = localGame.InstallDirectory;
+            IsUpdateAvailable = localGame.Installed
+                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                && localGame.InstalledVersion != localGame.LatestVersion;
+            
+            await LoadPlayStatsAsync(localGame.Id);
+            LoadManuals(localGame);
+            await LoadActionsAsync();
+        }
     }
 
     /// <summary>
@@ -384,6 +423,15 @@ public partial class GameActionBarViewModel : ViewModelBase
 
         _lastPlayedTimer?.Dispose();
         _lastPlayedTimer = null;
+    }
+
+    /// <summary>
+    /// Stops any polling timers. Used by transient menu-backing instances so they don't
+    /// leave background timers running after the menu closes.
+    /// </summary>
+    public void Dispose()
+    {
+        StopRunningCheck();
     }
 
     private void CheckRunningState()

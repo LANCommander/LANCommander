@@ -1,0 +1,41 @@
+---
+title: 2.1.5
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.5 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## New Features
+
+### Auto Redirect to External Provider in the Launcher
+The launcher now honors the server's "Auto Redirect to Provider" setting. When enabled, the login screen redirects straight to your external authentication provider, and the standard authentication fields and buttons are hidden based on the server's authentication settings.
+
+### Exit Button in Profile Dropdown
+An "Exit" button is now available under the profile dropdown, making it easier to fully quit the launcher.
+
+## Improvements
+- Consolidated the game flyout into a unified context menu for more consistent actions across the library views.
+- Tools that have no archive are now hidden from the install overlay.
+- Automated testing for various aspects of the server UI (thanks [aaronpowell](https://github.com/aaronpowell)!)
+
+## Bug Fixes
+- Fixed removing games from user libraries using the launcher.
+- Fixed tool installation.
+- Fixed the clickability of games in the compact library list.
+- Fixed updating of roles.
+- Fixed saving of authentication settings.
+- Fixed admin user creation in first time setup.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.5" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.4" to="v2.1.5" />

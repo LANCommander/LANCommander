@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.4** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.5** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -472,9 +472,45 @@ The launcher now ensures only a single instance can run at a time, preventing co
 
 </details>
 
+### 2.1.5
+<details>
+<summary>View 2.1.5 patch notes</summary>
+
+#### New Features
+
+##### Auto Redirect to External Provider in the Launcher
+The launcher now honors the server's "Auto Redirect to Provider" setting. When enabled, the login screen redirects straight to your external authentication provider, and the standard authentication fields and buttons are hidden based on the server's authentication settings.
+
+##### Exit Button in Profile Dropdown
+An "Exit" button is now available under the profile dropdown, making it easier to fully quit the launcher.
+
+#### Improvements
+- Consolidated the game flyout into a unified context menu for more consistent actions across the library views.
+- Tools that have no archive are now hidden from the install overlay.
+- Automated testing for various aspects of the server UI (thanks [aaronpowell](https://github.com/aaronpowell)!)
+
+#### Bug Fixes
+- Fixed removing games from user libraries using the launcher.
+- Fixed tool installation.
+- Fixed the clickability of games in the compact library list.
+- Fixed updating of roles.
+- Fixed saving of authentication settings.
+- Fixed admin user creation in first time setup.
+
+<ReleaseDownloads release="v2.1.5" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.5" />
+
+<details>
+<summary>View 2.1.4 downloads</summary>
+
 <ReleaseDownloads release="v2.1.4" />
+
+</details>
 
 <details>
 <summary>View 2.1.3 downloads</summary>
@@ -506,4 +542,4 @@ The launcher now ensures only a single instance can run at a time, preventing co
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.4" />
+<ContributorGrid from="v2.0.2" to="v2.1.5" />

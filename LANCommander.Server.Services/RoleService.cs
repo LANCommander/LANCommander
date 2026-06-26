@@ -40,7 +40,6 @@ namespace LANCommander.Server.Services
             return await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(r => r.Collections);
-                await context.UpdateRelationshipAsync(r => r.Users);
             });
         }
 

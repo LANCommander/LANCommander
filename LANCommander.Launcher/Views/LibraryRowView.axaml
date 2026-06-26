@@ -38,6 +38,9 @@
                 </ControlTemplate>
             </Setter>
         </Style>
+        <Style Selector="ListBox.CompactGamesList Border.CompactListRow">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
         <Style Selector="ListBox.CompactGamesList ListBoxItem:pointerover Border.CompactListRow">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
         </Style>

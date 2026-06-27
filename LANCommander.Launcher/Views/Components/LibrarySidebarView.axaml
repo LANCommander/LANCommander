@@ -27,7 +27,8 @@
             </Border>
             
             <!-- Navigation Buttons -->
-            <StackPanel DockPanel.Dock="Top" Margin="8,8,8,0">
+            <StackPanel DockPanel.Dock="Top" Margin="8,8,8,0"
+                        IsVisible="{Binding AreUserLibrariesEnabled}">
                 <Button Command="{Binding ShowDepotCommand}"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Left"

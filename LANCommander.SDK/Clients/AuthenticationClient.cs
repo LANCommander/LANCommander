@@ -228,6 +228,24 @@ public class AuthenticationClient(
         }
     }
 
+    public async Task<bool> GetEnableUserLibrariesAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Library?.EnableUserLibraries ?? true;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to enabling user libraries
+            return true;
+        }
+    }
+
     public Uri GetAuthenticationProviderLoginUrl(string provider)
     {
         return connectionClient.GetServerAddress().Join($"api/Auth/Login?Provider={provider}");

@@ -19,6 +19,8 @@ namespace LANCommander.Launcher.Services
         PlaySessionService playSessionService,
         ProfileClient profileClient,
         GameClient gameClient,
+        ToolService toolService,
+        ToolClient toolClient,
         IConnectionClient connectionClient,
         IServiceProvider serviceProvider) : BaseDatabaseService<Game>(dbContext, logger)
     {
@@ -65,6 +67,32 @@ namespace LANCommander.Launcher.Services
                             await gameClient.UninstallAsync(game.InstallDirectory, baseGame?.Id ?? game.BaseGameId.Value);
 
                             ClearGameState(baseGame!, skipAddons: true);
+                        }
+                    }
+
+                    // Uninstall any tools that were installed alongside this game. Tools are
+                    // installed into the game's directory, so this must happen before the
+                    // install directory is cleared in ClearGameState.
+                    var installedTools = await toolService
+                        .Query(t => t.Installed && t.Games.Any(g => g.Id == game.Id))
+                        .ToListAsync();
+
+                    foreach (var tool in installedTools)
+                    {
+                        try
+                        {
+                            await toolClient.UninstallAsync(game.InstallDirectory, tool.Id);
+
+                            tool.Installed = false;
+                            tool.InstallDirectory = null;
+                            tool.InstalledVersion = null;
+                            tool.InstalledOn = null;
+
+                            await toolService.UpdateAsync(tool);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", tool.Id, game.Id);
                         }
                     }
 

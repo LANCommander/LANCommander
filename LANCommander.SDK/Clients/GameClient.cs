@@ -2226,6 +2226,18 @@ namespace LANCommander.SDK.Services
                         context.AddVariable(variable.Key, variable.Value);
                 }
 
+                // When an action references {ServerHost} but the game server didn't specify a host,
+                // fall back to the host of the LANCommander server the launcher is connected to.
+                if (action.Variables == null
+                    || !action.Variables.TryGetValue("ServerHost", out var serverHost)
+                    || String.IsNullOrWhiteSpace(serverHost))
+                {
+                    var serverAddress = connectionClient.GetServerAddress();
+
+                    if (serverAddress != null)
+                        context.AddVariable("ServerHost", serverAddress.Host);
+                }
+
                 #region Run Scripts
                 var manifests = await ReadManifestsAsync(installDirectory, gameId);
 

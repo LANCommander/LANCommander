@@ -21,7 +21,8 @@ public class AuthenticationClient(
     IServerConfigurationRefresher configRefresher,
     ISettingsProvider settingsProvider,
     ApiRequestFactory apiRequestFactory,
-    IConnectionClient connectionClient)
+    IConnectionClient connectionClient,
+    ProfileClient profileClient)
 {
     public async Task<AuthToken> AuthenticateAsync(string username, string password, Uri serverAddress)
     {
@@ -101,8 +102,10 @@ public class AuthenticationClient(
         {
             logger.LogWarning("Could not logout, server inaccessible");
         }
-        
+
         tokenProvider.SetToken(null);
+
+        profileClient.ClearCache();
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)

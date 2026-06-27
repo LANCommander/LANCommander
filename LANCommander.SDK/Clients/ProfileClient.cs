@@ -32,6 +32,11 @@ namespace LANCommander.SDK.Services
             return _user;
         }
 
+        public void ClearCache()
+        {
+            _user = null;
+        }
+
         public async Task<string> GetAliasAsync()
         {
             try

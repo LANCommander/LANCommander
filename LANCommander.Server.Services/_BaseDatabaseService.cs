@@ -280,9 +280,20 @@ namespace LANCommander.Server.Services
                 var currentUser = await GetCurrentUserAsync(context);
                 
                 var newEntity = Activator.CreateInstance<T>();
-                
+
+                // Assign a stable primary key up front. Relationships (including
+                // many-to-many joins) are wired up below while the entity is still
+                // tracked, before it is added. If the key were left empty until
+                // AddAsync generated one, the key would change mid-save and EF would
+                // fail to fix up join foreign keys when multiple related entities are
+                // attached at once (e.g. adding a tool with multiple games).
+                if (addedEntity.Id == Guid.Empty)
+                    addedEntity.Id = Guid.NewGuid();
+
+                newEntity.Id = addedEntity.Id;
+
                 context.Entry(newEntity).CurrentValues.SetValues(addedEntity);
-                
+
                 newEntity.CreatedOn = DateTime.UtcNow;
                 newEntity.CreatedById = currentUser?.Id;
 

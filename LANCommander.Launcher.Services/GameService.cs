@@ -70,29 +70,23 @@ namespace LANCommander.Launcher.Services
                         }
                     }
 
-                    // Uninstall any tools that were installed alongside this game. Tools are
-                    // installed into the game's directory, so this must happen before the
-                    // install directory is cleared in ClearGameState.
-                    var installedTools = await toolService
-                        .Query(t => t.Installed && t.Games.Any(g => g.Id == game.Id))
-                        .ToListAsync();
+                    // Uninstall any tools that were installed for this game. Tools are installed
+                    // into the game's own directory and tracked per game, so uninstalling this
+                    // game only removes its copy and leaves the tool intact for other games that
+                    // share it. This must run before ClearGameState clears the install directory.
+                    var installedTools = await toolService.GetInstalledToolsForGameAsync(game.Id);
 
-                    foreach (var tool in installedTools)
+                    foreach (var gameTool in installedTools)
                     {
                         try
                         {
-                            await toolClient.UninstallAsync(game.InstallDirectory, tool.Id);
+                            await toolClient.UninstallAsync(game.InstallDirectory, gameTool.ToolId);
 
-                            tool.Installed = false;
-                            tool.InstallDirectory = null;
-                            tool.InstalledVersion = null;
-                            tool.InstalledOn = null;
-
-                            await toolService.UpdateAsync(tool);
+                            await toolService.SetToolUninstalledAsync(game.Id, gameTool.ToolId);
                         }
                         catch (Exception ex)
                         {
-                            Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", tool.Id, game.Id);
+                            Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", gameTool.ToolId, game.Id);
                         }
                     }
 

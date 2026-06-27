@@ -1062,7 +1062,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
             var localGame = await dbContext.Set<Data.Models.Game>()
                 .Include(g => g.DependentGames)
-                .Include(g => g.Tools)
+                .Include(g => g.GameTools)
                 .FirstOrDefaultAsync(g => g.Id == GameId);
 
             if (localGame == null)
@@ -1099,11 +1099,11 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                     .Where(a => a.Installed)
                     .Select(a => a.Id));
 
-            // Build set of currently installed tool IDs
+            // Build set of currently installed tool IDs (tracked per game)
             var installedToolIds = new HashSet<Guid>(
-                (localGame.Tools ?? [])
-                    .Where(t => t.Installed)
-                    .Select(t => t.Id));
+                (localGame.GameTools ?? [])
+                    .Where(gt => gt.Installed)
+                    .Select(gt => gt.ToolId));
 
             // ── Build options VM ───────────────────────────────────────────────
             var optionsVm = new InstallOptionsViewModel();

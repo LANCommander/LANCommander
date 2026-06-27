@@ -523,8 +523,8 @@ public partial class GameDetailViewModel : ViewModelBase
             {
                 foreach (var tool in tools)
                 {
-                    var localTool = await toolService.GetAsync(tool.Id);
-                    Tools.Add(new ToolItemViewModel(tool, localTool));
+                    var isInstalled = await toolService.IsToolInstalledForGameAsync(game.Id, tool.Id);
+                    Tools.Add(new ToolItemViewModel(tool, isInstalled));
                 }
             }
         }
@@ -559,17 +559,10 @@ public partial class ToolItemViewModel : ViewModelBase
     public string Name { get; }
     public bool IsInstalled { get; }
 
-    public ToolItemViewModel(SDK.Models.Tool tool, Data.Models.Tool? localTool)
+    public ToolItemViewModel(SDK.Models.Tool tool, bool isInstalled)
     {
         Id = tool.Id;
         Name = tool.Name ?? "Unknown Tool";
-        IsInstalled = localTool?.Installed ?? false;
-    }
-
-    public ToolItemViewModel(Data.Models.Tool tool)
-    {
-        Id = tool.Id;
-        Name = tool.Name ?? "Unknown Tool";
-        IsInstalled = tool.Installed;
+        IsInstalled = isInstalled;
     }
 }

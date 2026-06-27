@@ -8,7 +8,6 @@ namespace LANCommander.Launcher.Services.Import.Importers;
 
 public class ToolImporter(
     ToolService toolService,
-    LibraryService libraryService,
     ILogger<ToolImporter> logger) : BaseImporter<Tool>
 {
     public override async Task<ImportItemInfo<Tool>> GetImportInfoAsync(Tool record, BaseManifest manifest) =>
@@ -77,9 +76,14 @@ public class ToolImporter(
             
             await toolService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record);
-            
-            if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
-                await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
+
+            // Refresh the on-disk manifest for every game this tool is installed for and up to date
+            // on. Install state is tracked per game because a tool can be shared by several games.
+            foreach (var gameTool in await toolService.GetInstalledGameToolsAsync(existing.Id))
+            {
+                if (existing.LatestVersion == gameTool.InstalledVersion && !string.IsNullOrEmpty(gameTool.InstallDirectory))
+                    await ManifestHelper.WriteAsync(importItemInfo.Record, gameTool.InstallDirectory);
+            }
 
             return true;
         }

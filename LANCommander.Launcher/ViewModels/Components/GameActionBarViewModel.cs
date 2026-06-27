@@ -941,7 +941,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             try
             {
                 var tools = await gameClient.GetToolsAsync(GameId);
-                availableTools = tools?.Where(t => t.Archives?.Any() ?? false).ToArray() ?? [];
+                availableTools = tools?.Where(t => (t.Archives?.Any() ?? false) && !t.AlwaysInstall).ToArray() ?? [];
             }
             catch (Exception ex)
             {
@@ -1086,7 +1086,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             try
             {
                 var tools = await gameClient.GetToolsAsync(GameId);
-                availableTools = tools?.Where(t => t.Archives?.Any() ?? false).ToArray() ?? [];
+                availableTools = tools?.Where(t => (t.Archives?.Any() ?? false) && !t.AlwaysInstall).ToArray() ?? [];
             }
             catch (Exception ex)
             {

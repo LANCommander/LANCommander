@@ -45,6 +45,10 @@
                     <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
                 </FormItem>
 
+                <FormItem Label="Always Install" Help="When enabled, this tool is automatically installed with the game and hidden from the launcher's install options.">
+                    <Checkbox @bind-Value="@context.AlwaysInstall" />
+                </FormItem>
+
                 <FormItem Label="Games">
                     <TransferInput
                         Style="height: 350px"

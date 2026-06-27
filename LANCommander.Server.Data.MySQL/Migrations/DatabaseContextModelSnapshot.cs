@@ -1671,6 +1671,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("AlwaysInstall")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("char(36)");
 

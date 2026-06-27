@@ -1671,6 +1671,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AlwaysInstall")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 

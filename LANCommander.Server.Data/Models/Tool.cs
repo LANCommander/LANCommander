@@ -8,6 +8,7 @@ namespace LANCommander.Server.Data.Models
         public string Name { get; set; }
         public string? Description { get; set; }
         public string? Notes { get; set; }
+        public bool AlwaysInstall { get; set; }
 
         public ICollection<Action>? Actions { get; set; }
         public ICollection<Archive>? Archives { get; set; }

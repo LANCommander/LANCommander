@@ -37,6 +37,12 @@ namespace LANCommander.Server.Data.Models
         [InverseProperty("Archives")]
         public Tool? Tool { get; set; }
 
+        public Guid? GameVersionId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(GameVersionId))]
+        [InverseProperty(nameof(GameVersion.Archive))]
+        public GameVersion? GameVersion { get; set; }
+
         [Display(Name = "Last Version")]
         public Archive? LastVersion { get; set; }
 

@@ -1,0 +1,10 @@
+@page "/Games/{id:guid}/Versions"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Versions">
+    <VersionEditor />
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

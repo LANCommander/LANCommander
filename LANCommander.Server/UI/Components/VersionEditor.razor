@@ -1,0 +1,79 @@
+@inject GameVersionService GameVersionService
+@inject IMessageService MessageService
+@inject ILogger<VersionEditor> Logger
+
+<DataTable
+    @ref="_table"
+    TItem="GameVersion"
+    HidePagination
+    Responsive
+    Query="v => v.GameId == GameId">
+
+    <Columns>
+        <BoundDataColumn Property="v => v.SortOrder" Title="Sort Order" DefaultSortOrder="SortDirection.Descending" Hide />
+        <BoundDataColumn Property="v => v.Version">
+            <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
+        </BoundDataColumn>
+        <BoundDataColumn Property="v => v.Changelog">
+            <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Changelog" OnBlur="() => Update(context)" />
+        </BoundDataColumn>
+        <BoundDataColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive">
+            @if (context.Archive != null)
+            {
+                <ByteSize Value="context.Archive.CompressedSize" />
+            }
+            else
+            {
+                <span class="ant-typography ant-typography-secondary">None</span>
+            }
+        </BoundDataColumn>
+        <BoundDataColumn Property="v => v.Scripts != null ? v.Scripts.Count : 0" Title="Scripts" Include="Scripts" />
+        <BoundDataColumn Property="v => v.Actions != null ? v.Actions.Count : 0" Title="Actions" Include="Actions" />
+        <BoundDataColumn Property="v => v.SavePaths != null ? v.SavePaths.Count : 0" Title="Save Paths" Include="SavePaths" />
+        <BoundDataColumn Property="v => v.CreatedOn">
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
+
+        <DataActions TData="string">
+            @if (context.Archive != null)
+            {
+                <Tooltip Title="Download Archive">
+                    <a href="/Download/Archive/@context.Archive.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                        <Icon Type="@IconType.Outline.Download" />
+                    </a>
+                </Tooltip>
+            }
+        </DataActions>
+    </Columns>
+</DataTable>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+
+    DataTable<GameVersion> _table;
+
+    private async Task Update(GameVersion version)
+    {
+        try
+        {
+            // Fetch a fresh entity (without version-scoped config loaded) so that updating
+            // the Version/Changelog metadata does not touch the Scripts/Actions/SavePaths
+            // relationships. UpdateRelationshipAsync skips navigations that are null.
+            var existing = await GameVersionService.GetAsync(version.Id);
+
+            existing.Version = version.Version;
+            existing.Changelog = version.Changelog;
+
+            await GameVersionService.UpdateAsync(existing);
+
+            await _table.ReloadAsync();
+
+            MessageService.Success("Version updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Version could not be updated.");
+            Logger.LogError(ex, "Version could not be updated.");
+        }
+    }
+}

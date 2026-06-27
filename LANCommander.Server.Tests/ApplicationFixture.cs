@@ -5,8 +5,7 @@ namespace LANCommander.Server.Tests;
 public class ApplicationFixture : ApplicationFactory<Program>
 {
     public static ApplicationFixture Instance;
-    
-    public SDK.Client Client { get; set; }
+
     public IServiceProvider ServiceProvider { get; set; }
 
     public ApplicationFixture(ApplicationFactory<Program> factory)
@@ -14,7 +13,6 @@ public class ApplicationFixture : ApplicationFactory<Program>
         if (Instance != null)
             return;
 
-        Client = new SDK.Client(factory.CreateClient(), "C:\\Games");
         ServiceProvider = factory.Services;
 
         Instance = this;

@@ -6,6 +6,7 @@ namespace LANCommander.Server.Models
     {
         public Guid ScriptId { get; set; }
         public Guid? GameId { get; set; }
+        public Guid? GameVersionId { get; set; }
         public Guid? RedistributableId { get; set; }
         public Guid? ServerId { get; set; }
         public Guid? ToolId { get; set; }

@@ -2,6 +2,7 @@
 @using LANCommander.SDK.Extensions
 @using LANCommander.SDK.Enums
 @inject ScriptService ScriptService
+@inject GameVersionService GameVersionService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditor> Logger
@@ -73,6 +74,16 @@
 
     Archive _archive;
 
+    // For games, scripts are version-scoped: they belong to the game's latest GameVersion rather
+    // than the game directly. Resolved (creating an initial version if needed) before first render.
+    Guid? _gameVersionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (GameId.HasValue && GameId != Guid.Empty)
+            _gameVersionId = (await GameVersionService.GetOrCreateLatestAsync(GameId.Value)).Id;
+    }
+
     IEnumerable<ScriptType> GetAllowedTypes()
     {
         if (AllowedTypes != null)
@@ -84,7 +95,7 @@
     Expression<Func<Script, bool>> GetQueryExpression()
     {
         if (GameId.HasValue)
-            return s => s.GameId == GameId;
+            return s => s.GameVersionId == _gameVersionId;
 
         if (RedistributableId.HasValue)
             return s => s.RedistributableId == RedistributableId;
@@ -122,6 +133,7 @@
             ScriptType = scriptType,
             AllowedTypes = AllowedTypes,
             GameId = GameId,
+            GameVersionId = _gameVersionId,
             RedistributableId = RedistributableId,
             ServerId = ServerId,
             ToolId = ToolId,
@@ -152,6 +164,7 @@
             ScriptId = scriptId,
             AllowedTypes = AllowedTypes,
             GameId = GameId,
+            GameVersionId = _gameVersionId,
             RedistributableId = RedistributableId,
             ServerId = ServerId,
             ToolId = ToolId,

@@ -12,7 +12,6 @@ namespace LANCommander.Server.Tests;
 [TestCaseOrderer(DependencyOrderer.TypeName, DependencyOrderer.AssemblyName)]
 public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
 {
-    protected readonly SDK.Client Client = ApplicationFixture.Instance.Client;
     protected readonly IServiceProvider ServiceProvider;
     
     private AsyncServiceScope? _scope;

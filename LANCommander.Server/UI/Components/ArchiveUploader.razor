@@ -4,6 +4,7 @@
 @using LANCommander.UI.Services
 @using Microsoft.Extensions.Options
 @inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
 @inject StorageLocationService StorageLocationService
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
@@ -122,20 +123,7 @@
 
                 await ArchiveService.UpdateAsync(uploadedArchive);
 
-                if (Settings.Value.Server.Archives.EnablePatching)
-                {
-                    Archive? lastArchive = null;
-
-                    if (gameId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.GameId == gameId);
-                    else if (redistributableId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.RedistributableId == redistributableId);
-                    else if (toolId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.ToolId == toolId);
-
-                    if (lastArchive != null)
-                        BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, uploadedArchive.Id));
-                }
+                await CreateGameVersionAsync(uploadedArchive, gameId, version, changelog);
 
                 if (OnArchiveUploaded.HasDelegate)
                     await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);
@@ -150,6 +138,22 @@
                 Logger.LogError(ex, "Failed to process uploaded archive");
             }
         });
+    }
+
+    // An archive upload is the version-creation event for a game. Create a new GameVersion
+    // (which snapshots the previous version's Scripts/Actions/SavePaths into fresh rows so the
+    // prior version's config is frozen) and link the uploaded archive to it. Redistributable and
+    // Tool archives are not versioned in this phase.
+    private async Task CreateGameVersionAsync(Archive uploadedArchive, Guid? gameId, string version, string changelog)
+    {
+        if (gameId == null || gameId == Guid.Empty)
+            return;
+
+        var gameVersion = await GameVersionService.CreateAsync(gameId.Value, version, changelog);
+
+        uploadedArchive.GameVersionId = gameVersion.Id;
+
+        await ArchiveService.UpdateAsync(uploadedArchive);
     }
 
     private async Task Clear()
@@ -247,6 +251,8 @@
                 uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 
                 await ArchiveService.UpdateAsync(uploadedArchive);
+
+                await CreateGameVersionAsync(uploadedArchive, gameId, version, changelog);
 
                 if (OnArchiveUploaded.HasDelegate)
                     await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);

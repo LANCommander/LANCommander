@@ -42,6 +42,7 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Company>? Publishers { get; set; }
         public ICollection<Company>? Developers { get; set; }
         public ICollection<Archive>? Archives { get; set; }
+        public ICollection<GameVersion>? Versions { get; set; }
         public ICollection<Script>? Scripts { get; set; }
         public ICollection<GameSave>? GameSaves { get; set; }
         public ICollection<PlaySession>? PlaySessions { get; set; }

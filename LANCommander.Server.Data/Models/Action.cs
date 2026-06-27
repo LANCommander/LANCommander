@@ -31,5 +31,11 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(ToolId))]
         [InverseProperty("Actions")]
         public Tool? Tool { get; set; }
+
+        public Guid? GameVersionId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(GameVersionId))]
+        [InverseProperty(nameof(GameVersion.Actions))]
+        public GameVersion? GameVersion { get; set; }
     }
 }

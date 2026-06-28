@@ -29,13 +29,14 @@
             </Select>
         </FormItem>
 
-        <FormItem Label="Connection String">
-            <Input @bind-Value="context.Server.Database.ConnectionString" />
-        </FormItem>
+        <DatabaseConnectionStringEditor Provider="context.Server.Database.Provider" @bind-ConnectionString="context.Server.Database.ConnectionString" />
 
-        <FormItem>
-            <Button Type="@ButtonType.Primary" HtmlType="submit">
-                Test &amp; Save
+        <FormItem Style="margin-top: 24px;">
+            <Button OnClick="TestDatabaseConnection" Loading="Loading">
+                Test
+            </Button>
+            <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="Loading" Style="margin-left: 8px;">
+                Save
             </Button>
         </FormItem>
     </Form>
@@ -63,18 +64,12 @@
         }
     }
 
-    async Task ValidateDatabaseConnection()
+    bool TestConnection()
     {
-        bool valid = false;
-
-        Loading = true;
-        StateHasChanged();
-        await Task.Yield();
-
         try
         {
             SetupService.ValidateConnectionString(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
-            valid = true;
+            return true;
         }
         catch (SqliteException ex)
         {
@@ -97,7 +92,28 @@
             MessageService.Error("Could not validate the connection string!");
         }
 
-        if (valid)
+        return false;
+    }
+
+    async Task TestDatabaseConnection()
+    {
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        if (TestConnection())
+            MessageService.Success("Database connection successful!");
+
+        Loading = false;
+    }
+
+    async Task ValidateDatabaseConnection()
+    {
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        if (TestConnection())
         {
             try
             {

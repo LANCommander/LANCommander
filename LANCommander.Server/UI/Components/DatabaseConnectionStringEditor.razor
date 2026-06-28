@@ -1,0 +1,215 @@
+@using LANCommander.Server.Settings.Enums
+@using Microsoft.Data.Sqlite
+@using MySqlConnector
+@using Npgsql
+
+@switch (Provider)
+{
+    case DatabaseProvider.SQLite:
+        <FormItem Label="Data Source">
+            <Input @bind-Value="SqliteBuilder.DataSource" @bind-Value:after="UpdateConnectionString" Placeholder="LANCommander.db" />
+        </FormItem>
+
+        <Collapse>
+            <Panel Header="Advanced Options">
+                <FormItem Label="Mode">
+                    <EnumSelect TEnum="SqliteOpenMode" @bind-Value="SqliteBuilder.Mode" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Cache">
+                    <EnumSelect TEnum="SqliteCacheMode" @bind-Value="SqliteBuilder.Cache" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Password">
+                    <InputPassword @bind-Value="SqliteBuilder.Password" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Pooling">
+                    <Switch @bind-Value="SqliteBuilder.Pooling" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Default Timeout (s)">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="SqliteBuilder.DefaultTimeout" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+            </Panel>
+        </Collapse>
+        break;
+
+    case DatabaseProvider.MySQL:
+        <div style="display: flex; gap: 16px;">
+            <div style="flex: 1;">
+                <FormItem Label="Server">
+                    <Input @bind-Value="MySqlBuilder.Server" @bind-Value:after="UpdateConnectionString" Placeholder="localhost" />
+                </FormItem>
+            </div>
+            <div style="flex: 0 0 140px;">
+                <FormItem Label="Port">
+                    <AntDesign.InputNumber TValue="uint" @bind-Value="MySqlBuilder.Port" @bind-Value:after="UpdateConnectionString" Min="0" Max="65535" Style="width: 100%;" />
+                </FormItem>
+            </div>
+        </div>
+        <FormItem Label="Database">
+            <Input @bind-Value="MySqlBuilder.Database" @bind-Value:after="UpdateConnectionString" Placeholder="LANCommander" />
+        </FormItem>
+        <div style="display: flex; gap: 16px;">
+            <div style="flex: 1;">
+                <FormItem Label="User ID">
+                    <Input @bind-Value="MySqlBuilder.UserID" @bind-Value:after="UpdateConnectionString" Placeholder="root" />
+                </FormItem>
+            </div>
+            <div style="flex: 1;">
+                <FormItem Label="Password">
+                    <InputPassword @bind-Value="MySqlBuilder.Password" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+            </div>
+        </div>
+
+        <Collapse>
+            <Panel Header="Advanced Options">
+                <FormItem Label="SSL Mode">
+                    <EnumSelect TEnum="MySqlSslMode" @bind-Value="MySqlBuilder.SslMode" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Character Set">
+                    <Input @bind-Value="MySqlBuilder.CharacterSet" @bind-Value:after="UpdateConnectionString" Placeholder="utf8mb4" />
+                </FormItem>
+                <FormItem Label="Connection Timeout (s)">
+                    <AntDesign.InputNumber TValue="uint" @bind-Value="MySqlBuilder.ConnectionTimeout" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+                <FormItem Label="Pooling">
+                    <Switch @bind-Value="MySqlBuilder.Pooling" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Minimum Pool Size">
+                    <AntDesign.InputNumber TValue="uint" @bind-Value="MySqlBuilder.MinimumPoolSize" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+                <FormItem Label="Maximum Pool Size">
+                    <AntDesign.InputNumber TValue="uint" @bind-Value="MySqlBuilder.MaximumPoolSize" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+            </Panel>
+        </Collapse>
+        break;
+
+    case DatabaseProvider.PostgreSQL:
+        <div style="display: flex; gap: 16px;">
+            <div style="flex: 1;">
+                <FormItem Label="Host">
+                    <Input @bind-Value="NpgsqlBuilder.Host" @bind-Value:after="UpdateConnectionString" Placeholder="localhost" />
+                </FormItem>
+            </div>
+            <div style="flex: 0 0 140px;">
+                <FormItem Label="Port">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="NpgsqlBuilder.Port" @bind-Value:after="UpdateConnectionString" Min="0" Max="65535" Style="width: 100%;" />
+                </FormItem>
+            </div>
+        </div>
+        <FormItem Label="Database">
+            <Input @bind-Value="NpgsqlBuilder.Database" @bind-Value:after="UpdateConnectionString" Placeholder="LANCommander" />
+        </FormItem>
+        <div style="display: flex; gap: 16px;">
+            <div style="flex: 1;">
+                <FormItem Label="User Id">
+                    <Input @bind-Value="NpgsqlBuilder.Username" @bind-Value:after="UpdateConnectionString" Placeholder="postgres" />
+                </FormItem>
+            </div>
+            <div style="flex: 1;">
+                <FormItem Label="Password">
+                    <InputPassword @bind-Value="NpgsqlBuilder.Password" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+            </div>
+        </div>
+
+        <Collapse>
+            <Panel Header="Advanced Options">
+                <FormItem Label="SSL Mode">
+                    <EnumSelect TEnum="SslMode" @bind-Value="NpgsqlBuilder.SslMode" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Search Path">
+                    <Input @bind-Value="NpgsqlBuilder.SearchPath" @bind-Value:after="UpdateConnectionString" Placeholder="public" />
+                </FormItem>
+                <FormItem Label="Timeout (s)">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="NpgsqlBuilder.Timeout" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+                <FormItem Label="Command Timeout (s)">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="NpgsqlBuilder.CommandTimeout" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+                <FormItem Label="Pooling">
+                    <Switch @bind-Value="NpgsqlBuilder.Pooling" @bind-Value:after="UpdateConnectionString" />
+                </FormItem>
+                <FormItem Label="Minimum Pool Size">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="NpgsqlBuilder.MinPoolSize" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+                <FormItem Label="Maximum Pool Size">
+                    <AntDesign.InputNumber TValue="int" @bind-Value="NpgsqlBuilder.MaxPoolSize" @bind-Value:after="UpdateConnectionString" Min="0" />
+                </FormItem>
+            </Panel>
+        </Collapse>
+        break;
+
+    default:
+        <Alert Type="@AlertType.Info" Message="Select a database provider to configure the connection." ShowIcon="true" />
+        break;
+}
+
+@code {
+    [Parameter] public DatabaseProvider Provider { get; set; }
+    [Parameter] public string ConnectionString { get; set; } = String.Empty;
+    [Parameter] public EventCallback<string> ConnectionStringChanged { get; set; }
+
+    SqliteConnectionStringBuilder SqliteBuilder = new();
+    MySqlConnectionStringBuilder MySqlBuilder = new();
+    NpgsqlConnectionStringBuilder NpgsqlBuilder = new();
+
+    DatabaseProvider _lastProvider = DatabaseProvider.Unknown;
+    string _lastConnectionString = String.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (Provider != _lastProvider || ConnectionString != _lastConnectionString)
+        {
+            ParseConnectionString();
+
+            _lastProvider = Provider;
+            _lastConnectionString = ConnectionString;
+        }
+    }
+
+    void ParseConnectionString()
+    {
+        try
+        {
+            switch (Provider)
+            {
+                case DatabaseProvider.SQLite:
+                    SqliteBuilder = new SqliteConnectionStringBuilder(ConnectionString ?? String.Empty);
+                    break;
+
+                case DatabaseProvider.MySQL:
+                    MySqlBuilder = new MySqlConnectionStringBuilder(ConnectionString ?? String.Empty);
+                    break;
+
+                case DatabaseProvider.PostgreSQL:
+                    NpgsqlBuilder = new NpgsqlConnectionStringBuilder(ConnectionString ?? String.Empty);
+                    break;
+            }
+        }
+        catch
+        {
+            // The existing connection string doesn't match the selected provider, start fresh.
+            SqliteBuilder = new();
+            MySqlBuilder = new();
+            NpgsqlBuilder = new();
+        }
+    }
+
+    async Task UpdateConnectionString()
+    {
+        var result = Provider switch
+        {
+            DatabaseProvider.SQLite => SqliteBuilder.ConnectionString,
+            DatabaseProvider.MySQL => MySqlBuilder.ConnectionString,
+            DatabaseProvider.PostgreSQL => NpgsqlBuilder.ConnectionString,
+            _ => ConnectionString
+        };
+
+        ConnectionString = result;
+        _lastConnectionString = result;
+
+        if (ConnectionStringChanged.HasDelegate)
+            await ConnectionStringChanged.InvokeAsync(result);
+    }
+}

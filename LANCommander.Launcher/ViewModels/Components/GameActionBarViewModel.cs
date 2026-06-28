@@ -540,7 +540,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var elapsed = DateTime.Now - end;
+        var elapsed = DateTime.UtcNow - end;
         if (elapsed.TotalMinutes < 1)
             LastPlayed = Localize("LastPlayedJustNow");
         else if (elapsed.TotalHours < 1)
@@ -559,7 +559,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             LastPlayed = Localize(days == 1 ? "LastPlayedDayAgo" : "LastPlayedDaysAgo", days);
         }
         else
-            LastPlayed = end.ToString("MMM d, yyyy");
+            LastPlayed = end.ToLocalTime().ToString("MMM d, yyyy");
     }
 
     /// <summary>

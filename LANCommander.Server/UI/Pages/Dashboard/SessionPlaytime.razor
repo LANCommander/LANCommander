@@ -8,7 +8,9 @@
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
     </Column>
     <PropertyColumn Property="d => d.Game.Title" Title="Game" Sortable Filterable />
-    <PropertyColumn Property="d => d.LastPlayed" Title="Last Played" Sortable Filterable />
+    <PropertyColumn Property="d => d.LastPlayed" Title="Last Played" Sortable Filterable>
+        <LocalTime Value="context.LastPlayed" />
+    </PropertyColumn>
     <PropertyColumn Property="d => d.SessionCount" Title="Sessions" Sortable Filterable />
     <PropertyColumn Property="d => d.TotalTime" Title="Total Time" Sortable />
     <PropertyColumn Property="d => d.AverageTime" Title="Average Session" Sortable DefaultSortOrder="SortDirection.Descending" />

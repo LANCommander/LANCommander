@@ -1,0 +1,119 @@
+@using LANCommander.Server.Settings
+@using Microsoft.Extensions.Options
+@inject UserService UserService
+@inject IOptions<Settings> Settings
+@inject IMessageService MessageService
+@inject ILogger<CreateUserDialog> Logger
+
+<Modal Title="Add a User" @bind-Visible="Visible" OnOk="Submit" OnCancel="Cancel" ConfirmLoading="Submitting">
+    <Form Model="Model" Layout="@FormLayout.Vertical">
+        <FormItem Label="Username">
+            <Input @bind-Value="@context.UserName" OnPressEnter="Submit" />
+        </FormItem>
+        <FormItem Label="Password">
+            <InputPassword @bind-Value="@context.Password" OnPressEnter="Submit" />
+        </FormItem>
+        <FormItem Label="Confirm Password">
+            <InputPassword @bind-Value="@context.PasswordConfirm" OnPressEnter="Submit" />
+        </FormItem>
+        @if (Settings.Value.Server.Authentication.RequireApproval)
+        {
+            <FormItem Label="Approved">
+                <Switch @bind-Value="@context.Approved" />
+            </FormItem>
+        }
+    </Form>
+</Modal>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public EventCallback OnCreated { get; set; }
+
+    NewUserModel Model { get; set; } = new();
+    bool Submitting = false;
+
+    async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Model.UserName))
+        {
+            MessageService.Error("A username is required!");
+            return;
+        }
+
+        if (Model.Password != Model.PasswordConfirm)
+        {
+            MessageService.Error("Passwords do not match!");
+            return;
+        }
+
+        if (await UserService.ExistsAsync(u => u.UserName == Model.UserName))
+        {
+            MessageService.Error("A user with that username already exists!");
+            return;
+        }
+
+        Submitting = true;
+
+        try
+        {
+            var approved = !Settings.Value.Server.Authentication.RequireApproval || Model.Approved;
+
+            var user = new User
+            {
+                UserName = Model.UserName,
+                Approved = approved,
+                ApprovedOn = approved ? DateTime.UtcNow : null,
+            };
+
+            var checkResult = await UserService.CheckRegister(user, Model.Password);
+
+            if (!checkResult.Succeeded)
+            {
+                foreach (var error in checkResult.Errors)
+                    MessageService.Error(error.Description);
+
+                return;
+            }
+
+            user = await UserService.AddAsync(user);
+
+            await UserService.ChangePassword(user.UserName, Model.Password);
+
+            MessageService.Success($"Created {user.UserName}!");
+
+            await Close();
+
+            await OnCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not create user!");
+            Logger.LogError(ex, "Could not create user!");
+        }
+        finally
+        {
+            Submitting = false;
+        }
+    }
+
+    async Task Cancel()
+    {
+        await Close();
+    }
+
+    async Task Close()
+    {
+        Model = new();
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    public class NewUserModel
+    {
+        public string UserName { get; set; }
+        public string Password { get; set; }
+        public string PasswordConfirm { get; set; }
+        public bool Approved { get; set; } = true;
+    }
+}

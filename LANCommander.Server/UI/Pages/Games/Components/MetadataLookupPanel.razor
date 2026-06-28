@@ -404,10 +404,10 @@ else if (_stage == ModalStage.Merge)
 
         try
         {
-            LANCommander.Server.Data.Models.Game? existing = null;
+            LANCommander.SDK.Models.Manifest.Game? existing = null;
 
             if (GameId != Guid.Empty)
-                existing = await GameService.GetAsync(GameId);
+                existing = await GameService.GetManifestAsync(GameId);
 
             var manifest = _fetchedManifest;
             manifest.Id = GameId == Guid.Empty ? Guid.NewGuid() : GameId;
@@ -419,34 +419,34 @@ else if (_stage == ModalStage.Merge)
                 manifest.Description = existing.Description;
 
             if (!_importReleasedOn && existing != null)
-                manifest.ReleasedOn = existing.ReleasedOn ?? default;
+                manifest.ReleasedOn = existing.ReleasedOn;
 
             if (!_importSingleplayer && existing != null)
                 manifest.Singleplayer = existing.Singleplayer;
 
             if (!_importEngine)
-                manifest.Engine = null;
+                manifest.Engine = existing?.Engine;
 
             if (!_importDevelopers)
-                manifest.Developers = new List<LANCommander.SDK.Models.Manifest.Company>();
+                manifest.Developers = existing?.Developers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
 
             if (!_importPublishers)
-                manifest.Publishers = new List<LANCommander.SDK.Models.Manifest.Company>();
+                manifest.Publishers = existing?.Publishers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
 
             if (!_importGenres)
-                manifest.Genres = new List<LANCommander.SDK.Models.Manifest.Genre>();
+                manifest.Genres = existing?.Genres ?? new List<LANCommander.SDK.Models.Manifest.Genre>();
 
             if (!_importTags)
-                manifest.Tags = new List<LANCommander.SDK.Models.Manifest.Tag>();
+                manifest.Tags = existing?.Tags ?? new List<LANCommander.SDK.Models.Manifest.Tag>();
 
             if (!_importMultiplayerModes)
-                manifest.MultiplayerModes = new List<LANCommander.SDK.Models.Manifest.MultiplayerMode>();
+                manifest.MultiplayerModes = existing?.MultiplayerModes ?? new List<LANCommander.SDK.Models.Manifest.MultiplayerMode>();
 
             if (!_importSavePaths)
-                manifest.SavePaths = new List<LANCommander.SDK.Models.Manifest.SavePath>();
+                manifest.SavePaths = existing?.SavePaths ?? new List<LANCommander.SDK.Models.Manifest.SavePath>();
 
             if (!_importExternalIds)
-                manifest.ExternalIds = new List<LANCommander.SDK.Models.Manifest.GameExternalId>();
+                manifest.ExternalIds = existing?.ExternalIds ?? new List<LANCommander.SDK.Models.Manifest.GameExternalId>();
 
             using var context = ImportContextFactory.Create();
             await context.InitializeMetadataUpdateAsync(manifest);

@@ -22,11 +22,11 @@ namespace LANCommander.Server.Services.MediaGrabbers
             _grabbers = new List<IMediaGrabberService> { hq, steam, steamGridDb, youtube };
         }
 
-        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
+        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
         {
             var results = new List<MediaGrabberResult>();
 
-            await foreach (var batch in SearchStreamAsync(type, keywords))
+            await foreach (var batch in SearchStreamAsync(type, keywords, page))
                 results.AddRange(batch);
 
             return results;
@@ -34,16 +34,18 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public IEnumerable<string> GetGrabberNames() => _grabbers.Select(g => g.Name);
 
+        public IEnumerable<string> GetPagingGrabberNames() => _grabbers.Where(g => g.SupportsPaging).Select(g => g.Name);
+
         public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
-            MediaType type, string keywords,
+            MediaType type, string keywords, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            await foreach (var batch in SearchStreamAsync(type, keywords, null, cancellationToken))
+            await foreach (var batch in SearchStreamAsync(type, keywords, null, page, cancellationToken))
                 yield return batch;
         }
 
         public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
-            MediaType type, string keywords, string? grabberName,
+            MediaType type, string keywords, string? grabberName, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var applicable = _grabbers.Where(g => g.SupportedMediaTypes.Contains(type)).ToList();
@@ -60,7 +62,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             {
                 try
                 {
-                    var results = (await grabber.SearchAsync(type, keywords)).ToList();
+                    var results = (await grabber.SearchAsync(type, keywords, page)).ToList();
 
                     foreach (var result in results)
                         result.GrabberName = grabber.Name;

@@ -36,8 +36,13 @@ public class HqMediaGrabber(
         { MediaType.Manual, HqModels.MediaType.Manual },
     };
 
-    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
+    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
     {
+        // HQ returns all matching media for a game in a single request,
+        // so there are no further pages to load.
+        if (page > 0)
+            return [];
+
         if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
             return [];
 

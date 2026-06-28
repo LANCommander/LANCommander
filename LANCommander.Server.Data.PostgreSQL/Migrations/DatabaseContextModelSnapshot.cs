@@ -1242,6 +1242,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("EnableSaves")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1249,6 +1255,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
@@ -1733,11 +1742,17 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("EnableSaves")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")
@@ -1771,6 +1786,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");

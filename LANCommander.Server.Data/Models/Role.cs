@@ -9,6 +9,16 @@ namespace LANCommander.Server.Data.Models
     {
         public ICollection<Collection> Collections { get; set; }
         public ICollection<UserRole> UserRoles { get; set; }
+
+        [Display(Name = "Storage Quota (MB)")]
+        public int? StorageQuotaMB { get; set; }
+
+        [Display(Name = "Download Speed (KB/s)")]
+        public int? DownloadSpeedKBps { get; set; }
+
+        [Display(Name = "Enable Saves")]
+        public bool? EnableSaves { get; set; }
+
         [NotMapped]
         public ICollection<User> Users 
         {

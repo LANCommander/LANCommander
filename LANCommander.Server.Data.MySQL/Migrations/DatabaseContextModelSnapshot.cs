@@ -1242,6 +1242,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("EnableSaves")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -1249,6 +1255,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
@@ -1733,11 +1742,17 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool?>("EnableSaves")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("LockoutEnabled")
@@ -1771,6 +1786,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("int");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("tinyint(1)");

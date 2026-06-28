@@ -252,6 +252,35 @@ public static class SaveEndpoints
         
         using (var stream = file.OpenReadStream())
         {
+            var limits = await userService.GetLimitsAsync(user);
+
+            if (!limits.SavesEnabled)
+                return TypedResults.BadRequest("Cloud saves are disabled for your account.");
+
+            if (!limits.StorageUnlimited)
+            {
+                if (stream.Length > limits.StorageQuotaBytes)
+                    return TypedResults.BadRequest("Save exceeds your storage quota.");
+
+                // Cull oldest saves (across all games) to make room for the incoming save.
+                var existingSaves = await saveService
+                    .Query(q => q
+                        .Where(s => s.UserId == user.Id)
+                        .OrderBy(s => s.CreatedOn))
+                    .GetAsync();
+
+                var used = existingSaves.Sum(s => s.Size);
+
+                foreach (var saveToCull in existingSaves)
+                {
+                    if (used + stream.Length <= limits.StorageQuotaBytes)
+                        break;
+
+                    await saveService.DeleteAsync(saveToCull);
+                    used -= saveToCull.Size;
+                }
+            }
+
             var save = new GameSave
             {
                 Game = game,
@@ -259,9 +288,9 @@ public static class SaveEndpoints
                 Size = stream.Length,
                 StorageLocation = saveStorageLocation,
             };
-            
+
             stream.Seek(0, SeekOrigin.Begin);
-        
+
             save = await saveService.AddAsync(save);
 
             try

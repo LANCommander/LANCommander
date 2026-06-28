@@ -24,6 +24,21 @@
         <FormItem Label="Collections">
             <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="SelectedCollections" />
         </FormItem>
+        <FormItem Label="Storage Quota (MB)" Help="0 or blank = unlimited">
+            <AntDesign.InputNumber TValue="int?" @bind-Value="Role.StorageQuotaMB" Min="0" />
+        </FormItem>
+        <FormItem Label="Download Speed (KB/s)" Help="0 or blank = unlimited">
+            <AntDesign.InputNumber TValue="int?" @bind-Value="Role.DownloadSpeedKBps" Min="0" />
+        </FormItem>
+        <FormItem Label="Cloud Saves" Help="Disable cloud saves for users in this role">
+            <Select TItemValue="bool?" TItem="bool?" @bind-Value="Role.EnableSaves">
+                <SelectOptions>
+                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)null" Label="Not set" />
+                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)true" Label="Enabled" />
+                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)false" Label="Disabled" />
+                </SelectOptions>
+            </Select>
+        </FormItem>
     </Form>
 </PageContent>
 

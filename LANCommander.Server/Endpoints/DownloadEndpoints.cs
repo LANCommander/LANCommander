@@ -20,7 +20,9 @@ public static class DownloadEndpoints
 
     internal static async Task<Results<NotFound, FileStreamHttpResult>> DownloadArchiveAsync(
         Guid id,
+        ClaimsPrincipal user,
         [FromServices] ArchiveService archiveService,
+        [FromServices] DownloadThrottle downloadThrottle,
         [FromServices] ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger(nameof(DownloadEndpoints));
@@ -59,7 +61,10 @@ public static class DownloadEndpoints
             logger.LogInformation("Serving redistributable archive {RedistName} (ID: {ArchiveId})", archive.Redistributable.Name, id);
         }
 
-        return TypedResults.File(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read), fileDownloadName: name, contentType: MediaTypeNames.Application.Octet);
+        var stream = await downloadThrottle.ApplyAsync(
+            new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read), user);
+
+        return TypedResults.File(stream, fileDownloadName: name, contentType: MediaTypeNames.Application.Octet);
     }
 
     internal static async Task<Results<UnauthorizedHttpResult, NotFound, FileStreamHttpResult>> DownloadSaveAsync(

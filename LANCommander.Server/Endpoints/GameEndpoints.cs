@@ -412,6 +412,7 @@ public static class GameEndpoints
     internal static async Task<IResult> DownloadAsync(
         [FromServices] GameService gameService,
         [FromServices] ArchiveService archiveService,
+        [FromServices] DownloadThrottle downloadThrottle,
         [FromServices] IOptions<Settings.Settings> settings,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
@@ -463,8 +464,10 @@ public static class GameEndpoints
         
         var contentType = MediaTypeNames.Application.Octet;
         var fileName = $"{game.Title.SanitizeFilename()}.zip";
-        
-        return TypedResults.File(fs, contentType, fileName);
+
+        var stream = await downloadThrottle.ApplyAsync(fs, userPrincipal);
+
+        return TypedResults.File(stream, contentType, fileName);
     }
 
     internal static async Task<IResult> ImportAsync(

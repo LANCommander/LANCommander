@@ -100,6 +100,49 @@ namespace LANCommander.Server.Services
             return roles.Any(r => r.Name == roleName);
         }
 
+        public async Task<UserLimits> GetLimitsAsync(User user)
+        {
+            var roles = await GetRolesAsync(user);
+
+            var storageQuota = Resolve(user.StorageQuotaMB, roles.Select(r => r.StorageQuotaMB));
+            var downloadSpeed = Resolve(user.DownloadSpeedKBps, roles.Select(r => r.DownloadSpeedKBps));
+            var savesEnabled = Resolve(user.EnableSaves, roles.Select(r => r.EnableSaves));
+
+            return new UserLimits(storageQuota, downloadSpeed, savesEnabled);
+        }
+
+        /// <summary>
+        /// Resolves an effective limit value. A per-user override (if set) takes precedence. Otherwise the most
+        /// restrictive (lowest non-zero) value across the user's roles is used. A value of 0 means unlimited, and a
+        /// null role value means the limit is not configured for that role and is ignored.
+        /// </summary>
+        internal static int Resolve(int? userOverride, IEnumerable<int?> roleValues)
+        {
+            if (userOverride.HasValue)
+                return userOverride.Value;
+
+            var restrictive = roleValues
+                .Where(v => v.HasValue && v.Value > 0)
+                .Select(v => v!.Value)
+                .ToList();
+
+            return restrictive.Count == 0 ? 0 : restrictive.Min();
+        }
+
+        /// <summary>
+        /// Resolves an effective boolean permission (e.g. whether saves are enabled). A per-user override (if set)
+        /// takes precedence. Otherwise the most restrictive value across the user's roles is used: if any role
+        /// explicitly disables the permission it is disabled. A null role value means the permission is not configured
+        /// for that role and is ignored; if no role configures it the permission defaults to enabled.
+        /// </summary>
+        internal static bool Resolve(bool? userOverride, IEnumerable<bool?> roleValues)
+        {
+            if (userOverride.HasValue)
+                return userOverride.Value;
+
+            return !roleValues.Any(v => v == false);
+        }
+
         public async Task<IEnumerable<Collection>> GetCollectionsAsync(User user)
         {
             try
@@ -523,8 +566,13 @@ namespace LANCommander.Server.Services
             user.Alias = entity.Alias;
             user.Approved = entity.Approved;
             user.ApprovedOn = entity.ApprovedOn;
+            user.StorageQuotaMB = entity.StorageQuotaMB;
+            user.DownloadSpeedKBps = entity.DownloadSpeedKBps;
+            user.EnableSaves = entity.EnableSaves;
 
             await identityContext.UserManager.UpdateAsync(user);
+
+            await Cache.RemoveByTagAsync($"User/{entity.Id}");
 
             return user;
         }

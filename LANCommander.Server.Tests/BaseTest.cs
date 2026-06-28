@@ -1,5 +1,6 @@
 using System.Formats.Asn1;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Services;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.EntityFrameworkCore;
@@ -12,17 +13,25 @@ namespace LANCommander.Server.Tests;
 [TestCaseOrderer(DependencyOrderer.TypeName, DependencyOrderer.AssemblyName)]
 public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
 {
-    protected readonly SDK.Client Client = ApplicationFixture.Instance.Client;
+    protected AuthenticationClient AuthenticationClient => ApplicationFixture.Instance.AuthenticationClient;
+    protected GameClient GameClient => ApplicationFixture.Instance.GameClient;
+    protected SaveClient SaveClient => ApplicationFixture.Instance.SaveClient;
+    protected TagClient TagClient => ApplicationFixture.Instance.TagClient;
+
     protected readonly IServiceProvider ServiceProvider;
-    
+
     private AsyncServiceScope? _scope;
-    
+
     public BaseTest(ApplicationFixture fixture)
     {
         _scope = ApplicationFixture.Instance.ServiceProvider.CreateAsyncScope();
-        
+
         ServiceProvider = _scope?.ServiceProvider;
     }
+
+    /// <summary>Authenticates against the in-memory server; the token is reused by the SDK clients.</summary>
+    protected Task AuthenticateAsync(string username, string password)
+        => ApplicationFixture.Instance.AuthenticateAsync(username, password);
     
     protected T GetService<T>() => ServiceProvider.GetService<T>();
 

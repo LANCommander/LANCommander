@@ -23,11 +23,15 @@ public class UserServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
         var userService = GetService<UserService>();
         
         var result = await userService.ChangePassword(TestConstants.AdminUserName, TestConstants.AdminInitialPassword, TestConstants.AdminPassword);
-        
+
         result.Succeeded.ShouldBeTrue();
-        
+
         var validPassword = await userService.CheckPassword(TestConstants.AdminUserName, TestConstants.AdminPassword);
-        
+
         validPassword.ShouldBeTrue();
+
+        // The admin account is shared across the in-memory test database, so restore the original
+        // password to avoid breaking other tests that authenticate with AdminInitialPassword.
+        await userService.ChangePassword(TestConstants.AdminUserName, TestConstants.AdminPassword, TestConstants.AdminInitialPassword);
     }
 }

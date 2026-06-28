@@ -1,5 +1,6 @@
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Settings.Enums;
 using Moq;
 using Octokit;
 using Semver;
@@ -76,6 +77,20 @@ public static class GitHubServiceMockFactory
         mock.Setup(x => x.GetReleaseAsync(It.IsAny<SemVersion>()))
             .ReturnsAsync((SemVersion version) =>
             {
+                return CreateRelease(version);
+            });
+
+        // Setup GetReleaseAsync (tag overload) — UpdateService resolves releases by string tag
+        // (e.g. "v1.0.0" or "nightly"); without this the mock returns null and callers NRE.
+        mock.Setup(x => x.GetReleaseAsync(It.IsAny<string>()))
+            .ReturnsAsync((string tag) =>
+            {
+                var trimmed = tag?.TrimStart('v');
+
+                var version = SemVersion.TryParse(trimmed, SemVersionStyles.Any, out var parsed)
+                    ? parsed
+                    : Version;
+
                 return CreateRelease(version);
             });
 

@@ -1,7 +1,7 @@
-using LANCommander.Server.Services.Factories;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.ImportExport.Factories;
+using LANCommander.Server.Services;
 
 namespace LANCommander.Server.Tests.Services;
 
@@ -244,32 +244,23 @@ public class ImporterTests(ApplicationFixture fixture) : BaseTest(fixture)
             }
         };
 
-        // Set the manifest on the import context
+        var gameService = GetService<GameService>();
 
-        // Prepare the import queue with all flags
-        var importFlags = ImportRecordFlags.Actions | ImportRecordFlags.Archives | ImportRecordFlags.Collections |
-                         ImportRecordFlags.CustomFields | ImportRecordFlags.Developers | ImportRecordFlags.Engine |
-                         ImportRecordFlags.Genres | ImportRecordFlags.Keys | ImportRecordFlags.Media |
-                         ImportRecordFlags.MultiplayerModes | ImportRecordFlags.Platforms | ImportRecordFlags.PlaySessions |
-                         ImportRecordFlags.Publishers | ImportRecordFlags.Saves | ImportRecordFlags.SavePaths |
-                         ImportRecordFlags.Scripts | ImportRecordFlags.Tags;
+        // Queue the manifest's metadata records (developers, engine, genres, multiplayer modes,
+        // publishers, save paths, tags and the game itself) and run the import pipeline. This is
+        // the archive-free entry point used for in-memory imports.
+        await importContext.InitializeMetadataUpdateAsync(manifest);
 
-        await importContext.PrepareGameImportQueueAsync(manifest, importFlags);
-
-        // Import the queue
         await importContext.ImportQueueAsync();
 
-        // Assert that the game was imported successfully
-        Assert.NotNull(importContext.DataRecord);
-        Assert.IsType<LANCommander.Server.Data.Models.Game>(importContext.DataRecord);
-        
-        var importedGame = (LANCommander.Server.Data.Models.Game)importContext.DataRecord;
+        // Assert that the game was imported successfully by reading it back from the service
+        var importedGame = await gameService.GetAsync(manifest.Id);
+
+        Assert.NotNull(importedGame);
         Assert.Equal("Test Game", importedGame.Title);
         Assert.Equal("A comprehensive test game for import testing", importedGame.Description);
 
-        // Assert that all items were processed
-        // Note: The exact count may vary depending on how the importers handle the data
-        // We expect at least some items to be processed
+        // Assert that all queued items were processed
         Assert.True(importContext.Processed > 0, "At least some items should have been processed");
 
         // Clean up

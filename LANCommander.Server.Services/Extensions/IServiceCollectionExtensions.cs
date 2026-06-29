@@ -33,6 +33,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<GameService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<ScriptService>();
+        services.AddScoped<ModuleService>();
         services.AddScoped<GenreService>();
         services.AddScoped<PlatformService>();
         services.AddScoped<KeyService>();

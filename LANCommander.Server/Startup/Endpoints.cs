@@ -32,6 +32,7 @@ public static class Endpoints
             endpoints.MapLauncherEndpoints();
             endpoints.MapLibraryEndpoints();
             endpoints.MapRedistributablesEndpoints();
+            endpoints.MapModulesEndpoints();
             endpoints.MapToolsEndpoints();
             endpoints.MapIssueEndpoints();
             endpoints.MapSaveEndpoints();

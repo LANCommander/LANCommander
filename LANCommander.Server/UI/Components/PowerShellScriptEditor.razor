@@ -1,0 +1,91 @@
+@inject ScriptService ScriptService
+@inject ModuleService ModuleService
+
+<Flex Gap="FlexGap.Small" Wrap="FlexWrap.Wrap" Align="FlexAlign.Center" Style="margin-bottom: 16px;">
+    @foreach (var group in Snippets.Select(s => s.Group).Distinct())
+    {
+        <Dropdown>
+            <Overlay>
+                <Menu>
+                    @foreach (var snippet in Snippets.Where(s => s.Group == group))
+                    {
+                        <MenuItem OnClick="() => InsertSnippet(snippet)">
+                            @snippet.Name
+                        </MenuItem>
+                    }
+                </Menu>
+            </Overlay>
+
+            <ChildContent>
+                <Button Type="@ButtonType.Primary">@group</Button>
+            </ChildContent>
+        </Dropdown>
+    }
+
+    @if (Variables != null && Variables.Any())
+    {
+        <Dropdown>
+            <Overlay>
+                <Menu>
+                    @foreach (var variable in Variables)
+                    {
+                        <MenuItem OnClick="() => InsertText(variable)">
+                            @variable
+                        </MenuItem>
+                    }
+                </Menu>
+            </Overlay>
+
+            <ChildContent>
+                <Button Type="@ButtonType.Primary">Variables</Button>
+            </ChildContent>
+        </Dropdown>
+    }
+</Flex>
+
+<CodeInput @ref="_codeInput"
+           Value="@Value"
+           ValueChanged="@ValueChanged"
+           Language="Languages.PowerShell"
+           OnSave="OnSave"
+           ModuleFunctions="@_moduleFunctions"
+           Height="@Height" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public int Height { get; set; } = 500;
+    [Parameter] public IEnumerable<string>? Variables { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    CodeInput? _codeInput;
+    IEnumerable<Snippet> Snippets { get; set; } = [];
+    List<ModuleFunctionCompletion> _moduleFunctions = new();
+
+    protected override void OnInitialized()
+    {
+        Snippets = ScriptService.GetSnippets();
+
+        _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
+            .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
+            .ToList();
+    }
+
+    public async Task LayoutAsync()
+    {
+        if (_codeInput != null)
+            await _codeInput.LayoutAsync();
+    }
+
+    async Task InsertText(string text)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertText(text);
+    }
+
+    async Task InsertSnippet(Snippet snippet)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertSnippet(snippet.Content);
+    }
+}

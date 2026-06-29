@@ -1,0 +1,57 @@
+@page "/Scripting/Modules"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ModuleService ModuleService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<PageHeader Title="Modules">
+    <PageHeaderExtra>
+        <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Modules/Add"))" Type="@ButtonType.Primary">Add Module</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent>
+    <Table TItem="Module" DataSource="@Modules" Size="@TableSize.Small" Context="module" Responsive>
+        <PropertyColumn Property="m => m.Name" Title="Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <ActionColumn Title="" Style="text-align: right">
+            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
+                <a href="@($"/Scripting/Modules/{module.Name}")" class="ant-btn ant-btn-primary">Edit</a>
+                <Popconfirm OnConfirm="() => Delete(module)" Title="Are you sure you want to delete this module?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </Flex>
+        </ActionColumn>
+    </Table>
+</PageContent>
+
+@code {
+    IEnumerable<Module> Modules { get; set; } = new List<Module>();
+
+    protected override void OnInitialized()
+    {
+        Load();
+    }
+
+    void Load()
+    {
+        Modules = ModuleService.GetModules().ToList();
+    }
+
+    void Delete(Module module)
+    {
+        try
+        {
+            ModuleService.DeleteModule(module.Name);
+
+            Load();
+
+            MessageService.Success("Module deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete module!");
+            Logger?.LogError(ex, "Could not delete module");
+        }
+    }
+}

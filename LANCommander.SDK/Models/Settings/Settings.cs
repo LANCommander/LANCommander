@@ -13,6 +13,7 @@ public class Settings
     public GameSettings Games { get; set; } = new();
     public ToolSettings Tools { get; set; } = new();
     public MediaSettings Media { get; set; } = new();
+    public ModuleSettings Modules { get; set; } = new();
     public DebugSettings Debug { get; set; } = new();
     public UpdateSettings Updates { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();

@@ -37,7 +37,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
     public override bool IsCollectionFiltered => !string.IsNullOrEmpty(SelectedCollection);
     public override string FilteredCollectionName => SelectedCollection ?? string.Empty;
 
-    public LibraryViewModel(IServiceProvider serviceProvider)
+    public LibraryViewModel(IServiceProvider serviceProvider) : base(serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<LibraryViewModel>>();
@@ -66,6 +66,12 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 var mediaService   = scope.ServiceProvider.GetRequiredService<MediaService>();
                 var mediaClient    = scope.ServiceProvider.GetRequiredService<MediaClient>();
                 var dbContext       = scope.ServiceProvider.GetRequiredService<DbContext>();
+
+                if (!IsOfflineMode)
+                {
+                    var moduleClient = scope.ServiceProvider.GetRequiredService<ModuleClient>();
+                    await moduleClient.SyncAsync();
+                }
 
                 var items = await libraryService.GetItemsAsync();
                 var results = new List<GameItemViewModel>();

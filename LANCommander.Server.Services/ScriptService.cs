@@ -125,5 +125,62 @@ namespace LANCommander.Server.Services
                 };
             });
         }
+
+        private string GetSnippetsStoragePath()
+        {
+            var storagePath = settingsProvider.CurrentValue.Server.Scripts.Snippets.StoragePath;
+
+            if (string.IsNullOrWhiteSpace(storagePath))
+            {
+                storagePath = AppPaths.GetConfigPath("Snippets");
+
+                settingsProvider.Update(s =>
+                {
+                    s.Server.Scripts.Snippets.StoragePath = storagePath;
+                });
+            }
+
+            if (!Directory.Exists(storagePath))
+                Directory.CreateDirectory(storagePath);
+
+            return storagePath;
+        }
+
+        private string GetSnippetPath(string group, string name) =>
+            Path.Combine(GetSnippetsStoragePath(), group, $"{name}.ps1");
+
+        public Snippet GetSnippet(string group, string name)
+        {
+            var path = GetSnippetPath(group, name);
+
+            if (!File.Exists(path))
+                return null;
+
+            return new Snippet
+            {
+                Group = group,
+                Name = name,
+                Content = File.ReadAllText(path),
+            };
+        }
+
+        public void SaveSnippet(Snippet snippet)
+        {
+            var path = GetSnippetPath(snippet.Group, snippet.Name);
+            var directory = Path.GetDirectoryName(path);
+
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            File.WriteAllText(path, snippet.Content ?? string.Empty);
+        }
+
+        public void DeleteSnippet(string group, string name)
+        {
+            var path = GetSnippetPath(group, name);
+
+            if (File.Exists(path))
+                File.Delete(path);
+        }
     }
 }

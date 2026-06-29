@@ -17,12 +17,14 @@
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
     [Parameter] public string? ScriptType { get; set; }
+    [Parameter] public IEnumerable<ModuleFunctionCompletion>? ModuleFunctions { get; set; }
 
     static bool _completionsRegistered;
     static bool _yamlCompletionsRegistered;
     bool _isEditorInitialized = false;
     string? _previousValue;
     string? _previousScriptType;
+    IEnumerable<ModuleFunctionCompletion>? _previousModuleFunctions;
     IJSObjectReference? _module;
 
     StandaloneCodeEditor _editor;
@@ -62,6 +64,11 @@
             await RunValidationAsync();
         }
 
+        if (_isEditorInitialized && _module != null && !ReferenceEquals(ModuleFunctions, _previousModuleFunctions))
+        {
+            await PushModuleFunctionsAsync();
+        }
+
         await base.OnParametersSetAsync();
     }
 
@@ -99,8 +106,27 @@
         if (Language.Id == "powershell")
             await _module.InvokeVoidAsync("SetupFileDropHandler");
 
+        if (Language.Id == "powershell")
+            await PushModuleFunctionsAsync();
+
         if (OnReady.HasDelegate)
             await OnReady.InvokeAsync();
+    }
+
+    async Task PushModuleFunctionsAsync()
+    {
+        if (_module == null)
+            return;
+
+        _previousModuleFunctions = ModuleFunctions;
+
+        await _module.InvokeVoidAsync("setModuleFunctions", ModuleFunctions ?? []);
+    }
+
+    public async Task LayoutAsync()
+    {
+        if (_isEditorInitialized && _editor != null)
+            await _editor.Layout();
     }
 
     public async Task InsertText(string text)

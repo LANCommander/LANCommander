@@ -175,8 +175,16 @@ namespace LANCommander.SDK.PowerShell
             T result = default;
             
             var initialSessionState = InitialSessionState.CreateDefault();
-            
+
             initialSessionState.AddCustomCmdlets();
+
+            // Always import synced PowerShell modules so their functions are available to every script
+            var modulesPath = AppPaths.GetConfigPath("Modules");
+            if (Directory.Exists(modulesPath))
+            {
+                foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
+                    initialSessionState.ImportPSModule(new[] { moduleDirectory });
+            }
 
             DisableWow64Redirection();
 

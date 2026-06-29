@@ -1,0 +1,388 @@
+@page "/Scripting/Modules/Add"
+@page "/Scripting/Modules/{Name}"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ModuleService ModuleService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Edit> Logger
+
+<style>
+    .module-editor .monaco-editor,
+    .module-editor .monaco-editor-container {
+        min-height: 400px;
+    }
+</style>
+
+<PageHeader Title="@(IsNew ? "Add Module" : Module.Name)">
+    <PageHeaderExtra>
+        <Flex Gap="FlexGap.Small">
+            <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Modules"))">Back</Button>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </Flex>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent Class="module-editor">
+    <Form Model="@Module" Layout="@FormLayout.Vertical">
+        <Tabs ActiveKey="@_activeTab" ActiveKeyChanged="OnTabChanged">
+            <TabPane Key="functions" Tab="Functions">
+                @if (_activeTab == "functions")
+                {
+                    <GridRow Gutter="16">
+                        <GridCol Span="6">
+                            <Flex Style="margin-bottom: 16px;">
+                                <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" OnClick="AddFunction" Block>Add Function</Button>
+                            </Flex>
+
+                            <Tree TItem="ModuleFunction" SelectedKeys="@_selectedFunctionKeys" OnClick="OnFunctionTreeClick">
+                                <ChildContent>
+                                    <TreeNode Title="Public" Selectable="false" Expanded>
+                                        <ChildContent>
+                                            @foreach (var function in Module.Functions.Where(f => f.Visibility == FunctionVisibility.Public))
+                                            {
+                                                <TreeNode Key="@function.Id.ToString()" Title="@FunctionTitle(function)" DataItem="function" IsLeaf />
+                                            }
+                                        </ChildContent>
+                                    </TreeNode>
+                                    <TreeNode Title="Private" Selectable="false" Expanded>
+                                        <ChildContent>
+                                            @foreach (var function in Module.Functions.Where(f => f.Visibility == FunctionVisibility.Private))
+                                            {
+                                                <TreeNode Key="@function.Id.ToString()" Title="@FunctionTitle(function)" DataItem="function" IsLeaf />
+                                            }
+                                        </ChildContent>
+                                    </TreeNode>
+                                </ChildContent>
+                            </Tree>
+                        </GridCol>
+
+                        <GridCol Span="18">
+                            @if (_selectedFunction != null)
+                            {
+                                <FormItem Label="Function Name">
+                                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Style="flex-grow: 1;">
+                                            <Select TItem="VerbOption" TItemValue="string"
+                                                    DataSource="_verbOptions"
+                                                    @bind-Value="Verb"
+                                                    ValueName="@nameof(VerbOption.Verb)"
+                                                    LabelName="@nameof(VerbOption.Verb)"
+                                                    GroupName="@nameof(VerbOption.Group)"
+                                                    SortByGroup="SortDirection.Ascending"
+                                                    SortByLabel="SortDirection.Ascending"
+                                                    ShowSearch
+                                                    Style="width: 160px;" />
+                                            <span>-</span>
+                                            <Input @bind-Value="Noun" Placeholder="Noun" Style="flex-grow: 1;" />
+                                        </Flex>
+                                        <Select @bind-Value="_selectedFunction.Visibility" TItemValue="FunctionVisibility" TItem="FunctionVisibility" Style="width: 140px;">
+                                            <SelectOptions>
+                                                <SelectOption TItemValue="FunctionVisibility" TItem="FunctionVisibility" Value="FunctionVisibility.Public" Label="Public" />
+                                                <SelectOption TItemValue="FunctionVisibility" TItem="FunctionVisibility" Value="FunctionVisibility.Private" Label="Private" />
+                                            </SelectOptions>
+                                        </Select>
+                                        <Popconfirm OnConfirm="() => DeleteFunction(_selectedFunction)" Title="Are you sure you want to delete this function?">
+                                            <Button Icon="@IconType.Outline.Delete" Danger />
+                                        </Popconfirm>
+                                    </Flex>
+                                </FormItem>
+
+                                @if (!string.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsValidFunctionName(_selectedFunction.Name))
+                                {
+                                    <Alert Type="@AlertType.Error" Message="Function names must use Verb-Noun format (e.g. Get-Thing)." ShowIcon="true" Style="margin-bottom: 16px;" />
+                                }
+                                else if (!string.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsApprovedVerb(_selectedFunction.Name))
+                                {
+                                    <Alert Type="@AlertType.Warning" Message="That verb is not an approved PowerShell verb. Run Get-Verb to see the approved list." ShowIcon="true" Style="margin-bottom: 16px;" />
+                                }
+
+                                <PowerShellScriptEditor @key="_selectedFunction" @bind-Value="_selectedFunction.Content" OnSave="Save" Height="400" />
+                            }
+                        </GridCol>
+                    </GridRow>
+                }
+            </TabPane>
+            <TabPane Key="manifest" Tab="Manifest">
+                <FormItem Label="Module Name">
+                    <Input @bind-Value="@context.Name" Disabled="@(!IsNew)" />
+                </FormItem>
+
+                <Flex Justify="FlexJustify.FlexEnd" Align="FlexAlign.Center" Gap="FlexGap.Small" Style="margin-bottom: 16px;">
+                    <span>Advanced</span>
+                    <Switch Checked="@_advancedManifest" OnChange="OnManifestModeChanged" />
+                </Flex>
+
+                @if (_activeTab == "manifest" && _advancedManifest)
+                {
+                    <CodeInput @bind-Value="@context.Manifest" Language="Languages.PowerShell" OnSave="Save" Height="400" />
+                }
+                else if (_activeTab == "manifest")
+                {
+                    <Form Model="@_manifest" Layout="@FormLayout.Vertical" Context="manifestContext">
+                        <FormItem Label="Module Version">
+                            <Input @bind-Value="@_manifest.ModuleVersion" />
+                        </FormItem>
+                        <FormItem Label="GUID">
+                            <Input @bind-Value="@_manifest.Guid" />
+                        </FormItem>
+                        <FormItem Label="Author">
+                            <Input @bind-Value="@_manifest.Author" />
+                        </FormItem>
+                        <FormItem Label="Description">
+                            <TextArea @bind-Value="@_manifest.Description" />
+                        </FormItem>
+                        <FormItem Label="Exported Functions">
+                            @if (ExportedFunctions.Count == 0)
+                            {
+                                <AntDesign.Text Type="@TextElementType.Secondary">None. Mark functions as Public to export them.</AntDesign.Text>
+                            }
+                            else
+                            {
+                                @foreach (var function in ExportedFunctions)
+                                {
+                                    <Tag>@function</Tag>
+                                }
+                            }
+                        </FormItem>
+                        <FormItem Label="Exported Aliases">
+                            @if (ExportedAliases.Count == 0)
+                            {
+                                <AntDesign.Text Type="@TextElementType.Secondary">None detected.</AntDesign.Text>
+                            }
+                            else
+                            {
+                                @foreach (var alias in ExportedAliases)
+                                {
+                                    <Tag>@alias</Tag>
+                                }
+                            }
+                        </FormItem>
+                    </Form>
+                }
+            </TabPane>
+        </Tabs>
+    </Form>
+</PageContent>
+
+@code {
+    [Parameter] public string Name { get; set; }
+
+    Module Module { get; set; } = new();
+    ModuleManifest _manifest = new();
+    ModuleFunction _selectedFunction;
+
+    string _verb = string.Empty;
+    string _noun = string.Empty;
+    string[] _selectedFunctionKeys = Array.Empty<string>();
+    List<VerbOption> _verbOptions = new();
+
+    record VerbOption(string Verb, string Group);
+
+    string _activeTab = "functions";
+    bool _advancedManifest;
+
+    bool _isNew = true;
+    bool IsNew => _isNew;
+
+    IReadOnlyList<string> ExportedFunctions => ModuleService.GetExportedFunctions(Module);
+    IReadOnlyList<string> ExportedAliases => ModuleService.GetExportedAliases(Module);
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(Name))
+        {
+            var module = ModuleService.GetModule(Name);
+
+            if (module != null)
+            {
+                Module = module;
+                _isNew = false;
+            }
+        }
+
+        if (_isNew && Module.Functions.Count == 0)
+        {
+            Module.Functions.Add(new ModuleFunction
+            {
+                Name = "Get-Example",
+                Visibility = FunctionVisibility.Public,
+                Content = "function Get-Example {\n    [CmdletBinding()]\n    param()\n\n    \"Hello from a LANCommander module\"\n}\n",
+            });
+        }
+
+        _verbOptions = ModuleService.GetApprovedVerbGroups()
+            .SelectMany(g => g.Verbs.Select(v => new VerbOption(v, g.Name)))
+            .ToList();
+        _manifest = ModuleService.ParseManifest(Module.Manifest);
+        SelectFunction(Module.Functions.FirstOrDefault());
+    }
+
+    void OnTabChanged(string key)
+    {
+        _activeTab = key;
+    }
+
+    string FunctionTitle(ModuleFunction function) =>
+        string.IsNullOrWhiteSpace(function.Name) ? "(unnamed)" : function.Name;
+
+    void AddFunction()
+    {
+        var function = new ModuleFunction
+        {
+            Name = string.Empty,
+            Visibility = FunctionVisibility.Public,
+            Content = "function Verb-Noun {\n    [CmdletBinding()]\n    param()\n\n}\n",
+        };
+
+        Module.Functions.Add(function);
+        SelectFunction(function);
+    }
+
+    void SelectFunction(ModuleFunction function)
+    {
+        _selectedFunction = function;
+        _selectedFunctionKeys = function == null ? Array.Empty<string>() : new[] { function.Id.ToString() };
+        LoadNameParts();
+    }
+
+    void DeleteFunction(ModuleFunction function)
+    {
+        Module.Functions.Remove(function);
+
+        if (_selectedFunction == function)
+            SelectFunction(Module.Functions.FirstOrDefault());
+    }
+
+    void LoadNameParts()
+    {
+        _verb = string.Empty;
+        _noun = string.Empty;
+
+        if (_selectedFunction == null || string.IsNullOrEmpty(_selectedFunction.Name))
+            return;
+
+        var dash = _selectedFunction.Name.IndexOf('-');
+
+        if (dash > 0)
+        {
+            _verb = _selectedFunction.Name.Substring(0, dash);
+            _noun = _selectedFunction.Name.Substring(dash + 1);
+        }
+        else
+        {
+            _verb = _selectedFunction.Name;
+        }
+    }
+
+    string Verb
+    {
+        get => _verb;
+        set { _verb = value; UpdateFunctionName(); }
+    }
+
+    string Noun
+    {
+        get => _noun;
+        set { _noun = value; UpdateFunctionName(); }
+    }
+
+    void OnFunctionTreeClick(TreeEventArgs<ModuleFunction> args)
+    {
+        if (args.Node.DataItem != null)
+            SelectFunction(args.Node.DataItem);
+    }
+
+    void UpdateFunctionName()
+    {
+        if (_selectedFunction == null)
+            return;
+
+        var name = string.IsNullOrEmpty(_noun) ? _verb : $"{_verb}-{_noun}";
+
+        _selectedFunction.Name = name;
+
+        if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(_selectedFunction.Content))
+        {
+            var declaration = new System.Text.RegularExpressions.Regex(
+                @"function\s+[^\s{(]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (declaration.IsMatch(_selectedFunction.Content))
+                _selectedFunction.Content = declaration.Replace(_selectedFunction.Content, $"function {name}", 1);
+        }
+    }
+
+    void OnManifestModeChanged(bool advanced)
+    {
+        if (advanced)
+        {
+            if (string.IsNullOrWhiteSpace(_manifest.RootModule))
+                _manifest.RootModule = $"{Module.Name}.psm1";
+
+            Module.Manifest = ModuleService.GenerateManifest(_manifest, ExportedFunctions, ExportedAliases);
+        }
+        else
+        {
+            _manifest = ModuleService.ParseManifest(Module.Manifest);
+        }
+
+        _advancedManifest = advanced;
+    }
+
+    void Save()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Module.Name))
+            {
+                MessageService.Error("Name is required.");
+                return;
+            }
+
+            if (IsNew && ModuleService.ModuleExists(Module.Name))
+            {
+                MessageService.Error("A module with that name already exists.");
+                return;
+            }
+
+            foreach (var function in Module.Functions)
+            {
+                if (!ModuleService.IsValidFunctionName(function.Name))
+                {
+                    MessageService.Error($"'{function.Name}' is not a valid function name. Use Verb-Noun format.");
+                    return;
+                }
+            }
+
+            var duplicate = Module.Functions
+                .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(g => g.Count() > 1);
+
+            if (duplicate != null)
+            {
+                MessageService.Error($"Duplicate function name '{duplicate.Key}'. Function names must be unique.");
+                return;
+            }
+
+            if (!_advancedManifest)
+            {
+                if (string.IsNullOrWhiteSpace(_manifest.RootModule))
+                    _manifest.RootModule = $"{Module.Name}.psm1";
+
+                Module.Manifest = ModuleService.GenerateManifest(_manifest, ExportedFunctions, ExportedAliases);
+            }
+
+            ModuleService.SaveModule(Module);
+
+            _isNew = false;
+
+            MessageService.Success("Module saved!");
+
+            NavigationManager.NavigateTo("/Scripting/Modules");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save module!");
+            Logger?.LogError(ex, "Could not save module");
+        }
+    }
+}

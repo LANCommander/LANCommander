@@ -37,7 +37,7 @@ public partial class LibraryViewModel : GamesCollectionViewModel
     public override bool IsCollectionFiltered => !string.IsNullOrEmpty(SelectedCollection);
     public override string FilteredCollectionName => SelectedCollection ?? string.Empty;
 
-    public LibraryViewModel(IServiceProvider serviceProvider) : base(serviceProvider)
+    public LibraryViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<LibraryViewModel>>();

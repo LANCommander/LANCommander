@@ -1,0 +1,58 @@
+@page "/Scripting/Snippets"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ScriptService ScriptService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<PageHeader Title="Snippets">
+    <PageHeaderExtra>
+        <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Snippets/Add"))" Type="@ButtonType.Primary">Add Snippet</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent>
+    <Table TItem="Snippet" DataSource="@Snippets" Size="@TableSize.Small" Context="snippet" Responsive>
+        <PropertyColumn Property="s => s.Group" Title="Group" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <PropertyColumn Property="s => s.Name" Title="Name" Sortable />
+        <ActionColumn Title="" Style="text-align: right">
+            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
+                <a href="@($"/Scripting/Snippets/{snippet.Group}/{snippet.Name}")" class="ant-btn ant-btn-primary">Edit</a>
+                <Popconfirm OnConfirm="() => Delete(snippet)" Title="Are you sure you want to delete this snippet?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </Flex>
+        </ActionColumn>
+    </Table>
+</PageContent>
+
+@code {
+    IEnumerable<Snippet> Snippets { get; set; } = new List<Snippet>();
+
+    protected override void OnInitialized()
+    {
+        Load();
+    }
+
+    void Load()
+    {
+        Snippets = ScriptService.GetSnippets().OrderBy(s => s.Group).ThenBy(s => s.Name).ToList();
+    }
+
+    void Delete(Snippet snippet)
+    {
+        try
+        {
+            ScriptService.DeleteSnippet(snippet.Group, snippet.Name);
+
+            Load();
+
+            MessageService.Success("Snippet deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete snippet!");
+            Logger?.LogError(ex, "Could not delete snippet");
+        }
+    }
+}

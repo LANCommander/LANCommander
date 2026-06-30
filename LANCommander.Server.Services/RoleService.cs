@@ -37,10 +37,15 @@ namespace LANCommander.Server.Services
 
         public override async Task<Role> UpdateAsync(Role entity)
         {
-            return await base.UpdateAsync(entity, async context =>
+            var role = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(r => r.Collections);
             });
+
+            // Role limit columns are cached as part of users' role snapshots, so invalidate them.
+            await cache.RemoveByTagAsync(["User/Roles", "User/Security"]);
+
+            return role;
         }
 
         public async Task<Role> GetAsync(string roleName)

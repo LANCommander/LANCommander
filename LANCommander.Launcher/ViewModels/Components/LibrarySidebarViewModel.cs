@@ -39,6 +39,9 @@ public partial class LibrarySidebarViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isOfflineMode;
 
+    [ObservableProperty]
+    private bool _areUserLibrariesEnabled = true;
+
     public event EventHandler? DepotSelected;
     public event EventHandler<LibraryItemViewModel>? ItemSelected;
     public event EventHandler? RefreshRequested;
@@ -78,6 +81,19 @@ public partial class LibrarySidebarViewModel : ViewModelBase
             var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
             var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
+
+            if (!IsOfflineMode)
+            {
+                try
+                {
+                    var authenticationClient = scope.ServiceProvider.GetRequiredService<AuthenticationClient>();
+                    AreUserLibrariesEnabled = await authenticationClient.GetEnableUserLibrariesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to fetch user library setting; defaulting to enabled");
+                }
+            }
 
             var items = await libraryService.GetItemsAsync();
 

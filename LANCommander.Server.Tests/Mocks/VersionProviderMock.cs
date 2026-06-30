@@ -1,5 +1,7 @@
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
+using System;
+using System.Linq;
 using LANCommander.Server.Settings.Enums;
 using Semver;
 
@@ -16,7 +18,16 @@ public class VersionProviderMock : IVersionProvider
 
     public ReleaseChannel GetReleaseChannel(SemVersion version)
     {
-        throw new NotImplementedException();
+        if (version.IsRelease)
+            return ReleaseChannel.Stable;
+
+        if (version.IsPrerelease && version.PrereleaseIdentifiers.Any(pi => pi.Value == "nightly"))
+            return ReleaseChannel.Nightly;
+
+        if (version.IsPrerelease)
+            return ReleaseChannel.Prerelease;
+
+        throw new ArgumentException("Could not parse version number", nameof(version));
     }
 
     public static void SetVersion(string version)

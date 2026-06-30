@@ -1,0 +1,86 @@
+@page "/Scripting/Snippets/Add"
+@page "/Scripting/Snippets/{Group}/{Name}"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ScriptService ScriptService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Edit> Logger
+
+<PageHeader Title="@(IsNew ? "Add Snippet" : $"{Snippet.Group} / {Snippet.Name}")">
+    <PageHeaderExtra>
+        <Flex Gap="FlexGap.Small">
+            <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Snippets"))">Back</Button>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </Flex>
+    </PageHeaderExtra>
+</PageHeader>
+
+<PageContent>
+    <Form Model="@Snippet" Layout="@FormLayout.Vertical">
+        <FormItem Label="Group">
+            <Input @bind-Value="@context.Group" />
+        </FormItem>
+        <FormItem Label="Name">
+            <Input @bind-Value="@context.Name" />
+        </FormItem>
+        <FormItem Label="Content">
+            <PowerShellScriptEditor @bind-Value="@context.Content" OnSave="Save" Height="500" />
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    [Parameter] public string Group { get; set; }
+    [Parameter] public string Name { get; set; }
+
+    Snippet Snippet { get; set; } = new();
+
+    string _originalGroup;
+    string _originalName;
+
+    bool IsNew => string.IsNullOrEmpty(_originalName);
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Name))
+        {
+            var snippet = ScriptService.GetSnippet(Group, Name);
+
+            if (snippet != null)
+            {
+                Snippet = snippet;
+                _originalGroup = snippet.Group;
+                _originalName = snippet.Name;
+            }
+        }
+    }
+
+    void Save()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Snippet.Group) || string.IsNullOrWhiteSpace(Snippet.Name))
+            {
+                MessageService.Error("Group and Name are required.");
+                return;
+            }
+
+            if (!IsNew && (_originalGroup != Snippet.Group || _originalName != Snippet.Name))
+                ScriptService.DeleteSnippet(_originalGroup, _originalName);
+
+            ScriptService.SaveSnippet(Snippet);
+
+            _originalGroup = Snippet.Group;
+            _originalName = Snippet.Name;
+
+            MessageService.Success("Snippet saved!");
+
+            NavigationManager.NavigateTo("/Scripting/Snippets");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save snippet!");
+            Logger?.LogError(ex, "Could not save snippet");
+        }
+    }
+}

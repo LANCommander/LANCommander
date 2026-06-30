@@ -140,6 +140,14 @@ namespace LANCommander.Launcher.Data
                 );
 
             builder.Entity<Game>()
+                .HasMany(g => g.Tools)
+                .WithMany(t => t.Games)
+                .UsingEntity<GameTool>(
+                    gt => gt.HasOne(x => x.Tool).WithMany(t => t.GameTools).HasForeignKey(x => x.ToolId).OnDelete(DeleteBehavior.Cascade),
+                    gt => gt.HasOne(x => x.Game).WithMany(g => g.GameTools).HasForeignKey(x => x.GameId).OnDelete(DeleteBehavior.Cascade),
+                    gt => gt.HasKey(x => new { x.GameId, x.ToolId }));
+
+            builder.Entity<Game>()
                 .HasMany(g => g.DependentGames)
                 .WithOne(g => g.BaseGame)
                 .IsRequired(false)

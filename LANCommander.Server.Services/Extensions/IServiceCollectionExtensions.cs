@@ -34,6 +34,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<GameVersionService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<ScriptService>();
+        services.AddScoped<ModuleService>();
         services.AddScoped<GenreService>();
         services.AddScoped<PlatformService>();
         services.AddScoped<KeyService>();

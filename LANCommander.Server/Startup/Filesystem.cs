@@ -18,6 +18,7 @@ public static class Filesystem
             settings.Value.Server.Launcher.StoragePath,
             settings.Value.Server.Backups.StoragePath,
             settings.Value.Server.Scripts.Snippets.StoragePath,
+            settings.Value.Server.Scripts.Modules.StoragePath,
         ];
 
         foreach (var directory in directories)

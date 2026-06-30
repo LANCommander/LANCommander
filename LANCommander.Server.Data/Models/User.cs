@@ -75,6 +75,18 @@ namespace LANCommander.Server.Data.Models
         public string? Alias { get; set; }
 
         [JsonIgnore]
+        [Display(Name = "Storage Quota (MB)")]
+        public int? StorageQuotaMB { get; set; }
+
+        [JsonIgnore]
+        [Display(Name = "Download Speed (KB/s)")]
+        public int? DownloadSpeedKBps { get; set; }
+
+        [JsonIgnore]
+        [Display(Name = "Enable Saves")]
+        public bool? EnableSaves { get; set; }
+
+        [JsonIgnore]
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 

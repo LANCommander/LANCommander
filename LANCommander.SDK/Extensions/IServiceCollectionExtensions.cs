@@ -47,6 +47,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<LibraryClient>();
         services.AddSingleton<LobbyClient>();
         services.AddSingleton<MediaClient>();
+        services.AddSingleton<ModuleClient>();
         services.AddSingleton<PlaySessionClient>();
         services.AddSingleton<ProfileClient>();
         services.AddSingleton<RedistributableClient>();

@@ -28,8 +28,13 @@ namespace LANCommander.Server.Services.MediaGrabbers
             SteamClient = new SteamClient();
         }
 
-        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
+        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
         {
+            // Steam returns the full set of assets for a game in a single request,
+            // so there are no further pages to load.
+            if (page > 0)
+                return Enumerable.Empty<MediaGrabberResult>();
+
             return type switch
             {
                 MediaType.Cover => await GetCoversAsync(keywords),

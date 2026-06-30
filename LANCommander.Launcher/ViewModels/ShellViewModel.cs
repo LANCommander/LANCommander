@@ -112,6 +112,9 @@ public partial class ShellViewModel : ViewModelBase
     public bool IsLibraryActive => !IsDepotActive;
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
 
+    [ObservableProperty]
+    private bool _areUserLibrariesEnabled = true;
+
     // Child view models
     public DepotViewModel           DepotViewModel           { get; private set; } = null!;
     public DepotBrowseViewModel     DepotBrowseViewModel     { get; private set; } = null!;
@@ -218,11 +221,25 @@ public partial class ShellViewModel : ViewModelBase
         DownloadQueue.InstallCompleted += OnInstallCompleted;
         DownloadQueue.Initialize();
 
+        if (!IsOfflineMode)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var authenticationClient = scope.ServiceProvider.GetRequiredService<AuthenticationClient>();
+                AreUserLibrariesEnabled = await authenticationClient.GetEnableUserLibrariesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch user library setting; defaulting to enabled");
+            }
+        }
+
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
 
-        // Open to library if the user has games, otherwise show the depot
-        if (LibraryViewModel.Games.Count > 0)
+        // Open to library if user libraries are enabled and the user has games, otherwise show the depot
+        if (AreUserLibrariesEnabled && LibraryViewModel.Games.Count > 0)
             ShowLibrary();
         else
             ShowDepot();

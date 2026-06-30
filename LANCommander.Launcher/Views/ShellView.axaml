@@ -76,7 +76,8 @@
 
                 <!-- Left: Depot / Library toggle -->
                 <StackPanel Grid.Column="0"
-                            Orientation="Horizontal">
+                            Orientation="Horizontal"
+                            IsVisible="{Binding AreUserLibrariesEnabled}">
                     <IconButton Command="{Binding ShowLibraryCommand}"
                                 Text="Library"
                                 Classes="Text"

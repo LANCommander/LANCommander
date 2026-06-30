@@ -52,8 +52,15 @@ const variables: VariableDefinition[] = [
     { name: "$GameId", type: "string", description: "Game GUID identifier", scriptTypes: ["BeforeStart", "AfterStop", "GameStarted", "GameStopped"] },
 ];
 
+interface ModuleFunctionDefinition {
+    name: string;
+    synopsis: string | null;
+    module: string | null;
+}
+
 let registered = false;
 let currentScriptType: string | null = null;
+let moduleFunctions: ModuleFunctionDefinition[] = [];
 
 export function registerPowerShellCompletions(): void {
     if (registered || typeof monaco === "undefined") return;
@@ -65,6 +72,10 @@ export function registerPowerShellCompletions(): void {
 
 export function setScriptType(scriptType: string | null): void {
     currentScriptType = scriptType;
+}
+
+export function setModuleFunctions(functions: ModuleFunctionDefinition[]): void {
+    moduleFunctions = functions ?? [];
 }
 
 function getFilteredVariables(): VariableDefinition[] {
@@ -177,6 +188,18 @@ function registerCompletionProvider(): void {
 
             // Cmdlet name completions
             if (!paramMatch && !memberMatch) {
+                for (const fn of moduleFunctions) {
+                    suggestions.push({
+                        label: fn.name,
+                        kind: monaco.languages.CompletionItemKind.Function,
+                        insertText: fn.name,
+                        detail: fn.module ? `Module: ${fn.module}` : "Module function",
+                        documentation: fn.synopsis || undefined,
+                        range,
+                        sortText: `0_${fn.name}`,
+                    });
+                }
+
                 for (let i = 0; i < allCmdlets.length; i++) {
                     const c = allCmdlets[i];
                     const isBuiltin = i >= cmdlets.length;
@@ -225,6 +248,24 @@ function registerHoverProvider(): void {
                             contents: [
                                 { value: `**${cmdlet.name}**` },
                                 { value: buildCmdletHoverMarkdown(cmdlet) },
+                            ],
+                        };
+                    }
+
+                    const fn = moduleFunctions.find((f) => f.name === match![0]);
+                    if (fn) {
+                        const body = (fn.module ? `**Module:** ${fn.module}` : "Module function") +
+                            (fn.synopsis ? `\n\n${fn.synopsis}` : "");
+                        return {
+                            range: {
+                                startLineNumber: position.lineNumber,
+                                endLineNumber: position.lineNumber,
+                                startColumn: start,
+                                endColumn: end,
+                            },
+                            contents: [
+                                { value: `**${fn.name}**` },
+                                { value: body },
                             ],
                         };
                     }

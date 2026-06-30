@@ -1,0 +1,49 @@
+---
+title: 2.1.6
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.6 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## New Features
+
+### User and Role Limits
+Roles and individual users can now be assigned limits for save storage, total user storage, and download speed. This gives admins finer control over resource usage on shared servers. Resolves [#85](https://github.com/LANCommander/LANCommander/issues/85), [#84](https://github.com/LANCommander/LANCommander/issues/84), and [#100](https://github.com/LANCommander/LANCommander/issues/).
+
+### PowerShell Modules
+A new "Scripting" section has been added to the server UI where PowerShell modules can be defined. These act as a library of reusable functions that can be called from any script. Modules are automatically synced to the launcher and imported when scripts are executed.
+
+### Per-Game Tool Tracking
+Tools are now tracked on a per-game basis. Tools can be marked to "Always Install", and any tools installed for a game are automatically uninstalled when that game is uninstalled.
+
+### Admin User Creation Dialog
+Admins can now create new users directly from the server with a new user creation dialog. Fixes [#419](https://github.com/LANCommander/LANCommander/issues/419).
+
+### Database Connection Editor
+The connection string input used in first-time setup and server settings has been refactored into a full database connection component, making it easier to configure database connections. Fixes [#256](https://github.com/LANCommander/LANCommander/issues/256).
+
+## Improvements
+- Added "Select All" and "Load More" buttons to the media grabber. Fixes [#417](https://github.com/LANCommander/LANCommander/issues/417).
+- Metadata lookups now preserve existing values instead of overwriting them. Fixes [#420](https://github.com/LANCommander/LANCommander/issues/420).
+- The Library navigation and library/depot switcher are now hidden in both the web UI and launcher when user libraries are disabled.
+- Action `ServerHost` values now default to the LANCommander server address.
+
+## Bug Fixes
+- Fixed the display of UTC times.
+- Fixed creation of entities with many-to-many relationships. Ref [#414](https://github.com/LANCommander/LANCommander/issues/414).
+- Fixed reconciliation of library games based on whether user libraries are enabled or disabled. Ref [#423](https://github.com/LANCommander/LANCommander/issues/423).
+- The profile cache is now invalidated when logging out. Fixes [#422](https://github.com/LANCommander/LANCommander/issues/422).
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.6" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.5" to="v2.1.6" />

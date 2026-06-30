@@ -13,15 +13,19 @@ namespace LANCommander.Server.Services.MediaGrabbers
     {
         public string Name => "YouTube";
 
+        public bool SupportsPaging => true;
+
         public MediaType[] SupportedMediaTypes => [MediaType.Video];
 
-        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
+        private const int PageSize = 20;
+
+        public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
         {
             var youtube = new YoutubeClient();
             var results = new List<MediaGrabberResult>();
             var group = $"{keywords.Trim()}: Trailers & Gameplay";
 
-            foreach (var video in (await youtube.Search.GetVideosAsync(keywords + " trailer gameplay")).Take(20))
+            foreach (var video in (await youtube.Search.GetVideosAsync(keywords + " trailer gameplay")).Skip(page * PageSize).Take(PageSize))
             {
                 var thumbnail = video.Thumbnails.GetWithHighestResolution();
 

@@ -97,14 +97,14 @@ namespace LANCommander.Launcher.Services
             await importContext.ImportQueueAsync();
             await importContext.DownloadPendingMediaAsync();
 
-            // Remove games from the local library that are no longer in the remote library
-            await ReconcileRemovedGamesAsync(remoteLibrary.Select(g => g.Id).ToList());
+            // Make the local library membership match the remote library exactly
+            await ReconcileLibraryMembershipAsync(remoteLibrary.Select(g => g.Id).ToList());
 
             // Sync play sessions for all library games
             await SyncPlaySessionsAsync(remoteLibrary.Select(g => g.Id));
         }
 
-        internal async Task ReconcileRemovedGamesAsync(IReadOnlyCollection<Guid> remoteGameIds)
+        internal async Task ReconcileLibraryMembershipAsync(IReadOnlyCollection<Guid> remoteGameIds)
         {
             // The library endpoint returns an empty list both when the library is genuinely
             // empty and when it fails server-side. Treating an empty result as authoritative
@@ -125,19 +125,48 @@ namespace LANCommander.Launcher.Services
             if (library == null)
                 return;
 
-            var staleGames = library.Games
-                .Where(g => !remoteGameIds.Contains(g.Id))
-                .ToList();
+            var remoteGameIdSet = remoteGameIds.ToHashSet();
 
-            if (staleGames.Count == 0)
-                return;
+            // Remove games that are no longer present in the remote library.
+            var staleGames = library.Games
+                .Where(g => !remoteGameIdSet.Contains(g.Id))
+                .ToList();
 
             foreach (var staleGame in staleGames)
                 library.Games.Remove(staleGame);
 
+            // Add games that belong in the remote library and already exist locally but are
+            // missing from the local library. The import above skips games whose cached records
+            // are unchanged, so toggling "Enable User Libraries" off on the server (which makes
+            // the endpoint return every game) would otherwise leave previously-dropped games
+            // hidden from the library view.
+            var localGameIds = library.Games
+                .Select(g => g.Id)
+                .ToHashSet();
+
+            var missingGameIds = remoteGameIdSet
+                .Where(id => !localGameIds.Contains(id))
+                .ToList();
+
+            var gamesToAdd = missingGameIds.Count == 0
+                ? new List<Data.Models.Game>()
+                : await dbContext.Games
+                    .Where(g => missingGameIds.Contains(g.Id))
+                    .ToListAsync();
+
+            foreach (var game in gamesToAdd)
+                library.Games.Add(game);
+
+            if (staleGames.Count == 0 && gamesToAdd.Count == 0)
+                return;
+
             await dbContext.SaveChangesAsync();
 
-            Logger?.LogInformation("Removed {Count} game(s) from the local library that are no longer present on the server", staleGames.Count);
+            if (staleGames.Count > 0)
+                Logger?.LogInformation("Removed {Count} game(s) from the local library that are no longer present on the server", staleGames.Count);
+
+            if (gamesToAdd.Count > 0)
+                Logger?.LogInformation("Added {Count} game(s) to the local library that were already cached locally", gamesToAdd.Count);
         }
 
         public async Task ImportGameAsync(Guid gameId)

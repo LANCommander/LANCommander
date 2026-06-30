@@ -1,4 +1,3 @@
-using LANCommander.SDK.Services;
 using Shouldly;
 using LANCommander.Server.Services;
 using LANCommander.Server.Data;
@@ -317,13 +316,12 @@ public class VersioningTests(ApplicationFixture fixture) : BaseTest(fixture)
         /*
         // Simple service that's not bound to change much
         var tagService = GetService<TagService>();
-        var authenticationClient = GetService<AuthenticationClient>();
 
         var user = await EnsureAdminUserCreatedAsync();
 
-        await authenticationClient.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
+        await AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
 
-        var response = await Client.Tags.CreateAsync(new SDK.Models.Tag
+        var response = await TagClient.CreateAsync(new SDK.Models.Tag
         {
             Name = "Test Tag",
         });

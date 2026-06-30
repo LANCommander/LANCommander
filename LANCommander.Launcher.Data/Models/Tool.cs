@@ -8,13 +8,10 @@ namespace LANCommander.Launcher.Data.Models
         public string Name { get; set; }
         public string? Description { get; set; }
         public string? Notes { get; set; }
-        
-        public bool Installed { get; set; }
-        public string? InstallDirectory { get; set; }
-        public string? InstalledVersion { get; set; }
-        public DateTime? InstalledOn { get; set; }
+
         public string? LatestVersion { get; set; }
-        
+
         public virtual ICollection<Game>? Games { get; set; } = new List<Game>();
+        public virtual ICollection<GameTool> GameTools { get; set; } = new List<GameTool>();
     }
 }

@@ -600,28 +600,22 @@ namespace LANCommander.Launcher.Services
                             await _gameClient.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
 
                             // Uninstall any tools that were deselected. Selected tools are installed
-                            // via their own queue items, so we only handle removal here.
+                            // via their own queue items, so we only handle removal here. Tool install
+                            // state is tracked per game, so this only affects this game's copy.
                             var selectedToolIds = queueItem.ToolIds ?? [];
-                            var toolsToRemove = await _toolService
-                                .Query(t => t.Installed && t.Games.Any(g => g.Id == localGame.Id))
-                                .ToListAsync();
+                            var installedTools = await _toolService.GetInstalledToolsForGameAsync(localGame.Id);
 
-                            foreach (var localTool in toolsToRemove.Where(t => !selectedToolIds.Contains(t.Id)))
+                            foreach (var gameTool in installedTools.Where(gt => !selectedToolIds.Contains(gt.ToolId)))
                             {
                                 try
                                 {
-                                    await _toolClient.UninstallAsync(localGame.InstallDirectory, localTool.Id);
+                                    await _toolClient.UninstallAsync(localGame.InstallDirectory, gameTool.ToolId);
 
-                                    localTool.Installed = false;
-                                    localTool.InstallDirectory = null;
-                                    localTool.InstalledVersion = null;
-                                    localTool.InstalledOn = null;
-
-                                    await _toolService.UpdateAsync(localTool);
+                                    await _toolService.SetToolUninstalledAsync(localGame.Id, gameTool.ToolId);
                                 }
                                 catch (Exception ex)
                                 {
-                                    Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", localTool.Id, localGame.Id);
+                                    Logger?.LogError(ex, "Could not uninstall tool {ToolId} from game {GameId}", gameTool.ToolId, localGame.Id);
                                 }
                             }
 
@@ -687,7 +681,10 @@ namespace LANCommander.Launcher.Services
                     return;
                 }
 
-                if (localTool.Installed)
+                var alreadyInstalled = queueItem.DependsOnId.HasValue
+                    && await _toolService.IsToolInstalledForGameAsync(queueItem.DependsOnId.Value, localTool.Id);
+
+                if (alreadyInstalled)
                 {
                     // Modify — currently no-op
                 }
@@ -871,6 +868,19 @@ namespace LANCommander.Launcher.Services
 
                         // Update manifest and scripts on disk
                         await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+
+                        // Bug #1 convergence: after applying all updates and re-importing, the installed
+                        // version may still trail the server's resolved latest version (the last applied
+                        // archive's version string is not guaranteed to equal the canonical latest version).
+                        // Converge explicitly so the game leaves the "update available" state.
+                        if (!string.IsNullOrWhiteSpace(localGame.LatestVersion))
+                        {
+                            localGame.InstalledVersion = localGame.LatestVersion;
+                            await _gameService.UpdateAsync(localGame);
+
+                            Logger?.LogInformation("[InstallQueue] Update(Game): Converged InstalledVersion to LatestVersion {LatestVersion} for {Title}",
+                                localGame.LatestVersion, currentItem.Title);
+                        }
                     }
                     else
                     {
@@ -937,6 +947,8 @@ namespace LANCommander.Launcher.Services
                 currentItem.Status = InstallStatus.Downloading;
                 OnQueueChanged?.Invoke();
 
+                string toolInstallDirectory = null;
+
                 try
                 {
                     var planItem = new InstallPlanItem
@@ -950,7 +962,7 @@ namespace LANCommander.Launcher.Services
 
                     var result = await _toolClient.ExecuteInstallPlanItemAsync(planItem, currentItem.CancellationToken.Token);
 
-                    UpdateToolState(currentItem, localTool, result.InstallDirectory);
+                    toolInstallDirectory = result.InstallDirectory;
                 }
                 catch (InstallCanceledException ex)
                 {
@@ -978,7 +990,12 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    await _toolService.UpdateAsync(localTool);
+                    // Install state is tracked per game because a tool can be shared by several
+                    // games and is installed into each game's own directory.
+                    if (currentItem.DependsOnId.HasValue)
+                        await _toolService.SetToolInstalledAsync(currentItem.DependsOnId.Value, localTool.Id, toolInstallDirectory, currentItem.Version);
+                    else
+                        Logger?.LogWarning("Tool {ToolName} ({ToolId}) was installed without an associated game; install state not recorded", localTool.Name, localTool.Id);
                 }
                 catch (Exception ex)
                 {
@@ -1198,14 +1215,6 @@ namespace LANCommander.Launcher.Services
                     localAddon.InstalledOn = null;
                 }
             }
-        }
-
-        private static void UpdateToolState(InstallQueueTool currentItem, Tool localTool, string installDirectory)
-        {
-            localTool.InstallDirectory = installDirectory;
-            localTool.Installed = true;
-            localTool.InstalledVersion = currentItem.Version;
-            localTool.InstalledOn ??= DateTime.Now;
         }
 
         public async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)

@@ -57,8 +57,16 @@
 {
     <div class="media-grabber-group">
         <div class="media-grabber-group-header">
-            <h2>@grabberGroup.Group</h2>
-            <span class="media-grabber-group-source">via @grabberGroup.GrabberName</span>
+            <div class="media-grabber-group-title">
+                <h2>@grabberGroup.Group</h2>
+                <span class="media-grabber-group-source">via @grabberGroup.GrabberName</span>
+            </div>
+            @if (MultiSelect && grabberGroup.Results.Any())
+            {
+                <Button Size="ButtonSize.Small" OnClick="() => ToggleSelectAll(grabberGroup)">
+                    @(AllSelected(grabberGroup) ? "Deselect all" : "Select all")
+                </Button>
+            }
         </div>
 
         @if (Type == MediaType.Video)
@@ -89,6 +97,18 @@
         else
         {
             <ImagePicker Size="Size" MultiSelect="MultiSelect" SelectedValues="_selectedKeys" SelectedValuesChanged="OnMultiImageSelectionChanged" Images="@grabberGroup.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
+        }
+
+        @if (CanLoadMore(grabberGroup))
+        {
+            <div class="media-grabber-load-more">
+                <Button Size="ButtonSize.Small"
+                        Loading="@(_loadingGroupId == GroupId(grabberGroup))"
+                        Disabled="@(_loadingGroupId != null)"
+                        OnClick="() => LoadMoreGroup(grabberGroup)">
+                    Load more
+                </Button>
+            </div>
         }
     </div>
 }
@@ -135,6 +155,12 @@
     CancellationTokenSource _searchCts;
     List<MediaGrabberResult> _allResults = new();
     List<GroupedResults> _groupedResults = new();
+    HashSet<string> _seenKeys = new();
+
+    HashSet<string> _pagingProviders = new();
+    Dictionary<string, int> _groupPages = new();
+    HashSet<string> _exhaustedGroups = new();
+    string _loadingGroupId;
 
     string _selectedProvider = string.Empty;
     string[] _availableProviders = [];
@@ -147,6 +173,7 @@
 
         _availableProviders = new[] { "All" }.Concat(MediaGrabberService.GetGrabberNames()).ToArray();
         _selectedProvider = _availableProviders.First();
+        _pagingProviders = MediaGrabberService.GetPagingGrabberNames().ToHashSet();
 
         await GetResults(Type, Search);
     }
@@ -171,7 +198,11 @@
             _preview = null;
             _allResults.Clear();
             _groupedResults.Clear();
+            _seenKeys.Clear();
             _selectedKeys.Clear();
+            _groupPages.Clear();
+            _exhaustedGroups.Clear();
+            _loadingGroupId = null;
             await InvokeAsync(StateHasChanged);
 
             if (String.IsNullOrWhiteSpace(search))
@@ -179,18 +210,7 @@
 
             var grabberName = _selectedProvider == "All" ? null : _selectedProvider;
 
-            await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, grabberName, token))
-            {
-                if (token.IsCancellationRequested)
-                    break;
-
-                foreach (var result in batch)
-                    result.UniqueKey = $"{result.GrabberName}:{result.Id}";
-
-                _allResults.AddRange(batch);
-                RebuildGroups();
-                await InvokeAsync(StateHasChanged);
-            }
+            await StreamResults(type, search, grabberName, 0, null, token);
 
             Loading = false;
             await InvokeAsync(StateHasChanged);
@@ -203,6 +223,79 @@
 
             Loading = false;
         }
+    }
+
+    private string GroupId(GroupedResults group) => $"{group.GrabberName}|{group.Group}";
+
+    private bool CanLoadMore(GroupedResults group) =>
+        !Loading
+        && group.Results.Any()
+        && _pagingProviders.Contains(group.GrabberName)
+        && !_exhaustedGroups.Contains(GroupId(group));
+
+    private async Task LoadMoreGroup(GroupedResults group)
+    {
+        if (Loading || _loadingGroupId != null || String.IsNullOrWhiteSpace(Search))
+            return;
+
+        var groupId = GroupId(group);
+        _searchCts ??= new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            _loadingGroupId = groupId;
+            await InvokeAsync(StateHasChanged);
+
+            var nextPage = _groupPages.GetValueOrDefault(groupId) + 1;
+            _groupPages[groupId] = nextPage;
+
+            // Only query the provider this group came from, and keep only this game's results.
+            var added = await StreamResults(Type, Search, group.GrabberName, nextPage, group.Group, token);
+
+            if (added == 0)
+                _exhaustedGroups.Add(groupId);
+
+            _loadingGroupId = null;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _loadingGroupId = null;
+            MessageService.Error("An unknown error occurred when trying to get more media results");
+            Logger.LogError(ex, "An unknown error occurred when trying to get more media results");
+        }
+    }
+
+    private async Task<int> StreamResults(MediaType type, string search, string? grabberName, int page, string? onlyGroup, CancellationToken token)
+    {
+        var added = 0;
+
+        await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, grabberName, page, token))
+        {
+            if (token.IsCancellationRequested)
+                break;
+
+            foreach (var result in batch)
+            {
+                if (onlyGroup != null && result.Group != onlyGroup)
+                    continue;
+
+                result.UniqueKey = $"{result.GrabberName}:{result.Id}";
+
+                if (!_seenKeys.Add(result.UniqueKey))
+                    continue;
+
+                _allResults.Add(result);
+                added++;
+            }
+
+            RebuildGroups();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        return added;
     }
 
     private void RebuildGroups()
@@ -227,6 +320,27 @@
             if (!_selectedKeys.Add(result.UniqueKey))
                 _selectedKeys.Remove(result.UniqueKey);
         }
+    }
+
+    private bool AllSelected(GroupedResults group) =>
+        group.Results.Count > 0 && group.Results.All(r => _selectedKeys.Contains(r.UniqueKey));
+
+    private async Task ToggleSelectAll(GroupedResults group)
+    {
+        var keys = group.Results.Select(r => r.UniqueKey).ToList();
+
+        if (keys.All(_selectedKeys.Contains))
+        {
+            foreach (var key in keys)
+                _selectedKeys.Remove(key);
+        }
+        else
+        {
+            foreach (var key in keys)
+                _selectedKeys.Add(key);
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnResultPicked(MediaGrabberResult result)

@@ -14,9 +14,15 @@
 
 <Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
     <PropertyColumn Property="ps => ps.Game.Title" Title="Game" />
-    <PropertyColumn Property="ps => ps.Start" />
-    <PropertyColumn Property="ps => ps.End" />
-    <PropertyColumn Property="ps => ps.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable DefaultSortOrder="@SortDirection.Descending" />
+    <PropertyColumn Property="ps => ps.Start">
+        <LocalTime Value="context.Start" />
+    </PropertyColumn>
+    <PropertyColumn Property="ps => ps.End">
+        <LocalTime Value="context.End" />
+    </PropertyColumn>
+    <PropertyColumn Property="ps => ps.CreatedOn" Sortable DefaultSortOrder="@SortDirection.Descending">
+        <LocalTime Value="context.CreatedOn" />
+    </PropertyColumn>
     <PropertyColumn Property="ps => ps.CreatedBy" Sortable>
         @context.CreatedBy?.UserName
     </PropertyColumn>

@@ -67,6 +67,12 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 var mediaClient    = scope.ServiceProvider.GetRequiredService<MediaClient>();
                 var dbContext       = scope.ServiceProvider.GetRequiredService<DbContext>();
 
+                if (!IsOfflineMode)
+                {
+                    var moduleClient = scope.ServiceProvider.GetRequiredService<ModuleClient>();
+                    await moduleClient.SyncAsync();
+                }
+
                 var items = await libraryService.GetItemsAsync();
                 var results = new List<GameItemViewModel>();
                 var gameModels = new List<LANCommander.Launcher.Data.Models.Game>();

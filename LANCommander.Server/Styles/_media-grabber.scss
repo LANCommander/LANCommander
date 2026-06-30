@@ -3,6 +3,11 @@
 }
 
 .media-grabber-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
     h2 {
         margin: 0;
     }
@@ -26,6 +31,12 @@
     display: flex;
     justify-content: center;
     padding: 24px 0;
+}
+
+.media-grabber-load-more {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
 }
 
 // ── Video preview ────────────────────────────────────────────

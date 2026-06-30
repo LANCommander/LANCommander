@@ -29,19 +29,19 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
         {
             File.WriteAllText("test.txt", "Hello World!");
 
-            using (var archive = ZipArchive.Create())
+            using (var archive = ZipArchive.CreateArchive())
             {
                 archive.AddEntry("test.txt", "test.txt");
 
                 archive.SaveTo("test.zip", CompressionType.None);
-                
+
                 var fileInfo = new FileInfo("test.zip");
-                
+
                 fileInfo.Length.ShouldBe(126);
             }
 
             using (Stream stream = File.OpenRead("test.zip"))
-            using (var reader = ReaderFactory.Open(stream))
+            using (var reader = ReaderFactory.OpenReader(stream))
             {
                 while (reader.MoveToNextEntry())
                 {
@@ -73,7 +73,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
             File.WriteAllText("test.txt", "Hello World!");
 
             using (var ms = new MemoryStream())
-            using (var archive = ZipArchive.Create())
+            using (var archive = ZipArchive.CreateArchive())
             {
                 archive.AddEntry("test.txt", "test.txt");
 
@@ -83,7 +83,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
 
                 ms.Length.ShouldBe(126);
 
-                using (var reader = ReaderFactory.Open(ms))
+                using (var reader = ReaderFactory.OpenReader(ms))
                 {
                     while (reader.MoveToNextEntry())
                     {
@@ -119,9 +119,9 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
         var saveService = GetService<GameSaveService>();
 
         var user = await EnsureAdminUserCreatedAsync();
-        
-        await Client.AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
-        
+
+        await AuthenticateAsync(TestConstants.AdminUserName, TestConstants.AdminInitialPassword);
+
         var installDirectory = GetTemporaryDirectory();
         var tempPath = await EnsureStorageLocationsExistAsync();
 
@@ -144,10 +144,10 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
             game = await gameService.AddAsync(game);
 
             // Mock game install directory
-            var sdkGame = await gameClient.GetAsync(game.Id);
+            var sdkGame = await GameClient.GetAsync(game.Id);
 
-            var gameInstallDirectory = await gameClient.GetInstallDirectory(sdkGame, installDirectory);
-            var manifest = gameClient.GetManifest(game.Id);
+            var gameInstallDirectory = await GameClient.GetInstallDirectory(sdkGame, installDirectory);
+            var manifest = await GameClient.GetManifestAsync(game.Id);
 
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, ".lancommander"));
             Directory.CreateDirectory(Path.Combine(gameInstallDirectory, "save"));
@@ -176,7 +176,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
 
                 var stream = await savePacker.PackAsync();
 
-                using (var reader = ReaderFactory.Open(stream, new ReaderOptions()
+                using (var reader = ReaderFactory.OpenReader(stream, new ReaderOptions()
                        {
                            LeaveStreamOpen = true,
                        }))
@@ -200,7 +200,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
 
                 packedSize = stream.Length;
 
-                uploadedSave = await Client.Saves.UploadAsync(stream, manifest);
+                uploadedSave = await SaveClient.UploadAsync(stream, manifest);
             }
 
             #endregion
@@ -225,7 +225,7 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
 
             // Check contents of file
             using (var fs = File.OpenRead(uploadedSavePath))
-            using (var reader = ReaderFactory.Open(fs, new ReaderOptions()
+            using (var reader = ReaderFactory.OpenReader(fs, new ReaderOptions()
                    {
                        LeaveStreamOpen = true,
                    }))

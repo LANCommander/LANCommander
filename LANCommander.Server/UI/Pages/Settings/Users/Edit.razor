@@ -30,6 +30,29 @@
             <Input @bind-Value="context.Email" />
         </FormItem>
 
+        @if (IsAdministrator)
+        {
+            <Divider>Limits</Divider>
+
+            <FormItem Label="Storage Quota (MB)" Help="0 or blank = unlimited; overrides role limits">
+                <AntDesign.InputNumber TValue="int?" @bind-Value="context.StorageQuotaMB" Min="0" />
+            </FormItem>
+
+            <FormItem Label="Download Speed (KB/s)" Help="0 or blank = unlimited; overrides role limits">
+                <AntDesign.InputNumber TValue="int?" @bind-Value="context.DownloadSpeedKBps" Min="0" />
+            </FormItem>
+
+            <FormItem Label="Cloud Saves" Help="Overrides role limits">
+                <Select TItemValue="bool?" TItem="bool?" @bind-Value="context.EnableSaves">
+                    <SelectOptions>
+                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)null" Label="Not set" />
+                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)true" Label="Enabled" />
+                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)false" Label="Disabled" />
+                    </SelectOptions>
+                </Select>
+            </FormItem>
+        }
+
         <Divider>Custom Fields</Divider>
 
         @if (context.CustomFields == null || context.CustomFields?.Count == 0)
@@ -76,10 +99,13 @@
     Form<User> Form;
 
     bool FieldsModified = false;
+    bool IsAdministrator = false;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        IsAdministrator = authState.User.IsInRole(RoleService.AdministratorRoleName);
 
         if (authState.User.Identity.IsAuthenticated)
         {

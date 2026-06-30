@@ -1290,6 +1290,12 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("EnableSaves")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -1297,6 +1303,9 @@ namespace LANCommander.Migrations
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");
@@ -1727,6 +1736,9 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AlwaysInstall")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("TEXT");
 
@@ -1786,11 +1798,17 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("DownloadSpeedKBps")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("EnableSaves")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("LockoutEnabled")
@@ -1824,6 +1842,9 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("StorageQuotaMB")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");

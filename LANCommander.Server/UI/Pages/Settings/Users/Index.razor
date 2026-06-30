@@ -83,6 +83,10 @@
         </DataActions>
     </Columns>
 
+    <RightToolbar>
+        <Button OnClick="() => CreateUserDialogVisible = true" Type="@ButtonType.Primary">Add User</Button>
+    </RightToolbar>
+
     <PaginationTemplate>
         <Pagination
             Total="context.Total"
@@ -95,10 +99,13 @@
     </PaginationTemplate>
 </DataTable>
 
+<CreateUserDialog @bind-Visible="CreateUserDialogVisible" OnCreated="() => Table.ReloadAsync()" />
+
 @code {
     ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();
     
     bool Loading = true;
+    bool CreateUserDialogVisible = false;
 
     DataTable<User> Table;
     int Total;

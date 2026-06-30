@@ -21,7 +21,8 @@ public class AuthenticationClient(
     IServerConfigurationRefresher configRefresher,
     ISettingsProvider settingsProvider,
     ApiRequestFactory apiRequestFactory,
-    IConnectionClient connectionClient)
+    IConnectionClient connectionClient,
+    ProfileClient profileClient)
 {
     public async Task<AuthToken> AuthenticateAsync(string username, string password, Uri serverAddress)
     {
@@ -101,8 +102,10 @@ public class AuthenticationClient(
         {
             logger.LogWarning("Could not logout, server inaccessible");
         }
-        
+
         tokenProvider.SetToken(null);
+
+        profileClient.ClearCache();
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)
@@ -225,6 +228,24 @@ public class AuthenticationClient(
         {
             // Older servers don't expose this setting - default to no auto-redirect
             return false;
+        }
+    }
+
+    public async Task<bool> GetEnableUserLibrariesAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Library?.EnableUserLibraries ?? true;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to enabling user libraries
+            return true;
         }
     }
 

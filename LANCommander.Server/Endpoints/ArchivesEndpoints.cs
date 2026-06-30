@@ -37,7 +37,9 @@ public static class ArchivesEndpoints
 
     internal static async Task<Results<FileStreamHttpResult, NotFound, UnauthorizedHttpResult>> DownloadAsync(
         Guid id,
+        System.Security.Claims.ClaimsPrincipal user,
         [FromServices] ArchiveService archiveService,
+        [FromServices] DownloadThrottle downloadThrottle,
         [FromServices] ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("ArchivesApi");
@@ -64,8 +66,11 @@ public static class ArchivesEndpoints
             return TypedResults.NotFound();
         }
 
+        var stream = await downloadThrottle.ApplyAsync(
+            new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), user);
+
         return TypedResults.File(
-            new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read),
+            stream,
             "application/octet-stream",
             $"{archive.Game.Title.SanitizeFilename()}.zip");
     }

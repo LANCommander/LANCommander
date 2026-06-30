@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.5** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.6** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -501,9 +501,53 @@ An "Exit" button is now available under the profile dropdown, making it easier t
 
 </details>
 
+### 2.1.6
+<details>
+<summary>View 2.1.6 patch notes</summary>
+
+#### New Features
+
+##### User and Role Limits
+Roles and individual users can now be assigned limits for save storage, total user storage, and download speed. This gives admins finer control over resource usage on shared servers. Resolves [#85](https://github.com/LANCommander/LANCommander/issues/85), [#84](https://github.com/LANCommander/LANCommander/issues/84), and [#100](https://github.com/LANCommander/LANCommander/issues/).
+
+##### PowerShell Modules
+A new "Scripting" section has been added to the server UI where PowerShell modules can be defined. These act as a library of reusable functions that can be called from any script. Modules are automatically synced to the launcher and imported when scripts are executed.
+
+##### Per-Game Tool Tracking
+Tools are now tracked on a per-game basis. Tools can be marked to "Always Install", and any tools installed for a game are automatically uninstalled when that game is uninstalled.
+
+##### Admin User Creation Dialog
+Admins can now create new users directly from the server with a new user creation dialog. Fixes [#419](https://github.com/LANCommander/LANCommander/issues/419).
+
+##### Database Connection Editor
+The connection string input used in first-time setup and server settings has been refactored into a full database connection component, making it easier to configure database connections. Fixes [#256](https://github.com/LANCommander/LANCommander/issues/256).
+
+#### Improvements
+- Added "Select All" and "Load More" buttons to the media grabber. Fixes [#417](https://github.com/LANCommander/LANCommander/issues/417).
+- Metadata lookups now preserve existing values instead of overwriting them. Fixes [#420](https://github.com/LANCommander/LANCommander/issues/420).
+- The Library navigation and library/depot switcher are now hidden in both the web UI and launcher when user libraries are disabled.
+- Action `ServerHost` values now default to the LANCommander server address.
+
+#### Bug Fixes
+- Fixed the display of UTC times.
+- Fixed creation of entities with many-to-many relationships. Ref [#414](https://github.com/LANCommander/LANCommander/issues/414).
+- Fixed reconciliation of library games based on whether user libraries are enabled or disabled. Ref [#423](https://github.com/LANCommander/LANCommander/issues/423).
+- The profile cache is now invalidated when logging out. Fixes [#422](https://github.com/LANCommander/LANCommander/issues/422).
+
+<ReleaseDownloads release="v2.1.6" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.6" />
+
+<details>
+<summary>View 2.1.5 downloads</summary>
+
 <ReleaseDownloads release="v2.1.5" />
+
+</details>
 
 <details>
 <summary>View 2.1.4 downloads</summary>
@@ -542,4 +586,4 @@ An "Exit" button is now available under the profile dropdown, making it easier t
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.5" />
+<ContributorGrid from="v2.0.2" to="v2.1.6" />

@@ -6,6 +6,7 @@
 @using YamlDotNet.Serialization.NamingConventions
 @inherits FeedbackComponent<ScriptEditorOptions, Script>
 @inject ScriptService ScriptService
+@inject ModuleService ModuleService
 @inject ArchiveService ArchiveService
 @inject ServerService ServerService
 @inject RedistributableService RedistributableService
@@ -91,7 +92,7 @@
     <Checkbox @bind-Checked="_script.RequiresAdmin">Requires Admin</Checkbox>
 </Flex>
 
-<CodeInput @ref="_codeInput" @bind-Value="_script.Contents" Language="Languages.PowerShell" OnSave="Save" ScriptType="@_script.Type.ToString()" OnReady="OnEditorReady" />
+<CodeInput @ref="_codeInput" @bind-Value="_script.Contents" Language="Languages.PowerShell" OnSave="Save" ScriptType="@_script.Type.ToString()" ModuleFunctions="@_moduleFunctions" OnReady="OnEditorReady" />
 
 <PowerShellConsole @ref="_console" Id="_id" @bind-Active="_debugging"/>
 
@@ -113,6 +114,7 @@
     CodeInput? _codeInput;
     PowerShellConsole? _console;
     IEnumerable<Snippet> Snippets { get; set; } = [];
+    List<ModuleFunctionCompletion> _moduleFunctions = new();
     List<string> _variables = new();
     List<string> _optionKeys = new();
     string _redistributableName = string.Empty;
@@ -210,6 +212,10 @@
 
         UpdateVariables();
         Snippets = ScriptService.GetSnippets();
+
+        _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
+            .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
+            .ToList();
     }
 
     async Task OnEditorReady()

@@ -1071,19 +1071,34 @@ namespace LANCommander.SDK.Services
             }
 
             // Tool items
-            if (toolIds != null)
-            {
-                foreach (var toolId in toolIds)
-                {
-                    var tool = await toolClient.GetAsync(toolId);
-                    var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
+            var toolIdSet = new HashSet<Guid>(toolIds ?? Array.Empty<Guid>());
 
-                    foreach (var toolPlanItem in toolPlan.Items)
-                    {
-                        toolPlanItem.Order = plan.Items.Count;
-                        toolPlanItem.DependsOnId = game.Id;
-                        plan.Items.Add(toolPlanItem);
-                    }
+            // Always-install tools are installed alongside the game regardless of user selection
+            try
+            {
+                var gameTools = await GetToolsAsync(game.Id);
+
+                if (gameTools != null)
+                {
+                    foreach (var alwaysInstallTool in gameTools.Where(t => t.AlwaysInstall))
+                        toolIdSet.Add(alwaysInstallTool.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "[InstallQueue] GenerateInstallPlan: Could not resolve always-install tools for game {GameId}", game.Id);
+            }
+
+            foreach (var toolId in toolIdSet)
+            {
+                var tool = await toolClient.GetAsync(toolId);
+                var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
+
+                foreach (var toolPlanItem in toolPlan.Items)
+                {
+                    toolPlanItem.Order = plan.Items.Count;
+                    toolPlanItem.DependsOnId = game.Id;
+                    plan.Items.Add(toolPlanItem);
                 }
             }
 
@@ -2209,6 +2224,18 @@ namespace LANCommander.SDK.Services
                 {
                     foreach (var variable in action.Variables)
                         context.AddVariable(variable.Key, variable.Value);
+                }
+
+                // When an action references {ServerHost} but the game server didn't specify a host,
+                // fall back to the host of the LANCommander server the launcher is connected to.
+                if (action.Variables == null
+                    || !action.Variables.TryGetValue("ServerHost", out var serverHost)
+                    || String.IsNullOrWhiteSpace(serverHost))
+                {
+                    var serverAddress = connectionClient.GetServerAddress();
+
+                    if (serverAddress != null)
+                        context.AddVariable("ServerHost", serverAddress.Host);
                 }
 
                 #region Run Scripts

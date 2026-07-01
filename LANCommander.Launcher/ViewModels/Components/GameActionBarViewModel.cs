@@ -1285,18 +1285,13 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 return;
 
             IsInstalling = true;
-            StatusMessage = $"Switching to version {selected.Version}...";
+            StatusMessage = $"Preparing to switch to version {selected.Version}...";
 
-            _logger.LogInformation("Switching game {GameId} ({Title}) to version {Version}", GameId, Title, selected.Version);
+            _logger.LogInformation("Queuing switch of game {GameId} ({Title}) to version {Version}", GameId, Title, selected.Version);
 
-            await installService.SwitchToVersionAsync(localGame, selected);
+            await installService.AddVersionSwitchAsync(localGame, selected);
 
-            IsUpdateAvailable = localGame.Installed
-                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                && localGame.InstalledVersion != localGame.LatestVersion;
-
-            StatusMessage = $"Now on version {selected.Version}";
-            await LoadActionsAsync();
+            StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)

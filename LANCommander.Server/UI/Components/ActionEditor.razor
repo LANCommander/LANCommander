@@ -68,7 +68,7 @@
     protected override async Task OnInitializedAsync()
     {
         if (GameId.HasValue && GameId != Guid.Empty)
-            _gameVersionId = (await GameVersionService.GetOrCreateLatestAsync(GameId.Value)).Id;
+            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId.Value);
 
         await LoadActions();
     }
@@ -101,10 +101,7 @@
         };
 
         if (GameId.HasValue)
-        {
             newAction.GameId = GameId;
-            newAction.GameVersionId = _gameVersionId;
-        }
 
         if (ServerId.HasValue)
             newAction.ServerId = ServerId;

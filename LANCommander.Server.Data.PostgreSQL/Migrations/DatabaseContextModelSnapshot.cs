@@ -250,9 +250,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Changelog")
-                        .HasColumnType("text");
-
                     b.Property<long>("CompressedSize")
                         .HasColumnType("bigint");
 

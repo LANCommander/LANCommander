@@ -1,5 +1,6 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @inject GameService GameService
+@inject GameVersionService GameVersionService
 @inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
@@ -48,6 +49,11 @@
                     else {
                         <Text>@Title</Text>
                     }
+
+                    @if (!String.IsNullOrWhiteSpace(_latestVersionNumber))
+                    {
+                        <span class="ant-typography ant-typography-secondary" style="margin-left: 8px;">@_latestVersionNumber</span>
+                    }
                 </PageHeaderTitle>
 
                 <PageHeaderExtra>
@@ -76,13 +82,14 @@
 
     Game Game { get; set; } = new Game();
     Guid _id;
+    string _latestVersionNumber = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
         if (_id != Id)
         {
             _id = Id;
-            
+
             if (_id != Guid.Empty)
                 Game = await GameService
                     .Include(g => g.Actions)
@@ -109,6 +116,18 @@
 
             if (Game == null)
                 NavigationManager.NavigateTo("/Games");
+
+            await RefreshVersionAsync();
         }
+    }
+
+    public async Task RefreshVersionAsync()
+    {
+        if (_id != Guid.Empty)
+            _latestVersionNumber = await GameVersionService.GetLatestVersionNumberAsync(_id) ?? string.Empty;
+        else
+            _latestVersionNumber = string.Empty;
+
+        await InvokeAsync(StateHasChanged);
     }
 }

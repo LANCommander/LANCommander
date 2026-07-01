@@ -35,10 +35,6 @@
             <Input @bind-Value="@context.Version" />
         </FormItem>
 
-        <FormItem Label="Changelog">
-            <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
-        </FormItem>
-
         <FormItem Label="Path">
             <StorageLocationSelector Type="StorageLocationType.Archive" @bind-Value="@context.StorageLocation" />
         </FormItem>
@@ -93,7 +89,6 @@
         var redistributableId = Archive.RedistributableId;
         var toolId = Archive.ToolId;
         var version = Archive.Version;
-        var changelog = Archive.Changelog;
 
         await ChunkUploader.Start(async (string objectKeyStr) =>
         {
@@ -117,13 +112,10 @@
                 uploadedArchive.RedistributableId = redistributableId;
                 uploadedArchive.ToolId = toolId;
                 uploadedArchive.Version = version;
-                uploadedArchive.Changelog = changelog;
                 uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
                 uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 
                 await ArchiveService.UpdateAsync(uploadedArchive);
-
-                await CreateGameVersionAsync(uploadedArchive, gameId, version, changelog);
 
                 if (OnArchiveUploaded.HasDelegate)
                     await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);
@@ -138,22 +130,6 @@
                 Logger.LogError(ex, "Failed to process uploaded archive");
             }
         });
-    }
-
-    // An archive upload is the version-creation event for a game. Create a new GameVersion
-    // (which snapshots the previous version's Scripts/Actions/SavePaths into fresh rows so the
-    // prior version's config is frozen) and link the uploaded archive to it. Redistributable and
-    // Tool archives are not versioned in this phase.
-    private async Task CreateGameVersionAsync(Archive uploadedArchive, Guid? gameId, string version, string changelog)
-    {
-        if (gameId == null || gameId == Guid.Empty)
-            return;
-
-        var gameVersion = await GameVersionService.CreateAsync(gameId.Value, version, changelog);
-
-        uploadedArchive.GameVersionId = gameVersion.Id;
-
-        await ArchiveService.UpdateAsync(uploadedArchive);
     }
 
     private async Task Clear()
@@ -198,7 +174,12 @@
             Archive = new Archive();
 
             if (GameId != Guid.Empty)
+            {
                 Archive.GameId = GameId;
+                // Default the version to the game's current version so the upload is tagged
+                // against it unless the uploader chooses a different version number.
+                Archive.Version = await GameVersionService.GetLatestVersionNumberAsync(GameId) ?? string.Empty;
+            }
             else if (RedistributableId != Guid.Empty)
                 Archive.RedistributableId = RedistributableId;
             else if (ToolId != Guid.Empty)
@@ -236,7 +217,6 @@
             var redistributableId = Archive.RedistributableId;
             var toolId = Archive.ToolId;
             var version = Archive.Version;
-            var changelog = Archive.Changelog;
 
             var uploadedArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
 
@@ -246,13 +226,10 @@
                 uploadedArchive.RedistributableId = redistributableId;
                 uploadedArchive.ToolId = toolId;
                 uploadedArchive.Version = version;
-                uploadedArchive.Changelog = changelog;
                 uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
                 uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 
                 await ArchiveService.UpdateAsync(uploadedArchive);
-
-                await CreateGameVersionAsync(uploadedArchive, gameId, version, changelog);
 
                 if (OnArchiveUploaded.HasDelegate)
                     await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);

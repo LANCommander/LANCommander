@@ -64,7 +64,6 @@ namespace LANCommander.Server.Services
                             Id = Guid.NewGuid(),
                             GameId = game.Id,
                             Version = string.IsNullOrWhiteSpace(archive.Version) ? $"{i + 1}" : archive.Version,
-                            Changelog = archive.Changelog,
                             SortOrder = i,
                             CreatedOn = archive.CreatedOn,
                         };

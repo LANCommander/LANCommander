@@ -509,7 +509,6 @@ public static class GameEndpoints
             if (existingArchive == null)
             {
                 existingArchive.ObjectKey = request.ObjectKey.ToString();
-                existingArchive.Changelog = request.Changelog;
                 existingArchive.StorageLocation = storageLocation;
                 
                 var uploadedArchivePath = await archiveService.GetArchiveFileLocationAsync(existingArchive);
@@ -525,7 +524,6 @@ public static class GameEndpoints
                 var archive = new Archive
                 {
                     ObjectKey = request.ObjectKey.ToString(),
-                    Changelog = request.Changelog,
                     GameId = request.Id,
                     StorageLocation = storageLocation
                 };

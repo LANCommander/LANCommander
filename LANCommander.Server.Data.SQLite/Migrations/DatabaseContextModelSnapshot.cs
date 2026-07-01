@@ -245,9 +245,6 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Changelog")
-                        .HasColumnType("TEXT");
-
                     b.Property<long>("CompressedSize")
                         .HasColumnType("INTEGER");
 

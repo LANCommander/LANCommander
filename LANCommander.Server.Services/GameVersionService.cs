@@ -73,6 +73,54 @@ namespace LANCommander.Server.Services
         }
 
         /// <summary>
+        /// Returns the id of the newest version for a game, or null if it has none. Lightweight
+        /// companion to <see cref="GetLatestAsync"/> for callers that only need to associate an
+        /// entity with the current version and don't need the full version graph loaded.
+        /// </summary>
+        public async Task<Guid?> GetLatestIdAsync(Guid gameId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            return await context.GameVersions
+                .Where(v => v.GameId == gameId)
+                .OrderByDescending(v => v.SortOrder)
+                .ThenByDescending(v => v.CreatedOn)
+                .Select(v => (Guid?)v.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Returns the version number of the newest version for a game, or null if it has none.
+        /// Lightweight projection for callers that only need the version string (e.g. to display
+        /// it or to prepopulate an upload form).
+        /// </summary>
+        public async Task<string?> GetLatestVersionNumberAsync(Guid gameId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            return await context.GameVersions
+                .Where(v => v.GameId == gameId)
+                .OrderByDescending(v => v.SortOrder)
+                .ThenByDescending(v => v.CreatedOn)
+                .Select(v => v.Version)
+                .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Returns the id of the newest version for a game, creating an empty initial version if
+        /// none exists yet. Lightweight companion to <see cref="GetOrCreateLatestAsync"/>.
+        /// </summary>
+        public async Task<Guid> GetOrCreateLatestIdAsync(Guid gameId)
+        {
+            var latestId = await GetLatestIdAsync(gameId);
+
+            if (latestId.HasValue)
+                return latestId.Value;
+
+            return (await CreateAsync(gameId, string.Empty)).Id;
+        }
+
+        /// <summary>
         /// Returns the versions newer than the supplied version string, ordered oldest-to-newest.
         /// If the version is unknown or blank, only the latest version is returned.
         /// </summary>

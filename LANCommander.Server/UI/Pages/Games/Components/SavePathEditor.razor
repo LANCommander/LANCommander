@@ -59,7 +59,7 @@
     protected override async Task OnInitializedAsync()
     {
         if (GameId != Guid.Empty)
-            _gameVersionId = (await GameVersionService.GetOrCreateLatestAsync(GameId)).Id;
+            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId);
 
         _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
@@ -74,7 +74,6 @@
         _savePaths.Add(new SavePath
         {
             GameId = GameId,
-            GameVersionId = _gameVersionId,
             WorkingDirectory = "{InstallDir}"
         });
     }

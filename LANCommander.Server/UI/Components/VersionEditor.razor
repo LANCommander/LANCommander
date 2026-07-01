@@ -2,6 +2,12 @@
 @inject IMessageService MessageService
 @inject ILogger<VersionEditor> Logger
 
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <div>
+        <Text Type="@TextElementType.Secondary">Changelog</Text>
+        <TextArea @bind-Value="_newChangelog" MaxLength="500" ShowCount Rows="2" />
+    </div>
+
 <DataTable
     @ref="_table"
     TItem="GameVersion"
@@ -11,12 +17,8 @@
 
     <Columns>
         <BoundDataColumn Property="v => v.SortOrder" Title="Sort Order" DefaultSortOrder="SortDirection.Descending" Hide />
-        <BoundDataColumn Property="v => v.Version">
-            <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="v => v.Changelog">
-            <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Changelog" OnBlur="() => Update(context)" />
-        </BoundDataColumn>
+        <BoundDataColumn Property="v => v.Version" />
+        <BoundDataColumn Property="v => v.Changelog" />
         <BoundDataColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive">
             @if (context.Archive != null)
             {
@@ -46,34 +48,70 @@
         </DataActions>
     </Columns>
 </DataTable>
+</Flex>
+
+<Modal Title="Create New Version" Visible="@_createVersionVisible" OnOk="CreateVersion" OnCancel="CancelCreateVersion" ConfirmLoading="_creating">
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+        <Text>Version</Text>
+        <Input @bind-Value="_newVersion" OnPressEnter="CreateVersion" />
+    </Flex>
+</Modal>
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [Parameter] public EventCallback OnVersionCreated { get; set; }
 
     DataTable<GameVersion> _table;
 
-    private async Task Update(GameVersion version)
+    string _newVersion = string.Empty;
+    string _newChangelog = string.Empty;
+    bool _createVersionVisible;
+    bool _creating;
+
+    public void OpenCreateVersion()
     {
+        _newVersion = string.Empty;
+        _createVersionVisible = true;
+        StateHasChanged();
+    }
+
+    private void CancelCreateVersion()
+    {
+        _createVersionVisible = false;
+    }
+
+    private async Task CreateVersion()
+    {
+        if (String.IsNullOrWhiteSpace(_newVersion))
+        {
+            MessageService.Error("A version is required.");
+            return;
+        }
+
+        _creating = true;
+
         try
         {
-            // Fetch a fresh entity (without version-scoped config loaded) so that updating
-            // the Version/Changelog metadata does not touch the Scripts/Actions/SavePaths
-            // relationships. UpdateRelationshipAsync skips navigations that are null.
-            var existing = await GameVersionService.GetAsync(version.Id);
+            await GameVersionService.CreateAsync(GameId, _newVersion, _newChangelog);
 
-            existing.Version = version.Version;
-            existing.Changelog = version.Changelog;
-
-            await GameVersionService.UpdateAsync(existing);
+            _createVersionVisible = false;
+            _newChangelog = string.Empty;
 
             await _table.ReloadAsync();
 
-            MessageService.Success("Version updated!");
+            if (OnVersionCreated.HasDelegate)
+                await OnVersionCreated.InvokeAsync();
+
+            MessageService.Success("Version created!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Version could not be updated.");
-            Logger.LogError(ex, "Version could not be updated.");
+            MessageService.Error("Version could not be created.");
+            Logger.LogError(ex, "Version could not be created for game {GameId}", GameId);
+        }
+        finally
+        {
+            _creating = false;
         }
     }
 }

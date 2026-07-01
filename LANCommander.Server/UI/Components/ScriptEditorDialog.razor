@@ -188,7 +188,6 @@
             if (Options.GameId.HasValue && Options.GameId != Guid.Empty)
             {
                 _script.GameId = Options.GameId;
-                _script.GameVersionId = Options.GameVersionId;
                 _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == Options.GameId);
             }
             else if (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty)

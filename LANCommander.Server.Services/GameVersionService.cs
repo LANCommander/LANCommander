@@ -151,6 +151,33 @@ namespace LANCommander.Server.Services
         }
 
         /// <summary>
+        /// Returns every version for a game, newest first (highest SortOrder, CreatedOn tiebreaker),
+        /// with each version's Archive loaded. Used to present the full version list to clients.
+        /// </summary>
+        public async Task<IEnumerable<GameVersion>> GetAllAsync(Guid gameId)
+        {
+            return (await Query(q => q.Where(v => v.GameId == gameId))
+                    .Include(v => v.Archive)
+                    .GetAsync(v => v.GameId == gameId))
+                .OrderByDescending(v => v.SortOrder)
+                .ThenByDescending(v => v.CreatedOn)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Returns a single version with its full config graph (Archive, Scripts, Actions,
+        /// SavePaths) loaded. Used to build a version-scoped manifest for a specific version.
+        /// </summary>
+        public async Task<GameVersion?> GetWithConfigAsync(Guid versionId)
+        {
+            return await Include(v => v.Archive)
+                .Include(v => v.Scripts)
+                .Include(v => v.Actions)
+                .Include(v => v.SavePaths)
+                .GetAsync(versionId);
+        }
+
+        /// <summary>
         /// Creates a new version for a game. The new version copies the version-scoped
         /// configuration (Scripts, Actions, SavePaths) from the current latest version
         /// into fresh rows so each version owns an independent snapshot of its config.

@@ -940,6 +940,49 @@ namespace LANCommander.Launcher.Services
             }
         }
 
+        /// <summary>
+        /// Installs or rolls an already-installed game to a specific version. Downloads that
+        /// version's full archive, extracts it over the install directory, then writes the
+        /// version-scoped manifest and scripts so the on-disk config matches the chosen version
+        /// exactly. Updates the local InstalledVersion. Used by the launcher's version picker for
+        /// explicit install/rollback outside the normal update queue.
+        /// </summary>
+        public async Task SwitchToVersionAsync(Game localGame, SDK.Models.GameVersion version, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(localGame);
+            ArgumentNullException.ThrowIfNull(version);
+
+            if (version.ArchiveId == null || version.ArchiveId == Guid.Empty)
+                throw new InstallException("The selected version has no archive to install.");
+
+            if (string.IsNullOrWhiteSpace(localGame.InstallDirectory))
+                throw new InstallException("The game is not installed.");
+
+            using (var operation = Logger.BeginOperation("Switching game {GameTitle} ({GameId}) to version {Version}", localGame.Title, localGame.Id, version.Version))
+            {
+                Logger?.LogInformation("[InstallQueue] SwitchToVersion: Switching {Title} ({Id}) from {InstalledVersion} to {TargetVersion} (archive {ArchiveId})",
+                    localGame.Title, localGame.Id, localGame.InstalledVersion, version.Version, version.ArchiveId);
+
+                var success = await _gameClient.ApplyUpdateArchiveAsync(version.ArchiveId.Value, localGame.Id, localGame.InstallDirectory, cancellationToken);
+
+                if (!success)
+                    throw new InstallCanceledException("Version switch was canceled");
+
+                // Write the version-scoped manifest and scripts so the on-disk config matches the chosen version.
+                await _gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, localGame.Id, version.Id);
+
+                localGame.InstalledVersion = version.Version;
+                await _gameService.UpdateAsync(localGame);
+
+                Logger?.LogInformation("[InstallQueue] SwitchToVersion: Completed switch of {Title} ({Id}) to version {Version}",
+                    localGame.Title, localGame.Id, version.Version);
+
+                OnInstallComplete?.Invoke(localGame);
+
+                operation.Complete();
+            }
+        }
+
         public async Task Install(InstallQueueTool currentItem, Tool localTool, SDK.Models.Tool remoteTool)
         {
             using (var operation = Logger.BeginOperation("Installing tool {ToolName} ({ToolId})", localTool.Name, localTool.Id))

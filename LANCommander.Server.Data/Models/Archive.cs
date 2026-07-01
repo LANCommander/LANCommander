@@ -6,8 +6,6 @@ namespace LANCommander.Server.Data.Models
 {
     public class Archive : BaseModel
     {
-        public string? Changelog { get; set; }
-
         public string ObjectKey { get; set; }
 
         [Required]

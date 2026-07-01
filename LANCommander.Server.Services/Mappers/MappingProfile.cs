@@ -15,6 +15,10 @@ namespace LANCommander.Server
             
             CreateMap<Data.Models.Action, SDK.Models.Action>();
             CreateMap<Data.Models.Archive, SDK.Models.Archive>();
+            CreateMap<Data.Models.GameVersion, SDK.Models.GameVersion>()
+                .ForMember(dest => dest.ArchiveId, opt => opt.MapFrom(src => src.Archive != null ? (Guid?)src.Archive.Id : null))
+                .ForMember(dest => dest.CompressedSize, opt => opt.MapFrom(src => src.Archive != null ? src.Archive.CompressedSize : 0))
+                .ForMember(dest => dest.UncompressedSize, opt => opt.MapFrom(src => src.Archive != null ? src.Archive.UncompressedSize : 0));
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();

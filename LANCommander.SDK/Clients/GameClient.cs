@@ -128,6 +128,26 @@ namespace LANCommander.SDK.Services
                 .GetAsync<Models.Manifest.Game>();
         }
 
+        public async Task<Models.Manifest.Game> GetManifestAsync(Guid id, Guid versionId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Versions/{versionId}/Manifest")
+                .GetAsync<Models.Manifest.Game>();
+        }
+
+        public async Task<IEnumerable<Models.GameVersion>> GetVersionsAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Versions")
+                .GetAsync<IEnumerable<Models.GameVersion>>();
+        }
+
         public async Task<ICollection<Models.Manifest.Game>> GetManifestsAsync(string installDirectory, Guid id)
         {
             var manifests = new List<Models.Manifest.Game>();
@@ -297,6 +317,16 @@ namespace LANCommander.SDK.Services
                 .UseAuthenticationToken()
                 .UseVersioning()
                 .UseRoute($"/api/Games/{id}/Scripts")
+                .GetAsync<IEnumerable<Script>>();
+        }
+
+        public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id, Guid versionId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Versions/{versionId}/Scripts")
                 .GetAsync<IEnumerable<Script>>();
         }
 
@@ -1767,6 +1797,29 @@ namespace LANCommander.SDK.Services
             await ManifestHelper.WriteAsync(manifest, installDirectory);
 
             var scripts = await GetScriptsAsync(gameId);
+
+            if (scripts != null && scripts.Any())
+            {
+                var game = new Game { Id = gameId };
+
+                foreach (var script in scripts)
+                    await ScriptHelper.SaveScriptAsync(game, script, installDirectory);
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the on-disk manifest and scripts for an installed game using a specific version,
+        /// writing the version-scoped manifest and its scripts to the game's install directory. Used
+        /// when installing or rolling back to a particular version so the local config matches exactly.
+        /// </summary>
+        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Guid gameId, Guid versionId)
+        {
+            logger?.LogTrace("Refreshing version {VersionId} manifest and scripts for game {GameId} in {InstallDirectory}", versionId, gameId, installDirectory);
+
+            var manifest = await GetManifestAsync(gameId, versionId);
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+
+            var scripts = await GetScriptsAsync(gameId, versionId);
 
             if (scripts != null && scripts.Any())
             {

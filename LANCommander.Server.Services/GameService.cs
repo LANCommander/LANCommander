@@ -124,7 +124,31 @@ namespace LANCommander.Server.Services
 
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
-            var game = await Query(q =>
+            var game = await LoadGameForManifestAsync(id);
+
+            return await GetManifestAsync(game);
+        }
+
+        /// <summary>
+        /// Builds a manifest scoped to a specific game version, so an installed (potentially older)
+        /// version resolves its own Version string and Scripts/Actions/SavePaths snapshot instead of
+        /// the current latest version's config.
+        /// </summary>
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id, Guid versionId)
+        {
+            var game = await LoadGameForManifestAsync(id);
+
+            if (game == null)
+                return null;
+
+            var version = await gameVersionService.GetWithConfigAsync(versionId);
+
+            return await BuildManifestAsync(game, version);
+        }
+
+        private async Task<Game> LoadGameForManifestAsync(Guid id)
+        {
+            return await Query(q =>
             {
                 return q
                     .AsNoTracking()
@@ -150,37 +174,43 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Tags)
                     .Include(g => g.ExternalIds);
             }).GetAsync(id);
-
-            return await GetManifestAsync(game);
         }
-        
+
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
         {
             if (game == null)
                 return null;
-
-            var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
 
             // Resolve version-scoped config (Version, Scripts, Actions, SavePaths) from the
             // newest GameVersion so the manifest reflects that version's config snapshot rather
             // than the union of all historical (dual-written) config rows hanging off the game.
             var latestVersion = await gameVersionService.GetLatestAsync(game.Id);
 
-            if (latestVersion != null)
-            {
-                if (!String.IsNullOrWhiteSpace(latestVersion.Version))
-                    manifest.Version = latestVersion.Version;
+            return await BuildManifestAsync(game, latestVersion);
+        }
 
-                manifest.Scripts = latestVersion.Scripts != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.Script>>(latestVersion.Scripts.Where(s => s.Type != ScriptType.Package).ToList())
+        private async Task<SDK.Models.Manifest.Game> BuildManifestAsync(Game game, GameVersion version)
+        {
+            if (game == null)
+                return null;
+
+            var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
+
+            if (version != null)
+            {
+                if (!String.IsNullOrWhiteSpace(version.Version))
+                    manifest.Version = version.Version;
+
+                manifest.Scripts = version.Scripts != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.Script>>(version.Scripts.Where(s => s.Type != ScriptType.Package).ToList())
                     : new List<SDK.Models.Manifest.Script>();
 
-                manifest.Actions = latestVersion.Actions != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.Action>>(latestVersion.Actions.ToList())
+                manifest.Actions = version.Actions != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.Action>>(version.Actions.ToList())
                     : new List<SDK.Models.Manifest.Action>();
 
-                manifest.SavePaths = latestVersion.SavePaths != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.SavePath>>(latestVersion.SavePaths.ToList())
+                manifest.SavePaths = version.SavePaths != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.SavePath>>(version.SavePaths.ToList())
                     : new List<SDK.Models.Manifest.SavePath>();
             }
 

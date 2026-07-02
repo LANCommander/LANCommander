@@ -591,7 +591,7 @@ namespace LANCommander.Launcher.Services
                         // Probably doing a modification of some sort
                         if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
                         {
-                            var allAddons = remoteGame.DependentGames.ToArray();
+                            var allAddons = (remoteGame.DependentGames ?? []).ToArray();
                             var removeAddons = allAddons.Except(queueItem.AddonIds ?? []).ToArray();
                             var addAddons = allAddons.Intersect(queueItem.AddonIds ?? []).ToArray();
 

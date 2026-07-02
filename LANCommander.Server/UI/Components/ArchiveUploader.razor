@@ -4,6 +4,7 @@
 @using LANCommander.UI.Services
 @using Microsoft.Extensions.Options
 @inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
 @inject StorageLocationService StorageLocationService
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
@@ -32,10 +33,6 @@
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" />
-        </FormItem>
-
-        <FormItem Label="Changelog">
-            <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
         </FormItem>
 
         <FormItem Label="Path">
@@ -92,7 +89,6 @@
         var redistributableId = Archive.RedistributableId;
         var toolId = Archive.ToolId;
         var version = Archive.Version;
-        var changelog = Archive.Changelog;
 
         await ChunkUploader.Start(async (string objectKeyStr) =>
         {
@@ -116,26 +112,10 @@
                 uploadedArchive.RedistributableId = redistributableId;
                 uploadedArchive.ToolId = toolId;
                 uploadedArchive.Version = version;
-                uploadedArchive.Changelog = changelog;
                 uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
                 uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 
                 await ArchiveService.UpdateAsync(uploadedArchive);
-
-                if (Settings.Value.Server.Archives.EnablePatching)
-                {
-                    Archive? lastArchive = null;
-
-                    if (gameId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.GameId == gameId);
-                    else if (redistributableId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.RedistributableId == redistributableId);
-                    else if (toolId != Guid.Empty)
-                        lastArchive = await ArchiveService.GetLatestArchiveAsync(a => a.Id != uploadedArchive.Id && a.ToolId == toolId);
-
-                    if (lastArchive != null)
-                        BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, uploadedArchive.Id));
-                }
 
                 if (OnArchiveUploaded.HasDelegate)
                     await OnArchiveUploaded.InvokeAsync(uploadedArchive.Id);
@@ -194,7 +174,12 @@
             Archive = new Archive();
 
             if (GameId != Guid.Empty)
+            {
                 Archive.GameId = GameId;
+                // Default the version to the game's current version so the upload is tagged
+                // against it unless the uploader chooses a different version number.
+                Archive.Version = await GameVersionService.GetLatestVersionNumberAsync(GameId) ?? string.Empty;
+            }
             else if (RedistributableId != Guid.Empty)
                 Archive.RedistributableId = RedistributableId;
             else if (ToolId != Guid.Empty)
@@ -232,7 +217,6 @@
             var redistributableId = Archive.RedistributableId;
             var toolId = Archive.ToolId;
             var version = Archive.Version;
-            var changelog = Archive.Changelog;
 
             var uploadedArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
 
@@ -242,7 +226,6 @@
                 uploadedArchive.RedistributableId = redistributableId;
                 uploadedArchive.ToolId = toolId;
                 uploadedArchive.Version = version;
-                uploadedArchive.Changelog = changelog;
                 uploadedArchive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(uploadedArchive);
                 uploadedArchive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(uploadedArchive);
 

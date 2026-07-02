@@ -188,6 +188,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("GameVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -225,6 +228,8 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("GameId");
 
+                    b.HasIndex("GameVersionId");
+
                     b.HasIndex("ServerId");
 
                     b.HasIndex("ToolId");
@@ -240,9 +245,6 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Changelog")
-                        .HasColumnType("TEXT");
-
                     b.Property<long>("CompressedSize")
                         .HasColumnType("INTEGER");
 
@@ -253,6 +255,9 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameVersionId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("LastVersionId")
@@ -289,6 +294,9 @@ namespace LANCommander.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("GameVersionId")
+                        .IsUnique();
 
                     b.HasIndex("LastVersionId");
 
@@ -715,6 +723,48 @@ namespace LANCommander.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("GameSaves");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Changelog")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("GameVersions");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -1310,6 +1360,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("GameVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsRegex")
                         .HasColumnType("INTEGER");
 
@@ -1334,6 +1387,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("GameVersionId");
 
                     b.HasIndex("UpdatedById");
 
@@ -1360,6 +1415,9 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameVersionId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -1392,6 +1450,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("GameVersionId");
 
                     b.HasIndex("RedistributableId");
 
@@ -2168,6 +2228,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Actions")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
                         .WithMany("Actions")
                         .HasForeignKey("ServerId")
@@ -2187,6 +2252,8 @@ namespace LANCommander.Migrations
 
                     b.Navigation("Game");
 
+                    b.Navigation("GameVersion");
+
                     b.Navigation("Server");
 
                     b.Navigation("Tool");
@@ -2205,6 +2272,11 @@ namespace LANCommander.Migrations
                         .WithMany("Archives")
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithOne("Archive")
+                        .HasForeignKey("LANCommander.Server.Data.Models.Archive", "GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.HasOne("LANCommander.Server.Data.Models.Archive", "LastVersion")
                         .WithMany()
@@ -2234,6 +2306,8 @@ namespace LANCommander.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("LastVersion");
 
@@ -2500,6 +2574,31 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("Versions")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -2833,6 +2932,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("SavePaths")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2841,6 +2945,8 @@ namespace LANCommander.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2856,6 +2962,11 @@ namespace LANCommander.Migrations
                         .WithMany("Scripts")
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Scripts")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.HasOne("LANCommander.Server.Data.Models.Redistributable", "Redistributable")
                         .WithMany("Scripts")
@@ -2880,6 +2991,8 @@ namespace LANCommander.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("Redistributable");
 
@@ -3222,6 +3335,19 @@ namespace LANCommander.Migrations
                     b.Navigation("Scripts");
 
                     b.Navigation("Servers");
+
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.Navigation("Actions");
+
+                    b.Navigation("Archive");
+
+                    b.Navigation("SavePaths");
+
+                    b.Navigation("Scripts");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>

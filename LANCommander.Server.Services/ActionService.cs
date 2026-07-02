@@ -14,10 +14,17 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
+        GameVersionService gameVersionService,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Action>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Action> AddAsync(Action entity)
         {
+            // Actions for a game are version-scoped. Attach new actions to the game's current
+            // version here so callers don't have to resolve and pass it in themselves.
+            if (entity.GameId.HasValue && entity.GameId != Guid.Empty
+                && (entity.GameVersionId == null || entity.GameVersionId == Guid.Empty))
+                entity.GameVersionId = await gameVersionService.GetOrCreateLatestIdAsync(entity.GameId.Value);
+
             return await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(a => a.Game);

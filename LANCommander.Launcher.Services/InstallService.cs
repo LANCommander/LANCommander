@@ -565,6 +565,13 @@ namespace LANCommander.Launcher.Services
                     return;
                 }
 
+                if (queueItem.TargetVersion != null)
+                {
+                    await SwitchToVersion(queueItem, localGame, remoteGame);
+                    await Next();
+                    return;
+                }
+
                 if (localGame.Installed && !queueItem.DependsOnId.HasValue
                     && !string.IsNullOrEmpty(localGame.InstallDirectory)
                     && ManifestHelper.Exists(localGame.InstallDirectory, localGame.Id))
@@ -933,6 +940,136 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
 
                 Logger?.LogTrace("Update of game {GameTitle} ({GameId}) complete!", localGame.Title, localGame.Id);
+
+                OnInstallComplete?.Invoke(localGame);
+
+                operation.Complete();
+            }
+        }
+
+        /// <summary>
+        /// Queues an explicit install/rollback of an already-installed game to a specific version.
+        /// The switch runs through the download queue (so it shows progress and supports cancel)
+        /// and is processed by <see cref="SwitchToVersion"/>.
+        /// </summary>
+        public async Task AddVersionSwitchAsync(Game localGame, SDK.Models.GameVersion version)
+        {
+            ArgumentNullException.ThrowIfNull(localGame);
+            ArgumentNullException.ThrowIfNull(version);
+
+            if (version.ArchiveId == null || version.ArchiveId == Guid.Empty)
+                throw new InstallException("The selected version has no archive to install.");
+
+            if (string.IsNullOrWhiteSpace(localGame.InstallDirectory))
+                throw new InstallException("The game is not installed.");
+
+            var remoteGame = await _gameClient.GetAsync(localGame.Id);
+
+            if (remoteGame == null)
+                throw new InstallException($"Could not fetch game info for game {localGame.Id}");
+
+            // Drop any settled (non-active) history for this game so the switch shows as a fresh item.
+            var staleItems = Queue.Where(i => !i.State && i.Id == localGame.Id).ToList();
+
+            foreach (var staleItem in staleItems)
+                Queue.Remove(staleItem);
+
+            // If a switch/install for this game is already in flight, don't queue a duplicate.
+            if (Queue.Any(i => i.Id == localGame.Id
+                && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading)))
+            {
+                Logger?.LogInformation("[InstallQueue] AddVersionSwitch: Game {GameId} already has an active queue item, skipping", localGame.Id);
+                return;
+            }
+
+            var queueItem = new InstallQueueGame(remoteGame)
+            {
+                InstallDirectory = localGame.InstallDirectory,
+                Version = version.Version,
+                TargetVersion = version,
+                IsUpdate = !string.IsNullOrWhiteSpace(localGame.InstalledVersion)
+                    && version.Version != localGame.InstalledVersion,
+            };
+
+            Queue.Add(queueItem);
+
+            _pendingNotificationRoots.Add(localGame.Id);
+
+            Logger?.LogInformation("[InstallQueue] AddVersionSwitch: Queued switch of {Title} ({Id}) to version {Version}",
+                localGame.Title, localGame.Id, version.Version);
+
+            if (!Queue.Any(i => i.State))
+            {
+                queueItem.Status = InstallStatus.Starting;
+                await Next();
+            }
+
+            OnQueueChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Applies an explicit version switch queue item. Downloads the target version's full
+        /// archive, extracts it over the install directory, then writes the version-scoped manifest
+        /// and scripts so on-disk config matches the chosen version. Updates the local
+        /// InstalledVersion. Cancellable via the queue item's cancellation token.
+        /// </summary>
+        private async Task SwitchToVersion(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
+        {
+            var version = currentItem.TargetVersion;
+
+            using (var operation = Logger.BeginOperation("Switching game {GameTitle} ({GameId}) to version {Version}", localGame.Title, localGame.Id, version.Version))
+            {
+                Logger?.LogInformation("[InstallQueue] SwitchToVersion: Switching {Title} ({Id}) from {InstalledVersion} to {TargetVersion} (archive {ArchiveId})",
+                    localGame.Title, localGame.Id, localGame.InstalledVersion, version.Version, version.ArchiveId);
+
+                currentItem.Status = InstallStatus.Downloading;
+                OnQueueChanged?.Invoke();
+
+                try
+                {
+                    var success = await _gameClient.ApplyUpdateArchiveAsync(version.ArchiveId.Value, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
+
+                    if (!success)
+                        throw new InstallCanceledException("Version switch was canceled");
+
+                    // Write the version-scoped manifest and scripts so on-disk config matches the chosen version.
+                    await _gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, localGame.Id, version.Id);
+
+                    localGame.InstalledVersion = version.Version;
+                    await _gameService.UpdateAsync(localGame);
+                }
+                catch (InstallCanceledException)
+                {
+                    Logger?.LogError("Version switch canceled, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (InstallException ex)
+                {
+                    Logger?.LogError(ex, "An error occurred during version switch");
+                    currentItem.Status = InstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
+                    OnInstallFail?.Invoke(localGame);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred during version switch");
+                    currentItem.Status = InstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
+                    OnInstallFail?.Invoke(localGame);
+                    return;
+                }
+
+                currentItem.CompletedOn = DateTime.Now;
+                currentItem.Status = InstallStatus.Complete;
+                currentItem.Progress = 1;
+                currentItem.BytesDownloaded = currentItem.TotalBytes;
+
+                OnQueueChanged?.Invoke();
+
+                Logger?.LogInformation("[InstallQueue] SwitchToVersion: Completed switch of {Title} ({Id}) to version {Version}",
+                    localGame.Title, localGame.Id, version.Version);
 
                 OnInstallComplete?.Invoke(localGame);
 

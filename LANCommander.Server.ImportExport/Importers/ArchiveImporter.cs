@@ -61,7 +61,6 @@ public class ArchiveImporter(
                 UpdatedOn = record.UpdatedOn,
                 StorageLocation = ImportContext.ArchiveStorageLocation,
                 Version = record.Version,
-                Changelog = record.Changelog,
                 ObjectKey = record.ObjectKey,
                 CompressedSize = record.CompressedSize,
                 UncompressedSize = record.UncompressedSize,
@@ -123,7 +122,6 @@ public class ArchiveImporter(
         try
         {
             existing.Version = archive.Version;
-            existing.Changelog = archive.Changelog;
             existing.StorageLocation = ImportContext.ArchiveStorageLocation;
             existing.CreatedOn = archive.CreatedOn;
             existing.UpdatedOn = archive.UpdatedOn;

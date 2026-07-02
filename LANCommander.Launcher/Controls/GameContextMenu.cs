@@ -196,6 +196,7 @@ public static class GameContextMenu
         items.Add(Item("Browse Files", vm, "BrowseFilesCommand", visiblePath: "IsInstalled"));
         items.Add(Item("View Manual", vm, "OpenFirstManualCommand", visiblePath: "HasManuals"));
         items.Add(Item("Modify", vm, "ModifyCommand", visiblePath: "IsInstalled"));
+        items.Add(Item("Select Version...", vm, "SelectVersionCommand", visiblePath: "IsInstalled"));
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Verify Files", vm, "VerifyFilesCommand", visiblePath: "IsInstalled", enabledPath: "IsVerifyingFiles", enabledInvert: true));
         items.Add(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true));

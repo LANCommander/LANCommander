@@ -12,10 +12,6 @@
 
 <PageContent>
     <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
-        <FormItem Label="Enable Patching">
-            <Switch @bind-Checked="context.Server.Archives.EnablePatching" />
-        </FormItem>
-
         <FormItem Label="Allow Insecure Downloads">
             <Switch @bind-Checked="context.Server.Archives.AllowInsecureDownloads" />
         </FormItem>

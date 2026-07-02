@@ -153,7 +153,6 @@ public static class ToolsEndpoints
                 File.Delete(archivePath);
 
                 archive.ObjectKey = request.ObjectKey.ToString();
-                archive.Changelog = request.Changelog;
                 archive.CompressedSize = new FileInfo(archivePath).Length;
                 archive.StorageLocation = storageLocation;
 
@@ -164,7 +163,6 @@ public static class ToolsEndpoints
                 archive = new Archive
                 {
                     ObjectKey = request.ObjectKey.ToString(),
-                    Changelog = request.Changelog,
                     ToolId = request.Id,
                     CompressedSize = new FileInfo(archivePath).Length,
                     StorageLocation = storageLocation,

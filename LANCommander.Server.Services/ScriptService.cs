@@ -18,13 +18,20 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
+        GameVersionService gameVersionService,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Script> AddAsync(Script script)
         {
             using var context = await contextFactory.CreateDbContextAsync();
-            
+
             await cache.ExpireGameCacheAsync(script?.GameId);
+
+            // Scripts for a game are version-scoped. Attach new scripts to the game's current
+            // version here so callers don't have to resolve and pass it in themselves.
+            if (script.GameId.HasValue && script.GameId != Guid.Empty
+                && (script.GameVersionId == null || script.GameVersionId == Guid.Empty))
+                script.GameVersionId = await gameVersionService.GetOrCreateLatestIdAsync(script.GameId.Value);
 
             if (script.RedistributableId?.IsNullOrEmpty() ?? false)
             {

@@ -23,6 +23,9 @@ public static class GameEndpoints
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
+        group.MapGet("/{id:guid}/Versions", GetVersionsByIdAsync);
+        group.MapGet("/{id:guid}/Versions/{versionId:guid}/Manifest", GetVersionManifestByIdAsync);
+        group.MapGet("/{id:guid}/Versions/{versionId:guid}/Scripts", GetVersionScriptsByIdAsync);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
         group.MapGet("/{id:guid}/Tools", GetToolsByIdAsync);
@@ -138,6 +141,61 @@ public static class GameEndpoints
                 tags: ["Games", $"Games/{id}"]);
         
         return TypedResults.Ok(manifest);
+    }
+
+    internal static async Task<IResult> GetVersionsByIdAsync(
+        [FromServices] GameVersionService gameVersionService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id)
+    {
+        var versions = await cache.GetOrSetAsync($"Games/{id}/Versions", async _ =>
+        {
+            var results = await gameVersionService.GetAllAsync(id);
+
+            return mapper.Map<IEnumerable<SDK.Models.GameVersion>>(results);
+        }, tags: ["Games", $"Games/{id}"]);
+
+        return TypedResults.Ok(versions);
+    }
+
+    internal static async Task<IResult> GetVersionManifestByIdAsync(
+        [FromServices] GameService gameService,
+        [FromServices] IFusionCache cache,
+        Guid id,
+        Guid versionId)
+    {
+        var manifest = await cache
+            .GetOrSetAsync<SDK.Models.Manifest.Game>(
+                $"Game/{id}/Versions/{versionId}/Manifest",
+                async _ => await gameService.GetManifestAsync(id, versionId),
+                TimeSpan.MaxValue,
+                tags: ["Games", $"Games/{id}"]);
+
+        if (manifest == null)
+            return TypedResults.NotFound();
+
+        return TypedResults.Ok(manifest);
+    }
+
+    internal static async Task<IResult> GetVersionScriptsByIdAsync(
+        [FromServices] ScriptService scriptService,
+        [FromServices] IFusionCache cache,
+        [FromServices] IMapper mapper,
+        Guid id,
+        Guid versionId)
+    {
+        var scripts = await cache.GetOrSetAsync($"Games/{id}/Versions/{versionId}/Scripts", async _ =>
+        {
+            var results = await scriptService
+                .AsSplitQuery()
+                .AsNoTracking()
+                .GetAsync(s => s.GameVersionId == versionId && s.Type != SDK.Enums.ScriptType.Package);
+
+            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+        }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
+
+        return TypedResults.Ok(scripts);
     }
 
     internal static async Task<IResult> GetActionsByIdAsync(
@@ -509,7 +567,6 @@ public static class GameEndpoints
             if (existingArchive == null)
             {
                 existingArchive.ObjectKey = request.ObjectKey.ToString();
-                existingArchive.Changelog = request.Changelog;
                 existingArchive.StorageLocation = storageLocation;
                 
                 var uploadedArchivePath = await archiveService.GetArchiveFileLocationAsync(existingArchive);
@@ -525,7 +582,6 @@ public static class GameEndpoints
                 var archive = new Archive
                 {
                     ObjectKey = request.ObjectKey.ToString(),
-                    Changelog = request.Changelog,
                     GameId = request.Id,
                     StorageLocation = storageLocation
                 };

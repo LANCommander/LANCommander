@@ -1,0 +1,117 @@
+@inject GameVersionService GameVersionService
+@inject IMessageService MessageService
+@inject ILogger<VersionEditor> Logger
+
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <div>
+        <Text Type="@TextElementType.Secondary">Changelog</Text>
+        <TextArea @bind-Value="_newChangelog" MaxLength="500" ShowCount Rows="2" />
+    </div>
+
+<DataTable
+    @ref="_table"
+    TItem="GameVersion"
+    HidePagination
+    Responsive
+    Query="v => v.GameId == GameId">
+
+    <Columns>
+        <BoundDataColumn Property="v => v.SortOrder" Title="Sort Order" DefaultSortOrder="SortDirection.Descending" Hide />
+        <BoundDataColumn Property="v => v.Version" />
+        <BoundDataColumn Property="v => v.Changelog" />
+        <BoundDataColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive">
+            @if (context.Archive != null)
+            {
+                <ByteSize Value="context.Archive.CompressedSize" />
+            }
+            else
+            {
+                <span class="ant-typography ant-typography-secondary">None</span>
+            }
+        </BoundDataColumn>
+        <BoundDataColumn Property="v => v.Scripts != null ? v.Scripts.Count : 0" Title="Scripts" Include="Scripts" />
+        <BoundDataColumn Property="v => v.Actions != null ? v.Actions.Count : 0" Title="Actions" Include="Actions" />
+        <BoundDataColumn Property="v => v.SavePaths != null ? v.SavePaths.Count : 0" Title="Save Paths" Include="SavePaths" />
+        <BoundDataColumn Property="v => v.CreatedOn">
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
+
+        <DataActions TData="string">
+            @if (context.Archive != null)
+            {
+                <Tooltip Title="Download Archive">
+                    <a href="/Download/Archive/@context.Archive.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                        <Icon Type="@IconType.Outline.Download" />
+                    </a>
+                </Tooltip>
+            }
+        </DataActions>
+    </Columns>
+</DataTable>
+</Flex>
+
+<Modal Title="Create New Version" Visible="@_createVersionVisible" OnOk="CreateVersion" OnCancel="CancelCreateVersion" ConfirmLoading="_creating">
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+        <Text>Version</Text>
+        <Input @bind-Value="_newVersion" OnPressEnter="CreateVersion" />
+    </Flex>
+</Modal>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [Parameter] public EventCallback OnVersionCreated { get; set; }
+
+    DataTable<GameVersion> _table;
+
+    string _newVersion = string.Empty;
+    string _newChangelog = string.Empty;
+    bool _createVersionVisible;
+    bool _creating;
+
+    public void OpenCreateVersion()
+    {
+        _newVersion = string.Empty;
+        _createVersionVisible = true;
+        StateHasChanged();
+    }
+
+    private void CancelCreateVersion()
+    {
+        _createVersionVisible = false;
+    }
+
+    private async Task CreateVersion()
+    {
+        if (String.IsNullOrWhiteSpace(_newVersion))
+        {
+            MessageService.Error("A version is required.");
+            return;
+        }
+
+        _creating = true;
+
+        try
+        {
+            await GameVersionService.CreateAsync(GameId, _newVersion, _newChangelog);
+
+            _createVersionVisible = false;
+            _newChangelog = string.Empty;
+
+            await _table.ReloadAsync();
+
+            if (OnVersionCreated.HasDelegate)
+                await OnVersionCreated.InvokeAsync();
+
+            MessageService.Success("Version created!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Version could not be created.");
+            Logger.LogError(ex, "Version could not be created for game {GameId}", GameId);
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+}

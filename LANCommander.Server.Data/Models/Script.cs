@@ -38,5 +38,11 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(ServerId))]
         [InverseProperty("Scripts")]
         public Server? Server { get; set; }
+
+        public Guid? GameVersionId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(GameVersionId))]
+        [InverseProperty(nameof(GameVersion.Scripts))]
+        public GameVersion? GameVersion { get; set; }
     }
 }

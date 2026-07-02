@@ -22,6 +22,7 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
+        GameVersionService gameVersionService,
         MediaService mediaService,
         StorageLocationService storageLocationService,
         SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
@@ -123,7 +124,31 @@ namespace LANCommander.Server.Services
 
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
-            var game = await Query(q =>
+            var game = await LoadGameForManifestAsync(id);
+
+            return await GetManifestAsync(game);
+        }
+
+        /// <summary>
+        /// Builds a manifest scoped to a specific game version, so an installed (potentially older)
+        /// version resolves its own Version string and Scripts/Actions/SavePaths snapshot instead of
+        /// the current latest version's config.
+        /// </summary>
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id, Guid versionId)
+        {
+            var game = await LoadGameForManifestAsync(id);
+
+            if (game == null)
+                return null;
+
+            var version = await gameVersionService.GetWithConfigAsync(versionId);
+
+            return await BuildManifestAsync(game, version);
+        }
+
+        private async Task<Game> LoadGameForManifestAsync(Guid id)
+        {
+            return await Query(q =>
             {
                 return q
                     .AsNoTracking()
@@ -149,16 +174,45 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Tags)
                     .Include(g => g.ExternalIds);
             }).GetAsync(id);
-
-            return await GetManifestAsync(game);
         }
-        
+
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
         {
             if (game == null)
                 return null;
 
+            // Resolve version-scoped config (Version, Scripts, Actions, SavePaths) from the
+            // newest GameVersion so the manifest reflects that version's config snapshot rather
+            // than the union of all historical (dual-written) config rows hanging off the game.
+            var latestVersion = await gameVersionService.GetLatestAsync(game.Id);
+
+            return await BuildManifestAsync(game, latestVersion);
+        }
+
+        private async Task<SDK.Models.Manifest.Game> BuildManifestAsync(Game game, GameVersion version)
+        {
+            if (game == null)
+                return null;
+
             var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
+
+            if (version != null)
+            {
+                if (!String.IsNullOrWhiteSpace(version.Version))
+                    manifest.Version = version.Version;
+
+                manifest.Scripts = version.Scripts != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.Script>>(version.Scripts.Where(s => s.Type != ScriptType.Package).ToList())
+                    : new List<SDK.Models.Manifest.Script>();
+
+                manifest.Actions = version.Actions != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.Action>>(version.Actions.ToList())
+                    : new List<SDK.Models.Manifest.Action>();
+
+                manifest.SavePaths = version.SavePaths != null
+                    ? mapper.Map<ICollection<SDK.Models.Manifest.SavePath>>(version.SavePaths.ToList())
+                    : new List<SDK.Models.Manifest.SavePath>();
+            }
 
             if (game.Redistributables != null && game.Redistributables.Any())
             {
@@ -242,18 +296,27 @@ namespace LANCommander.Server.Services
 
         public async Task<Archive> GetLatestArchiveAsync(Guid id)
         {
+            var latestVersion = await gameVersionService.GetLatestAsync(id);
+
+            if (latestVersion?.Archive != null)
+                return latestVersion.Archive;
+
+            // Fallback for games not yet backfilled into the versioning model.
             var game = await AsNoTracking()
                 .AsSplitQuery()
                 .Include(g => g.Archives)
                 .GetAsync(id);
-            
-            var latestArchive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-            
-            return latestArchive;
+
+            return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
         }
 
         public async Task<string> GetVersionAsync(Guid id)
         {
+            var latestVersion = await gameVersionService.GetLatestAsync(id);
+
+            if (latestVersion != null && !String.IsNullOrWhiteSpace(latestVersion.Version))
+                return latestVersion.Version;
+
             var latestArchive = await GetLatestArchiveAsync(id);
 
             return latestArchive?.Version ?? String.Empty;
@@ -261,29 +324,12 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
         {
-            var game = await AsNoTracking()
-                .AsSplitQuery()
-                .Include(g => g.Archives)
-                .GetAsync(gameId);
+            var newerVersions = await gameVersionService.GetNewerThanAsync(gameId, version);
 
-            if (game?.Archives == null || !game.Archives.Any())
-                return [];
-
-            var orderedArchives = game.Archives.OrderBy(a => a.CreatedOn).ToList();
-
-            if (string.IsNullOrWhiteSpace(version))
-                return [orderedArchives.Last()];
-
-            var installedArchive = orderedArchives.FirstOrDefault(a => a.Version == version);
-
-            if (installedArchive == null)
-                return [orderedArchives.Last()];
-
-            var newerArchives = orderedArchives
-                .Where(a => a.CreatedOn > installedArchive.CreatedOn)
+            return newerVersions
+                .Where(v => v.Archive != null)
+                .Select(v => v.Archive)
                 .ToList();
-
-            return newerArchives;
         }
 
         public async Task PackageAsync(Guid id)

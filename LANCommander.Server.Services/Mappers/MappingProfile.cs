@@ -15,6 +15,10 @@ namespace LANCommander.Server
             
             CreateMap<Data.Models.Action, SDK.Models.Action>();
             CreateMap<Data.Models.Archive, SDK.Models.Archive>();
+            CreateMap<Data.Models.GameVersion, SDK.Models.GameVersion>()
+                .ForMember(dest => dest.ArchiveId, opt => opt.MapFrom(src => src.Archive != null ? (Guid?)src.Archive.Id : null))
+                .ForMember(dest => dest.CompressedSize, opt => opt.MapFrom(src => src.Archive != null ? src.Archive.CompressedSize : 0))
+                .ForMember(dest => dest.UncompressedSize, opt => opt.MapFrom(src => src.Archive != null ? src.Archive.UncompressedSize : 0));
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();
@@ -109,9 +113,11 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Engine, SDK.Models.Manifest.Engine>().ReverseMap();
             CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>()
                 .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
-                    src.Archives != null && src.Archives.Any()
-                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
-                        : null))
+                    src.Versions != null && src.Versions.Any()
+                        ? src.Versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).First().Version
+                        : (src.Archives != null && src.Archives.Any()
+                            ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                            : null)))
                 .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
                 .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))
                 .ForMember(dest => dest.Scripts, opt => opt.MapFrom(src => src.Scripts != null ? src.Scripts.Where(s => s.Type != ScriptType.Package) : null))

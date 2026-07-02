@@ -1,5 +1,6 @@
 ﻿@inject SavePathService SavePathService
 @inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<SavePathEditor> Logger
@@ -52,15 +53,21 @@
     Archive? _archive;
     ICollection<SavePath> _savePaths = new List<SavePath>();
 
+    // Save paths are version-scoped: they belong to the game's latest GameVersion.
+    Guid? _gameVersionId;
+
     protected override async Task OnInitializedAsync()
     {
+        if (GameId != Guid.Empty)
+            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId);
+
         _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
         await LoadPaths();
     }
 
     async Task LoadPaths()
-        => _savePaths = await SavePathService.GetAsync(p => p.GameId == GameId);
+        => _savePaths = await SavePathService.GetAsync(p => p.GameVersionId == _gameVersionId);
 
     void AddPath()
     {

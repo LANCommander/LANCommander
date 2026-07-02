@@ -4,6 +4,7 @@ using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Server.Data.MySQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260627014632_AddGameVersions")]
+    partial class AddGameVersions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -249,6 +252,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("Changelog")
+                        .HasColumnType("longtext");
 
                     b.Property<long>("CompressedSize")
                         .HasColumnType("bigint");
@@ -1292,12 +1298,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("DownloadSpeedKBps")
-                        .HasColumnType("int");
-
-                    b.Property<bool?>("EnableSaves")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -1305,9 +1305,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
-
-                    b.Property<int?>("StorageQuotaMB")
-                        .HasColumnType("int");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
@@ -1740,9 +1737,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<bool>("AlwaysInstall")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("char(36)");
 
@@ -1802,17 +1796,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("DownloadSpeedKBps")
-                        .HasColumnType("int");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool?>("EnableSaves")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("LockoutEnabled")
@@ -1846,9 +1834,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext");
-
-                    b.Property<int?>("StorageQuotaMB")
-                        .HasColumnType("int");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("tinyint(1)");

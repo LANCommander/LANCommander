@@ -1208,6 +1208,108 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task SelectVersionAsync()
+    {
+        if (!IsInstalled || IsInstalling) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            var versions = (await gameClient.GetVersionsAsync(GameId))?.ToList() ?? [];
+
+            // Only versions that carry an archive can be installed or rolled back to.
+            var installable = versions
+                .Where(v => v.ArchiveId.HasValue && v.ArchiveId.Value != Guid.Empty)
+                .ToList();
+
+            if (installable.Count == 0)
+            {
+                await Views.AlertOverlay.ShowAsync("No Versions Available", "This game has no downloadable versions.");
+                return;
+            }
+
+            var installedVersion = installable.FirstOrDefault(v => v.Version == localGame.InstalledVersion);
+            var installedSortOrder = installedVersion?.SortOrder;
+
+            var versionsVm = new GameVersionsViewModel
+            {
+                DialogTitle = $"{Title} — Versions",
+            };
+
+            foreach (var version in installable)
+            {
+                var isInstalled = version.Version == localGame.InstalledVersion;
+                var isNewer = installedSortOrder.HasValue && version.SortOrder > installedSortOrder.Value;
+                versionsVm.Versions.Add(new GameVersionItemViewModel(version, isInstalled, isNewer));
+            }
+
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<SDK.Models.GameVersion?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.GameVersionsOverlay
+                {
+                    DataContext = versionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.VersionSelected += (_, v) => tcs.TrySetResult(v);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+                else
+                {
+                    tcs.TrySetResult(null);
+                }
+            });
+
+            var selected = await tcs.Task;
+
+            if (selected == null)
+                return;
+
+            IsInstalling = true;
+            StatusMessage = $"Preparing to switch to version {selected.Version}...";
+
+            _logger.LogInformation("Queuing switch of game {GameId} ({Title}) to version {Version}", GameId, Title, selected.Version);
+
+            await installService.AddVersionSwitchAsync(localGame, selected);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to switch version for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to switch version: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Switch Version", ex.Message);
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task UninstallAsync()
     {
         if (!IsInstalled || IsUninstalling) return;

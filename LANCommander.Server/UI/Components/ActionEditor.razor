@@ -2,6 +2,7 @@
 @using Action = LANCommander.Server.Data.Models.Action
 @inject ActionService ActionService
 @inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
 @inject ModalService ModalService
 @inject MessageService MessageService
 @inject ILogger<ActionEditor> Logger
@@ -59,15 +60,24 @@
     Server? _server;
     Tool? _tool;
 
+    // For games, actions are version-scoped: they belong to the game's latest GameVersion.
+    Guid? _gameVersionId;
+
     ObservableCollection<Action> _sortedActions = new();
 
-    protected override async Task OnInitializedAsync() => await LoadActions();
+    protected override async Task OnInitializedAsync()
+    {
+        if (GameId.HasValue && GameId != Guid.Empty)
+            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId.Value);
+
+        await LoadActions();
+    }
 
     async Task LoadActions()
     {
         if (GameId.HasValue)
         {
-            _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameId == GameId.Value));
+            _sortedActions = new ObservableCollection<Action>(await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameVersionId == _gameVersionId));
             _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
         }
@@ -92,7 +102,7 @@
 
         if (GameId.HasValue)
             newAction.GameId = GameId;
-        
+
         if (ServerId.HasValue)
             newAction.ServerId = ServerId;
 

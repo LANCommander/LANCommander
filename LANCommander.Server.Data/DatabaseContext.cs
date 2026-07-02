@@ -75,6 +75,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Collection>();
             builder.ConfigureBaseRelationships<Company>();
             builder.ConfigureBaseRelationships<Game>();
+            builder.ConfigureBaseRelationships<GameVersion>();
             builder.ConfigureBaseRelationships<GameSave>();
             builder.ConfigureBaseRelationships<Genre>();
             builder.ConfigureBaseRelationships<Key>();
@@ -262,6 +263,43 @@ namespace LANCommander.Server.Data
                 .WithOne(e => e.Game)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
+            #region Game Version Relationships
+            builder.Entity<Game>()
+                .HasMany(g => g.Versions)
+                .WithOne(v => v.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // GameVersion owns the version-scoped config. The same Archive/Script/Action/SavePath
+            // rows are also referenced by the Game (dual-write during the transition), which already
+            // declares a cascade path. A second cascade path here would be rejected by MySQL
+            // (multiple cascade paths), so the GameVersion side uses ClientCascade instead.
+            builder.Entity<GameVersion>()
+                .HasOne(v => v.Archive)
+                .WithOne(a => a.GameVersion)
+                .HasForeignKey<Archive>(a => a.GameVersionId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Scripts)
+                .WithOne(s => s.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Actions)
+                .WithOne(a => a.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.SavePaths)
+                .WithOne(p => p.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
             #endregion
 
             #region Media Relationships
@@ -527,6 +565,8 @@ namespace LANCommander.Server.Data
         }
 
         public DbSet<Game>? Games { get; set; }
+
+        public DbSet<GameVersion>? GameVersions { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }
 

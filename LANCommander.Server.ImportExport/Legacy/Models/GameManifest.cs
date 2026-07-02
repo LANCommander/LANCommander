@@ -89,7 +89,7 @@ internal class GameManifest : IKeyedModel
                 WorkingDirectory = s.WorkingDirectory,
                 Type = (SDK.Enums.SavePathType)(int)s.Type,
                 IsRegex = s.IsRegex,
-                Entries = s.Entries != null || s.Entries.Any() ? s.Entries.Select(e => new SDK.Models.SavePathEntry
+                Entries = s.Entries != null && s.Entries.Any() ? s.Entries.Select(e => new SDK.Models.SavePathEntry
                 {
                     ActualPath = e.ActualPath,
                     ArchivePath = e.ArchivePath,

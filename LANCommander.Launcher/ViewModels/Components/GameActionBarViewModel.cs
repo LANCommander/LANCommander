@@ -1061,7 +1061,6 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
 
             var localGame = await dbContext.Set<Data.Models.Game>()
-                .Include(g => g.DependentGames)
                 .Include(g => g.GameTools)
                 .FirstOrDefaultAsync(g => g.Id == GameId);
 
@@ -1093,11 +1092,15 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
             }
 
-            // Build set of currently installed addon IDs
+            // Build set of currently installed addon IDs. Addons install as their own Game
+            // records (with Installed set), and the local DependentGames relationship is not
+            // populated during import, so look the available addons up directly by ID.
+            var availableAddonIds = availableAddons.Select(a => a.Id).ToArray();
             var installedAddonIds = new HashSet<Guid>(
-                (localGame.DependentGames ?? [])
-                    .Where(a => a.Installed)
-                    .Select(a => a.Id));
+                await dbContext.Set<Data.Models.Game>()
+                    .Where(g => availableAddonIds.Contains(g.Id) && g.Installed)
+                    .Select(g => g.Id)
+                    .ToListAsync());
 
             // Build set of currently installed tool IDs (tracked per game)
             var installedToolIds = new HashSet<Guid>(

@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" />
+    <PackageReference Include="Riok.Mapperly">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" />
     <PackageReference Include="YoutubeExplode" />

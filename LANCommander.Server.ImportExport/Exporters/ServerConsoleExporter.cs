@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class ServerConsoleExporter(ServerConsoleService serverConsoleService) : BaseExporter<ServerConsole, Data.Models.ServerConsole>
+public class ServerConsoleExporter(ManifestMapper manifestMapper, ServerConsoleService serverConsoleService) : BaseExporter<ServerConsole, Data.Models.ServerConsole>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.ServerConsole record)
     {
@@ -22,6 +22,6 @@ public class ServerConsoleExporter(ServerConsoleService serverConsoleService) : 
 
     public override async Task<ServerConsole> ExportAsync(Guid id)
     {
-        return await serverConsoleService.GetAsync<ServerConsole>(id);
+        return await serverConsoleService.GetAsync(id, manifestMapper.ProjectToManifestServerConsole);
     }
 } 

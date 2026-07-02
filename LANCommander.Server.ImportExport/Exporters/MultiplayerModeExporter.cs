@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class MultiplayerModeExporter(
+    ManifestMapper manifestMapper,
     MultiplayerModeService multiplayerModeService) : BaseExporter<MultiplayerMode, Data.Models.MultiplayerMode>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.MultiplayerMode record)
@@ -23,6 +24,6 @@ public class MultiplayerModeExporter(
 
     public override async Task<MultiplayerMode> ExportAsync(Guid id)
     {
-        return await multiplayerModeService.GetAsync<MultiplayerMode>(id);
+        return await multiplayerModeService.GetAsync(id, manifestMapper.ProjectToManifestMultiplayerMode);
     }
 } 

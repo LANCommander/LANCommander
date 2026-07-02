@@ -1,4 +1,3 @@
-using AutoMapper;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using LANCommander.SDK;
@@ -8,6 +7,7 @@ using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Mappers;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
@@ -23,7 +23,7 @@ public class DockerServerEngine(
     SettingsProvider<Settings.Settings> settingsProvider,
     PowerShellScriptFactory powerShellScriptFactory,
     IServiceProvider serviceProvider,
-    IMapper mapper,
+    SdkMapper sdkMapper,
     IOptions<SDK.Models.Settings> settings) : IServerEngine
 {
     private ServerEngineConfiguration _config;
@@ -117,7 +117,7 @@ public class DockerServerEngine(
             {
                 var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
 
-                script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
+                script.AddVariable("Server", sdkMapper.ToSdk(server));
 
                 script.UseWorkingDirectory(server.WorkingDirectory);
                 script.UseInline(serverScript.Contents);
@@ -170,7 +170,7 @@ public class DockerServerEngine(
                 {
                     var script = powerShellScriptFactory.Create(ScriptType.AfterStop);
 
-                    script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
+                    script.AddVariable("Server", sdkMapper.ToSdk(server));
 
                     script.UseWorkingDirectory(server.WorkingDirectory);
                     script.UseInline(serverScript.Contents);

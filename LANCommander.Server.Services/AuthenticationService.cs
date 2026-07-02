@@ -5,12 +5,12 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Exceptions;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.IdentityModel.Tokens;
 using YamlDotNet.Serialization;
 using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
@@ -19,7 +19,7 @@ namespace LANCommander.Server.Services
 {
     public class AuthenticationService(
         ILogger<AuthenticationService> logger,
-        IMapper mapper,
+        SdkMapper sdkMapper,
         SettingsProvider<Settings.Settings> settingsProvider,
         UserService userService,
         RoleService roleService,
@@ -36,8 +36,8 @@ namespace LANCommander.Server.Services
 
             try
             {
-                var user = await userService.GetAsync<User>(userName);
-                var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
+                var user = await userService.GetAsync(userName, sdkMapper.ProjectToSdkUser);
+                var scripts = await scriptService.GetAsync(s => s.Type == ScriptType.UserLogin, sdkMapper.ProjectToSdkScript);
 
                 if (scripts.Any())
                 {
@@ -192,7 +192,7 @@ namespace LANCommander.Server.Services
                     
                     try
                     {
-                        var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
+                        var scripts = await scriptService.GetAsync(s => s.Type == ScriptType.UserLogin, sdkMapper.ProjectToSdkScript);
 
                         if (scripts.Any())
                         {
@@ -200,7 +200,7 @@ namespace LANCommander.Server.Services
 
                             foreach (var script in scripts)
                             {
-                                await scriptClient.Authentication_RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
+                                await scriptClient.Authentication_RunUserRegistrationScript(script, sdkMapper.ToSdk(user));
                             }
                         }
                     }

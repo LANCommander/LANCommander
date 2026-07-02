@@ -1,8 +1,8 @@
-using AutoMapper;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -25,16 +25,16 @@ public static class ToolsEndpoints
     }
 
     internal static async Task<IResult> GetAsync(
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ToolService toolService)
     {
         var models = await toolService.GetAsync();
-        return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.Tool>>(models));
+        return TypedResults.Ok(models.Select(sdkMapper.ToSdk).ToList());
     }
 
     internal static async Task<IResult> GetByIdAsync(
         Guid id,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ToolService toolService)
     {
         var tool = await toolService
@@ -45,7 +45,7 @@ public static class ToolsEndpoints
         if (tool == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(mapper.Map<SDK.Models.Tool>(tool));
+        return TypedResults.Ok(sdkMapper.ToSdk(tool));
     }
 
     internal static async Task<IResult> GetManifestByIdAsync(
@@ -63,7 +63,7 @@ public static class ToolsEndpoints
     internal static async Task<IResult> GetScriptsByIdAsync(
         [FromServices] ScriptService scriptService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var scripts = await cache.GetOrSetAsync($"Tools/{id}/Scripts", async _ =>
@@ -73,7 +73,7 @@ public static class ToolsEndpoints
                 .AsNoTracking()
                 .GetAsync(s => s.RedistributableId == id && s.Type != SDK.Enums.ScriptType.Package);
 
-            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Scripts", $"Tools/{id}/Scripts", "Tools", $"Tools/{id}"]);
         
         return TypedResults.Ok(scripts);

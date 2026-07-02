@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
@@ -13,11 +12,10 @@ namespace LANCommander.Server.Services
         ILogger<PlaySessionService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         PlaySessionKeepAliveTracker keepAliveTracker,
-        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<PlaySession> AddAsync(PlaySession entity)
         {

@@ -1,5 +1,4 @@
-﻿using AutoMapper.QueryableExtensions;
-using LANCommander.Server.Data.Models;
+﻿using LANCommander.Server.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

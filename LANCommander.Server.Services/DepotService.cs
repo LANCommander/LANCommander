@@ -1,5 +1,5 @@
-using AutoMapper;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -18,7 +18,7 @@ public class DepotService(
     UserService userService,
     PlaySessionService playSessionService,
     RatingService ratingService,
-    IMapper mapper,
+    SdkMapper sdkMapper,
     ILogger<DepotService> logger)
 {
     public async Task<SDK.Models.DepotResults> GetResults()
@@ -38,13 +38,13 @@ public class DepotService(
 
         var depotResults = new SDK.Models.DepotResults
         {
-            Games = mapper.Map<ICollection<SDK.Models.DepotGame>>(games),
-            Collections = mapper.Map<ICollection<SDK.Models.Collection>>(await collectionService.AsNoTracking().GetAsync()),
-            Companies = mapper.Map<ICollection<SDK.Models.Company>>(await companyService.AsNoTracking().GetAsync()),
-            Engines = mapper.Map<ICollection<SDK.Models.Engine>>(await engineService.AsNoTracking().GetAsync()),
-            Genres = mapper.Map<ICollection<SDK.Models.Genre>>(await genreService.AsNoTracking().GetAsync()),
-            Platforms = mapper.Map<ICollection<SDK.Models.Platform>>(await platformService.AsNoTracking().GetAsync()),
-            Tags = mapper.Map<ICollection<SDK.Models.Tag>>(await tagService.AsNoTracking().GetAsync()),
+            Games = games.Select(sdkMapper.ToDepotGame).ToList(),
+            Collections = (await collectionService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
+            Companies = (await companyService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
+            Engines = (await engineService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
+            Genres = (await genreService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
+            Platforms = (await platformService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
+            Tags = (await tagService.AsNoTracking().GetAsync()).Select(sdkMapper.ToSdk).ToList(),
         };
 
         return depotResults;

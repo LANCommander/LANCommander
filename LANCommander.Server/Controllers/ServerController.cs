@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.SDK.Helpers;
+﻿using LANCommander.SDK.Helpers;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -10,18 +9,15 @@ namespace LANCommander.Server.Controllers
     public class ServerController : BaseController
     {
         private readonly ServerService ServerService;
-        private readonly IMapper Mapper;
         private readonly IOptions<Settings.Settings> _settings;
 
         public ServerController(
             ILogger<ServerController> logger,
             SettingsProvider<Settings.Settings> settingsProvider,
-            IMapper mapper,
             ServerService serverService,
             IOptions<Settings.Settings> settings) : base(logger, settingsProvider)
         {
             ServerService = serverService;
-            Mapper = mapper;
             _settings = settings;
         }
 

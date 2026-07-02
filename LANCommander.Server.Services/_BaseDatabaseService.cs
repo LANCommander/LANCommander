@@ -6,8 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using System.Reflection;
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using LANCommander.Server.Services.Abstractions;
 using Microsoft.AspNetCore.Http;
 using ZiggyCreatures.Caching.Fusion;
@@ -18,7 +16,6 @@ namespace LANCommander.Server.Services
         ILogger logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory) : BaseService(logger, settingsProvider), IBaseDatabaseService<T> where T : class, IBaseModel
     {
@@ -124,9 +121,9 @@ namespace LANCommander.Server.Services
             return await GetAsync(x => true);
         }
 
-        public virtual async Task<ICollection<U>> GetAsync<U>()
+        public virtual async Task<ICollection<U>> GetAsync<U>(Func<IQueryable<T>, IQueryable<U>> projector)
         {
-            return await GetAsync<U>(x => true);
+            return await GetAsync<U>(x => true, projector);
         }
 
         public virtual async Task<T> GetAsync(Guid id)
@@ -134,9 +131,14 @@ namespace LANCommander.Server.Services
             return await FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public virtual async Task<U> GetAsync<U>(Guid id)
+        public virtual async Task<U> GetAsync<U>(Guid id, Func<IQueryable<T>, IQueryable<U>> projector)
         {
-            return await FirstOrDefaultAsync<U>(x => x.Id == id);
+            return await FirstOrDefaultAsync<U>(x => x.Id == id, projector);
+        }
+
+        public virtual async Task<U> GetAsync<U>(Guid id, Func<T, U> map)
+        {
+            return await FirstOrDefaultAsync<U>(x => x.Id == id, map);
         }
 
         public virtual async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
@@ -158,18 +160,18 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<U>> projector)
         {
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-                
+
                 var queryable = context.Set<T>().AsQueryable();
-                
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
-                
-                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).ToListAsync();
+
+                return await projector(queryable.Where(predicate)).ToListAsync();
             }
             finally
             {
@@ -196,18 +198,18 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public virtual async Task<U> FirstAsync<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<U> FirstAsync<U>(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<U>> projector)
         {
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-                
+
                 var queryable = context.Set<T>().AsQueryable();
-                
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstAsync();
+                return await projector(queryable.Where(predicate)).FirstAsync();
             }
             finally
             {
@@ -234,7 +236,26 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public virtual async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<U>> projector)
+        {
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+
+                var queryable = context.Set<T>().AsQueryable();
+
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+
+                return await projector(queryable.Where(predicate)).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+
+        public virtual async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate, Func<T, U> map)
         {
             try
             {
@@ -247,11 +268,7 @@ namespace LANCommander.Server.Services
 
                 var entity = await queryable.Where(predicate).FirstOrDefaultAsync();
 
-                return mapper.Map<U>(entity);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
+                return entity == null ? default! : map(entity);
             }
             finally
             {

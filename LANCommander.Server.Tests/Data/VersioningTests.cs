@@ -59,7 +59,6 @@ public class VersioningTests(ApplicationFixture fixture) : BaseTest(fixture)
                 GameId = g.Id,
                 StorageLocationId = storageLocation.Id,
                 Version = "1.0.0",
-                Changelog = "Initial release",
                 ObjectKey = "archive-1.zip",
                 CreatedOn = olderArchiveCreatedOn,
             });
@@ -70,7 +69,6 @@ public class VersioningTests(ApplicationFixture fixture) : BaseTest(fixture)
                 GameId = g.Id,
                 StorageLocationId = storageLocation.Id,
                 Version = "2.0.0",
-                Changelog = "Second release",
                 ObjectKey = "archive-2.zip",
                 CreatedOn = newerArchiveCreatedOn,
             });

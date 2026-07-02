@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
@@ -13,9 +12,8 @@ namespace LANCommander.Server.Services
         ILogger<GameVersionService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameVersion>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameVersion>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<GameVersion> AddAsync(GameVersion entity)
         {

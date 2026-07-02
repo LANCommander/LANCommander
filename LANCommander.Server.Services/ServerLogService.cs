@@ -3,7 +3,6 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -14,9 +13,8 @@ namespace LANCommander.Server.Services
         ILogger<ServerConsoleService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<ServerConsole> AddAsync(ServerConsole entity)
         {

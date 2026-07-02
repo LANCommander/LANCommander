@@ -1,5 +1,3 @@
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
@@ -21,7 +19,6 @@ namespace LANCommander.Server.Services
         private readonly IdentityContextFactory _identityContextFactory;
         private readonly CollectionService CollectionService;
         private readonly IDbContextFactory<DatabaseContext> ContextFactory;
-        private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
         private readonly IOptions<IdentityOptions> _identityOptions;
 
@@ -30,7 +27,6 @@ namespace LANCommander.Server.Services
         public UserService(
             ILogger<UserService> logger,
             SettingsProvider<Settings.Settings> settingsProvider,
-            IMapper mapper,
             IFusionCache cache,
             CollectionService collectionService,
             IDbContextFactory<DatabaseContext> contextFactory,
@@ -40,7 +36,6 @@ namespace LANCommander.Server.Services
             _identityContextFactory = identityContextFactory;
             CollectionService = collectionService;
             ContextFactory = contextFactory;
-            Mapper = mapper;
             Cache = cache;
             _identityOptions = identityOptions;
         }
@@ -63,9 +58,9 @@ namespace LANCommander.Server.Services
             return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());
         }
 
-        public async Task<T> GetAsync<T>(string userName)
+        public async Task<T> GetAsync<T>(string userName, Func<IQueryable<User>, IQueryable<T>> projector)
         {
-            return await FirstOrDefaultAsync<T>(u => u.UserName.ToUpper() == userName.ToUpper());
+            return await FirstOrDefaultAsync<T>(u => u.UserName.ToUpper() == userName.ToUpper(), projector);
         }
 
         public async Task<IEnumerable<Role>> GetRolesAsync(User user)
@@ -359,7 +354,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ICollection<T>> GetAsync<T>()
+        public async Task<ICollection<T>> GetAsync<T>(Func<IQueryable<User>, IQueryable<T>> projector)
         {
             try
             {
@@ -369,9 +364,7 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable
-                    .ProjectTo<T>(Mapper.ConfigurationProvider)
-                    .ToListAsync();
+                return await projector(queryable).ToListAsync();
             }
             finally
             {
@@ -391,11 +384,11 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id)
+        public async Task<T> GetAsync<T>(Guid id, Func<IQueryable<User>, IQueryable<T>> projector)
         {
             try
             {
-                return await FirstOrDefaultAsync<T>(u => u.Id == id);
+                return await FirstOrDefaultAsync<T>(u => u.Id == id, projector);
             }
             finally
             {
@@ -421,7 +414,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ICollection<T>> GetAsync<T>(Expression<Func<User, bool>> predicate)
+        public async Task<ICollection<T>> GetAsync<T>(Expression<Func<User, bool>> predicate, Func<IQueryable<User>, IQueryable<T>> projector)
         {
             try
             {
@@ -431,10 +424,7 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable
-                    .Where(predicate)
-                    .ProjectTo<T>(Mapper.ConfigurationProvider)
-                    .ToListAsync();
+                return await projector(queryable.Where(predicate)).ToListAsync();
             }
             finally
             {
@@ -460,7 +450,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> FirstOrDefaultAsync<T>(Expression<Func<User, bool>> predicate)
+        public async Task<T> FirstOrDefaultAsync<T>(Expression<Func<User, bool>> predicate, Func<IQueryable<User>, IQueryable<T>> projector)
         {
             try
             {
@@ -470,10 +460,7 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable
-                    .Where(predicate)
-                    .ProjectTo<T>(Mapper.ConfigurationProvider)
-                    .FirstOrDefaultAsync();
+                return await projector(queryable.Where(predicate)).FirstOrDefaultAsync();
             }
             finally
             {
@@ -502,7 +489,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> FirstOrDefaultAsync<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public async Task<T> FirstOrDefaultAsync<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector, Func<IQueryable<User>, IQueryable<T>> projector)
         {
             try
             {
@@ -512,9 +499,7 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable
-                    .Where(predicate)
-                    .ProjectTo<T>(Mapper.ConfigurationProvider)
+                return await projector(queryable.Where(predicate))
                     .OrderBy(orderKeySelector)
                     .FirstOrDefaultAsync();
             }

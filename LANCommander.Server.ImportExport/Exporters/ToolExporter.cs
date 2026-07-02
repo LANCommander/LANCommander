@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class ToolExporter(ToolService toolService) : BaseExporter<Tool, Data.Models.Tool>
+public class ToolExporter(ManifestMapper manifestMapper, ToolService toolService) : BaseExporter<Tool, Data.Models.Tool>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Tool record)
     {
@@ -21,7 +21,7 @@ public class ToolExporter(ToolService toolService) : BaseExporter<Tool, Data.Mod
 
     public override async Task<Tool> ExportAsync(Guid id)
     {
-        var tool = await toolService.GetAsync<Tool>(id);
+        var tool = await toolService.GetAsync(id, manifestMapper.ProjectToManifestTool);
 
         if (tool.Archives is null)
             tool.Archives = new List<Archive>();

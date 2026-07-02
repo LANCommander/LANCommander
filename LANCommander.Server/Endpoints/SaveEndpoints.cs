@@ -1,8 +1,8 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using System.DirectoryServices.AccountManagement;
 using System.Security.Claims;
@@ -30,6 +30,7 @@ public static class SaveEndpoints
     public static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
         [FromServices] ILogger<Program> logger,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -42,7 +43,7 @@ public static class SaveEndpoints
             return TypedResults.Unauthorized();
         }
 
-        var saves = await saveService.GetAsync<SDK.Models.GameSave>(gs => gs.UserId == user.Id);
+        var saves = await saveService.GetAsync(gs => gs.UserId == user.Id, sdkMapper.ProjectToSdkGameSave);
 
         return TypedResults.Ok(saves);
     }
@@ -51,6 +52,7 @@ public static class SaveEndpoints
         Guid id,
         ClaimsPrincipal userPrincipal,
         [FromServices] ILogger<Program> logger,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -63,7 +65,7 @@ public static class SaveEndpoints
             return TypedResults.Unauthorized();
         }
 
-        var save = await saveService.FirstOrDefaultAsync<SDK.Models.GameSave>(s => s.Id == id);
+        var save = await saveService.FirstOrDefaultAsync(s => s.Id == id, sdkMapper.ProjectToSdkGameSave);
         
         if (save == null)
             return TypedResults.NotFound();
@@ -101,6 +103,7 @@ public static class SaveEndpoints
         Guid gameId,
         ClaimsPrincipal userPrincipal,
         [FromServices] ILogger<Program> logger,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -109,11 +112,11 @@ public static class SaveEndpoints
         if (user == null)
         {
             logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
-            
+
             return TypedResults.Unauthorized();
         }
-        
-        var userSaves = await saveService.GetAsync<SDK.Models.GameSave>(gs => gs.UserId == user.Id && gs.GameId == gameId);
+
+        var userSaves = await saveService.GetAsync(gs => gs.UserId == user.Id && gs.GameId == gameId, sdkMapper.ProjectToSdkGameSave);
         
         return TypedResults.Ok(userSaves);
     }
@@ -122,7 +125,7 @@ public static class SaveEndpoints
         Guid gameId,
         ClaimsPrincipal userPrincipal,
         [FromServices] ILogger<Program> logger,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
@@ -131,10 +134,10 @@ public static class SaveEndpoints
         if (user == null)
         {
             logger.LogError("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
-            
+
             return TypedResults.Unauthorized();
         }
-        
+
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
             .FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == user.Id);
@@ -142,7 +145,7 @@ public static class SaveEndpoints
         if (latestSave == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(mapper.Map<SDK.Models.GameSave>(latestSave));
+        return TypedResults.Ok(sdkMapper.ToSdk(latestSave));
     }
 
     public static async Task<IResult> DownloadLatestSaveByGameAsync(
@@ -217,7 +220,7 @@ public static class SaveEndpoints
         HttpContext httpContext,
         [FromServices] ILogger<Program> logger,
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] StorageLocationService storageLocationService,
@@ -322,7 +325,7 @@ public static class SaveEndpoints
                         await saveService.DeleteAsync(saveToCull);
                 }
 
-                return TypedResults.Ok(mapper.Map<SDK.Models.GameSave>(save));
+                return TypedResults.Ok(sdkMapper.ToSdk(save));
             }
             catch (Exception ex)
             {

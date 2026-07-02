@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Data;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -23,7 +23,7 @@ public static class LibraryEndpoints
 
     internal static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
         [FromServices] LibraryService libraryService,
@@ -50,14 +50,14 @@ public static class LibraryEndpoints
                             .AsSplitQuery()
                             .GetAsync();
 
-                        return mapper.Map<IEnumerable<SDK.Models.Game>>(entities);
+                        return entities.Select(sdkMapper.ToSdk).ToList();
                     },
                     TimeSpan.MaxValue,
                     tags: ["Games"]);
 
                 var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
-                return TypedResults.Ok(ordered.Select(g => mapper.Map<SDK.Models.EntityReference>(g)));
+                return TypedResults.Ok(ordered.Select(sdkMapper.ToEntityReference));
             }
 
             if (userPrincipal.Identity?.Name is null)
@@ -85,7 +85,7 @@ public static class LibraryEndpoints
 
                     var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
-                    return mapper.Map<IEnumerable<SDK.Models.EntityReference>>(ordered);
+                    return ordered.Select(sdkMapper.ToEntityReference).ToList();
                 },
                 TimeSpan.MaxValue,
                 tags: ["Library", "Games"]);

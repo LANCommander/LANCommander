@@ -110,7 +110,10 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IPXRelayService>();
         services.AddSingleton<IBeaconMessageInterceptor, BeaconMessageInterceptor>();
 
-        services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
+        // Mapperly mappers (stateless, thread-safe compile-time source generators).
+        services.AddSingleton<Mappers.SdkMapper>();
+        services.AddSingleton<Mappers.ManifestMapper>();
+
         services.AddFusionCache();
 
         return services;

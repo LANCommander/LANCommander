@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -12,9 +11,8 @@ namespace LANCommander.Server.Services
         ILogger<CategoryService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<Category>(logger, settingsProvider, cache, mapper, httpContextAccessor, context)
+        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<Category>(logger, settingsProvider, cache, httpContextAccessor, context)
     {
         public override async Task<Category> AddAsync(Category entity)
         {

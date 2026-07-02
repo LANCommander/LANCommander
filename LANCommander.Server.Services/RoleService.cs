@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
@@ -16,11 +15,10 @@ namespace LANCommander.Server.Services
         ILogger<RoleService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         CollectionService collectionService,
-        IdentityContextFactory identityContextFactory) : BaseDatabaseService<Role>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IdentityContextFactory identityContextFactory) : BaseDatabaseService<Role>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public const string AdministratorRoleName = "Administrator";
 
@@ -51,13 +49,6 @@ namespace LANCommander.Server.Services
         public async Task<Role> GetAsync(string roleName)
         {
             return await FirstOrDefaultAsync(r => r.Name == roleName);
-        }
-
-        public async Task<T> GetAsync<T>(string roleName)
-        {
-            var role = await FirstOrDefaultAsync(r => r.Name == roleName);
-
-            return mapper.Map<T>(role);
         }
 
         public async Task<Role> AssignCollections(Guid roleId, IEnumerable<Guid> collectionIds)

@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class KeyExporter(
+    ManifestMapper manifestMapper,
     KeyService keyService) : BaseExporter<Key, Data.Models.Key>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Key record)
@@ -23,6 +24,6 @@ public class KeyExporter(
 
     public override async Task<Key> ExportAsync(Guid id)
     {
-        return await keyService.GetAsync<Key>(id);
+        return await keyService.GetAsync(id, manifestMapper.ProjectToManifestKey);
     }
 } 

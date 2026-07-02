@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.RegularExpressions;
-using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using YamlDotNet.Core.Tokens;
 using ZiggyCreatures.Caching.Fusion;
@@ -17,9 +16,8 @@ namespace LANCommander.Server.Services
         ILogger<PageService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Page>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Page>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Page> AddAsync(Page entity)
         {

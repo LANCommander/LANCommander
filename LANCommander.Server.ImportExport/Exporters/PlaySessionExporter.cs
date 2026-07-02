@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class PlaySessionExporter(PlaySessionService playSessionService) : BaseExporter<PlaySession, Data.Models.PlaySession>
+public class PlaySessionExporter(ManifestMapper manifestMapper, PlaySessionService playSessionService) : BaseExporter<PlaySession, Data.Models.PlaySession>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.PlaySession record)
     {
@@ -22,6 +22,6 @@ public class PlaySessionExporter(PlaySessionService playSessionService) : BaseEx
 
     public override async Task<PlaySession> ExportAsync(Guid id)
     {
-        return await playSessionService.GetAsync<PlaySession>(id);
+        return await playSessionService.GetAsync(id, manifestMapper.ProjectToManifestPlaySession);
     }
 } 

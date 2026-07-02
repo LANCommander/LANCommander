@@ -1,13 +1,14 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class MediaExporter(
+    ManifestMapper manifestMapper,
     MediaService mediaService) : BaseExporter<Media, Data.Models.Media>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Media record)
@@ -55,7 +56,7 @@ public class MediaExporter(
                 }
             }
         
-            return await mediaService.GetAsync<Media>(id);
+            return await mediaService.GetAsync(id, manifestMapper.ProjectToManifestMedia);
         }
         catch (Exception ex)
         {

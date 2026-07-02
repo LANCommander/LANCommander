@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
@@ -20,7 +19,7 @@ public class RedistributableExporter(RedistributableService redistributableServi
 
     public override async Task<Redistributable> ExportAsync(Guid id)
     {
-        var redistributable = await redistributableService.GetAsync<Redistributable>(id);
+        var redistributable = await redistributableService.GetManifestAsync(id);
 
         if (redistributable.Archives is null)
             redistributable.Archives = new List<Archive>();

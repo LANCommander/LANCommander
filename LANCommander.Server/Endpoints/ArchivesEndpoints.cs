@@ -1,5 +1,6 @@
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.IO.Compression;
@@ -21,14 +22,16 @@ public static class ArchivesEndpoints
     }
 
     internal static async Task<Results<Ok<ICollection<SDK.Models.Archive>>, UnauthorizedHttpResult>> GetAsync(
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ArchiveService archiveService)
-            => TypedResults.Ok(await archiveService.GetAsync<SDK.Models.Archive>());
+            => TypedResults.Ok(await archiveService.GetAsync(sdkMapper.ProjectToSdkArchive));
 
     internal static async Task<Results<Ok<SDK.Models.Archive>, NotFound, UnauthorizedHttpResult>> GetByIdAsync(
         Guid id,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ArchiveService archiveService)
     {
-        var archive = await archiveService.GetAsync<SDK.Models.Archive>(id);
+        var archive = await archiveService.GetAsync(id, sdkMapper.ProjectToSdkArchive);
 
         return archive is not null ?
             TypedResults.Ok(archive) :

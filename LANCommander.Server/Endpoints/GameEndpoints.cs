@@ -1,12 +1,12 @@
 using System.Net.Mime;
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -45,7 +45,7 @@ public static class GameEndpoints
         [FromServices] LibraryService libraryService,
         [FromServices] IOptions<Settings.Settings> settings,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal)
     {
@@ -61,7 +61,7 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync();
 
-            return mapper.Map<IEnumerable<SDK.Models.Game>>(games);
+            return games.Select(sdkMapper.ToSdk).ToList();
         }, TimeSpan.MaxValue, tags: ["Games"]);
 
         foreach (var mappedGame in mappedGames)
@@ -92,7 +92,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetByIdAsync(
         [FromServices] GameService gameService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] ManifestMapper manifestMapper,
         Guid id)
     {
         var game = await cache.GetOrSetAsync<SDK.Models.Manifest.Game>($"Games/{id}", async _ =>
@@ -119,7 +119,7 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
                 
-            return mapper.Map<SDK.Models.Manifest.Game>(result);
+            return manifestMapper.ToManifest(result);
         }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
         if (game != null)
@@ -146,14 +146,14 @@ public static class GameEndpoints
     internal static async Task<IResult> GetVersionsByIdAsync(
         [FromServices] GameVersionService gameVersionService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var versions = await cache.GetOrSetAsync($"Games/{id}/Versions", async _ =>
         {
             var results = await gameVersionService.GetAllAsync(id);
 
-            return mapper.Map<IEnumerable<SDK.Models.GameVersion>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(versions);
@@ -181,7 +181,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetVersionScriptsByIdAsync(
         [FromServices] ScriptService scriptService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id,
         Guid versionId)
     {
@@ -192,7 +192,7 @@ public static class GameEndpoints
                 .AsNoTracking()
                 .GetAsync(s => s.GameVersionId == versionId && s.Type != SDK.Enums.ScriptType.Package);
 
-            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
 
         return TypedResults.Ok(scripts);
@@ -204,7 +204,7 @@ public static class GameEndpoints
         [FromServices] LibraryService libraryService,
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
         Guid id)
@@ -230,13 +230,13 @@ public static class GameEndpoints
             dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
             dataActions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
 
-            var mappedActions = mapper.Map<List<SDK.Models.Action>>(dataActions);
+            var mappedActions = dataActions.Select(sdkMapper.ToSdk).ToList();
 
             foreach (var server in game.Servers)
             {
                 foreach (var serverAction in server.Actions)
                 {
-                    var mappedAction = mapper.Map<SDK.Models.Action>(serverAction);
+                    var mappedAction = sdkMapper.ToSdk(serverAction);
 
                     // Server actions are attached to the server, not the game, so their GameId is
                     // empty. Stamp the owning game's id so the launcher associates the action with
@@ -262,7 +262,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetAddonsByIdAsync(
         [FromServices] GameService gameService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var addons = await cache.GetOrSetAsync($"Games/{id}/Addons", async _ =>
@@ -272,8 +272,8 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .AsNoTracking()
                 .GetAsync(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
-                
-            return mapper.Map<IEnumerable<SDK.Models.Game>>(results);
+
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(addons);
@@ -282,7 +282,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetToolsByIdAsync(
         [FromServices] ToolService toolService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var tools = await cache.GetOrSetAsync($"Games/{id}/Tools", async _ =>
@@ -293,7 +293,7 @@ public static class GameEndpoints
                 .AsNoTracking()
                 .GetAsync(t => t.Games.Any(g => g.Id == id));
 
-            return mapper.Map<IEnumerable<SDK.Models.Tool>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Tools", "Games", $"Games/{id}"]);
 
         return TypedResults.Ok(tools);
@@ -302,7 +302,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetScriptsByIdAsync(
         [FromServices] ScriptService scriptService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var scripts = await cache.GetOrSetAsync($"Games/{id}/Scripts", async _ =>
@@ -312,7 +312,7 @@ public static class GameEndpoints
                 .AsNoTracking()
                 .GetAsync(s => s.GameId == id && s.Type != SDK.Enums.ScriptType.Package);
 
-            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Scripts", $"Games/{id}/Scripts", "Games", $"Games/{id}"]);
         
         return TypedResults.Ok(scripts);
@@ -428,7 +428,7 @@ public static class GameEndpoints
 
     internal static async Task<IResult> GetUpdatesAsync(
         [FromServices] GameService gameService,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
         Guid id,
         string version)
@@ -436,7 +436,7 @@ public static class GameEndpoints
         try
         {
             var archives = await gameService.GetUpdatesAsync(id, version);
-            var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
+            var mapped = archives.Select(sdkMapper.ToSdk).ToList();
 
             return TypedResults.Ok(mapped);
         }

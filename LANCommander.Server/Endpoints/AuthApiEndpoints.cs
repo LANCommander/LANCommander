@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Exceptions;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -191,11 +191,12 @@ public static class AuthApiEndpoints
     }
 
     internal static IResult GetAuthenticationProvidersAsync(
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IOptions<Settings.Settings> settings)
     {
-        var providers = mapper.Map<IEnumerable<AuthenticationProvider>>(
-            settings.Value.Server.Authentication.AuthenticationProviders);
+        var providers = settings.Value.Server.Authentication.AuthenticationProviders
+            .Select(sdkMapper.ToSdk)
+            .ToList();
 
         return TypedResults.Ok(providers);
     }

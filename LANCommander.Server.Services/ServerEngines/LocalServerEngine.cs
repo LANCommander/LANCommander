@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
@@ -9,6 +8,7 @@ using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Mappers;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Services.Utilities;
 using LANCommander.Server.Settings.Enums;
@@ -21,7 +21,7 @@ namespace LANCommander.Server.Services.ServerEngines;
 
 public class LocalServerEngine(
     ILogger<LocalServerEngine> logger,
-    IMapper mapper,
+    SdkMapper sdkMapper,
     IServiceProvider serviceProvider,
     PowerShellScriptFactory powerShellScriptFactory,
     ProcessExecutionContextFactory processExecutionContextFactory,
@@ -124,7 +124,7 @@ public class LocalServerEngine(
             {
                 var script = powerShellScriptFactory.Create(ScriptType.BeforeStart);
 
-                script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
+                script.AddVariable("Server", sdkMapper.ToSdk(server));
 
                 script.UseWorkingDirectory(server.WorkingDirectory);
                 script.UseInline(serverScript.Contents);
@@ -162,7 +162,7 @@ public class LocalServerEngine(
 
                 EmitStatus(server, ServerProcessStatus.Running);
 
-                await executionContext.ExecuteServerAsync(mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
+                await executionContext.ExecuteServerAsync(sdkMapper.ToSdk(server), cancellationTokenSource);
 
                 EmitStatus(server, ServerProcessStatus.Stopped);
             }
@@ -228,7 +228,7 @@ public class LocalServerEngine(
                 {
                     var script = powerShellScriptFactory.Create(ScriptType.AfterStop);
 
-                    script.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
+                    script.AddVariable("Server", sdkMapper.ToSdk(server));
 
                     script.UseWorkingDirectory(server.WorkingDirectory);
                     script.UseInline(serverScript.Contents);

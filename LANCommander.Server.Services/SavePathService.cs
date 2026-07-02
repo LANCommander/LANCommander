@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +11,9 @@ namespace LANCommander.Server.Services
         ILogger<SavePathService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         GameVersionService gameVersionService,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<SavePath> AddAsync(SavePath entity)
         {

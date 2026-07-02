@@ -2,7 +2,6 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
@@ -16,10 +15,9 @@ namespace LANCommander.Server.Services
         ILogger<ScriptService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         GameVersionService gameVersionService,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Script> AddAsync(Script script)
         {

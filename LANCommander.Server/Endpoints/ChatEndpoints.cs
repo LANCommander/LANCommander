@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +25,10 @@ public static class ChatEndpoints
 
     public static async Task<IResult> GetByThreadIdAsync(
         Guid threadId,
-        [FromServices] ChatService chatService,
-        [FromServices] IMapper mapper)
+        [FromServices] ChatService chatService)
     {
-        var messages = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(await chatService.GetMessagesAsync(threadId, 10));
-        
+        var messages = (await chatService.GetMessagesAsync(threadId, 10)).Items;
+
         return TypedResults.Ok(messages);
     }
 

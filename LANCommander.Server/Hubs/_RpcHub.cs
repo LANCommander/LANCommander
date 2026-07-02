@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Rpc.Server;
 using LANCommander.SDK.Services;
@@ -11,7 +10,6 @@ namespace LANCommander.Server.Hubs;
 
 public partial class RpcHub(
     IFusionCache cache,
-    IMapper mapper,
     ILogger<RpcHub> logger,
     ServerService serverService,
     GameService gameService,

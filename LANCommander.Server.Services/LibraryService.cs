@@ -2,7 +2,6 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +13,10 @@ namespace LANCommander.Server.Services
         ILogger<LibraryService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         GameService gameService,
-        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Library> AddAsync(Library entity)
         {

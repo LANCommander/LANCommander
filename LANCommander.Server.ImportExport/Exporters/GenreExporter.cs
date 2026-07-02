@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class GenreExporter(
+    ManifestMapper manifestMapper,
     GenreService genreService) : BaseExporter<Genre, Data.Models.Genre>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Genre record)
@@ -23,6 +24,6 @@ public class GenreExporter(
 
     public override async Task<Genre> ExportAsync(Guid id)
     {
-        return await genreService.GetAsync<Genre>(id);
+        return await genreService.GetAsync(id, manifestMapper.ProjectToManifestGenre);
     }
 } 

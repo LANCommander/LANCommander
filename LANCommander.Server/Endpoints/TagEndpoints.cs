@@ -1,5 +1,5 @@
-using AutoMapper;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Server.Endpoints;
@@ -23,9 +23,9 @@ public static class TagEndpoints
     internal static async Task<IResult> CreateAsync(
         [FromBody] SDK.Models.Tag tag,
         [FromServices] TagService tagService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
-        var entity = await tagService.AddAsync(mapper.Map<Data.Models.Tag>(tag));
+        var entity = await tagService.AddAsync(sdkMapper.ToData(tag));
         
         return TypedResults.Ok(entity);
     }
@@ -34,7 +34,7 @@ public static class TagEndpoints
         Guid id,
         [FromBody] SDK.Models.Tag tag,
         [FromServices] TagService tagService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
         var existing = await tagService.GetAsync(id);
         
@@ -43,7 +43,7 @@ public static class TagEndpoints
         
         tag.Id = existing.Id;
         
-        existing = await tagService.UpdateAsync(mapper.Map<Data.Models.Tag>(tag));
+        existing = await tagService.UpdateAsync(sdkMapper.ToData(tag));
         
         return TypedResults.Ok(existing);
     }

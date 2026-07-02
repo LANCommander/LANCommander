@@ -2,6 +2,7 @@ using System.Security.Claims;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,11 +24,12 @@ public static class ProfileEndpoints
 
     internal static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] UserService userService)
     {
         if (userPrincipal?.Identity?.IsAuthenticated ?? false)
         {
-            var user = await userService.GetAsync<SDK.Models.User>(userPrincipal.Identity!.Name);
+            var user = await userService.GetAsync(userPrincipal.Identity!.Name, sdkMapper.ProjectToSdkUser);
 
             if (user != null)
                 return TypedResults.Ok(user);

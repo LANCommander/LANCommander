@@ -3,7 +3,6 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using System.IO.Compression;
 using System.Linq.Expressions;
-using AutoMapper;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
@@ -21,10 +20,9 @@ namespace LANCommander.Server.Services
         ILogger<ArchiveService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveClient
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, httpContextAccessor, dbContextFactory), IArchiveClient
     {
         public async Task<Archive> GetLatestArchiveAsync(Expression<Func<Archive, bool>> predicate)
         {

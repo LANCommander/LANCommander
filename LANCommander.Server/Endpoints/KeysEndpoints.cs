@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Server.Endpoints;
@@ -21,7 +21,7 @@ public static class KeysEndpoints
     internal static async Task<IResult> GetAsync(
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
@@ -64,9 +64,9 @@ public static class KeysEndpoints
             }
 
             if (key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+                return TypedResults.Ok(sdkMapper.ToSdk(key));
 
-            var allocated = await AllocateNewKeyAsync(game.Id, keyRequest, game.KeyAllocationMethod, userPrincipal, mapper, keyService, userService);
+            var allocated = await AllocateNewKeyAsync(game.Id, keyRequest, game.KeyAllocationMethod, userPrincipal, sdkMapper, keyService, userService);
 
             return TypedResults.Ok(allocated);
         }
@@ -82,7 +82,7 @@ public static class KeysEndpoints
         Guid id,
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
@@ -125,9 +125,9 @@ public static class KeysEndpoints
             }
 
             if (key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+                return TypedResults.Ok(sdkMapper.ToSdk(key));
 
-            var allocated = await AllocateNewKeyAsync(id, keyRequest, game.KeyAllocationMethod, userPrincipal, mapper, keyService, userService);
+            var allocated = await AllocateNewKeyAsync(id, keyRequest, game.KeyAllocationMethod, userPrincipal, sdkMapper, keyService, userService);
 
             return TypedResults.Ok(allocated);
         }
@@ -143,7 +143,7 @@ public static class KeysEndpoints
         Guid id,
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
@@ -188,7 +188,7 @@ public static class KeysEndpoints
             var availableKey = game.Keys.FirstOrDefault(k => k.IsAvailable());
 
             if (availableKey == null && key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+                return TypedResults.Ok(sdkMapper.ToSdk(key));
 
             if (availableKey == null)
                 return TypedResults.NotFound();
@@ -207,7 +207,7 @@ public static class KeysEndpoints
                     break;
             }
 
-            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+            return TypedResults.Ok(sdkMapper.ToSdk(key));
         }
         catch (Exception ex)
         {
@@ -222,7 +222,7 @@ public static class KeysEndpoints
         KeyRequest keyRequest,
         KeyAllocationMethod keyAllocationMethod,
         ClaimsPrincipal userPrincipal,
-        IMapper mapper,
+        SdkMapper sdkMapper,
         KeyService keyService,
         UserService userService)
     {
@@ -235,10 +235,10 @@ public static class KeysEndpoints
             return null;
 
         if (keyAllocationMethod == KeyAllocationMethod.MacAddress)
-            return mapper.Map<SDK.Models.Key>(await keyService.AllocateAsync(availableKey, keyRequest.MacAddress));
+            return sdkMapper.ToSdk(await keyService.AllocateAsync(availableKey, keyRequest.MacAddress));
 
         if (keyAllocationMethod == KeyAllocationMethod.UserAccount)
-            return mapper.Map<SDK.Models.Key>(await keyService.AllocateAsync(availableKey, user));
+            return sdkMapper.ToSdk(await keyService.AllocateAsync(availableKey, user));
 
         return null;
     }

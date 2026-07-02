@@ -3,7 +3,6 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
 using System.Net.Mime;
-using AutoMapper;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using SixLabors.ImageSharp;
@@ -26,11 +25,10 @@ namespace LANCommander.Server.Services
         ILogger<MediaService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         StorageLocationService storageLocationService,
-        MediaToolService mediaToolService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        MediaToolService mediaToolService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Media> AddAsync(Media entity)
         {

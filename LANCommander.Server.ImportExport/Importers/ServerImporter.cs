@@ -1,7 +1,7 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;
 using SharpCompress.Common;
@@ -10,7 +10,7 @@ namespace LANCommander.Server.ImportExport.Importers;
 
 public class ServerImporter(
     ILogger<ServerImporter> logger,
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     ServerService serverService,
     GameService gameService,
     UserService userService) : BaseImporter<SDK.Models.Manifest.Server>
@@ -35,7 +35,7 @@ public class ServerImporter(
 
     public override async Task<bool> AddAsync(SDK.Models.Manifest.Server record)
     {
-        var server = mapper.Map<Data.Models.Server>(record);
+        var server = manifestMapper.ToData(record);
 
         try
         {

@@ -1,7 +1,7 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -20,7 +20,6 @@ public static class DepotEndpoints
 
     internal static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
         [FromServices] IFusionCache cache,
         [FromServices] DepotService depotService,
         [FromServices] UserService userService,
@@ -89,7 +88,7 @@ public static class DepotEndpoints
     internal static async Task<IResult> GetGamesAsync(
         Guid id,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
         [FromServices] DepotService depotService,
@@ -111,7 +110,7 @@ public static class DepotEndpoints
             .Include(l => l.Games)
             .FirstOrDefaultAsync(l => l.UserId == user.Id);
 
-        var result = mapper.Map<SDK.Models.DepotGame>(game);
+        var result = sdkMapper.ToDepotGame(game);
 
         if (library?.Games.Any(g => g.Id == game.Id) ?? false)
             result.InLibrary = true;

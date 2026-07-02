@@ -2,7 +2,7 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
-using AutoMapper;
+using LANCommander.Server.Services.Mappers;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Http;
@@ -19,9 +19,10 @@ namespace LANCommander.Server.Services
         SettingsProvider<Settings.Settings> settingsProvider,
         ScriptClient scriptClient,
         IFusionCache cache,
-        IMapper mapper,
+        SdkMapper sdkMapper,
+        ManifestMapper manifestMapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Tool>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Tool>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Tool> AddAsync(Tool entity)
         {
@@ -68,7 +69,7 @@ namespace LANCommander.Server.Services
                 })
                 .GetAsync(manifestId);
             
-            return mapper.Map<SDK.Models.Manifest.Tool>(tool);
+            return manifestMapper.ToManifest(tool);
         }
 
         public async Task PackageAsync(Guid id)
@@ -93,7 +94,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in tool.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Tool_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Tool>(tool), latestArchivePath);
+                    var package = await scriptClient.Tool_RunPackageScriptAsync(sdkMapper.ToSdk(script), sdkMapper.ToSdk(tool), latestArchivePath);
 
                     if (package == null)
                     {

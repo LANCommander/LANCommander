@@ -1,14 +1,14 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class SaveExporter(
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     GameSaveService gameSaveService) : BaseExporter<Save, Data.Models.GameSave>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.GameSave record)
@@ -54,7 +54,7 @@ public class SaveExporter(
                 }
             }
             
-            return mapper.Map<Save>(entity);
+            return manifestMapper.ToManifest(entity);
         }
         catch (Exception ex)
         {

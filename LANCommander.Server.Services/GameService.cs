@@ -1,8 +1,8 @@
 ﻿using System.IO.Compression;
-using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Mappers;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using System.Linq.Expressions;
@@ -18,14 +18,15 @@ namespace LANCommander.Server.Services
         ILogger<GameService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
+        SdkMapper sdkMapper,
+        ManifestMapper manifestMapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
         GameVersionService gameVersionService,
         MediaService mediaService,
         StorageLocationService storageLocationService,
-        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {
@@ -194,7 +195,7 @@ namespace LANCommander.Server.Services
             if (game == null)
                 return null;
 
-            var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
+            var manifest = manifestMapper.ToManifest(game);
 
             if (version != null)
             {
@@ -202,15 +203,15 @@ namespace LANCommander.Server.Services
                     manifest.Version = version.Version;
 
                 manifest.Scripts = version.Scripts != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.Script>>(version.Scripts.Where(s => s.Type != ScriptType.Package).ToList())
+                    ? version.Scripts.Where(s => s.Type != ScriptType.Package).Select(manifestMapper.ToManifest).ToList()
                     : new List<SDK.Models.Manifest.Script>();
 
                 manifest.Actions = version.Actions != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.Action>>(version.Actions.ToList())
+                    ? version.Actions.Select(manifestMapper.ToManifest).ToList()
                     : new List<SDK.Models.Manifest.Action>();
 
                 manifest.SavePaths = version.SavePaths != null
-                    ? mapper.Map<ICollection<SDK.Models.Manifest.SavePath>>(version.SavePaths.ToList())
+                    ? version.SavePaths.Select(manifestMapper.ToManifest).ToList()
                     : new List<SDK.Models.Manifest.SavePath>();
             }
 
@@ -354,7 +355,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
+                    var package = await scriptClient.Game_RunPackageScriptAsync(sdkMapper.ToSdk(script), sdkMapper.ToSdk(game), latestArchivePath);
 
                     if (package == null)
                     {

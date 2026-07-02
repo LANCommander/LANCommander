@@ -1,19 +1,19 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 /// <summary>
 /// Implements exporting for archive records
 /// </summary>
-/// <param name="mapper">AutoMapper instance for mapping between models</param>
+/// <param name="manifestMapper">Mapper for converting between data and manifest models</param>
 /// <param name="archiveService">Service for archive operations</param>
 public class ArchiveExporter(
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     ArchiveService archiveService) : BaseExporter<Archive, Data.Models.Archive>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Archive record)
@@ -60,7 +60,7 @@ public class ArchiveExporter(
                 }
             }
         
-            return mapper.Map<Archive>(entity);
+            return manifestMapper.ToManifest(entity);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
@@ -33,7 +32,7 @@ public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Mode
 
     public override async Task<SDK.Models.Manifest.Server> ExportAsync(Guid id)
     {
-        var entity = await serverService.GetAsync<SDK.Models.Manifest.Server>(id);
+        var entity = await serverService.GetManifestAsync(id);
         
         var files = Directory.GetFiles(entity.WorkingDirectory, "*", SearchOption.AllDirectories);
 

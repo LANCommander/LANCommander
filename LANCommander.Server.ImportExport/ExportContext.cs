@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
@@ -7,6 +6,7 @@ using LANCommander.Server.ImportExport.Exporters;
 using LANCommander.Server.ImportExport.Importers;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZipArchive = System.IO.Compression.ZipArchive;
@@ -41,7 +41,7 @@ public class ExportContext(
     ServerConsoleExporter serverConsoleExporter,
     ServerHttpPathExporter serverHttpPathExporter,
     TagExporter tagExporter,
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     ILogger<ExportContext> logger) : IDisposable
 {
     public object Manifest { get; private set; }
@@ -183,7 +183,7 @@ public class ExportContext(
                 .Include(g => g.Tools);
         }).GetAsync(gameId);
         
-        var gameManifest = mapper.Map<SDK.Models.Manifest.Game>(game);
+        var gameManifest = manifestMapper.ToManifest(game);
 
         DataRecord = game;
         Manifest = gameManifest;
@@ -225,7 +225,7 @@ public class ExportContext(
             .GetAsync(redistributableId);
         
         DataRecord = redistributable;
-        Manifest = mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
+        Manifest = manifestMapper.ToManifest(redistributable);
         
         var exportItemInfo = new List<ExportItemInfo>();
         
@@ -252,7 +252,7 @@ public class ExportContext(
             .GetAsync(serverId);
 
         DataRecord = server;
-        Manifest = mapper.Map<SDK.Models.Manifest.Server>(server);
+        Manifest = manifestMapper.ToManifest(server);
         
         var exportItemInfo = new List<ExportItemInfo>();
         
@@ -278,7 +278,7 @@ public class ExportContext(
             .GetAsync(toolId);
 
         DataRecord = tool;
-        Manifest = mapper.Map<SDK.Models.Manifest.Tool>(tool);
+        Manifest = manifestMapper.ToManifest(tool);
         
         var exportItemInfo = new List<ExportItemInfo>();
         

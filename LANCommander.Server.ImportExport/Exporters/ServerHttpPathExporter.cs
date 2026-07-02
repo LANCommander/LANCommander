@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class ServerHttpPathExporter(ServerHttpPathService serverHttpPathService) : BaseExporter<ServerHttpPath, Data.Models.ServerHttpPath>
+public class ServerHttpPathExporter(ManifestMapper manifestMapper, ServerHttpPathService serverHttpPathService) : BaseExporter<ServerHttpPath, Data.Models.ServerHttpPath>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.ServerHttpPath record)
     {
@@ -22,6 +22,6 @@ public class ServerHttpPathExporter(ServerHttpPathService serverHttpPathService)
 
     public override async Task<ServerHttpPath> ExportAsync(Guid id)
     {
-        return await serverHttpPathService.GetAsync<ServerHttpPath>(id);
+        return await serverHttpPathService.GetAsync(id, manifestMapper.ProjectToManifestServerHttpPath);
     }
 } 

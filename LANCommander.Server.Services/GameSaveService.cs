@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.SDK.Enums;
@@ -15,10 +14,9 @@ namespace LANCommander.Server.Services
         ILogger<GameSaveService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<GameSave> AddAsync(GameSave entity)
         {

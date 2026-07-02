@@ -2,7 +2,7 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
-using AutoMapper;
+using LANCommander.Server.Services.Mappers;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Http;
@@ -19,9 +19,10 @@ namespace LANCommander.Server.Services
         SettingsProvider<Settings.Settings> settingsProvider,
         ScriptClient scriptClient,
         IFusionCache cache,
-        IMapper mapper,
+        SdkMapper sdkMapper,
+        ManifestMapper manifestMapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Redistributable> AddAsync(Redistributable entity)
         {
@@ -67,7 +68,7 @@ namespace LANCommander.Server.Services
                 })
                 .GetAsync(manifestId);
             
-            return mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
+            return manifestMapper.ToManifest(redistributable);
         }
 
         public async Task<Archive> GetLatestArchiveAsync(Guid id)
@@ -138,7 +139,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in redistributable.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Redistributable_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Redistributable>(redistributable), latestArchivePath);
+                    var package = await scriptClient.Redistributable_RunPackageScriptAsync(sdkMapper.ToSdk(script), sdkMapper.ToSdk(redistributable), latestArchivePath);
 
                     if (package == null)
                     {

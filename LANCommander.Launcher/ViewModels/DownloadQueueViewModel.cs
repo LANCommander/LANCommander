@@ -85,6 +85,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     public event EventHandler<Guid>? InstallCompleted;
 
+    public event EventHandler<Guid>? ToolInstallCompleted;
+
     public DownloadQueueViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -104,6 +106,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
         _installService.OnProgress += OnProgress;
         _installService.OnTaskProgressUpdate += OnTaskProgressUpdate;
         _installService.OnInstallComplete += OnInstallComplete;
+        _installService.OnToolInstallComplete += OnToolInstallComplete;
         _installService.OnInstallQueueComplete += OnInstallQueueComplete;
         _installService.OnInstallFail += OnInstallFail;
 
@@ -232,6 +235,19 @@ public partial class DownloadQueueViewModel : ViewModelBase
         {
             RefreshQueue();
             InstallCompleted?.Invoke(this, game.Id);
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnToolInstallComplete(Data.Models.Game game)
+    {
+        _logger.LogInformation("Tool install complete for game {GameTitle}", game.Title);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            RefreshQueue();
+            ToolInstallCompleted?.Invoke(this, game.Id);
         });
 
         return Task.CompletedTask;

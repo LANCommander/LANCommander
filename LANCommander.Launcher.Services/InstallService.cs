@@ -42,6 +42,9 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnInstallCompleteHandler(Game game);
         public event OnInstallCompleteHandler OnInstallComplete;
 
+        public delegate Task OnToolInstallCompleteHandler(Game game);
+        public event OnToolInstallCompleteHandler OnToolInstallComplete;
+
         public delegate Task OnInstallQueueCompleteHandler(Game game);
         public event OnInstallQueueCompleteHandler OnInstallQueueComplete;
 
@@ -1005,6 +1008,22 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
 
                 Logger?.LogTrace("Install of tool {ToolName} ({ToolId}) complete!", localTool.Name, localTool.Id);
+
+                // Refresh the dependent game's action bar
+                if (currentItem.DependsOnId.HasValue)
+                {
+                    try
+                    {
+                        var dependentGame = await _gameService.GetAsync(currentItem.DependsOnId.Value);
+
+                        if (dependentGame != null)
+                            OnToolInstallComplete?.Invoke(dependentGame);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Failed to refresh actions for game {GameId} after install of tool {ToolId}", currentItem.DependsOnId, localTool.Id);
+                    }
+                }
 
                 operation.Complete();
             }

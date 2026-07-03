@@ -1509,6 +1509,24 @@ namespace LANCommander.SDK.Services
             }
             #endregion
 
+            #region Delete Tool Files
+            if (manifest.Tools != null)
+            {
+                foreach (var tool in manifest.Tools)
+                {
+                    try
+                    {
+                        if (ManifestHelper.Exists(installDirectory, tool.Id))
+                            await toolClient.UninstallAsync(installDirectory, tool.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not clean up tool {ToolId}", tool.Id);
+                    }
+                }
+            }
+            #endregion
+
             #region Delete Files
             var fileListPath = GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
 

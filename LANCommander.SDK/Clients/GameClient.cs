@@ -1022,86 +1022,6 @@ namespace LANCommander.SDK.Services
 
             plan.Items.Add(gameItem);
 
-            // Redistributable items
-            if (game.Redistributables != null)
-            {
-                foreach (var redist in game.Redistributables)
-                {
-                    var redistItem = new InstallPlanItem
-                    {
-                        EntityId = redist.Id,
-                        Title = redist.Name,
-                        Type = InstallPlanItemType.Redistributable,
-                        InstallDirectory = destination,
-                        Order = plan.Items.Count,
-                        DependsOnId = game.Id,
-                    };
-
-                    redistItem.Tasks.Add(new InstallTaskDefinition
-                    {
-                        Type = InstallTaskType.DownloadAndExtract,
-                        Title = $"Download {redist.Name}",
-                        Order = 0,
-                        TargetId = redist.Id,
-                        TargetName = redist.Name,
-                        IsCritical = true,
-                        ReportsProgress = true,
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["ParentGameId"] = game.Id.ToString(),
-                        },
-                    });
-
-                    redistItem.Tasks.Add(new InstallTaskDefinition
-                    {
-                        Type = InstallTaskType.RunRedistributableInstallScript,
-                        Title = $"Install {redist.Name}",
-                        Order = 1,
-                        TargetId = redist.Id,
-                        TargetName = redist.Name,
-                        IsCritical = false,
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["ParentGameId"] = game.Id.ToString(),
-                        },
-                    });
-
-                    plan.Items.Add(redistItem);
-                }
-            }
-
-            // Tool items
-            var toolIdSet = new HashSet<Guid>(toolIds ?? Array.Empty<Guid>());
-
-            // Always-install tools are installed alongside the game regardless of user selection
-            try
-            {
-                var gameTools = await GetToolsAsync(game.Id);
-
-                if (gameTools != null)
-                {
-                    foreach (var alwaysInstallTool in gameTools.Where(t => t.AlwaysInstall))
-                        toolIdSet.Add(alwaysInstallTool.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogWarning(ex, "[InstallQueue] GenerateInstallPlan: Could not resolve always-install tools for game {GameId}", game.Id);
-            }
-
-            foreach (var toolId in toolIdSet)
-            {
-                var tool = await toolClient.GetAsync(toolId);
-                var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
-
-                foreach (var toolPlanItem in toolPlan.Items)
-                {
-                    toolPlanItem.Order = plan.Items.Count;
-                    toolPlanItem.DependsOnId = game.Id;
-                    plan.Items.Add(toolPlanItem);
-                }
-            }
-
             // Addon items
             if (addonIds != null)
             {
@@ -1186,6 +1106,86 @@ namespace LANCommander.SDK.Services
                     }
 
                     plan.Items.Add(addonItem);
+                }
+            }
+
+            // Tool items
+            var toolIdSet = new HashSet<Guid>(toolIds ?? Array.Empty<Guid>());
+
+            // Always-install tools are installed alongside the game regardless of user selection
+            try
+            {
+                var gameTools = await GetToolsAsync(game.Id);
+
+                if (gameTools != null)
+                {
+                    foreach (var alwaysInstallTool in gameTools.Where(t => t.AlwaysInstall))
+                        toolIdSet.Add(alwaysInstallTool.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "[InstallQueue] GenerateInstallPlan: Could not resolve always-install tools for game {GameId}", game.Id);
+            }
+
+            foreach (var toolId in toolIdSet)
+            {
+                var tool = await toolClient.GetAsync(toolId);
+                var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
+
+                foreach (var toolPlanItem in toolPlan.Items)
+                {
+                    toolPlanItem.Order = plan.Items.Count;
+                    toolPlanItem.DependsOnId = game.Id;
+                    plan.Items.Add(toolPlanItem);
+                }
+            }
+
+            // Redistributable items
+            if (game.Redistributables != null)
+            {
+                foreach (var redist in game.Redistributables)
+                {
+                    var redistItem = new InstallPlanItem
+                    {
+                        EntityId = redist.Id,
+                        Title = redist.Name,
+                        Type = InstallPlanItemType.Redistributable,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {redist.Name}",
+                        Order = 0,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.RunRedistributableInstallScript,
+                        Title = $"Install {redist.Name}",
+                        Order = 1,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = false,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    plan.Items.Add(redistItem);
                 }
             }
 

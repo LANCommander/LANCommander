@@ -23,8 +23,9 @@ namespace LANCommander.Server.Services
         public override async Task<Script> AddAsync(Script script)
         {
             using var context = await contextFactory.CreateDbContextAsync();
-            
+
             await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.RemoveByTagAsync("Scripts");
 
             if (script.RedistributableId?.IsNullOrEmpty() ?? false)
             {
@@ -50,8 +51,9 @@ namespace LANCommander.Server.Services
         public override async Task<Script> UpdateAsync(Script script)
         {
             using var context = await contextFactory.CreateDbContextAsync();
-            
+
             await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.RemoveByTagAsync("Scripts");
 
             if (script.RedistributableId?.IsNullOrEmpty() ?? false)
             {
@@ -77,8 +79,9 @@ namespace LANCommander.Server.Services
         public override async Task DeleteAsync(Script script)
         {
             using var context = await contextFactory.CreateDbContextAsync();
-            
+
             await cache.ExpireGameCacheAsync(script?.GameId);
+            await cache.RemoveByTagAsync("Scripts");
 
             if (script.RedistributableId?.IsNullOrEmpty() ?? false)
             {

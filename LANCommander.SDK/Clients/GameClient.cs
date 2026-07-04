@@ -2461,7 +2461,15 @@ namespace LANCommander.SDK.Services
                     {
                         logger?.LogDebug("Uploading save for game {GameId}", manifest.Id);
 
-                        await saveClient.UploadAsync(installDirectory, manifest.Id);
+                        try
+                        {
+                            await saveClient.UploadAsync(installDirectory, manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogError(ex, "Save upload attempt failed for game {GameId}", manifest.Id);
+                            throw;
+                        }
 
                         logger?.LogInformation("Save uploaded successfully for game {GameId}", manifest.Id);
 

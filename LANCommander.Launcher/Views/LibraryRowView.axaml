@@ -9,10 +9,6 @@
              x:Class="LANCommander.Launcher.Views.LibraryRowView"
              x:DataType="vm:LibraryViewModel">
 
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
-
     <UserControl.Styles>
         <Style Selector="ListBox.CompactGamesList">
             <Setter Property="Background" Value="Transparent" />
@@ -75,7 +71,8 @@
                     <DataTemplate DataType="vmComponents:GameItemViewModel">
                         <Border Classes="CompactListRow" Padding="8,4" CornerRadius="0">
                             <DockPanel>
-                                <Image Source="{Binding IconPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                <Image controls:AsyncImage.Source="{Binding IconPath}"
+                                       controls:AsyncImage.DecodeWidth="48"
                                        Width="24" Height="24"
                                        Stretch="Uniform"
                                        Margin="0,0,8,0"

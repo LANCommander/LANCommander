@@ -266,6 +266,11 @@ public partial class ShellViewModel : ViewModelBase
             IsLoading = false;
         }
 
+        // Fill the library instantly from the server (streaming media) so first-run and
+        // newly-added games appear before the slow import finishes caching them locally.
+        if (!IsOfflineMode)
+            _ = LibraryViewModel.LoadLibraryFromServerAsync();
+
         // Load depot data in the background so the UI is not blocked by network calls
         _ = LoadDepotInBackgroundAsync();
 

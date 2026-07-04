@@ -171,16 +171,27 @@
     {
         if (firstRender)
         {
+            int? storedPageSize = null;
+
             try
             {
                 var storedSize = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "DataTablePageSize");
 
                 if (!string.IsNullOrEmpty(storedSize) && int.TryParse(storedSize, out var size) && size > 0)
-                    PageSize = size;
+                    storedPageSize = size;
             }
             catch { }
 
-            await OnChange.InvokeAsync();
+            if (storedPageSize.HasValue)
+            {
+                PageSize = storedPageSize.Value;
+
+                await ReloadAsync();
+            }
+            else
+            {
+                await OnChange.InvokeAsync();
+            }
         }
     }
 

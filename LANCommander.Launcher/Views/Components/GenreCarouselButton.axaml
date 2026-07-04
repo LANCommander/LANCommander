@@ -1,16 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
-             xmlns:converters="using:LANCommander.Launcher.Converters"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
              xmlns:local="using:LANCommander.Launcher.Views.Components"
-             x:Class="LANCommander.Launcher.Views.Components.GenreCarouselButton"            
+             x:Class="LANCommander.Launcher.Views.Components.GenreCarouselButton"
              x:DataType="vmComponents:GenreCarouselButtomViewModel"
              ClipToBounds="False">
-    
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
-    
+
     <UserControl.Styles>
         <Style Selector="Button.GenreCarouselButton">
             <Setter Property="Padding" Value="0" />
@@ -53,7 +49,8 @@
             </Border>
 
             <!-- Hero background image -->
-            <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=h150}"
+            <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
+                   controls:AsyncImage.DecodeHeight="150"
                    Stretch="UniformToFill"
                    IsVisible="{Binding HasBackground}" />
 

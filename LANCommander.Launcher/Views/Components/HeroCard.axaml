@@ -1,15 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
-             xmlns:converters="using:LANCommander.Launcher.Converters"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
              xmlns:local="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.Components.HeroCard"
              x:DataType="vmComponents:GameItemViewModel"
              ClipToBounds="False">
-
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="Button.HeroCard">
@@ -41,18 +37,20 @@
             CommandParameter="{Binding $parent[local:HeroCard].CommandParameter}">
         <Panel>
             <!-- Background: hero image -->
-            <Image Source="{Binding HeroPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+            <Image controls:AsyncImage.Source="{Binding HeroPath}"
+                   controls:AsyncImage.DecodeWidth="480"
                    Stretch="UniformToFill"
                    IsVisible="{Binding HeroPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-            <!-- Fallback: cover blurred as background when no hero -->
+            <!-- Fallback background when no hero: approximate a blur by decoding the
+                 cover tiny (32px) and letting the GPU upscale it smoothly. This is a
+                 static texture, unlike a live BlurEffect which re-renders every scroll
+                 frame and was the main source of depot scroll jank. -->
             <Panel IsVisible="{Binding HeroPath, Converter={x:Static StringConverters.IsNullOrEmpty}}">
-                <Image Source="{Binding CoverPath, Converter={StaticResource FilePathToBitmapConverter}}"
-                       Stretch="UniformToFill">
-                    <Image.Effect>
-                        <BlurEffect Radius="20" />
-                    </Image.Effect>
-                </Image>
+                <Image controls:AsyncImage.Source="{Binding CoverPath}"
+                       controls:AsyncImage.DecodeWidth="32"
+                       RenderOptions.BitmapInterpolationMode="HighQuality"
+                       Stretch="UniformToFill" />
                 <Border Background="#55000000" />
             </Panel>
 
@@ -67,7 +65,7 @@
             </Border>
 
             <!-- Logo (bottom-left) -->
-            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+            <Image controls:AsyncImage.Source="{Binding LogoPath}"
                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
                    MaxWidth="190" MaxHeight="72"
                    Margin="14,0,0,14"

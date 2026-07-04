@@ -59,6 +59,9 @@ public partial class Cover : UserControl
     private bool _isAnimatedCover;
     private bool _receivedFirstFrame;
     private string? _lastLoadedSource;
+    // Source for an animated cover whose stream is deferred until it should actually
+    // play (hover/focus), so the depot doesn't stream every video cover up front.
+    private string? _animatedSource;
 
     public string? Source
     {
@@ -210,6 +213,7 @@ public partial class Cover : UserControl
 
         _isAnimatedCover = IsAnimatedMimeType(mimeType);
         _lastLoadedSource = source;
+        _animatedSource = _isAnimatedCover ? source : null;
 
         if (string.IsNullOrEmpty(source))
         {
@@ -217,10 +221,16 @@ public partial class Cover : UserControl
             return;
         }
 
-        // Route all animated covers (video, APNG, GIF) through LibVLC
+        // Route all animated covers (video, APNG, GIF) through LibVLC — but only start
+        // streaming when we should actually be animating. Otherwise defer until hover
+        // (UpdateAnimationState) and show the title placeholder in the meantime.
         if (_isAnimatedCover)
         {
-            LoadAnimatedCover(source);
+            if (AlwaysAnimate || IsPlayingAnimation)
+                LoadAnimatedCover(source);
+            else
+                SetBitmap(null);
+
             return;
         }
 
@@ -438,19 +448,40 @@ public partial class Cover : UserControl
 
     private void UpdateAnimationState()
     {
-        if (!_isAnimatedCover || _videoRenderer?.Player == null) return;
+        if (!_isAnimatedCover) return;
 
-        if (AlwaysAnimate || IsPlayingAnimation)
+        var shouldAnimate = AlwaysAnimate || IsPlayingAnimation;
+
+        if (shouldAnimate)
         {
-            _videoRenderer.Player.SetPause(false);
+            // Start streaming on first hover/focus if we deferred it in LoadCover.
+            if (_videoRenderer == null)
+            {
+                if (!string.IsNullOrEmpty(_animatedSource))
+                    LoadAnimatedCover(_animatedSource);
+            }
+            else
+            {
+                _videoRenderer.Player?.SetPause(false);
+            }
         }
-        else
+        else if (_videoRenderer != null)
         {
-            _videoRenderer.Player.SetPause(true);
+            // Tear the stream down entirely on un-hover instead of pausing, so idle
+            // covers hold no LibVLC/network resources. _isAnimatedCover stays set so a
+            // re-hover restarts playback.
+            DisposeRenderer();
+            SetBitmap(null);
+            InvalidateVisual();
         }
     }
 
-    private void StopVideo()
+    /// <summary>
+    /// Tears down the video renderer without clearing <see cref="_isAnimatedCover"/>,
+    /// so the cover can restart on a later hover. Contrast with <see cref="StopVideo"/>,
+    /// which fully resets animated state when the source itself changes.
+    /// </summary>
+    private void DisposeRenderer()
     {
         if (_videoRenderer != null)
         {
@@ -458,8 +489,13 @@ public partial class Cover : UserControl
             _videoRenderer.Dispose();
             _videoRenderer = null;
         }
-        _isAnimatedCover = false;
         _receivedFirstFrame = false;
+    }
+
+    private void StopVideo()
+    {
+        DisposeRenderer();
+        _isAnimatedCover = false;
     }
 
     // ── Rendering ────────────────────────────────────────────────────────

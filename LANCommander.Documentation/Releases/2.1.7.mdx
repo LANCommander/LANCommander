@@ -1,0 +1,35 @@
+---
+title: 2.1.7
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.7 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- The launcher now loads your library from a new `/Library/Games` endpoint and displays it immediately, with images rendered directly from the server. The full import still runs in the background, so offline functionality is preserved while the library becomes usable much sooner.
+- Depot images are now streamed from a remote image cache instead of being downloaded to disk, reducing UI jank. Fixes [#427](https://github.com/LANCommander/LANCommander/issues/427).
+- Game installs and uninstalls are now more reliable: installs run in a consistent order (base game, addons, tools, then redistributables), tools are removed before their game is uninstalled, and the game action bar refreshes after a tool is installed. Ref [#414](https://github.com/LANCommander/LANCommander/issues/414).
+- The modify menu now lists installed addons.
+- Save upload failures are now logged instead of failing silently.
+- A running game process is now terminated as a fallback when no spawned window is detected.
+- View data is now loaded before transitioning, smoothing navigation.
+
+## Bug Fixes
+- Save path changes on a game now take effect immediately instead of requiring a server restart. Games are correctly updated when a save path is added, updated, or deleted.
+- Fixed installation of games and addons that have no dependent games.
+- Fixed importing legacy LCX files that have no save paths defined. Fixes [#426](https://github.com/LANCommander/LANCommander/issues/426).
+- Fixed persisted page sizes in data tables.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.7" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.6" to="v2.1.7" />

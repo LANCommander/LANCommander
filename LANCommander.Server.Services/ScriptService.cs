@@ -101,29 +101,22 @@ namespace LANCommander.Server.Services
         
         public IEnumerable<Snippet> GetSnippets()
         {
-            var storagePath = settingsProvider.CurrentValue.Server.Scripts.Snippets.StoragePath;
-            
-            if (string.IsNullOrWhiteSpace(storagePath))
-            {
-                // Set default storage path
-                storagePath = AppPaths.GetConfigPath("Snippets");
-                
-                settingsProvider.Update(s =>
-                {
-                    s.Server.Scripts.Snippets.StoragePath = storagePath;
-                });
-            }
-            
+            var storagePath = GetSnippetsStoragePath();
+
             var files = Directory.GetFiles(storagePath, "*.ps1", SearchOption.AllDirectories);
 
             return files.Select(f =>
             {
-                var split = f.Substring(storagePath.Length).TrimStart('/').Split(Path.DirectorySeparatorChar);
+                var relative = Path.GetRelativePath(storagePath, f);
+                
+                var split = relative.Split(
+                    new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                    StringSplitOptions.RemoveEmptyEntries);
 
                 return new Snippet
                 {
                     Name = Path.GetFileNameWithoutExtension(f),
-                    Group = split[1],
+                    Group = split.Length > 1 ? split[0] : string.Empty,
                     Content = File.ReadAllText(f)
                 };
             });

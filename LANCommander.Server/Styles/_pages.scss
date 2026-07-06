@@ -1,0 +1,35 @@
+// Public page navigation tree (rendered by PageMenu inside Render.razor). Give the
+// sidebar more breathing room and a larger, more readable type scale than the compact
+// default AntDesign tree used in the admin editor.
+.page-nav {
+    padding: 24px 16px;
+
+    .ant-tree {
+        background: transparent;
+        font-size: 16px;
+
+        .ant-tree-treenode {
+            width: 100%;
+            padding: 4px 0;
+            align-items: center;
+        }
+
+        .ant-tree-node-content-wrapper {
+            min-height: auto;
+            padding: 8px 12px;
+            line-height: 1.5;
+            border-radius: 6px;
+        }
+
+        .ant-tree-title {
+            font-size: 16px;
+        }
+
+        // Keep the expand/collapse chevron vertically centered on the taller rows.
+        .ant-tree-switcher {
+            display: flex;
+            align-items: center;
+            line-height: normal;
+        }
+    }
+}

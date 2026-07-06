@@ -1,17 +1,47 @@
-﻿@inject PageService PageService
+@using LANCommander.Server.Services.Models
+@inject PageService PageService
+@inject NavigationManager NavigationManager
 
-<Menu Mode="@MenuMode.Inline">
-    @foreach (var parent in ParentPages)
-    {
-        <PageMenuItem Page="@parent" />
-    }
-</Menu>
+<Tree TItem="PageMenuNode"
+      DataSource="Nodes"
+      ChildrenExpression="x => x.DataItem?.Children"
+      KeyExpression="x => x.DataItem?.Route"
+      TitleExpression="x => x.DataItem?.Title"
+      BlockNode
+      DefaultExpandAll
+      SelectedKeys="SelectedKeys"
+      OnSelect="OnSelect" />
 
 @code {
-    ICollection<Page> ParentPages = new List<Page>();
+    [Parameter] public string CurrentRoute { get; set; }
+
+    IReadOnlyList<PageMenuNode> Nodes = new List<PageMenuNode>();
+    string[] SelectedKeys = Array.Empty<string>();
 
     protected override async Task OnInitializedAsync()
     {
-        ParentPages = await PageService.SortBy(p => p.SortOrder).GetAsync(p => p.ParentId == null || p.ParentId == Guid.Empty);
+        Nodes = await PageService.GetMenuAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        SelectedKeys = String.IsNullOrEmpty(CurrentRoute)
+            ? Array.Empty<string>()
+            : new[] { CurrentRoute };
+    }
+
+    void OnSelect(TreeEventArgs<PageMenuNode> args)
+    {
+        var route = args.Node?.DataItem?.Route;
+
+        if (String.IsNullOrEmpty(route))
+            return;
+
+        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
+            .Split('?', '#')[0]
+            .Trim('/');
+
+        if (!String.Equals(currentPath, route.Trim('/'), StringComparison.OrdinalIgnoreCase))
+            NavigationManager.NavigateTo($"/{route}");
     }
 }

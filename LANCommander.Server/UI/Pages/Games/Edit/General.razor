@@ -2,6 +2,8 @@
 @page "/Games/{id:guid}"
 @page "/Games/Add"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using PSC.Blazor.Components.MarkdownEditor
+@using PSC.Blazor.Components.MarkdownEditor.Models
 @inject CollectionService CollectionService
 @inject CompanyService CompanyService
 @inject EngineService EngineService
@@ -57,7 +59,11 @@
                 <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
             </FormItem>
             <FormItem Label="Description">
-                <TextArea @bind-Value="@context.Description" />
+                <MarkdownEditor
+                    @bind-Value="context.Description"
+                    SpellChecker="false"
+                    CSSClass="ant-typography"
+                    MinHeight="500px" />
             </FormItem>
             <FormItem Label="Engine">
                 <Select TItem="Engine"

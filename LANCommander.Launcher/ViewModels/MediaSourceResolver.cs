@@ -27,6 +27,9 @@ public static class MediaSourceResolver
         if (File.Exists(localPath))
             return localPath;
 
+        if (mediaClient.IsOfflineMode())
+            return null;
+
         if (media.MimeType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true)
             return mediaClient.GetAbsoluteStreamUrl(media);
 

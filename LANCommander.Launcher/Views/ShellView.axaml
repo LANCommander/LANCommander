@@ -161,7 +161,7 @@
                         </Grid>
                     </Button>
 
-                    <!-- Idle: always-visible downloads button + optional offline badge -->
+                    <!-- Idle: always-visible downloads button -->
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -182,23 +182,6 @@
                                 </Border>
                             </StackPanel>
                         </Button>
-
-                        <Border IsVisible="{Binding IsOfflineMode}"
-                                Padding="10,4"
-                                CornerRadius="4"
-                                Background="#4A2D00">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="⚠" Foreground="#FFA500" />
-                                <TextBlock Text="Offline Mode" Foreground="#FFA500" FontSize="12" FontWeight="SemiBold" />
-                                <Button Content="Go Online"
-                                        Command="{Binding TryGoOnlineCommand}"
-                                        Background="#0E639C"
-                                        Foreground="White"
-                                        Padding="8,2"
-                                        FontSize="11"
-                                        IsVisible="{Binding CanGoOnline}" />
-                            </StackPanel>
-                        </Border>
 
                     </StackPanel>
                 </Panel>

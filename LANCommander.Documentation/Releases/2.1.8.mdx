@@ -1,0 +1,37 @@
+---
+title: 2.1.8
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.8 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## New Features
+
+### Runtime Platform Targeting
+Actions, scripts, and save paths can now be scoped to a specific runtime platform (Windows, Linux, or macOS). This makes it possible to define platform-specific launch actions, install/uninstall scripts, and save paths on a single game without them conflicting across operating systems. A new `Get-Runtime` PowerShell cmdlet is also available for detecting the current platform from within scripts.
+
+## Improvements
+- The offline mode button has been moved to the titlebar for easier access.
+- The game description editor in the server UI is now a full Markdown editor.
+- Page functionality has been improved with better menus for adding and deleting pages, and slugs are now generated in PascalCase.
+- Client/server version mismatches are now detected and logged, making it easier to diagnose connection issues caused by version drift.
+- Data table sort order is now persisted.
+
+## Bug Fixes
+- Images now load from the local cache when the launcher is in offline mode.
+- Fixed enumeration of script snippets.
+- Fixed PowerShell module loading in the launcher. On Windows the execution policy is set to bypass, and module load failures are now trapped and reported as a warning per module instead of failing the entire script.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.8" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.7" to="v2.1.8" />

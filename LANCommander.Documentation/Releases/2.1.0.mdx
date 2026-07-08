@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.7** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.8** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -561,9 +561,41 @@ The connection string input used in first-time setup and server settings has bee
 
 </details>
 
+### 2.1.8
+<details>
+<summary>View 2.1.8 patch notes</summary>
+
+#### New Features
+
+##### Runtime Platform Targeting
+Actions, scripts, and save paths can now be scoped to a specific runtime platform (Windows, Linux, or macOS). This makes it possible to define platform-specific launch actions, install/uninstall scripts, and save paths on a single game without them conflicting across operating systems. A new `Get-Runtime` PowerShell cmdlet is also available for detecting the current platform from within scripts.
+
+#### Improvements
+- The offline mode button has been moved to the titlebar for easier access.
+- The game description editor in the server UI is now a full Markdown editor.
+- Page functionality has been improved with better menus for adding and deleting pages, and slugs are now generated in PascalCase.
+- Client/server version mismatches are now detected and logged, making it easier to diagnose connection issues caused by version drift.
+- Data table sort order is now persisted.
+
+#### Bug Fixes
+- Images now load from the local cache when the launcher is in offline mode.
+- Fixed enumeration of script snippets.
+- Fixed PowerShell module loading in the launcher. On Windows the execution policy is set to bypass, and module load failures are now trapped and reported as a warning per module instead of failing the entire script.
+
+<ReleaseDownloads release="v2.1.8" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.8" />
+
+<details>
+<summary>View 2.1.7 downloads</summary>
+
 <ReleaseDownloads release="v2.1.7" />
+
+</details>
 
 <details>
 <summary>View 2.1.6 downloads</summary>
@@ -616,4 +648,4 @@ The connection string input used in first-time setup and server settings has bee
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.7" />
+<ContributorGrid from="v2.0.2" to="v2.1.8" />

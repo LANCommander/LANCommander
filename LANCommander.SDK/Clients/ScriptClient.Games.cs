@@ -24,6 +24,12 @@ public partial class ScriptClient
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install);
 
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.Install))
+            {
+                logger?.LogTrace("Skipping install script; not supported on the current runtime");
+                return result;
+            }
+
             using (var op = logger.BeginOperation("Executing install script"))
             {
                 if (File.Exists(path))
@@ -92,6 +98,12 @@ public partial class ScriptClient
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.Uninstall))
+            {
+                logger?.LogTrace("Skipping uninstall script; not supported on the current runtime");
+                return result;
+            }
+
             using (var op = logger.BeginOperation("Executing uninstall script"))
             {
                 if (File.Exists(path))
@@ -159,6 +171,12 @@ public partial class ScriptClient
         {
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.BeforeStart);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.BeforeStart))
+            {
+                logger?.LogTrace("Skipping before start script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing before start script"))
             {
@@ -231,6 +249,12 @@ public partial class ScriptClient
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.AfterStop);
 
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.AfterStop))
+            {
+                logger?.LogTrace("Skipping after stop script; not supported on the current runtime");
+                return result;
+            }
+
             using (var op = logger.BeginOperation("Executing after stop script"))
             {
                 if (File.Exists(path))
@@ -300,6 +324,12 @@ public partial class ScriptClient
         {
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.NameChange))
+            {
+                logger?.LogTrace("Skipping name change script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing name change script"))
             {
@@ -384,6 +414,12 @@ public partial class ScriptClient
         {
             var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange);
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(manifest.Scripts, Enums.ScriptType.KeyChange))
+            {
+                logger?.LogTrace("Skipping key change script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing key change script"))
             {

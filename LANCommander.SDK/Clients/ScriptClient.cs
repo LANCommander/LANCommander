@@ -22,6 +22,20 @@ namespace LANCommander.SDK.Services
     {
         public bool Debug { get; set; }
 
+        private static bool SupportsCurrentRuntime(System.Collections.Generic.IEnumerable<SDK.Models.Manifest.Script> scripts, Enums.ScriptType type)
+        {
+            var platforms = scripts?.FirstOrDefault(s => s.Type == type)?.Platforms ?? Enums.RuntimePlatform.None;
+
+            return EnvironmentHelper.SupportsCurrentRuntime(platforms);
+        }
+
+        private static bool SupportsCurrentRuntime(System.Collections.Generic.IEnumerable<SDK.Models.Script> scripts, Enums.ScriptType type)
+        {
+            var platforms = scripts?.FirstOrDefault(s => s.Type == type)?.Platforms ?? Enums.RuntimePlatform.None;
+
+            return EnvironmentHelper.SupportsCurrentRuntime(platforms);
+        }
+
         private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)
         {
             var scriptRunners = serviceProvider.GetServices<IScriptInterceptor>();

@@ -65,6 +65,7 @@ public class ScriptImporter(
                 Name = record.Name,
                 Description = record.Description,
                 RequiresAdmin = record.RequiresAdmin,
+                Platforms = record.Platforms,
                 Type = record.Type,
                 Contents = string.Empty,
             };
@@ -168,6 +169,7 @@ public class ScriptImporter(
             existing.Name = record.Name;
             existing.Description = record.Description;
             existing.RequiresAdmin = record.RequiresAdmin;
+            existing.Platforms = record.Platforms;
             existing.Type = record.Type;
 
             await scriptService.UpdateAsync(existing);

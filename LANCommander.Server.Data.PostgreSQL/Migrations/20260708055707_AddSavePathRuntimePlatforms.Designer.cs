@@ -3,6 +3,7 @@ using System;
 using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LANCommander.Server.Data.PostgreSQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260708055707_AddSavePathRuntimePlatforms")]
+    partial class AddSavePathRuntimePlatforms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -694,9 +697,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
-
-                    b.Property<int>("Platforms")
-                        .HasColumnType("integer");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");

@@ -11,6 +11,7 @@ namespace LANCommander.SDK.Models
         public string Name { get; set; }
         public string Description { get; set; }
         public bool RequiresAdmin { get; set; }
+        public RuntimePlatform Platforms { get; set; }
         public string Contents { get; set; }
     }
 }

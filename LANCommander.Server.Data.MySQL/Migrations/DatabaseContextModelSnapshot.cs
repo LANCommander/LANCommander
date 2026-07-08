@@ -203,6 +203,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("Path")
                         .HasColumnType("longtext");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("int");
+
                     b.Property<bool>("PrimaryAction")
                         .HasColumnType("tinyint(1)");
 
@@ -691,6 +694,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("char(36)");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("int");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
@@ -1324,6 +1330,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("int");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -1372,6 +1381,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("RedistributableId")
                         .HasColumnType("char(36)");

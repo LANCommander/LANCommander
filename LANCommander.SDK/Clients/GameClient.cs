@@ -193,7 +193,8 @@ namespace LANCommander.SDK.Services
                             WorkingDirectory = a.WorkingDirectory,
                             IsPrimaryAction = a.IsPrimaryAction,
                             SortOrder = a.SortOrder,
-                            Variables = a.Variables
+                            Variables = a.Variables,
+                            Platforms = a.Platforms
                         }));
                 }
             }
@@ -266,6 +267,11 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not get lobbies");
                 }
             }
+
+            // Only surface actions that support the runtime the launcher is currently running on.
+            actions = actions
+                .Where(a => EnvironmentHelper.SupportsCurrentRuntime(a.Platforms))
+                .ToList();
 
             return actions;
         }

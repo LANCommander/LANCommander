@@ -104,6 +104,10 @@
     <FormItem Label="Description">
         <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
     </FormItem>
+
+    <FormItem Label="Platforms">
+        <RuntimePlatformSelect @bind-Value="context.Platforms" />
+    </FormItem>
 </Form>
 
 

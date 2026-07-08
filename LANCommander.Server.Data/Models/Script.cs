@@ -14,6 +14,7 @@ namespace LANCommander.Server.Data.Models
         public ScriptType Type { get; set; }
         public string Contents { get; set; }
         public bool RequiresAdmin { get; set; }
+        public RuntimePlatform Platforms { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]

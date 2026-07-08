@@ -11,6 +11,7 @@ namespace LANCommander.Server.Data.Models
         public string Path { get; set; }
         public string? WorkingDirectory { get; set; }
         public bool IsRegex { get; set; }
+        public RuntimePlatform Platforms { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]

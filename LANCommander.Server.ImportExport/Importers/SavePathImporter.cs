@@ -43,6 +43,7 @@ public class SavePathImporter(
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 IsRegex = record.IsRegex,
+                Platforms = record.Platforms,
                 Type = record.Type,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
@@ -71,6 +72,7 @@ public class SavePathImporter(
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;
+            existing.Platforms = record.Platforms;
             existing.Type = record.Type;
             existing.Game = await gameService.GetAsync(game.Id);
             

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Models
 {
@@ -14,6 +15,7 @@ namespace LANCommander.SDK.Models
         public bool IsPrimaryAction { get; set; }
         public int SortOrder { get; set; }
         public string OptionOverrides { get; set; }
+        public RuntimePlatform Platforms { get; set; }
         public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
     }
 }

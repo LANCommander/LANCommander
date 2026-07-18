@@ -121,7 +121,22 @@ install_steamcmd() {
 install_wine() {
   echo "Installing WINE..."
 
-  apt_install wine wine32 wine64 libwine fonts-wine winetricks cabextract unzip wget ca-certificates
+  if ! dpkg --print-foreign-architectures | grep -qx i386; then
+    dpkg --add-architecture i386
+    _APT_UPDATED=""   # force apt-get update to pull the i386 package lists
+  fi
+
+  apt_install wine wine32:i386 wine64 libwine fonts-wine cabextract unzip wget curl ca-certificates
+
+  # winetricks: install the self-contained upstream script.
+  if [[ -x "/usr/local/bin/winetricks" ]]; then
+    echo "winetricks already installed. Skipping download."
+  else
+    echo "Downloading winetricks..."
+    curl -fsSL "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -o /usr/local/bin/winetricks
+    chmod +x /usr/local/bin/winetricks
+    echo "winetricks installed."
+  fi
 
   ensure_user "wine" "/home/wine"
   ensure_dir_owned "/home/wine/.wine" "wine" "wine"

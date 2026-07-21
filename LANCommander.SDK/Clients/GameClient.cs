@@ -91,6 +91,8 @@ namespace LANCommander.SDK.Services
         private const string PlayerAliasFilename = "PlayerAlias";
         private const string KeyFilename = "Key";
 
+        private static readonly TimeSpan ServerNotificationTimeout = TimeSpan.FromSeconds(15);
+
         private TrackableStream _transferStream;
         private IAsyncReader _reader;
 
@@ -519,6 +521,8 @@ namespace LANCommander.SDK.Services
             
             logger?.LogTrace("Signaling to the server that we started the game...");
 
+            using var timeout = new CancellationTokenSource(ServerNotificationTimeout);
+
             try
             {
                 await apiRequestFactory
@@ -526,6 +530,7 @@ namespace LANCommander.SDK.Services
                     .UseAuthenticationToken()
                     .UseVersioning()
                     .UseRoute($"/api/Games/{id}/Started")
+                    .UseCancellationToken(timeout.Token)
                     .GetAsync<object>();
             }
             catch (Exception ex)
@@ -541,13 +546,16 @@ namespace LANCommander.SDK.Services
             
             logger?.LogTrace("Signaling to the server that we stopped the game...");
 
+            using var timeout = new CancellationTokenSource(ServerNotificationTimeout);
+
             try
-            { 
+            {
                 await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
                     .UseRoute($"/api/Games/{id}/Stopped")
+                    .UseCancellationToken(timeout.Token)
                     .GetAsync<object>();
             }
             catch (Exception ex)

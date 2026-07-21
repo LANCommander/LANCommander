@@ -25,6 +25,7 @@ public class DepotService(
     {
         var games = await gameService
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(g => g.Media)
             .Include(g => g.Collections)
             .Include(g => g.Platforms)
@@ -54,6 +55,7 @@ public class DepotService(
     {
         return await gameService
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(g => g.Actions)
             .Include(g => g.Archives)
             .Include(g => g.BaseGame)

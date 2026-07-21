@@ -109,7 +109,9 @@ namespace LANCommander.SDK.Tests
             var savePath = new SavePath
             {
                 Id = Guid.NewGuid(),
-                Path = "base\\.*.cfg",
+                // GetFileSavePathEntries matches against relative paths normalized to
+                // forward slashes, so the regex must use '/' and escape the literal dot.
+                Path = "base/.*\\.cfg",
                 WorkingDirectory = "{InstallDir}",
                 Type = Enums.SavePathType.File,
                 IsRegex = true

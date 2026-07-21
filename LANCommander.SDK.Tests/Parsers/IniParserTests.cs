@@ -90,7 +90,12 @@ namespace LANCommander.SDK.Tests.IniHandling
 
                 foreach (var requiredKeys in requiredSection.Value)
                 {
-                    Assert.Equal(requiredKeys.Value, section.Keys.Count(x => string.Equals(x.Name, requiredKeys.Key, StringComparison.InvariantCultureIgnoreCase)));
+                    // An empty key name is a sentinel meaning "assert the total key count".
+                    var count = (requiredKeys.Key == "")
+                        ? section.Keys.Count
+                        : section.Keys.Count(x => string.Equals(x.Name, requiredKeys.Key, StringComparison.InvariantCultureIgnoreCase));
+
+                    Assert.Equal(requiredKeys.Value, count);
                 }
             }
         }

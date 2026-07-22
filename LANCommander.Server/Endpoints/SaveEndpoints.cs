@@ -216,6 +216,7 @@ public static class SaveEndpoints
 
     public static async Task<IResult> UploadSaveByGameAsync(
         Guid gameId,
+        [FromQuery] RuntimePlatform platform,
         ClaimsPrincipal userPrincipal,
         HttpContext httpContext,
         [FromServices] ILogger<Program> logger,
@@ -289,6 +290,7 @@ public static class SaveEndpoints
                 Game = game,
                 User = user,
                 Size = stream.Length,
+                Platforms = platform,
                 StorageLocation = saveStorageLocation,
             };
 

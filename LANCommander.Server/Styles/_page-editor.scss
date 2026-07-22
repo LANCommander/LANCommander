@@ -3,7 +3,27 @@
 }
 
 .page-editor-tree-pane {
+    .ant-tree-node-content-wrapper {
+        display: flex;
+    }
 
+    .ant-tree-title {
+        flex: 1 1 auto;
+    }
+
+    .page-editor-tree-title {
+        display: block;
+        width: 100% !important;
+    }
+
+    // Reveal the row's ellipsis action only while hovering that row.
+    .page-editor-tree-action {
+        visibility: hidden;
+    }
+
+    .ant-tree-node-content-wrapper:hover .page-editor-tree-action {
+        visibility: visible;
+    }
 }
 
 .page-editor-markdown-pane {

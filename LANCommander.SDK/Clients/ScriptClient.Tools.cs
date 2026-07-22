@@ -24,6 +24,12 @@ public partial class ScriptClient
         
         var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.DetectInstall);
 
+        if (File.Exists(path) && !SupportsCurrentRuntime(toolManifest.Scripts, Enums.ScriptType.DetectInstall))
+        {
+            logger?.LogTrace("Skipping detect install script; not supported on the current runtime");
+            return result;
+        }
+
         try
         {
             if (File.Exists(path))
@@ -109,7 +115,13 @@ public partial class ScriptClient
         var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
 
         var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.Install);
-        
+
+        if (Path.Exists(path) && !SupportsCurrentRuntime(toolManifest.Scripts, Enums.ScriptType.Install))
+        {
+            logger?.LogTrace("Skipping install script; not supported on the current runtime");
+            return result;
+        }
+
         try
         {
             if (Path.Exists(path))
@@ -169,6 +181,12 @@ public partial class ScriptClient
         var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
 
         var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.Uninstall);
+
+        if (Path.Exists(path) && !SupportsCurrentRuntime(toolManifest.Scripts, Enums.ScriptType.Uninstall))
+        {
+            logger?.LogTrace("Skipping uninstall script; not supported on the current runtime");
+            return result;
+        }
 
         try
         {
@@ -231,6 +249,12 @@ public partial class ScriptClient
             var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.BeforeStart);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(toolManifest.Scripts, Enums.ScriptType.BeforeStart))
+            {
+                logger?.LogTrace("Skipping before start script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing before start script"))
             {
@@ -295,6 +319,12 @@ public partial class ScriptClient
             var toolManifest = await ManifestHelper.ReadAsync<Tool>(installDirectory, toolId);
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, toolId, Enums.ScriptType.AfterStop);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(toolManifest.Scripts, Enums.ScriptType.AfterStop))
+            {
+                logger?.LogTrace("Skipping after stop script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing after stop script"))
             {

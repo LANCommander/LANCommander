@@ -27,6 +27,9 @@
                 <Button Icon="@IconType.Outline.Edit" Type="ButtonType.Text" OnClick="() => OpenVariablePicker(context, nameof(Action.WorkingDirectory))" Size="ButtonSize.Small" />
             </Flex>
         </PropertyColumn>
+        <PropertyColumn Property="a => a.Platforms" Title="Platforms">
+            <RuntimePlatformSelect @bind-Value="context.Platforms" />
+        </PropertyColumn>
         <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
             <Checkbox @bind-Checked="context.PrimaryAction"/>
         </PropertyColumn>

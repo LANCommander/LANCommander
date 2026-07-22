@@ -5,6 +5,7 @@
 @using System.IO.Compression
 @using System.Linq.Expressions
 @using System.Text
+@using System.Text.Json
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
 @using System.Web
@@ -77,6 +78,22 @@
     string Search { get; set; } = "";
     string Url;
     bool DrawerOpen = false;
+    bool _restored = false;
+
+    string SortStorageKey
+    {
+        get
+        {
+            try
+            {
+                return $"DataTableSort:{new Uri(Url).AbsolutePath}";
+            }
+            catch
+            {
+                return "DataTableSort";
+            }
+        }
+    }
 
     internal Dictionary<int, bool> ColumnVisibility = new();
     List<string> Includes = new();
@@ -150,6 +167,21 @@
                     base.OnParametersSet();
                 }
 
+                if (_restored)
+                {
+                    try
+                    {
+                        var activeSorts = queryModel.SortModel
+                            .Where(s => s.SortDirection != AntDesign.SortDirection.None)
+                            .ToList<ITableSortModel>();
+
+                        var sortState = new QueryModel<TItem>(1, PageSize, 0, activeSorts, new List<ITableFilterModel>());
+
+                        await JSRuntime.InvokeVoidAsync("localStorage.setItem", SortStorageKey, JsonSerializer.Serialize<QueryModel<TItem>>(sortState));
+                    }
+                    catch { }
+                }
+
                 Loading = false;
                 await InvokeAsync(StateHasChanged);
                 await Task.Yield();
@@ -169,18 +201,59 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
+            return;
+
+        int? storedPageSize = null;
+        List<ITableSortModel>? storedSortModel = null;
+
+        try
         {
-            try
+            var storedSize = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "DataTablePageSize");
+
+            if (!string.IsNullOrEmpty(storedSize) && int.TryParse(storedSize, out var size) && size > 0)
+                storedPageSize = size;
+        }
+        catch { }
+
+        try
+        {
+            var storedSort = await JSRuntime.InvokeAsync<string>("localStorage.getItem", SortStorageKey);
+
+            if (!string.IsNullOrEmpty(storedSort))
             {
-                var storedSize = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "DataTablePageSize");
+                var restored = JsonSerializer.Deserialize<QueryModel<TItem>>(storedSort);
 
-                if (!string.IsNullOrEmpty(storedSize) && int.TryParse(storedSize, out var size) && size > 0)
-                    PageSize = size;
+                if (restored?.SortModel != null && restored.SortModel.Count > 0)
+                    storedSortModel = restored.SortModel.ToList();
             }
-            catch { }
+        }
+        catch { }
 
-            await OnChange.InvokeAsync();
+        // Saving is guarded until the initial state has been restored so that the
+        // columns' default sort (fired during first render) does not overwrite the
+        // user's persisted sort before we have a chance to read it.
+        _restored = true;
+
+        if (storedPageSize.HasValue)
+            PageSize = storedPageSize.Value;
+
+        try
+        {
+            // Fall back to the columns' default sort (e.g. DefaultSortOrder) when nothing
+            // is persisted. Routing every case through ReloadData keeps the sort a concern
+            // of the grid itself and ensures the header reflects the active sort.
+            var sortModel = storedSortModel
+                ?? (GetQueryModel() as QueryModel<TItem>)?.SortModel?.ToList()
+                ?? new List<ITableSortModel>();
+
+            var queryModel = new QueryModel<TItem>(1, PageSize, 0, sortModel, new List<ITableFilterModel>());
+
+            ReloadData(queryModel);
+        }
+        catch
+        {
+            await ReloadAsync();
         }
     }
 

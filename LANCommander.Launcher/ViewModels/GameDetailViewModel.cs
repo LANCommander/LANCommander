@@ -311,11 +311,11 @@ public partial class GameDetailViewModel : ViewModelBase
                 using var scope = _serviceProvider.CreateScope();
                 var mediaClient = scope.ServiceProvider.GetRequiredService<MediaClient>();
 
-                CoverPath      = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Cover,       mediaClient);
+                CoverPath      = ResolveEssentialMediaPath(game.Media, MediaType.Cover,      mediaClient);
                 CoverMimeType  = game.Media.FirstOrDefault(m => m.Type == MediaType.Cover)?.MimeType;
-                LogoPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Logo,        mediaClient);
-                BackgroundPath = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Background,  mediaClient);
-                IconPath       = await GetOrDownloadMediaPathAsync(game.Media, MediaType.Icon,        mediaClient);
+                LogoPath       = ResolveEssentialMediaPath(game.Media, MediaType.Logo,       mediaClient);
+                BackgroundPath = ResolveEssentialMediaPath(game.Media, MediaType.Background, mediaClient);
+                IconPath       = ResolveEssentialMediaPath(game.Media, MediaType.Icon,       mediaClient);
             }
             catch (Exception ex)
             {
@@ -473,36 +473,11 @@ public partial class GameDetailViewModel : ViewModelBase
         return typeLabel;
     }
 
-    private async Task<string?> GetOrDownloadMediaPathAsync(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)
-    {
-        var media = mediaCollection.FirstOrDefault(m => m.Type == type);
-        
-        if (media == null)
-            return null;
-
-        try
-        {
-            var localPath = mediaClient.GetLocalPath(media);
-            
-            // Check if file exists locally
-            if (File.Exists(localPath))
-                return localPath;
-
-            // Download the media
-            _logger.LogDebug("Downloading media {MediaId} of type {Type}", media.Id, type);
-            
-            var fileInfo = await mediaClient.DownloadAsync(media, localPath);
-            
-            if (fileInfo.Exists)
-                return fileInfo.FullName;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get or download media {MediaId}", media.Id);
-        }
-
-        return null;
-    }
+    // Resolves an essential asset (cover/logo/background/icon) to a local path when the import has
+    // already cached it, otherwise a server stream URL so it renders instantly without blocking on a
+    // download. The background import still caches these to disk for offline use.
+    private static string? ResolveEssentialMediaPath(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)
+        => MediaSourceResolver.Resolve(mediaCollection.FirstOrDefault(m => m.Type == type), mediaClient);
 
     private async Task LoadToolsAsync(SDK.Models.Game game)
     {

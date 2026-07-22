@@ -9,6 +9,7 @@ namespace LANCommander.Server.Services.Extensions
         static readonly Regex WordDelimiters = new Regex(@"[\s—–_]", RegexOptions.Compiled);
         static readonly Regex InvalidChars = new Regex(@"[^a-z0-9\-]", RegexOptions.Compiled);
         static readonly Regex MultipleHyphens = new Regex(@"-{2,}", RegexOptions.Compiled);
+        static readonly Regex NonAlphanumeric = new Regex(@"[^a-zA-Z0-9]+", RegexOptions.Compiled);
 
         public static string ToUrlSlug(this string value)
         {
@@ -20,6 +21,21 @@ namespace LANCommander.Server.Services.Extensions
             value = MultipleHyphens.Replace(value, "-");
 
             return value.Trim('-');
+        }
+
+        public static string ToRouteSlug(this string value)
+        {
+            if (String.IsNullOrWhiteSpace(value))
+                return String.Empty;
+
+            value = RemoveDiacritics(value);
+
+            var words = NonAlphanumeric
+                .Split(value)
+                .Where(word => word.Length > 0)
+                .Select(word => Char.ToUpperInvariant(word[0]) + word.Substring(1));
+
+            return String.Concat(words);
         }
 
         private static string RemoveDiacritics(string stIn)

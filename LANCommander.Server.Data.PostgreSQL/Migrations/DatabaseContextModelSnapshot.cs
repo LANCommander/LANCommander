@@ -206,6 +206,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("Path")
                         .HasColumnType("text");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("PrimaryAction")
                         .HasColumnType("boolean");
 
@@ -699,6 +702,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
@@ -1377,6 +1383,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
@@ -1430,6 +1439,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("RedistributableId")
                         .HasColumnType("uuid");

@@ -91,6 +91,8 @@ namespace LANCommander.SDK.Services
         private const string PlayerAliasFilename = "PlayerAlias";
         private const string KeyFilename = "Key";
 
+        private static readonly TimeSpan ServerNotificationTimeout = TimeSpan.FromSeconds(15);
+
         private TrackableStream _transferStream;
         private IAsyncReader _reader;
 
@@ -213,7 +215,8 @@ namespace LANCommander.SDK.Services
                             WorkingDirectory = a.WorkingDirectory,
                             IsPrimaryAction = a.IsPrimaryAction,
                             SortOrder = a.SortOrder,
-                            Variables = a.Variables
+                            Variables = a.Variables,
+                            Platforms = a.Platforms
                         }));
                 }
             }
@@ -286,6 +289,11 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not get lobbies");
                 }
             }
+
+            // Only surface actions that support the runtime the launcher is currently running on.
+            actions = actions
+                .Where(a => EnvironmentHelper.SupportsCurrentRuntime(a.Platforms))
+                .ToList();
 
             return actions;
         }
@@ -543,6 +551,8 @@ namespace LANCommander.SDK.Services
             
             logger?.LogTrace("Signaling to the server that we started the game...");
 
+            using var timeout = new CancellationTokenSource(ServerNotificationTimeout);
+
             try
             {
                 await apiRequestFactory
@@ -550,6 +560,7 @@ namespace LANCommander.SDK.Services
                     .UseAuthenticationToken()
                     .UseVersioning()
                     .UseRoute($"/api/Games/{id}/Started")
+                    .UseCancellationToken(timeout.Token)
                     .GetAsync<object>();
             }
             catch (Exception ex)
@@ -565,13 +576,16 @@ namespace LANCommander.SDK.Services
             
             logger?.LogTrace("Signaling to the server that we stopped the game...");
 
+            using var timeout = new CancellationTokenSource(ServerNotificationTimeout);
+
             try
-            { 
+            {
                 await apiRequestFactory
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
                     .UseRoute($"/api/Games/{id}/Stopped")
+                    .UseCancellationToken(timeout.Token)
                     .GetAsync<object>();
             }
             catch (Exception ex)
@@ -1052,86 +1066,6 @@ namespace LANCommander.SDK.Services
 
             plan.Items.Add(gameItem);
 
-            // Redistributable items
-            if (game.Redistributables != null)
-            {
-                foreach (var redist in game.Redistributables)
-                {
-                    var redistItem = new InstallPlanItem
-                    {
-                        EntityId = redist.Id,
-                        Title = redist.Name,
-                        Type = InstallPlanItemType.Redistributable,
-                        InstallDirectory = destination,
-                        Order = plan.Items.Count,
-                        DependsOnId = game.Id,
-                    };
-
-                    redistItem.Tasks.Add(new InstallTaskDefinition
-                    {
-                        Type = InstallTaskType.DownloadAndExtract,
-                        Title = $"Download {redist.Name}",
-                        Order = 0,
-                        TargetId = redist.Id,
-                        TargetName = redist.Name,
-                        IsCritical = true,
-                        ReportsProgress = true,
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["ParentGameId"] = game.Id.ToString(),
-                        },
-                    });
-
-                    redistItem.Tasks.Add(new InstallTaskDefinition
-                    {
-                        Type = InstallTaskType.RunRedistributableInstallScript,
-                        Title = $"Install {redist.Name}",
-                        Order = 1,
-                        TargetId = redist.Id,
-                        TargetName = redist.Name,
-                        IsCritical = false,
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["ParentGameId"] = game.Id.ToString(),
-                        },
-                    });
-
-                    plan.Items.Add(redistItem);
-                }
-            }
-
-            // Tool items
-            var toolIdSet = new HashSet<Guid>(toolIds ?? Array.Empty<Guid>());
-
-            // Always-install tools are installed alongside the game regardless of user selection
-            try
-            {
-                var gameTools = await GetToolsAsync(game.Id);
-
-                if (gameTools != null)
-                {
-                    foreach (var alwaysInstallTool in gameTools.Where(t => t.AlwaysInstall))
-                        toolIdSet.Add(alwaysInstallTool.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogWarning(ex, "[InstallQueue] GenerateInstallPlan: Could not resolve always-install tools for game {GameId}", game.Id);
-            }
-
-            foreach (var toolId in toolIdSet)
-            {
-                var tool = await toolClient.GetAsync(toolId);
-                var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
-
-                foreach (var toolPlanItem in toolPlan.Items)
-                {
-                    toolPlanItem.Order = plan.Items.Count;
-                    toolPlanItem.DependsOnId = game.Id;
-                    plan.Items.Add(toolPlanItem);
-                }
-            }
-
             // Addon items
             if (addonIds != null)
             {
@@ -1216,6 +1150,86 @@ namespace LANCommander.SDK.Services
                     }
 
                     plan.Items.Add(addonItem);
+                }
+            }
+
+            // Tool items
+            var toolIdSet = new HashSet<Guid>(toolIds ?? Array.Empty<Guid>());
+
+            // Always-install tools are installed alongside the game regardless of user selection
+            try
+            {
+                var gameTools = await GetToolsAsync(game.Id);
+
+                if (gameTools != null)
+                {
+                    foreach (var alwaysInstallTool in gameTools.Where(t => t.AlwaysInstall))
+                        toolIdSet.Add(alwaysInstallTool.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "[InstallQueue] GenerateInstallPlan: Could not resolve always-install tools for game {GameId}", game.Id);
+            }
+
+            foreach (var toolId in toolIdSet)
+            {
+                var tool = await toolClient.GetAsync(toolId);
+                var toolPlan = await toolClient.GenerateInstallPlanAsync(tool, destination);
+
+                foreach (var toolPlanItem in toolPlan.Items)
+                {
+                    toolPlanItem.Order = plan.Items.Count;
+                    toolPlanItem.DependsOnId = game.Id;
+                    plan.Items.Add(toolPlanItem);
+                }
+            }
+
+            // Redistributable items
+            if (game.Redistributables != null)
+            {
+                foreach (var redist in game.Redistributables)
+                {
+                    var redistItem = new InstallPlanItem
+                    {
+                        EntityId = redist.Id,
+                        Title = redist.Name,
+                        Type = InstallPlanItemType.Redistributable,
+                        InstallDirectory = destination,
+                        Order = plan.Items.Count,
+                        DependsOnId = game.Id,
+                    };
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.DownloadAndExtract,
+                        Title = $"Download {redist.Name}",
+                        Order = 0,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = true,
+                        ReportsProgress = true,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    redistItem.Tasks.Add(new InstallTaskDefinition
+                    {
+                        Type = InstallTaskType.RunRedistributableInstallScript,
+                        Title = $"Install {redist.Name}",
+                        Order = 1,
+                        TargetId = redist.Id,
+                        TargetName = redist.Name,
+                        IsCritical = false,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ParentGameId"] = game.Id.ToString(),
+                        },
+                    });
+
+                    plan.Items.Add(redistItem);
                 }
             }
 
@@ -1534,6 +1548,24 @@ namespace LANCommander.SDK.Services
                     catch (Exception ex)
                     {
                         logger?.LogWarning(ex, "Could not clean up redistributable {RedistributableId}", redistributable.Id);
+                    }
+                }
+            }
+            #endregion
+
+            #region Delete Tool Files
+            if (manifest.Tools != null)
+            {
+                foreach (var tool in manifest.Tools)
+                {
+                    try
+                    {
+                        if (ManifestHelper.Exists(installDirectory, tool.Id))
+                            await toolClient.UninstallAsync(installDirectory, tool.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not clean up tool {ToolId}", tool.Id);
                     }
                 }
             }
@@ -2496,7 +2528,15 @@ namespace LANCommander.SDK.Services
                     {
                         logger?.LogDebug("Uploading save for game {GameId}", manifest.Id);
 
-                        await saveClient.UploadAsync(installDirectory, manifest.Id);
+                        try
+                        {
+                            await saveClient.UploadAsync(installDirectory, manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogError(ex, "Save upload attempt failed for game {GameId}", manifest.Id);
+                            throw;
+                        }
 
                         logger?.LogInformation("Save uploaded successfully for game {GameId}", manifest.Id);
 

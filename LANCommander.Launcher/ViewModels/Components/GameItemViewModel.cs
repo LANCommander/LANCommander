@@ -116,6 +116,31 @@ public partial class GameItemViewModel : ViewModelBase
         ShowInLibraryBadge = inLibrary && showInLibraryBadge;
     }
 
+    public GameItemViewModel(SDK.Models.Game game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
+    {
+        Id = game.Id;
+        Title = game.Title ?? "Unknown";
+        Description = game.Description ?? string.Empty;
+        SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
+        ReleasedOn = game.ReleasedOn;
+        Type = game.Type;
+        Singleplayer = game.Singleplayer;
+        Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
+        Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
+        Developers = game.Developers != null ? string.Join(", ", game.Developers.Select(d => d.Name)) : string.Empty;
+        Publishers = game.Publishers != null ? string.Join(", ", game.Publishers.Select(p => p.Name)) : string.Empty;
+        Tags = game.Tags != null ? string.Join(", ", game.Tags.Select(t => t.Name)) : string.Empty;
+        HasLocalMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Local) ?? false;
+        HasLanMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.LAN) ?? false;
+        HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
+        MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
+        CoverPath = coverPath;
+        CoverMimeType = coverMimeType;
+        HasCover = !string.IsNullOrEmpty(coverPath);
+        InLibrary = inLibrary;
+        ShowInLibraryBadge = inLibrary && showInLibraryBadge;
+    }
+
     public GameItemViewModel(Game game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
     {
         Id = game.Id;

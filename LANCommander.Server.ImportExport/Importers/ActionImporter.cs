@@ -41,6 +41,7 @@ public class ActionImporter(
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 PrimaryAction = record.IsPrimaryAction,
+                Platforms = record.Platforms,
                 SortOrder = record.SortOrder,
                 OptionOverrides = record.OptionOverrides,
                 CreatedOn = record.CreatedOn,
@@ -89,6 +90,7 @@ public class ActionImporter(
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.PrimaryAction = record.IsPrimaryAction;
+            existing.Platforms = record.Platforms;
             existing.SortOrder = record.SortOrder;
             existing.OptionOverrides = record.OptionOverrides;
             existing.CreatedOn = record.CreatedOn;

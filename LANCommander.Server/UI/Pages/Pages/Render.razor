@@ -1,6 +1,7 @@
-﻿@page "/Pages/{*route}"
+@page "/Pages/{*route}"
 @using LANCommander.SDK.Extensions
 @using LANCommander.Server.UI.Pages.Pages.Components
+@using LANCommander.UI
 @using Markdig
 @using ZiggyCreatures.Caching.Fusion
 @using LANCommander.Server.Services.Abstractions
@@ -14,18 +15,43 @@
     <Layout Class="panel-layout">
         <Content>
             <SplitPane Style="flex-grow: 1">
-                <Pane Size="25%">
-                    <PageMenu />
+                <Pane Size="25%" Class="page-nav">
+                    <PageMenu CurrentRoute="@Page.Route" />
                 </Pane>
 
                 <Pane Size="75%">
+                    @if (Ancestors.Any())
+                    {
+                        <div style="padding: 16px 24px 0;">
+                            <Breadcrumb>
+                                @foreach (var ancestor in Ancestors)
+                                {
+                                    <BreadcrumbItem Href="@($"/{ancestor.Route}")">@ancestor.Title</BreadcrumbItem>
+                                }
+                                <BreadcrumbItem>@Page.Title</BreadcrumbItem>
+                            </Breadcrumb>
+                        </div>
+                    }
+
                     <PageHeader Title="@Page.Title" />
 
                     <div style="padding: 0 24px;">
-                        <Markdown Content="@Page.Contents" />
+                        @((MarkupString)Markdig.Markdown.ToHtml(Page.Contents ?? "", PagePipeline))
                     </div>
                 </Pane>
             </SplitPane>
+        </Content>
+    </Layout>
+}
+else if (NotFoundResult)
+{
+    <Layout Class="panel-layout">
+        <Content>
+            <NotFound Title="Page Not Found">
+                <Extra>
+                    <a href="/Pages"><Button Type="@ButtonType.Primary">Back to Pages</Button></a>
+                </Extra>
+            </NotFound>
         </Content>
     </Layout>
 }
@@ -33,12 +59,25 @@
 <link rel="stylesheet" href="~/css/pages.css?v=@(VersionProvider.GetCurrentVersion())" />
 
 @code {
+    // Markdown from page contents is rendered as raw markup, so raw HTML is stripped
+    // to prevent stored XSS from executing for public visitors.
+    static readonly MarkdownPipeline PagePipeline = new MarkdownPipelineBuilder()
+        .DisableHtml()
+        .UseAdvancedExtensions()
+        .Build();
+
     [Parameter] public string Route { get; set; }
 
     Page Page;
+    bool NotFoundResult;
+    List<Page> Ancestors = new();
 
     protected override async Task OnParametersSetAsync()
     {
+        Page = null;
+        NotFoundResult = false;
+        Ancestors = new();
+
         if (Route == null)
         {
             var firstParent = await PageService.Query(q =>
@@ -53,12 +92,40 @@
         }
         else
         {
-            var route = Route.TrimEnd('/').ToLower();
+            var route = Route.TrimEnd('/');
 
-            Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+            Page = await Cache.GetOrSetAsync<Page>(PageService.GetCacheKey(route), async _ =>
             {
-                return await PageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
+                // Routes are stored in PascalCase; match case-insensitively so the incoming
+                // URL casing doesn't have to be exact.
+                var target = $"Pages/{route}".ToLower();
+
+                return await PageService.FirstOrDefaultAsync(p => p.Route.ToLower() == target);
             });
+
+            if (Page == null)
+                NotFoundResult = true;
+            else
+                await LoadAncestorsAsync();
         }
+    }
+
+    async Task LoadAncestorsAsync()
+    {
+        var chain = new List<Page>();
+        var parentId = Page.ParentId;
+
+        while (parentId != null && parentId != Guid.Empty)
+        {
+            var ancestor = await PageService.GetAsync(parentId.Value);
+
+            if (ancestor == null)
+                break;
+
+            chain.Insert(0, ancestor);
+            parentId = ancestor.ParentId;
+        }
+
+        Ancestors = chain;
     }
 }

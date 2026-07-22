@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
@@ -8,8 +9,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using Semver;
 using Action = System.Action;
 
 namespace LANCommander.SDK.Helpers;
@@ -31,6 +34,8 @@ public class ApiRequestBuilder(
 
     private async ValueTask<TResult> DeserializeResultAsync<TResult>(HttpResponseMessage response)
     {
+        EnsureVersionCompatibility(response);
+
         var body = await response.Content.ReadAsStringAsync(_cancellationToken);
 
         try
@@ -42,6 +47,31 @@ public class ApiRequestBuilder(
         {
             return default;
         }
+    }
+
+    /// <summary>
+    /// The server advertises its API version on every response via the <c>X-API-Version</c>
+    /// header. When the server's major version differs from ours the payload schemas are
+    /// incompatible, which otherwise surfaces as confusing downstream errors (empty results,
+    /// null deserialization). Detect that here and throw a clear, actionable exception instead.
+    /// </summary>
+    private static void EnsureVersionCompatibility(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("X-API-Version", out var values))
+            return;
+
+        var serverRaw = values.FirstOrDefault();
+
+        if (String.IsNullOrWhiteSpace(serverRaw)
+            || !SemVersion.TryParse(serverRaw, SemVersionStyles.Any, out var serverVersion))
+            return;
+
+        var clientVersion = VersionHelper.GetCurrentVersion();
+
+        if (serverVersion.Major != clientVersion.Major)
+            throw new ApiVersionMismatchException(clientVersion, serverVersion,
+                $"This launcher (v{clientVersion}) is not compatible with the server (v{serverVersion}). " +
+                "Update the launcher or server so their major versions match.");
     }
 
     public ApiRequestBuilder UseAuthenticationToken()

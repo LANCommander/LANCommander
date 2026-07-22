@@ -1,11 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Data.Models
 {
     [Table("GameSaves")]
     public class GameSave : BaseModel
     {
+        public RuntimePlatform Platforms { get; set; }
+
         public Guid StorageLocationId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(StorageLocationId))]

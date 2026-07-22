@@ -176,21 +176,45 @@ namespace LANCommander.SDK.PowerShell
             
             var initialSessionState = InitialSessionState.CreateDefault();
 
-            initialSessionState.AddCustomCmdlets();
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                initialSessionState.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
 
-            // Always import synced PowerShell modules so their functions are available to every script
-            var modulesPath = AppPaths.GetConfigPath("Modules");
-            if (Directory.Exists(modulesPath))
-            {
-                foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
-                    initialSessionState.ImportPSModule(new[] { moduleDirectory });
-            }
+            initialSessionState.AddCustomCmdlets();
 
             DisableWow64Redirection();
 
             using (Runspace runspace = RunspaceFactory.CreateRunspace(initialSessionState))
             {
                 runspace.Open();
+                
+                var modulesPath = AppPaths.GetConfigPath("Modules");
+                
+                if (Directory.Exists(modulesPath))
+                {
+                    foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
+                    {
+                        try
+                        {
+                            using var import = System.Management.Automation.PowerShell.Create();
+                            
+                            import.Runspace = runspace;
+                                
+                            import.AddCommand("Import-Module")
+                                .AddParameter("Name", moduleDirectory)
+                                .AddParameter("ErrorAction", "Stop");
+                                
+                            import.Invoke();
+
+                            if (import.HadErrors)
+                                foreach (var error in import.Streams.Error)
+                                    Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
+                        }
+                    }
+                }
 
                 // Ensure TLS 1.2 is available for web requests (GitHub, etc.)
                 using (var tls = System.Management.Automation.PowerShell.Create())

@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
+using Semver;
 
 namespace LANCommander.SDK.Services;
 
@@ -92,15 +94,60 @@ public class ConnectionClient(
         {
             if (!IsConnected())
                 await rpc.ConnectAsync(GetServerAddress());
-            
+
             settingsProvider.Update(s => s.Authentication.OfflineModeEnabled = false);
-            
+
+            await LogVersionMismatchAsync();
+
             OnConnect?.Invoke(this, EventArgs.Empty);
 
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reads the server's advertised API version (sent on every response via the
+    /// <c>X-API-Version</c> header) and logs a warning when it differs from this client's
+    /// version, so version drift is visible in the logs at connection time.
+    /// </summary>
+    private async Task LogVersionMismatchAsync()
+    {
+        try
+        {
+            var address = GetServerAddress();
+
+            if (address == null)
+                return;
+
+            using var request = new HttpRequestMessage(HttpMethod.Head, address);
+            using var response = await _pingHttpClient.SendAsync(request);
+
+            if (!response.Headers.TryGetValues("X-API-Version", out var values))
+            {
+                logger?.LogWarning("Server did not report an API version; unable to verify compatibility");
+                return;
+            }
+
+            var serverRaw = values.FirstOrDefault();
+            var clientVersion = VersionHelper.GetCurrentVersion();
+
+            if (!SemVersion.TryParse(serverRaw, SemVersionStyles.Any, out var serverVersion))
+            {
+                logger?.LogWarning("Server reported an unparseable API version '{ServerVersion}' (launcher is v{ClientVersion})", serverRaw, clientVersion);
+                return;
+            }
+
+            if (serverVersion.ComparePrecedenceTo(clientVersion) != 0)
+                logger?.LogWarning("API version mismatch: server is v{ServerVersion}, launcher is v{ClientVersion}", serverVersion, clientVersion);
+            else
+                logger?.LogDebug("API versions match (v{ClientVersion})", clientVersion);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(ex, "Failed to check server API version on connect");
+        }
     }
     
     public async Task<bool> DisconnectAsync()

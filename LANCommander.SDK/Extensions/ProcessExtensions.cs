@@ -24,7 +24,8 @@ namespace LANCommander.SDK.Extensions
             switch (signal)
             {
                 case ProcessTerminationMethod.Close:
-                    process.CloseMainWindow();
+                    if (!process.CloseMainWindow())
+                        process.Kill(true);
                     break;
 
                 case ProcessTerminationMethod.Kill:

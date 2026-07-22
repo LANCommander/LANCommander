@@ -174,6 +174,16 @@ namespace LANCommander.Launcher.Services
                 .AnyAsync(g => g.Id == gameId && g.Libraries.Any(l => l.UserId == userId));
         }
 
+        public async Task<HashSet<Guid>> GetLibraryGameIdsAsync()
+        {
+            var userId = AuthenticationService.GetUserId();
+            var ids = await Context.Games
+                .Where(g => g.Libraries.Any(l => l.UserId == userId))
+                .Select(g => g.Id)
+                .ToListAsync();
+            return ids.ToHashSet();
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();

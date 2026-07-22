@@ -1,8 +1,8 @@
-﻿<Space>
+<Space>
     @if (!Editing)
     {
         <SpaceItem>
-            <a href="/@Page.Route" target="_blank">/@Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length)<strong>@Page.Slug</strong></a>
+            <a href="/@FullRoute" target="_blank">@ParentRoute<strong>@Page.Slug</strong></a>
         </SpaceItem>
 
         <SpaceItem>
@@ -13,7 +13,7 @@
     {
         <SpaceItem>
             <AntDesign.Input @bind-Value="Page.Slug" OnBlur="GenerateSlug" Size="@InputSize.Small">
-                <AddOnBefore>@ComputedParentRoute</AddOnBefore>
+                <AddOnBefore>@ParentRoute</AddOnBefore>
             </AntDesign.Input>
         </SpaceItem>
 
@@ -28,12 +28,10 @@
     [Parameter] public EventCallback<Page> PageChanged { get; set; }
 
     bool Editing { get; set; } = false;
-    string ComputedParentRoute = "";
 
-    protected override void OnInitialized()
-    {
-        GenerateSlug();
-    }
+    string ParentRoute => "/" + (Page.Parent?.Route ?? "Pages") + "/";
+
+    string FullRoute => (Page.Parent?.Route ?? "Pages") + "/" + Page.Slug;
 
     void Edit()
     {
@@ -42,17 +40,13 @@
 
     void GenerateSlug()
     {
-        Page.Slug = Page.Slug.ToUrlSlug();
+        Page.Slug = Page.Slug.ToRouteSlug();
         Page.Route = PageService.RenderRoute(Page);
-
-        ComputedParentRoute = $"/" + Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length);
     }
 
     async Task Save()
     {
         GenerateSlug();
-
-        Page.Route = PageService.RenderRoute(Page);
 
         if (PageChanged.HasDelegate)
             await PageChanged.InvokeAsync(Page);

@@ -16,6 +16,7 @@ public static class LibraryEndpoints
         var group = routes.MapGroup("/api/Library").RequireAuthorization();
 
         group.MapGet("/", GetAsync);
+        group.MapGet("/Games", GetGamesAsync);
         group.MapPost("/AddToLibrary/{id:guid}", AddToLibraryAsync);
         group.MapPost("/RemoveFromLibrary/{id:guid}", RemoveFromLibraryAsync);
         group.MapPost("/RemoveFromLibrary/{id:guid}/Addons", RemoveFromLibraryWithAddonsAsync);
@@ -97,6 +98,100 @@ public static class LibraryEndpoints
             logger.LogError(ex, "Failed to get user library for user {User}", userPrincipal.Identity?.Name ?? "Unknown User");
             return TypedResults.Ok(Enumerable.Empty<SDK.Models.EntityReference>());
         }
+    }
+
+    internal static async Task<IResult> GetGamesAsync(
+        ClaimsPrincipal userPrincipal,
+        [FromServices] IMapper mapper,
+        [FromServices] IFusionCache cache,
+        [FromServices] GameService gameService,
+        [FromServices] LibraryService libraryService,
+        [FromServices] UserService userService,
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
+        [FromServices] ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("LibraryApi");
+
+        try
+        {
+            if (userPrincipal.Identity?.Name is null)
+            {
+                logger.LogError("Failed to get user library games: User is not authenticated");
+                return TypedResults.Ok(Enumerable.Empty<SDK.Models.Game>());
+            }
+
+            var user = await userService.GetAsync(userPrincipal.Identity.Name);
+
+            // When user libraries are disabled the "library" is the full catalog. Cache it under a
+            // shared key since it is identical for every user.
+            if (!settingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
+            {
+                logger.LogDebug("User libraries are disabled; returning all games with media");
+
+                var allGames = await cache.GetOrSetAsync(
+                    "Library/Games",
+                    async _ => mapper.Map<IEnumerable<SDK.Models.Game>>(await LoadGamesWithMediaAsync(gameService, null)),
+                    TimeSpan.MaxValue,
+                    tags: ["Library", "Games"]);
+
+                return TypedResults.Ok(allGames);
+            }
+
+            logger.LogDebug("Getting library games for user {User}", userPrincipal.Identity.Name);
+
+            var result = await cache.GetOrSetAsync(
+                $"Library/{user.Id}/Games",
+                async _ =>
+                {
+                    var library = await libraryService.GetByUserIdAsync(user.Id);
+                    var libraryGameIds = library.Games.Select(g => g.Id).ToList();
+
+                    var games = await LoadGamesWithMediaAsync(gameService, libraryGameIds);
+
+                    var mapped = mapper.Map<IEnumerable<SDK.Models.Game>>(games).ToList();
+
+                    foreach (var game in mapped)
+                        game.InLibrary = true;
+
+                    return mapped;
+                },
+                TimeSpan.MaxValue,
+                // Tagged with Library/{userId} so LibraryService add/remove invalidates it automatically.
+                tags: ["Library", "Games", $"Library/{user.Id}"]);
+
+            return TypedResults.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get user library games for user {User}", userPrincipal.Identity?.Name ?? "Unknown User");
+            return TypedResults.Ok(Enumerable.Empty<SDK.Models.Game>());
+        }
+    }
+
+    // Loads library games with just the navigations the launcher needs to render cards and the
+    // detail view (cover/icon/logo/hero live in Media). Pass null for libraryGameIds to load all games.
+    private static async Task<IEnumerable<Data.Models.Game>> LoadGamesWithMediaAsync(
+        GameService gameService,
+        IReadOnlyCollection<Guid>? libraryGameIds)
+    {
+        var query = gameService
+            .Include(g => g.Collections)
+            .Include(g => g.Developers)
+            .Include(g => g.Engine)
+            .Include(g => g.Genres)
+            .Include(g => g.Media)
+            .Include(g => g.MultiplayerModes)
+            .Include(g => g.Platforms)
+            .Include(g => g.Publishers)
+            .Include(g => g.Tags)
+            .AsNoTracking()
+            .AsSplitQuery();
+
+        var games = libraryGameIds is null
+            ? await query.GetAsync()
+            : await query.GetAsync(g => libraryGameIds.Contains(g.Id));
+
+        return games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
     }
 
     internal static async Task<IResult> AddToLibraryAsync(

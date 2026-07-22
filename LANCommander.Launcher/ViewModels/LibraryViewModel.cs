@@ -198,6 +198,75 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         }
     }
 
+    /// <summary>
+    /// Fills the library instantly from the server's scoped library endpoint, streaming covers and
+    /// icons that aren't cached locally yet. Only adds games not already present from the local
+    /// database load, so returning users keep their authoritative (install-aware) entries and
+    /// first-run/newly-added games appear without waiting on the slow import. Once the import
+    /// completes, the local-DB reload replaces these with fully-populated entries.
+    /// </summary>
+    public async Task LoadLibraryFromServerAsync()
+    {
+        if (IsOfflineMode)
+            return;
+
+        try
+        {
+            var existingIds = _allGames.Select(g => g.Id).ToHashSet();
+
+            var newItems = await Task.Run(async () =>
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var libraryClient = scope.ServiceProvider.GetRequiredService<LibraryClient>();
+                var mediaClient   = scope.ServiceProvider.GetRequiredService<MediaClient>();
+
+                var games = await libraryClient.GetGamesAsync();
+                var results = new List<GameItemViewModel>();
+
+                foreach (var game in games)
+                {
+                    if (existingIds.Contains(game.Id))
+                        continue;
+
+                    var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+                    var iconMedia  = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+
+                    var vm = new GameItemViewModel(
+                        game,
+                        MediaSourceResolver.Resolve(coverMedia, mediaClient),
+                        coverMedia?.MimeType,
+                        inLibrary: true,
+                        showInLibraryBadge: false);
+
+                    vm.IconPath = MediaSourceResolver.Resolve(iconMedia, mediaClient);
+
+                    results.Add(vm);
+                }
+
+                return results;
+            });
+
+            if (newItems.Count == 0)
+                return;
+
+            foreach (var vm in newItems)
+                _allGames.Add(vm);
+
+            PopulateGenres();
+            PopulateCollections();
+            PopulateTags();
+            PopulateDevelopers();
+            PopulatePublishers();
+            ApplyFilters();
+
+            _logger.LogInformation("Added {Count} library games from server instant pass", newItems.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load library from server");
+        }
+    }
+
     [RelayCommand]
     private void FilterByCollection(string? collectionName)
     {

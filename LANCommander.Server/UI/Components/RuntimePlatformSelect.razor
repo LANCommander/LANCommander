@@ -1,0 +1,47 @@
+@using LANCommander.SDK.Enums
+
+<Select TItem="PlatformOption"
+        TItemValue="RuntimePlatform"
+        Mode="SelectMode.Multiple"
+        AllowClear
+        DataSource="@Options"
+        Values="@SelectedFlags"
+        ValuesChanged="OnValuesChanged"
+        LabelName="@nameof(PlatformOption.Label)"
+        ValueName="@nameof(PlatformOption.Value)"
+        Placeholder="@Placeholder"
+        Style="@Style" />
+
+@code {
+    [Parameter] public RuntimePlatform Value { get; set; }
+    [Parameter] public EventCallback<RuntimePlatform> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "All platforms";
+    [Parameter] public string Style { get; set; } = "min-width: 180px";
+
+    record PlatformOption(RuntimePlatform Value, string Label);
+
+    static readonly PlatformOption[] Options =
+    {
+        new(RuntimePlatform.Windows, "Windows"),
+        new(RuntimePlatform.Linux, "Linux"),
+        new(RuntimePlatform.macOS, "macOS"),
+    };
+
+    IEnumerable<RuntimePlatform> SelectedFlags =>
+        Options.Where(o => Value.HasFlag(o.Value)).Select(o => o.Value);
+
+    async Task OnValuesChanged(IEnumerable<RuntimePlatform> values)
+    {
+        var combined = RuntimePlatform.None;
+
+        if (values != null)
+        {
+            foreach (var value in values)
+                combined |= value;
+        }
+
+        Value = combined;
+
+        await ValueChanged.InvokeAsync(combined);
+    }
+}

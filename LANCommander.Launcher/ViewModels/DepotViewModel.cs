@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -140,25 +139,20 @@ public partial class DepotViewModel : ViewModelBase
                     allGames.Add(dg);
             }
 
-            // Parallel: download covers + resolve library membership
+            // Resolve library membership in one query; build cover URLs (streamed on demand,
+            // never downloaded to disk).
             var coverCache     = new Dictionary<Guid, string?>();
             var coverMimeCache = new Dictionary<Guid, string?>();
-            var librarySet     = new HashSet<Guid>();
+            var librarySet     = await libraryService.GetLibraryGameIdsAsync();
 
-            await Task.Run(async () =>
+            foreach (var game in allGames)
             {
-                foreach (var game in allGames)
+                if (game.Cover != null)
                 {
-                    if (await libraryService.IsInLibraryAsync(game.Id))
-                        librarySet.Add(game.Id);
-
-                    if (game.Cover != null)
-                    {
-                        coverCache[game.Id] = await GetOrDownloadMediaAsync(game.Cover, mediaClient);
-                        coverMimeCache[game.Id] = game.Cover.MimeType;
-                    }
+                    coverCache[game.Id] = MediaUrl(game.Cover, mediaClient);
+                    coverMimeCache[game.Id] = game.Cover.MimeType;
                 }
-            });
+            }
 
             // ── Popular games: newest 10 (by CreatedOn desc), fetch full data for hero+logo ──
 
@@ -426,9 +420,9 @@ public partial class DepotViewModel : ViewModelBase
 
             var inLibrary  = librarySet.Contains(game.Id);
             var coverMedia = game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
-            var coverPath  = await GetOrDownloadMediaAsync(coverMedia, mediaClient);
-            var heroPath   = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
-            var logoPath   = await GetOrDownloadMediaAsync(game.Media?.FirstOrDefault(m => m.Type == MediaType.Logo), mediaClient);
+            var coverPath  = MediaUrl(coverMedia, mediaClient);
+            var heroPath   = MediaUrl(game.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
+            var logoPath   = MediaUrl(game.Media?.FirstOrDefault(m => m.Type == MediaType.Logo), mediaClient);
 
             var vm = new GameItemViewModel(depotGame, coverPath, coverMedia?.MimeType, inLibrary);
             
@@ -449,8 +443,8 @@ public partial class DepotViewModel : ViewModelBase
         try
         {
             var game = await gameClient.GetAsync(depotGame.Id);
-            
-            return await GetOrDownloadMediaAsync(game?.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
+
+            return MediaUrl(game?.Media?.FirstOrDefault(m => m.Type == MediaType.Background), mediaClient);
         }
         catch
         {
@@ -458,24 +452,17 @@ public partial class DepotViewModel : ViewModelBase
         }
     }
 
-    private static async Task<string?> GetOrDownloadMediaAsync(Media? media, MediaClient mediaClient)
+    // Depot media is streamed from the server on demand (see RemoteImageCache / AsyncImage),
+    // never persisted to disk. Still images use the server-resized thumbnail; animated
+    // (video) covers use the range-capable stream endpoint.
+    private static string? MediaUrl(Media? media, MediaClient mediaClient)
     {
         if (media == null)
             return null;
-        try
-        {
-            var localPath = mediaClient.GetLocalPath(media);
-            
-            if (File.Exists(localPath))
-                return localPath;
-            
-            var file = await mediaClient.DownloadAsync(media, localPath);
-            
-            return file.Exists ? file.FullName : null;
-        }
-        catch
-        {
-            return null;
-        }
+
+        if (media.MimeType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true)
+            return mediaClient.GetAbsoluteStreamUrl(media);
+
+        return mediaClient.GetAbsoluteThumbnailUrl(media);
     }
 }

@@ -201,6 +201,9 @@ namespace LANCommander.Migrations
                     b.Property<string>("Path")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("PrimaryAction")
                         .HasColumnType("INTEGER");
 
@@ -694,6 +697,9 @@ namespace LANCommander.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
@@ -1370,6 +1376,9 @@ namespace LANCommander.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
@@ -1423,6 +1432,9 @@ namespace LANCommander.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("RedistributableId")
                         .HasColumnType("TEXT");

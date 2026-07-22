@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using LANCommander.Server.Services.Extensions;
 
 namespace LANCommander.Server.Services
 {
@@ -16,6 +17,8 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Engine> AddAsync(Engine entity)
         {
+            await cache.ExpireGameCacheAsync();
+
             return await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(e => e.Games);
@@ -24,10 +27,19 @@ namespace LANCommander.Server.Services
 
         public override async Task<Engine> UpdateAsync(Engine entity)
         {
+            await cache.ExpireGameCacheAsync();
+
             return await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(e => e.Games);
             });
+        }
+
+        public override async Task DeleteAsync(Engine entity)
+        {
+            await cache.ExpireGameCacheAsync();
+
+            await base.DeleteAsync(entity);
         }
     }
 }

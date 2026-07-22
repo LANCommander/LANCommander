@@ -40,6 +40,9 @@ namespace LANCommander.SDK.Services
         public string GetAbsoluteUrl(Media media)
             => connectionClient.GetServerAddress().Join(GetDownloadPath(media)).ToString();
 
+        public bool IsOfflineMode()
+            => connectionClient.IsOfflineMode();
+
         public string GetLocalPath(Media media)
             => GetLocalPath(media.FileId, media.Crc32);
 

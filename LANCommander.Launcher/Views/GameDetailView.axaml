@@ -3,16 +3,11 @@
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
              xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
-             xmlns:converters="using:LANCommander.Launcher.Converters"
              xmlns:components="using:LANCommander.Launcher.Views.Components"
              xmlns:controls="using:LANCommander.Launcher.Controls"
              x:Class="LANCommander.Launcher.Views.GameDetailView"
              x:DataType="vm:GameDetailViewModel"
 >
-
-    <UserControl.Resources>
-        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
-    </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="Panel:focus-visible > Border#FocusBorder">
@@ -37,7 +32,8 @@
                             IsHitTestVisible="False"
                             IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                         <Panel>
-                            <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=w1600}"
+                            <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
+                                   controls:AsyncImage.DecodeWidth="1600"
                                    Stretch="UniformToFill">
                                 <Image.Effect>
                                     <BlurEffect Radius="24" />
@@ -48,7 +44,8 @@
                     </Border>
 
                     <!-- Background image -->
-                    <Image Source="{Binding BackgroundPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=w1600}"
+                    <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
+                           controls:AsyncImage.DecodeWidth="1600"
                            Stretch="UniformToFill"
                            IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
@@ -99,7 +96,7 @@
                                  VerticalAlignment="Bottom"
                                  MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.33}"
                                  MaxHeight="{Binding Bounds.Height, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.5}">
-                            <Image Source="{Binding LogoPath, Converter={StaticResource FilePathToBitmapConverter}, ConverterParameter=full}"
+                            <Image controls:AsyncImage.Source="{Binding LogoPath}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Left"
                                    VerticalAlignment="Bottom" />

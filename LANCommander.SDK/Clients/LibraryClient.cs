@@ -20,6 +20,18 @@ namespace LANCommander.SDK.Services
             return results ?? [];
         }
 
+        public async Task<IEnumerable<Game>> GetGamesAsync()
+        {
+            var results = await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute("/api/Library/Games")
+                .GetAsync<IEnumerable<Game>>();
+
+            return results ?? [];
+        }
+
         public async Task<bool> AddToLibrary(Guid gameId)
         {
             return await apiRequestFactory

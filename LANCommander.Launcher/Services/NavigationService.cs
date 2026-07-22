@@ -49,16 +49,16 @@ public partial class NavigationService : ObservableObject, INavigationService
         }
 
         // Show the loading overlay and yield so the UI thread can paint it
-        // BEFORE the heavy view creation from the ContentControl DataTemplate.
+        // over the CURRENT view before we do any heavy work.
         IsNavigating = true;
         await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render).GetTask();
-
-        CurrentView = viewModel;
 
         try
         {
             if (initializeAsync != null)
                 await initializeAsync();
+
+            CurrentView = viewModel;
 
             // Yield again so the new view finishes layout/render
             // before we hide the overlay.
@@ -67,6 +67,8 @@ public partial class NavigationService : ObservableObject, INavigationService
         catch
         {
             // Initialization errors are handled by the caller's callback.
+            // Still swap to the target view so navigation isn't left stuck.
+            CurrentView = viewModel;
         }
         finally
         {

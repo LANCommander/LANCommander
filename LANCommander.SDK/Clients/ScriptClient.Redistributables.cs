@@ -26,6 +26,12 @@ public partial class ScriptClient
         
         var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.DetectInstall);
 
+        if (File.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.DetectInstall))
+        {
+            logger?.LogTrace("Skipping detect install script; not supported on the current runtime");
+            return result;
+        }
+
         try
         {
             if (File.Exists(path))
@@ -112,7 +118,13 @@ public partial class ScriptClient
         var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
         var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Install);
-        
+
+        if (Path.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.Install))
+        {
+            logger?.LogTrace("Skipping install script; not supported on the current runtime");
+            return result;
+        }
+
         try
         {
             if (Path.Exists(path))
@@ -185,6 +197,12 @@ public partial class ScriptClient
         var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
         var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Uninstall);
+
+        if (Path.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.Uninstall))
+        {
+            logger?.LogTrace("Skipping uninstall script; not supported on the current runtime");
+            return result;
+        }
 
         try
         {
@@ -260,6 +278,12 @@ public partial class ScriptClient
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.BeforeStart))
+            {
+                logger?.LogTrace("Skipping before start script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing before start script"))
             {
@@ -341,6 +365,12 @@ public partial class ScriptClient
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.AfterStop);
 
+            if (File.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.AfterStop))
+            {
+                logger?.LogTrace("Skipping after stop script; not supported on the current runtime");
+                return result;
+            }
+
             using (var op = logger.BeginOperation("Executing after stop script"))
             {
                 if (File.Exists(path))
@@ -420,6 +450,12 @@ public partial class ScriptClient
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
             
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.NameChange))
+            {
+                logger?.LogTrace("Skipping name change script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing name change script"))
             {
@@ -510,6 +546,12 @@ public partial class ScriptClient
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
             var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.RunWrapper);
+
+            if (File.Exists(path) && !SupportsCurrentRuntime(redistributableManifest.Scripts, Enums.ScriptType.RunWrapper))
+            {
+                logger?.LogTrace("Skipping run wrapper script; not supported on the current runtime");
+                return result;
+            }
 
             using (var op = logger.BeginOperation("Executing run wrapper script"))
             {

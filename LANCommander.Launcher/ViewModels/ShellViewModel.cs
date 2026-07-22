@@ -219,6 +219,7 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel.SearchRequested  += OnSearchRequested;
 
         DownloadQueue.InstallCompleted += OnInstallCompleted;
+        DownloadQueue.ToolInstallCompleted += OnToolInstallCompleted;
         DownloadQueue.Initialize();
 
         if (!IsOfflineMode)
@@ -264,6 +265,11 @@ public partial class ShellViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+
+        // Fill the library instantly from the server (streaming media) so first-run and
+        // newly-added games appear before the slow import finishes caching them locally.
+        if (!IsOfflineMode)
+            _ = LibraryViewModel.LoadLibraryFromServerAsync();
 
         // Load depot data in the background so the UI is not blocked by network calls
         _ = LoadDepotInBackgroundAsync();
@@ -649,6 +655,15 @@ public partial class ShellViewModel : ViewModelBase
                 _lastDepotBrowseFilter.Collection,
                 _lastDepotBrowseFilter.Search);
 
+        if (DepotGameDetailViewModel.Id == gameId)
+            await DepotGameDetailViewModel.RefreshInstallStatusAsync();
+
+        if (GameDetailViewModel.Id == gameId)
+            await GameDetailViewModel.RefreshInstallStatusAsync();
+    }
+    
+    private async void OnToolInstallCompleted(object? sender, Guid gameId)
+    {
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();
 

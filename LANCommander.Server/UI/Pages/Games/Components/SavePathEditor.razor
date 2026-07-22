@@ -35,6 +35,9 @@
         <PropertyColumn Property="p => p.IsRegex" Title="Regex">
             <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
         </PropertyColumn>
+        <PropertyColumn Property="p => p.Platforms" Title="Platforms">
+            <RuntimePlatformSelect @bind-Value="context.Platforms" />
+        </PropertyColumn>
         <ActionColumn>
             <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                 <Button OnClick="() => RemovePath(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Data.Models
 {
@@ -13,6 +14,7 @@ namespace LANCommander.Server.Data.Models
         public bool PrimaryAction { get; set; }
         public int SortOrder { get; set; }
         public string? OptionOverrides { get; set; }
+        public RuntimePlatform Platforms { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]

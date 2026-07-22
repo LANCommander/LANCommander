@@ -156,7 +156,7 @@ namespace LANCommander.SDK.Services
                     if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
                         tempLocationFilePath = "Saves";
 
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File && EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)))
                     {
                         var entries = GetFileSavePathEntries(savePath, installDirectory) ?? [];
 
@@ -258,10 +258,10 @@ namespace LANCommander.SDK.Services
             using (var savePacker = new SavePacker(installDirectory))
             {
                 if (manifest?.SavePaths.Any() ?? false)
-                    savePacker.AddPaths(manifest.SavePaths);
+                    savePacker.AddPaths(manifest.SavePaths.Where(sp => EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)));
 
                 await savePacker.AddManifestAsync(manifest);
-                
+
                 return await savePacker.PackAsync();
             }
         }
@@ -272,7 +272,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Saves/Game/{manifest.Id}/Upload")
+                .UseRoute($"/api/Saves/Game/{manifest.Id}/Upload?platform={EnvironmentHelper.GetCurrentRuntime()}")
                 .UploadAsync<GameSave>($"game-{manifest.Id}-save", stream);
         }
 
@@ -283,7 +283,7 @@ namespace LANCommander.SDK.Services
                 var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
                 if (manifest?.SavePaths?.Any() ?? false)
-                    savePacker.AddPaths(manifest.SavePaths);
+                    savePacker.AddPaths(manifest.SavePaths.Where(sp => EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)));
 
                 if (savePacker.HasEntries())
                 {

@@ -30,6 +30,8 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Game> AddAsync(Game entity)
         {
+            await cache.ExpireGameCacheAsync(entity.Id);
+
             return await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(g => g.Actions);

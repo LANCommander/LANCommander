@@ -102,7 +102,7 @@ public static class LibraryEndpoints
 
     internal static async Task<IResult> GetGamesAsync(
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
         [FromServices] LibraryService libraryService,
@@ -128,9 +128,9 @@ public static class LibraryEndpoints
             {
                 logger.LogDebug("User libraries are disabled; returning all games with media");
 
-                var allGames = await cache.GetOrSetAsync(
+                var allGames = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>(
                     "Library/Games",
-                    async _ => mapper.Map<IEnumerable<SDK.Models.Game>>(await LoadGamesWithMediaAsync(gameService, null)),
+                    async _ => (await LoadGamesWithMediaAsync(gameService, null)).Select(sdkMapper.ToSdk).ToList(),
                     TimeSpan.MaxValue,
                     tags: ["Library", "Games"]);
 
@@ -148,7 +148,7 @@ public static class LibraryEndpoints
 
                     var games = await LoadGamesWithMediaAsync(gameService, libraryGameIds);
 
-                    var mapped = mapper.Map<IEnumerable<SDK.Models.Game>>(games).ToList();
+                    var mapped = games.Select(sdkMapper.ToSdk).ToList();
 
                     foreach (var game in mapped)
                         game.InLibrary = true;

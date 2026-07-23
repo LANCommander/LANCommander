@@ -1,6 +1,7 @@
 using LANCommander.SDK.Migrations;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Migrations;
+using LANCommander.Server.Services.Abstractions;
 
 namespace LANCommander.Server.Startup;
 
@@ -34,6 +35,14 @@ public static class Migrations
 
     public static async Task<WebApplication> RunApplicationMigrationsAsync(this WebApplication app)
     {
+        var election = app.Services.GetRequiredService<ICoordinatorElection>();
+
+        // Settings/path migrations touch the shared config filesystem; only the coordinator runs
+        // them so multiple instances can't race moving the same files. In single-instance mode the
+        // default election always reports leadership.
+        if (!await election.TryAcquireAsync())
+            return app;
+
         var migrationService = app.Services.GetRequiredService<MigrationService>();
 
         await migrationService.MigrateAsync();

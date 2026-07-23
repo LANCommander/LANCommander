@@ -42,6 +42,11 @@ public static class Database
         else
             DatabaseContext.ConnectionString = settings.Value.Server.Database.ConnectionString;
 
+        if (settings.Value.Server.Scaling.Enabled && DatabaseContext.Provider == DatabaseProvider.SQLite)
+            throw new InvalidOperationException(
+                "Server.Scaling.Enabled is true but the configured database provider is SQLite. " +
+                "Horizontal scaling requires a shared MySQL or PostgreSQL database.");
+
         return app;
     }
 
@@ -53,6 +58,13 @@ public static class Database
             using var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var election = scope.ServiceProvider.GetRequiredService<Server.Services.Abstractions.ICoordinatorElection>();
+            if (!await election.TryAcquireAsync())
+            {
+                logger.LogDebug("Not the coordinator; skipping database migration");
+                return;
+            }
+
             logger.LogDebug("Migrating database if required");
 
             if ((await db.Database.GetPendingMigrationsAsync()).Any())

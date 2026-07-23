@@ -99,7 +99,18 @@ public class SettingsProvider<TSettings> : ISettingsProvider, IHostedService
         var serializer = YamlSerializerFactory.Create();
         var serialization = serializer.Serialize(settings);
 
-        await File.WriteAllTextAsync(_filePath, serialization, ct);
+        var tempPath = _filePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+        try
+        {
+            await File.WriteAllTextAsync(tempPath, serialization, ct);
+            File.Move(tempPath, _filePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;

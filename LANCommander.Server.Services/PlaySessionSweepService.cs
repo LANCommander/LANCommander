@@ -1,3 +1,4 @@
+using LANCommander.Server.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,7 @@ namespace LANCommander.Server.Services;
 public sealed class PlaySessionSweepService(
     IServiceScopeFactory scopeFactory,
     ServerManager serverManager,
+    ICoordinatorElection coordinatorElection,
     SettingsProvider<Settings.Settings> settingsProvider,
     ILogger<PlaySessionSweepService> logger) : BackgroundService
 {
@@ -27,6 +29,11 @@ public sealed class PlaySessionSweepService(
                 var timeout = TimeSpan.FromSeconds(Math.Max(1, gameServers.KeepAliveTimeout));
 
                 await Task.Delay(interval, stoppingToken);
+
+                // Only the coordinator sweeps, so autostop scheduling isn't duplicated across
+                // instances. ScheduleStop keeps in-memory state that must live on one node.
+                if (!coordinatorElection.IsLeader)
+                    continue;
 
                 using var scope = scopeFactory.CreateScope();
                 var playSessionService = scope.ServiceProvider.GetRequiredService<PlaySessionService>();

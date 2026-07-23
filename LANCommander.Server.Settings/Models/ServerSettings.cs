@@ -16,6 +16,7 @@ public class ServerSettings
     public LogSettings Logs { get; set; } = new();
     public MediaSettings Media { get; set; } = new();
     public RoleSettings Roles { get; set; } = new();
+    public ScalingSettings Scaling { get; set; } = new();
     public ScriptSettings Scripts { get; set; } = new();
     public GameServerSettings GameServers { get; set; } = new();
     public UpdateSettings Update { get; set; } = new();

@@ -1,5 +1,6 @@
 using System.Reflection;
 using Hangfire;
+using Hangfire.Redis.StackExchange;
 using LANCommander.Server.Jobs.Recurring;
 
 namespace LANCommander.Server.Startup;
@@ -8,15 +9,25 @@ public static class BackgroundProcessing
 {
     public static WebApplicationBuilder AddHangfire(this WebApplicationBuilder builder)
     {
-        builder.Services.AddHangfire(static (sp, configuration) =>
+        var scalingEnabled = builder.IsScalingEnabled();
+        var redisConnectionString = builder.GetRedisConnectionString();
+
+        builder.Services.AddHangfire((sp, configuration) =>
         {
             var logger = sp.GetRequiredService<ILogger<Program>>();
             logger.LogDebug("Initializing Hangfire");
             configuration
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
                 .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseInMemoryStorage();
+                .UseRecommendedSerializerSettings();
+
+            if (scalingEnabled)
+                configuration.UseRedisStorage(redisConnectionString, new RedisStorageOptions
+                {
+                    Prefix = "LANCommander:Hangfire:",
+                });
+            else
+                configuration.UseInMemoryStorage();
         });
         
         builder.Services.AddHangfireServer();

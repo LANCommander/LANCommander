@@ -50,19 +50,23 @@ public static class ApplicationSettings
         }
     }
 
-    public static WebApplication ValidateSettings(this WebApplication app)
+    public static async Task<WebApplication> ValidateSettings(this WebApplication app)
     {
         var settingsProvider = app.Services.GetRequiredService<SettingsProvider<Settings.Settings>>();
         var settings = app.Services.GetRequiredService<IOptions<Settings.Settings>>();
+        var election = app.Services.GetRequiredService<Server.Services.Abstractions.ICoordinatorElection>();
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        
+
         if (settings.Value.Server.Authentication.TokenSecret.Length < 16)
         {
-            logger.LogDebug("JWT token secret is too short. Regenerating...");
-            settingsProvider.Update(s =>
+            if (await election.TryAcquireAsync())
             {
-                s.Server.Authentication.TokenSecret = Guid.NewGuid().ToString(); 
-            });
+                logger.LogDebug("JWT token secret is too short. Regenerating...");
+                settingsProvider.Update(s =>
+                {
+                    s.Server.Authentication.TokenSecret = Guid.NewGuid().ToString();
+                });
+            }
         }
 
         return app;

@@ -9,6 +9,7 @@ if (args.Contains("--debugger"))
 builder.AddSettings();
 builder.AddAsService();
 builder.AddLogger();
+builder.AddScaling();
 
 builder.AddRazor();
 builder.AddSignalR();
@@ -33,7 +34,7 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogDebug("Building Application");
 
 app.UseDatabase(args);
-app.ValidateSettings();
+await app.ValidateSettings();
 
 app.UseCors("CorsPolicy");
 app.UseHttpsRedirection();

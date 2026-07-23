@@ -14,6 +14,7 @@ using LANCommander.Server.Services.Providers;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services.Extensions;
 
@@ -100,6 +101,10 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<ServerManager>();
 
+        // Default single-instance coordinator election. Replaced by a Redis-backed lease in the
+        // Server project when horizontal scaling is enabled.
+        services.AddSingleton<ICoordinatorElection, SingleInstanceCoordinatorElection>();
+
         services.AddSingleton<PlaySessionKeepAliveTracker>();
         services.AddHostedService<PlaySessionSweepService>();
 
@@ -114,7 +119,9 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<Mappers.SdkMapper>();
         services.AddSingleton<Mappers.ManifestMapper>();
 
-        services.AddFusionCache();
+        // TryWithAutoSetup wires up a registered serializer, distributed cache (Redis L2), and
+        // backplane when scaling mode has registered them; otherwise FusionCache stays in-memory.
+        services.AddFusionCache().TryWithAutoSetup();
 
         return services;
     }

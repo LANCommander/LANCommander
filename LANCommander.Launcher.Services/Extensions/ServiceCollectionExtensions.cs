@@ -35,6 +35,8 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<KeepAliveService>();
             #endregion
 
+            services.AddSingleton<ICurrentProcessInfo, CurrentProcessInfo>();
+            services.AddSingleton<IElevatedProcessLauncher, ElevatedProcessLauncher>();
             services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
             services.AddSingleton<ScriptDebugger>();
             services.AddSingleton<IScriptDebugger>(sp =>

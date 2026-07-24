@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Extensions;
+﻿using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Options;
@@ -28,7 +29,7 @@ namespace LANCommander.Server.Jobs.Background
                     if (!localArtifacts.Any(a => a.Name.EndsWith(artifact.Name)))
                     {
                         using (var downloadStream = await httpClient.GetStreamAsync(artifact.Url))
-                        using (var fs = new FileStream(Path.Combine(settings.Value.Server.Launcher.StoragePath, artifact.Name), FileMode.Create))
+                        using (var fs = new FileStream(AppPaths.ResolveStorageLocationPath(settings.Value.Server.Launcher.StoragePath, artifact.Name), FileMode.Create))
                         {
                             await downloadStream.CopyToAsync(fs);
                             op.Complete();

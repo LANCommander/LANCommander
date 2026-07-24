@@ -140,8 +140,11 @@ namespace LANCommander.Server.Services
                 
                 foreach (var storageLocation in storageLocations)
                 {
-                    if (!Directory.Exists(storageLocation.Path))
-                        Directory.CreateDirectory(storageLocation.Path);
+                    // Store the configured (possibly relative) path, but create the resolved physical directory.
+                    var resolvedPath = AppPaths.ResolveStorageLocationPath(storageLocation.Path);
+
+                    if (!Directory.Exists(resolvedPath))
+                        Directory.CreateDirectory(resolvedPath);
 
                     try
                     {

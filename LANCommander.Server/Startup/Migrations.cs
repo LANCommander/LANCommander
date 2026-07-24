@@ -29,6 +29,9 @@ public static class Migrations
         builder.Services.AddScoped<IMigration, MoveLauncherMigration>();
         builder.Services.AddScoped<IMigration, MoveLogsMigration>();
 
+        // Align settings-based storage paths with the unified resolver
+        builder.Services.AddScoped<IMigration, AlignSettingsStoragePathsMigration>();
+
         return builder;
     }
 

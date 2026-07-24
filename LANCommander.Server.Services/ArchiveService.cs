@@ -189,9 +189,6 @@ namespace LANCommander.Server.Services
         {
             var storageLocation = await storageLocationService.GetAsync(storageLocationId);
 
-            if (!Directory.Exists(storageLocation.Path))
-                Directory.CreateDirectory(storageLocation.Path);
-
             var archive = new Archive
             {
                 ObjectKey = Guid.NewGuid().ToString(),

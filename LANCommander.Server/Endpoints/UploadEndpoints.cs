@@ -28,9 +28,6 @@ public static class UploadEndpoints
             storageLocationId == null || storageLocationId == Guid.Empty ? null : storageLocationId,
             SDK.Enums.StorageLocationType.Archive);
 
-        if (!Directory.Exists(storageLocation.Path))
-            Directory.CreateDirectory(storageLocation.Path);
-
         var archive = new Archive
         {
             ObjectKey = Guid.NewGuid().ToString(),

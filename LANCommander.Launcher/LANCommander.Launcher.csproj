@@ -41,6 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" />
   </ItemGroup>

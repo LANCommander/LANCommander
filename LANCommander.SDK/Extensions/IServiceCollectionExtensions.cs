@@ -2,6 +2,7 @@ using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Clients;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Plugins;
 using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc.Client;
@@ -60,8 +61,11 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<MigrationHistoryService>();
         services.AddSingleton<MigrationService>();
-        
+
         services.TryAddSingleton<IChatClient, ChatClient>();
+
+        // Plugin framework: in-process event bus shared by both hosts so plugins can react to lifecycle events.
+        services.TryAddSingleton<IPluginEventBus, PluginEventBus>();
         
         return services;
     }

@@ -7,14 +7,67 @@ using global::Avalonia.VisualTree;
 using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Views;
 
 public partial class GameDetailView : UserControl
 {
+    private bool _pluginTabsAdded;
+
     public GameDetailView()
     {
         InitializeComponent();
+
+        DataContextChanged += (_, _) => AppendPluginTabs();
+    }
+
+    /// <summary>
+    /// Appends plugin-contributed detail sections (via <see cref="IGameDetailTabContribution"/>) to
+    /// the bottom of the left column once a game is bound. A failing contribution is skipped so the
+    /// built-in detail content still renders.
+    /// </summary>
+    private void AppendPluginTabs()
+    {
+        if (_pluginTabsAdded || DataContext is not GameDetailViewModel detailVm)
+            return;
+
+        var contributions = App.Services?
+            .GetServices<Plugins.Contributions.IGameDetailTabContribution>()
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (contributions == null || contributions.Count == 0)
+            return;
+
+        _pluginTabsAdded = true;
+
+        foreach (var contribution in contributions)
+        {
+            Control content;
+
+            try
+            {
+                content = contribution.BuildContent(detailVm.Id);
+            }
+            catch
+            {
+                continue;
+            }
+
+            var header = new TextBlock
+            {
+                Text = contribution.Header,
+                FontWeight = global::Avalonia.Media.FontWeight.SemiBold,
+                FontSize = 16,
+            };
+
+            var stack = new StackPanel { Spacing = 8 };
+            stack.Children.Add(header);
+            stack.Children.Add(content);
+
+            LeftContent.Children.Add(stack);
+        }
     }
 
     /// <summary>

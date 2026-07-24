@@ -19,39 +19,14 @@
 
     <Grid RowDefinitions="*,Auto">
 
-        <!-- ── Main Content ──────────────────────────────────────────── -->
-        <TransitioningContentControl Grid.Row="0" Content="{Binding ContentView}">
+        <!-- ── Main Content ──────────────────────────────────────────────
+             Data templates are supplied in code-behind from the IViewRegistry so plugins can
+             contribute navigable views. Most-derived-first matching preserves the
+             DepotGameDetailViewModel-before-GameDetailViewModel resolution rule. -->
+        <TransitioningContentControl x:Name="ContentHost" Grid.Row="0" Content="{Binding ContentView}">
             <TransitioningContentControl.PageTransition>
                 <controls:FadeInPageTransition Duration="0:0:0.2" />
             </TransitioningContentControl.PageTransition>
-            <TransitioningContentControl.DataTemplates>
-                <DataTemplate DataType="vm:DepotViewModel">
-                    <views:DepotView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:DepotBrowseViewModel">
-                    <views:DepotBrowseView />
-                </DataTemplate>
-                <!-- DepotGameDetailViewModel must appear before GameDetailViewModel
-                     so the more-specific type is matched first. -->
-                <DataTemplate DataType="vm:DepotGameDetailViewModel">
-                    <views:GameDetailView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:GamesListViewModel">
-                    <views:GamesListView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:LibraryViewModel">
-                    <views:GamesListView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:GameDetailViewModel">
-                    <views:GameDetailView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:SettingsViewModel">
-                    <views:SettingsView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:DownloadQueueViewModel">
-                    <views:DownloadQueuePageView />
-                </DataTemplate>
-            </TransitioningContentControl.DataTemplates>
         </TransitioningContentControl>
 
         <!-- ── Loading overlay (shown during async navigation) ───── -->
@@ -186,7 +161,10 @@
                     </StackPanel>
                 </Panel>
                 
-                <Panel Grid.Column="2" HorizontalAlignment="Right">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                    <!-- Plugin-contributed footer items, ordered in code-behind -->
+                    <StackPanel x:Name="FooterPluginItems" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" />
+
                     <!-- Chat button -->
                     <Button Command="{Binding OpenChatCommand}"
                             Classes="Text">
@@ -202,7 +180,7 @@
                             </Border>
                         </StackPanel>
                     </Button>
-                </Panel>
+                </StackPanel>
 
             </Grid>
         </Border>

@@ -35,7 +35,7 @@
         
         <!-- Content -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="24" Margin="24">
+            <StackPanel x:Name="SectionsPanel" Spacing="24" Margin="24">
                 
                 <!-- Status Message -->
                 <TextBlock Text="{Binding StatusMessage}"

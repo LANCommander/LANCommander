@@ -148,7 +148,7 @@ public class GameInstallationSharedDirectoryTests : IDisposable
     /// resolution and local file verification, so they are safe to leave null.
     /// </summary>
     private static GameClient CreateClient() =>
-        new(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        new(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
     private static void InstallGameFiles(string installDirectory)
     {

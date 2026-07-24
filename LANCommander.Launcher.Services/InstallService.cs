@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Plugins.Events;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Game = LANCommander.Launcher.Data.Models.Game;
@@ -24,6 +26,7 @@ namespace LANCommander.Launcher.Services
         private readonly RedistributableClient _redistributableClient;
         private readonly ToolClient _toolClient;
         private readonly MediaClient _mediaClient;
+        private readonly IPluginEventBus _pluginEventBus;
 
         private Stopwatch Stopwatch { get; set; }
 
@@ -64,7 +67,8 @@ namespace LANCommander.Launcher.Services
             GameClient gameClient,
             RedistributableClient redistributableClient,
             ToolClient toolClient,
-            MediaClient mediaClient) : base(logger)
+            MediaClient mediaClient,
+            IPluginEventBus pluginEventBus) : base(logger)
         {
             _gameService = gameService;
             _toolService = toolService;
@@ -73,6 +77,16 @@ namespace LANCommander.Launcher.Services
             _redistributableClient = redistributableClient;
             _toolClient = toolClient;
             _mediaClient = mediaClient;
+            _pluginEventBus = pluginEventBus;
+
+            // Bridge existing lifecycle events to the plugin event bus so plugins can react without
+            // touching every internal call site.
+            OnInstallComplete += game =>
+                _pluginEventBus.PublishAsync(new GameInstalledEvent(game.Id, game.InstallDirectory ?? string.Empty));
+            OnInstallFail += game =>
+                _pluginEventBus.PublishAsync(new GameInstallFailedEvent(game.Id, game.InstallDirectory));
+            OnQueueChanged += () =>
+                _pluginEventBus.PublishAsync(new InstallQueueChangedEvent());
 
             Stopwatch = new Stopwatch();
 
@@ -734,6 +748,8 @@ namespace LANCommander.Launcher.Services
 
                 currentItem.Status = InstallStatus.Downloading;
                 OnQueueChanged?.Invoke();
+
+                await _pluginEventBus.PublishAsync(new GameInstallingEvent(localGame.Id, currentItem.InstallDirectory));
 
                 try
                 {

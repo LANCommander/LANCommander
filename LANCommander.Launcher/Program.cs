@@ -14,6 +14,7 @@ using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -106,7 +107,13 @@ class Program
         services.AddSingleton<InstallService>();
         services.AddSingleton<SingleInstanceService>();
 
+        // Plugin framework: discover drop-in plugins and let them register services before the
+        // provider is built. UI contributions register harmlessly but are never resolved in headless mode.
+        var pluginLoader = PluginBootstrap.ConfigurePlugins(services, PluginHost.Launcher);
+
         var serviceProvider = services.BuildServiceProvider();
+
+        await pluginLoader.InitializeAllAsync(serviceProvider).ConfigureAwait(false);
 
         if (settings.Debug.EnableScriptDebugging)
         {

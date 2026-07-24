@@ -81,6 +81,11 @@ app.PrepareDirectories();
 
 await app.RunApplicationMigrationsAsync();
 await app.RunDatabaseMigrationsAsync();
+
+// Initialize plugins once the database is ready but before servers start, so plugins can subscribe
+// to lifecycle events ahead of time.
+await app.Services.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>().InitializeAllAsync(app.Services);
+
 await app.StartServersAsync();
 await app.StartBeaconAsync();
 

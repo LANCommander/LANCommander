@@ -4,6 +4,8 @@ using LANCommander.Launcher.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Plugins.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,7 @@ namespace LANCommander.Launcher.Services
         ToolService toolService,
         ToolClient toolClient,
         IConnectionClient connectionClient,
+        IPluginEventBus pluginEventBus,
         IServiceProvider serviceProvider) : BaseDatabaseService<Game>(dbContext, logger)
     {
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
@@ -49,6 +52,7 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     OnUninstall?.Invoke(game);
+                    await pluginEventBus.PublishAsync(new GameUninstallingEvent(game.Id, game.InstallDirectory));
 
                     var installService = serviceProvider.GetService<InstallService>();
                     installService?.ClearCompleted(game.Id);
@@ -94,6 +98,7 @@ namespace LANCommander.Launcher.Services
                     await UpdateAsync(game);
 
                     OnUninstallComplete?.Invoke(game);
+                    await pluginEventBus.PublishAsync(new GameUninstalledEvent(game.Id));
 
                     operation.Complete();
                 }

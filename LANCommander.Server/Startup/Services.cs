@@ -1,5 +1,6 @@
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Clients;
 using LANCommander.Server.ImportExport.Extensions;
@@ -29,6 +30,10 @@ public static class Services
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();
         builder.AddServiceDefaults();
+
+        // Plugin framework: discover drop-in plugins and let them register services. Must run last,
+        // while the service collection is still open (the provider is built immediately after).
+        PluginBootstrap.ConfigurePlugins(builder.Services, PluginHost.Server);
 
         return builder;
     }

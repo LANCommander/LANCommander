@@ -9,6 +9,8 @@ using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Plugins.Events;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
 using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
@@ -22,7 +24,8 @@ public class AuthenticationClient(
     ISettingsProvider settingsProvider,
     ApiRequestFactory apiRequestFactory,
     IConnectionClient connectionClient,
-    ProfileClient profileClient)
+    ProfileClient profileClient,
+    IPluginEventBus pluginEventBus)
 {
     public async Task<AuthToken> AuthenticateAsync(string username, string password, Uri serverAddress)
     {
@@ -65,6 +68,18 @@ public class AuthenticationClient(
 
                     await configRefresher.RefreshAsync();
 
+                    try
+                    {
+                        var profile = await profileClient.GetAsync(forceLoad: true);
+
+                        if (profile != null)
+                            await pluginEventBus.PublishAsync(new UserLoggedInEvent(profile.Id, profile.UserName));
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Could not publish login event for user {UserName}", username);
+                    }
+
                     return token;
 
                 case HttpStatusCode.Forbidden:
@@ -88,6 +103,17 @@ public class AuthenticationClient(
     
     public async Task LogoutAsync()
     {
+        User loggedOutUser = null;
+
+        try
+        {
+            loggedOutUser = await profileClient.GetAsync();
+        }
+        catch
+        {
+            // Profile may be unavailable if the server is offline; logout still proceeds.
+        }
+
         try
         {
             await apiRequestFactory
@@ -106,6 +132,18 @@ public class AuthenticationClient(
         tokenProvider.SetToken(null);
 
         profileClient.ClearCache();
+
+        if (loggedOutUser != null)
+        {
+            try
+            {
+                await pluginEventBus.PublishAsync(new UserLoggedOutEvent(loggedOutUser.Id, loggedOutUser.UserName));
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not publish logout event for user {UserName}", loggedOutUser.UserName);
+            }
+        }
     }
     
     public async Task RegisterAsync(string username, string password, string passwordConfirmation)

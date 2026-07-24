@@ -3,14 +3,17 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Plugins;
 using LANCommander.SDK.PowerShell.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -181,6 +184,8 @@ namespace LANCommander.SDK.PowerShell
 
             initialSessionState.AddCustomCmdlets();
 
+            RegisterPluginCmdlets(initialSessionState);
+
             DisableWow64Redirection();
 
             using (Runspace runspace = RunspaceFactory.CreateRunspace(initialSessionState))
@@ -188,31 +193,35 @@ namespace LANCommander.SDK.PowerShell
                 runspace.Open();
                 
                 var modulesPath = AppPaths.GetConfigPath("Modules");
-                
-                if (Directory.Exists(modulesPath))
-                {
-                    foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
-                    {
-                        try
-                        {
-                            using var import = System.Management.Automation.PowerShell.Create();
-                            
-                            import.Runspace = runspace;
-                                
-                            import.AddCommand("Import-Module")
-                                .AddParameter("Name", moduleDirectory)
-                                .AddParameter("ErrorAction", "Stop");
-                                
-                            import.Invoke();
 
-                            if (import.HadErrors)
-                                foreach (var error in import.Streams.Error)
-                                    Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
-                        }
+                var moduleSources = new List<string>();
+
+                if (Directory.Exists(modulesPath))
+                    moduleSources.AddRange(Directory.GetDirectories(modulesPath));
+
+                moduleSources.AddRange(GetPluginModulePaths());
+
+                foreach (var moduleDirectory in moduleSources)
+                {
+                    try
+                    {
+                        using var import = System.Management.Automation.PowerShell.Create();
+
+                        import.Runspace = runspace;
+
+                        import.AddCommand("Import-Module")
+                            .AddParameter("Name", moduleDirectory)
+                            .AddParameter("ErrorAction", "Stop");
+
+                        import.Invoke();
+
+                        if (import.HadErrors)
+                            foreach (var error in import.Streams.Error)
+                                Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
                     }
                 }
 
@@ -345,6 +354,96 @@ namespace LANCommander.SDK.PowerShell
             RevertWow64Redirection();
 
             return result;
+        }
+
+        private void RegisterPluginCmdlets(InitialSessionState initialSessionState)
+        {
+            IEnumerable<IPluginPowerShellContributor> contributors;
+
+            try
+            {
+                contributors = ServiceProvider.GetServices<IPluginPowerShellContributor>();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell contributors");
+                return;
+            }
+
+            foreach (var contributor in contributors)
+            {
+                IEnumerable<Type> cmdletTypes;
+
+                try
+                {
+                    cmdletTypes = contributor.GetCmdletTypes() ?? Enumerable.Empty<Type>();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Plugin PowerShell contributor {Contributor} failed to enumerate cmdlet types", contributor.GetType().FullName);
+                    continue;
+                }
+
+                foreach (var cmdletType in cmdletTypes)
+                {
+                    try
+                    {
+                        var attribute = cmdletType.GetCustomAttribute<CmdletAttribute>();
+
+                        if (attribute == null)
+                        {
+                            Logger?.LogWarning("Plugin cmdlet type {CmdletType} is missing a [Cmdlet] attribute and was skipped", cmdletType.FullName);
+                            continue;
+                        }
+
+                        var cmdletName = $"{attribute.VerbName}-{attribute.NounName}";
+
+                        initialSessionState.Commands.Add(new SessionStateCmdletEntry(cmdletName, cmdletType, null));
+
+                        Logger?.LogDebug("Registered plugin cmdlet {CmdletName} from {CmdletType}", cmdletName, cmdletType.FullName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogWarning(ex, "Could not register plugin cmdlet {CmdletType}", cmdletType.FullName);
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<string> GetPluginModulePaths()
+        {
+            IEnumerable<IPluginPowerShellContributor> contributors;
+
+            try
+            {
+                contributors = ServiceProvider.GetServices<IPluginPowerShellContributor>();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell contributors");
+                yield break;
+            }
+
+            foreach (var contributor in contributors)
+            {
+                IEnumerable<string> modulePaths;
+
+                try
+                {
+                    modulePaths = contributor.GetModulePaths() ?? Enumerable.Empty<string>();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Plugin PowerShell contributor {Contributor} failed to enumerate module paths", contributor.GetType().FullName);
+                    continue;
+                }
+
+                foreach (var modulePath in modulePaths)
+                {
+                    if (!string.IsNullOrWhiteSpace(modulePath))
+                        yield return modulePath;
+                }
+            }
         }
 
         private static T ConvertResult<T>(object value)

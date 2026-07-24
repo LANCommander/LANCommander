@@ -9,6 +9,7 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using LANCommander.Launcher.Input;
 using LANCommander.Launcher.Helpers;
+using LANCommander.Launcher.Plugins;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
@@ -194,11 +195,44 @@ public partial class App : Application
             _logger?.LogInformation("Initializing view model...");
             await mainViewModel.InitializeAsync().ConfigureAwait(false);
             _logger?.LogInformation("View model initialized, application ready");
+
+            // Initialize plugins now that the service provider and core services are ready.
+            await Services!.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>()
+                .InitializeAllAsync(Services!).ConfigureAwait(false);
+
+            // Register plugin-contributed navigable views with the shared registry so the shell's
+            // content control can render them. The registry's data template reads its registration
+            // list live, so mappings added here are picked up even though the template was attached
+            // when the shell view was constructed.
+            RegisterPluginNavigationViews();
         }
         catch (Exception ex)
         {
             _logger?.LogCritical(ex, "Fatal error during async initialization");
             Console.Error.WriteLine($"Fatal error during async initialization: {ex}");
+        }
+    }
+
+    private static void RegisterPluginNavigationViews()
+    {
+        if (Services is null)
+            return;
+
+        var registry = Services.GetService<IViewRegistry>();
+
+        if (registry is null)
+            return;
+
+        foreach (var contribution in Services.GetServices<Plugins.Contributions.INavigationPageContribution>())
+        {
+            try
+            {
+                registry.Register(contribution.ViewModelType, contribution.BuildView);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Could not register navigation view for plugin contribution {Contribution}", contribution.GetType().FullName);
+            }
         }
     }
 
@@ -265,6 +299,37 @@ public partial class App : Application
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<SingleInstanceService>();
         services.AddSingleton<INavigationService, NavigationService>();
+
+        // View registry: seed the built-in view model -> view mappings that were previously declared
+        // as inline DataTemplates in MainWindow.axaml / ShellView.axaml. Plugins may append further
+        // mappings during initialization. Ordering preserves the DepotGameDetailViewModel-before-
+        // GameDetailViewModel rule via most-derived-first matching in ViewRegistry.
+        services.AddSingleton<IViewRegistry>(_ =>
+        {
+            var registry = new ViewRegistry();
+
+            // App-level shell hosted in MainWindow's ContentControl
+            registry.Register<SplashViewModel>(() => new SplashView());
+            registry.Register<ServerSelectionViewModel>(() => new ServerSelectionView());
+            registry.Register<LoginViewModel>(() => new LoginView());
+            registry.Register<ShellViewModel>(() => new ShellView());
+
+            // Shell content hosted in ShellView's TransitioningContentControl
+            registry.Register<DepotViewModel>(() => new DepotView());
+            registry.Register<DepotBrowseViewModel>(() => new DepotBrowseView());
+            registry.Register<DepotGameDetailViewModel>(() => new GameDetailView());
+            registry.Register<GamesListViewModel>(() => new GamesListView());
+            registry.Register<LibraryViewModel>(() => new GamesListView());
+            registry.Register<GameDetailViewModel>(() => new GameDetailView());
+            registry.Register<SettingsViewModel>(() => new SettingsView());
+            registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
+
+            return registry;
+        });
+
+        // Plugin framework: discover drop-in plugins and let them register services. Must be the last
+        // registration step because the service provider is built immediately after this method returns.
+        LANCommander.SDK.Plugins.PluginBootstrap.ConfigurePlugins(services, LANCommander.SDK.Plugins.PluginHost.Launcher);
     }
     
     private static OSPlatform GetOSPlatform()

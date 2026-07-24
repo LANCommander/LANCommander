@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using LANCommander.Launcher.Plugins.Contributions;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,14 @@ public partial class ShellView : UserControl
     {
         InitializeComponent();
 
+        // Content templates come from the shared view registry (seeded with the built-in mappings and
+        // extendable by plugins) rather than inline XAML DataTemplates.
+        var registry = App.Services?.GetService<LANCommander.Launcher.Plugins.IViewRegistry>();
+        if (registry != null)
+            ContentHost.DataTemplates.Add(registry.AsDataTemplate());
+
+        AppendFooterContributions();
+
         KeyDown += OnKeyDown;
 
         DataContextChanged += (_, _) =>
@@ -32,6 +42,34 @@ public partial class ShellView : UserControl
                 _previousVm = vm;
             }
         };
+    }
+
+    /// <summary>
+    /// Renders any plugin-contributed footer controls (via <see cref="IFooterContribution"/>) to the
+    /// left of the chat button, ordered by their declared <c>Order</c>. A failing contribution is
+    /// skipped so the built-in footer still renders.
+    /// </summary>
+    private void AppendFooterContributions()
+    {
+        var contributions = App.Services?
+            .GetServices<IFooterContribution>()
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (contributions == null || contributions.Count == 0)
+            return;
+
+        foreach (var contribution in contributions)
+        {
+            try
+            {
+                FooterPluginItems.Children.Add(contribution.BuildContent());
+            }
+            catch
+            {
+                // A misbehaving plugin must not break the shell footer.
+            }
+        }
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

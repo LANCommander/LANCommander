@@ -6,6 +6,7 @@
     <Project Path="LANCommander.Launcher/LANCommander.Launcher.csproj" />
     <Project Path="LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <Project Path="LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
+    <Project Path="LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" />
     <Project Path="LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
     <Project Path="LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" Type="C#" />
   </Folder>
@@ -45,4 +46,7 @@
   <Project Path="LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj" />
   <Project Path="LANCommander.Packager\LANCommander.Packager.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
+  <Folder Name="/Plugins/">
+    <Project Path="LANCommander.SamplePlugin\LANCommander.SamplePlugin.csproj" />
+  </Folder>
 </Solution>

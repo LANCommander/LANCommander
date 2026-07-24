@@ -18,6 +18,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Plugins.Events;
 using Action = System.Action;
 
 namespace LANCommander.SDK.Services
@@ -74,7 +76,8 @@ namespace LANCommander.SDK.Services
         ScriptClient scriptClient,
         ProfileClient profileClient,
         LobbyClient lobbyClient,
-        ToolClient toolClient)
+        ToolClient toolClient,
+        IPluginEventBus pluginEventBus)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -2426,6 +2429,8 @@ namespace LANCommander.SDK.Services
                 }
                 #endregion
 
+                await pluginEventBus.PublishAsync(new GameBeforeLaunchEvent(gameId, installDirectory, action?.Name));
+
                 Task heartbeatTask = null;
 
                 try
@@ -2515,6 +2520,8 @@ namespace LANCommander.SDK.Services
                     }
                     #endregion
                 }
+
+                await pluginEventBus.PublishAsync(new GameAfterExitEvent(gameId, installDirectory));
             }
         }
 

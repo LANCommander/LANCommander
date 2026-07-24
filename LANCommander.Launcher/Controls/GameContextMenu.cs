@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,8 +10,10 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using LANCommander.Launcher.Plugins.Contributions;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Controls;
 
@@ -203,10 +207,61 @@ public static class GameContextMenu
         items.Add(Item("Add to Library", vm, "AddToLibraryCommand", visiblePath: "IsInLibrary", visibleInvert: true));
         items.Add(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary"));
 
+        AppendPluginItems(items, vm.GameId);
+
         flyout.Items.Clear();
         
         foreach (var item in items)
             flyout.Items.Add(item);
+    }
+
+    /// <summary>
+    /// Appends items contributed by plugins (via <see cref="IContextMenuContribution"/>) after the
+    /// built-in items, separated by a divider. A failing contribution is skipped so the core menu
+    /// still renders.
+    /// </summary>
+    private static void AppendPluginItems(List<Control> items, Guid gameId)
+    {
+        var contributions = App.Services?
+            .GetServices<IContextMenuContribution>()
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (contributions == null || contributions.Count == 0)
+            return;
+
+        var added = false;
+
+        foreach (var contribution in contributions)
+        {
+            IEnumerable<Control>? contributed;
+
+            try
+            {
+                contributed = contribution.BuildMenuItems(gameId);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (contributed == null)
+                continue;
+
+            foreach (var control in contributed)
+            {
+                if (control == null)
+                    continue;
+
+                if (!added)
+                {
+                    items.Add(new Separator());
+                    added = true;
+                }
+
+                items.Add(control);
+            }
+        }
     }
 
     private static MenuItem Item(

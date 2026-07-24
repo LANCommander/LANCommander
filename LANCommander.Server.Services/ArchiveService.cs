@@ -36,27 +36,23 @@ namespace LANCommander.Server.Services
         
         public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
         {
-            return Path.IsPathRooted(storageLocation.Path)
-                ? Path.Combine(storageLocation.Path, archive.ObjectKey)
-                : AppPaths.GetConfigPath(storageLocation.Path, archive.ObjectKey);
+            return AppPaths.ResolveStorageLocationPath(storageLocation.Path, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(Archive archive)
         {
             string storageLocationPath;
-            
+
             if (archive.StorageLocation != null)
                 storageLocationPath = archive.StorageLocation.Path;
             else
             {
                 var storageLocation = await storageLocationService.GetAsync(archive.StorageLocationId);
-                
+
                 storageLocationPath = storageLocation.Path;
             }
-            
-            return Path.IsPathRooted(storageLocationPath) ?
-                Path.Combine(storageLocationPath, archive.ObjectKey) :
-                AppPaths.GetConfigPath(storageLocationPath, archive.ObjectKey);
+
+            return AppPaths.ResolveStorageLocationPath(storageLocationPath, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)

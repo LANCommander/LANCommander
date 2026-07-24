@@ -170,8 +170,8 @@ public static class SaveEndpoints
         if (latestSave == null)
             return TypedResults.NotFound();
 
-        var fileName = latestSave.GetUploadPath();
-        
+        var fileName = saveService.GetSavePath(latestSave);
+
         if (!File.Exists(fileName))
             return TypedResults.NotFound();
 
@@ -201,11 +201,11 @@ public static class SaveEndpoints
             .Include(s => s.StorageLocation)
             .FirstOrDefaultAsync(s => s.Id == id && s.UserId == user.Id);
 
-        var fileName = save.GetUploadPath();
-        
+        var fileName = saveService.GetSavePath(save);
+
         if (!File.Exists(fileName))
             return TypedResults.NotFound();
-        
+
         var downloadName = $"{save.Game.Title} - {user.UserName} - {save.CreatedOn}".SanitizeFilename();
         
         return TypedResults.File(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{downloadName}.lcs");
@@ -297,7 +297,7 @@ public static class SaveEndpoints
 
             try
             {
-                var saveUploadFile = save.GetUploadPath();
+                var saveUploadFile = saveService.GetSavePath(save);
                 var saveUploadPath = Path.GetDirectoryName(saveUploadFile);
 
                 if (!Directory.Exists(saveUploadPath))

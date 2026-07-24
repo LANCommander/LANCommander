@@ -96,6 +96,66 @@ public class SaveClientTests(ApplicationFixture fixture) : BaseTest(fixture)
         }
     }
     
+    /// <summary>
+    /// Regression for the reported bug: saves were written to a working-directory-relative location while
+    /// downloads looked under the config directory. Upload and download now share <see cref="GameSaveService.GetSavePath"/>,
+    /// which must anchor a relative storage location beneath the config directory.
+    /// </summary>
+    [Fact]
+    public void GetSavePath_RelativeStorageLocation_ResolvesUnderConfigDirectory()
+    {
+        var saveService = GetService<GameSaveService>();
+
+        var save = new GameSave
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
+            StorageLocation = new StorageLocation
+            {
+                Path = "Saves",
+                Type = StorageLocationType.Save,
+            },
+        };
+
+        var path = saveService.GetSavePath(save);
+
+        path.ShouldBe(Path.Combine(
+            AppPaths.GetConfigDirectory(),
+            "Saves",
+            save.UserId.ToString(),
+            save.GameId.ToString(),
+            save.Id.ToString()));
+    }
+
+    [Fact]
+    public void GetSavePath_RootedStorageLocation_UsedVerbatim()
+    {
+        var saveService = GetService<GameSaveService>();
+
+        var rooted = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+
+        var save = new GameSave
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
+            StorageLocation = new StorageLocation
+            {
+                Path = rooted,
+                Type = StorageLocationType.Save,
+            },
+        };
+
+        var path = saveService.GetSavePath(save);
+
+        path.ShouldBe(Path.Combine(
+            rooted,
+            save.UserId.ToString(),
+            save.GameId.ToString(),
+            save.Id.ToString()));
+    }
+
     [Fact]
     public async Task SaveUploadWorksAsync()
     {

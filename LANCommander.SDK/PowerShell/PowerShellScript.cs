@@ -170,23 +170,63 @@ namespace LANCommander.SDK.PowerShell
             return Regex.IsMatch(Contents, pattern);
         }
 
-        public async Task<T> ExecuteAsync<T>()
+        /// <summary>
+        /// Builds the runspace configuration. When <paramref name="bypassExecutionPolicy"/> is set we
+        /// prefer an execution policy of <see cref="Microsoft.PowerShell.ExecutionPolicy.Bypass"/> so
+        /// unsigned game scripts run without prompting.
+        /// </summary>
+        private InitialSessionState CreateSessionState(bool bypassExecutionPolicy)
         {
-            T result = default;
-            
             var initialSessionState = InitialSessionState.CreateDefault();
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (bypassExecutionPolicy)
                 initialSessionState.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
 
             initialSessionState.AddCustomCmdlets();
 
-            DisableWow64Redirection();
+            return initialSessionState;
+        }
 
-            using (Runspace runspace = RunspaceFactory.CreateRunspace(initialSessionState))
+        /// <summary>
+        /// Opens a PowerShell runspace, preferring an execution policy of Bypass on Windows. Applying a
+        /// process-scope Bypass during <see cref="Runspace.Open"/> can throw on machines where the
+        /// execution policy is locked down by Group Policy; in that case we fall back to opening the
+        /// runspace with the system default policy so script execution is never silently skipped.
+        /// </summary>
+        private Runspace OpenRunspace()
+        {
+            var bypassExecutionPolicy = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+            var runspace = RunspaceFactory.CreateRunspace(CreateSessionState(bypassExecutionPolicy));
+
+            try
             {
                 runspace.Open();
-                
+
+                return runspace;
+            }
+            catch (Exception ex) when (bypassExecutionPolicy)
+            {
+                Logger?.LogWarning(ex, "Failed to open PowerShell runspace with ExecutionPolicy.Bypass; retrying with the system default execution policy");
+
+                runspace.Dispose();
+
+                var fallback = RunspaceFactory.CreateRunspace(CreateSessionState(false));
+
+                fallback.Open();
+
+                return fallback;
+            }
+        }
+
+        public async Task<T> ExecuteAsync<T>()
+        {
+            T result = default;
+
+            DisableWow64Redirection();
+
+            using (Runspace runspace = OpenRunspace())
+            {
                 var modulesPath = AppPaths.GetConfigPath("Modules");
                 
                 if (Directory.Exists(modulesPath))

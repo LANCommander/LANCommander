@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.8** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.9** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -586,9 +586,36 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 </details>
 
+### 2.1.9
+<details>
+<summary>View 2.1.9 patch notes</summary>
+
+#### Improvements
+- Path resolution has been unified across the server so that storage paths are resolved consistently everywhere. A migration aligns existing settings storage paths automatically on upgrade.
+- Depot queries have been optimized for better performance.
+- Server notifications now use a shorter timeout so a slow or unreachable server no longer holds up the launcher.
+- Updated SharpCompress to the latest version. This should resolve most extraction issues for games with large archives.
+
+#### Bug Fixes
+- Fixed detection of the primary display's resolution on some Linux multi-display configurations.
+- Fixed application path resolution on the server, correcting how saves, media, archives, and updates are located.
+- Improved handling of the bypass execution policy for scripts.
+- Fixed installation of wine32 and winetricks.
+
+<ReleaseDownloads release="v2.1.9" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.9" />
+
+<details>
+<summary>View 2.1.8 downloads</summary>
+
 <ReleaseDownloads release="v2.1.8" />
+
+</details>
 
 <details>
 <summary>View 2.1.7 downloads</summary>
@@ -648,4 +675,4 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.8" />
+<ContributorGrid from="v2.0.2" to="v2.1.9" />

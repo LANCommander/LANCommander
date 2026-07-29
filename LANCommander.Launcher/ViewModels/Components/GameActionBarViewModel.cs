@@ -1200,6 +1200,89 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 }
             }
 
+            // ── Saves section (installed games only) ────────────────────────────
+            if (IsInstalled)
+            {
+                var saveService = scope.ServiceProvider.GetRequiredService<SaveService>();
+                var installDir = localGame.InstallDirectory;
+
+                async Task ReloadSavesAsync(GameSavesViewModel vm)
+                {
+                    var saves = await saveService.Get(GameId);
+
+                    var items = saves
+                        .OrderByDescending(s => s.CreatedOn)
+                        .Select(save =>
+                        {
+                            var item = new GameSaveItemViewModel(save);
+
+                            item.DownloadRequested = async downloaded =>
+                            {
+                                try
+                                {
+                                    await saveService.DownloadAsync(installDir!, GameId, downloaded.Save.Id);
+                                    _logger.LogInformation("Downloaded save {SaveId} for game {GameId} ({Title})", downloaded.Save.Id, GameId, Title);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Failed to download save {SaveId} for game {GameId} ({Title})", downloaded.Save.Id, GameId, Title);
+                                    await Views.AlertOverlay.ShowAsync("Failed to Download Save", ex.Message);
+                                }
+                            };
+
+                            item.DeleteRequested = async deleted =>
+                            {
+                                try
+                                {
+                                    await saveService.DeleteAsync(deleted.Save.Id);
+                                    _logger.LogInformation("Deleted save {SaveId} for game {GameId} ({Title})", deleted.Save.Id, GameId, Title);
+                                    await ReloadSavesAsync(vm);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Failed to delete save {SaveId} for game {GameId} ({Title})", deleted.Save.Id, GameId, Title);
+                                    await Views.AlertOverlay.ShowAsync("Failed to Delete Save", ex.Message);
+                                }
+                            };
+
+                            return item;
+                        })
+                        .ToList();
+
+                    vm.SetSaves(items);
+                }
+
+                var savesVm = new GameSavesViewModel();
+                await ReloadSavesAsync(savesVm);
+
+                var savesSection = new ManageSectionViewModel
+                {
+                    Title = "Saves",
+                    IconValue = "FloppyDisk",
+                    Content = savesVm,
+                    ActionText = "Upload Current Save",
+                };
+
+                savesSection.ActionAsync = async () =>
+                {
+                    try
+                    {
+                        await saveService.UploadAsync(installDir!, GameId);
+                        await ReloadSavesAsync(savesVm);
+                        savesSection.Status = "Uploaded";
+                        _logger.LogInformation("Uploaded save for game {GameId} ({Title})", GameId, Title);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to upload save for game {GameId} ({Title})", GameId, Title);
+                        savesSection.Status = "Upload failed";
+                        await Views.AlertOverlay.ShowAsync("Failed to Upload Save", ex.Message);
+                    }
+                };
+
+                manageVm.Sections.Add(savesSection);
+            }
+
             AppendPluginSections(manageVm);
 
             if (manageVm.Sections.Count == 0)

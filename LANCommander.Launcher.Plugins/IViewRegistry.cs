@@ -5,7 +5,7 @@ namespace LANCommander.Launcher.Plugins;
 
 /// <summary>
 /// Maps view model types to the Avalonia controls that render them. Seeded at startup with the
-/// launcher's built-in mappings and extended at runtime by plugins that contribute navigable views.
+/// launcher's built-in mappings and extended at runtime by plugins that add navigable views.
 /// Consumers apply <see cref="AsDataTemplate"/> to a <see cref="ContentControl"/> so content is
 /// resolved by view model type, replacing the previously hard-coded inline XAML data templates.
 /// </summary>

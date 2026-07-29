@@ -1,15 +1,15 @@
 using Avalonia.Controls;
 using Avalonia.Layout;
-using LANCommander.Launcher.Plugins.Contributions;
+using LANCommander.Launcher.Plugins.Extensions;
 
 namespace LANCommander.SamplePlugin;
 
 /// <summary>
-/// Contributes a settings section built entirely in code (no XAML / avares assets), which is the
+/// Adds a settings section built entirely in code (no XAML / avares assets), which is the
 /// recommended authoring path for plugin views since it avoids Avalonia asset resolution across the
 /// plugin's AssemblyLoadContext.
 /// </summary>
-public sealed class SampleSettingsContribution : ISettingsPageContribution
+public sealed class SampleSettingsExtension : ISettingsPageExtension
 {
     public string Title => "Sample Plugin";
 
@@ -21,7 +21,7 @@ public sealed class SampleSettingsContribution : ISettingsPageContribution
 
         panel.Children.Add(new TextBlock
         {
-            Text = "This settings section was contributed by the sample plugin.",
+            Text = "This settings section was added by the sample plugin.",
             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
             Opacity = 0.7,
         });

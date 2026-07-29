@@ -21,7 +21,7 @@
 
         <!-- ── Main Content ──────────────────────────────────────────────
              Data templates are supplied in code-behind from the IViewRegistry so plugins can
-             contribute navigable views. Most-derived-first matching preserves the
+             add navigable views. Most-derived-first matching preserves the
              DepotGameDetailViewModel-before-GameDetailViewModel resolution rule. -->
         <TransitioningContentControl x:Name="ContentHost" Grid.Row="0" Content="{Binding ContentView}">
             <TransitioningContentControl.PageTransition>
@@ -162,7 +162,7 @@
                 </Panel>
                 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
-                    <!-- Plugin-contributed footer items, ordered in code-behind -->
+                    <!-- Plugin footer items, ordered in code-behind -->
                     <StackPanel x:Name="FooterPluginItems" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" />
 
                     <!-- Chat button -->

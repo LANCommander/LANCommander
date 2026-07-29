@@ -41,7 +41,7 @@
         </Grid>
 
         <!-- Main Content (fills full window height). Data templates are supplied in code-behind from
-             the IViewRegistry so plugins can contribute view mappings. -->
+             the IViewRegistry so plugins can add view mappings. -->
         <ContentControl x:Name="MainContent" Content="{Binding CurrentView}" ZIndex="0" />
 
         <!-- Floating Title Bar (overlays content) -->

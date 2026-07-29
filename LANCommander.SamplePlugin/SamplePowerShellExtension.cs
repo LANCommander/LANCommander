@@ -6,7 +6,7 @@ namespace LANCommander.SamplePlugin;
 /// Registers the sample plugin's cmdlets (and optionally PowerShell modules) into the runspace used
 /// by LANCommander scripts.
 /// </summary>
-public sealed class SamplePowerShellContributor : IPluginPowerShellContributor
+public sealed class SamplePowerShellExtension : IPluginPowerShellExtension
 {
     public IEnumerable<Type> GetCmdletTypes() => new[] { typeof(SampleGreetingCmdlet) };
 

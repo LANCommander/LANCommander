@@ -3,7 +3,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
-using LANCommander.Launcher.Plugins.Contributions;
+using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +27,7 @@ public partial class ShellView : UserControl
         if (registry != null)
             ContentHost.DataTemplates.Add(registry.AsDataTemplate());
 
-        AppendFooterContributions();
+        AppendFooterExtensions();
 
         KeyDown += OnKeyDown;
 
@@ -45,25 +45,25 @@ public partial class ShellView : UserControl
     }
 
     /// <summary>
-    /// Renders any plugin-contributed footer controls (via <see cref="IFooterContribution"/>) to the
-    /// left of the chat button, ordered by their declared <c>Order</c>. A failing contribution is
+    /// Renders any plugin footer controls (via <see cref="IFooterExtension"/>) to the
+    /// left of the chat button, ordered by their declared <c>Order</c>. A failing extension is
     /// skipped so the built-in footer still renders.
     /// </summary>
-    private void AppendFooterContributions()
+    private void AppendFooterExtensions()
     {
-        var contributions = App.Services?
-            .GetServices<IFooterContribution>()
+        var extensions = App.Services?
+            .GetServices<IFooterExtension>()
             .OrderBy(c => c.Order)
             .ToList();
 
-        if (contributions == null || contributions.Count == 0)
+        if (extensions == null || extensions.Count == 0)
             return;
 
-        foreach (var contribution in contributions)
+        foreach (var extension in extensions)
         {
             try
             {
-                FooterPluginItems.Children.Add(contribution.BuildContent());
+                FooterPluginItems.Children.Add(extension.BuildContent());
             }
             catch
             {

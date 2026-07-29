@@ -31,7 +31,7 @@ public interface IPlugin
 
     /// <summary>
     /// Asynchronous startup hook, invoked <b>after</b> the host's service provider is built. Use this
-    /// to resolve services, subscribe to lifecycle events, register UI contributions, etc.
+    /// to resolve services, subscribe to lifecycle events, register UI extensions, etc.
     /// </summary>
     Task InitializeAsync(PluginContext context, CancellationToken cancellationToken);
 }

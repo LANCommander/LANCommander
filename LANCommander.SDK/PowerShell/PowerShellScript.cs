@@ -358,29 +358,29 @@ namespace LANCommander.SDK.PowerShell
 
         private void RegisterPluginCmdlets(InitialSessionState initialSessionState)
         {
-            IEnumerable<IPluginPowerShellContributor> contributors;
+            IEnumerable<IPluginPowerShellExtension> extensions;
 
             try
             {
-                contributors = ServiceProvider.GetServices<IPluginPowerShellContributor>();
+                extensions = ServiceProvider.GetServices<IPluginPowerShellExtension>();
             }
             catch (Exception ex)
             {
-                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell contributors");
+                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell extensions");
                 return;
             }
 
-            foreach (var contributor in contributors)
+            foreach (var extension in extensions)
             {
                 IEnumerable<Type> cmdletTypes;
 
                 try
                 {
-                    cmdletTypes = contributor.GetCmdletTypes() ?? Enumerable.Empty<Type>();
+                    cmdletTypes = extension.GetCmdletTypes() ?? Enumerable.Empty<Type>();
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogWarning(ex, "Plugin PowerShell contributor {Contributor} failed to enumerate cmdlet types", contributor.GetType().FullName);
+                    Logger?.LogWarning(ex, "Plugin PowerShell extension {Extension} failed to enumerate cmdlet types", extension.GetType().FullName);
                     continue;
                 }
 
@@ -412,29 +412,29 @@ namespace LANCommander.SDK.PowerShell
 
         private IEnumerable<string> GetPluginModulePaths()
         {
-            IEnumerable<IPluginPowerShellContributor> contributors;
+            IEnumerable<IPluginPowerShellExtension> extensions;
 
             try
             {
-                contributors = ServiceProvider.GetServices<IPluginPowerShellContributor>();
+                extensions = ServiceProvider.GetServices<IPluginPowerShellExtension>();
             }
             catch (Exception ex)
             {
-                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell contributors");
+                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell extensions");
                 yield break;
             }
 
-            foreach (var contributor in contributors)
+            foreach (var extension in extensions)
             {
                 IEnumerable<string> modulePaths;
 
                 try
                 {
-                    modulePaths = contributor.GetModulePaths() ?? Enumerable.Empty<string>();
+                    modulePaths = extension.GetModulePaths() ?? Enumerable.Empty<string>();
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogWarning(ex, "Plugin PowerShell contributor {Contributor} failed to enumerate module paths", contributor.GetType().FullName);
+                    Logger?.LogWarning(ex, "Plugin PowerShell extension {Extension} failed to enumerate module paths", extension.GetType().FullName);
                     continue;
                 }
 

@@ -10,7 +10,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using LANCommander.Launcher.Plugins.Contributions;
+using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -216,39 +216,39 @@ public static class GameContextMenu
     }
 
     /// <summary>
-    /// Appends items contributed by plugins (via <see cref="IContextMenuContribution"/>) after the
-    /// built-in items, separated by a divider. A failing contribution is skipped so the core menu
+    /// Appends items added by plugins (via <see cref="IContextMenuExtension"/>) after the
+    /// built-in items, separated by a divider. A failing extension is skipped so the core menu
     /// still renders.
     /// </summary>
     private static void AppendPluginItems(List<Control> items, Guid gameId)
     {
-        var contributions = App.Services?
-            .GetServices<IContextMenuContribution>()
+        var extensions = App.Services?
+            .GetServices<IContextMenuExtension>()
             .OrderBy(c => c.Order)
             .ToList();
 
-        if (contributions == null || contributions.Count == 0)
+        if (extensions == null || extensions.Count == 0)
             return;
 
         var added = false;
 
-        foreach (var contribution in contributions)
+        foreach (var extension in extensions)
         {
-            IEnumerable<Control>? contributed;
+            IEnumerable<Control>? extensionItems;
 
             try
             {
-                contributed = contribution.BuildMenuItems(gameId);
+                extensionItems = extension.BuildMenuItems(gameId);
             }
             catch
             {
                 continue;
             }
 
-            if (contributed == null)
+            if (extensionItems == null)
                 continue;
 
-            foreach (var control in contributed)
+            foreach (var control in extensionItems)
             {
                 if (control == null)
                     continue;

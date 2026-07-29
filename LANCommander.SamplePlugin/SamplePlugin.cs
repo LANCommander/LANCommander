@@ -1,4 +1,4 @@
-using LANCommander.Launcher.Plugins.Contributions;
+using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.SamplePlugin;
 using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Plugins.Events;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace LANCommander.SamplePlugin;
 
 /// <summary>
-/// Reference plugin exercising the framework's contribution points: a server metadata provider, a
+/// Reference plugin exercising the framework's extension points: a server metadata provider, a
 /// launcher settings section, a PowerShell cmdlet, and a lifecycle event subscription. Used as the
 /// end-to-end smoke test for the plugin framework.
 /// </summary>
@@ -27,14 +27,14 @@ public sealed class SamplePlugin : IPlugin
 
     public void ConfigureServices(IServiceCollection services)
     {
-        // Server: contribute an additional metadata provider that appears in the host's enumeration.
+        // Server: add an additional metadata provider that appears in the host's enumeration.
         services.AddSingleton<IMetadataProvider, SampleMetadataProvider>();
 
-        // Launcher: contribute a settings section rendered by a code-built control.
-        services.AddSingleton<ISettingsPageContribution, SampleSettingsContribution>();
+        // Launcher: add a settings section rendered by a code-built control.
+        services.AddSingleton<ISettingsPageExtension, SampleSettingsExtension>();
 
-        // Both hosts: contribute a PowerShell cmdlet callable from any script.
-        services.AddSingleton<IPluginPowerShellContributor, SamplePowerShellContributor>();
+        // Both hosts: add a PowerShell cmdlet callable from any script.
+        services.AddSingleton<IPluginPowerShellExtension, SamplePowerShellExtension>();
     }
 
     public Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)

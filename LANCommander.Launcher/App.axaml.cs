@@ -200,7 +200,7 @@ public partial class App : Application
             await Services!.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>()
                 .InitializeAllAsync(Services!).ConfigureAwait(false);
 
-            // Register plugin-contributed navigable views with the shared registry so the shell's
+            // Register plugin navigable views with the shared registry so the shell's
             // content control can render them. The registry's data template reads its registration
             // list live, so mappings added here are picked up even though the template was attached
             // when the shell view was constructed.
@@ -223,15 +223,15 @@ public partial class App : Application
         if (registry is null)
             return;
 
-        foreach (var contribution in Services.GetServices<Plugins.Contributions.INavigationPageContribution>())
+        foreach (var extension in Services.GetServices<Plugins.Extensions.INavigationPageExtension>())
         {
             try
             {
-                registry.Register(contribution.ViewModelType, contribution.BuildView);
+                registry.Register(extension.ViewModelType, extension.BuildView);
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Could not register navigation view for plugin contribution {Contribution}", contribution.GetType().FullName);
+                _logger?.LogWarning(ex, "Could not register navigation view for plugin extension {Extension}", extension.GetType().FullName);
             }
         }
     }

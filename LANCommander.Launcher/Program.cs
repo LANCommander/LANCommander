@@ -108,7 +108,7 @@ class Program
         services.AddSingleton<SingleInstanceService>();
 
         // Plugin framework: discover drop-in plugins and let them register services before the
-        // provider is built. UI contributions register harmlessly but are never resolved in headless mode.
+        // provider is built. UI extensions register harmlessly but are never resolved in headless mode.
         var pluginLoader = PluginBootstrap.ConfigurePlugins(services, PluginHost.Launcher);
 
         var serviceProvider = services.BuildServiceProvider();

@@ -23,8 +23,8 @@ public partial class GameDetailView : UserControl
     }
 
     /// <summary>
-    /// Appends plugin-contributed detail sections (via <see cref="IGameDetailTabContribution"/>) to
-    /// the bottom of the left column once a game is bound. A failing contribution is skipped so the
+    /// Appends plugin detail sections (via <see cref="Plugins.Extensions.IGameDetailTabExtension"/>) to
+    /// the bottom of the left column once a game is bound. A failing extension is skipped so the
     /// built-in detail content still renders.
     /// </summary>
     private void AppendPluginTabs()
@@ -32,23 +32,23 @@ public partial class GameDetailView : UserControl
         if (_pluginTabsAdded || DataContext is not GameDetailViewModel detailVm)
             return;
 
-        var contributions = App.Services?
-            .GetServices<Plugins.Contributions.IGameDetailTabContribution>()
+        var extensions = App.Services?
+            .GetServices<Plugins.Extensions.IGameDetailTabExtension>()
             .OrderBy(c => c.Order)
             .ToList();
 
-        if (contributions == null || contributions.Count == 0)
+        if (extensions == null || extensions.Count == 0)
             return;
 
         _pluginTabsAdded = true;
 
-        foreach (var contribution in contributions)
+        foreach (var extension in extensions)
         {
             Control content;
 
             try
             {
-                content = contribution.BuildContent(detailVm.Id);
+                content = extension.BuildContent(detailVm.Id);
             }
             catch
             {
@@ -57,7 +57,7 @@ public partial class GameDetailView : UserControl
 
             var header = new TextBlock
             {
-                Text = contribution.Header,
+                Text = extension.Header,
                 FontWeight = global::Avalonia.Media.FontWeight.SemiBold,
                 FontSize = 16,
             };

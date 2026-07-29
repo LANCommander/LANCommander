@@ -2,7 +2,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using LANCommander.Launcher.Plugins.Contributions;
+using LANCommander.Launcher.Plugins.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Views;
@@ -17,26 +17,26 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>
-    /// Appends any plugin-contributed settings sections beneath the built-in sections, styled to
-    /// match the surrounding cards so contributions look native.
+    /// Appends any plugin settings sections beneath the built-in sections, styled to
+    /// match the surrounding cards so extensions look native.
     /// </summary>
     private void AppendPluginSections()
     {
-        var contributions = App.Services?
-            .GetServices<ISettingsPageContribution>()
+        var extensions = App.Services?
+            .GetServices<ISettingsPageExtension>()
             .OrderBy(c => c.Order)
             .ToList();
 
-        if (contributions == null || contributions.Count == 0)
+        if (extensions == null || extensions.Count == 0)
             return;
 
-        foreach (var contribution in contributions)
+        foreach (var extension in extensions)
         {
             Control content;
 
             try
             {
-                content = contribution.BuildContent();
+                content = extension.BuildContent();
             }
             catch
             {
@@ -46,7 +46,7 @@ public partial class SettingsView : UserControl
 
             var header = new TextBlock
             {
-                Text = contribution.Title,
+                Text = extension.Title,
                 FontWeight = FontWeight.SemiBold,
                 FontSize = 16,
             };

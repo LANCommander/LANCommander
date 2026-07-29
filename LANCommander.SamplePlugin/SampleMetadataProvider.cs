@@ -4,7 +4,7 @@ using LANCommander.Server.Services.Providers.Metadata;
 namespace LANCommander.SamplePlugin;
 
 /// <summary>
-/// Minimal metadata provider contributed by the sample plugin. Returns no results; its purpose is to
+/// Minimal metadata provider added by the sample plugin. Returns no results; its purpose is to
 /// prove that a plugin-registered <see cref="IMetadataProvider"/> is picked up by the server's
 /// provider enumeration.
 /// </summary>

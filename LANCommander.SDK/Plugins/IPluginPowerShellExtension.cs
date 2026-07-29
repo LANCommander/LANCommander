@@ -4,11 +4,11 @@ using System.Collections.Generic;
 namespace LANCommander.SDK.Plugins;
 
 /// <summary>
-/// Implemented by plugins that want to contribute PowerShell cmdlets or script modules into the
+/// Implemented by plugins that want to add PowerShell cmdlets or script modules into the
 /// LANCommander runspace. Register the implementation in <see cref="IPlugin.ConfigureServices"/>;
-/// the SDK's PowerShell runspace picks up all registered contributors when a script is executed.
+/// the SDK's PowerShell runspace picks up all registered extensions when a script is executed.
 /// </summary>
-public interface IPluginPowerShellContributor
+public interface IPluginPowerShellExtension
 {
     /// <summary>
     /// Returns cmdlet types (classes decorated with <c>[Cmdlet]</c>) to register into each runspace.

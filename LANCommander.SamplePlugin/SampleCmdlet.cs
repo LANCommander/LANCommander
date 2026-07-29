@@ -3,8 +3,8 @@ using System.Management.Automation;
 namespace LANCommander.SamplePlugin;
 
 /// <summary>
-/// A cmdlet contributed by the sample plugin. Once registered via
-/// <see cref="SamplePowerShellContributor"/> it is callable from any LANCommander script as
+/// A cmdlet added by the sample plugin. Once registered via
+/// <see cref="SamplePowerShellExtension"/> it is callable from any LANCommander script as
 /// <c>Get-SampleGreeting -Name "World"</c>.
 /// </summary>
 [Cmdlet(VerbsCommon.Get, "SampleGreeting")]

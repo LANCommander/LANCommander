@@ -72,6 +72,13 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string? _installDirectory;
 
+    // Game options schema (YAML authored on the server). Drives visibility of the "Game Options" menu item.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGameOptions))]
+    private string? _optionSchema;
+
+    public bool HasGameOptions => !string.IsNullOrWhiteSpace(OptionSchema);
+
     // Play state
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
@@ -197,6 +204,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         Title = game.Title ?? "Unknown";
         IsInstalled = game.Installed;
         InstallDirectory = game.InstallDirectory;
+        OptionSchema = game.OptionSchema;
         IsUpdateAvailable = game.Installed
             && !string.IsNullOrWhiteSpace(game.LatestVersion)
             && game.InstalledVersion != game.LatestVersion;
@@ -279,6 +287,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
+            OptionSchema = localGame.OptionSchema;
             IsUpdateAvailable = localGame.Installed
                 && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                 && localGame.InstalledVersion != localGame.LatestVersion;
@@ -289,6 +298,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalled = false;
             InstallDirectory = null;
+            OptionSchema = game.OptionSchema;
             IsUpdateAvailable = false;
             PlayTime = Localize("PlayStatNone");
             LastPlayed = Localize("LastPlayedNever");
@@ -382,6 +392,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             {
                 IsInstalled = localGame.Installed;
                 InstallDirectory = localGame.InstallDirectory;
+                OptionSchema = localGame.OptionSchema;
                 IsUpdateAvailable = localGame.Installed
                     && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                     && localGame.InstalledVersion != localGame.LatestVersion;
@@ -1306,6 +1317,68 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         finally
         {
             IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenGameOptionsAsync()
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+
+            var localGame = await gameService.GetAsync(GameId);
+            if (localGame == null || string.IsNullOrWhiteSpace(localGame.OptionSchema))
+                return;
+
+            var optionsVm = GameOptionsOverlayViewModel.Build(localGame.OptionSchema, localGame.Options, Title ?? "Game");
+            if (optionsVm == null)
+                return;
+
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.GameOptionsOverlay
+                {
+                    DataContext = optionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+            });
+
+            var confirmed = await tcs.Task;
+
+            if (confirmed != true)
+                return;
+
+            var values = optionsVm.CollectValues();
+            localGame.Options = System.Text.Json.JsonSerializer.Serialize(values);
+
+            await gameService.UpdateAsync(localGame);
+
+            _logger.LogInformation("Saved game options for {GameId} ({Title})", GameId, Title);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to edit game options for {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to edit options: {ex.Message}";
         }
     }
 

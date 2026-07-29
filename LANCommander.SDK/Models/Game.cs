@@ -19,6 +19,7 @@ namespace LANCommander.SDK.Models
         public GameType Type { get; set; }
         public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
+        public string OptionSchema { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
         public virtual IEnumerable<Collection> Collections { get; set; }

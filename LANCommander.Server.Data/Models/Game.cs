@@ -52,6 +52,8 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Tool>? Tools { get; set; }
         public ICollection<Media>? Media { get; set; }
 
+        public string? OptionSchema { get; set; }
+
         public string? ValidKeyRegex { get; set; }
         public ICollection<Key>? Keys { get; set; }
         public ICollection<Collection> Collections { get; set; }

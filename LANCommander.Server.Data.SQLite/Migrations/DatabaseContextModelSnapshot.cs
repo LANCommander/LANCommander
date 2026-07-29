@@ -561,6 +561,9 @@ namespace LANCommander.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("TEXT");
 

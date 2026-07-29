@@ -3,6 +3,7 @@ using System;
 using LANCommander.Launcher.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Launcher.Data.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260623052445_AddGameOptions")]
+    partial class AddGameOptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -135,6 +138,21 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasIndex("TagsId");
 
                     b.ToTable("GameTag");
+                });
+
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.Property<Guid>("GamesId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ToolsId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GamesId", "ToolsId");
+
+                    b.HasIndex("ToolsId");
+
+                    b.ToTable("GameTool");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Category", b =>
@@ -344,33 +362,6 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasIndex("GameId");
 
                     b.ToTable("GameExternalIds");
-                });
-
-            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameTool", b =>
-                {
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ToolId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("InstallDirectory")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Installed")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("InstalledOn")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("InstalledVersion")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("GameId", "ToolId");
-
-                    b.HasIndex("ToolId");
-
-                    b.ToTable("GameTool");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Genre", b =>
@@ -650,6 +641,18 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime>("ImportedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InstallDirectory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Installed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("InstalledOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstalledVersion")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LatestVersion")
                         .HasColumnType("TEXT");
 
@@ -829,6 +832,21 @@ namespace LANCommander.Launcher.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GameTool", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Launcher.Data.Models.Tool", null)
+                        .WithMany()
+                        .HasForeignKey("ToolsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Category", b =>
                 {
                     b.HasOne("LANCommander.Launcher.Data.Models.Category", "Parent")
@@ -863,25 +881,6 @@ namespace LANCommander.Launcher.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Game");
-                });
-
-            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameTool", b =>
-                {
-                    b.HasOne("LANCommander.Launcher.Data.Models.Game", "Game")
-                        .WithMany("GameTools")
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LANCommander.Launcher.Data.Models.Tool", "Tool")
-                        .WithMany("GameTools")
-                        .HasForeignKey("ToolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
-
-                    b.Navigation("Tool");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Library", b =>
@@ -962,18 +961,11 @@ namespace LANCommander.Launcher.Data.Migrations
 
                     b.Navigation("ExternalIds");
 
-                    b.Navigation("GameTools");
-
                     b.Navigation("Media");
 
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
-                });
-
-            modelBuilder.Entity("LANCommander.Launcher.Data.Models.Tool", b =>
-                {
-                    b.Navigation("GameTools");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>

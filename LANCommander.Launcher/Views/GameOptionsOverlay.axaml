@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:models="using:LANCommander.SDK.Models"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             x:Class="LANCommander.Launcher.Views.GameOptionsOverlay"
+             x:DataType="vm:GameOptionsOverlayViewModel"
+             controls:AutoFocus.IsEnabled="True">
+
+    <UserControl.DataTemplates>
+
+        <!-- Group → expander section with recursive children -->
+        <DataTemplate DataType="vm:GameOptionGroupViewModel">
+            <Expander Header="{Binding DisplayName}"
+                      IsExpanded="True"
+                      HorizontalAlignment="Stretch"
+                      Margin="0,0,0,4">
+                <ItemsControl ItemsSource="{Binding Children}" />
+            </Expander>
+        </DataTemplate>
+
+        <!-- bool → CheckBox -->
+        <DataTemplate DataType="vm:BoolOptionViewModel">
+            <StackPanel Spacing="2" Margin="0,0,0,10">
+                <CheckBox IsChecked="{Binding Value}"
+                          Content="{Binding DisplayName}" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- choice → ComboBox -->
+        <DataTemplate DataType="vm:ChoiceOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Choices}"
+                          SelectedItem="{Binding SelectedChoice}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="models:OptionChoice">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- int → NumericUpDown -->
+        <DataTemplate DataType="vm:IntOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <NumericUpDown Value="{Binding Value}"
+                               Increment="1"
+                               FormatString="0"
+                               HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- string → TextBox -->
+        <DataTemplate DataType="vm:StringOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <TextBox Text="{Binding Value}"
+                         HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- list row → fields + remove -->
+        <DataTemplate DataType="vm:GameOptionListRowViewModel">
+            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    Padding="8" Margin="0,0,0,6">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="✕"
+                            Background="Transparent"
+                            Padding="6,2"
+                            VerticalAlignment="Top"
+                            Margin="6,0,0,0"
+                            IsEnabled="{Binding CanRemove}"
+                            Command="{Binding RemoveCommand}" />
+                    <ItemsControl ItemsSource="{Binding Fields}" />
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- list → rows + add -->
+        <DataTemplate DataType="vm:GameOptionListViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding Rows}" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="Add Item"
+                            IsEnabled="{Binding CanAdd}"
+                            Command="{Binding AddRowCommand}" />
+                    <TextBlock Text="{Binding BoundsHint}"
+                               IsVisible="{Binding HasBoundsHint}"
+                               FontSize="12" Opacity="0.45"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+    </UserControl.DataTemplates>
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="#AA000000">
+
+        <!-- Centered card -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Width="520"
+                MaxHeight="640"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BoxShadow="0 8 40 8 #88000000">
+
+            <DockPanel>
+
+                <!-- ── Header ─────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Top" Padding="20,16,20,8">
+                    <TextBlock FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding DialogTitle}" />
+                </Border>
+
+                <!-- ── Buttons ────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Bottom" Padding="20,12,20,16">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8"
+                                Classes="DialogFooter">
+                        <Button Content="Cancel" Click="Cancel_Click" />
+                        <Button Content="Save" Classes="Primary" Click="Confirm_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Options tree ───────────────────────────────────────── -->
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="20,8">
+                    <StackPanel Spacing="0">
+                        <ItemsControl ItemsSource="{Binding RootLeaves}" />
+                        <ItemsControl ItemsSource="{Binding Tabs}" />
+                    </StackPanel>
+                </ScrollViewer>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

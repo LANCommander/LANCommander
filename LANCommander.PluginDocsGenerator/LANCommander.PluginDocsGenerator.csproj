@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Utility only; not part of the shipped app build graph. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    References the plugin contract assemblies so their compiled types + generated XML docs land in
+    this tool's output folder, where the generator reflects over them to build the API reference.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+    <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" />
+  </ItemGroup>
+
+</Project>

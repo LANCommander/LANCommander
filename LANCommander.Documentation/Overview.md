@@ -28,3 +28,4 @@ This site serves as the main documentation platform for the project. As such, it
 - [Packager](/Packager/Overview)
 - [Scripting](/Scripting/Overview)
 - [SDK Documentation](/SDK/Overview)
+- [Plugin Development](/Plugins/Overview)

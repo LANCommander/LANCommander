@@ -48,5 +48,6 @@
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
   <Folder Name="/Plugins/">
     <Project Path="LANCommander.SamplePlugin\LANCommander.SamplePlugin.csproj" />
+    <Project Path="LANCommander.PluginDocsGenerator\LANCommander.PluginDocsGenerator.csproj" />
   </Folder>
 </Solution>

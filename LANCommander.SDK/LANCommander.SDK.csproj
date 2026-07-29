@@ -13,6 +13,10 @@
         <RepositoryType>git</RepositoryType>
         <PackageTags>lancommander</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <!-- Emit XML docs so the plugin API reference can be generated from source comments. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- Don't fail/spam the build for members without XML comments. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

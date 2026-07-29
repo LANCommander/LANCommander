@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
@@ -14,26 +13,6 @@ public partial class InstallOptionsOverlay : UserControl
     public InstallOptionsOverlay()
     {
         InitializeComponent();
-        DataContextChanged += OnDataContextChanged;
-    }
-
-    private void OnDataContextChanged(object? sender, EventArgs e)
-    {
-        if (DataContext is InstallOptionsViewModel vm)
-        {
-            foreach (var addon in vm.Addons)
-                addon.PropertyChanged += OnSelectionChanged;
-            foreach (var tool in vm.Tools)
-                tool.PropertyChanged += OnSelectionChanged;
-        }
-    }
-
-    private void OnSelectionChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if ((e.PropertyName == nameof(InstallAddonItemViewModel.IsSelected)
-             || e.PropertyName == nameof(InstallToolItemViewModel.IsSelected))
-            && DataContext is InstallOptionsViewModel vm)
-            vm.RefreshSizes();
     }
 
     private void Confirm_Click(object? sender, RoutedEventArgs e) => Close(true);
@@ -41,44 +20,8 @@ public partial class InstallOptionsOverlay : UserControl
 
     private void Close(bool? result)
     {
-        if (DataContext is InstallOptionsViewModel vm)
-        {
-            foreach (var addon in vm.Addons)
-                addon.PropertyChanged -= OnSelectionChanged;
-            foreach (var tool in vm.Tools)
-                tool.PropertyChanged -= OnSelectionChanged;
-        }
-
         var layer = OverlayLayer.GetOverlayLayer(this);
         DialogClosed?.Invoke(this, result);
         layer?.Children.Remove(this);
-    }
-
-    private void SelectAllAddons_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is InstallOptionsViewModel vm)
-            foreach (var addon in vm.Addons)
-                addon.IsSelected = true;
-    }
-
-    private void DeselectAllAddons_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is InstallOptionsViewModel vm)
-            foreach (var addon in vm.Addons)
-                addon.IsSelected = false;
-    }
-
-    private void SelectAllTools_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is InstallOptionsViewModel vm)
-            foreach (var tool in vm.Tools)
-                tool.IsSelected = true;
-    }
-
-    private void DeselectAllTools_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is InstallOptionsViewModel vm)
-            foreach (var tool in vm.Tools)
-                tool.IsSelected = false;
     }
 }

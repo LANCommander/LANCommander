@@ -1,0 +1,278 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:models="using:LANCommander.SDK.Models"
+             xmlns:views="using:LANCommander.Launcher.Views"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             x:Class="LANCommander.Launcher.Views.ManageOverlay"
+             x:DataType="vm:ManageOverlayViewModel"
+             controls:AutoFocus.IsEnabled="True">
+
+    <UserControl.DataTemplates>
+
+        <!-- ══ Option node templates (shared by the Options section) ══════════ -->
+
+        <!-- Group → expander section with recursive children -->
+        <DataTemplate DataType="vm:GameOptionGroupViewModel">
+            <Expander Header="{Binding DisplayName}"
+                      IsExpanded="True"
+                      HorizontalAlignment="Stretch"
+                      Margin="0,0,0,4">
+                <ItemsControl ItemsSource="{Binding Children}" />
+            </Expander>
+        </DataTemplate>
+
+        <!-- bool → CheckBox -->
+        <DataTemplate DataType="vm:BoolOptionViewModel">
+            <StackPanel Spacing="2" Margin="0,0,0,10">
+                <CheckBox IsChecked="{Binding Value}"
+                          Content="{Binding DisplayName}" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- choice → ComboBox -->
+        <DataTemplate DataType="vm:ChoiceOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Choices}"
+                          SelectedItem="{Binding SelectedChoice}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="models:OptionChoice">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- int → NumericUpDown -->
+        <DataTemplate DataType="vm:IntOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <NumericUpDown Value="{Binding Value}"
+                               Increment="1"
+                               FormatString="0"
+                               HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- string → TextBox -->
+        <DataTemplate DataType="vm:StringOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <TextBox Text="{Binding Value}"
+                         HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- list row → fields + remove -->
+        <DataTemplate DataType="vm:GameOptionListRowViewModel">
+            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    Padding="8" Margin="0,0,0,6">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="✕"
+                            Background="Transparent"
+                            Padding="6,2"
+                            VerticalAlignment="Top"
+                            Margin="6,0,0,0"
+                            IsEnabled="{Binding CanRemove}"
+                            Command="{Binding RemoveCommand}" />
+                    <ItemsControl ItemsSource="{Binding Fields}" />
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- list → rows + add -->
+        <DataTemplate DataType="vm:GameOptionListViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,10">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="13" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="12" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding Rows}" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="Add Item"
+                            IsEnabled="{Binding CanAdd}"
+                            Command="{Binding AddRowCommand}" />
+                    <TextBlock Text="{Binding BoundsHint}"
+                               IsVisible="{Binding HasBoundsHint}"
+                               FontSize="12" Opacity="0.45"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ══ Section content templates ═════════════════════════════════════ -->
+
+        <!-- Options section -->
+        <DataTemplate DataType="vm:GameOptionsOverlayViewModel">
+            <StackPanel Spacing="0">
+                <ItemsControl ItemsSource="{Binding RootLeaves}" />
+                <ItemsControl ItemsSource="{Binding Tabs}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Modify section -->
+        <DataTemplate DataType="vm:InstallOptionsViewModel">
+            <views:InstallOptionsBody />
+        </DataTemplate>
+
+        <!-- Versions section -->
+        <DataTemplate DataType="vm:GameVersionsViewModel">
+            <ItemsControl ItemsSource="{Binding Versions}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GameVersionItemViewModel">
+                        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                Padding="12,10"
+                                Margin="0,0,0,6"
+                                CornerRadius="4">
+                            <StackPanel Spacing="6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right"
+                                                Orientation="Horizontal"
+                                                Spacing="8"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="Installed"
+                                                   FontSize="11"
+                                                   Opacity="0.55"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsInstalled}" />
+                                        <Button Content="{Binding ButtonText}"
+                                                Classes="Primary"
+                                                Command="{Binding SwitchCommand}"
+                                                IsVisible="{Binding IsInstallable}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding VersionLabel}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14" />
+                                        <TextBlock Text="{Binding CreatedOnText}"
+                                                   FontSize="11"
+                                                   Opacity="0.55"
+                                                   IsVisible="{Binding CreatedOnKnown}" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock Text="{Binding ChangelogText}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding HasChangelog}" />
+                                <TextBlock FontSize="11"
+                                           Opacity="0.55"
+                                           IsVisible="{Binding HasSize}">
+                                    <Run Text="Download:" />
+                                    <Run Text="{Binding SizeText}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+
+    </UserControl.DataTemplates>
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="#AA000000">
+
+        <!-- Centered card -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Width="720"
+                MaxHeight="640"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                BoxShadow="0 8 40 8 #88000000">
+
+            <DockPanel>
+
+                <!-- ── Header ─────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Top" Padding="20,16,20,8">
+                    <TextBlock FontSize="18" FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding DialogTitle}" />
+                </Border>
+
+                <!-- ── Footer ─────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Bottom" Padding="20,12,20,16">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Left"
+                                Content="Close"
+                                Click="Close_Click" />
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="12"
+                                    Classes="DialogFooter">
+                            <TextBlock Text="{Binding SelectedSection.Status}"
+                                       Opacity="0.6"
+                                       FontSize="12"
+                                       VerticalAlignment="Center" />
+                            <Button Content="{Binding SelectedSection.ActionText}"
+                                    Classes="Primary"
+                                    IsVisible="{Binding SelectedSection.HasAction}"
+                                    Command="{Binding SelectedSection.RunActionCommand}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- ── Body: nav + content ────────────────────────────────── -->
+                <Grid ColumnDefinitions="180,*" MinHeight="360">
+
+                    <!-- Left navigation -->
+                    <ListBox Grid.Column="0"
+                             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                             ItemsSource="{Binding Sections}"
+                             SelectedItem="{Binding SelectedSection}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ManageSectionViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Icon Type="Regular"
+                                          Value="{Binding IconValue}"
+                                          Width="16" Height="16"
+                                          VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Title}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Right content -->
+                    <ScrollViewer Grid.Column="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Padding="20,8,20,8">
+                        <ContentControl Content="{Binding SelectedSection.Content}" />
+                    </ScrollViewer>
+
+                </Grid>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

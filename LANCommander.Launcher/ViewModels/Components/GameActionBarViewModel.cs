@@ -57,6 +57,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(ShowSimplePlayButton))]
 
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(CanManage))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -75,9 +76,13 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     // Game options schema (YAML authored on the server). Drives visibility of the "Game Options" menu item.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasGameOptions))]
+    [NotifyPropertyChangedFor(nameof(CanManage))]
     private string? _optionSchema;
 
     public bool HasGameOptions => !string.IsNullOrWhiteSpace(OptionSchema);
+
+    /// <summary>Whether the unified Manage dialog has anything to show (options and/or install-only sections).</summary>
+    public bool CanManage => IsInstalled || HasGameOptions;
 
     // Play state
     [ObservableProperty]
@@ -1057,19 +1062,17 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private async Task ModifyAsync()
+    private async Task ManageAsync()
     {
-        if (!IsInstalled) return;
+        if (!CanManage) return;
 
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
-            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
-            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
-            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
-
-            var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+            var gameService    = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient     = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var dbContext      = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
 
             var localGame = await dbContext.Set<Data.Models.Game>()
                 .Include(g => g.GameTools)
@@ -1078,308 +1081,235 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             if (localGame == null)
                 throw new InvalidOperationException("Game not found in local database");
 
-            // ── Gather options ─────────────────────────────────────────────────
-            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
-            var availableAddons    = Array.Empty<SDK.Models.Game>();
-            var availableTools     = Array.Empty<SDK.Models.Tool>();
-
-            try
+            var manageVm = new ManageOverlayViewModel
             {
-                var addons = await gameClient.GetAddonsAsync(GameId);
-                availableAddons = addons?.ToArray() ?? [];
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
-            }
-
-            try
-            {
-                var tools = await gameClient.GetToolsAsync(GameId);
-                availableTools = tools?.Where(t => (t.Archives?.Any() ?? false) && !t.AlwaysInstall).ToArray() ?? [];
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
-            }
-
-            // Build set of currently installed addon IDs. Addons install as their own Game
-            // records (with Installed set), and the local DependentGames relationship is not
-            // populated during import, so look the available addons up directly by ID.
-            var availableAddonIds = availableAddons.Select(a => a.Id).ToArray();
-            var installedAddonIds = new HashSet<Guid>(
-                await dbContext.Set<Data.Models.Game>()
-                    .Where(g => availableAddonIds.Contains(g.Id) && g.Installed)
-                    .Select(g => g.Id)
-                    .ToListAsync());
-
-            // Build set of currently installed tool IDs (tracked per game)
-            var installedToolIds = new HashSet<Guid>(
-                (localGame.GameTools ?? [])
-                    .Where(gt => gt.Installed)
-                    .Select(gt => gt.ToolId));
-
-            // ── Build options VM ───────────────────────────────────────────────
-            var optionsVm = new InstallOptionsViewModel();
-
-            foreach (var dir in installDirectories)
-                optionsVm.InstallDirectories.Add(dir);
-
-            // If current install directory isn't in the list, add it
-            if (!string.IsNullOrEmpty(localGame.InstallDirectory))
-            {
-                var currentDir = System.IO.Path.GetDirectoryName(localGame.InstallDirectory) ?? localGame.InstallDirectory;
-
-                if (!optionsVm.InstallDirectories.Contains(currentDir))
-                    optionsVm.InstallDirectories.Insert(0, currentDir);
-
-                optionsVm.SelectedInstallDirectory = currentDir;
-            }
-            else
-            {
-                optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
-            }
-
-            optionsVm.GameTitle = Title ?? "Game";
-            optionsVm.DialogTitle = $"Modify {optionsVm.GameTitle}";
-            optionsVm.ConfirmButtonText = "Apply";
-            optionsVm.AlwaysShowDirectory = true;
-
-            // Fetch base game archive sizes
-            try
-            {
-                var game = await gameClient.GetAsync(GameId);
-                var archives = game?.Archives?.ToArray() ?? [];
-                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
-                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
-            }
-            catch { /* sizes will show as 0 */ }
-
-            // Add addons sorted by type, then name; pre-select currently installed ones
-            foreach (var addon in availableAddons
-                         .OrderBy(a => a.Type)
-                         .ThenBy(a => a.Title ?? string.Empty))
-                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: installedAddonIds.Contains(addon.Id)));
-
-            // Add tools sorted by name; pre-select currently installed ones
-            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
-                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: installedToolIds.Contains(tool.Id)));
-
-            // ── Show dialog ───────────────────────────────────────────────────
-            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                var overlay = new Views.InstallOptionsOverlay
-                {
-                    DataContext = optionsVm,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
-                };
-
-                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
-
-                var mainWindow = (Application.Current?.ApplicationLifetime
-                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-
-                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
-
-                if (layer is not null)
-                {
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
-
-                    layer.Children.Add(overlay);
-                }
-            });
-
-            var confirmed = await tcs.Task;
-
-            if (confirmed != true)
-                return;
-
-            // ── Queue the modification ────────────────────────────────────────
-            _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}, tools={ToolCount}",
-                GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length, optionsVm.SelectedTools.Length);
-
-            await installService.Add(
-                localGame,
-                optionsVm.SelectedInstallDirectory,
-                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
-                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
-
-            StatusMessage = "Added to download queue";
-            InstallRequested?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to modify game {GameId} ({Title})", GameId, Title);
-            StatusMessage = $"Failed to modify: {ex.Message}";
-        }
-    }
-
-    [RelayCommand]
-    private async Task SelectVersionAsync()
-    {
-        if (!IsInstalled || IsInstalling) return;
-
-        try
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
-
-            var localGame = await gameService.GetAsync(GameId);
-            if (localGame == null)
-                throw new InvalidOperationException("Game not found in local database");
-
-            var versions = (await gameClient.GetVersionsAsync(GameId))?.ToList() ?? [];
-
-            // Only versions that carry an archive can be installed or rolled back to.
-            var installable = versions
-                .Where(v => v.ArchiveId.HasValue && v.ArchiveId.Value != Guid.Empty)
-                .ToList();
-
-            if (installable.Count == 0)
-            {
-                await Views.AlertOverlay.ShowAsync("No Versions Available", "This game has no downloadable versions.");
-                return;
-            }
-
-            var installedVersion = installable.FirstOrDefault(v => v.Version == localGame.InstalledVersion);
-            var installedSortOrder = installedVersion?.SortOrder;
-
-            var versionsVm = new GameVersionsViewModel
-            {
-                DialogTitle = $"{Title} — Versions",
+                DialogTitle = $"Manage {Title}",
             };
 
-            foreach (var version in installable)
+            // ── Options section ────────────────────────────────────────────────
+            if (!string.IsNullOrWhiteSpace(localGame.OptionSchema))
             {
-                var isInstalled = version.Version == localGame.InstalledVersion;
-                var isNewer = installedSortOrder.HasValue && version.SortOrder > installedSortOrder.Value;
-                versionsVm.Versions.Add(new GameVersionItemViewModel(version, isInstalled, isNewer));
+                var optionsVm = GameOptionsOverlayViewModel.Build(localGame.OptionSchema, localGame.Options, Title ?? "Game");
+
+                if (optionsVm != null)
+                {
+                    var optionsSection = new ManageSectionViewModel
+                    {
+                        Title = "Options",
+                        IconValue = "SlidersHorizontal",
+                        Content = optionsVm,
+                        ActionText = "Save",
+                    };
+
+                    optionsSection.ActionAsync = async () =>
+                    {
+                        var values = optionsVm.CollectValues();
+                        localGame.Options = System.Text.Json.JsonSerializer.Serialize(values);
+
+                        await gameService.UpdateAsync(localGame);
+
+                        optionsSection.Status = "Saved";
+                        _logger.LogInformation("Saved game options for {GameId} ({Title})", GameId, Title);
+                    };
+
+                    manageVm.Sections.Add(optionsSection);
+                }
             }
 
-            var tcs = new System.Threading.Tasks.TaskCompletionSource<SDK.Models.GameVersion?>();
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            // ── Modify section (installed games only) ───────────────────────────
+            if (IsInstalled)
             {
-                var overlay = new Views.GameVersionsOverlay
+                var modifyVm = await BuildModifyOptionsAsync(scope, localGame);
+
+                var modifySection = new ManageSectionViewModel
                 {
-                    DataContext = versionsVm,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                    Title = "Modify",
+                    IconValue = "Wrench",
+                    Content = modifyVm,
+                    ActionText = "Apply",
                 };
 
-                overlay.VersionSelected += (_, v) => tcs.TrySetResult(v);
-
-                var mainWindow = (Application.Current?.ApplicationLifetime
-                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-
-                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
-
-                if (layer is not null)
+                modifySection.ActionAsync = async () =>
                 {
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+                    _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}, tools={ToolCount}",
+                        GameId, Title, modifyVm.SelectedInstallDirectory, modifyVm.SelectedAddons.Length, modifyVm.SelectedTools.Length);
 
-                    layer.Children.Add(overlay);
-                }
-                else
+                    await installService.Add(
+                        localGame,
+                        modifyVm.SelectedInstallDirectory,
+                        modifyVm.SelectedAddons.Length > 0 ? modifyVm.SelectedAddons : null,
+                        modifyVm.SelectedTools.Length > 0 ? modifyVm.SelectedTools : null);
+
+                    StatusMessage = "Added to download queue";
+                    InstallRequested?.Invoke(this, EventArgs.Empty);
+                    manageVm.Close();
+                };
+
+                manageVm.Sections.Add(modifySection);
+            }
+
+            // ── Versions section (installed games with downloadable versions) ───
+            if (IsInstalled)
+            {
+                var versions = (await gameClient.GetVersionsAsync(GameId))?.ToList() ?? [];
+
+                // Only versions that carry an archive can be installed or rolled back to.
+                var installable = versions
+                    .Where(v => v.ArchiveId.HasValue && v.ArchiveId.Value != Guid.Empty)
+                    .ToList();
+
+                if (installable.Count > 0)
                 {
-                    tcs.TrySetResult(null);
+                    var installedVersion   = installable.FirstOrDefault(v => v.Version == localGame.InstalledVersion);
+                    var installedSortOrder = installedVersion?.SortOrder;
+
+                    var versionsVm = new GameVersionsViewModel();
+
+                    foreach (var version in installable)
+                    {
+                        var isInstalled = version.Version == localGame.InstalledVersion;
+                        var isNewer = installedSortOrder.HasValue && version.SortOrder > installedSortOrder.Value;
+
+                        var item = new GameVersionItemViewModel(version, isInstalled, isNewer)
+                        {
+                            SwitchRequested = async chosen =>
+                            {
+                                IsInstalling = true;
+                                StatusMessage = $"Preparing to switch to version {chosen.Version.Version}...";
+
+                                _logger.LogInformation("Queuing switch of game {GameId} ({Title}) to version {Version}", GameId, Title, chosen.Version.Version);
+
+                                await installService.AddVersionSwitchAsync(localGame, chosen.Version);
+
+                                StatusMessage = "Added to download queue";
+                                IsInstalling = false;
+                                InstallRequested?.Invoke(this, EventArgs.Empty);
+                                manageVm.Close();
+                            },
+                        };
+
+                        versionsVm.Versions.Add(item);
+                    }
+
+                    manageVm.Sections.Add(new ManageSectionViewModel
+                    {
+                        Title = "Versions",
+                        IconValue = "ClockCounterClockwise",
+                        Content = versionsVm,
+                    });
                 }
-            });
+            }
 
-            var selected = await tcs.Task;
-
-            if (selected == null)
+            if (manageVm.Sections.Count == 0)
                 return;
 
-            IsInstalling = true;
-            StatusMessage = $"Preparing to switch to version {selected.Version}...";
+            manageVm.SelectedSection = manageVm.Sections.FirstOrDefault();
 
-            _logger.LogInformation("Queuing switch of game {GameId} ({Title}) to version {Version}", GameId, Title, selected.Version);
-
-            await installService.AddVersionSwitchAsync(localGame, selected);
-
-            StatusMessage = "Added to download queue";
-            InstallRequested?.Invoke(this, EventArgs.Empty);
+            await Views.ManageOverlay.ShowAsync(manageVm);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to switch version for game {GameId} ({Title})", GameId, Title);
-            StatusMessage = $"Failed to switch version: {ex.Message}";
-            await Views.AlertOverlay.ShowAsync("Failed to Switch Version", ex.Message);
-        }
-        finally
-        {
-            IsInstalling = false;
+            _logger.LogError(ex, "Failed to open manage dialog for {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to open manage dialog: {ex.Message}";
         }
     }
 
-    [RelayCommand]
-    private async Task OpenGameOptionsAsync()
+    /// <summary>
+    /// Builds the install-options view-model backing the Modify section: available add-ons, tools and
+    /// install directories (with the currently-installed ones pre-selected) plus base game download sizes.
+    /// </summary>
+    private async Task<InstallOptionsViewModel> BuildModifyOptionsAsync(IServiceScope scope, Data.Models.Game localGame)
     {
+        var gameClient       = scope.ServiceProvider.GetRequiredService<GameClient>();
+        var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+        var dbContext        = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+        var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+        var availableAddons    = Array.Empty<SDK.Models.Game>();
+        var availableTools     = Array.Empty<SDK.Models.Tool>();
+
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-
-            var localGame = await gameService.GetAsync(GameId);
-            if (localGame == null || string.IsNullOrWhiteSpace(localGame.OptionSchema))
-                return;
-
-            var optionsVm = GameOptionsOverlayViewModel.Build(localGame.OptionSchema, localGame.Options, Title ?? "Game");
-            if (optionsVm == null)
-                return;
-
-            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                var overlay = new Views.GameOptionsOverlay
-                {
-                    DataContext = optionsVm,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
-                };
-
-                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
-
-                var mainWindow = (Application.Current?.ApplicationLifetime
-                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-
-                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
-
-                if (layer is not null)
-                {
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
-                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
-
-                    layer.Children.Add(overlay);
-                }
-            });
-
-            var confirmed = await tcs.Task;
-
-            if (confirmed != true)
-                return;
-
-            var values = optionsVm.CollectValues();
-            localGame.Options = System.Text.Json.JsonSerializer.Serialize(values);
-
-            await gameService.UpdateAsync(localGame);
-
-            _logger.LogInformation("Saved game options for {GameId} ({Title})", GameId, Title);
+            var addons = await gameClient.GetAddonsAsync(GameId);
+            availableAddons = addons?.ToArray() ?? [];
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to edit game options for {GameId} ({Title})", GameId, Title);
-            StatusMessage = $"Failed to edit options: {ex.Message}";
+            _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
         }
+
+        try
+        {
+            var tools = await gameClient.GetToolsAsync(GameId);
+            availableTools = tools?.Where(t => (t.Archives?.Any() ?? false) && !t.AlwaysInstall).ToArray() ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+        }
+
+        // Build set of currently installed addon IDs. Addons install as their own Game
+        // records (with Installed set), and the local DependentGames relationship is not
+        // populated during import, so look the available addons up directly by ID.
+        var availableAddonIds = availableAddons.Select(a => a.Id).ToArray();
+        var installedAddonIds = new HashSet<Guid>(
+            await dbContext.Set<Data.Models.Game>()
+                .Where(g => availableAddonIds.Contains(g.Id) && g.Installed)
+                .Select(g => g.Id)
+                .ToListAsync());
+
+        // Build set of currently installed tool IDs (tracked per game)
+        var installedToolIds = new HashSet<Guid>(
+            (localGame.GameTools ?? [])
+                .Where(gt => gt.Installed)
+                .Select(gt => gt.ToolId));
+
+        var optionsVm = new InstallOptionsViewModel();
+
+        foreach (var dir in installDirectories)
+            optionsVm.InstallDirectories.Add(dir);
+
+        // If current install directory isn't in the list, add it
+        if (!string.IsNullOrEmpty(localGame.InstallDirectory))
+        {
+            var currentDir = System.IO.Path.GetDirectoryName(localGame.InstallDirectory) ?? localGame.InstallDirectory;
+
+            if (!optionsVm.InstallDirectories.Contains(currentDir))
+                optionsVm.InstallDirectories.Insert(0, currentDir);
+
+            optionsVm.SelectedInstallDirectory = currentDir;
+        }
+        else
+        {
+            optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+        }
+
+        optionsVm.GameTitle = Title ?? "Game";
+        optionsVm.DialogTitle = $"Modify {optionsVm.GameTitle}";
+        optionsVm.ConfirmButtonText = "Apply";
+        optionsVm.AlwaysShowDirectory = true;
+
+        // Fetch base game archive sizes
+        try
+        {
+            var game = await gameClient.GetAsync(GameId);
+            var archives = game?.Archives?.ToArray() ?? [];
+            optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
+            optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+        }
+        catch { /* sizes will show as 0 */ }
+
+        // Add addons sorted by type, then name; pre-select currently installed ones
+        foreach (var addon in availableAddons
+                     .OrderBy(a => a.Type)
+                     .ThenBy(a => a.Title ?? string.Empty))
+            optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: installedAddonIds.Contains(addon.Id)));
+
+        // Add tools sorted by name; pre-select currently installed ones
+        foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+            optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: installedToolIds.Contains(tool.Id)));
+
+        return optionsVm;
     }
 
     [RelayCommand]

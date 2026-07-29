@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using ByteSizeLib;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace LANCommander.Launcher.ViewModels;
 
@@ -46,10 +48,20 @@ public partial class GameVersionItemViewModel : ViewModelBase
     /// <summary>Label for the action button: "Update" for a newer version, "Roll Back" for an older one.</summary>
     public string ButtonText { get; }
 
+    /// <summary>Invoked when the user picks this version to switch to. Set by the host dialog.</summary>
+    public Func<GameVersionItemViewModel, Task>? SwitchRequested { get; set; }
+
     public GameVersionItemViewModel(SDK.Models.GameVersion version, bool isInstalled, bool isNewerThanInstalled)
     {
         Version = version;
         IsInstalled = isInstalled;
         ButtonText = isNewerThanInstalled ? "Update" : "Roll Back";
+    }
+
+    [RelayCommand]
+    private async Task SwitchAsync()
+    {
+        if (SwitchRequested is not null)
+            await SwitchRequested(this);
     }
 }

@@ -1200,6 +1200,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 }
             }
 
+            AppendPluginSections(manageVm);
+
             if (manageVm.Sections.Count == 0)
                 return;
 
@@ -1211,6 +1213,43 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             _logger.LogError(ex, "Failed to open manage dialog for {GameId} ({Title})", GameId, Title);
             StatusMessage = $"Failed to open manage dialog: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Appends sections contributed by plugins (via <see cref="Plugins.Extensions.IGameManageSectionExtension"/>)
+    /// after the built-in sections. A failing extension is skipped so the core dialog still renders.
+    /// </summary>
+    private void AppendPluginSections(ManageOverlayViewModel manageVm)
+    {
+        var extensions = App.Services?
+            .GetServices<Plugins.Extensions.IGameManageSectionExtension>()
+            .OrderBy(e => e.Order)
+            .ToList();
+
+        if (extensions == null || extensions.Count == 0)
+            return;
+
+        foreach (var extension in extensions)
+        {
+            try
+            {
+                var content = extension.BuildContent(GameId);
+
+                if (content == null)
+                    continue;
+
+                manageVm.Sections.Add(new ManageSectionViewModel
+                {
+                    Title = extension.Title,
+                    IconValue = extension.IconValue,
+                    Content = content,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Manage section extension {Extension} failed for game {GameId}", extension.GetType().FullName, GameId);
+            }
         }
     }
 

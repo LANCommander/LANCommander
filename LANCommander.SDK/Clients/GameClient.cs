@@ -901,7 +901,9 @@ namespace LANCommander.SDK.Services
 
             logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
 
-            // Handle standalone mods — need base game first
+            // Handle standalone mods — the base game must be installed first, and the
+            // standalone mod's archive extracts into the base game's directory. The mod is
+            // still a separate library entity with an independent lifecycle from the base game.
             if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
             {
                 var baseGame = await GetAsync(game.BaseGameId);

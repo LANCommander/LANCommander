@@ -1,0 +1,10 @@
+<Project>
+  <!-- Opt any external/third-party source under External/ out of this repo's Central Package
+       Management. Those projects (e.g. git submodules) declare inline PackageReference versions and
+       are versioned upstream, independently of our Directory.Packages.props. Sitting above them, this
+       file stops MSBuild's walk-up before it reaches the repo-root CPM config, so they build both
+       standalone and when consumed here. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

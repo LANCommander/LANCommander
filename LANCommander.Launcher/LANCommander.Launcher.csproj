@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -36,6 +36,14 @@
     <PackageReference Include="ppy.SDL3-CS" />
   </ItemGroup>
 
+  <!-- On the Windows-desktop TFM, LibVLCSharp drags in Microsoft.WindowsAppSDK (for its unused WinUI
+       integration; we use LibVLCSharp.Avalonia). Its buildTransitive targets force a legacy UWP
+       RuntimeIdentifiers list that breaks framework-pack resolution (NETSDK1082/1083). Reference it
+       directly with all assets excluded so those targets aren't imported. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
+    <PackageReference Include="Microsoft.WindowsAppSDK" VersionOverride="1.1.1" ExcludeAssets="all" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="LANCommander.Launcher.Tests" />
   </ItemGroup>
@@ -44,6 +52,19 @@
     <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" />
+
+    <!-- GameOverlay.Capture: platform-neutral API plus a per-OS backend that self-registers at runtime. -->
+    <ProjectReference Include="..\External\GameOverlay.Capture\src\GameOverlay.Capture\GameOverlay.Capture.csproj" />
+
+    <!-- Windows backend (net10.0-windows10.0.19041.0) -->
+    <ProjectReference Include="..\External\GameOverlay.Capture\src\GameOverlay.Capture.Windows\GameOverlay.Capture.Windows.csproj"
+                      Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'" />
+
+    <!-- Linux / macOS backends (net10.0) -->
+    <ProjectReference Include="..\External\GameOverlay.Capture\src\GameOverlay.Capture.Linux\GameOverlay.Capture.Linux.csproj"
+                      Condition="'$(TargetFramework)' == 'net10.0'" />
+    <ProjectReference Include="..\External\GameOverlay.Capture\src\GameOverlay.Capture.MacOS\GameOverlay.Capture.MacOS.csproj"
+                      Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 
   <ItemGroup>

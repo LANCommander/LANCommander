@@ -14,7 +14,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Input;
+using ICommand = System.Windows.Input.ICommand;
 
 namespace LANCommander.Launcher.Controls;
 

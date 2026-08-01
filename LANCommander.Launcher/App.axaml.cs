@@ -15,6 +15,7 @@ using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.Launcher.Services.Platform;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
@@ -284,6 +285,29 @@ public partial class App : Application
 
         // Input
         services.AddSingleton<GamepadService>();
+
+        // Big screen status bar (battery/volume) — platform backend selected by OS. Only invoked
+        // while in big screen mode.
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IBatteryService, WindowsBatteryService>();
+            services.AddSingleton<IVolumeService, WindowsVolumeService>();
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            services.AddSingleton<IBatteryService, LinuxBatteryService>();
+            services.AddSingleton<IVolumeService, LinuxVolumeService>();
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            services.AddSingleton<IBatteryService, MacBatteryService>();
+            services.AddSingleton<IVolumeService, MacVolumeService>();
+        }
+        else
+        {
+            services.AddSingleton<IBatteryService, NullBatteryService>();
+            services.AddSingleton<IVolumeService, NullVolumeService>();
+        }
 
         // Platform services
         services.AddNotifications(opts =>

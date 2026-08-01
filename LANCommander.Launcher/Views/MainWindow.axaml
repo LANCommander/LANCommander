@@ -179,6 +179,57 @@
               </StackPanel>
             </Border>
 
+            <!-- Big Screen status items (battery / volume / time) — shown only in big screen mode,
+                 where the window controls are hidden, so the two panels never overlap. -->
+            <StackPanel Grid.Column="5"
+                        Orientation="Horizontal"
+                        Spacing="16"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0"
+                        DataContext="{Binding StatusBar}"
+                        IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsBigScreenMode}">
+
+                <!-- Battery (hidden on devices without a battery) -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                            IsVisible="{Binding HasBattery}">
+                    <Icon Type="Regular" Value="{Binding BatteryIcon}" Width="18" Height="18" Color="White" />
+                    <TextBlock Text="{Binding BatteryPercent, StringFormat='{}{0}%'}"
+                               Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Volume (interactive: click opens a slider that changes system volume) -->
+                <Button Classes="Text"
+                        Padding="4,2"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsVolumeSupported}"
+                        ToolTip.Tip="Volume">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom">
+                            <StackPanel Spacing="8" Width="60">
+                                <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
+                                           HorizontalAlignment="Center" FontSize="12" />
+                                <Slider Orientation="Vertical"
+                                        Height="140"
+                                        HorizontalAlignment="Center"
+                                        Minimum="0" Maximum="100"
+                                        Value="{Binding Volume, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Icon Type="Regular" Value="{Binding VolumeIcon}" Width="18" Height="18" Color="White" />
+                        <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
+                                   Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Time -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Icon Type="Regular" Value="Clock" Width="18" Height="18" Color="White" />
+                    <TextBlock Text="{Binding Time}" Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+
             <!-- Window Controls (hidden in big screen mode) -->
             <StackPanel Grid.Column="5" Orientation="Horizontal"
                         IsVisible="{Binding IsNotBigScreenMode}">

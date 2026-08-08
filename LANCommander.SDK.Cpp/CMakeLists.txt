@@ -63,6 +63,7 @@ add_library(lancommander STATIC
     src/clients/connection_client.cpp
     src/archive/crc32_util.cpp
     src/script/batch_script_runner.cpp
+    src/json/json_writer.cpp
 )
 
 target_include_directories(lancommander

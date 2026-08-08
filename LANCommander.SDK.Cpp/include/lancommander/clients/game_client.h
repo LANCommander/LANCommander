@@ -18,6 +18,10 @@ public:
     Result<std::vector<Game>> get_all();
     Result<Game> get(const std::string& game_id);
     Result<GameManifest> get_manifest(const std::string& game_id);
+    // The raw manifest body, for injecting as $GameManifest. Scripts routinely
+    // reach into manifest fields that GameManifest does not model, so prefer
+    // this over re-serialising the parsed struct.
+    Result<std::string> get_manifest_json(const std::string& game_id);
     Result<std::vector<Action>> get_actions(const std::string& game_id);
     Result<std::vector<Game>> get_addons(const std::string& game_id);
     Result<std::vector<Redistributable>> get_redistributables(const std::string& game_id);

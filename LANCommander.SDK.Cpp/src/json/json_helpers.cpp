@@ -263,43 +263,126 @@ Redistributable parse_redistributable(cJSON* obj)
     r.id          = get_string(obj, "id", "Id");
     r.name        = get_string(obj, "name", "Name");
     r.description = get_string(obj, "description", "Description");
+
+    cJSON* scripts = get_child(obj, "scripts", "Scripts");
+    if (scripts && scripts->type == cJSON_Array) {
+        const int n = cJSON_GetArraySize(scripts);
+        for (int i = 0; i < n; ++i) {
+            cJSON* item = cJSON_GetArrayItem(scripts, i);
+            if (item) r.scripts.push_back(parse_script(item));
+        }
+    }
+
     return r;
+}
+
+ScriptType script_type_from_ordinal(int ordinal)
+{
+    switch (ordinal) {
+        case 0:  return ScriptType::Install;
+        case 1:  return ScriptType::Uninstall;
+        case 2:  return ScriptType::NameChange;
+        case 3:  return ScriptType::KeyChange;
+        case 4:  return ScriptType::SaveUpload;
+        case 5:  return ScriptType::SaveDownload;
+        case 6:  return ScriptType::DetectInstall;
+        case 7:  return ScriptType::BeforeStart;
+        case 8:  return ScriptType::AfterStop;
+        case 9:  return ScriptType::GameStarted;
+        case 10: return ScriptType::GameStopped;
+        case 11: return ScriptType::UserRegistration;
+        case 12: return ScriptType::UserLogin;
+        case 13: return ScriptType::ApplicationStart;
+        case 14: return ScriptType::Package;
+        case 15: return ScriptType::RunWrapper;
+        default: return ScriptType::Unknown;
+    }
+}
+
+ScriptType script_type_from_name(const std::string& name)
+{
+    if (name == "Install")               return ScriptType::Install;
+    if (name == "Uninstall")             return ScriptType::Uninstall;
+    if (name == "NameChange")            return ScriptType::NameChange;
+    if (name == "KeyChange")             return ScriptType::KeyChange;
+    if (name == "SaveUpload")            return ScriptType::SaveUpload;
+    if (name == "SaveDownload")          return ScriptType::SaveDownload;
+    if (name == "DetectInstall")         return ScriptType::DetectInstall;
+    if (name == "BeforeStart")           return ScriptType::BeforeStart;
+    if (name == "AfterStop")             return ScriptType::AfterStop;
+    if (name == "GameStarted")           return ScriptType::GameStarted;
+    if (name == "GameStopped")           return ScriptType::GameStopped;
+    if (name == "UserRegistration")      return ScriptType::UserRegistration;
+    if (name == "UserLogin")             return ScriptType::UserLogin;
+    if (name == "ApplicationStart")      return ScriptType::ApplicationStart;
+    if (name == "Package")               return ScriptType::Package;
+    if (name == "RunWrapper")            return ScriptType::RunWrapper;
+    return ScriptType::Unknown;
+}
+
+// Accepts the three shapes a [Flags] enum can take on the wire: an ordinal, a
+// comma-separated name list ("Windows, Linux"), or an array of names.
+int parse_runtime_platform(cJSON* value)
+{
+    if (!value)
+        return RuntimePlatform_None;
+
+    if (value->type == cJSON_Number)
+        return value->valueint;
+
+    if (value->type == cJSON_String && value->valuestring) {
+        int flags = RuntimePlatform_None;
+        const std::string text = value->valuestring;
+        std::string token;
+
+        for (std::size_t i = 0; i <= text.size(); ++i) {
+            const bool at_end = (i == text.size());
+            if (!at_end && text[i] != ',') {
+                if (text[i] != ' ')
+                    token += text[i];
+                continue;
+            }
+            if (token == "Windows")    flags |= RuntimePlatform_Windows;
+            else if (token == "Linux") flags |= RuntimePlatform_Linux;
+            else if (token == "macOS") flags |= RuntimePlatform_macOS;
+            token.clear();
+        }
+        return flags;
+    }
+
+    if (value->type == cJSON_Array) {
+        int flags = RuntimePlatform_None;
+        const int n = cJSON_GetArraySize(value);
+        for (int i = 0; i < n; ++i) {
+            cJSON* item = cJSON_GetArrayItem(value, i);
+            if (item)
+                flags |= parse_runtime_platform(item);
+        }
+        return flags;
+    }
+
+    return RuntimePlatform_None;
 }
 
 Script parse_script(cJSON* obj)
 {
     Script s;
-    s.name     = get_string(obj, "name", "Name");
-    s.contents = get_string(obj, "contents", "Contents");
+    s.name        = get_string(obj, "name", "Name");
+    s.description = get_string(obj, "description", "Description");
+    s.contents    = get_string(obj, "contents", "Contents");
+
+    s.requires_admin = get_bool(obj, "requiresAdmin", "RequiresAdmin", false);
+    s.platforms      = parse_runtime_platform(
+        get_child(obj, "platforms", "Platforms"));
 
     cJSON* t = get_child(obj, "type", "Type");
-    if (t && t->type == cJSON_Number) {
-        switch (t->valueint) {
-            case 0:  s.type = ScriptType::Install;      break;
-            case 1:  s.type = ScriptType::Uninstall;    break;
-            case 2:  s.type = ScriptType::NameChange;   break;
-            case 3:  s.type = ScriptType::KeyChange;    break;
-            case 4:  s.type = ScriptType::SaveUpload;   break;
-            case 5:  s.type = ScriptType::SaveDownload; break;
-            case 6:  s.type = ScriptType::DetectInstall; break;
-            case 7:  s.type = ScriptType::BeforeStart;  break;
-            case 8:  s.type = ScriptType::AfterStop;    break;
-            case 9:  s.type = ScriptType::GameStarted;  break;
-            case 10: s.type = ScriptType::GameStopped;  break;
-            default: s.type = ScriptType::Unknown;      break;
-        }
-    } else if (t && t->type == cJSON_String && t->valuestring) {
-        std::string sv = t->valuestring;
-        if (sv == "Install")        s.type = ScriptType::Install;
-        else if (sv == "Uninstall") s.type = ScriptType::Uninstall;
-        else if (sv == "NameChange")  s.type = ScriptType::NameChange;
-        else if (sv == "KeyChange")   s.type = ScriptType::KeyChange;
-        else if (sv == "BeforeStart") s.type = ScriptType::BeforeStart;
-        else if (sv == "AfterStop")   s.type = ScriptType::AfterStop;
-        else s.type = ScriptType::Unknown;
-    } else {
+    if (t && t->type == cJSON_Number)
+        s.type = script_type_from_ordinal(t->valueint);
+    else if (t && t->type == cJSON_String && t->valuestring)
+        s.type = script_type_from_name(t->valuestring);
+    else
         s.type = ScriptType::Unknown;
-    }
+
     return s;
 }
 

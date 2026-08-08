@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+#include "custom_field.h"
+#include "script.h"
+
 namespace lancommander {
 
 enum class GameType {
@@ -82,6 +85,11 @@ struct GameManifest {
     std::vector<ManifestAction> actions;
     std::vector<ManifestSavePath> save_paths;
     std::vector<ManifestRedistributable> redistributables;
+    // Each custom field becomes one PowerShell variable named after the field.
+    std::vector<GameCustomField> custom_fields;
+    // Metadata only — script bodies live in separate .ps1 files on disk. Used
+    // to gate execution on the current runtime platform.
+    std::vector<Script> scripts;
 };
 
 } // namespace lancommander

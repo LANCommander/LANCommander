@@ -48,18 +48,27 @@ Result<Game> GameClient::get(const std::string& game_id)
     return Result<Game>::ok(std::move(g));
 }
 
-Result<GameManifest> GameClient::get_manifest(const std::string& game_id)
+Result<std::string> GameClient::get_manifest_json(const std::string& game_id)
 {
     HttpResponse resp = m_http.get("/api/Games/" + game_id + "/Manifest");
     if (!resp.ok()) {
         std::ostringstream e;
         e << "GetManifest failed (HTTP " << resp.status_code << ")";
-        return Result<GameManifest>::fail(e.str());
+        return Result<std::string>::fail(e.str());
     }
+
+    return Result<std::string>::ok(resp.body);
+}
+
+Result<GameManifest> GameClient::get_manifest(const std::string& game_id)
+{
+    Result<std::string> body = get_manifest_json(game_id);
+    if (!body)
+        return Result<GameManifest>::fail(body.error);
 
     GameManifest manifest;
     std::string error;
-    if (!parse_manifest_json(resp.body, &manifest, &error))
+    if (!parse_manifest_json(body.value, &manifest, &error))
         return Result<GameManifest>::fail(error);
 
     return Result<GameManifest>::ok(std::move(manifest));
@@ -226,6 +235,26 @@ bool parse_manifest_json(const std::string& json_str, GameManifest* out, std::st
             mr.id   = json::get_string(r, "id", "Id");
             mr.name = json::get_string(r, "name", "Name");
             out->redistributables.push_back(std::move(mr));
+        }
+    }
+
+    cJSON* fields = json::get_child(doc.root, "customFields", "CustomFields");
+    if (fields && fields->type == cJSON_Array) {
+        int n = cJSON_GetArraySize(fields);
+        for (int i = 0; i < n; ++i) {
+            cJSON* f = cJSON_GetArrayItem(fields, i);
+            if (!f) continue;
+            out->custom_fields.push_back(json::parse_custom_field(f));
+        }
+    }
+
+    cJSON* scripts = json::get_child(doc.root, "scripts", "Scripts");
+    if (scripts && scripts->type == cJSON_Array) {
+        int n = cJSON_GetArraySize(scripts);
+        for (int i = 0; i < n; ++i) {
+            cJSON* s = cJSON_GetArrayItem(scripts, i);
+            if (!s) continue;
+            out->scripts.push_back(json::parse_script(s));
         }
     }
 

@@ -69,6 +69,12 @@ std::vector<std::string> collect_strings(cJSON* arr);
 // JSON string escaping for building request bodies.
 std::string escape(const std::string& in);
 
+// ScriptType / RuntimePlatform decoding. The server may send an enum as an
+// ordinal or as its name, so both branches are shared by every caller.
+ScriptType script_type_from_ordinal(int ordinal);
+ScriptType script_type_from_name(const std::string& name);
+int parse_runtime_platform(cJSON* value);
+
 // Model parsers — existing
 AuthToken parse_auth_token(cJSON* obj);
 Game parse_game(cJSON* obj);

@@ -1,8 +1,10 @@
-# Build directories
-build/
-build_test/
-cmake-build-*/
-out/
+# Build directories. Anchored to the SDK root on purpose: an unanchored
+# "build/" would also match vendor/picoposh/build/, which holds the tracked
+# sources.list that our CMakeLists reads.
+/build/
+/build_test/
+/cmake-build-*/
+/out/
 
 # IDE files
 .vs/

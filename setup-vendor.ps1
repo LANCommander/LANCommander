@@ -2,7 +2,8 @@
 .SYNOPSIS
     Downloads vendor libraries for LANCommander.SDK.Cpp and LANCommander.Launcher.Legacy.
 .DESCRIPTION
-    Fetches the following dependencies from GitHub:
+    Initialises the picoposh git submodule, then fetches the following
+    dependencies from GitHub:
       - cJSON 1.7.19        -> LANCommander.SDK.Cpp/vendor/cjson/
       - miniz 3.1.0         -> LANCommander.Launcher.Legacy/vendor/miniz/
       - Allegro 4.4.3.1     -> LANCommander.Launcher.Legacy/vendor/allegro4/
@@ -115,6 +116,33 @@ function Get-VendorDep {
 # ---------------------------------------------------------------------------
 Write-Host "Setting up vendor dependencies..." -ForegroundColor Yellow
 Write-Host ""
+
+# ---------------------------------------------------------------------------
+# picoposh is a git submodule, not a download — the submodule pin is the single
+# source of truth for its version.
+#
+# Never recursive: picoposh also pins Watt-32, a large DOS-only TCP/IP stack we
+# never compile. Its zlib and libzip submodules ARE wanted, though — without
+# them Expand-Archive links a stub, so scripts cannot unpack archives.
+# ---------------------------------------------------------------------------
+$picoposh = Join-Path $RepoRoot 'LANCommander.SDK.Cpp/vendor/picoposh'
+if (-not (Test-Path (Join-Path $picoposh 'include/picoposh.h'))) {
+    Write-Host '--- picoposh (git submodule) ---' -ForegroundColor Cyan
+    git -C $RepoRoot submodule update --init --depth 1 -- 'LANCommander.SDK.Cpp/vendor/picoposh'
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to initialise the picoposh submodule.' }
+    Write-Host '  Initialised.' -ForegroundColor Green
+}
+
+if (-not (Test-Path (Join-Path $picoposh 'third_party/libzip/CMakeLists.txt'))) {
+    Write-Host '--- picoposh zlib + libzip (for Expand-Archive) ---' -ForegroundColor Cyan
+    git -C $picoposh submodule update --init --depth 1 -- 'third_party/zlib' 'third_party/libzip'
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning '  Could not initialise zlib/libzip; Expand-Archive will be a stub.'
+    } else {
+        Write-Host '  Initialised.' -ForegroundColor Green
+    }
+    Write-Host ""
+}
 
 foreach ($dep in $deps) {
     Get-VendorDep -Dep $dep

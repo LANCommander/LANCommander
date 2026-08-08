@@ -6,12 +6,14 @@ on:
     paths:
       - 'LANCommander.Launcher.Legacy/**'
       - 'LANCommander.SDK.Cpp/**'
+      - '.gitmodules'
       - '.github/workflows/LANCommander.Launcher.Legacy.yml'
   pull_request:
     branches: [main]
     paths:
       - 'LANCommander.Launcher.Legacy/**'
       - 'LANCommander.SDK.Cpp/**'
+      - '.gitmodules'
       - '.github/workflows/LANCommander.Launcher.Legacy.yml'
   workflow_dispatch:
 
@@ -27,6 +29,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Fetch picoposh explicitly rather than via `submodules: true`, which
+      # would also pull the two External/GameOverlay.* submodules this job does
+      # not need. Never use `submodules: recursive` — picoposh pins Watt-32, a
+      # large DOS-only TCP/IP stack we never compile.
+      - name: Fetch picoposh submodule
+        shell: bash
+        run: |
+          git submodule update --init --depth 1 -- LANCommander.SDK.Cpp/vendor/picoposh
+          # zlib + libzip back Expand-Archive. Never --recursive: picoposh also
+          # pins Watt-32, a large DOS-only TCP/IP stack we never compile.
+          git -C LANCommander.SDK.Cpp/vendor/picoposh submodule update --init --depth 1 \
+              -- third_party/zlib third_party/libzip
 
       # ---------------------------------------------------------------
       # MSYS2 with MinGW32 (i686) toolchain

@@ -61,6 +61,22 @@ endif()
 
 add_subdirectory(${PICOPOSH_DIR} ${CMAKE_CURRENT_BINARY_DIR}/picoposh)
 
+# picoposh vendors zlib and libzip for Expand-Archive, and defines a `zip`
+# target for them. ZipArchiveExtractor links that same target rather than
+# vendoring a second zip implementation — one in the process, not two.
+#
+# When the submodules are absent picoposh links its stub, no `zip` target
+# exists, and the extractor compiles to a matching stub that reports cleanly.
+if(TARGET zip)
+    set(LANCOMMANDER_ZIP_LIBS zip)
+    message(STATUS "lancommander: zip extraction via picoposh's libzip")
+else()
+    set(LANCOMMANDER_ZIP_LIBS "")
+    message(STATUS
+        "lancommander: no zip backend — ZipArchiveExtractor and Expand-Archive "
+        "will report unavailable. Run setup-vendor.ps1 to fetch zlib/libzip.")
+endif()
+
 # ---------------------------------------------------------------------------
 # Core library (no HTTP backend — consumer must link one)
 # ---------------------------------------------------------------------------
@@ -83,6 +99,7 @@ add_library(lancommander STATIC
     src/clients/issue_client.cpp
     src/clients/connection_client.cpp
     src/archive/crc32_util.cpp
+    src/archive/zip_archive_extractor.cpp
     src/json/json_writer.cpp
     src/yaml/yaml_convert.cpp
     src/manifest_helper.cpp
@@ -100,6 +117,14 @@ target_include_directories(lancommander
 # PUBLIC on both: lancommander is a static library, so consumers must see these
 # on their own link line to resolve cJSON_* and the pico_* entry points.
 target_link_libraries(lancommander PUBLIC cjson yaml picoposh::picoposh)
+
+if(LANCOMMANDER_ZIP_LIBS)
+    target_compile_definitions(lancommander PRIVATE LANCOMMANDER_HAVE_LIBZIP)
+    # PRIVATE + BUILD_INTERFACE, matching how picoposh consumes it: the
+    # vendored target is not part of anyone's install/export set.
+    target_link_libraries(lancommander
+        PRIVATE $<BUILD_INTERFACE:${LANCOMMANDER_ZIP_LIBS}>)
+endif()
 
 # Platform socket libraries for BeaconClient
 if(WIN32)
@@ -152,6 +177,7 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_script_helper.cpp
         tests/test_json.cpp
         tests/test_yaml.cpp
+        tests/test_archive.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

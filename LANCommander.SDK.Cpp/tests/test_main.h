@@ -37,5 +37,6 @@ void test_script_runner();
 void test_script_helper();
 void test_json();
 void test_yaml();
+void test_archive();
 
 #endif // LANCOMMANDER_TESTS_TEST_MAIN_H

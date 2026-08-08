@@ -54,6 +54,7 @@
 #include "script/script_runner.h"
 #include "script/picoposh_script_runner.h"
 #include "script/script_helper.h"
+#include "script/cmdlets.h"
 
 // Clients
 #include "clients/authentication_client.h"

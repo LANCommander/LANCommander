@@ -107,6 +107,13 @@ add_library(lancommander STATIC
     src/script/script_helper.cpp
     src/script/picoposh_script_runner.cpp
     src/clients/script_execution_client.cpp
+    src/script/cmdlets/cmdlets.cpp
+    src/script/cmdlets/cmdlet_support.cpp
+    src/script/cmdlets/cmdlets_system.cpp
+    src/script/cmdlets/cmdlets_math.cpp
+    src/script/cmdlets/cmdlets_bytes.cpp
+    src/script/cmdlets/cmdlets_text.cpp
+    src/script/cmdlets/cmdlets_manifest.cpp
 )
 
 target_include_directories(lancommander
@@ -178,6 +185,7 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_json.cpp
         tests/test_yaml.cpp
         tests/test_archive.cpp
+        tests/test_cmdlets.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

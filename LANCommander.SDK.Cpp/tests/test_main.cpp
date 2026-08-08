@@ -25,6 +25,7 @@ int main()
     test_json();
     test_yaml();
     test_cmdlets();
+    test_cmdlets_api();
     test_archive();
 
     std::printf("\n%d checks, %d failures\n", g_checks, g_failures);

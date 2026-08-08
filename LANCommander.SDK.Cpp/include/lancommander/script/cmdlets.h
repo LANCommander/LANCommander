@@ -4,10 +4,39 @@
 #include <string>
 #include <vector>
 
+#include "../archive/archive_extractor.h"
+#include "../http/http_client.h"
 #include "../types.h"
 
 namespace lancommander {
 namespace cmdlets {
+
+// Services a cmdlet needs beyond its own parameters.
+//
+// A PicoCmdletDef is static and its callbacks receive only the PicoStage, so
+// there is nowhere to hang per-registration state — this is process-global,
+// like the registry itself. The .NET SDK does the same thing by a different
+// route: it stashes the ApiRequestFactory in a session variable and the
+// cmdlet fetches it back out.
+//
+// Cmdlets that need something absent from the context fail with a clear
+// message rather than misbehaving, so setting it is only required if a script
+// actually calls one of them.
+struct Context {
+    // Used by Get-UserCustomField, Update-UserCustomField and
+    // Expand-LatestArchive. Must outlive every script run.
+    IHttpClient* http;
+
+    // Optional. Expand-LatestArchive uses the SDK's ZipArchiveExtractor when
+    // this is null.
+    IArchiveExtractor* extractor;
+
+    Context() : http(NULL), extractor(NULL) {}
+};
+
+void set_context(const Context& context);
+const Context& context();
+void clear_context();
 
 // LANCommander's cmdlet pack for the embedded picoposh interpreter — the C++
 // counterpart of the cmdlets the .NET SDK registers into its runspace, so a

@@ -76,7 +76,7 @@ void test_cmdlets()
 {
     Result<bool> registered = cmdlets::register_all();
     CHECK(registered.success);
-    CHECK(cmdlets::names().size() == 13);
+    CHECK(cmdlets::names().size() == 17);
 
     // Every registered name must actually resolve in the interpreter.
     {

@@ -7,6 +7,8 @@ namespace cmdlets {
 
 namespace {
 
+Context g_context;
+
 typedef const PicoCmdletDef* (*DefAccessor)();
 
 // The one place every cmdlet is listed. Each accessor returns a pointer to a
@@ -16,14 +18,18 @@ const DefAccessor kAccessors[] = {
     cmdlet_convert_aspect_ratio,
     cmdlet_convert_to_string_bytes,
     cmdlet_edit_patch_binary,
+    cmdlet_expand_latest_archive,
     cmdlet_get_game_manifest,
     cmdlet_get_horizontal_fov,
     cmdlet_get_primary_display,
     cmdlet_get_runtime,
     cmdlet_get_sanitized_path,
+    cmdlet_get_user_custom_field,
     cmdlet_get_vertical_fov,
     cmdlet_new_package,
+    cmdlet_out_player_avatar,
     cmdlet_update_ini_value,
+    cmdlet_update_user_custom_field,
     cmdlet_write_game_manifest,
     cmdlet_write_replace_content_in_file
 };
@@ -31,6 +37,12 @@ const DefAccessor kAccessors[] = {
 const int kCount = (int)(sizeof(kAccessors) / sizeof(kAccessors[0]));
 
 } // namespace
+
+void set_context(const Context& context) { g_context = context; }
+
+const Context& context() { return g_context; }
+
+void clear_context() { g_context = Context(); }
 
 Result<bool> register_all()
 {

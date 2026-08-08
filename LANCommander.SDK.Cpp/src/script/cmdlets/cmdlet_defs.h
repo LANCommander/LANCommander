@@ -34,6 +34,12 @@ const PicoCmdletDef* cmdlet_edit_patch_binary();
 const PicoCmdletDef* cmdlet_write_replace_content_in_file();
 const PicoCmdletDef* cmdlet_update_ini_value();
 
+// cmdlets_api.cpp — the only ones needing cmdlets::context()
+const PicoCmdletDef* cmdlet_get_user_custom_field();
+const PicoCmdletDef* cmdlet_update_user_custom_field();
+const PicoCmdletDef* cmdlet_expand_latest_archive();
+const PicoCmdletDef* cmdlet_out_player_avatar();
+
 // cmdlets_manifest.cpp
 const PicoCmdletDef* cmdlet_get_game_manifest();
 const PicoCmdletDef* cmdlet_write_game_manifest();

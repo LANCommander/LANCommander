@@ -114,6 +114,7 @@ add_library(lancommander STATIC
     src/script/cmdlets/cmdlets_bytes.cpp
     src/script/cmdlets/cmdlets_text.cpp
     src/script/cmdlets/cmdlets_manifest.cpp
+    src/script/cmdlets/cmdlets_api.cpp
 )
 
 target_include_directories(lancommander
@@ -186,6 +187,7 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_yaml.cpp
         tests/test_archive.cpp
         tests/test_cmdlets.cpp
+        tests/test_cmdlets_api.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

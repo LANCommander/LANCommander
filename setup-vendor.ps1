@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Downloads vendor libraries for LANCommander.SDK.Cpp and LANCommander.Launcher.Legacy.
+    Downloads vendor libraries for liblancommander and LANCommander.Launcher.Legacy.
 .DESCRIPTION
     Initialises the picoposh git submodule, then fetches the following
     dependencies from GitHub:
-      - cJSON 1.7.19        -> LANCommander.SDK.Cpp/vendor/cjson/
+      - cJSON 1.7.19        -> liblancommander/vendor/cjson/
       - miniz 3.1.0         -> LANCommander.Launcher.Legacy/vendor/miniz/
       - Allegro 4.4.3.1     -> LANCommander.Launcher.Legacy/vendor/allegro4/
 #>
@@ -23,7 +23,7 @@ $deps = @(
     @{
         Name    = 'cJSON 1.7.19'
         Url     = 'https://github.com/DaveGamble/cJSON/archive/refs/tags/v1.7.19.zip'
-        Dest    = Join-Path $RepoRoot 'LANCommander.SDK.Cpp/vendor/cjson'
+        Dest    = Join-Path $RepoRoot 'liblancommander/vendor/cjson'
         ZipRoot = 'cJSON-1.7.19'
         Files   = @('cJSON.c', 'cJSON.h')
     },
@@ -32,7 +32,7 @@ $deps = @(
         # rather than reproducing libyaml's include/ + src/ split.
         Name    = 'libyaml 0.2.5'
         Url     = 'https://github.com/yaml/libyaml/archive/refs/tags/0.2.5.zip'
-        Dest    = Join-Path $RepoRoot 'LANCommander.SDK.Cpp/vendor/libyaml'
+        Dest    = Join-Path $RepoRoot 'liblancommander/vendor/libyaml'
         ZipRoot = 'libyaml-0.2.5'
         Files   = @(
             'include/yaml.h', 'src/yaml_private.h',
@@ -150,10 +150,10 @@ Write-Host ""
 # never compile. Its zlib and libzip submodules ARE wanted, though — without
 # them Expand-Archive links a stub, so scripts cannot unpack archives.
 # ---------------------------------------------------------------------------
-$picoposh = Join-Path $RepoRoot 'LANCommander.SDK.Cpp/vendor/picoposh'
+$picoposh = Join-Path $RepoRoot 'liblancommander/vendor/picoposh'
 if (-not (Test-Path (Join-Path $picoposh 'include/picoposh.h'))) {
     Write-Host '--- picoposh (git submodule) ---' -ForegroundColor Cyan
-    git -C $RepoRoot submodule update --init --depth 1 -- 'LANCommander.SDK.Cpp/vendor/picoposh'
+    git -C $RepoRoot submodule update --init --depth 1 -- 'liblancommander/vendor/picoposh'
     if ($LASTEXITCODE -ne 0) { throw 'Failed to initialise the picoposh submodule.' }
     Write-Host '  Initialised.' -ForegroundColor Green
 }

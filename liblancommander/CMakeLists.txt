@@ -55,7 +55,7 @@ set(PICOPOSH_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/picoposh)
 if(NOT EXISTS ${PICOPOSH_DIR}/CMakeLists.txt)
     message(FATAL_ERROR
         "vendor/picoposh is empty. Initialise the submodule:\n"
-        "  git submodule update --init LANCommander.SDK.Cpp/vendor/picoposh\n"
+        "  git submodule update --init liblancommander/vendor/picoposh\n"
         "or run ./setup-vendor.ps1 from the repository root.")
 endif()
 

@@ -1,4 +1,4 @@
-[submodule "LANCommander.SDK.Cpp/vendor/picoposh"]
-	path = LANCommander.SDK.Cpp/vendor/picoposh
+[submodule "liblancommander/vendor/picoposh"]
+	path = liblancommander/vendor/picoposh
 	url = https://github.com/LANCommander/picoposh.git
 	shallow = true

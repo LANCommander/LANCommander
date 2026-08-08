@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs every snippet LANCommander ships to script authors through picoposh and
-# reports which ones survive. Run from LANCommander.SDK.Cpp/.
+# reports which ones survive. Run from liblancommander/.
 #
 # Build picoposh first:
 #   cmake -S vendor/picoposh -B vendor/picoposh/build/cmake

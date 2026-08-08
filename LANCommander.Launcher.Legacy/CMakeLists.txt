@@ -57,7 +57,7 @@ endif()
 # ---------------------------------------------------------------------------
 # LANCommander C++ SDK (sibling directory)
 # ---------------------------------------------------------------------------
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../LANCommander.SDK.Cpp
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../liblancommander
                  ${CMAKE_CURRENT_BINARY_DIR}/sdk)
 
 # ---------------------------------------------------------------------------

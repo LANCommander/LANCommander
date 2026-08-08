@@ -63,7 +63,7 @@ if [ ! -d "$ALLEGRO_SRC" ]; then
     exit 1
 fi
 
-if [ ! -f "$REPO_ROOT/LANCommander.SDK.Cpp/vendor/cjson/cJSON.c" ]; then
+if [ ! -f "$REPO_ROOT/liblancommander/vendor/cjson/cJSON.c" ]; then
     echo "ERROR: cJSON vendor source not found."
     echo "  Run setup-vendor.ps1 first."
     exit 1

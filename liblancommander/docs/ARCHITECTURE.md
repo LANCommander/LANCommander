@@ -3,7 +3,7 @@
 ## Design Principles
 
 1. **C++14 minimum** — No C++17 features. This enables compilation with older toolchains including Open Watcom for Win9x targets.
-2. **No mandatory external dependencies** — cJSON is vendored. HTTP backends are optional link targets.
+2. **No mandatory external dependencies** — cJSON, libyaml and picoposh are vendored and built in-tree; libzip and zlib come with picoposh. HTTP backends are optional link targets.
 3. **Backend abstraction** — HTTP, archive extraction, and script execution are all behind abstract interfaces. Consumers provide platform-specific implementations.
 4. **Value types** — Models are plain structs. No inheritance hierarchies, no virtual methods, no allocator magic. They copy and move naturally.
 5. **Synchronous API** — All methods are blocking. Async behavior is the caller's responsibility (threads, event loops, etc.). This avoids platform-specific async primitives.
@@ -32,9 +32,26 @@
 
 The static library contains:
 - All client implementations
-- JSON parsing (cJSON + helpers)
+- JSON parsing and serialization (cJSON + helpers)
+- YAML ↔ JSON conversion (libyaml), so `Manifest.yml` is shared with the .NET SDK
 - CRC32 utility
-- BatchScriptRunner
+- Path helpers (`<filesystem>` is unavailable on our targets)
+- `PicoPoshScriptRunner`, `ScriptHelper` and `ScriptExecutionClient`
+- The LANCommander cmdlet pack, registered into picoposh on request
+
+Everything above the boundary speaks JSON. YAML is converted at the edge rather
+than given its own model parsers, so a manifest read from disk goes through the
+same `parse_manifest_json` as an API response.
+
+It links the vendored `picoposh` static library — a git submodule at
+`vendor/picoposh`, pulled in with `add_subdirectory` and linked as
+`picoposh::picoposh`. Upstream gates its `-Werror`, CLI target, CTest and
+install rules behind options that default off when it is vendored, so none of
+that leaks into a consumer's build.
+
+`Expand-Archive` needs picoposh's own zlib and libzip submodules. Without them
+it links a stub and reports cleanly, so a clone that skipped them still
+builds — it just cannot unpack archives. `setup-vendor.ps1` initialises them.
 
 It does **not** contain any HTTP backend. You must link one separately.
 
@@ -115,35 +132,112 @@ public:
 };
 ```
 
-### Adding a New Script Runner
+### The Script Execution Pipeline
 
-Implement `IScriptRunner` for your platform:
+Unlike the HTTP and archive layers, script execution is **not** a per-platform
+extension point: picoposh is portable C89 and runs the same subset everywhere,
+so `PicoPoshScriptRunner` is the only implementation the SDK ships.
+
+The runner is built on picoposh's **session** API. A session is one interpreter
+kept alive across several runs, which is what makes the following possible:
+
+```
+pico_session_new()
+  ├─ pico_session_set_variable(name, value)      host data, never parsed
+  ├─ run  "<lancommander-setup>"                 type conversions only
+  ├─ run  "<the user's script>"                  verbatim, starts at line 1
+  ├─ pico_session_get_variable("Return")         text form
+  └─ run  "<lancommander-return>"                ConvertTo-Json into a variable
+pico_session_free()
+```
+
+Four properties follow, and they are the reason this code is as short as it is:
+
+1. **Nothing is prepended to the user's script**, so error line numbers are its
+   own. The setup statements are a separate run against the same session.
+2. **Values are data, not text.** `pico_session_set_variable` takes a string and
+   never involves the parser, so a value containing quotes, `$(...)`, backticks
+   or newlines needs no escaping, and a variable name may contain spaces. There
+   is no injection boundary to get wrong.
+3. **`$Return` survives `exit`**, because the session outlives the script.
+4. **The JSON read-back goes into a variable**, not to stdout, so it cannot
+   pollute `ScriptResult::output`.
+
+The only generated script text is the type conversions — `ConvertFrom-Json` for
+object variables, `[int]` for integers, `-eq 'true'` for booleans (deliberately
+not `[bool]`, which casts any non-empty string to `$true`), and the expression
+itself for `of_raw`. Those need a plain `$Identifier`, so a non-string variable
+with an unusual name is injected as a string and noted in `ScriptResult::error`.
+
+> This used to be very different. Before picoposh had a session API, variables
+> were injected by generating `$Name = '<value>'` script text and `$Return` was
+> recovered by appending a nonce-delimited block to stdout and parsing it back
+> out. That cost a single-quote-doubling escaper on the security boundary, a
+> line-number correction pass, stdout line-buffering to keep the sentinels out
+> of the caller's log, and it lost the return value entirely whenever a script
+> called `exit`. All of it is gone. `docs/PICOPOSH_GAPS.md` has the history.
+
+Output uses `pico_set_output` rather than `pico_run_capture`, which are mutually
+exclusive: `pico_con_out` checks the capture buffer first, so an installed sink
+would be silently bypassed. Driving the sink ourselves gives streaming and
+capture at once, and avoids `pico_string_free` for output entirely.
+
+picoposh's sink and current directory are process globals and it is documented
+as single-threaded, so the runner refuses re-entrant calls and brackets each run
+with a save/restore of both — the sink via `pico_get_output`, the directory
+because `Set-Location` mutates the real process CWD.
+
+If you need full Windows PowerShell semantics on a modern desktop, implementing
+`IScriptRunner` over `pwsh`/`powershell.exe` is a reasonable thing to do — the
+interface is deliberately still abstract.
+
+### Adding a Cmdlet
+
+Cmdlets live in `src/script/cmdlets/`, grouped by what they do, and are
+registered with picoposh through `pico_register_cmdlet`. Adding one touches
+exactly two files: the group's `.cpp`, and the table in `cmdlets.cpp`.
 
 ```cpp
-#include <lancommander/script/script_runner.h>
+// src/script/cmdlets/cmdlets_mine.cpp
+#include "script/cmdlets/cmdlet_defs.h"
 
-class ShellScriptRunner : public lancommander::IScriptRunner {
-public:
-    lancommander::ScriptResult run_file(
-        const std::string& script_path,
-        const std::string& working_directory,
-        const std::map<std::string, std::string>& variables) override
-    {
-        // 1. Fork/exec /bin/sh with the script
-        // 2. Set environment variables from the map
-        // 3. Capture stdout/stderr
-        // 4. Return ScriptResult with exit code
-    }
+namespace { // definitions must be static const — picoposh borrows, not copies
 
-    lancommander::ScriptResult run_inline(
-        const std::string& script_contents,
-        const std::string& working_directory,
-        const std::map<std::string, std::string>& variables) override
-    {
-        // Write to temp file, run_file(), delete temp file
-    }
+pico_status get_thing_begin(PicoStage* ctx)
+{
+    std::string name;
+    if (!arg_string(ctx, "Name", 0, &name))
+        return fail(ctx, PICO_ERR_ARG, "requires a -Name");
+
+    return emit_string(ctx, name);
+}
+
+const PicoParamDef params[] = { { "Name", 0, 0 } };   // {name, is_switch, position}
+
+const PicoCmdletDef get_thing_def = {
+    "Get-Thing", params, 1, get_thing_begin, NULL, NULL, "Does a thing."
 };
+
+}
+
+const PicoCmdletDef* cmdlet_get_thing() { return &get_thing_def; }
 ```
+
+Three things to know before writing one:
+
+1. **`cmdlet_support.h` wraps picoposh's internal headers in `extern "C"`.**
+   Only `picoposh.h` has its own guards, so including `pico_cmd.h` and friends
+   from C++ directly would give them C++ linkage and fail to link.
+2. **A definition carries no user data.** The callbacks receive only the
+   `PicoStage`, and the definition is static, so anything beyond the cmdlet's
+   own parameters has to come from process-global state. This is what currently
+   blocks the cmdlets needing an HTTP client (see API_REFERENCE.md).
+3. **`begin` runs once before input, `process` once per pipeline item.** A
+   source cmdlet emits from `begin`; one that transforms piped input implements
+   `process`. `Get-SanitizedPath` does both, so it works either way.
+
+Registration is process-global and opt-in — `cmdlets::register_all()` — because
+a host embedding this SDK may want the plain picoposh language and nothing else.
 
 ### Adding a New API Client
 

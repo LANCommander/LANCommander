@@ -28,6 +28,21 @@ $deps = @(
         Files   = @('cJSON.c', 'cJSON.h')
     },
     @{
+        # Flattened into one directory: the SDK compiles the sources directly
+        # rather than reproducing libyaml's include/ + src/ split.
+        Name    = 'libyaml 0.2.5'
+        Url     = 'https://github.com/yaml/libyaml/archive/refs/tags/0.2.5.zip'
+        Dest    = Join-Path $RepoRoot 'LANCommander.SDK.Cpp/vendor/libyaml'
+        ZipRoot = 'libyaml-0.2.5'
+        Files   = @(
+            'include/yaml.h', 'src/yaml_private.h',
+            'src/api.c', 'src/dumper.c', 'src/emitter.c', 'src/loader.c',
+            'src/parser.c', 'src/reader.c', 'src/scanner.c', 'src/writer.c',
+            'License'
+        )
+        Flatten = $true
+    },
+    @{
         Name    = 'miniz 3.1.0'
         Url     = 'https://github.com/richgel999/miniz/archive/refs/tags/3.1.0.zip'
         Dest    = Join-Path $RepoRoot 'LANCommander.Launcher.Legacy/vendor/miniz'
@@ -92,14 +107,24 @@ function Get-VendorDep {
             Copy-Item -Path $tempZip -Destination (Join-Path $Dep.Dest 'allegro-src.zip') -Force
         }
         else {
-            # Copy only specified files
+            # Copy only specified files. With -Flatten, a path like src/api.c
+            # lands as api.c rather than recreating the archive's directories.
             foreach ($file in $Dep.Files) {
                 $src = Join-Path $srcRoot $file
                 if (-not (Test-Path $src)) {
                     Write-Warning "  File not found in archive: $file"
                     continue
                 }
-                Copy-Item -Path $src -Destination (Join-Path $Dep.Dest $file) -Force
+
+                $leaf = if ($Dep.Flatten) { Split-Path $file -Leaf } else { $file }
+                $dst  = Join-Path $Dep.Dest $leaf
+
+                $dstDir = Split-Path $dst -Parent
+                if (-not (Test-Path $dstDir)) {
+                    New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+                }
+
+                Copy-Item -Path $src -Destination $dst -Force
             }
             Write-Host "  Copied $($Dep.Files.Count) files to $($Dep.Dest)" -ForegroundColor Green
         }

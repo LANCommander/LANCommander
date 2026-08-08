@@ -1,5 +1,6 @@
 #include "json_helpers.h"
 
+#include <cstdio>
 #include <cstring>
 
 namespace lancommander {
@@ -9,21 +10,53 @@ namespace json {
 // Primitive accessors
 // ---------------------------------------------------------------------------
 
+// A JSON number or boolean where a string is expected is stringified rather
+// than dropped, mirroring what a typed deserializer does.
+//
+// This matters most for YAML: a plain scalar carries no type, so a manifest
+// written by YamlDotNet has `Version: 1.32` and `Value: 27960` that both read
+// back as numbers even though the model stores them as strings.
+static std::string stringify(cJSON* n)
+{
+    if (!n)
+        return std::string();
+
+    switch (n->type & 0xFF) {
+        case cJSON_String:
+            return n->valuestring ? std::string(n->valuestring) : std::string();
+
+        case cJSON_True:
+            return "true";
+
+        case cJSON_False:
+            return "false";
+
+        case cJSON_Number: {
+            char buffer[40];
+            // Integers must not come back as "1.000000", and 1.32 must not come
+            // back as "1.3200000000000001".
+            if (n->valuedouble == (double)(long)n->valuedouble)
+                std::sprintf(buffer, "%ld", (long)n->valuedouble);
+            else
+                std::sprintf(buffer, "%.15g", n->valuedouble);
+            return std::string(buffer);
+        }
+
+        default:
+            return std::string();
+    }
+}
+
 std::string get_string(cJSON* obj, const char* camel, const char* pascal)
 {
     cJSON* n = cJSON_GetObjectItem(obj, camel);
     if (!n) n = cJSON_GetObjectItem(obj, pascal);
-    if (n && n->type == cJSON_String && n->valuestring)
-        return std::string(n->valuestring);
-    return {};
+    return stringify(n);
 }
 
 std::string get_string(cJSON* obj, const char* key)
 {
-    cJSON* n = cJSON_GetObjectItem(obj, key);
-    if (n && n->type == cJSON_String && n->valuestring)
-        return std::string(n->valuestring);
-    return {};
+    return stringify(cJSON_GetObjectItem(obj, key));
 }
 
 int get_int(cJSON* obj, const char* camel, const char* pascal, int def)

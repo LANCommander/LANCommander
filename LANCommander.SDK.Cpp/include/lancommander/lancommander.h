@@ -47,6 +47,9 @@
 // Path utilities
 #include "util/path.h"
 
+// Manifest (Manifest.yml, shared with the .NET SDK)
+#include "manifest_helper.h"
+
 // Script execution
 #include "script/script_runner.h"
 #include "script/picoposh_script_runner.h"

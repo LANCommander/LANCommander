@@ -11,6 +11,27 @@ add_library(cjson STATIC vendor/cjson/cJSON.c)
 target_include_directories(cjson PUBLIC vendor/cjson)
 target_compile_definitions(cjson PRIVATE CJSON_HIDE_SYMBOLS)
 
+# libyaml — needed to read the Manifest.yml the .NET launcher writes, so both
+# launchers can share an install directory. Its version macros normally come
+# from an autotools-generated config.h; we supply them directly instead.
+add_library(yaml STATIC
+    vendor/libyaml/api.c     vendor/libyaml/dumper.c
+    vendor/libyaml/emitter.c vendor/libyaml/loader.c
+    vendor/libyaml/parser.c  vendor/libyaml/reader.c
+    vendor/libyaml/scanner.c vendor/libyaml/writer.c
+)
+target_include_directories(yaml PUBLIC vendor/libyaml)
+target_compile_definitions(yaml PUBLIC YAML_DECLARE_STATIC)
+target_compile_definitions(yaml PRIVATE
+    YAML_VERSION_STRING="0.2.5"
+    YAML_VERSION_MAJOR=0
+    YAML_VERSION_MINOR=2
+    YAML_VERSION_PATCH=5
+)
+if(MSVC)
+    target_compile_definitions(yaml PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
 # ---------------------------------------------------------------------------
 # picoposh — embedded PowerShell-subset interpreter (git submodule).
 #
@@ -63,6 +84,8 @@ add_library(lancommander STATIC
     src/clients/connection_client.cpp
     src/archive/crc32_util.cpp
     src/json/json_writer.cpp
+    src/yaml/yaml_convert.cpp
+    src/manifest_helper.cpp
     src/util/path_util.cpp
     src/script/script_helper.cpp
     src/script/picoposh_script_runner.cpp
@@ -76,7 +99,7 @@ target_include_directories(lancommander
 
 # PUBLIC on both: lancommander is a static library, so consumers must see these
 # on their own link line to resolve cJSON_* and the pico_* entry points.
-target_link_libraries(lancommander PUBLIC cjson picoposh::picoposh)
+target_link_libraries(lancommander PUBLIC cjson yaml picoposh::picoposh)
 
 # Platform socket libraries for BeaconClient
 if(WIN32)
@@ -128,6 +151,7 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_script_runner.cpp
         tests/test_script_helper.cpp
         tests/test_json.cpp
+        tests/test_yaml.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

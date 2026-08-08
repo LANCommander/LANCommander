@@ -21,6 +21,8 @@ int main()
 {
     test_ps_quote();
     test_script_runner();
+    test_script_helper();
+    test_json();
 
     std::printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

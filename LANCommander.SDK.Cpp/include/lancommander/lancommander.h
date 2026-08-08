@@ -50,6 +50,7 @@
 // Script execution
 #include "script/script_runner.h"
 #include "script/picoposh_script_runner.h"
+#include "script/script_helper.h"
 
 // Clients
 #include "clients/authentication_client.h"
@@ -67,6 +68,7 @@
 #include "clients/redistributable_client.h"
 #include "clients/save_client.h"
 #include "clients/script_client.h"
+#include "clients/script_execution_client.h"
 #include "clients/tool_client.h"
 
 #endif // LANCOMMANDER_H

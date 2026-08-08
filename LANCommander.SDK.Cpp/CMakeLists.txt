@@ -64,7 +64,9 @@ add_library(lancommander STATIC
     src/archive/crc32_util.cpp
     src/json/json_writer.cpp
     src/util/path_util.cpp
+    src/script/script_helper.cpp
     src/script/picoposh_script_runner.cpp
+    src/clients/script_execution_client.cpp
 )
 
 target_include_directories(lancommander
@@ -124,6 +126,8 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_main.cpp
         tests/test_ps_quote.cpp
         tests/test_script_runner.cpp
+        tests/test_script_helper.cpp
+        tests/test_json.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

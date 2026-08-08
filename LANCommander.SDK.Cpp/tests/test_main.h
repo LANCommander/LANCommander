@@ -34,5 +34,7 @@ void report_failure_eq(const char* file, int line, const char* expression,
 // Each test translation unit exposes one of these.
 void test_ps_quote();
 void test_script_runner();
+void test_script_helper();
+void test_json();
 
 #endif // LANCOMMANDER_TESTS_TEST_MAIN_H

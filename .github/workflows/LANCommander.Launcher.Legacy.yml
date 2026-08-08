@@ -18,6 +18,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  # The Win9x job cross-builds and cannot execute what it produces, so the SDK's
+  # own tests run natively here. This is also the only compile coverage for
+  # picoposh's POSIX backends (pico_os_dir_posix.c, pico_os_http_sock.c).
+  test-sdk:
+    name: SDK tests (native)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch picoposh submodule
+        run: |
+          git submodule update --init --depth 1 -- LANCommander.SDK.Cpp/vendor/picoposh
+          # zlib + libzip back Expand-Archive. Never --recursive: picoposh also
+          # pins Watt-32, a large DOS-only TCP/IP stack we never compile.
+          git -C LANCommander.SDK.Cpp/vendor/picoposh submodule update --init --depth 1 \
+              -- third_party/zlib third_party/libzip
+
+      # No setup-vendor.ps1 here: cJSON is committed, and the SDK does not need
+      # miniz or Allegro (both are launcher dependencies).
+      - name: Configure
+        run: cmake -S LANCommander.SDK.Cpp -B build -DLANCOMMANDER_BUILD_TESTS=ON -DLANCOMMANDER_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
   build-win9x:
     name: Build (Win9x / MinGW-w64 i686)
     runs-on: windows-latest

@@ -62,8 +62,9 @@ add_library(lancommander STATIC
     src/clients/issue_client.cpp
     src/clients/connection_client.cpp
     src/archive/crc32_util.cpp
-    src/script/batch_script_runner.cpp
     src/json/json_writer.cpp
+    src/util/path_util.cpp
+    src/script/picoposh_script_runner.cpp
 )
 
 target_include_directories(lancommander
@@ -109,3 +110,29 @@ if(CURL_FOUND)
     target_link_libraries(lancommander_curl PUBLIC lancommander CURL::libcurl)
 endif()
 
+# ---------------------------------------------------------------------------
+# Tests and examples — off by default so add_subdirectory() consumers (the
+# Legacy launcher) stay lean and never inherit enable_testing().
+# ---------------------------------------------------------------------------
+option(LANCOMMANDER_BUILD_TESTS "Build the LANCommander C++ SDK tests" OFF)
+option(LANCOMMANDER_BUILD_EXAMPLES "Build the LANCommander C++ SDK examples" OFF)
+
+if(LANCOMMANDER_BUILD_TESTS)
+    enable_testing()
+
+    add_executable(lancommander_tests
+        tests/test_main.cpp
+        tests/test_ps_quote.cpp
+        tests/test_script_runner.cpp
+    )
+    target_link_libraries(lancommander_tests PRIVATE lancommander)
+    # src/ for the internal json/ headers, vendor/cjson for cJSON.h.
+    target_include_directories(lancommander_tests PRIVATE src/ vendor/cjson)
+
+    add_test(NAME lancommander_tests COMMAND lancommander_tests)
+endif()
+
+if(LANCOMMANDER_BUILD_EXAMPLES)
+    add_executable(script_runner_demo examples/script_runner_demo.cpp)
+    target_link_libraries(script_runner_demo PRIVATE lancommander)
+endif()

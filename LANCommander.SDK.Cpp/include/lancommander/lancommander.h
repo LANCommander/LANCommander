@@ -44,9 +44,12 @@
 #include "archive/archive_extractor.h"
 #include "archive/crc32_util.h"
 
+// Path utilities
+#include "util/path.h"
+
 // Script execution
 #include "script/script_runner.h"
-#include "script/batch_script_runner.h"
+#include "script/picoposh_script_runner.h"
 
 // Clients
 #include "clients/authentication_client.h"

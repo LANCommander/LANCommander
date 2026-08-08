@@ -40,5 +40,8 @@ void test_yaml();
 void test_cmdlets();
 void test_cmdlets_api();
 void test_archive();
+void test_serialize();
+void test_options();
+void test_gamespy();
 
 #endif // LANCOMMANDER_TESTS_TEST_MAIN_H

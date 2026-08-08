@@ -16,12 +16,17 @@ typedef const PicoCmdletDef* (*DefAccessor)();
 // the definition and everything it points at must outlive every script run.
 const DefAccessor kAccessors[] = {
     cmdlet_convert_aspect_ratio,
+    cmdlet_convert_from_serialized_base64,
+    cmdlet_convert_to_serialized_base64,
     cmdlet_convert_to_string_bytes,
     cmdlet_edit_patch_binary,
+    cmdlet_edit_patch_gamespy,
     cmdlet_expand_latest_archive,
     cmdlet_get_game_manifest,
+    cmdlet_get_game_options,
     cmdlet_get_horizontal_fov,
     cmdlet_get_primary_display,
+    cmdlet_get_redistributable_options,
     cmdlet_get_runtime,
     cmdlet_get_sanitized_path,
     cmdlet_get_user_custom_field,

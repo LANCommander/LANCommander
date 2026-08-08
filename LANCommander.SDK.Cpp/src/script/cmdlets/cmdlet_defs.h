@@ -30,15 +30,26 @@ const PicoCmdletDef* cmdlet_get_vertical_fov();
 const PicoCmdletDef* cmdlet_convert_to_string_bytes();
 const PicoCmdletDef* cmdlet_edit_patch_binary();
 
+// cmdlets_gamespy.cpp
+const PicoCmdletDef* cmdlet_edit_patch_gamespy();
+
 // cmdlets_text.cpp
 const PicoCmdletDef* cmdlet_write_replace_content_in_file();
 const PicoCmdletDef* cmdlet_update_ini_value();
+
+// cmdlets_serialize.cpp
+const PicoCmdletDef* cmdlet_convert_to_serialized_base64();
+const PicoCmdletDef* cmdlet_convert_from_serialized_base64();
 
 // cmdlets_api.cpp — the only ones needing cmdlets::context()
 const PicoCmdletDef* cmdlet_get_user_custom_field();
 const PicoCmdletDef* cmdlet_update_user_custom_field();
 const PicoCmdletDef* cmdlet_expand_latest_archive();
 const PicoCmdletDef* cmdlet_out_player_avatar();
+
+// cmdlets_options.cpp
+const PicoCmdletDef* cmdlet_get_game_options();
+const PicoCmdletDef* cmdlet_get_redistributable_options();
 
 // cmdlets_manifest.cpp
 const PicoCmdletDef* cmdlet_get_game_manifest();

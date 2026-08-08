@@ -27,6 +27,9 @@ int main()
     test_cmdlets();
     test_cmdlets_api();
     test_archive();
+    test_serialize();
+    test_options();
+    test_gamespy();
 
     std::printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

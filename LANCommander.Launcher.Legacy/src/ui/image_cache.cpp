@@ -1,9 +1,3 @@
-// Allegro 4 must come first.
-#include <allegro.h>
-#ifdef ALLEGRO_WINDOWS
-#include <winalleg.h>
-#endif
-
 #include "ui/image_cache.h"
 #include "ui/image_decoder.h"
 
@@ -35,8 +29,7 @@ namespace launcher
             for (std::map<std::string, Entry>::iterator it = m_cache.begin();
                  it != m_cache.end(); ++it)
             {
-                if (it->second.bmp)
-                    destroy_bitmap(it->second.bmp);
+                gfx::destroy_surface(it->second.surf);
             }
             m_cache.clear();
         }
@@ -59,22 +52,22 @@ namespace launcher
 
         void ImageCache::evict_oldest()
         {
-            // Find the entry with the lowest last_access that has a bitmap
-            // (NULL entries are tiny — prefer evicting real bitmaps first).
+            // Find the entry with the lowest last_access that has a surface
+            // (NULL entries are tiny — prefer evicting real surfaces first).
             std::map<std::string, Entry>::iterator victim = m_cache.end();
             unsigned long long oldest = (unsigned long long)-1;
 
             for (std::map<std::string, Entry>::iterator it = m_cache.begin();
                  it != m_cache.end(); ++it)
             {
-                if (it->second.bmp && it->second.last_access < oldest)
+                if (it->second.surf && it->second.last_access < oldest)
                 {
                     oldest = it->second.last_access;
                     victim = it;
                 }
             }
 
-            // If no bitmap entries found, evict any NULL entry.
+            // If no surface entries found, evict any NULL entry.
             if (victim == m_cache.end())
             {
                 for (std::map<std::string, Entry>::iterator it = m_cache.begin();
@@ -90,13 +83,12 @@ namespace launcher
 
             if (victim != m_cache.end())
             {
-                if (victim->second.bmp)
-                    destroy_bitmap(victim->second.bmp);
+                gfx::destroy_surface(victim->second.surf);
                 m_cache.erase(victim);
             }
         }
 
-        BITMAP *ImageCache::get(const std::string &media_id, int max_w, int max_h)
+        gfx::Surface *ImageCache::get(const std::string &media_id, int max_w, int max_h)
         {
             if (media_id.empty())
                 return NULL;
@@ -113,17 +105,16 @@ namespace launcher
                 it->second.last_access = m_access_counter;
 
                 if (it->second.max_w == max_w && it->second.max_h == max_h)
-                    return it->second.bmp;
+                    return it->second.surf;
 
-                // Size changed — return the stale bitmap while we wait for
+                // Size changed — return the stale surface while we wait for
                 // a decode slot.  Only re-decode when budget allows.
                 if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
-                    return it->second.bmp;
+                    return it->second.surf;
 
-                // Budget available — discard old bitmap and fall through
+                // Budget available — discard old surface and fall through
                 // to re-decode at the new size.
-                if (it->second.bmp)
-                    destroy_bitmap(it->second.bmp);
+                gfx::destroy_surface(it->second.surf);
                 m_cache.erase(it);
             }
 
@@ -141,7 +132,7 @@ namespace launcher
                 {
                     // Cache a NULL so we don't retry every frame.
                     Entry e;
-                    e.bmp = NULL;
+                    e.surf = NULL;
                     e.max_w = max_w;
                     e.max_h = max_h;
                     e.last_access = m_access_counter;
@@ -155,7 +146,7 @@ namespace launcher
             if (!decode_image_file(path.c_str(), max_w, max_h, &img))
             {
                 Entry e;
-                e.bmp = NULL;
+                e.surf = NULL;
                 e.max_w = max_w;
                 e.max_h = max_h;
                 e.last_access = m_access_counter;
@@ -169,34 +160,18 @@ namespace launcher
             while ((int)m_cache.size() >= m_max_entries)
                 evict_oldest();
 
-            // Convert raw RGBA pixels to an Allegro BITMAP.
-            // Use create_bitmap_ex at 32-bit so the alpha channel is preserved
-            // even if the display is 16-bit.
-            BITMAP *bmp = create_bitmap_ex(32, img.width, img.height);
-            if (bmp)
-            {
-                for (int y = 0; y < img.height; y++)
-                {
-                    const unsigned char *row = img.pixels + y * img.width * 4;
-                    for (int x = 0; x < img.width; x++)
-                    {
-                        int r = row[x * 4 + 0];
-                        int g = row[x * 4 + 1];
-                        int b = row[x * 4 + 2];
-                        int a = row[x * 4 + 3];
-                        putpixel(bmp, x, y, makeacol32(r, g, b, a));
-                    }
-                }
-            }
+            // Surfaces are always 32-bit, so alpha survives even on a
+            // 16-bit display.
+            gfx::Surface *surf = gfx::surface_from_rgba(img.pixels, img.width, img.height);
             free_decoded_image(&img);
 
             Entry e;
-            e.bmp = bmp;
+            e.surf = surf;
             e.max_w = max_w;
             e.max_h = max_h;
             e.last_access = m_access_counter;
             m_cache[media_id] = e;
-            return bmp;
+            return surf;
         }
 
     } // namespace ui

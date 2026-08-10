@@ -1,4 +1,18 @@
+[submodule "GameOverlay.Capture"]
+	path = External/GameOverlay.Capture
+	url = https://github.com/LANCommander/GameOverlay.Capture.git
+[submodule "External/GameOverlay.Avalonia"]
+	path = External/GameOverlay.Avalonia
+	url = https://github.com/LANCommander/GameOverlay.Avalonia
 [submodule "liblancommander/vendor/picoposh"]
 	path = liblancommander/vendor/picoposh
 	url = https://github.com/LANCommander/picoposh.git
 	shallow = true
+[submodule "LANCommander.Launcher.Legacy/vendor/sdl3"]
+	path = LANCommander.Launcher.Legacy/vendor/sdl3
+	url = https://github.com/LANCommander/SDL.git
+	branch = lancommander/win9x
+[submodule "LANCommander.Launcher.Legacy/vendor/sdl_ttf"]
+	path = LANCommander.Launcher.Legacy/vendor/sdl_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
+	branch = release-3.2.2

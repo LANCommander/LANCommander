@@ -3,8 +3,6 @@
 
 #include "input.h"
 
-struct BITMAP;
-
 namespace launcher
 {
 
@@ -16,10 +14,6 @@ namespace launcher
         // Height of the custom title bar / footer in pixels.
         int chrome_height();
         int footer_height();
-
-        // Remove the native Windows frame from the Allegro window.
-        // Stores the App pointer for resize handling in the WndProc.
-        void chrome_remove_frame(App *app);
 
         // Draw the title bar (semi-transparent overlay) and handle drag / close / minimize.
         // Returns true if the close button was clicked.

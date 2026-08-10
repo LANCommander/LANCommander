@@ -4,7 +4,8 @@
 #include "ui/window_chrome.h"
 #include "app/app.h"
 
-#include <allegro.h>
+#include "gfx/gfx.h"
+
 #include <cstdio>
 
 namespace launcher
@@ -28,7 +29,7 @@ namespace launcher
 
         void screen_downloads_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
 
@@ -41,7 +42,7 @@ namespace launcher
             int header_h = 40;
             int header_y = top;
             panel(buf, 0, header_y, sw, header_h, theme().surface);
-            hline(buf, 0, header_y + header_h - 1, sw - 1, theme().divider);
+            gfx::hline(buf, 0, header_y + header_h - 1, sw, theme().divider);
 
             // Back button
             int back_w = 60;
@@ -113,7 +114,7 @@ namespace launcher
                 if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
             }
 
-            set_clip_rect(buf, 0, content_y, sw - 1, bottom - 1);
+            gfx::push_clip(buf, gfx::rect(0, content_y, sw, bottom - content_y));
 
             if (items.empty())
             {
@@ -138,17 +139,15 @@ namespace launcher
                     const DownloadItem &it = items[i];
 
                     // Row background (alternate subtle shading)
-                    if (i % 2 == 0)
-                        rectfill(buf, 0, iy, sw - 1, iy + item_h - 1, theme().bg);
-                    else
-                        rectfill(buf, 0, iy, sw - 1, iy + item_h - 1, theme().surface);
+                    gfx::fill_rect(buf, gfx::rect(0, iy, sw, item_h),
+                                   (i % 2 == 0) ? theme().bg : theme().surface);
 
                     // Title
                     draw_text(buf, pad, iy + 8, theme().text_bright, it.title.c_str());
 
                     // Status string and color
                     const char *status_str = "Queued";
-                    int status_color = theme().text_dim;
+                    gfx::Color status_color = theme().text_dim;
                     switch (it.status)
                     {
                     case DownloadStatus::Downloading:
@@ -196,28 +195,28 @@ namespace launcher
                         int bar_x = pad;
                         int bar_w = sw - pad * 2;
                         int bar_y = iy + item_h - bar_h - 4;
-                        rectfill(buf, bar_x, bar_y, bar_x + bar_w - 1, bar_y + bar_h - 1,
-                                 theme().panel);
+                        gfx::fill_rect(buf, gfx::rect(bar_x, bar_y, bar_w, bar_h),
+                                       theme().panel);
                         int fill = (int)(it.progress * bar_w);
                         if (fill > 0)
                         {
-                            int bar_color = (it.status == DownloadStatus::Extracting)
-                                                ? theme().warning
-                                                : theme().primary;
-                            rectfill(buf, bar_x, bar_y, bar_x + fill - 1, bar_y + bar_h - 1,
-                                     bar_color);
+                            gfx::Color bar_color = (it.status == DownloadStatus::Extracting)
+                                                       ? theme().warning
+                                                       : theme().primary;
+                            gfx::fill_rect(buf, gfx::rect(bar_x, bar_y, fill, bar_h),
+                                           bar_color);
                         }
                     }
 
                     // Divider between items
                     if (i + 1 < items.size())
-                        hline(buf, pad, iy + item_h - 1, sw - pad, theme().divider);
+                        gfx::hline(buf, pad, iy + item_h - 1, sw - pad * 2 + 1, theme().divider);
 
                     iy += item_h;
                 }
             }
 
-            set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+            gfx::pop_clip(buf);
 
             // Scrollbar
             scrollbar(buf, sw - 14, content_y, content_h,

@@ -1,0 +1,65 @@
+# Symbols known NOT to exist on Windows 95/98/Me.
+#
+# These are checked in addition to the allowlist and always fail, so a bad
+# import cannot be waved through by having been present in the baseline
+# binary. Format: bare symbol name (DLL-independent), '#' comments ignored.
+#
+# A statically-imported symbol that kernel32/user32/gdi32 do not export makes
+# the EXE fail at load time, before main() runs.
+
+# --- Windows XP+ ---
+GetFileSizeEx                 # XP. (FreeType shims this itself under _WIN32_WINNT<=0x0400.)
+SetFilePointerEx              # XP
+GetModuleHandleExA            # XP
+GetModuleHandleExW            # XP
+EncodePointer                 # XP SP2
+DecodePointer                 # XP SP2
+FlsAlloc                      # XP
+FlsFree                       # XP
+FlsGetValue                   # XP
+FlsSetValue                   # XP
+GetNativeSystemInfo           # XP
+IsWow64Process                # XP SP2
+GetLogicalProcessorInformation # XP SP3
+HeapSetInformation            # XP SP2
+GetUserDefaultUILanguage      # 2000
+GlobalMemoryStatusEx          # 2000
+
+# --- Windows Vista+ ---
+GetTickCount64                # Vista. SDL3 src/timer/windows uses this.
+InitializeSRWLock             # Vista. SDL3 thread/windows mutex+rwlock.
+AcquireSRWLockShared          # Vista
+AcquireSRWLockExclusive       # Vista
+ReleaseSRWLockShared          # Vista
+ReleaseSRWLockExclusive       # Vista
+TryAcquireSRWLockShared       # Vista
+TryAcquireSRWLockExclusive    # Vista
+InitializeConditionVariable   # Vista. SDL3 thread/windows condvar.
+SleepConditionVariableCS      # Vista
+SleepConditionVariableSRW     # Vista
+WakeConditionVariable         # Vista
+WakeAllConditionVariable      # Vista
+InitOnceExecuteOnce           # Vista
+InitializeCriticalSectionEx   # Vista
+CreateWaitableTimerExW        # Vista. Present in shipped SDL3.
+SetWaitableTimerEx            # Vista. Present in shipped SDL3.
+CancelIoEx                    # Vista
+GetUserDefaultLocaleName      # Vista. SDL3 src/locale/windows.
+GetThreadId                   # Vista
+InetNtopW                     # Vista
+InetPtonW                     # Vista
+GetFinalPathNameByHandleW     # Vista
+
+# --- Windows 7/8/10+ ---
+GetSystemTimePreciseAsFileTime # Win8
+WaitOnAddress                  # Win8
+WakeByAddressSingle            # Win8
+WakeByAddressAll               # Win8
+SetThreadDescription           # Win10
+BCryptGenRandom                # Vista/7
+PathCchCanonicalizeEx          # Win8
+
+# --- NT-only (never on the 9x kernel) ---
+CreateHardLinkA
+CreateHardLinkW
+OpenThread

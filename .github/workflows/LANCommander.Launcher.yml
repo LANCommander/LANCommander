@@ -45,10 +45,11 @@ env:
 
 jobs:
   build:
-    runs-on: ${{ inputs.build_platform == 'Linux' && inputs.build_arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs.build_platform == 'Windows' && inputs.build_arch == 'x64') && 'windows-latest' || (inputs.build_platform == 'Linux' && inputs.build_arch == 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PUBLISH_FRAMEWORK: ${{ (inputs.build_platform == 'Windows' && inputs.build_arch == 'x64') && 'net10.0-windows10.0.19041.0' || 'net10.0' }}
 
     steps:
     # Checkout code
@@ -65,7 +66,32 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore --locked-mode
 
+    - name: Build native overlay payload (win-x64)
+      if: inputs.build_platform == 'Windows' && inputs.build_arch == 'x64'
+      shell: pwsh
+      run: |
+        $cfg = "${{ inputs.build_configuration }}"
+        $root = "External/GameOverlay.Avalonia"
+        cmake -S $root -B "$root/build" -G "Visual Studio 17 2022" -A x64
+        cmake --build "$root/build" --config $cfg --target GameOverlay.Native
+        cmake -S $root -B "$root/build-x86" -G "Visual Studio 17 2022" -A Win32
+        cmake --build "$root/build-x86" --config $cfg --target GameOverlay.Native
+
+    - name: Setup native toolchain (linux-x64)
+      if: inputs.build_platform == 'Linux' && inputs.build_arch == 'x64'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y cmake g++ libgl1-mesa-dev libx11-dev
+
+    - name: Build native overlay payload (linux-x64)
+      if: inputs.build_platform == 'Linux' && inputs.build_arch == 'x64'
+      shell: bash
+      run: |
+        root="External/GameOverlay.Avalonia"
+        cmake -S "$root" -B "$root/build-linux" -DCMAKE_BUILD_TYPE="${{ inputs.build_configuration }}"
+        cmake --build "$root/build-linux" --target GameOverlay.Native VkLayer_gameoverlay
+
     - name: Publish Launcher
+      shell: bash
       run: |
         # Strip leading 'v' if present
         RAW_VERSION="${{ inputs.version_tag }}"       # e.g. v2.0.0-rc1
@@ -80,6 +106,7 @@ jobs:
 
         dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" \
           -c "${{ inputs.build_configuration }}" \
+          --framework "${{ env.PUBLISH_FRAMEWORK }}" \
           --self-contained \
           --runtime "${{ inputs.build_runtime }}" \
           -p:Version="$SEMVER" \
@@ -96,7 +123,7 @@ jobs:
       if: inputs.build_platform == 'Linux'
       shell: bash
       run: |
-        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/${{ env.PUBLISH_FRAMEWORK }}/${{ inputs.build_runtime }}/publish"
         VLC_DIR="$PUBLISH_DIR/libvlc/${{ inputs.build_runtime }}"
         mkdir -p "$VLC_DIR"
 
@@ -148,7 +175,7 @@ jobs:
     - name: Bundle and Clean
       shell: pwsh
       run: |
-        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/${{ env.PUBLISH_FRAMEWORK }}/${{ inputs.build_runtime }}/publish"
 
         # Remove unnecessary files
         $PathsToRemove = @(
@@ -175,7 +202,7 @@ jobs:
         BUNDLE_ID="app.lancommander.launcher"
         ICON_SRC="LANCommander.Launcher/Assets/icon.icns"
 
-        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/${{ env.PUBLISH_FRAMEWORK }}/${{ inputs.build_runtime }}/publish"
         APP_DIR="${EXECUTABLE}.app"
 
         # Lay out the bundle skeleton.
@@ -226,7 +253,7 @@ jobs:
       run: |
         set -euo pipefail
 
-        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/${{ env.PUBLISH_FRAMEWORK }}/${{ inputs.build_runtime }}/publish"
         APP_NAME="LANCommander.Launcher"
         APPDIR="AppDir"
 
@@ -301,7 +328,7 @@ jobs:
       shell: pwsh
       run: |
         $compress = @{
-          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/*"
+          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/${{ env.PUBLISH_FRAMEWORK }}/${{ inputs.build_runtime }}/publish/*"
           DestinationPath = "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }

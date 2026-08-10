@@ -8,6 +8,8 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
+    <AssemblyVersion>2.1.9</AssemblyVersion>
+    <FileVersion>2.1.9</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

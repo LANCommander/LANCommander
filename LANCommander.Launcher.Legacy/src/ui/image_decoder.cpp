@@ -1,129 +1,145 @@
-// image_decoder.cpp — GDI+ based image decoder.
-// This file must NOT include any Allegro headers because Windows' BITMAP
-// typedef conflicts with Allegro 4's BITMAP struct.
+// image_decoder.cpp — image loading via stb_image.
+//
+// Replaces the GDI+ implementation. GDI+ is Windows-only and does not ship
+// with Windows 95/98, so the old build had to bundle gdiplus.dll as a
+// redistributable; stb is portable C with no dependencies at all, which also
+// keeps the DOS path open.
+//
+// The DecodedImage contract (tightly packed RGBA, caller frees) is unchanged,
+// so image_cache, screen_login and window_chrome are unaffected.
+//
+// One behavioural difference worth knowing: GDI+ could decode a JPEG straight
+// to a target size, whereas stb always decodes at full resolution and we
+// downscale afterwards. That is why the bundled backgrounds are pre-shrunk —
+// see tools/reencode-backgrounds.ps1.
 
 #include "ui/image_decoder.h"
 
-#define NOMINMAX
-#include <windows.h>
-#include <gdiplus.h>
+#include "stb_image.h"
+#include "stb_image_resize2.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 
-#pragma comment(lib, "gdiplus.lib")
-
-static ULONG_PTR s_gdiplus_token = 0;
-static bool s_gdiplus_ready = false;
-
-static void ensure_gdiplus()
+namespace
 {
-    if (!s_gdiplus_ready)
+    // Aspect-preserving fit, unchanged from the GDI+ version.
+    void fit_size(int src_w, int src_h, int max_w, int max_h,
+                  int *dst_w, int *dst_h)
     {
-        Gdiplus::GdiplusStartupInput input;
-        Gdiplus::GdiplusStartup(&s_gdiplus_token, &input, NULL);
-        s_gdiplus_ready = true;
+        int w = src_w;
+        int h = src_h;
+
+        if (w > max_w)
+        {
+            h = h * max_w / w;
+            w = max_w;
+        }
+        if (h > max_h)
+        {
+            w = w * max_h / h;
+            h = max_h;
+        }
+        if (w <= 0) w = 1;
+        if (h <= 0) h = 1;
+
+        *dst_w = w;
+        *dst_h = h;
     }
-}
+
+    bool read_file(const char *path, std::vector<unsigned char> *out)
+    {
+        FILE *f = fopen(path, "rb");
+        if (!f)
+            return false;
+
+        if (fseek(f, 0, SEEK_END) != 0)
+        {
+            fclose(f);
+            return false;
+        }
+
+        long size = ftell(f);
+        if (size <= 0)
+        {
+            fclose(f);
+            return false;
+        }
+        rewind(f);
+
+        out->resize((size_t)size);
+        size_t got = fread(&(*out)[0], 1, (size_t)size, f);
+        fclose(f);
+
+        return got == (size_t)size;
+    }
+} // namespace
 
 void image_decoder_init()
 {
-    // Deferred — GDI+ is started on first decode to reduce startup memory.
+    // Nothing to do — kept so callers don't change.
 }
 
 void image_decoder_shutdown()
 {
-    if (s_gdiplus_ready)
-    {
-        Gdiplus::GdiplusShutdown(s_gdiplus_token);
-        s_gdiplus_token = 0;
-        s_gdiplus_ready = false;
-    }
 }
 
-// Convert narrow path to wide string for GDI+.
-static std::wstring to_wide(const char *s)
+bool decode_image_memory(const void *data, int data_size, int max_w, int max_h,
+                         DecodedImage *out)
 {
-    if (!s || !*s)
-        return std::wstring();
-    int len = MultiByteToWideChar(CP_ACP, 0, s, -1, NULL, 0);
-    if (len <= 0)
-        return std::wstring();
-    std::wstring w(len, L'\0');
-    MultiByteToWideChar(CP_ACP, 0, s, -1, &w[0], len);
-    w.resize(len - 1); // strip null terminator from the string object
-    return w;
-}
-
-// Common helper: scale a GDI+ Bitmap and convert to RGBA pixel buffer.
-static bool scale_and_convert(Gdiplus::Bitmap *src, int max_w, int max_h, DecodedImage *out)
-{
-    int src_w = (int)src->GetWidth();
-    int src_h = (int)src->GetHeight();
-    if (src_w <= 0 || src_h <= 0)
+    if (!data || data_size <= 0 || !out)
         return false;
 
-    // Compute target size preserving aspect ratio.
-    int dst_w = src_w;
-    int dst_h = src_h;
+    int src_w = 0, src_h = 0, channels = 0;
+    unsigned char *pixels = stbi_load_from_memory(
+        (const stbi_uc *)data, data_size, &src_w, &src_h, &channels, 4);
 
-    if (dst_w > max_w)
+    if (!pixels || src_w <= 0 || src_h <= 0)
     {
-        dst_h = dst_h * max_w / dst_w;
-        dst_w = max_w;
-    }
-    if (dst_h > max_h)
-    {
-        dst_w = dst_w * max_h / dst_h;
-        dst_h = max_h;
-    }
-    if (dst_w <= 0)
-        dst_w = 1;
-    if (dst_h <= 0)
-        dst_h = 1;
-
-    // Draw scaled version into a 32-bit ARGB bitmap.
-    Gdiplus::Bitmap scaled(dst_w, dst_h, PixelFormat32bppARGB);
-    {
-        Gdiplus::Graphics g(&scaled);
-        g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
-        g.DrawImage(src, 0, 0, dst_w, dst_h);
-    }
-
-    // Lock bits and copy to our RGBA buffer.
-    Gdiplus::Rect rect(0, 0, dst_w, dst_h);
-    Gdiplus::BitmapData data;
-    if (scaled.LockBits(&rect, Gdiplus::ImageLockModeRead,
-                         PixelFormat32bppARGB, &data) != Gdiplus::Ok)
-        return false;
-
-    int pixel_count = dst_w * dst_h;
-    unsigned char *pixels = (unsigned char *)malloc(pixel_count * 4);
-    if (!pixels)
-    {
-        scaled.UnlockBits(&data);
+        if (pixels)
+            stbi_image_free(pixels);
         return false;
     }
 
-    // GDI+ PixelFormat32bppARGB stores each pixel as BGRA in memory.
-    // Convert to RGBA for our output.
-    for (int y = 0; y < dst_h; y++)
+    int dst_w = 0, dst_h = 0;
+    fit_size(src_w, src_h, max_w, max_h, &dst_w, &dst_h);
+
+    if (dst_w == src_w && dst_h == src_h)
     {
-        const unsigned char *src_row = (const unsigned char *)data.Scan0 + y * data.Stride;
-        unsigned char *dst_row = pixels + y * dst_w * 4;
-        for (int x = 0; x < dst_w; x++)
-        {
-            dst_row[x * 4 + 0] = src_row[x * 4 + 2]; // R
-            dst_row[x * 4 + 1] = src_row[x * 4 + 1]; // G
-            dst_row[x * 4 + 2] = src_row[x * 4 + 0]; // B
-            dst_row[x * 4 + 3] = src_row[x * 4 + 3]; // A
-        }
+        // No resampling needed. stb's allocation is plain malloc, which is
+        // what free_decoded_image releases, so hand it over directly.
+        out->pixels = pixels;
+        out->width = src_w;
+        out->height = src_h;
+        return true;
     }
 
-    scaled.UnlockBits(&data);
+    unsigned char *scaled = (unsigned char *)malloc((size_t)dst_w * dst_h * 4);
+    if (!scaled)
+    {
+        stbi_image_free(pixels);
+        return false;
+    }
 
-    out->pixels = pixels;
+    // Mitchell by default for downscale — visually equivalent to the GDI+
+    // HighQualityBicubic this replaces, and sRGB-correct, which GDI+ was not.
+    unsigned char *ok = stbir_resize_uint8_srgb(
+        pixels, src_w, src_h, 0,
+        scaled, dst_w, dst_h, 0,
+        STBIR_RGBA);
+
+    stbi_image_free(pixels);
+
+    if (!ok)
+    {
+        free(scaled);
+        return false;
+    }
+
+    out->pixels = scaled;
     out->width = dst_w;
     out->height = dst_h;
     return true;
@@ -131,88 +147,34 @@ static bool scale_and_convert(Gdiplus::Bitmap *src, int max_w, int max_h, Decode
 
 bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out)
 {
-    if (!out)
+    if (!path || !out)
         return false;
 
-    ensure_gdiplus();
-    out->pixels = NULL;
-    out->width = 0;
-    out->height = 0;
-
-    std::wstring wpath = to_wide(path);
-    if (wpath.empty())
+    std::vector<unsigned char> buf;
+    if (!read_file(path, &buf) || buf.empty())
         return false;
 
-    Gdiplus::Bitmap *src = new Gdiplus::Bitmap(wpath.c_str());
-    if (!src || src->GetLastStatus() != Gdiplus::Ok)
-    {
-        delete src;
-        return false;
-    }
-
-    bool ok = scale_and_convert(src, max_w, max_h, out);
-    delete src;
-    return ok;
+    return decode_image_memory(&buf[0], (int)buf.size(), max_w, max_h, out);
 }
 
-bool decode_image_memory(const void *data, int data_size, int max_w, int max_h, DecodedImage *out)
+bool decode_image_asset(const char *name, int max_w, int max_h, DecodedImage *out)
 {
-    if (!out || !data || data_size <= 0)
+    if (!name)
         return false;
 
-    ensure_gdiplus();
-    out->pixels = NULL;
-    out->width = 0;
-    out->height = 0;
-
-    // Create an IStream over the memory buffer.
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, data_size);
-    if (!hMem)
-        return false;
-
-    void *pMem = GlobalLock(hMem);
-    memcpy(pMem, data, data_size);
-    GlobalUnlock(hMem);
-
-    IStream *stream = NULL;
-    if (CreateStreamOnHGlobal(hMem, TRUE, &stream) != S_OK)
-    {
-        GlobalFree(hMem);
-        return false;
-    }
-
-    Gdiplus::Bitmap *src = new Gdiplus::Bitmap(stream);
-    bool ok = (src && src->GetLastStatus() == Gdiplus::Ok);
-    if (ok)
-        ok = scale_and_convert(src, max_w, max_h, out);
-
-    delete src;
-    stream->Release(); // also frees hMem (fDeleteOnRelease = TRUE)
-    return ok;
-}
-
-bool decode_image_resource(const char *resource_name, int max_w, int max_h, DecodedImage *out)
-{
-    if (!resource_name || !out)
-        return false;
-
-    HRSRC hRes = FindResourceA(NULL, resource_name, RT_RCDATA);
-    if (!hRes)
-        return false;
-    HGLOBAL hData = LoadResource(NULL, hRes);
-    if (!hData)
-        return false;
-    const void *resData = LockResource(hData);
-    int resSize = (int)SizeofResource(NULL, hRes);
-
-    return decode_image_memory(resData, resSize, max_w, max_h, out);
+    // Assets ship alongside the executable. This replaces the old
+    // FindResourceA/RT_RCDATA lookup, which was Win32-only.
+    std::string path = std::string("assets/") + name;
+    return decode_image_file(path.c_str(), max_w, max_h, out);
 }
 
 void free_decoded_image(DecodedImage *img)
 {
-    if (img && img->pixels)
-    {
+    if (!img)
+        return;
+    if (img->pixels)
         free(img->pixels);
-        img->pixels = NULL;
-    }
+    img->pixels = NULL;
+    img->width = 0;
+    img->height = 0;
 }

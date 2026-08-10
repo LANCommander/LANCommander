@@ -6,7 +6,8 @@
 #include "app/app.h"
 #include "app/logger.h"
 
-#include <allegro.h>
+#include "gfx/gfx.h"
+
 #include <cstdlib>
 #include <ctime>
 
@@ -25,20 +26,20 @@ namespace launcher
         static bool s_connecting = false;
 
         // Background image state.
-        static BITMAP *s_bg_bitmap = NULL;
+        static gfx::Surface *s_bg_bitmap = NULL;
         static bool s_bg_loaded = false;
 
-        static const char *BG_RESOURCE_NAMES[] = {
-            "BG_AOE2",
-            "BG_BFME2",
-            "BG_CSS",
-            "BG_NS2",
-            "BG_SOLDAT2",
-            "BG_UT2004",
+        static const char *BG_ASSET_NAMES[] = {
+            "backgrounds/aoe2.jpg",
+            "backgrounds/bfme2.jpg",
+            "backgrounds/css.jpg",
+            "backgrounds/ns2.jpg",
+            "backgrounds/soldat2.jpg",
+            "backgrounds/ut2004.jpg",
         };
-        static const int BG_COUNT = sizeof(BG_RESOURCE_NAMES) / sizeof(BG_RESOURCE_NAMES[0]);
+        static const int BG_COUNT = sizeof(BG_ASSET_NAMES) / sizeof(BG_ASSET_NAMES[0]);
 
-        static BITMAP *load_login_background(int max_w, int max_h)
+        static gfx::Surface *load_login_background(int max_w, int max_h)
         {
             static bool seeded = false;
             if (!seeded) { srand((unsigned)time(NULL)); seeded = true; }
@@ -46,31 +47,17 @@ namespace launcher
             int idx = rand() % BG_COUNT;
 
             DecodedImage img = {};
-            if (!decode_image_resource(BG_RESOURCE_NAMES[idx], max_w, max_h, &img))
+            if (!decode_image_asset(BG_ASSET_NAMES[idx], max_w, max_h, &img))
                 return NULL;
 
-            BITMAP *bmp = create_bitmap_ex(32, img.width, img.height);
-            if (bmp)
-            {
-                for (int y = 0; y < img.height; y++)
-                {
-                    unsigned char *row = img.pixels + y * img.width * 4;
-                    for (int x = 0; x < img.width; x++)
-                    {
-                        int r = row[x * 4 + 0];
-                        int g = row[x * 4 + 1];
-                        int b = row[x * 4 + 2];
-                        putpixel(bmp, x, y, makecol(r, g, b));
-                    }
-                }
-            }
+            gfx::Surface *s = gfx::surface_from_rgba(img.pixels, img.width, img.height);
             free_decoded_image(&img);
-            return bmp;
+            return s;
         }
 
         void screen_login_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
 
@@ -95,8 +82,8 @@ namespace launcher
             {
                 // Center-crop blit (UniformToFill)
                 int src_x = 0, src_y = 0;
-                int src_w = s_bg_bitmap->w;
-                int src_h = s_bg_bitmap->h;
+                int src_w = gfx::surface_width(s_bg_bitmap);
+                int src_h = gfx::surface_height(s_bg_bitmap);
 
                 if (src_w * sh > src_h * sw)
                 {
@@ -113,13 +100,12 @@ namespace launcher
                     src_h = scaled_h;
                 }
 
-                stretch_blit(s_bg_bitmap, buf, src_x, src_y, src_w, src_h, 0, 0, sw, sh);
+                gfx::blit_scaled(buf, s_bg_bitmap,
+                                 gfx::rect(src_x, src_y, src_w, src_h),
+                                 gfx::rect(0, 0, sw, sh));
 
                 // Darken overlay so the login panel is readable
-                set_trans_blender(0, 0, 0, 140);
-                drawing_mode(DRAW_MODE_TRANS, NULL, 0, 0);
-                rectfill(buf, 0, 0, sw - 1, sh - 1, makecol(0, 0, 0));
-                drawing_mode(DRAW_MODE_SOLID, NULL, 0, 0);
+                gfx::fill_rect_alpha(buf, gfx::rect(0, 0, sw, sh), gfx::rgba(0, 0, 0, 140));
             }
 
             // --- Layout (center below chrome) ---
@@ -245,7 +231,7 @@ namespace launcher
                 draw_text_center(buf, cx, y, theme().error, s_error_message.c_str());
 
             // Tab between fields
-            if (input.key_pressed(KEY_TAB))
+            if (input.key_pressed(Key::Tab))
                 s_focus = (s_focus + 1) % 3;
 
         }

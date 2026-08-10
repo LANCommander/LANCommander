@@ -1,35 +1,26 @@
-// Allegro 4 must come before Windows headers.
-#include <allegro.h>
-#ifdef ALLEGRO_WINDOWS
-#include <winalleg.h>
-#endif
+// window_chrome.cpp — the launcher's custom title bar and footer.
+//
+// Pure drawing and hit-testing against the backbuffer: no windows.h, no
+// backend headers. Everything that needs a real window (going frameless,
+// resize edges, dragging, minimising) lives behind chrome_platform.h.
 
 #include "ui/window_chrome.h"
+#include "ui/chrome_platform.h"
 #include "ui/theme.h"
 #include "ui/widgets.h"
 #include "app/app.h"
+#include "gfx/gfx.h"
 
-#include <windows.h>
 #include <cstdio>
+#include <cstring>
+#include <vector>
 
-// DWM is Vista+ only. Dynamically load to keep Win9x compatibility.
-typedef HRESULT (WINAPI *PFN_DwmSetWindowAttribute)(HWND, DWORD, LPCVOID, DWORD);
-static PFN_DwmSetWindowAttribute s_pfnDwmSetWindowAttribute = NULL;
-static bool s_dwm_checked = false;
-
-static void ensure_dwm()
-{
-    if (s_dwm_checked) return;
-    s_dwm_checked = true;
-    HMODULE hDwm = LoadLibraryA("dwmapi.dll");
-    if (hDwm)
-        s_pfnDwmSetWindowAttribute = (PFN_DwmSetWindowAttribute)
-            GetProcAddress(hDwm, "DwmSetWindowAttribute");
-}
-
-// DWM constants (avoid requiring dwmapi.h)
-#define LC_DWMWA_NCRENDERING_POLICY 2
-#define LC_DWMNCRP_DISABLED         1
+#ifdef _WIN32
+// Last Win32 holdout in this file: the title-bar icon is still pulled out of
+// the EXE's ICON resource with GetIconInfo/GetDIBits. It goes away when the
+// image stack moves to stb and the icon ships as a PNG asset.
+#include <windows.h>
+#endif
 
 namespace launcher
 {
@@ -39,208 +30,25 @@ namespace launcher
         static const int CHROME_H = 32;
         static const int FOOTER_H = 40;
         static const int BTN_W = 36;
-        static const int RESIZE_BORDER = 6;
-        static const int MIN_W = 640;
-        static const int MIN_H = 480;
 
-#ifdef ALLEGRO_WINDOWS
-        typedef LRESULT(CALLBACK *WndProcFn)(HWND, UINT, WPARAM, LPARAM);
-        static WndProcFn s_orig_wndproc = NULL;
-        static App *s_app = NULL;
+        static const ChromeMetrics g_metrics = {
+            CHROME_H,
+            FOOTER_H,
+            6,   // resize_border — grab width of the window edges
+            640, // min_w
+            480  // min_h
+        };
 
-        static LRESULT chrome_hittest(HWND hwnd, LPARAM lp)
-        {
-            POINT pt = { (short)LOWORD(lp), (short)HIWORD(lp) };
-            RECT rc;
-            GetClientRect(hwnd, &rc);
-            ScreenToClient(hwnd, &pt);
-
-            int w = rc.right;
-            int h = rc.bottom;
-
-            bool top    = pt.y < RESIZE_BORDER;
-            bool bottom = pt.y >= h - RESIZE_BORDER;
-            bool left   = pt.x < RESIZE_BORDER;
-            bool right  = pt.x >= w - RESIZE_BORDER;
-
-            if (top && left)     return HTTOPLEFT;
-            if (top && right)    return HTTOPRIGHT;
-            if (bottom && left)  return HTBOTTOMLEFT;
-            if (bottom && right) return HTBOTTOMRIGHT;
-            if (top)             return HTTOP;
-            if (bottom)          return HTBOTTOM;
-            if (left)            return HTLEFT;
-            if (right)           return HTRIGHT;
-
-            return HTCLIENT;
-        }
-
-        static LRESULT CALLBACK chrome_wndproc(HWND hwnd, UINT msg,
-                                               WPARAM wp, LPARAM lp)
-        {
-            switch (msg)
-            {
-            case WM_NCHITTEST:
-                return chrome_hittest(hwnd, lp);
-
-            case WM_NCCALCSIZE:
-                if (wp) return 0;
-                break;
-
-            case WM_SETCURSOR:
-            {
-                // Show resize cursors at window edges, arrow elsewhere.
-                LRESULT ht = chrome_hittest(hwnd, GetMessagePos());
-                LPCSTR cur = IDC_ARROW;
-                switch (ht)
-                {
-                case HTLEFT: case HTRIGHT:           cur = IDC_SIZEWE;   break;
-                case HTTOP: case HTBOTTOM:            cur = IDC_SIZENS;   break;
-                case HTTOPLEFT: case HTBOTTOMRIGHT:   cur = IDC_SIZENWSE; break;
-                case HTTOPRIGHT: case HTBOTTOMLEFT:   cur = IDC_SIZENESW; break;
-                }
-                SetCursor(LoadCursor(NULL, cur));
-                return TRUE;
-            }
-
-            case WM_GETMINMAXINFO:
-            {
-                MINMAXINFO *mmi = (MINMAXINFO *)lp;
-                mmi->ptMinTrackSize.x = MIN_W;
-                mmi->ptMinTrackSize.y = MIN_H;
-                return 0;
-            }
-
-            case WM_SIZE:
-            {
-                if (wp != SIZE_MINIMIZED && s_app)
-                {
-                    int new_w = LOWORD(lp);
-                    int new_h = HIWORD(lp);
-                    if (new_w > 0 && new_h > 0)
-                        s_app->request_resize(new_w, new_h);
-                }
-                break;
-            }
-
-            case WM_ERASEBKGND:
-                // Suppress background erase — we paint the entire client area.
-                return 1;
-
-            case WM_PAINT:
-            {
-                // Prevent Allegro's default WM_PAINT from blitting its
-                // stale 800x600 screen surface. Just validate the
-                // region — our main loop repaints every frame.
-                PAINTSTRUCT ps;
-                BeginPaint(hwnd, &ps);
-                if (s_app && s_app->backbuffer())
-                {
-                    blit_to_hdc(s_app->backbuffer(), ps.hdc,
-                                0, 0, 0, 0,
-                                s_app->screen_width(),
-                                s_app->screen_height());
-                }
-                EndPaint(hwnd, &ps);
-                return 0;
-            }
-            }
-            if (s_orig_wndproc)
-                return s_orig_wndproc(hwnd, msg, wp, lp);
-            return DefWindowProc(hwnd, msg, wp, lp);
-        }
-
-        static void ensure_subclass()
-        {
-            HWND hwnd = win_get_window();
-            if (!hwnd) return;
-            WndProcFn current = (WndProcFn)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-            if (current == chrome_wndproc) return;
-            s_orig_wndproc = current;
-            SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)chrome_wndproc);
-        }
-#endif
+        const ChromeMetrics &chrome_metrics() { return g_metrics; }
 
         int chrome_height() { return CHROME_H; }
         int footer_height() { return FOOTER_H; }
 
-        void chrome_remove_frame(App *app)
-        {
-#ifdef ALLEGRO_WINDOWS
-            s_app = app;
-
-            HWND hwnd = win_get_window();
-            if (!hwnd) return;
-
-            RECT client;
-            GetClientRect(hwnd, &client);
-            int cw = client.right - client.left;
-            int ch = client.bottom - client.top;
-
-            RECT wr;
-            GetWindowRect(hwnd, &wr);
-
-            LONG style = GetWindowLong(hwnd, GWL_STYLE);
-            style &= ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU |
-                        WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-            style |= WS_POPUP;
-            SetWindowLong(hwnd, GWL_STYLE, style);
-
-            LONG exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-            exstyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE |
-                         WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
-            SetWindowLong(hwnd, GWL_EXSTYLE, exstyle);
-
-            // Disable DWM non-client rendering (Vista+ only, no-op on Win9x/XP)
-            ensure_dwm();
-            if (s_pfnDwmSetWindowAttribute)
-            {
-                DWORD policy = LC_DWMNCRP_DISABLED;
-                s_pfnDwmSetWindowAttribute(hwnd, LC_DWMWA_NCRENDERING_POLICY,
-                                           &policy, sizeof(policy));
-            }
-
-            // Install the WndProc subclass BEFORE SetWindowPos so that
-            // the WM_NCCALCSIZE triggered by SWP_FRAMECHANGED is handled
-            // by our proc (returns 0 → no non-client area).
-            ensure_subclass();
-
-            SetWindowPos(hwnd, NULL, wr.left, wr.top, cw, ch,
-                         SWP_NOZORDER | SWP_FRAMECHANGED);
-
-            // Re-assert foreground + focus — the style change to WS_POPUP
-            // can cause the window to lose keyboard focus on some systems.
-            SetForegroundWindow(hwnd);
-            SetFocus(hwnd);
-#endif
-        }
-
-        // ---------------------------------------------------------------
-        // Semi-transparent black overlay for the title bar area.
-        // ---------------------------------------------------------------
-        static void draw_tint(BITMAP *buf, int x, int y, int w, int h,
-                              int r, int g, int b, int alpha)
-        {
-            for (int row = 0; row < h; row++)
-            {
-                for (int col = 0; col < w; col++)
-                {
-                    int px = getpixel(buf, x + col, y + row);
-                    int pr = getr(px);
-                    int pg = getg(px);
-                    int pb = getb(px);
-                    int nr = pr + (r - pr) * alpha / 255;
-                    int ng = pg + (g - pg) * alpha / 255;
-                    int nb = pb + (b - pb) * alpha / 255;
-                    putpixel(buf, x + col, y + row, makecol(nr, ng, nb));
-                }
-            }
-        }
 
         // ---------------------------------------------------------------
         // Title bar icon — loaded once from the EXE resource.
         // ---------------------------------------------------------------
-        static BITMAP *s_icon_bmp = NULL;
+        static gfx::Surface *s_icon_bmp = NULL;
         static bool s_icon_loaded = false;
         static const int ICON_SIZE = 20; // display size in the title bar
 
@@ -249,7 +57,7 @@ namespace launcher
             if (s_icon_loaded) return;
             s_icon_loaded = true;
 
-#ifdef ALLEGRO_WINDOWS
+#ifdef _WIN32
             // Load the icon resource embedded via launcher.rc.
             HICON hIcon = (HICON)LoadImageA(
                 GetModuleHandle(NULL), "IDI_ICON1", IMAGE_ICON,
@@ -282,29 +90,24 @@ namespace launcher
 
             ReleaseDC(NULL, hdc);
 
-            // Create an Allegro bitmap from the BGRA pixels.
-            s_icon_bmp = create_bitmap_ex(32, ICON_SIZE, ICON_SIZE);
-            if (s_icon_bmp)
+            // Swizzle BGRA -> RGBA, pre-multiplying against black so a plain
+            // opaque blit looks right. (Phase 1 replaces this whole GDI icon
+            // path with a stb-decoded PNG and a real alpha blit.)
             {
-                for (int y = 0; y < ICON_SIZE; y++)
+                std::vector<unsigned char> rgba((size_t)ICON_SIZE * ICON_SIZE * 4);
+                for (int i = 0; i < ICON_SIZE * ICON_SIZE; ++i)
                 {
-                    for (int x = 0; x < ICON_SIZE; x++)
-                    {
-                        int idx = (y * ICON_SIZE + x) * 4;
-                        int b = pixels[idx + 0];
-                        int g = pixels[idx + 1];
-                        int r = pixels[idx + 2];
-                        int a = pixels[idx + 3];
+                    const int b = pixels[i * 4 + 0];
+                    const int g = pixels[i * 4 + 1];
+                    const int r = pixels[i * 4 + 2];
+                    const int a = pixels[i * 4 + 3];
 
-                        // Pre-multiply against black background for
-                        // simple blit (no alpha blending needed).
-                        r = r * a / 255;
-                        g = g * a / 255;
-                        b = b * a / 255;
-
-                        putpixel(s_icon_bmp, x, y, makecol32(r, g, b));
-                    }
+                    rgba[i * 4 + 0] = (unsigned char)(r * a / 255);
+                    rgba[i * 4 + 1] = (unsigned char)(g * a / 255);
+                    rgba[i * 4 + 2] = (unsigned char)(b * a / 255);
+                    rgba[i * 4 + 3] = 255;
                 }
+                s_icon_bmp = gfx::surface_from_rgba(&rgba[0], ICON_SIZE, ICON_SIZE);
             }
 
             delete[] pixels;
@@ -328,17 +131,15 @@ namespace launcher
 
         bool window_chrome_draw(App &app, const InputState &input)
         {
-#ifdef ALLEGRO_WINDOWS
-            ensure_subclass();
-#endif
 
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
             bool close_clicked = false;
 
             // --- Semi-transparent black overlay (50% opacity) ---
-            draw_tint(buf, 0, 0, sw, CHROME_H, 0, 0, 0, 128);
+            gfx::fill_rect_alpha(buf, gfx::rect(0, 0, sw, CHROME_H),
+                                 gfx::rgba(0, 0, 0, 128));
 
             // --- Icon + Title ---
             ensure_icon_loaded();
@@ -346,8 +147,7 @@ namespace launcher
             if (s_icon_bmp)
             {
                 int icon_y = (CHROME_H - ICON_SIZE) / 2;
-                blit(s_icon_bmp, buf, 0, 0, title_x, icon_y,
-                     ICON_SIZE, ICON_SIZE);
+                gfx::blit(buf, s_icon_bmp, title_x, icon_y);
                 title_x += ICON_SIZE + 6;
             }
             draw_text(buf, title_x, (CHROME_H - text_height()) / 2,
@@ -360,10 +160,10 @@ namespace launcher
                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
                 if (hovered)
                     panel(buf, close_x, 0, BTN_W, CHROME_H,
-                          makecol(0xC4, 0x2B, 0x1C)); // Windows red close
+                          gfx::rgb(0xC4, 0x2B, 0x1C)); // Windows red close
 
                 int cx = close_x + BTN_W / 2;
-                int color = hovered ? theme().text_bright : theme().text_dim;
+                gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
                 draw_text_center(buf, cx, (CHROME_H - text_height()) / 2, color, "X");
 
                 if (hovered && input.mouse.pressed)
@@ -376,18 +176,16 @@ namespace launcher
                 bool hovered = (input.mouse.x >= min_x && input.mouse.x < min_x + BTN_W &&
                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
                 if (hovered)
-                    draw_tint(buf, min_x, 0, BTN_W, CHROME_H, 255, 255, 255, 25);
+                    gfx::fill_rect_alpha(buf, gfx::rect(min_x, 0, BTN_W, CHROME_H),
+                                         gfx::rgba(255, 255, 255, 25));
 
                 int cx = min_x + BTN_W / 2;
-                int color = hovered ? theme().text_bright : theme().text_dim;
+                gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
                 draw_text_center(buf, cx, (CHROME_H - text_height()) / 2, color, "_");
 
                 if (hovered && input.mouse.pressed)
                 {
-#ifdef ALLEGRO_WINDOWS
-                    HWND hwnd = win_get_window();
-                    if (hwnd) ShowWindow(hwnd, SW_MINIMIZE);
-#endif
+                    chrome_platform_minimize();
                 }
             }
 
@@ -409,7 +207,7 @@ namespace launcher
                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
 
                 // Background — always primary blue, darker when active.
-                int bg = (s_user_dropdown_open || hovered) ? theme().primary_active : theme().primary;
+                gfx::Color bg = (s_user_dropdown_open || hovered) ? theme().primary_active : theme().primary;
                 panel(buf, user_btn_x, 0, user_btn_w, CHROME_H, bg);
 
                 int text_y = (CHROME_H - th) / 2;
@@ -446,8 +244,8 @@ namespace launcher
 
                 // Menu background.
                 panel(buf, menu_x, menu_y, menu_w, menu_h, theme().surface);
-                rect(buf, menu_x, menu_y, menu_x + menu_w - 1, menu_y + menu_h - 1,
-                     theme().divider);
+                gfx::draw_rect(buf, gfx::rect(menu_x, menu_y, menu_w, menu_h),
+                               theme().divider);
 
                 // Check if the offline label should say "Go Online" instead.
                 if (app.settings().authentication.offline_mode)
@@ -474,10 +272,10 @@ namespace launcher
 
                     // Separator above "Logout".
                     if (i == item_count - 1)
-                        hline(buf, menu_x + 1, iy, menu_x + menu_w - 2, theme().divider);
+                        gfx::hline(buf, menu_x + 1, iy, menu_w - 2, theme().divider);
 
                     int text_y = iy + (menu_item_h - text_height()) / 2;
-                    int color = item_hovered ? theme().text_bright : theme().text;
+                    gfx::Color color = item_hovered ? theme().text_bright : theme().text;
 
                     // Logout in red.
                     if (ids[i] == UserMenuItem::Logout && !item_hovered)
@@ -529,21 +327,17 @@ namespace launcher
             }
 
             // --- Drag handling ---
-            int drag_right = (user_btn_w > 0) ? user_btn_x : min_x;
-            bool in_drag_area = (input.mouse.x >= 0 && input.mouse.x < drag_right &&
-                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
+            // Publish the draggable span so the platform hit test agrees with
+            // what we just drew. Dragging is suppressed while the dropdown is
+            // open so the click that should dismiss it isn't swallowed.
+            const int drag_right = (user_btn_w > 0) ? user_btn_x : min_x;
+            chrome_platform_frame(drag_right, !s_user_dropdown_open);
+
+            const bool in_drag_area = (input.mouse.x >= 0 && input.mouse.x < drag_right &&
+                                       input.mouse.y >= 0 && input.mouse.y < CHROME_H);
 
             if (in_drag_area && input.mouse.pressed && !s_user_dropdown_open)
-            {
-#ifdef ALLEGRO_WINDOWS
-                HWND hwnd = win_get_window();
-                if (hwnd)
-                {
-                    ReleaseCapture();
-                    SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-                }
-#endif
-            }
+                chrome_platform_begin_drag();
 
             return close_clicked;
         }
@@ -566,7 +360,7 @@ namespace launcher
 
         void window_footer_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
 
@@ -575,7 +369,7 @@ namespace launcher
 
             // ==== Footer bar ====
             panel(buf, 0, fy, sw, FOOTER_H, theme().footer);
-            hline(buf, 0, fy, sw - 1, theme().divider);
+            gfx::hline(buf, 0, fy, sw, theme().divider);
 
             int pad = 12;
             int btn_h = 24;
@@ -593,7 +387,7 @@ namespace launcher
                                 input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
                 if (hovered)
-                    rectfill(buf, bx, btn_y, bx + bw - 1, btn_y + btn_h - 1, theme().panel_hover);
+                    gfx::fill_rect(buf, gfx::rect(bx, btn_y, bw, btn_h), theme().panel_hover);
 
                 draw_text_center(buf, bx + bw / 2, btn_y + (btn_h - th) / 2,
                                  theme().text_dim, label);
@@ -624,9 +418,9 @@ namespace launcher
                                          input.mouse.y >= fy && input.mouse.y < fy + FOOTER_H);
 
                     // Title (left)
-                    set_clip_rect(buf, info_x, fy, info_x + info_w - 80, fy + FOOTER_H);
+                    gfx::push_clip(buf, gfx::rect(info_x, fy, info_w - 80, FOOTER_H));
                     draw_text(buf, info_x, btn_y + 1, theme().text, cur->title.c_str());
-                    set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+                    gfx::pop_clip(buf);
 
                     // Percentage (right)
                     char pct[16];
@@ -638,12 +432,10 @@ namespace launcher
                     int bar_x = info_x;
                     int bar_w = info_w;
                     int bar_y2 = btn_y + btn_h + 1;
-                    rectfill(buf, bar_x, bar_y2, bar_x + bar_w - 1, bar_y2 + 2,
-                             theme().panel);
+                    gfx::fill_rect(buf, gfx::rect(bar_x, bar_y2, bar_w, 3), theme().panel);
                     int fill = (int)(cur->progress * bar_w);
                     if (fill > 0)
-                        rectfill(buf, bar_x, bar_y2, bar_x + fill - 1, bar_y2 + 2,
-                                 theme().primary);
+                        gfx::fill_rect(buf, gfx::rect(bar_x, bar_y2, fill, 3), theme().primary);
 
                     if (area_hovered && input.mouse.clicked && !on_downloads_screen)
                         app.switch_screen(Screen::Downloads);
@@ -665,11 +457,9 @@ namespace launcher
                                        input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
 
                     if (on_downloads_screen)
-                        rectfill(buf, dl_x, btn_y, dl_x + dl_w - 1, btn_y + btn_h - 1,
-                                 theme().primary);
+                        gfx::fill_rect(buf, gfx::rect(dl_x, btn_y, dl_w, btn_h), theme().primary);
                     else if (dl_hovered)
-                        rectfill(buf, dl_x, btn_y, dl_x + dl_w - 1, btn_y + btn_h - 1,
-                                 theme().panel_hover);
+                        gfx::fill_rect(buf, gfx::rect(dl_x, btn_y, dl_w, btn_h), theme().panel_hover);
 
                     draw_text_center(buf, dl_x + dl_w / 2, btn_y + (btn_h - th) / 2,
                                      (on_downloads_screen || dl_hovered)

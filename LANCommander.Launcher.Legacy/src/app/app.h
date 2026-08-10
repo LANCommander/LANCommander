@@ -6,6 +6,7 @@
 
 #include <lancommander/lancommander.h>
 
+#include "gfx/gfx.h"
 #include "settings.h"
 #include "ui/image_cache.h"
 #include "app/download_queue.h"
@@ -17,9 +18,6 @@ enum class LibraryTab
     Depot,
     Library
 };
-
-// Forward declarations for Allegro types — avoids pulling <allegro.h> into headers.
-struct BITMAP;
 
 namespace launcher
 {
@@ -41,13 +39,13 @@ namespace launcher
         App();
         ~App();
 
-        // Initialize Allegro, create the window, load settings.
+        // Initialize the display, create the window, load settings.
         bool init(int width, int height);
 
         // Run the main loop. Returns the exit code.
         int run();
 
-        // Shut down Allegro.
+        // Tear down the display and save settings.
         void shutdown();
 
         // --- State accessors (used by screens) ---
@@ -64,7 +62,7 @@ namespace launcher
 
         Settings &settings();
 
-        BITMAP *backbuffer();
+        gfx::Surface *backbuffer();
         int screen_width() const;
         int screen_height() const;
 
@@ -107,10 +105,7 @@ namespace launcher
         void apply_pending_resize();
 
     private:
-        // Allegro
-        int m_width;
-        int m_height;
-        BITMAP *m_backbuffer;
+        // The display, backbuffer and their dimensions are owned by gfx.
 
         // SDK (IHttpClient* — concrete type created in app.cpp)
         lancommander::IHttpClient *m_http;

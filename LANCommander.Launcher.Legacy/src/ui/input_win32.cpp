@@ -5,6 +5,7 @@
 #endif
 
 #include "ui/input.h"
+#include "gfx/gfx.h"
 
 #include <windows.h>
 
@@ -18,49 +19,42 @@ namespace launcher
         // which breaks after the window style is changed to WS_POPUP.
         // Uses GetAsyncKeyState for real-time key reads (same approach as
         // the mouse button handling below).
+        //
+        // Transitional: SDL_PollEvent replaces this file wholesale, at which
+        // point the two hand-written translation tables and the auto-repeat
+        // timer below all disappear. The struct it fills is already the
+        // target shape so the screens only get converted once.
         // -----------------------------------------------------------------
 
-        static int vk_to_allegro(int vk)
+        static Key vk_to_key(int vk)
         {
-            if (vk >= 'A' && vk <= 'Z') return KEY_A + (vk - 'A');
-            if (vk >= '0' && vk <= '9') return KEY_0 + (vk - '0');
-            if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return KEY_0_PAD + (vk - VK_NUMPAD0);
-            if (vk >= VK_F1 && vk <= VK_F12) return KEY_F1 + (vk - VK_F1);
+            if (vk >= 'A' && vk <= 'Z')
+                return (Key)((int)Key::A + (vk - 'A'));
+            if (vk >= '0' && vk <= '9')
+                return (Key)((int)Key::Num0 + (vk - '0'));
+            if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9)
+                return (Key)((int)Key::Num0 + (vk - VK_NUMPAD0));
+            if (vk >= VK_F1 && vk <= VK_F12)
+                return (Key)((int)Key::F1 + (vk - VK_F1));
 
             switch (vk)
             {
-            case VK_ESCAPE:    return KEY_ESC;
-            case VK_BACK:      return KEY_BACKSPACE;
-            case VK_TAB:       return KEY_TAB;
-            case VK_RETURN:    return KEY_ENTER;
-            case VK_SPACE:     return KEY_SPACE;
-            case VK_INSERT:    return KEY_INSERT;
-            case VK_DELETE:    return KEY_DEL;
-            case VK_HOME:      return KEY_HOME;
-            case VK_END:       return KEY_END;
-            case VK_PRIOR:     return KEY_PGUP;
-            case VK_NEXT:      return KEY_PGDN;
-            case VK_LEFT:      return KEY_LEFT;
-            case VK_RIGHT:     return KEY_RIGHT;
-            case VK_UP:        return KEY_UP;
-            case VK_DOWN:      return KEY_DOWN;
-            case VK_DIVIDE:    return KEY_SLASH_PAD;
-            case VK_MULTIPLY:  return KEY_ASTERISK;
-            case VK_SUBTRACT:  return KEY_MINUS_PAD;
-            case VK_ADD:       return KEY_PLUS_PAD;
-            case VK_DECIMAL:   return KEY_DEL_PAD;
-            case VK_OEM_3:     return KEY_TILDE;
-            case VK_OEM_MINUS: return KEY_MINUS;
-            case VK_OEM_PLUS:  return KEY_EQUALS;
-            case VK_OEM_4:     return KEY_OPENBRACE;
-            case VK_OEM_6:     return KEY_CLOSEBRACE;
-            case VK_OEM_1:     return KEY_COLON;
-            case VK_OEM_7:     return KEY_QUOTE;
-            case VK_OEM_5:     return KEY_BACKSLASH;
-            case VK_OEM_COMMA: return KEY_COMMA;
-            case VK_OEM_PERIOD:return KEY_STOP;
-            case VK_OEM_2:     return KEY_SLASH;
-            default:           return 0;
+            case VK_ESCAPE: return Key::Escape;
+            case VK_BACK:   return Key::Backspace;
+            case VK_TAB:    return Key::Tab;
+            case VK_RETURN: return Key::Enter;
+            case VK_SPACE:  return Key::Space;
+            case VK_INSERT: return Key::Insert;
+            case VK_DELETE: return Key::Delete;
+            case VK_HOME:   return Key::Home;
+            case VK_END:    return Key::End;
+            case VK_PRIOR:  return Key::PageUp;
+            case VK_NEXT:   return Key::PageDown;
+            case VK_LEFT:   return Key::Left;
+            case VK_RIGHT:  return Key::Right;
+            case VK_UP:     return Key::Up;
+            case VK_DOWN:   return Key::Down;
+            default:        return Key::None;
             }
         }
 
@@ -151,6 +145,7 @@ namespace launcher
         {
             // --- Keyboard: poll directly from Windows ---
             keys.clear();
+            text.clear();
 
             // Build real-time key state from GetAsyncKeyState.
             BYTE kb[256];
@@ -161,6 +156,11 @@ namespace launcher
             }
             // Toggle state for Caps Lock (needed by vk_to_ascii_char).
             kb[VK_CAPITAL] |= (BYTE)(GetKeyState(VK_CAPITAL) & 1);
+
+            unsigned mods = ModNone;
+            if (kb[VK_SHIFT]   & 0x80) mods |= ModShift;
+            if (kb[VK_CONTROL] & 0x80) mods |= ModCtrl;
+            if (kb[VK_MENU]    & 0x80) mods |= ModAlt;
 
             DWORD now = GetTickCount();
 
@@ -173,6 +173,7 @@ namespace launcher
                 bool was_down = (s_prev_kb[vk]   & 0x80) != 0;
 
                 bool emit = false;
+                bool repeat = false;
 
                 if (down && !was_down)
                 {
@@ -189,20 +190,26 @@ namespace launcher
                         now - s_repeat_last  >= REPEAT_RATE_MS)
                     {
                         emit = true;
+                        repeat = true;
                         s_repeat_last = now;
                     }
                 }
 
                 if (emit)
                 {
-                    int sc    = vk_to_allegro(vk);
+                    Key k = vk_to_key(vk);
                     int ascii = vk_to_ascii_char(vk, kb);
 
-                    if (sc != 0 || ascii != 0)
+                    // Control chords produce no text.
+                    if (ascii >= 32 && ascii < 127 && !(mods & ModCtrl) && !(mods & ModAlt))
+                        text += (char)ascii;
+
+                    if (k != Key::None)
                     {
                         KeyEvent ev;
-                        ev.scancode = sc;
-                        ev.ascii    = ascii;
+                        ev.key = k;
+                        ev.repeat = repeat;
+                        ev.mods = mods;
                         keys.push_back(ev);
                     }
                 }
@@ -214,14 +221,9 @@ namespace launcher
 
             memcpy(s_prev_kb, kb, 256);
 
-            // Keep Allegro's key_shifts in sync (used for Alt+F4 check).
-            {
-                int shifts = 0;
-                if (kb[VK_SHIFT]   & 0x80) shifts |= KB_SHIFT_FLAG;
-                if (kb[VK_CONTROL] & 0x80) shifts |= KB_CTRL_FLAG;
-                if (kb[VK_MENU]    & 0x80) shifts |= KB_ALT_FLAG;
-                key_shifts = shifts;
-            }
+            // --- Quit ---
+            if (gfx::display_close_requested())
+                quit_requested = true;
 
             // --- Mouse ---
             poll_mouse();
@@ -268,11 +270,22 @@ namespace launcher
             s_prev_mouse_b = mouse.buttons;
         }
 
-        bool InputState::key_pressed(int scancode) const
+        bool InputState::key_pressed(Key k) const
         {
             for (size_t i = 0; i < keys.size(); ++i)
             {
-                if (keys[i].scancode == scancode)
+                if (keys[i].key == k)
+                    return true;
+            }
+
+            return false;
+        }
+
+        bool InputState::mod_down(Mod m) const
+        {
+            for (size_t i = 0; i < keys.size(); ++i)
+            {
+                if (keys[i].mods & m)
                     return true;
             }
 

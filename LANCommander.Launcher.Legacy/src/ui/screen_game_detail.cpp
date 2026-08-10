@@ -7,13 +7,15 @@
 #include "app/game_database.h"
 #include "app/logger.h"
 
-#include <allegro.h>
+#include "gfx/gfx.h"
+
+#include <windows.h>
 #include <cstdio>
 #include <cstring>
 
-#ifdef ALLEGRO_WINDOWS
-#include <winalleg.h>
-#include <windows.h>
+#ifdef _WIN32
+// Game launching (CreateProcess / ShellExecute) is application domain, not
+// rendering — it stays Win32 and is not part of the gfx seam.
 #include <shellapi.h>
 #endif
 
@@ -29,7 +31,7 @@ namespace launcher
         static lancommander::Game s_game;
         static std::vector<lancommander::Action> s_actions;
         static std::string s_status_message;
-        static int s_status_color = 0;
+        static gfx::Color s_status_color = gfx::rgb(0, 0, 0);
 
         // Scroll state
         static int s_scroll_y = 0;
@@ -295,44 +297,30 @@ namespace launcher
         // -----------------------------------------------------------------
         // Gradient helper
         // -----------------------------------------------------------------
-        static void draw_gradient_bottom(BITMAP *buf, int x, int y,
-                                         int w, int h, int bg_color)
+        // Fades the hero image into the page background: fully transparent at
+        // the top, fully `bg_color` at the bottom.
+        static void draw_gradient_bottom(gfx::Surface *buf, int x, int y,
+                                         int w, int h, gfx::Color bg_color)
         {
-            int br = getr(bg_color);
-            int bgc = getg(bg_color);
-            int bb = getb(bg_color);
-
-            for (int row = 0; row < h; row++)
-            {
-                int alpha = 255 * row / (h > 1 ? h - 1 : 1);
-                for (int col = 0; col < w; col++)
-                {
-                    int px = getpixel(buf, x + col, y + row);
-                    int pr = getr(px);
-                    int pg = getg(px);
-                    int pb = getb(px);
-                    int r = pr + (br - pr) * alpha / 255;
-                    int g = pg + (bgc - pg) * alpha / 255;
-                    int b = pb + (bb - pb) * alpha / 255;
-                    putpixel(buf, x + col, y + row, makecol(r, g, b));
-                }
-            }
+            gfx::fill_rect_gradient_v(buf, gfx::rect(x, y, w, h),
+                                      gfx::with_alpha(bg_color, 0),
+                                      gfx::with_alpha(bg_color, 255));
         }
 
         // -----------------------------------------------------------------
         // Large primary button (different styling from the standard button)
         // -----------------------------------------------------------------
-        static ButtonState button_large(BITMAP *bmp, int x, int y, int w, int h,
+        static ButtonState button_large(gfx::Surface *bmp, int x, int y, int w, int h,
                                         const char *label_text, const InputState &input,
-                                        int bg_color, int bg_hover_color)
+                                        gfx::Color bg_color, gfx::Color bg_hover_color)
         {
             ButtonState state;
             state.hovered = (input.mouse.x >= x && input.mouse.x < x + w &&
                              input.mouse.y >= y && input.mouse.y < y + h);
             state.clicked = state.hovered && input.mouse.clicked;
 
-            int bg = state.hovered ? bg_hover_color : bg_color;
-            rectfill(bmp, x, y, x + w - 1, y + h - 1, bg);
+            gfx::Color bg = state.hovered ? bg_hover_color : bg_color;
+            gfx::fill_rect(bmp, gfx::rect(x, y, w, h), bg);
 
             int tx = x + (w - text_width(label_text)) / 2;
             int ty = y + (h - text_height()) / 2;
@@ -342,7 +330,7 @@ namespace launcher
         }
 
         // Secondary (outline-style) button
-        static ButtonState button_secondary(BITMAP *bmp, int x, int y, int w, int h,
+        static ButtonState button_secondary(gfx::Surface *bmp, int x, int y, int w, int h,
                                             const char *label_text, const InputState &input)
         {
             ButtonState state;
@@ -350,9 +338,9 @@ namespace launcher
                              input.mouse.y >= y && input.mouse.y < y + h);
             state.clicked = state.hovered && input.mouse.clicked;
 
-            int bg = state.hovered ? theme().panel_hover : theme().panel;
-            rectfill(bmp, x, y, x + w - 1, y + h - 1, bg);
-            rect(bmp, x, y, x + w - 1, y + h - 1, theme().divider);
+            gfx::Color bg = state.hovered ? theme().panel_hover : theme().panel;
+            gfx::fill_rect(bmp, gfx::rect(x, y, w, h), bg);
+            gfx::draw_rect(bmp, gfx::rect(x, y, w, h), theme().divider);
 
             int tx = x + (w - text_width(label_text)) / 2;
             int ty = y + (h - text_height()) / 2;
@@ -366,7 +354,7 @@ namespace launcher
         // =================================================================
         void screen_game_detail_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
 
@@ -431,13 +419,13 @@ namespace launcher
 
             // Cover
             std::string cover_id = find_cover_id(s_game);
-            BITMAP *cover = NULL;
+            gfx::Surface *cover = NULL;
             if (!cover_id.empty())
                 cover = app.image_cache().get(cover_id, cover_max_w, cover_max_h);
 
             // Right column height: cover + metadata
             int right_h = 0;
-            if (cover) right_h = cover->h - cover_overlap + 8;
+            if (cover) right_h = gfx::surface_height(cover) - cover_overlap + 8;
             right_h += th + 4; // type
             if (s_game.released_year > 0) right_h += th + 4;
             if (!s_game.genres.empty())
@@ -450,7 +438,7 @@ namespace launcher
             // Left column height: description
             int left_h = 12;
             if (!s_game.description.empty())
-                left_h += draw_text_wrap(NULL, 0, 0, left_max, 0,
+                left_h += draw_text_wrap(NULL, 0, 0, left_max, theme().text,
                                          s_game.description.c_str());
 
             int body_h = (right_h > left_h ? right_h : left_h) + 20;
@@ -470,7 +458,7 @@ namespace launcher
             int sy = -s_scroll_y; // global scroll offset
 
             // Clip everything below the chrome bar.
-            set_clip_rect(buf, 0, top, sw - 1, sh - 1);
+            gfx::push_clip(buf, gfx::rect(0, top, sw, sh - top));
 
             // =============================================================
             // Hero section
@@ -478,19 +466,21 @@ namespace launcher
             int hero_y = top + sy;
 
             std::string bg_id = find_media_id(s_game, "Background");
-            BITMAP *bg_img = NULL;
+            gfx::Surface *bg_img = NULL;
             if (!bg_id.empty())
                 bg_img = app.image_cache().get(bg_id, sw, sw);
 
             if (bg_img)
             {
-                int blit_w = bg_img->w < sw ? bg_img->w : sw;
-                int blit_h = bg_img->h < hero_h ? bg_img->h : hero_h;
+                int img_w = gfx::surface_width(bg_img);
+                int img_h = gfx::surface_height(bg_img);
+                int blit_w = img_w < sw ? img_w : sw;
+                int blit_h = img_h < hero_h ? img_h : hero_h;
                 int dst_x = (sw - blit_w) / 2;
                 int dst_y = hero_y;
-                if (bg_img->h < hero_h)
-                    dst_y = hero_y + (hero_h - bg_img->h) / 2;
-                blit(bg_img, buf, 0, 0, dst_x, dst_y, blit_w, blit_h);
+                if (img_h < hero_h)
+                    dst_y = hero_y + (hero_h - img_h) / 2;
+                gfx::blit_region(buf, bg_img, gfx::rect(0, 0, blit_w, blit_h), dst_x, dst_y);
                 draw_gradient_bottom(buf, 0, hero_y + hero_h - 60, sw, 60, theme().bg);
             }
             else
@@ -501,14 +491,14 @@ namespace launcher
 
             // Logo overlay
             std::string logo_id = find_media_id(s_game, "Logo");
-            BITMAP *logo_img = NULL;
+            gfx::Surface *logo_img = NULL;
             if (!logo_id.empty())
                 logo_img = app.image_cache().get(logo_id, 200, 64);
 
             if (logo_img)
             {
-                set_alpha_blender();
-                draw_trans_sprite(buf, logo_img, 24, hero_y + hero_h - logo_img->h - 16);
+                gfx::blit_alpha(buf, logo_img, 24,
+                                hero_y + hero_h - gfx::surface_height(logo_img) - 16);
             }
             else
             {
@@ -519,9 +509,9 @@ namespace launcher
             // --- Cover art (overlaps hero bottom) ---
             if (cover)
             {
-                int cx = right_x + (cover_col_w - cover->w) / 2;
+                int cx = right_x + (cover_col_w - gfx::surface_width(cover)) / 2;
                 int cy = hero_y + hero_h - cover_overlap;
-                blit(cover, buf, 0, 0, cx, cy, cover->w, cover->h);
+                gfx::blit(buf, cover, cx, cy);
             }
 
             // --- Back button overlaid on the hero ---
@@ -538,11 +528,8 @@ namespace launcher
                                     input.mouse.y >= back_y && input.mouse.y < back_y + back_h);
                 back_btn.clicked = back_btn.hovered && input.mouse.clicked;
 
-                drawing_mode(DRAW_MODE_TRANS, NULL, 0, 0);
-                set_trans_blender(0, 0, 0, back_btn.hovered ? 180 : 140);
-                rectfill(buf, back_x, back_y, back_x + back_w - 1, back_y + back_h - 1,
-                         makecol(0, 0, 0));
-                drawing_mode(DRAW_MODE_SOLID, NULL, 0, 0);
+                gfx::fill_rect_alpha(buf, gfx::rect(back_x, back_y, back_w, back_h),
+                                     gfx::rgba(0, 0, 0, back_btn.hovered ? 180 : 140));
 
                 int tx = back_x + (back_w - text_width(back_label)) / 2;
                 int ty = back_y + (back_h - th) / 2;
@@ -629,7 +616,7 @@ namespace launcher
             {
                 int play_w = 140;
                 const char *play_label;
-                int play_bg, play_bg_hover;
+                gfx::Color play_bg, play_bg_hover;
 
                 if (this_game_starting)
                 {
@@ -641,7 +628,7 @@ namespace launcher
                 {
                     play_label = "Stop";
                     play_bg = theme().error;
-                    play_bg_hover = makecol(200, 60, 60);
+                    play_bg_hover = gfx::rgb(200, 60, 60);
                 }
                 else
                 {
@@ -835,13 +822,13 @@ namespace launcher
             int below_bar = bar_y + bar_h;
 
             // Vertical divider
-            vline(buf, right_x - 1, below_bar, below_bar + body_h, theme().divider);
+            gfx::vline(buf, right_x - 1, below_bar, body_h + 1, theme().divider);
 
             // --- Right column: metadata under cover ---
             int meta_x = right_x + 12;
             int my = below_bar + 12;
             if (cover)
-                my = hero_y + hero_h - cover_overlap + cover->h + 8;
+                my = hero_y + hero_h - cover_overlap + gfx::surface_height(cover) + 8;
 
             const char *type_str = "Main Game";
             switch (s_game.type)
@@ -907,7 +894,7 @@ namespace launcher
                                s_game.description.c_str());
 
             // Restore clip rect.
-            set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+            gfx::pop_clip(buf);
 
             // Scrollbar
             {
@@ -937,7 +924,7 @@ namespace launcher
                 int dy = (sh - dlg_h) / 2;
 
                 panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
-                rect(buf, dx, dy, dx + dlg_w - 1, dy + dlg_h - 1, theme().divider);
+                gfx::draw_rect(buf, gfx::rect(dx, dy, dlg_w, dlg_h), theme().divider);
 
                 int cy = dy + pad;
                 draw_text_center(buf, dx + dlg_w / 2, cy, theme().text_bright, "Choose an action");
@@ -983,7 +970,7 @@ namespace launcher
                 int cancel_w = 90;
                 ButtonState cancel = button(buf, dx + dlg_w - btn_pad - cancel_w, cy,
                                             cancel_w, row_h, "Cancel", input);
-                if (cancel.clicked || input.key_pressed(KEY_ESC))
+                if (cancel.clicked || input.key_pressed(Key::Escape))
                     s_modal = ModalType::None;
             }
 
@@ -1013,7 +1000,7 @@ namespace launcher
                 int dy = (sh - dlg_h) / 2;
 
                 panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
-                rect(buf, dx, dy, dx + dlg_w - 1, dy + dlg_h - 1, theme().divider);
+                gfx::draw_rect(buf, gfx::rect(dx, dy, dlg_w, dlg_h), theme().divider);
 
                 int cx = dx + pad;
                 int content_w = dlg_w - pad * 2;
@@ -1041,21 +1028,19 @@ namespace launcher
                         s_install_dir_index--;
 
                     // Current directory text
-                    rectfill(buf, cx + arrow_w + 2, cy,
-                             cx + arrow_w + 2 + sel_w - 1, cy + row_h - 1,
-                             theme().input_bg);
-                    rect(buf, cx + arrow_w + 2, cy,
-                         cx + arrow_w + 2 + sel_w - 1, cy + row_h - 1,
-                         theme().input_border);
+                    gfx::fill_rect(buf, gfx::rect(cx + arrow_w + 2, cy, sel_w, row_h),
+                                   theme().input_bg);
+                    gfx::draw_rect(buf, gfx::rect(cx + arrow_w + 2, cy, sel_w, row_h),
+                                   theme().input_border);
                     {
                         const char *dir_text = "";
                         if (s_install_dir_index >= 0 && s_install_dir_index < (int)dirs.size())
                             dir_text = dirs[s_install_dir_index].c_str();
-                        set_clip_rect(buf, cx + arrow_w + 6, cy,
-                                      cx + arrow_w + sel_w - 4, cy + row_h - 1);
+                        gfx::push_clip(buf, gfx::rect(cx + arrow_w + 6, cy,
+                                                      sel_w - 10, row_h));
                         draw_text(buf, cx + arrow_w + 6,
                                   cy + (row_h - th) / 2, theme().text, dir_text);
-                        set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+                        gfx::pop_clip(buf);
                     }
 
                     // Right arrow
@@ -1093,7 +1078,7 @@ namespace launcher
                     int visible = addon_count > 8 ? 8 : addon_count;
                     int list_h = visible * (row_h + 2);
 
-                    set_clip_rect(buf, cx, cy, cx + content_w - 1, cy + list_h - 1);
+                    gfx::push_clip(buf, gfx::rect(cx, cy, content_w, list_h));
 
                     int ay = cy - s_install_scroll_y;
                     for (int i = 0; i < addon_count; ++i)
@@ -1122,7 +1107,7 @@ namespace launcher
                         }
                         ay += row_h + 2;
                     }
-                    set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+                    gfx::pop_clip(buf);
 
                     // Scroll for long addon lists
                     if (addon_count > visible)
@@ -1185,7 +1170,7 @@ namespace launcher
                     s_modal = ModalType::None;
                 }
 
-                if (cancel.clicked || input.key_pressed(KEY_ESC))
+                if (cancel.clicked || input.key_pressed(Key::Escape))
                     s_modal = ModalType::None;
             }
         }

@@ -1,8 +1,8 @@
 #ifndef LAUNCHER_UI_IMAGE_DECODER_H
 #define LAUNCHER_UI_IMAGE_DECODER_H
 
-// Raw decoded image data. No Allegro types here so this header can be
-// included from files that use GDI+ (which conflicts with Allegro's BITMAP).
+// Raw decoded image data — backend-neutral by design, so the graphics layer
+// and the decoder can change independently.
 struct DecodedImage
 {
     unsigned char *pixels; // Row-major, 4 bytes per pixel: R, G, B, A
@@ -22,9 +22,10 @@ bool decode_image_file(const char *path, int max_w, int max_h, DecodedImage *out
 // Same as above but decodes from a memory buffer instead of a file path.
 bool decode_image_memory(const void *data, int data_size, int max_w, int max_h, DecodedImage *out);
 
-// Decode an image embedded as an RCDATA resource in the current executable.
-// resource_name is the name used in the .rc file (e.g. "BG_AOE2").
-bool decode_image_resource(const char *resource_name, int max_w, int max_h, DecodedImage *out);
+// Decode an image shipped alongside the executable, named relative to the
+// assets/ directory (e.g. "backgrounds/aoe2.jpg"). Replaces the old
+// RT_RCDATA resource lookup, which was Win32-only.
+bool decode_image_asset(const char *name, int max_w, int max_h, DecodedImage *out);
 
 void free_decoded_image(DecodedImage *img);
 

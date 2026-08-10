@@ -6,7 +6,8 @@
 #include "app/app.h"
 #include "app/game_database.h"
 
-#include <allegro.h>
+#include "gfx/gfx.h"
+
 #include <algorithm>
 #include <cctype>
 
@@ -166,7 +167,7 @@ namespace launcher
 
         void screen_library_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
             int top = chrome_height();
@@ -248,7 +249,7 @@ namespace launcher
             }
 
             // Clip to grid area.
-            set_clip_rect(buf, 0, grid_y, sw - 1, sh - footer_height() - 1);
+            gfx::push_clip(buf, gfx::rect(0, grid_y, sw, sh - footer_height() - grid_y));
 
             if (count == 0)
             {
@@ -282,29 +283,30 @@ namespace launcher
 
                 // --- Cover image ---
                 std::string cid = get_cover_id(app, i);
-                BITMAP *cover = NULL;
+                gfx::Surface *cover = NULL;
                 if (!cid.empty())
                     cover = app.image_cache().get(cid, item_w, item_h);
 
                 if (cover)
                 {
                     // Center the cover in the cell if decoded size differs.
-                    int ix = cx + (item_w - cover->w) / 2;
-                    int iy = cy + (item_h - cover->h) / 2;
-                    blit(cover, buf, 0, 0, ix, iy, cover->w, cover->h);
+                    int ix = cx + (item_w - gfx::surface_width(cover)) / 2;
+                    int iy = cy + (item_h - gfx::surface_height(cover)) / 2;
+                    gfx::blit(buf, cover, ix, iy);
                 }
                 else
                 {
                     // Placeholder: dark panel with word-wrapped title.
-                    rectfill(buf, cx, cy, cx + item_w - 1, cy + item_h - 1, theme().panel);
-                    set_clip_rect(buf, cx, cy, cx + item_w - 1, cy + item_h - 1);
+                    gfx::fill_rect(buf, gfx::rect(cx, cy, item_w, item_h), theme().panel);
+                    gfx::push_clip(buf, gfx::rect(cx, cy, item_w, item_h));
                     int pad = 8;
                     int wrap_w = item_w - pad * 2;
-                    int text_h = draw_text_wrap_center(NULL, 0, 0, wrap_w, 0, item_title);
+                    int text_h = draw_text_wrap_center(NULL, 0, 0, wrap_w,
+                                                       theme().text_dim, item_title);
                     int ty = cy + (item_h - text_h) / 2;
                     draw_text_wrap_center(buf, cx + item_w / 2, ty, wrap_w,
                                           theme().text_dim, item_title);
-                    set_clip_rect(buf, 0, grid_y, sw - 1, sh - footer_height() - 1);
+                    gfx::pop_clip(buf);
                 }
 
                 // --- Hover highlight ---
@@ -316,15 +318,12 @@ namespace launcher
                 if (hovered)
                 {
                     // Light overlay on hover.
-                    drawing_mode(DRAW_MODE_TRANS, NULL, 0, 0);
-                    set_trans_blender(255, 255, 255, 40);
-                    rectfill(buf, cx, cy, cx + item_w - 1, cy + item_h - 1,
-                             makecol(255, 255, 255));
-                    drawing_mode(DRAW_MODE_SOLID, NULL, 0, 0);
+                    gfx::fill_rect_alpha(buf, gfx::rect(cx, cy, item_w, item_h),
+                                         gfx::rgba(255, 255, 255, 40));
 
                     // Border
-                    rect(buf, cx - 1, cy - 1, cx + item_w, cy + item_h,
-                         theme().primary);
+                    gfx::draw_rect(buf, gfx::rect(cx - 1, cy - 1, item_w + 2, item_h + 2),
+                                   theme().primary);
                 }
 
                 // --- Click to open game detail ---
@@ -336,7 +335,7 @@ namespace launcher
             }
 
             // Restore clip rect.
-            set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+            gfx::pop_clip(buf);
 
             // Scrollbar
             scrollbar(buf, sw - 14, grid_y, grid_area_h,

@@ -5,7 +5,8 @@
 #include "app/app.h"
 #include "app/logger.h"
 
-#include <allegro.h>
+#include "gfx/gfx.h"
+
 #include <cstdio>
 
 namespace launcher
@@ -21,14 +22,14 @@ namespace launcher
         static std::vector<std::string> s_install_dirs;
         static bool s_offline_mode = false;
         static std::string s_status_message;
-        static int  s_status_color = 0;
+        static gfx::Color s_status_color = gfx::rgb(0, 0, 0);
         // Focus: 0 = server address, 1..N = install dir fields
         static int  s_focus = 0;
         static int  s_scroll_y = 0;
 
         void screen_settings_draw(App &app, const InputState &input)
         {
-            BITMAP *buf = app.backbuffer();
+            gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
 
@@ -41,7 +42,7 @@ namespace launcher
             int header_h = 40;
             int header_y = top;
             panel(buf, 0, header_y, sw, header_h, theme().surface);
-            hline(buf, 0, header_y + header_h - 1, sw - 1, theme().divider);
+            gfx::hline(buf, 0, header_y + header_h - 1, sw, theme().divider);
 
             // Back button
             int back_w = 60;
@@ -111,7 +112,7 @@ namespace launcher
                 if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
             }
 
-            set_clip_rect(buf, 0, content_y, sw - 1, bottom - 1);
+            gfx::push_clip(buf, gfx::rect(0, content_y, sw, bottom - content_y));
 
             int y = content_y + pad - s_scroll_y;
 
@@ -144,13 +145,13 @@ namespace launcher
                 int cb_size = 16;
                 int cb_y = y + (22 - cb_size) / 2;
 
-                rect(buf, form_x, cb_y, form_x + cb_size - 1, cb_y + cb_size - 1,
-                     theme().input_border);
+                gfx::draw_rect(buf, gfx::rect(form_x, cb_y, cb_size, cb_size),
+                               theme().input_border);
 
                 if (s_offline_mode)
-                    rectfill(buf, form_x + 3, cb_y + 3,
-                             form_x + cb_size - 4, cb_y + cb_size - 4,
-                             theme().primary);
+                    gfx::fill_rect(buf, gfx::rect(form_x + 3, cb_y + 3,
+                                                  cb_size - 6, cb_size - 6),
+                                   theme().primary);
 
                 draw_text(buf, form_x + cb_size + 8, y + (22 - th) / 2,
                           theme().text, "Offline Mode");
@@ -274,14 +275,14 @@ namespace launcher
                 draw_text_center(buf, sw / 2, y, s_status_color,
                                  s_status_message.c_str());
 
-            set_clip_rect(buf, 0, 0, sw - 1, sh - 1);
+            gfx::pop_clip(buf);
 
             // Scrollbar
             scrollbar(buf, sw - 14, content_y, content_h,
                       total_h, content_h, s_scroll_y, input);
 
             // --- Tab between fields ---
-            if (input.key_pressed(KEY_TAB))
+            if (input.key_pressed(Key::Tab))
                 s_focus = (s_focus + 1) % total_focus_fields;
 
             // --- Back navigation ---

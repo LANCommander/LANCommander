@@ -2,7 +2,7 @@ name: LANCommander.Launcher.Legacy
 
 on:
   push:
-    branches: [main, feature/legacy-launcher]
+    branches: [main, feature/legacy-launcher, refactor/legacy-launcher-rebuild]
     paths:
       - 'LANCommander.Launcher.Legacy/**'
       - 'liblancommander/**'
@@ -47,6 +47,24 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  test-launcher:
+    name: Launcher tests (headless)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # No submodules needed: nothing here reaches outside src/.
+      - name: Configure
+        run: cmake -S LANCommander.Launcher.Legacy/tests -B build-launcher-tests
+
+      - name: Build
+        run: cmake --build build-launcher-tests -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build-launcher-tests --output-on-failure
 
   build-win9x:
     name: Build (Win9x / MinGW-w64 i686)
@@ -133,6 +151,7 @@ jobs:
           cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD" \
               -G "MinGW Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
+              -DLAUNCHER_GFX_BACKEND=allegro \
               -DALLEGRO_STATIC=ON \
               -DTARGET_WIN9X=ON \
               -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
@@ -150,11 +169,11 @@ jobs:
           cp "$LAUNCHER_EXE" out-win9x/LANCommander.exe
           strip out-win9x/LANCommander.exe
 
-          # Bundle GDI+ redistributable (MinGW CRT is statically linked)
-          if [ -f "$MINGW_PREFIX/bin/gdiplus.dll" ]; then
-              cp "$MINGW_PREFIX/bin/gdiplus.dll" out-win9x/
-              echo "Bundled: gdiplus.dll"
-          fi
+          # Assets load by path at runtime (they used to be RCDATA in the EXE).
+          cp -r LANCommander.Launcher.Legacy/assets out-win9x/assets
+
+          # No gdiplus.dll: image decoding is stb now, so there is no
+          # redistributable to ship. MinGW CRT is statically linked.
 
           # Show PE info for verification
           objdump -p out-win9x/LANCommander.exe | grep -i "Version\|Subsystem" || true
@@ -162,9 +181,59 @@ jobs:
           echo ""
           ls -lh out-win9x/
 
+      - name: Win9x import check
+        run: bash LANCommander.Launcher.Legacy/tools/deny-scan.sh out-win9x/LANCommander.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: LANCommander-Legacy-Win9x
           path: out-win9x/
           if-no-files-found: error
+
+  build-sdl3:
+    name: Build (SDL3 / MinGW-w64 i686)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch submodules
+        shell: bash
+        run: |
+          git submodule update --init --depth 1 -- liblancommander/vendor/picoposh
+          git -C liblancommander/vendor/picoposh submodule update --init --depth 1 \
+              -- third_party/zlib third_party/libzip
+          git submodule update --init --depth 1 -- \
+              LANCommander.Launcher.Legacy/vendor/sdl3 \
+              LANCommander.Launcher.Legacy/vendor/sdl_ttf
+          git -C LANCommander.Launcher.Legacy/vendor/sdl_ttf \
+              submodule update --init --depth 1 -- external/freetype
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: false
+          install: >-
+            mingw-w64-i686-gcc
+            mingw-w64-i686-cmake
+            mingw-w64-i686-make
+            make
+
+      - name: Download vendor dependencies
+        shell: pwsh
+        run: ./setup-vendor.ps1
+
+      - name: Build launcher (SDL3)
+        run: |
+          cmake -S LANCommander.Launcher.Legacy -B LANCommander.Launcher.Legacy/build-sdl \
+              -G "MinGW Makefiles" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DLAUNCHER_GFX_BACKEND=sdl3
+          mingw32-make -C LANCommander.Launcher.Legacy/build-sdl launcher -j$(nproc)

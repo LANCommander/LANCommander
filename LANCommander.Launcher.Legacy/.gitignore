@@ -1,7 +1,15 @@
 # Build directories
 build/
+build-*/
+build-deps/
 cmake-build-*/
 out/
+out-*/
+
+# Third-party sources downloaded by setup-vendor.ps1 (not submodules).
+# SDL3 and SDL_ttf are git submodules and are deliberately NOT ignored.
+vendor/allegro4/
+allegro4-win9x/
 
 # IDE files
 .vs/

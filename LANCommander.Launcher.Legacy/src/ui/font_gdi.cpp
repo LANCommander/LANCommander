@@ -1,6 +1,5 @@
 // gdi_font.cpp — TrueType font rendering via GDI, blitted into Allegro
-// BITMAPs.  This file includes Allegro AND Windows headers; winalleg.h
-// resolves the BITMAP typedef conflict.
+// gfx surfaces via a coverage mask.
 //
 // Unicode strategy (MSLU / "unicows" pattern):
 //   All text input is UTF-8. We always convert to UTF-16 internally.
@@ -11,17 +10,13 @@
 //   This is the same approach Microsoft's unicows.dll takes, implemented
 //   inline for the small set of GDI functions we actually use.
 
-#include <allegro.h>
-#ifdef ALLEGRO_WINDOWS
-#include <winalleg.h>
-#endif
-
-#include "ui/gdi_font.h"
+#include "ui/font.h"
 
 #include <windows.h>
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -230,17 +225,22 @@ int gdi_font_text_width(const char *text)
 }
 
 // -----------------------------------------------------------------------
-// Core rendering: draw text into an Allegro BITMAP via a temporary GDI DIB.
+// Core rendering: rasterise text to a coverage mask via a temporary GDI DIB.
 //
 // Strategy:
 //   1. Create a small DIB section just big enough for the text.
 //   2. Fill it with black (so GDI anti-aliasing blends against black).
 //   3. Render white text onto the DIB.
 //   4. Read pixels back — the white channel gives us coverage (alpha).
-//   5. Blend each pixel into the Allegro BITMAP at the requested color.
+//   5. Hand the coverage mask to gfx, which does the composite.
+//
+// Step 5 used to be an inline getpixel/putpixel loop against an Allegro
+// BITMAP. Keeping the composite behind gfx is what lets SDL_ttf drop in
+// later without touching any caller.
 // -----------------------------------------------------------------------
 
-static void render(BITMAP *dst, int x, int y, int allegro_color, const char *text)
+static void render(launcher::gfx::Surface *dst, int x, int y,
+                   launcher::gfx::Color color, const char *text)
 {
     if (!g_hfont || !text || !*text || !dst)
         return;
@@ -287,56 +287,22 @@ static void render(BITMAP *dst, int x, int y, int allegro_color, const char *tex
 
     GdiFlush();
 
-    // Decompose the requested Allegro color.
-    int cr = getr(allegro_color);
-    int cg = getg(allegro_color);
-    int cb = getb(allegro_color);
-
-    // Blit coverage-weighted pixels into the Allegro bitmap.
-    const unsigned char *src = (const unsigned char *)bits;
-    for (int row = 0; row < th; row++)
+    // Extract an 8-bit coverage mask from the BGRA DIB. Coverage comes from
+    // the red channel — ClearType produces per-channel values, but we
+    // flatten to greyscale, as the previous inline blend did.
+    std::vector<unsigned char> mask((size_t)tw * th);
     {
-        int dy = y + row;
-        if (dy < 0 || dy >= dst->h)
+        const unsigned char *src = (const unsigned char *)bits;
+        unsigned char *out = &mask[0];
+        const size_t count = (size_t)tw * th;
+        for (size_t i = 0; i < count; ++i)
         {
-            src += tw * 4;
-            continue;
-        }
-        for (int col = 0; col < tw; col++)
-        {
-            int dx = x + col;
-            if (dx < 0 || dx >= dst->w)
-            {
-                src += 4;
-                continue;
-            }
-
-            // Coverage from the red channel (ClearType gives per-channel
-            // values, but we simplify to greyscale for Allegro's palette).
-            int alpha = src[2]; // red channel in BGRA DIB
+            out[i] = src[2];
             src += 4;
-
-            if (alpha == 0)
-                continue;
-
-            if (alpha >= 250)
-            {
-                putpixel(dst, dx, dy, allegro_color);
-            }
-            else
-            {
-                // Blend with the existing pixel.
-                int bg = getpixel(dst, dx, dy);
-                int br = getr(bg);
-                int bgr = getg(bg);
-                int bb = getb(bg);
-                int r = br + (cr - br) * alpha / 255;
-                int g = bgr + (cg - bgr) * alpha / 255;
-                int b = bb + (cb - bb) * alpha / 255;
-                putpixel(dst, dx, dy, makecol(r, g, b));
-            }
         }
     }
+
+    launcher::gfx::blend_coverage(dst, x, y, tw, th, &mask[0], tw, color);
 
     SelectObject(dc, old_font);
     SelectObject(dc, old_bmp);
@@ -346,19 +312,91 @@ static void render(BITMAP *dst, int x, int y, int allegro_color, const char *tex
 
 // --- Public API ---
 
-void gdi_font_draw(void *allegro_bmp, int x, int y, int color, const char *text)
+namespace launcher
 {
-    render((BITMAP *)allegro_bmp, x, y, color, text);
-}
+    namespace ui
+    {
 
-void gdi_font_draw_center(void *allegro_bmp, int cx, int y, int color, const char *text)
-{
-    int w = gdi_font_text_width(text);
-    render((BITMAP *)allegro_bmp, cx - w / 2, y, color, text);
-}
+        bool font_init(int px_size)
+        {
+            gdi_font_init(px_size);
+            return gdi_font_height() > 0;
+        }
 
-void gdi_font_draw_right(void *allegro_bmp, int rx, int y, int color, const char *text)
-{
-    int w = gdi_font_text_width(text);
-    render((BITMAP *)allegro_bmp, rx - w, y, color, text);
-}
+        void font_shutdown()
+        {
+            gdi_font_shutdown();
+        }
+
+        int font_height()
+        {
+            return gdi_font_height();
+        }
+
+        int font_measure(const char *utf8)
+        {
+            return gdi_font_text_width(utf8);
+        }
+
+        int font_fit(const char *utf8, int max_w, int *out_w)
+        {
+            if (out_w)
+                *out_w = 0;
+            if (!g_measure_dc || !utf8 || !*utf8 || max_w <= 0)
+                return 0;
+
+            std::wstring w = utf8_to_wide(utf8);
+            if (w.empty())
+                return 0;
+
+            HFONT old = (HFONT)SelectObject(g_measure_dc, g_hfont);
+
+            INT fit = 0;
+            SIZE sz = { 0, 0 };
+            BOOL ok;
+
+            if (g_wide_ok)
+            {
+                ok = GetTextExtentExPointW(g_measure_dc, w.c_str(), (int)w.size(),
+                                           max_w, &fit, NULL, &sz);
+            }
+            else
+            {
+                std::string a = wide_to_ansi(w);
+                ok = GetTextExtentExPointA(g_measure_dc, a.c_str(), (int)a.size(),
+                                           max_w, &fit, NULL, &sz);
+            }
+
+            SelectObject(g_measure_dc, old);
+
+            if (!ok || fit <= 0)
+                return 0;
+
+            // `fit` counts UTF-16 units (or ANSI bytes); callers index into the
+            // original UTF-8, so convert the fitting prefix back to get a byte
+            // count they can use.
+            int bytes;
+            if (g_wide_ok)
+            {
+                bytes = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), fit,
+                                            NULL, 0, NULL, NULL);
+            }
+            else
+            {
+                // The ANSI path is lossy anyway; treat bytes as 1:1.
+                bytes = fit;
+            }
+
+            if (out_w)
+                *out_w = (int)sz.cx;
+            return bytes > 0 ? bytes : 0;
+        }
+
+        void font_draw(gfx::Surface *dst, int x, int y, gfx::Color color,
+                       const char *utf8)
+        {
+            render(dst, x, y, color, utf8);
+        }
+
+    } // namespace ui
+} // namespace launcher

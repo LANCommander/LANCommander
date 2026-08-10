@@ -1,15 +1,13 @@
-// Allegro 4 must be included before Windows headers to avoid BITMAP conflict.
-#include <allegro.h>
-#ifdef ALLEGRO_WINDOWS
-#include <winalleg.h>
-#endif
+#include <windows.h>
 
 #include "app/app.h"
+#include "gfx/gfx.h"
 #include "app/logger.h"
 #include "ui/input.h"
 #include "ui/theme.h"
 #include "ui/image_decoder.h"
 #include "ui/window_chrome.h"
+#include "ui/chrome_platform.h"
 #include "ui/screen_login.h"
 #include "ui/screen_library.h"
 #include "ui/screen_game_detail.h"
@@ -28,13 +26,8 @@ namespace launcher
     static const char *LOG_DIR       = "Data\\Logs";
     static const char *MEDIA_DIR     = "Data\\Media";
 
-    // Allegro close-button callback (Alt+F4, taskbar Close, etc.).
-    static volatile int s_close_requested = 0;
-    static void close_button_handler() { s_close_requested = 1; }
-    END_OF_STATIC_FUNCTION(close_button_handler)
-
     App::App()
-        : m_width(0), m_height(0), m_backbuffer(NULL), m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_image_cache(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Depot), m_quit(false), m_resize_pending(false), m_pending_width(0), m_pending_height(0)
+        : m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_image_cache(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Depot), m_quit(false), m_resize_pending(false), m_pending_width(0), m_pending_height(0)
     {
     }
 
@@ -54,53 +47,21 @@ namespace launcher
 
     bool App::init(int width, int height)
     {
-        m_width = width;
-        m_height = height;
-
         // Create the Data directory structure.
         CreateDirectoryA(DATA_DIR, NULL);
 
         log_init(LOG_DIR);
 
-        // --- Allegro initialization ---
-        if (allegro_init() != 0)
+        // --- Display ---
+        if (!gfx::init_display("LANCommander", width, height))
         {
-            log_error("allegro_init() failed");
+            log_error("gfx::init_display() failed");
             return false;
         }
 
-        install_keyboard();
-        install_mouse();
-        install_timer();
-
-        set_color_depth(32);
-
-        if (set_gfx_mode(GFX_AUTODETECT_WINDOWED, m_width, m_height, 0, 0) != 0)
-        {
-            // Fall back to 16-bit if 32-bit isn't available (Win9x compatibility)
-            set_color_depth(16);
-
-            if (set_gfx_mode(GFX_AUTODETECT_WINDOWED, m_width, m_height, 0, 0) != 0)
-                return false;
-        }
-
-        set_window_title("LANCommander");
-
-        // Don't use show_mouse(screen) — it fights with backbuffer
-        // blitting. We draw our own cursor on the backbuffer instead.
-        show_mouse(NULL);
-
-        // Remove the native Windows frame — we draw our own title bar.
-        ui::chrome_remove_frame(this);
-
-        m_backbuffer = create_bitmap(m_width, m_height);
-
-        if (!m_backbuffer)
-            return false;
-
-        // Allow the OS close (Alt+F4, taskbar) to signal the app.
-        LOCK_FUNCTION(close_button_handler);
-        set_close_button_callback(close_button_handler);
+        // Go frameless and install the resize/drag hit test — we draw our own
+        // title bar. What this does depends on the backend.
+        ui::chrome_platform_init(this);
 
         // --- Theme ---
         ui::theme_init();
@@ -214,22 +175,29 @@ namespace launcher
 
         while (!m_quit)
         {
+            const unsigned int frame_start = gfx::ticks_ms();
+
             // --- Input: drain all events once per frame ---
             input.poll();
 
-            // --- Apply pending resize (set by WndProc) ---
+            // --- Apply pending resize ---
+            // The Win32 backend reports this through its WndProc; the SDL
+            // backend has no WndProc and reports it on the InputState.
+            if (input.resized)
+                request_resize(input.resize_w, input.resize_h);
+
             apply_pending_resize();
 
             // OS close request (taskbar Close, WM_CLOSE).
-            if (s_close_requested)
+            if (input.quit_requested)
                 m_quit = true;
 
             // Alt+F4
-            if (input.key_pressed(KEY_F4) && (key_shifts & KB_ALT_FLAG))
+            if (input.key_pressed(ui::Key::F4) && input.mod_down(ui::ModAlt))
                 m_quit = true;
 
             // Global ESC handling
-            if (input.key_pressed(KEY_ESC))
+            if (input.key_pressed(ui::Key::Escape))
             {
                 if (m_current_screen == Screen::GameDetail ||
                     m_current_screen == Screen::Downloads ||
@@ -246,7 +214,7 @@ namespace launcher
             m_image_cache->begin_frame();
 
             // --- Clear ---
-            clear_to_color(m_backbuffer, ui::theme().bg);
+            gfx::clear(gfx::backbuffer(), ui::theme().bg);
 
             // --- Draw current screen ---
             switch (m_current_screen)
@@ -277,66 +245,19 @@ namespace launcher
             if (ui::window_chrome_draw(*this, input))
                 m_quit = true;
 
-            // --- Mouse cursor (drawn on backbuffer so it isn't overwritten) ---
-            {
-                // 12x19 arrow cursor bitmap (0=transparent, 1=black, 2=white)
-                static const unsigned char cursor[19][12] = {
-                    {1,0,0,0,0,0,0,0,0,0,0,0},
-                    {1,1,0,0,0,0,0,0,0,0,0,0},
-                    {1,2,1,0,0,0,0,0,0,0,0,0},
-                    {1,2,2,1,0,0,0,0,0,0,0,0},
-                    {1,2,2,2,1,0,0,0,0,0,0,0},
-                    {1,2,2,2,2,1,0,0,0,0,0,0},
-                    {1,2,2,2,2,2,1,0,0,0,0,0},
-                    {1,2,2,2,2,2,2,1,0,0,0,0},
-                    {1,2,2,2,2,2,2,2,1,0,0,0},
-                    {1,2,2,2,2,2,2,2,2,1,0,0},
-                    {1,2,2,2,2,2,2,2,2,2,1,0},
-                    {1,2,2,2,2,2,2,2,2,2,2,1},
-                    {1,2,2,2,2,2,2,1,1,1,1,1},
-                    {1,2,2,2,1,2,2,1,0,0,0,0},
-                    {1,2,2,1,0,1,2,2,1,0,0,0},
-                    {1,2,1,0,0,1,2,2,1,0,0,0},
-                    {1,1,0,0,0,0,1,2,2,1,0,0},
-                    {1,0,0,0,0,0,1,2,2,1,0,0},
-                    {0,0,0,0,0,0,0,1,1,0,0,0},
-                };
-                int mx = input.mouse.x;
-                int my = input.mouse.y;
-                int col_b = makecol(0, 0, 0);
-                int col_w = makecol(255, 255, 255);
-                for (int row = 0; row < 19; ++row)
-                {
-                    int py = my + row;
-                    if (py < 0 || py >= m_height) continue;
-                    for (int col = 0; col < 12; ++col)
-                    {
-                        int px = mx + col;
-                        if (px < 0 || px >= m_width) continue;
-                        if (cursor[row][col] == 1)
-                            putpixel(m_backbuffer, px, py, col_b);
-                        else if (cursor[row][col] == 2)
-                            putpixel(m_backbuffer, px, py, col_w);
-                    }
-                }
-            }
-
             // --- Flip ---
-            // Blit directly to the window DC so we aren't limited by
-            // Allegro's fixed-size screen bitmap after a resize.
-#ifdef ALLEGRO_WINDOWS
-            {
-                HWND hwnd = win_get_window();
-                HDC hdc = GetDC(hwnd);
-                blit_to_hdc(m_backbuffer, hdc, 0, 0, 0, 0, m_width, m_height);
-                ReleaseDC(hwnd, hdc);
-            }
-#else
-            blit(m_backbuffer, screen, 0, 0, 0, 0, m_width, m_height);
-#endif
+            gfx::present();
 
-            // Simple frame limiter (~30 FPS to keep CPU usage low)
-            rest(33);
+            // Frame limiter (~30 FPS to keep CPU usage low). Subtracts the
+            // work already done this frame, which the old fixed rest(33)
+            // never did — so this is the first time it has actually been a
+            // 30 FPS cap rather than "30 FPS minus however long drawing took".
+            {
+                const unsigned int FRAME_MS = 33;
+                unsigned int elapsed = gfx::ticks_ms() - frame_start;
+                if (elapsed < FRAME_MS)
+                    gfx::delay_ms(FRAME_MS - elapsed);
+            }
         }
 
         return 0;
@@ -351,15 +272,10 @@ namespace launcher
         m_settings.authentication.token.access_token = m_connection->get_access_token();
         m_settings.save(SETTINGS_FILE);
 
-        if (m_backbuffer)
-        {
-            destroy_bitmap(m_backbuffer);
-            m_backbuffer = NULL;
-        }
-
+        ui::theme_shutdown();
         image_decoder_shutdown();
 
-        allegro_exit();
+        gfx::shutdown_display();
     }
 
     // --- Accessors ---
@@ -376,9 +292,9 @@ namespace launcher
 
     Settings &App::settings() { return m_settings; }
 
-    BITMAP *App::backbuffer() { return m_backbuffer; }
-    int App::screen_width() const { return m_width; }
-    int App::screen_height() const { return m_height; }
+    gfx::Surface *App::backbuffer() { return gfx::backbuffer(); }
+    int App::screen_width() const { return gfx::display_width(); }
+    int App::screen_height() const { return gfx::display_height(); }
 
     void App::switch_screen(Screen s) { m_current_screen = s; }
     Screen App::current_screen() const { return m_current_screen; }
@@ -414,22 +330,7 @@ namespace launcher
             return;
         m_resize_pending = false;
 
-        int new_w = m_pending_width;
-        int new_h = m_pending_height;
-
-        if (new_w == m_width && new_h == m_height)
-            return;
-        if (new_w <= 0 || new_h <= 0)
-            return;
-
-        BITMAP *new_buf = create_bitmap(new_w, new_h);
-        if (!new_buf)
-            return;
-
-        destroy_bitmap(m_backbuffer);
-        m_backbuffer = new_buf;
-        m_width = new_w;
-        m_height = new_h;
+        gfx::resize_display(m_pending_width, m_pending_height);
     }
 
 } // namespace launcher

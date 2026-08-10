@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-        <Version>1.1.0</Version>
+        <Version>2.1.8</Version>
         <Authors>pathartl</Authors>
         <Company>LANCommander</Company>
         <Description>A .NET library for interacting with a LANCommander server</Description>

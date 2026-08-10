@@ -14,9 +14,18 @@
 #       make
 #
 # Usage:
-#   ./build-win9x.sh            # default Release build
-#   ./build-win9x.sh Debug      # debug build
-#   ./build-win9x.sh Release 4  # release, 4 parallel jobs
+#   ./build-win9x.sh                    # Release, allegro backend
+#   ./build-win9x.sh Debug              # debug build
+#   ./build-win9x.sh Release 4          # release, 4 parallel jobs
+#   ./build-win9x.sh Release 4 sdl3     # SDL3 backend instead of Allegro
+#
+# Backends:
+#   allegro  Known-good on the target, needs a DirectX runtime for
+#            DirectDraw. This is what has historically shipped.
+#   sdl3     Uses the LANCommander/SDL fork's lancommander/win9x branch,
+#            which builds SDL's Windows backend against the ANSI entry
+#            points. Needs no DirectX at all (the framebuffer goes through
+#            GDI), but has not yet been run on real hardware.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -27,17 +36,32 @@ ALLEGRO_SRC="$LAUNCHER_DIR/vendor/allegro4/allegro5-4.4.3.1"
 
 BUILD_TYPE="${1:-Release}"
 JOBS="${2:-$(nproc 2>/dev/null || echo 2)}"
+BACKEND="${3:-allegro}"
+
+if [ "$BACKEND" != "allegro" ] && [ "$BACKEND" != "sdl3" ]; then
+    echo "ERROR: backend must be 'allegro' or 'sdl3', got '$BACKEND'"
+    exit 1
+fi
 
 ALLEGRO_BUILD="$LAUNCHER_DIR/build-allegro-win9x"
 ALLEGRO_PREFIX="$LAUNCHER_DIR/allegro4-win9x"
-LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x"
-OUTPUT_DIR="$LAUNCHER_DIR/out-win9x"
+
+# Separate trees and outputs so the two backends can be built and carried to
+# the VM side by side for comparison.
+if [ "$BACKEND" = "sdl3" ]; then
+    LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x-sdl3"
+    OUTPUT_DIR="$LAUNCHER_DIR/out-win9x-sdl3"
+else
+    LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x"
+    OUTPUT_DIR="$LAUNCHER_DIR/out-win9x"
+fi
 
 # ---------------------------------------------------------------------------
 # Preflight
 # ---------------------------------------------------------------------------
 echo "=== LANCommander Legacy Launcher — Win9x build ==="
 echo "  Build type : $BUILD_TYPE"
+echo "  Backend    : $BACKEND"
 echo "  Jobs       : $JOBS"
 echo ""
 
@@ -57,9 +81,19 @@ if ! command -v gcc &>/dev/null; then
     exit 1
 fi
 
-if [ ! -d "$ALLEGRO_SRC" ]; then
+if [ "$BACKEND" = "allegro" ] && [ ! -d "$ALLEGRO_SRC" ]; then
     echo "ERROR: Allegro 4 source not found at $ALLEGRO_SRC"
     echo "  Run setup-vendor.ps1 first, or extract the Allegro 4.4.3.1 source there."
+    exit 1
+fi
+
+if [ "$BACKEND" = "sdl3" ] && [ ! -f "$LAUNCHER_DIR/vendor/sdl3/CMakeLists.txt" ]; then
+    echo "ERROR: SDL3 submodule missing. Fetch it with:"
+    echo "  git submodule update --init --depth 1 -- \\"
+    echo "      LANCommander.Launcher.Legacy/vendor/sdl3 \\"
+    echo "      LANCommander.Launcher.Legacy/vendor/sdl_ttf"
+    echo "  git -C LANCommander.Launcher.Legacy/vendor/sdl_ttf \\"
+    echo "      submodule update --init --depth 1 -- external/freetype"
     exit 1
 fi
 
@@ -84,7 +118,8 @@ fi
 # ---------------------------------------------------------------------------
 # Step 1: Build Allegro 4 from source (static, no addons)
 # ---------------------------------------------------------------------------
-echo "--- Step 1/3: Building Allegro 4 (static) ---"
+if [ "$BACKEND" = "allegro" ]; then
+echo "--- Step 1/4: Building Allegro 4 (static) ---"
 
 mkdir -p "$ALLEGRO_BUILD"
 cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
@@ -111,20 +146,26 @@ if [ -z "$ALLEGRO_LIB" ]; then
     exit 1
 fi
 echo "  Allegro built: $ALLEGRO_LIB"
+else
+echo "--- Step 1/4: Skipped (SDL3 backend builds SDL from the submodule) ---"
+fi
 
 # ---------------------------------------------------------------------------
 # Step 2: Build the launcher
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Step 2/3: Building LANCommander Legacy Launcher ---"
+echo "--- Step 2/4: Building LANCommander Legacy Launcher ($BACKEND) ---"
 
 mkdir -p "$LAUNCHER_BUILD"
-cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD" \
-    -G "$CMAKE_GENERATOR" \
-    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-    -DALLEGRO_STATIC=ON \
-    -DTARGET_WIN9X=ON \
-    -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
+
+# TARGET_WIN9X=ON is what sets PE subsystem 4.0, links the CRT statically,
+# and (for the SDL3 backend) turns on SDL_WIN9X so SDL's Windows backend is
+# built against the ANSI entry points.
+if [ "$BACKEND" = "sdl3" ]; then
+    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=sdl3         -DTARGET_WIN9X=ON
+else
+    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=allegro         -DALLEGRO_STATIC=ON         -DTARGET_WIN9X=ON         -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
+fi
 
 $MAKE_CMD -C "$LAUNCHER_BUILD" -j"$JOBS"
 
@@ -132,7 +173,7 @@ $MAKE_CMD -C "$LAUNCHER_BUILD" -j"$JOBS"
 # Step 3: Package output
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Step 3/3: Packaging ---"
+echo "--- Step 3/4: Packaging ---"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -148,15 +189,26 @@ cp "$LAUNCHER_EXE" "$OUTPUT_DIR/LANCommander.exe"
 # Strip the binary for size
 strip "$OUTPUT_DIR/LANCommander.exe" 2>/dev/null || true
 
-# Bundle GDI+ redistributable (ships with XP+, needed on Win9x)
-MINGW_PREFIX="${MINGW_PREFIX:-/mingw32}"
-if [ -f "$MINGW_PREFIX/bin/gdiplus.dll" ]; then
-    cp "$MINGW_PREFIX/bin/gdiplus.dll" "$OUTPUT_DIR/"
-    echo "  Bundled: gdiplus.dll"
-else
-    echo "  WARNING: gdiplus.dll not found — must be provided on target"
-fi
-# MinGW CRT (libgcc, libstdc++, libwinpthread) is statically linked via -static
+# Assets (login backgrounds, bundled font) load by path at runtime — they used
+# to be RCDATA inside the EXE, which is Win32-only.
+rm -rf "$OUTPUT_DIR/assets"
+cp -r "$LAUNCHER_DIR/assets" "$OUTPUT_DIR/assets"
+echo "  Bundled: assets/ ($(du -sh "$OUTPUT_DIR/assets" 2>/dev/null | cut -f1))"
+
+# No gdiplus.dll: image decoding is stb now, so there is no redistributable
+# to ship. MinGW CRT is statically linked via -static.
+#
+# Clear out what earlier builds of this script left behind. Deliberately
+# narrow — this directory doubles as a hand-staged deployment folder, and
+# DirectX-80a.zip / 7z920.exe were put here by hand and are still target
+# prerequisites. Only filenames this script itself used to emit are removed,
+# and it says so rather than deleting silently.
+for stale in gdiplus.dll gdiplus.exe; do
+    if [ -f "$OUTPUT_DIR/$stale" ]; then
+        rm -f "$OUTPUT_DIR/$stale"
+        echo "  Removed obsolete: $stale (GDI+ redistributable, no longer used)"
+    fi
+done
 
 # Check PE subsystem version
 echo ""
@@ -172,11 +224,34 @@ if command -v objdump &>/dev/null; then
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# Step 4: Win9x compatibility gate
+# ---------------------------------------------------------------------------
+# A statically-imported symbol that Win95/98 does not export makes the EXE
+# fail at load time, before main() runs, with no useful diagnostic. Catch it
+# here rather than on the target.
+echo ""
+echo "--- Step 4/4: Win9x import check ---"
+bash "$LAUNCHER_DIR/tools/deny-scan.sh" "$OUTPUT_DIR/LANCommander.exe"
+
 echo ""
 echo "=== Build complete ==="
 echo ""
 echo "Contents of $OUTPUT_DIR:"
 ls -lh "$OUTPUT_DIR"
 echo ""
-echo "NOTE: The target Win9x machine also needs:"
-echo "  - DirectX runtime (DirectDraw, DirectInput, DirectSound)."
+echo "To deploy, copy LANCommander.exe AND assets/ together — the UI font is"
+echo "bundled, so without assets/fonts/ no text renders at all."
+echo ""
+if [ "$BACKEND" = "allegro" ]; then
+    echo "The target also needs a DirectX runtime (DirectDraw) and WININET"
+    echo "(IE4+ on Win95; built in on Win98)."
+else
+    echo "The target needs WININET (IE4+ on Win95; built in on Win98)."
+    echo "No DirectX required: SDL presents through GDI, not DirectDraw."
+    echo ""
+    echo "NOTE: this backend has never been run on Win9x. Passing the import"
+    echo "      check only means the loader will accept the binary."
+fi
+echo ""
+echo "See WIN9X-TESTING.md for the VM setup and smoke checklist."

@@ -4,8 +4,9 @@
 #include <map>
 #include <string>
 
-// Forward declarations — avoids pulling Allegro or SDK headers into callers.
-struct BITMAP;
+#include "gfx/gfx.h"
+
+// Forward declaration — avoids pulling SDK headers into callers.
 namespace lancommander
 {
     class MediaClient;
@@ -16,7 +17,7 @@ namespace launcher
     namespace ui
     {
 
-        // Downloads, decodes, and caches game media as Allegro BITMAPs.
+        // Downloads, decodes, and caches game media as gfx surfaces.
         // Uses LRU eviction and a per-frame decode budget to limit memory.
         class ImageCache
         {
@@ -37,9 +38,9 @@ namespace launcher
             // Get (or download + decode on first request) a cover image scaled to
             // fit within max_w x max_h.  Returns NULL if the image could not be
             // loaded, the decode budget is exhausted, or the media ID is empty.
-            BITMAP *get(const std::string &media_id, int max_w, int max_h);
+            gfx::Surface *get(const std::string &media_id, int max_w, int max_h);
 
-            // Release all cached bitmaps.
+            // Release all cached surfaces.
             void clear();
 
         private:
@@ -48,7 +49,7 @@ namespace launcher
 
             struct Entry
             {
-                BITMAP *bmp;
+                gfx::Surface *surf;
                 int max_w;
                 int max_h;
                 unsigned long long last_access;

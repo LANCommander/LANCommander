@@ -1,0 +1,187 @@
+name: LANCommander Sign
+
+# Signs the Windows binaries inside an already-uploaded build artifact using Azure
+# Artifact Signing (formerly Trusted Signing), then repacks and replaces the artifact.
+#
+# The Server and Launcher builds cross-compile every RID on ubuntu-latest, and the
+# signing action only runs on Windows, so signing happens here as a downstream job
+# rather than inline in those workflows.
+#
+# Required repository secrets (OIDC federated credential):
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#
+# Required repository variables:
+#   AZURE_SIGNING_ENDPOINT           e.g. https://eus.codesigning.azure.net
+#   AZURE_SIGNING_ACCOUNT_NAME
+#   AZURE_SIGNING_CERT_PROFILE_NAME
+#
+# Leaving AZURE_SIGNING_ENDPOINT unset disables signing: every step is skipped and the
+# job succeeds, leaving the unsigned artifact in place. Forks without the Azure setup
+# therefore still produce a complete (if unsigned) release.
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: 'Name of the artifact to sign. Also the name of the zip inside it.'
+        required: true
+        type: string
+      file_patterns:
+        description: 'Comma separated filename patterns to sign, relative to the archive root.'
+        required: false
+        type: string
+        default: 'LANCommander.*.exe,LANCommander.*.dll'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  sign:
+    runs-on: windows-latest
+
+    env:
+      SIGNING_ENABLED: ${{ vars.AZURE_SIGNING_ENDPOINT != '' && 'true' || 'false' }}
+
+    steps:
+    - name: Report signing configuration
+      shell: pwsh
+      run: |
+        if ($env:SIGNING_ENABLED -eq 'true') {
+          Write-Host "Signing ${{ inputs.artifact_name }}"
+        } else {
+          Write-Host "::warning::AZURE_SIGNING_ENDPOINT is not set. Skipping signing of ${{ inputs.artifact_name }}."
+        }
+
+    - name: Download Artifact
+      if: env.SIGNING_ENABLED == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: sign-download
+
+    - name: Extract Artifact
+      if: env.SIGNING_ENABLED == 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $archive = Join-Path $PWD "sign-download/${{ inputs.artifact_name }}"
+        $staging = Join-Path $PWD 'sign-staging'
+
+        # ZipFile is used over Expand-Archive because the Server payload contains
+        # thousands of wwwroot files and Expand-Archive is an order of magnitude slower.
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $staging)
+
+    - name: Collect Files to Sign
+      id: targets
+      if: env.SIGNING_ENABLED == 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $staging = Join-Path $PWD 'sign-staging'
+        $patterns = '${{ inputs.file_patterns }}'.Split(',') | ForEach-Object { $_.Trim() }
+
+        # The signing action expects absolute paths. NetBeauty relocates the Server's
+        # managed assemblies into Libraries/, so the search has to recurse.
+        $files = Get-ChildItem -Path $staging -Recurse -File -Include $patterns |
+          Select-Object -ExpandProperty FullName |
+          Sort-Object
+
+        if (-not $files) {
+          throw "No files in $staging matched '${{ inputs.file_patterns }}'. Refusing to sign nothing."
+        }
+
+        Write-Host "Signing $($files.Count) file(s):"
+        $files | ForEach-Object { Write-Host "  $($_.Substring($staging.Length + 1))" }
+
+        "files<<SIGNTARGETS"    | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        $files                  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "SIGNTARGETS"           | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    # The signing action documents a .NET 8 runtime prerequisite, which is not
+    # guaranteed to be present on every windows-latest image revision.
+    - name: Setup .NET
+      if: env.SIGNING_ENABLED == 'true'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Azure Login
+      if: env.SIGNING_ENABLED == 'true'
+      uses: azure/login@v3
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Sign Files
+      if: env.SIGNING_ENABLED == 'true'
+      uses: azure/artifact-signing-action@v2
+      with:
+        endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+        signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+        certificate-profile-name: ${{ vars.AZURE_SIGNING_CERT_PROFILE_NAME }}
+        files: ${{ steps.targets.outputs.files }}
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+        # Pin authentication to the session established by azure/login rather than
+        # letting DefaultAzureCredential fall through a chain of unconfigured options.
+        exclude-environment-credential: true
+        exclude-azure-cli-credential: false
+
+    - name: Verify Signatures
+      if: env.SIGNING_ENABLED == 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $staging = Join-Path $PWD 'sign-staging'
+        $patterns = '${{ inputs.file_patterns }}'.Split(',') | ForEach-Object { $_.Trim() }
+        $failed = @()
+
+        foreach ($file in Get-ChildItem -Path $staging -Recurse -File -Include $patterns) {
+          $signature = Get-AuthenticodeSignature -FilePath $file.FullName
+          $relative = $file.FullName.Substring($staging.Length + 1)
+
+          if ($signature.Status -ne 'Valid') {
+            $failed += "$relative : $($signature.Status) - $($signature.StatusMessage)"
+          } elseif (-not $signature.TimeStamperCertificate) {
+            $failed += "$relative : signed but not timestamped"
+          } else {
+            Write-Host "$relative : Valid ($($signature.SignerCertificate.Subject))"
+          }
+        }
+
+        if ($failed) {
+          $failed | ForEach-Object { Write-Host "::error::$_" }
+          throw "$($failed.Count) file(s) failed signature verification."
+        }
+
+    - name: Repack Artifact
+      if: env.SIGNING_ENABLED == 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $staging = Join-Path $PWD 'sign-staging'
+        $archive = Join-Path $PWD '${{ inputs.artifact_name }}'
+
+        # The build workflows compress "publish/*", so the archive root is flat.
+        # includeBaseDirectory: $false reproduces that layout.
+        Remove-Item -Force -ErrorAction SilentlyContinue $archive
+        [System.IO.Compression.ZipFile]::CreateFromDirectory(
+          $staging,
+          $archive,
+          [System.IO.Compression.CompressionLevel]::Fastest,
+          $false)
+
+    - name: Upload Signed Artifact
+      if: env.SIGNING_ENABLED == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        path: ${{ inputs.artifact_name }}
+        name: ${{ inputs.artifact_name }}
+        overwrite: true

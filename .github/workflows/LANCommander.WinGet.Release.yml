@@ -3,6 +3,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write  # gh release download / upload
+  id-token: write  # OIDC token for Azure Artifact Signing
+
 jobs:
   create-installers:
     runs-on: windows-latest
@@ -10,6 +14,10 @@ jobs:
       matrix:
         app: ['Server', 'Launcher']
         arch: ['x64', 'arm64']
+    env:
+      # See LANCommander.Sign.yml for the required secrets and variables. Leaving
+      # AZURE_SIGNING_ENDPOINT unset skips signing and ships an unsigned installer.
+      SIGNING_ENABLED: ${{ vars.AZURE_SIGNING_ENDPOINT != '' && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,6 +94,56 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' installer.iss
         shell: pwsh
+
+      # Sign the installer. The payload inside it is already signed, since this job
+      # repackages the release assets produced by LANCommander.Sign.yml.
+      - name: Setup .NET
+        if: env.SIGNING_ENABLED == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Azure Login
+        if: env.SIGNING_ENABLED == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign installer
+        if: env.SIGNING_ENABLED == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_CERT_PROFILE_NAME }}
+          files: ${{ github.workspace }}\Output\LANCommander.${{ matrix.app }}-${{ env.VERSION }}-${{ matrix.arch }}-Setup.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          # Pin authentication to the session established by azure/login rather than
+          # letting DefaultAzureCredential fall through a chain of unconfigured options.
+          exclude-environment-credential: true
+          exclude-azure-cli-credential: false
+
+      - name: Verify installer signature
+        if: env.SIGNING_ENABLED == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $installer = "Output/LANCommander.${{ matrix.app }}-${{ env.VERSION }}-${{ matrix.arch }}-Setup.exe"
+          $signature = Get-AuthenticodeSignature -FilePath $installer
+
+          if ($signature.Status -ne 'Valid') {
+            throw "$installer : $($signature.Status) - $($signature.StatusMessage)"
+          }
+          if (-not $signature.TimeStamperCertificate) {
+            throw "$installer : signed but not timestamped"
+          }
+
+          Write-Host "$installer : Valid ($($signature.SignerCertificate.Subject))"
 
       # Upload installer to release
       - name: Upload installer to release

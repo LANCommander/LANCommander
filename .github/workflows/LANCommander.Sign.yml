@@ -40,6 +40,8 @@ jobs:
   sign:
     runs-on: windows-latest
 
+    environment: release
+
     env:
       SIGNING_ENABLED: ${{ vars.AZURE_SIGNING_ENDPOINT != '' && 'true' || 'false' }}
 

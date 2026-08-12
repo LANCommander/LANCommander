@@ -10,6 +10,7 @@ permissions:
 jobs:
   create-installers:
     runs-on: windows-latest
+    environment: release
     strategy:
       matrix:
         app: ['Server', 'Launcher']

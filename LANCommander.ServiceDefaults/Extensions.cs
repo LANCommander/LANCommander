@@ -56,19 +56,14 @@ public static class Extensions
         return builder;
     }
 
+    /// <summary>
+    /// Registers cross-cutting logging concerns only. Provider registration and minimum levels are
+    /// owned by the host application (see LANCommander.Server/Startup/Logger.cs), which drives them
+    /// from Settings.yml. Registering providers or calling SetMinimumLevel here would clobber that
+    /// configuration, since this runs after the host has already set logging up.
+    /// </summary>
     public static void AddStandardLogging(this ILoggingBuilder builder)
     {
-        // Add console logging
-        builder.AddConsole();
-        builder.AddDebug();
-
-        // Add file logging to default Logs directory
-        var logsDirectory = Path.Combine(AppContext.BaseDirectory, "Logs");
-        builder.AddFileLogging(logsDirectory);
-
-        // Set default minimum level
-        builder.SetMinimumLevel(LogLevel.Information);
-
         // Add common filters to reduce noise
         builder.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
         builder.AddFilter("Microsoft.AspNetCore.Components", LogLevel.Warning);

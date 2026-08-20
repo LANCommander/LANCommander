@@ -54,7 +54,7 @@ public class MonacoCodeEditor : StandaloneCodeEditor
         }, null);
 
         _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./_content/LANCommander.UI/bundle.js");
+            "import", UIAssets.BundleUrl);
 
         if (!_completionsRegistered)
         {

@@ -5,6 +5,7 @@
 @inject UserService UserService
 @inject UserCustomFieldService UserCustomFieldService
 @inject IOptions<Settings> Settings
+@inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
@@ -29,7 +30,11 @@
 
                     if (customField != null)
                     {
-                        <Button Type="@ButtonType.Primary" OnClick="() => Unlink(customField)">Unlink</Button>
+                        var wouldLockOut = !HasPassword && CustomFields.Count <= 1;
+
+                        <Tooltip Title="@(wouldLockOut ? "You can't unlink your only sign-in method. Set a password first." : null)">
+                            <Button Type="@ButtonType.Primary" Disabled="wouldLockOut" OnClick="() => Unlink(customField)">Unlink</Button>
+                        </Tooltip>
                     }
                     else
                     {
@@ -47,10 +52,12 @@
     User User = new();
     List<UserCustomField> CustomFields = new();
 
+    private bool HasPassword => !String.IsNullOrEmpty(User.PasswordHash);
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        
+
         if (authState.User.Identity.IsAuthenticated)
         {
             User = await UserService.GetAsync(authState.User.Identity.Name);
@@ -61,10 +68,12 @@
 
     async Task LoadData()
     {
+        CustomFields.Clear();
+
         foreach (var authenticationProvider in Settings.Value.Server.Authentication.AuthenticationProviders)
         {
             var customField = await UserCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
-            
+
             if (customField != null)
                 CustomFields.Add(customField);
         }
@@ -74,6 +83,13 @@
 
     async Task Unlink(UserCustomField customField)
     {
+        // Prevent locking the user out: a passwordless account must retain at least one linked provider.
+        if (!HasPassword && CustomFields.Count <= 1)
+        {
+            MessageService.Error("You can't unlink your only sign-in method. Set a password first.");
+            return;
+        }
+
         await UserCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
 
         await LoadData();

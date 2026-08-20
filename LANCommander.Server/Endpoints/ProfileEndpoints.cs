@@ -41,8 +41,12 @@ public static class ProfileEndpoints
     internal static async Task<IResult> ChangeAliasAsync(
         [FromBody] ChangeAliasRequest request,
         ClaimsPrincipal userPrincipal,
-        [FromServices] UserService userService)
+        [FromServices] UserService userService,
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider)
     {
+        if (!settingsProvider.CurrentValue.Server.Authentication.AllowAliasChange)
+            return TypedResults.StatusCode(StatusCodes.Status403Forbidden);
+
         if (userPrincipal?.Identity?.IsAuthenticated ?? false)
         {
             var user = await userService.GetAsync(userPrincipal.Identity!.Name);

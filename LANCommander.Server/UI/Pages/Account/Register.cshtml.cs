@@ -102,7 +102,7 @@ namespace LANCommander.Server.UI.Pages.Account
             }
             else
             {
-                if (!Settings.Value.Server.Authentication.AllowRegistration)
+                if (!Settings.Value.Server.Authentication.AllowRegistration || !Settings.Value.Server.Authentication.AllowPassword)
                     return LocalRedirect("~/Login");
 
                 Model.RegistrationType = RegistrationType.Basic;
@@ -120,7 +120,7 @@ namespace LANCommander.Server.UI.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
 
-            if (Model.RegistrationType != RegistrationType.AuthenticationProvider && !Settings.Value.Server.Authentication.AllowRegistration)
+            if (Model.RegistrationType != RegistrationType.AuthenticationProvider && (!Settings.Value.Server.Authentication.AllowRegistration || !Settings.Value.Server.Authentication.AllowPassword))
                 return LocalRedirect("~/Login");
 
             ExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();

@@ -29,6 +29,9 @@ namespace LANCommander.Server.Services
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
+            if (!settingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+                throw new UserAuthenticationException("Password authentication is disabled");
+
             if (string.IsNullOrWhiteSpace(userName) || await userService.CheckPassword(userName, password) == false)
                 throw new UserAuthenticationException("Invalid username or password");
 
@@ -148,6 +151,9 @@ namespace LANCommander.Server.Services
         {
             if (!settingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
                 throw new UserRegistrationException("User registration is disabled");
+
+            if (!settingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+                throw new UserRegistrationException("Password authentication is disabled");
 
             if (string.IsNullOrWhiteSpace(password))
                 throw new UserRegistrationException("Password is empty");

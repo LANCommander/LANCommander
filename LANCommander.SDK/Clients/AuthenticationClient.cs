@@ -213,6 +213,23 @@ public class AuthenticationClient(
         }
     }
 
+    public async Task<bool> GetPasswordAllowedAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<Settings>();
+
+            return settings?.Authentication?.AllowPassword ?? true;
+        }
+        catch
+        {
+            // Older servers don't expose this setting - default to allowing password authentication
+            return true;
+        }
+    }
     public async Task<bool> GetAutoRedirectToProviderAsync()
     {
         try

@@ -40,6 +40,12 @@ public partial class LoginViewModel : ViewModelBase
     private bool _allowRegistration = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderSeparator))]
+    private bool _allowPassword = true;
+    [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
@@ -66,14 +72,16 @@ public partial class LoginViewModel : ViewModelBase
 
     public ObservableCollection<AuthenticationProvider> AuthenticationProviders { get; } = new();
 
-    // When auto-redirect is enabled, the username/password login path is hidden entirely.
-    public bool ShowCredentialFields => !AutoRedirectToProvider;
+    // When auto-redirect is enabled, or the server disables password auth, the username/password login path is hidden entirely.
+    public bool ShowCredentialFields => !AutoRedirectToProvider && AllowPassword;
 
-    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider;
+    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider && AllowPassword;
 
     public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider;
 
-    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider;
+    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider && AllowPassword;
+
+    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider && AllowPassword;
 
     // Hide provider buttons only in the case the launcher auto-redirects (auto-redirect on + exactly one provider).
     public bool ShowProviderButtons => AutoRedirectToProvider
@@ -81,7 +89,7 @@ public partial class LoginViewModel : ViewModelBase
         : AuthenticationProviders.Count >= 1;
 
     // The "or" separator only makes sense when both credential fields and provider buttons are shown.
-    public bool ShowProviderSeparator => !AutoRedirectToProvider && ShowProviderButtons;
+    public bool ShowProviderSeparator => !AutoRedirectToProvider && AllowPassword && ShowProviderButtons;
 
     public event EventHandler? LoginSucceeded;
     public event EventHandler? ChangeServerRequested;
@@ -125,9 +133,11 @@ public partial class LoginViewModel : ViewModelBase
             // External providers unavailable - username/password login still works
         }
 
+        AllowPassword = await _authenticationClient.GetPasswordAllowedAsync();
+
         AllowRegistration = await _authenticationClient.GetRegistrationAllowedAsync();
 
-        if (!AllowRegistration && IsRegistering)
+        if ((!AllowRegistration || !AllowPassword) && IsRegistering)
             IsRegistering = false;
 
         AutoRedirectToProvider = await _authenticationClient.GetAutoRedirectToProviderAsync();
@@ -149,6 +159,13 @@ public partial class LoginViewModel : ViewModelBase
         if (IsServerOffline)
         {
             StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (!AllowPassword)
+        {
+            StatusMessage = "Password authentication is disabled. Please sign in with an external provider.";
             HasError = true;
             return;
         }
@@ -197,6 +214,13 @@ public partial class LoginViewModel : ViewModelBase
         if (IsServerOffline)
         {
             StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (!AllowPassword)
+        {
+            StatusMessage = "Password authentication is disabled. Please sign in with an external provider.";
             HasError = true;
             return;
         }

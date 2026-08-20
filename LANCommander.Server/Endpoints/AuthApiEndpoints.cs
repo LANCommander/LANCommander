@@ -46,28 +46,13 @@ public static class AuthApiEndpoints
         }
         catch (UserAuthenticationException ex)
         {
-            List<ErrorResponse.ErrorInfo> errorDetails =
-                ex.IdentityResult?.Errors.Select(FromIdentityResult).ToList() ?? [];
-
-            if (errorDetails.Count == 0)
-            {
-                errorDetails.Add(new ErrorResponse.ErrorInfo { Message = ex.Message });
-            }
-
-            var errorResponse = new ErrorResponse
-            {
-                Error = "AuthenticationFailed",
-                Message = "User authentication failed.",
-                Details = errorDetails,
-            };
-            
-            return TypedResults.BadRequest(errorResponse);
+            return BadRequest("AuthenticationFailed", "User authentication failed.", ex.Message, ex.IdentityResult);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while trying to log in {UserName}", model.Username);
 
-            return TypedResults.BadRequest(ex.Message);
+            return BadRequest("AuthenticationFailed", "User authentication failed.", ex.Message);
         }
     }
     
@@ -165,28 +150,13 @@ public static class AuthApiEndpoints
         }
         catch (UserRegistrationException ex)
         {
-            List<ErrorResponse.ErrorInfo> errorDetails =
-                ex.IdentityResult?.Errors.Select(FromIdentityResult).ToList() ?? [];
-
-            if (errorDetails.Count == 0)
-            {
-                errorDetails.Add(new ErrorResponse.ErrorInfo { Message = ex.Message });
-            }
-
-            var errorResponse = new ErrorResponse
-            {
-                Error = "UserRegistrationFailed",
-                Message = "User registration failed.",
-                Details = errorDetails,
-            };
-
-            return TypedResults.BadRequest(errorResponse);
+            return BadRequest("UserRegistrationFailed", "User registration failed.", ex.Message, ex.IdentityResult);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, ex.Message);
 
-            return TypedResults.BadRequest(ex.Message);
+            return BadRequest("UserRegistrationFailed", "User registration failed.", ex.Message);
         }
     }
 
@@ -221,6 +191,30 @@ public static class AuthApiEndpoints
             Key = error.Code,
             Message = error.Description,
         };
+    }
+
+    /// <summary>
+    /// Always respond with an <see cref="ErrorResponse"/> so clients can pull the reason out of the
+    /// body. Returning a bare string leaves the launcher with nothing to show but a generic message.
+    /// </summary>
+    private static IResult BadRequest(string error, string message, string fallbackDetail, IdentityResult identityResult = null)
+    {
+        List<ErrorResponse.ErrorInfo> errorDetails =
+            identityResult?.Errors.Select(FromIdentityResult).ToList() ?? [];
+
+        if (errorDetails.Count == 0 && !string.IsNullOrWhiteSpace(fallbackDetail))
+        {
+            errorDetails.Add(new ErrorResponse.ErrorInfo { Message = fallbackDetail });
+        }
+
+        var errorResponse = new ErrorResponse
+        {
+            Error = error,
+            Message = message,
+            Details = errorDetails,
+        };
+
+        return TypedResults.BadRequest(errorResponse);
     }
 }
 

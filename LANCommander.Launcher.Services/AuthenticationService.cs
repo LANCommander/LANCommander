@@ -115,16 +115,25 @@ public class AuthenticationService(
 
             await authenticationClient.RegisterAsync(username, password, passwordConfirmation);
 
-            settingsProvider.Update(s =>
+            // The account exists and we're holding a token by this point, so a failure below is not a
+            // registration failure. Log it instead of reporting it back to the user as one.
+            try
             {
-                s.Authentication.ServerAddress = connectionClient.GetServerAddress();
-            });
-        
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
+                settingsProvider.Update(s =>
+                {
+                    s.Authentication.ServerAddress = connectionClient.GetServerAddress();
+                });
 
-            await profileService.DownloadProfileInfoAsync();
-            
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
+
+                await profileService.DownloadProfileInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Registered user {UserName}, but could not finish setting up the session", username);
+            }
+
             op.Complete();
         }
     }

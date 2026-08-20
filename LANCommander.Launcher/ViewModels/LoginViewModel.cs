@@ -12,6 +12,7 @@ using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
+using ErrorResponse = LANCommander.SDK.Models.ErrorResponse;
 
 namespace LANCommander.Launcher.ViewModels;
 
@@ -33,7 +34,12 @@ public partial class LoginViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
     private bool _isRegistering;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
+    private string _passwordRequirements = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
@@ -41,10 +47,13 @@ public partial class LoginViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
     [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
     [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
     [NotifyPropertyChangedFor(nameof(ShowProviderSeparator))]
     private bool _allowPassword = true;
+
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
@@ -64,6 +73,7 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
     [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
     [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
     [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
     [NotifyPropertyChangedFor(nameof(ShowProviderButtons))]
@@ -77,7 +87,7 @@ public partial class LoginViewModel : ViewModelBase
 
     public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider && AllowPassword;
 
-    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider;
+    public bool ShowPasswordRequirements => ShowPasswordConfirmation && !string.IsNullOrWhiteSpace(PasswordRequirements);
 
     public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider && AllowPassword;
 
@@ -140,6 +150,9 @@ public partial class LoginViewModel : ViewModelBase
         if ((!AllowRegistration || !AllowPassword) && IsRegistering)
             IsRegistering = false;
 
+        if (AllowRegistration)
+            PasswordRequirements = (await _authenticationClient.GetPasswordPolicyAsync())?.Describe() ?? string.Empty;
+
         AutoRedirectToProvider = await _authenticationClient.GetAutoRedirectToProviderAsync();
     }
 
@@ -197,6 +210,11 @@ public partial class LoginViewModel : ViewModelBase
             StatusMessage = "Login successful!";
             LoginSucceeded?.Invoke(this, EventArgs.Empty);
         }
+        catch (AuthFailedException ex)
+        {
+            StatusMessage = FormatError(ex.ErrorData, $"Login failed: {ex.Message}");
+            HasError = true;
+        }
         catch (Exception ex)
         {
             StatusMessage = $"Login failed: {ex.Message}";
@@ -252,13 +270,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (RegisterFailedException ex)
         {
-            if (ex.ErrorData?.DetailsMessages?.Any() == true)
-                StatusMessage = string.Join(" ", ex.ErrorData.DetailsMessages);
-            else if (!string.IsNullOrWhiteSpace(ex.ErrorData?.Message))
-                StatusMessage = ex.ErrorData.Message;
-            else
-                StatusMessage = ex.Message;
-
+            StatusMessage = FormatError(ex.ErrorData, ex.Message);
             HasError = true;
         }
         catch (Exception ex)
@@ -279,6 +291,25 @@ public partial class LoginViewModel : ViewModelBase
         HasError = false;
         StatusMessage = string.Empty;
         PasswordConfirmation = string.Empty;
+    }
+
+    /// <summary>
+    /// Prefer the server's per-error detail (password complexity rules, username availability, ...)
+    /// over the SDK's generic exception message.
+    /// </summary>
+    private static string FormatError(ErrorResponse? errorData, string fallback)
+    {
+        var details = errorData?.DetailsMessages?
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .ToArray();
+
+        if (details?.Length > 0)
+            return string.Join(Environment.NewLine, details);
+
+        if (!string.IsNullOrWhiteSpace(errorData?.Message))
+            return errorData.Message;
+
+        return fallback;
     }
 
     [RelayCommand]

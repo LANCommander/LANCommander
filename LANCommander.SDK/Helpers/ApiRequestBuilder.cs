@@ -40,8 +40,7 @@ public class ApiRequestBuilder(
 
         try
         {
-            return JsonSerializer.Deserialize<TResult>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<TResult>(body, SdkJsonOptions.Default);
         }
         catch
         {

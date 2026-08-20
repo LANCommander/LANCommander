@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using Microsoft.Extensions.Logging;
@@ -230,6 +230,56 @@ public class AuthenticationClient(
             return true;
         }
     }
+
+    public async Task<PasswordPolicy> GetPasswordPolicyAsync()
+    {
+        try
+        {
+            var settings = await apiRequestFactory
+                .Create()
+                .UseRoute("/api/Settings")
+                .GetAsync<PasswordPolicyResponse>();
+
+            var authentication = settings?.Authentication;
+
+            if (authentication == null)
+                return null;
+
+            return new PasswordPolicy
+            {
+                RequiredLength = authentication.PasswordRequiredLength,
+                RequireDigit = authentication.PasswordRequireDigit,
+                RequireLowercase = authentication.PasswordRequireLowercase,
+                RequireUppercase = authentication.PasswordRequireUppercase,
+                RequireNonAlphanumeric = authentication.PasswordRequireNonAlphanumeric,
+            };
+        }
+        catch
+        {
+            // Older servers don't expose the password policy - show no requirements
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Only the password policy portion of <c>/api/Settings</c>. Kept separate from
+    /// <see cref="Settings"/> so server-side policy never gets written into the client's own
+    /// persisted settings file.
+    /// </summary>
+    private class PasswordPolicyResponse
+    {
+        public AuthenticationSection Authentication { get; set; }
+
+        public class AuthenticationSection
+        {
+            public int PasswordRequiredLength { get; set; }
+            public bool PasswordRequireDigit { get; set; }
+            public bool PasswordRequireLowercase { get; set; }
+            public bool PasswordRequireUppercase { get; set; }
+            public bool PasswordRequireNonAlphanumeric { get; set; }
+        }
+    }
+
     public async Task<bool> GetAutoRedirectToProviderAsync()
     {
         try
@@ -297,31 +347,8 @@ public class AuthenticationClient(
         }
     }
     
-    internal async Task<ErrorResponse> ParseErrorResponseAsync(HttpResponseMessage response, bool defaultToGenericResponse = false)
+    internal async Task<ErrorResponse> ParseErrorResponseAsync(HttpResponseMessage response)
     {
-        ErrorResponse errorResponse = null;
-
-        // Try to deserialize the error response.
-        try
-        {
-            errorResponse = JsonSerializer.Deserialize<ErrorResponse>(await response.Content.ReadAsStringAsync());
-            
-            return errorResponse;
-        }
-        catch (Exception deserializationEx)
-        {
-            // Log error and create a fallback message if deserialization fails.
-            if (defaultToGenericResponse)
-            {
-                logger?.LogError(deserializationEx, "Error deserializing error response");
-                
-                errorResponse = new ErrorResponse
-                {
-                    Message = "Could not process the server response."
-                };
-            }
-        }
-
-        return errorResponse;
+        return await ErrorResponseParser.ParseAsync(response, logger);
     }
 }

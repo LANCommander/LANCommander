@@ -617,6 +617,31 @@ namespace LANCommander.SDK.Services
         }
 
         /// <summary>
+        /// Returns the key currently tracked for this install. The locally tracked key
+        /// (stored in .lancommander/{gameId}/Key) is authoritative: a new key is only
+        /// requested from the server and persisted when the install has no key tracked yet.
+        /// This prevents re-allocating a fresh key on every run/install (e.g. when the
+        /// machine's detected MAC address is not stable between launches).
+        /// </summary>
+        public async Task<string> GetOrAllocateKeyAsync(string installDirectory, Guid gameId)
+        {
+            var currentKey = await GetCurrentKeyAsync(installDirectory, gameId);
+
+            if (!string.IsNullOrWhiteSpace(currentKey))
+            {
+                logger?.LogTrace("Reusing key tracked for game {GameId}", gameId);
+                return currentKey;
+            }
+
+            var allocatedKey = await GetAllocatedKeyAsync(gameId);
+
+            if (!string.IsNullOrWhiteSpace(allocatedKey))
+                await UpdateCurrentKeyAsync(installDirectory, gameId, allocatedKey);
+
+            return allocatedKey;
+        }
+
+        /// <summary>
         /// Downloads, extracts, and runs post-install scripts for the specified game
         /// </summary>
         /// <param name="gameId">Unique identifier of the game to install.</param>
@@ -1337,7 +1362,7 @@ namespace LANCommander.SDK.Services
                             break;
 
                         case InstallTaskType.RunKeyChangeScript:
-                            var allocatedKey = await GetAllocatedKeyAsync(game.Id);
+                            var allocatedKey = await GetOrAllocateKeyAsync(planItem.InstallDirectory, game.Id);
                             await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
                             break;
 
@@ -1847,7 +1872,7 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var allocatedKey = await GetAllocatedKeyAsync(game.Id);
+                    var allocatedKey = await GetOrAllocateKeyAsync(game.InstallDirectory, game.Id);
 
                     await scriptClient.Game_RunInstallScriptAsync(game.InstallDirectory, game.Id);
                     await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
@@ -2304,10 +2329,16 @@ namespace LANCommander.SDK.Services
                     #region Check Key Allocation
                     if (connectionClient.IsConnected())
                     {
-                        var newKey = await GetAllocatedKeyAsync(manifest.Id);
+                        // The locally tracked key is authoritative: only allocate and apply a
+                        // key when this install doesn't already have one tracked. This avoids
+                        // requesting a fresh allocation on every launch.
+                        if (string.IsNullOrWhiteSpace(currentGameKey))
+                        {
+                            var newKey = await GetOrAllocateKeyAsync(installDirectory, manifest.Id);
 
-                        if (currentGameKey != newKey)
-                            await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                            if (!string.IsNullOrWhiteSpace(newKey))
+                                await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                        }
                     }
                     #endregion
 
@@ -2902,11 +2933,13 @@ namespace LANCommander.SDK.Services
 
         public static void UpdateCurrentKey(string installDirectory, Guid gameId, string newKey)
         {
+            Directory.CreateDirectory(GetMetadataDirectoryPath(installDirectory, gameId));
             File.WriteAllText(GetMetadataFilePath(installDirectory, gameId, KeyFilename), newKey);
         }
 
         public static async Task UpdateCurrentKeyAsync(string installDirectory, Guid gameId, string newKey)
         {
+            Directory.CreateDirectory(GetMetadataDirectoryPath(installDirectory, gameId));
             await File.WriteAllTextAsync(GetMetadataFilePath(installDirectory, gameId, KeyFilename), newKey);
         }
     }

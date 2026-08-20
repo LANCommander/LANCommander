@@ -5,7 +5,7 @@ namespace LANCommander.UI.Providers;
 
 public class ScriptProvider(IJSRuntime js)
 {
-    private const string ScriptAsset = "./_content/LANCommander.UI/bundle.js";
+    private static readonly string ScriptAsset = UIAssets.BundleUrl;
     
     private IJSObjectReference? _module;
 

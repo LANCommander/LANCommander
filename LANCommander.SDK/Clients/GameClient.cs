@@ -241,43 +241,65 @@ namespace LANCommander.SDK.Services
                 }
             }
 
+            var shims = mainManifest == null
+                ? Array.Empty<ShimInfo>()
+                : CompatibilityResolver.GetShims(mainManifest);
+
+            actions = actions
+                .Where(a => CompatibilityResolver.CanRunOnCurrentRuntime(a.Platforms, shims))
+                .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
+                .ThenByDescending(a => a.IsPrimaryAction)
+                .ThenBy(a => a.SortOrder)
+                .ToList();
+
             if (manifests.Any(m => m.MultiplayerModes?.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
             {
-                var primaryAction = actions.First(a => a.IsPrimaryAction);
+                var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction);
 
-                try
+                if (primaryAction != null)
                 {
-                    var lobbies = lobbyClient.GetSteamLobbies(installDirectory, id);
-
-                    foreach (var lobby in lobbies)
+                    try
                     {
-                        var lobbyAction = new Models.Manifest.Action
-                        {
-                            Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
-                            IsPrimaryAction = true,
-                            Name = $"Join {lobby.ExternalUsername}'s lobby",
-                            SortOrder = actions.Count,
-                            Path = primaryAction.Path,
-                            WorkingDirectory = primaryAction.WorkingDirectory
-                        };
+                        var lobbies = lobbyClient.GetSteamLobbies(installDirectory, id);
 
-                        actions.Add(lobbyAction);
+                        foreach (var lobby in lobbies)
+                        {
+                            var lobbyAction = new Models.Manifest.Action
+                            {
+                                Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
+                                IsPrimaryAction = true,
+                                Name = $"Join {lobby.ExternalUsername}'s lobby",
+                                SortOrder = actions.Count,
+                                Path = primaryAction.Path,
+                                WorkingDirectory = primaryAction.WorkingDirectory,
+                                Platforms = primaryAction.Platforms
+                            };
+
+                            actions.Add(lobbyAction);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not get lobbies");
                     }
                 }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex, "Could not get lobbies");
-                }
             }
-
-            // Only surface actions that support the runtime the launcher is currently running on.
-            actions = actions
-                .Where(a => EnvironmentHelper.SupportsCurrentRuntime(a.Platforms))
-                .ToList();
 
             return actions;
         }
         
+        /// <summary>
+        /// Returns the compatibility runtimes ("shims") attached to an installed game, used to label and
+        /// disambiguate bridged actions in the UI.
+        /// </summary>
+        public async Task<IReadOnlyList<ShimInfo>> GetShimsAsync(string installDirectory, Guid id)
+        {
+            var manifests = await GetManifestsAsync(installDirectory, id);
+            var mainManifest = manifests.FirstOrDefault(m => m.Id == id);
+
+            return CompatibilityResolver.GetShims(mainManifest);
+        }
+
         public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
         {
             return await apiRequestFactory

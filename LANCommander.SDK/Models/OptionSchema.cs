@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.Json;
+using LANCommander.SDK.Enums;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -11,6 +12,20 @@ namespace LANCommander.SDK.Models
     public class OptionSchema
     {
         public string CommandTemplate { get; set; }
+
+        /// <summary>
+        /// The guest platform(s) whose executables this shim can run on the host it is installed on.
+        /// <see cref="RuntimePlatform.None"/> (the default) means the shim can bridge any foreign platform,
+        /// which preserves the behavior of schemas authored before this field existed.
+        /// </summary>
+        public RuntimePlatform GuestPlatforms { get; set; } = RuntimePlatform.None;
+
+        /// <summary>
+        /// Optional friendly name for the compatibility runtime, used when disambiguating actions in the UI
+        /// (e.g. "Proton"). When empty, the redistributable's own name is used instead.
+        /// </summary>
+        public string DisplayName { get; set; }
+
         public Dictionary<string, OptionDefinition> Options { get; set; } = new Dictionary<string, OptionDefinition>();
 
         /// <summary>

@@ -125,7 +125,17 @@ namespace LANCommander.SDK
             var manifest = await ManifestHelper.ReadAsync<Models.Manifest.Game>(installDirectory, gameId);
 
             if (action == null)
-                action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+            {
+                var shims = CompatibilityResolver.GetShims(manifest);
+
+                // Prefer a natively runnable primary, then any action that can run on this runtime (native or bridged).
+                action = manifest.Actions?
+                    .Where(a => CompatibilityResolver.CanRunOnCurrentRuntime(a.Platforms, shims))
+                    .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
+                    .ThenByDescending(a => a.IsPrimaryAction)
+                    .ThenBy(a => a.SortOrder)
+                    .FirstOrDefault();
+            }
             
             if (manifest.CustomFields != null && manifest.CustomFields.Any())
             {

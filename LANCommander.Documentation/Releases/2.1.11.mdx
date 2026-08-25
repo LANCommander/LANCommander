@@ -1,0 +1,41 @@
+---
+title: 2.1.11
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.11 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- Better support for "compatibility runtimes" have been added to redistributables. This should provide a better feature set for runtimes such as `umu-launcher`, WINE, etc.
+- Added additional user profile restriction to server settings.
+- The media grabber dialog now lists HQ sub-providers when searching for media.
+- Password requirements are now shown in the launcher during sign-in and registration.
+- Removing an external authentication provider now prompts for confirmation.
+- Added claim mapping details for the Discord authentication provider.
+- The launcher now defaults to the library view on startup.
+- Loading indicators are now shown while the library and depot load, with the library indicator moved to an overlay.
+
+## Bug Fixes
+- Fixed game key allocation.
+- Fixed grabbing the auth token for HQ.
+- Fixed a stale JS bundle that caused a `setModuleFunctions` interop error.
+- Fixed the logging minimum level not being applied.
+- Fixed the confirm action when deleting a provider.
+- Fixed the automatic package cron job.
+- Fixed the title on the IGDB settings page.
+- Fixed local file path resolution.
+- Fixed resolution of the manual media path.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.11" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.10" to="v2.1.11" />

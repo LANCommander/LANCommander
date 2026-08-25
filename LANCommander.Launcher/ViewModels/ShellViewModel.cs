@@ -239,8 +239,9 @@ public partial class ShellViewModel : ViewModelBase
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
 
-        // Open to library if user libraries are enabled and the user has games, otherwise show the depot
-        if (AreUserLibrariesEnabled && LibraryViewModel.Games.Count > 0)
+        // Default to the library whenever user libraries are enabled; fall back to the depot only
+        // when libraries are turned off server-side.
+        if (AreUserLibrariesEnabled)
             ShowLibrary();
         else
             ShowDepot();

@@ -52,12 +52,15 @@ public class InstallServiceRoutingTests
     [Fact]
     public void ResolveExactDestination_NoTargetInstallation_ReturnsNaturalDestination()
     {
+        var parent = Path.Combine(Path.GetTempPath(), "Games");
+        var naturalDestination = Path.Combine(parent, "Half-Life");
+
         var result = InstallService.ResolveExactDestination(
-            installDirectory: @"D:\Games",
-            naturalDestination: @"D:\Games\Half-Life",
+            installDirectory: parent,
+            naturalDestination: naturalDestination,
             targetInstallation: null);
 
-        result.ShouldBe(@"D:\Games\Half-Life");
+        result.ShouldBe(naturalDestination);
     }
 
     [Fact]
@@ -65,11 +68,11 @@ public class InstallServiceRoutingTests
     {
         // Legacy/back-compat callers (CLI, no directory argument at all) — must never move the
         // installation just because a natural destination was computed from an empty hint.
-        var installation = MakeInstallation(@"D:\Games\Half-Life (1.1.0)");
+        var installation = MakeInstallation(Path.Combine(Path.GetTempPath(), "Games", "Half-Life (1.1.0)"));
 
         var result = InstallService.ResolveExactDestination(
             installDirectory: "",
-            naturalDestination: @"D:\Games\Half-Life",
+            naturalDestination: Path.Combine(Path.GetTempPath(), "Games", "Half-Life"),
             targetInstallation: installation);
 
         result.ShouldBe(installation.InstallDirectory);
@@ -79,14 +82,15 @@ public class InstallServiceRoutingTests
     public void ResolveExactDestination_NaturalDestinationMatchesInstallation_ReturnsItVerbatim()
     {
         // The common single-install case: no version suffix needed at all.
-        var installation = MakeInstallation(@"D:\Games\Half-Life");
+        var parent = Path.Combine(Path.GetTempPath(), "Games");
+        var installation = MakeInstallation(Path.Combine(parent, "Half-Life"));
 
         var result = InstallService.ResolveExactDestination(
-            installDirectory: @"D:\Games",
-            naturalDestination: @"D:\Games\Half-Life",
+            installDirectory: parent,
+            naturalDestination: installation.InstallDirectory,
             targetInstallation: installation);
 
-        result.ShouldBe(@"D:\Games\Half-Life");
+        result.ShouldBe(installation.InstallDirectory);
     }
 
     [Fact]
@@ -98,27 +102,30 @@ public class InstallServiceRoutingTests
         // natural path. The caller (e.g. the Modify dialog, which derives its directory argument
         // from Path.GetDirectoryName(installation.InstallDirectory)) supplying that *same* parent
         // must not be treated as "move it to the natural path" — there's no relocation intent.
-        var installation = MakeInstallation(@"D:\Games\Half-Life (1.1.0)");
+        var parent = Path.Combine(Path.GetTempPath(), "Games");
+        var installation = MakeInstallation(Path.Combine(parent, "Half-Life (1.1.0)"));
 
         var result = InstallService.ResolveExactDestination(
-            installDirectory: @"D:\Games",
-            naturalDestination: @"D:\Games\Half-Life",
+            installDirectory: parent,
+            naturalDestination: Path.Combine(parent, "Half-Life"),
             targetInstallation: installation);
 
-        result.ShouldBe(@"D:\Games\Half-Life (1.1.0)");
+        result.ShouldBe(installation.InstallDirectory);
     }
 
     [Fact]
     public void ResolveExactDestination_SameParent_IsCaseInsensitiveAndTrailingSlashInsensitive()
     {
-        var installation = MakeInstallation(@"D:\Games\Half-Life (1.1.0)");
+        var parent = Path.Combine(Path.GetTempPath(), "Games");
+        var installation = MakeInstallation(Path.Combine(parent, "Half-Life (1.1.0)"));
+        var differentlyCasedParent = parent.ToUpperInvariant() + Path.DirectorySeparatorChar;
 
         var result = InstallService.ResolveExactDestination(
-            installDirectory: @"d:\GAMES\",
-            naturalDestination: @"d:\GAMES\Half-Life",
+            installDirectory: differentlyCasedParent,
+            naturalDestination: Path.Combine(differentlyCasedParent, "Half-Life"),
             targetInstallation: installation);
 
-        result.ShouldBe(@"D:\Games\Half-Life (1.1.0)");
+        result.ShouldBe(installation.InstallDirectory);
     }
 
     [Fact]
@@ -128,14 +135,17 @@ public class InstallServiceRoutingTests
         // (a parent directory that is neither blank, nor the natural match, nor the
         // installation's own current parent) must still resolve to the natural destination so
         // Next() correctly classifies this as a Move.
-        var installation = MakeInstallation(@"D:\OldGames\Half-Life (1.1.0)");
+        var oldParent = Path.Combine(Path.GetTempPath(), "OldGames");
+        var newParent = Path.Combine(Path.GetTempPath(), "NewGames");
+        var installation = MakeInstallation(Path.Combine(oldParent, "Half-Life (1.1.0)"));
+        var naturalDestination = Path.Combine(newParent, "Half-Life");
 
         var result = InstallService.ResolveExactDestination(
-            installDirectory: @"D:\NewGames",
-            naturalDestination: @"D:\NewGames\Half-Life",
+            installDirectory: newParent,
+            naturalDestination: naturalDestination,
             targetInstallation: installation);
 
-        result.ShouldBe(@"D:\NewGames\Half-Life");
+        result.ShouldBe(naturalDestination);
     }
 
     // ── IsExplicitArchiveChange ─────────────────────────────────────────────────

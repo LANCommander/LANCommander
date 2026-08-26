@@ -236,17 +236,21 @@ public class GameInstallationServiceTests
     {
         await using var context = InMemoryDatabaseFactory.Create();
         var service = new GameInstallationService(context, NullLogger<GameInstallationService>.Instance);
+        var baseDirectory = Path.Combine(Path.GetTempPath(), "Games", "HalfLife");
+        var invalidCharacter = Path.GetInvalidFileNameChars().First();
 
         var game = new Game { Id = Guid.NewGuid(), Title = "Half-Life" };
         context.Games!.Add(game);
         await context.SaveChangesAsync();
 
-        await service.AddInstallationAsync(MakeInstallation(game.Id, @"C:\Games\HalfLife", "1.0.0"));
+        await service.AddInstallationAsync(MakeInstallation(game.Id, baseDirectory, "1.0.0"));
 
-        var directory = await service.GenerateInstallDirectoryAsync(game.Id, @"C:\Games\HalfLife", "1.1.0:Beta");
+        var directory = await service.GenerateInstallDirectoryAsync(
+            game.Id,
+            baseDirectory,
+            $"1.1.0{invalidCharacter}Beta");
 
-        // ':' is not a valid Windows filename character and must be sanitized out of the suffix.
-        directory.ShouldBe(@"C:\Games\HalfLife (1.1.0Beta)");
+        directory.ShouldBe($"{baseDirectory} (1.1.0Beta)");
     }
 
     [Fact]

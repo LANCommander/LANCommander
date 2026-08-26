@@ -168,6 +168,29 @@
                         </StackPanel>
                     </StackPanel>
                 </Grid>
+
+                <!-- Installation selector: only shown for games with more than one side-by-side
+                     installation. Selecting an entry switches the active installation (version +
+                     location) that play/modify/verify/uninstall/change-version act on. -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding HasMultipleInstallations}">
+                    <TextBlock Text="Installed Version:" FontSize="12" Opacity="0.6" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding Installations}"
+                              SelectedItem="{Binding SelectedInstallationItem}"
+                              MinWidth="220">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="vm:GameInstallationItemViewModel">
+                                <StackPanel Spacing="0">
+                                    <TextBlock Text="{Binding Label}"
+                                               FontSize="13"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
         </Border>
     </StackPanel>

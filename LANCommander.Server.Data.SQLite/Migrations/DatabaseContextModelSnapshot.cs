@@ -306,6 +306,58 @@ namespace LANCommander.Migrations
                     b.ToTable("Archive");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ArchivePatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CompressedSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FromArchiveId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ToArchiveId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UncompressedSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("FromArchiveId");
+
+                    b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("ToArchiveId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("ArchivePatches");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -538,6 +590,9 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("DefaultArchiveId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
@@ -583,6 +638,8 @@ namespace LANCommander.Migrations
                     b.HasIndex("BaseGameId");
 
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("DefaultArchiveId");
 
                     b.HasIndex("EngineId");
 
@@ -2258,6 +2315,47 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.ArchivePatch", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Archive", "FromArchive")
+                        .WithMany()
+                        .HasForeignKey("FromArchiveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("ArchivePatches")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Archive", "ToArchive")
+                        .WithMany()
+                        .HasForeignKey("ToArchiveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("FromArchive");
+
+                    b.Navigation("StorageLocation");
+
+                    b.Navigation("ToArchive");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Category", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2410,6 +2508,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Archive", "DefaultArchive")
+                        .WithMany()
+                        .HasForeignKey("DefaultArchiveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("LANCommander.Server.Data.Models.Engine", "Engine")
                         .WithMany("Games")
                         .HasForeignKey("EngineId")
@@ -2423,6 +2526,8 @@ namespace LANCommander.Migrations
                     b.Navigation("BaseGame");
 
                     b.Navigation("CreatedBy");
+
+                    b.Navigation("DefaultArchive");
 
                     b.Navigation("Engine");
 
@@ -3271,6 +3376,8 @@ namespace LANCommander.Migrations
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.StorageLocation", b =>
                 {
+                    b.Navigation("ArchivePatches");
+
                     b.Navigation("Archives");
 
                     b.Navigation("GameSaves");

@@ -53,7 +53,12 @@ public partial class AlertOverlay : UserControl
             var mainWindow = (Application.Current?.ApplicationLifetime
                 as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
-            var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+            // GetOverlayLayer throws on a null visual, and there genuinely may be no main window
+            // yet (or any more) when an alert is raised — during startup, shutdown, or headless
+            // runs. Throwing here would replace the error being reported with an unrelated one,
+            // right inside the catch block that was trying to report it. Fall through to the
+            // no-layer branch instead, which already handles "nowhere to show this".
+            var layer = mainWindow is null ? null : OverlayLayer.GetOverlayLayer(mainWindow);
 
             if (layer is not null)
             {

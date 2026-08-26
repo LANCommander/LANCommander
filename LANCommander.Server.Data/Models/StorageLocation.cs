@@ -15,6 +15,7 @@ namespace LANCommander.Server.Data.Models
         public string Path { get; set; }
         public StorageLocationType Type { get; set; }
         public ICollection<Archive>? Archives { get; set; }
+        public ICollection<ArchivePatch>? ArchivePatches { get; set; }
         public ICollection<GameSave>? GameSaves { get; set; }
         public ICollection<Media>? Media { get; set; }
     }

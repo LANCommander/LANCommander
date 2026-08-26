@@ -196,9 +196,11 @@ public static class GameContextMenu
         items.Add(Item("Browse Files", vm, "BrowseFilesCommand", visiblePath: "IsInstalled"));
         items.Add(Item("View Manual", vm, "OpenFirstManualCommand", visiblePath: "HasManuals"));
         items.Add(Item("Modify", vm, "ModifyCommand", visiblePath: "IsInstalled"));
+        items.Add(Item("Install Another Version", vm, "InstallAnotherVersionCommand", visiblePath: "IsInstalled"));
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Verify Files", vm, "VerifyFilesCommand", visiblePath: "IsInstalled", enabledPath: "IsVerifyingFiles", enabledInvert: true));
-        items.Add(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true));
+        items.Add(Item("Change Version…", vm, "ChangeVersionCommand", visiblePath: "IsInstalled", headerPath: "ChangeVersionMenuLabel"));
+        items.Add(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true, headerPath: "UninstallMenuLabel"));
         items.Add(Item("Add to Library", vm, "AddToLibraryCommand", visiblePath: "IsInLibrary", visibleInvert: true));
         items.Add(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary"));
 
@@ -215,11 +217,15 @@ public static class GameContextMenu
         string? visiblePath = null,
         bool visibleInvert = false,
         string? enabledPath = null,
-        bool enabledInvert = false)
+        bool enabledInvert = false,
+        string? headerPath = null)
     {
         var item = new MenuItem { Header = header };
 
         item.Bind(MenuItem.CommandProperty, new Binding(commandPath) { Source = vm });
+
+        if (headerPath != null)
+            item.Bind(MenuItem.HeaderProperty, new Binding(headerPath) { Source = vm });
 
         if (visiblePath != null)
             item.Bind(Visual.IsVisibleProperty, new Binding(visiblePath)

@@ -21,6 +21,11 @@ namespace LANCommander.SDK.Models
         public Engine Engine { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
+        /// <summary>
+        /// The explicitly configured default archive for this game, or null when no explicit
+        /// default is set (in which case the effective default is the newest archive).
+        /// </summary>
+        public Guid? DefaultArchiveId { get; set; }
         public virtual IEnumerable<Collection> Collections { get; set; }
         public virtual IEnumerable<GameCustomField> CustomFields { get; set; }
         public virtual IEnumerable<Company> Developers { get; set; }

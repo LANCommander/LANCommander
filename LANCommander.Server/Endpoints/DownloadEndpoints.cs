@@ -4,6 +4,7 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -18,11 +19,21 @@ public static class DownloadEndpoints
         group.MapGet("/Launcher/{objectKey}", DownloadLauncherAsync);
     }
 
-    internal static async Task<Results<NotFound, FileStreamHttpResult>> DownloadArchiveAsync(
+    /// <summary>
+    /// Serves a raw archive by id. Game archives are subject to the same
+    /// <c>Server.Archives.AllowInsecureDownloads</c> gate as
+    /// <c>/api/Games/{id}/Download</c> — otherwise this route would be a trivial way to download
+    /// any game archive anonymously while that setting is off. Non-game archives
+    /// (redistributables) keep their existing unauthenticated behavior: they are shared payloads
+    /// with no per-game access policy attached, and clients fetch them by id without a game
+    /// context.
+    /// </summary>
+    internal static async Task<Results<UnauthorizedHttpResult, NotFound, FileStreamHttpResult>> DownloadArchiveAsync(
         Guid id,
         ClaimsPrincipal user,
         [FromServices] ArchiveService archiveService,
         [FromServices] DownloadThrottle downloadThrottle,
+        [FromServices] IOptions<Settings.Settings> settings,
         [FromServices] ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger(nameof(DownloadEndpoints));
@@ -38,6 +49,14 @@ public static class DownloadEndpoints
         {
             logger.LogWarning("Archive with ID {ArchiveId} not found", id);
             return TypedResults.NotFound();
+        }
+
+        if (archive.Game != null
+            && !settings.Value.Server.Archives.AllowInsecureDownloads
+            && !(user?.Identity?.IsAuthenticated ?? false))
+        {
+            logger.LogWarning("Unauthorized anonymous download attempt for game archive {ArchiveId}", id);
+            return TypedResults.Unauthorized();
         }
 
         var fileName = await archiveService.GetArchiveFileLocationAsync(archive);

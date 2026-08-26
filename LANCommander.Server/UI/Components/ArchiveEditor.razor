@@ -12,6 +12,7 @@
 @inject ILogger<ArchiveEditor> Logger
 @using Hangfire
 @using LANCommander.Server.Jobs.Background
+@using LANCommander.Server.Services.Exceptions
 
 <DataTable
     @ref="_table"
@@ -23,6 +24,18 @@
         @if (_hasPackageScript)
         {
             <Button OnClick="Package" Loading="_packaging">Package</Button>
+        }
+        @if (GameId != Guid.Empty)
+        {
+            <Tooltip Title="Clears the explicit default so this game always installs the newest archive">
+                <Button OnClick="UseLatestAutomatically"
+                        Type="@ButtonType.Default"
+                        Icon="@IconType.Outline.Reload"
+                        Disabled="@(_game?.DefaultArchiveId == null || _settingDefault)"
+                        Loading="_settingDefault">
+                    Use Latest Automatically
+                </Button>
+            </Tooltip>
         }
         <Button OnClick="RecalculateFileSizes" Type="@ButtonType.Default">Recalculate File Sizes</Button>
         <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
@@ -38,12 +51,41 @@
         <BoundDataColumn Property="a => a.UncompressedSize">
             <ByteSize Value="context.UncompressedSize" />
         </BoundDataColumn>
+        @if (GameId != Guid.Empty)
+        {
+            <DataColumn TData="string" Title="Default">
+                @if (IsExplicitDefault(context))
+                {
+                    <Tag Color="@PresetColor.Gold.ToString()">Default</Tag>
+                }
+                else if (IsEffectiveDefaultOnly(context))
+                {
+                    <Tag Color="@PresetColor.Blue.ToString()">Latest</Tag>
+                }
+            </DataColumn>
+        }
+        <BoundDataColumn Property="a => a.Changelog">
+            @if (!String.IsNullOrWhiteSpace(context.Changelog))
+            {
+                <span title="@context.Changelog">@Truncate(context.Changelog, 60)</span>
+            }
+        </BoundDataColumn>
         <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy"/>
         <BoundDataColumn Property="s => s.CreatedOn" DefaultSortOrder="SortDirection.Descending">
             <LocalTime Value="context.CreatedOn" />
         </BoundDataColumn>
 
         <DataActions TData="string">
+            @if (GameId != Guid.Empty)
+            {
+                <Tooltip Title="@(IsExplicitDefault(context) ? "This is already the default" : "Set as Default")">
+                    <Button Icon="@IconType.Outline.Check"
+                            Type="@ButtonType.Text"
+                            Disabled="@(IsExplicitDefault(context) || _settingDefault)"
+                            OnClick="() => SetDefault(context)"/>
+                </Tooltip>
+            }
+
             <Tooltip Title="Recalculate File Size">
                 <Button Icon="@IconType.Outline.Sync" Type="@ButtonType.Text" OnClick="() => RecalculateFileSize(context)"/>
             </Tooltip>
@@ -62,9 +104,18 @@
                 <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)" Loading="_browsing"/>
             </Tooltip>
 
-            <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
-                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
-            </Popconfirm>
+            @if (GameId != Guid.Empty && IsExplicitDefault(context))
+            {
+                <Tooltip Title="This is the default archive for this game. Set another version as default or use &quot;Use Latest Automatically&quot; before deleting it.">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger Disabled/>
+                </Tooltip>
+            }
+            else
+            {
+                <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+                </Popconfirm>
+            }
         </DataActions>
     </Columns>
 </DataTable>
@@ -83,17 +134,113 @@
     bool _packaging;
     bool _checking;
     bool _hasPackageScript;
+    bool _settingDefault;
+
+    Game _game;
+    Archive _effectiveDefault;
 
     protected override async Task OnInitializedAsync()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
 
         if (GameId != Guid.Empty)
+        {
             _hasPackageScript = (await ScriptService.GetAsync(s => s.GameId == GameId && s.Type == SDK.Enums.ScriptType.Package)).Any();
+            await LoadGameDefaultStateAsync();
+        }
         else if (RedistributableId != Guid.Empty)
             _hasPackageScript = (await ScriptService.GetAsync(s => s.RedistributableId == RedistributableId && s.Type == SDK.Enums.ScriptType.Package)).Any();
         else if (ToolId != Guid.Empty)
             _hasPackageScript = (await ScriptService.GetAsync(s => s.ToolId == ToolId && s.Type == SDK.Enums.ScriptType.Package)).Any();
+    }
+
+    /// <summary>
+    /// Reloads the parent game's explicit default (<see cref="Game.DefaultArchiveId"/>) and
+    /// resolved effective default, used to render the "Default"/"Latest" badges, drive the
+    /// single-select "Set Default" action, and block deleting the current explicit default.
+    /// Only meaningful for game archives — redistributable/tool archives have no default concept.
+    /// </summary>
+    private async Task LoadGameDefaultStateAsync()
+    {
+        if (GameId == Guid.Empty)
+        {
+            _game = null;
+            _effectiveDefault = null;
+            return;
+        }
+
+        (_game, _effectiveDefault) = await GameService.GetSelectableArchivesAsync(GameId);
+    }
+
+    /// <summary>True when this archive is the game's admin-selected explicit default.</summary>
+    private bool IsExplicitDefault(Archive archive) =>
+        GameId != Guid.Empty && _game?.DefaultArchiveId.HasValue == true && _game.DefaultArchiveId.Value == archive.Id;
+
+    /// <summary>
+    /// True when this archive is only the game's default because it's the newest by upload
+    /// date (no explicit default is set) — shown as "Latest" rather than "Default" so admins can
+    /// tell an intentional pin apart from the automatic fallback.
+    /// </summary>
+    private bool IsEffectiveDefaultOnly(Archive archive) =>
+        GameId != Guid.Empty && !IsExplicitDefault(archive) && _effectiveDefault?.Id == archive.Id;
+
+    private static string Truncate(string value, int maxLength) =>
+        String.IsNullOrEmpty(value) || value.Length <= maxLength ? value : value.Substring(0, maxLength) + "…";
+
+    private async Task SetDefault(Archive archive)
+    {
+        if (GameId == Guid.Empty || IsExplicitDefault(archive))
+            return;
+
+        _settingDefault = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await GameService.SetDefaultArchiveAsync(GameId, archive.Id);
+            await LoadGameDefaultStateAsync();
+            await _table.ReloadAsync();
+
+            MessageService.Success($"'{archive.Version}' is now the default archive!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not set the default archive.");
+            Logger.LogError(ex, "Could not set default archive {ArchiveId} for game {GameId}", archive.Id, GameId);
+        }
+        finally
+        {
+            _settingDefault = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task UseLatestAutomatically()
+    {
+        if (GameId == Guid.Empty)
+            return;
+
+        _settingDefault = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await GameService.SetDefaultArchiveAsync(GameId, null);
+            await LoadGameDefaultStateAsync();
+            await _table.ReloadAsync();
+
+            MessageService.Success("Now using the latest archive automatically!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not clear the default archive.");
+            Logger.LogError(ex, "Could not clear default archive for game {GameId}", GameId);
+        }
+        finally
+        {
+            _settingDefault = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task Package()
@@ -285,6 +432,14 @@
 
     private async Task Delete(Archive archive)
     {
+        // UI-level guard mirroring the service-level protection: keep the message obvious and
+        // avoid the round-trip when we already know locally that this is the explicit default.
+        if (IsExplicitDefault(archive))
+        {
+            MessageService.Error("This archive is the default for this game. Set another version as default or use \"Use Latest Automatically\" first.");
+            return;
+        }
+
         try
         {
             await ArchiveService.DeleteAsync(archive);
@@ -292,6 +447,14 @@
             await _table.ReloadAsync();
 
             MessageService.Success("Archive deleted!");
+        }
+        catch (CannotDeleteDefaultArchiveException)
+        {
+            // Backstop path: another admin/session set this as the default between our last
+            // reload and this click. Refresh our local default state so the row reflects it.
+            MessageService.Error("This archive is the default for this game. Set another version as default or use \"Use Latest Automatically\" first.");
+            await LoadGameDefaultStateAsync();
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {

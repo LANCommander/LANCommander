@@ -42,6 +42,16 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Company>? Publishers { get; set; }
         public ICollection<Company>? Developers { get; set; }
         public ICollection<Archive>? Archives { get; set; }
+
+        /// <summary>
+        /// Administrator-selected default archive for this game. Must be a full archive that
+        /// belongs to this game; enforced by <see cref="Services.GameService.SetDefaultArchiveAsync"/>.
+        /// When null, the effective default falls back to the newest archive by <c>CreatedOn</c>.
+        /// </summary>
+        public Guid? DefaultArchiveId { get; set; }
+        [ForeignKey(nameof(DefaultArchiveId))]
+        public virtual Archive? DefaultArchive { get; set; }
+
         public ICollection<Script>? Scripts { get; set; }
         public ICollection<GameSave>? GameSaves { get; set; }
         public ICollection<PlaySession>? PlaySessions { get; set; }

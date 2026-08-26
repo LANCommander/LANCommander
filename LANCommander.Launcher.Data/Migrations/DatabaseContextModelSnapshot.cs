@@ -280,6 +280,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SelectedInstallationId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("Singleplayer")
                         .HasColumnType("INTEGER");
 
@@ -301,6 +304,8 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasIndex("BaseGameId");
 
                     b.HasIndex("EngineId");
+
+                    b.HasIndex("SelectedInstallationId");
 
                     b.ToTable("Games");
                 });
@@ -338,6 +343,110 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.HasIndex("GameId");
 
                     b.ToTable("GameExternalIds");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ArchiveId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayLabel")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ImportedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstallDirectory")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("InstalledOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Version")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_GameInstallations_GameId_Selected")
+                        .HasFilter("\"IsSelected\" = 1");
+
+                    b.HasIndex("InstallDirectory")
+                        .IsUnique();
+
+                    b.ToTable("GameInstallations");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallationAddon", b =>
+                {
+                    b.Property<Guid>("GameInstallationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AddonGameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ArchiveId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Installed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("InstalledOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstalledVersion")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GameInstallationId", "AddonGameId");
+
+                    b.HasIndex("AddonGameId");
+
+                    b.ToTable("GameInstallationAddons");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallationTool", b =>
+                {
+                    b.Property<Guid>("GameInstallationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ToolId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstallDirectory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Installed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("InstalledOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstalledVersion")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GameInstallationId", "ToolId");
+
+                    b.HasIndex("ToolId");
+
+                    b.ToTable("GameInstallationTools");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameTool", b =>
@@ -844,9 +953,16 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasForeignKey("EngineId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("LANCommander.Launcher.Data.Models.GameInstallation", "SelectedInstallation")
+                        .WithMany()
+                        .HasForeignKey("SelectedInstallationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("BaseGame");
 
                     b.Navigation("Engine");
+
+                    b.Navigation("SelectedInstallation");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameExternalId", b =>
@@ -857,6 +973,55 @@ namespace LANCommander.Launcher.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallation", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", "Game")
+                        .WithMany("Installations")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallationAddon", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", "AddonGame")
+                        .WithMany()
+                        .HasForeignKey("AddonGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Launcher.Data.Models.GameInstallation", "GameInstallation")
+                        .WithMany("InstallationAddons")
+                        .HasForeignKey("GameInstallationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AddonGame");
+
+                    b.Navigation("GameInstallation");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallationTool", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.GameInstallation", "GameInstallation")
+                        .WithMany("InstallationTools")
+                        .HasForeignKey("GameInstallationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Launcher.Data.Models.Tool", "Tool")
+                        .WithMany()
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameInstallation");
+
+                    b.Navigation("Tool");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameTool", b =>
@@ -958,11 +1123,20 @@ namespace LANCommander.Launcher.Data.Migrations
 
                     b.Navigation("GameTools");
 
+                    b.Navigation("Installations");
+
                     b.Navigation("Media");
 
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.GameInstallation", b =>
+                {
+                    b.Navigation("InstallationAddons");
+
+                    b.Navigation("InstallationTools");
                 });
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Tool", b =>

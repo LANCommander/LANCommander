@@ -284,7 +284,14 @@ public class ApiRequestBuilder(
         _request.Method = HttpMethod.Get;
         
         var response = await _httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
-        
+
+        // A failed response body (an "Unauthorized"/"Archive does not belong to game" payload, an
+        // error page, ...) must never be handed back as if it were a download: callers stream it
+        // straight into an archive reader, which would report it as a corrupt/unreadable archive
+        // and completely hide the real HTTP failure.
+        response
+            .EnsureSuccessStatusCode();
+
         return await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
     }
 

@@ -69,6 +69,7 @@ namespace LANCommander.Server.Data
 
             builder.ConfigureBaseRelationships<Models.Action>();
             builder.ConfigureBaseRelationships<Archive>();
+            builder.ConfigureBaseRelationships<ArchivePatch>();
             builder.ConfigureBaseRelationships<Category>();
             builder.ConfigureBaseRelationships<ChatMessage>();
             builder.ConfigureBaseRelationships<ChatThread>();
@@ -149,6 +150,13 @@ namespace LANCommander.Server.Data
                 .WithOne(g => g.Game)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasOne(g => g.DefaultArchive)
+                .WithMany()
+                .HasForeignKey(g => g.DefaultArchiveId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<Game>()
                 .HasMany(g => g.Scripts)
@@ -285,6 +293,35 @@ namespace LANCommander.Server.Data
             #region Archive Relationships
             builder.Entity<Archive>()
                 .Navigation(a => a.StorageLocation)
+                .AutoInclude();
+            #endregion
+
+            #region Archive Patch Relationships
+            // Patches are derived artifacts: deleting either endpoint of a patch cascades to the
+            // patch record itself, since a patch is meaningless without both full archives it links.
+            builder.Entity<ArchivePatch>()
+                .HasOne(p => p.FromArchive)
+                .WithMany()
+                .HasForeignKey(p => p.FromArchiveId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ArchivePatch>()
+                .HasOne(p => p.ToArchive)
+                .WithMany()
+                .HasForeignKey(p => p.ToArchiveId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ArchivePatch>()
+                .HasOne(p => p.StorageLocation)
+                .WithMany(sl => sl.ArchivePatches)
+                .HasForeignKey(p => p.StorageLocationId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ArchivePatch>()
+                .Navigation(p => p.StorageLocation)
                 .AutoInclude();
             #endregion
 
@@ -552,6 +589,7 @@ namespace LANCommander.Server.Data
         public DbSet<Issue>? Issues { get; set; }
         public DbSet<Page>? Pages { get; set; }
         public DbSet<StorageLocation>? StorageLocations { get; set; }
+        public DbSet<ArchivePatch>? ArchivePatches { get; set; }
         public DbSet<Role>? Roles { get; set; }
         public DbSet<User>? Users { get; set; }
         public DbSet<ChatThread>? ChatThreads { get; set; }

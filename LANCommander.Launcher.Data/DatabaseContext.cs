@@ -164,6 +164,70 @@ namespace LANCommander.Launcher.Data
                 .WithOne(e => e.Game)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Installations)
+                .WithOne(i => i.Game)
+                .HasForeignKey(i => i.GameId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Denormalized pointer to the selected installation. Deliberately not cascading:
+            // removing the selected installation should clear the pointer (handled explicitly by
+            // GameInstallationService within the same transaction), not delete the game.
+            builder.Entity<Game>()
+                .HasOne(g => g.SelectedInstallation)
+                .WithMany()
+                .HasForeignKey(g => g.SelectedInstallationId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+            #endregion
+
+            #region Game Installation Relationships
+            builder.Entity<GameInstallation>()
+                .HasIndex(i => i.InstallDirectory)
+                .IsUnique();
+
+            // Enforces "at most one selected installation per game" at the database level: this
+            // partial/filtered unique index only applies to rows where IsSelected is true, so any
+            // number of non-selected installations may share a GameId but only one selected one
+            // may exist per game. The authoritative invariant is still enforced transactionally by
+            // GameInstallationService; this is a safety net.
+            builder.Entity<GameInstallation>()
+                .HasIndex(i => i.GameId)
+                .IsUnique()
+                .HasFilter("\"IsSelected\" = 1")
+                .HasDatabaseName("IX_GameInstallations_GameId_Selected");
+
+            builder.Entity<GameInstallationTool>()
+                .HasKey(git => new { git.GameInstallationId, git.ToolId });
+
+            builder.Entity<GameInstallationTool>()
+                .HasOne(git => git.GameInstallation)
+                .WithMany(i => i.InstallationTools)
+                .HasForeignKey(git => git.GameInstallationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<GameInstallationTool>()
+                .HasOne(git => git.Tool)
+                .WithMany()
+                .HasForeignKey(git => git.ToolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<GameInstallationAddon>()
+                .HasKey(gia => new { gia.GameInstallationId, gia.AddonGameId });
+
+            builder.Entity<GameInstallationAddon>()
+                .HasOne(gia => gia.GameInstallation)
+                .WithMany(i => i.InstallationAddons)
+                .HasForeignKey(gia => gia.GameInstallationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<GameInstallationAddon>()
+                .HasOne(gia => gia.AddonGame)
+                .WithMany()
+                .HasForeignKey(gia => gia.AddonGameId)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Collection Relationships
@@ -180,6 +244,7 @@ namespace LANCommander.Launcher.Data
 
         public DbSet<Engine>? Engines { get; set; }
         public DbSet<Game>? Games { get; set; }
+        public DbSet<GameInstallation>? GameInstallations { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }
 

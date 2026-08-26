@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
@@ -76,18 +77,30 @@ namespace LANCommander.SDK.Services
         {
             logger?.LogTrace("Requesting avatar contents...");
 
-            using (var ms = new MemoryStream())
+            try
             {
-                var stream = await apiRequestFactory
-                    .Create()
-                    .UseAuthenticationToken()
-                    .UseVersioning()
-                    .UseRoute("/api/Profile/Avatar")
-                    .StreamAsync();
+                using (var ms = new MemoryStream())
+                {
+                    var stream = await apiRequestFactory
+                        .Create()
+                        .UseAuthenticationToken()
+                        .UseVersioning()
+                        .UseRoute("/api/Profile/Avatar")
+                        .StreamAsync();
                 
-                await stream.CopyToAsync(ms);
+                    await stream.CopyToAsync(ms);
                 
-                return ms.ToArray();
+                    return ms.ToArray();
+                }
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // The server answers 404 with an empty body when the user simply has no avatar
+                // set. That is an ordinary state, not an error, so keep returning empty content
+                // for it rather than surfacing the (now non-swallowed) HTTP failure.
+                logger?.LogTrace("No avatar is set for the current player");
+
+                return Array.Empty<byte>();
             }
         }
 

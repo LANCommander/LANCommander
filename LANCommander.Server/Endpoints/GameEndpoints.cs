@@ -6,6 +6,7 @@ using LANCommander.SDK.Services;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,9 @@ public static class GameEndpoints
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
+        group.MapGet("/{id:guid}/Archives", GetArchivesByIdAsync);
+        group.MapGet("/{id:guid}/Archives/Resolve", ResolveArchiveAsync);
+        group.MapPost("/{id:guid}/DefaultArchive", SetDefaultArchiveAsync).RequireAuthorization(RoleService.AdministratorRoleName);
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
         group.MapGet("/{id:guid}/Tools", GetToolsByIdAsync);
@@ -128,16 +132,134 @@ public static class GameEndpoints
     internal static async Task<IResult> GetManifestByIdAsync(
         [FromServices] GameService gameService,
         [FromServices] IFusionCache cache,
+        [FromServices] ILogger<Game> logger,
+        Guid id,
+        Guid? archiveId = null)
+    {
+        try
+        {
+            var cacheKey = archiveId.HasValue ? $"Game/{id}/Manifest/{archiveId}" : $"Game/{id}/Manifest";
+
+            var manifest = await cache
+                .GetOrSetAsync<SDK.Models.Manifest.Game>(
+                    cacheKey,
+                    async _ => await gameService.GetManifestAsync(id, archiveId),
+                    TimeSpan.MaxValue,
+                    tags: ["Games", $"Games/{id}", $"Games/{id}/Archives"]);
+
+            if (manifest == null)
+                return TypedResults.NotFound();
+
+            return TypedResults.Ok(manifest);
+        }
+        catch (ArchiveNotFoundForGameException ex)
+        {
+            logger?.LogWarning(ex, "Rejected manifest request for archive {ArchiveId} on game {GameId}", archiveId, id);
+
+            return TypedResults.BadRequest(ex.Message);
+        }
+    }
+
+    internal static async Task<IResult> GetArchivesByIdAsync(
+        [FromServices] GameService gameService,
+        [FromServices] IMapper mapper,
+        [FromServices] IFusionCache cache,
         Guid id)
     {
-        var manifest = await cache
-            .GetOrSetAsync<SDK.Models.Manifest.Game>(
-                $"Game/{id}/Manifest", 
-                async _ => await gameService.GetManifestAsync(id),
-                TimeSpan.MaxValue,
-                tags: ["Games", $"Games/{id}"]);
-        
-        return TypedResults.Ok(manifest);
+        var archives = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Archive>>(
+            $"Games/{id}/Archives/Selectable",
+            async _ =>
+            {
+                var (game, effectiveDefault) = await gameService.GetSelectableArchivesAsync(id);
+
+                if (game == null)
+                    return null;
+
+                // All existing archives are complete, installable snapshots under the immutable
+                // archive model, so every archive belonging to the game is selectable.
+                return (game.Archives ?? Enumerable.Empty<Archive>())
+                    .OrderByDescending(a => a.CreatedOn)
+                    .Select(a =>
+                    {
+                        var dto = mapper.Map<SDK.Models.Archive>(a);
+
+                        dto.IsDefault = game.DefaultArchiveId.HasValue && game.DefaultArchiveId.Value == a.Id;
+                        dto.IsEffectiveDefault = effectiveDefault != null && effectiveDefault.Id == a.Id;
+
+                        return dto;
+                    })
+                    .ToList();
+            },
+            TimeSpan.MaxValue,
+            tags: ["Games", $"Games/{id}", $"Games/{id}/Archives"]);
+
+        if (archives == null)
+            return TypedResults.NotFound();
+
+        return TypedResults.Ok(archives);
+    }
+
+    internal static async Task<IResult> ResolveArchiveAsync(
+        [FromServices] GameService gameService,
+        [FromServices] IMapper mapper,
+        [FromServices] ILogger<Game> logger,
+        Guid id,
+        Guid? archiveId = null)
+    {
+        try
+        {
+            var archive = await gameService.ResolveArchiveAsync(id, archiveId);
+
+            if (archive == null)
+            {
+                logger.LogWarning("Game {GameId} has no archives to resolve", id);
+
+                return TypedResults.NotFound();
+            }
+
+            var (game, effectiveDefault) = await gameService.GetSelectableArchivesAsync(id);
+
+            var dto = mapper.Map<SDK.Models.Archive>(archive);
+
+            dto.IsDefault = game?.DefaultArchiveId.HasValue == true && game.DefaultArchiveId.Value == archive.Id;
+            dto.IsEffectiveDefault = effectiveDefault != null && effectiveDefault.Id == archive.Id;
+
+            return TypedResults.Ok(dto);
+        }
+        catch (KeyNotFoundException)
+        {
+            return TypedResults.NotFound();
+        }
+        catch (ArchiveNotFoundForGameException ex)
+        {
+            logger.LogWarning(ex, "Rejected archive resolution for archive {ArchiveId} on game {GameId}", archiveId, id);
+
+            return TypedResults.BadRequest(ex.Message);
+        }
+    }
+
+    internal static async Task<IResult> SetDefaultArchiveAsync(
+        [FromServices] GameService gameService,
+        [FromServices] ILogger<Game> logger,
+        Guid id,
+        SDK.Models.SetDefaultArchiveRequest request)
+    {
+        try
+        {
+            await gameService.SetDefaultArchiveAsync(id, request?.ArchiveId);
+
+            return TypedResults.Ok();
+        }
+        catch (KeyNotFoundException)
+        {
+            return TypedResults.NotFound();
+        }
+        catch (InvalidDefaultArchiveException ex)
+        {
+            logger.LogWarning(ex, "Rejected default archive {ArchiveId} for game {GameId}", request?.ArchiveId, id);
+
+            return TypedResults.BadRequest(ex.Message);
+        }
     }
 
     internal static async Task<IResult> GetActionsByIdAsync(
@@ -373,11 +495,12 @@ public static class GameEndpoints
         [FromServices] IMapper mapper,
         [FromServices] ILogger<Game> logger,
         Guid id,
-        string version)
+        string version,
+        Guid? archiveId = null)
     {
         try
         {
-            var archives = await gameService.GetUpdatesAsync(id, version);
+            var archives = await gameService.GetUpdatesAsync(id, version, archiveId);
             var mapped = mapper.Map<IEnumerable<SDK.Models.Archive>>(archives);
 
             return TypedResults.Ok(mapped);
@@ -393,10 +516,22 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] ILogger<Game> logger,
         Guid id,
-        string version)
+        string version,
+        Guid? archiveId = null)
     {
         try
         {
+            if (archiveId.HasValue)
+            {
+                // An explicitly pinned archive never reports itself as outdated purely because a
+                // newer archive was uploaded or the default changed elsewhere; it still validates
+                // that the archive belongs to the game (an exception here falls through to the
+                // catch below, matching this endpoint's existing soft-fail behavior).
+                await gameService.ResolveArchiveAsync(id, archiveId);
+
+                return TypedResults.Ok(false);
+            }
+
             var currentVersion = await gameService.GetVersionAsync(id);
 
             return TypedResults.Ok(version != currentVersion);
@@ -416,7 +551,8 @@ public static class GameEndpoints
         [FromServices] IOptions<Settings.Settings> settings,
         [FromServices] ILogger<Game> logger,
         ClaimsPrincipal userPrincipal,
-        Guid id)
+        Guid id,
+        Guid? archiveId = null)
     {
         if (!settings.Value.Server.Archives.AllowInsecureDownloads &&
             !(userPrincipal?.Identity?.IsAuthenticated ?? false))
@@ -425,26 +561,33 @@ public static class GameEndpoints
             
             return TypedResults.Unauthorized();
         }
-        
-        var game = await gameService
-            .Include(g => g.Archives)
-            .GetAsync(id);
 
-        if (game == null)
+        Archive archive;
+
+        try
+        {
+            archive = await gameService.ResolveArchiveAsync(id, archiveId);
+        }
+        catch (KeyNotFoundException)
         {
             logger.LogError("Game with ID {GameId} could not be found", id);
-            
+
             return TypedResults.NotFound();
         }
+        catch (ArchiveNotFoundForGameException ex)
+        {
+            logger.LogWarning(ex, "Rejected download of archive {ArchiveId} for game {GameId}", archiveId, id);
 
-        if (!game.Archives.Any())
+            return TypedResults.BadRequest(ex.Message);
+        }
+
+        if (archive == null)
         {
             logger.LogError("No archives found for game with ID {GameId}", id);
             
             return TypedResults.NotFound();
         }
 
-        var archive = await gameService.GetLatestArchiveAsync(id);
         var path = await archiveService.GetArchiveFileLocationAsync(archive);
 
         if (!File.Exists(path))
@@ -453,6 +596,8 @@ public static class GameEndpoints
             
             return TypedResults.NotFound();
         }
+
+        var game = await gameService.GetAsync(id);
         
         var fs = new FileStream(
             path,

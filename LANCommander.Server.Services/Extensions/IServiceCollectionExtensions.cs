@@ -26,6 +26,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<AuthenticationService>();
         services.AddScoped<ArchiveService>();
         services.AddScoped<IArchiveClient, ArchiveService>();
+        services.AddScoped<ArchivePatchService>();
         services.AddScoped<StorageLocationService>();
         services.AddScoped<ActionService>();
         services.AddScoped<CategoryService>();

@@ -159,7 +159,7 @@ namespace LANCommander.SDK.Services
 
                 var taskProgress = new InstallTaskProgress
                 {
-                    QueueItemId = planItem.EntityId,
+                    QueueItemId = planItem.PlanItemId,
                     TaskId = taskDef.Id,
                     TaskType = taskDef.Type,
                     TaskTitle = taskDef.Title,
@@ -175,7 +175,7 @@ namespace LANCommander.SDK.Services
                         case InstallTaskType.DownloadAndExtract:
                             var result = await RetryHelper.RetryOnExceptionAsync(10,
                                 TimeSpan.FromMilliseconds(500), new ExtractionResult(),
-                                async () => await Task.Run(async () => await DownloadAndExtractAsync(tool, planItem.InstallDirectory, cancellationToken)));
+                                async () => await Task.Run(async () => await DownloadAndExtractAsync(tool, planItem.InstallDirectory, cancellationToken, planItem.DestinationOwnership)));
 
                             if (!result.Success && !result.Canceled)
                                 throw new InstallException("Could not extract the tool. Retry the install or check your connection");
@@ -408,7 +408,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Tool tool, string destination, CancellationToken cancellationToken = default)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Tool tool, string destination, CancellationToken cancellationToken = default, InstallDestinationOwnership destinationOwnership = InstallDestinationOwnership.ExistingInstallation)
         {
             if (tool == null)
             {
@@ -417,6 +417,14 @@ namespace LANCommander.SDK.Services
             }
 
             logger?.LogTrace("Downloading and extracting {Tool} to path {Destination}", tool.Name, destination);
+
+            // A tool is installed *into* a game's existing install directory, so failure cleanup
+            // here is even more dangerous than for a game: recursively deleting the destination
+            // after a canceled or failed tool download would take the whole game installation with
+            // it. Mirrors GameClient.DownloadAndExtractAsync — only a destination this extraction
+            // both declares and observes to be its own may ever be removed.
+            var ownsDestination = destinationOwnership == InstallDestinationOwnership.Fresh
+                && !DirectoryHasContent(destination);
 
             var extractionResult = new ExtractionResult
             {
@@ -478,7 +486,13 @@ namespace LANCommander.SDK.Services
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
+                    {
+                        // Leaving the loop mid-archive means a partial extraction, so it has to be
+                        // reported as a cancellation rather than falling through as a success.
+                        extractionResult.Canceled = true;
+
                         break;
+                    }
 
                     try
                     {
@@ -548,24 +562,21 @@ namespace LANCommander.SDK.Services
                 logger?.LogTrace(ex, "User cancelled the download");
 
                 extractionResult.Canceled = true;
+            }
+            catch (OperationCanceledException ex)
+            {
+                // Observed through the cancellation token rather than the reader's own Cancel().
+                // Must stay classified as a cancellation so RetryHelper doesn't re-download a
+                // download the user just canceled and report it as a corrupt archive.
+                logger?.LogTrace(ex, "The tool download was canceled for {ToolName}", tool.Name);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                    Directory.Delete(destination, true);
-                }
+                extractionResult.Canceled = true;
             }
             catch (Exception ex)
             {                
                 logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpFailedExtraction(destination, ownsDestination, "bad install");
 
                 throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
             }
@@ -585,8 +596,61 @@ namespace LANCommander.SDK.Services
 
                 logger?.LogTrace("Tool {Tool} successfully downloaded and extracted to {Destination}", tool.Name, destination);
             }
+            else
+            {
+                CleanUpFailedExtraction(destination, ownsDestination, "canceled install");
+            }
 
             return extractionResult;
+        }
+
+        /// <summary>
+        /// True when <paramref name="directory"/> exists and already contains anything at all.
+        /// An unreadable/erroring directory counts as "has content" so a failure to inspect it can
+        /// never be what authorizes a recursive delete.
+        /// </summary>
+        private bool DirectoryHasContent(string directory)
+        {
+            try
+            {
+                return Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not inspect {Directory} to determine install destination ownership; treating it as pre-existing", directory);
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Removes the partial results of a canceled/failed extraction, but only from a destination
+        /// this extraction owns. A tool's destination is normally the game's install directory, so
+        /// this almost always (correctly) does nothing at all: partial tool files may be left behind
+        /// for the next install to overwrite, but the game installation is never deleted.
+        /// </summary>
+        private void CleanUpFailedExtraction(string destination, bool ownsDestination, string reason)
+        {
+            if (!ownsDestination)
+            {
+                logger?.LogWarning("Not cleaning up {Destination} after {Reason}: the directory belongs to an existing installation and may only be overwritten, never deleted", destination, reason);
+
+                return;
+            }
+
+            try
+            {
+                if (Directory.Exists(destination))
+                {
+                    logger?.LogTrace("Cleaning up orphaned files in {Destination} after {Reason}", destination, reason);
+
+                    Directory.Delete(destination, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not clean up {Destination} after {Reason}", destination, reason);
+            }
         }
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)

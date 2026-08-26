@@ -94,7 +94,7 @@ namespace LANCommander.Launcher.Services
             {
                 var game = await gameService.GetAsync(options.GameId);
 
-                await installService.Add(game, options.InstallDirectory);
+                await installService.Add(game, options.InstallDirectory, archiveId: options.ArchiveId);
                 await installService.Next();
 
                 game = await gameService.GetAsync(options.GameId);

@@ -65,6 +65,50 @@
                     </UniformGrid>
                 </Border>
 
+                <!-- ── Version ────────────────────────────────────────────── -->
+                <Border IsVisible="{Binding ShowVersionSelector}"
+                        Padding="20,16,20,0">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Version"
+                                   FontSize="13" FontWeight="SemiBold" />
+
+                        <ComboBox ItemsSource="{Binding Archives}"
+                                  SelectedItem="{Binding SelectedArchive}"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="vm:InstallArchiveItemViewModel">
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Right"
+                                                IsVisible="{Binding HasBadge}"
+                                                Background="{DynamicResource SystemControlBackgroundAccentBrush}"
+                                                CornerRadius="3"
+                                                Padding="6,1"
+                                                Margin="8,0,0,0">
+                                            <TextBlock Text="{Binding BadgeText}"
+                                                       FontSize="10" FontWeight="SemiBold" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Version}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <StackPanel Spacing="2"
+                                    IsVisible="{Binding SelectedArchive, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding SelectedArchive.DetailSummary}"
+                                       FontSize="11" Opacity="0.6" />
+                            <TextBlock Text="{Binding SelectedArchive.Changelog}"
+                                       IsVisible="{Binding SelectedArchive.HasChangelog}"
+                                       FontSize="12" Opacity="0.8"
+                                       TextWrapping="Wrap"
+                                       MaxHeight="80" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- ── Addons ─────────────────────────────────────────────── -->
                 <Border IsVisible="{Binding HasAddons}"
                         Padding="20,16,20,0">

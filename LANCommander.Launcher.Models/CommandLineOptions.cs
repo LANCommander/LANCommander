@@ -45,6 +45,9 @@ namespace LANCommander.Launcher.Models
 
         [Option("InstallDirectory", HelpText = "The directory the game folder will be extracted to")]
         public string InstallDirectory { get; set; } = "";
+
+        [Option("ArchiveId", HelpText = "The GUID of a specific archive/version to install. Omit to use the server's effective default (admin default, otherwise latest)")]
+        public Guid? ArchiveId { get; set; }
     }
 
     [Verb("Uninstall", HelpText = "Uninstall a game from the local device")]

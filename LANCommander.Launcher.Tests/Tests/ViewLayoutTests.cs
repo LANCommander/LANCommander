@@ -9,6 +9,7 @@ using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Views.Components;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -58,6 +59,26 @@ public class ViewLayoutTests
         .AddSingleton<INavigationService, NavigationService>()
         .BuildServiceProvider();
 
+    private sealed class TestConnectionClient : IConnectionClient
+    {
+        public event EventHandler OnConnect = delegate { };
+        public event EventHandler OnDisconnect = delegate { };
+        public event EventHandler OnServerAddressChanged = delegate { };
+        public event EventHandler OnOfflineModeEnabled = delegate { };
+
+        public bool IsConnected() => false;
+        public bool IsConfigured() => true;
+        public bool IsOfflineMode() => false;
+        public bool HasServerAddress() => true;
+        public Uri GetServerAddress() => new("https://lancommander.test");
+        public Task UpdateServerAddressAsync(string address) => Task.CompletedTask;
+        public Task UpdateServerAddressAsync(Uri address) => Task.CompletedTask;
+        public Task<bool> ConnectAsync() => Task.FromResult(false);
+        public Task<bool> DisconnectAsync() => Task.FromResult(false);
+        public Task EnableOfflineModeAsync() => Task.CompletedTask;
+        public Task<bool> PingAsync(Uri? serverAddress = null) => Task.FromResult(false);
+    }
+
     // ---------------------------------------------------------------------------
     // Helper: wrap a view in a sized window, show it, capture and compare.
     // ---------------------------------------------------------------------------
@@ -93,10 +114,13 @@ public class ViewLayoutTests
     [AvaloniaFact]
     public void LoginView_Layout()
     {
-        // LoginViewModel requires SDK services — for a pure layout test we render
-        // the LoginView with a null DataContext and let the XAML show its skeleton.
-        // The view's bindings gracefully no-op when DataContext is null.
-        var view = new LoginView();
+        var viewModel = new LoginViewModel(
+            new TestConnectionClient(),
+            authenticationService: null!,
+            authenticationClient: null!,
+            settingsProvider: null!);
+        var view = new LoginView { DataContext = viewModel };
+
         CaptureAndAssert(view, "LoginView");
     }
 

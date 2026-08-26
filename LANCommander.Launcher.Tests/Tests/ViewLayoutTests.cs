@@ -15,6 +15,12 @@ using Xunit;
 
 namespace LANCommander.Launcher.Tests.Tests;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class VisualLayoutTestCollection
+{
+    public const string Name = "Visual layout tests";
+}
+
 /// <summary>
 /// Renders each major view in the headless Avalonia environment and compares the
 /// resulting screenshot against a committed baseline PNG.  A test fails when more
@@ -27,6 +33,7 @@ namespace LANCommander.Launcher.Tests.Tests;
 /// it to Baselines/ to establish the baseline for future runs.  Alternatively, run
 /// the "Update Visual Baselines" workflow dispatch to commit all baselines at once.
 /// </summary>
+[Collection(VisualLayoutTestCollection.Name)]
 public class ViewLayoutTests
 {
     private const int WindowWidth  = 1200;

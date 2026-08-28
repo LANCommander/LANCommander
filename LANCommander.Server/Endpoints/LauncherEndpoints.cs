@@ -1,3 +1,4 @@
+using LANCommander.SDK;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
@@ -23,7 +24,7 @@ public static class LauncherEndpoints
     {
         var version = versionProvider.GetCurrentVersion();
         var fileName = $"LANCommander.Launcher-Windows-x64-v{version.WithoutMetadata()}.zip";
-        var path = Path.Combine(settingsProvider.CurrentValue.Server.Launcher.StoragePath, fileName);
+        var path = AppPaths.ResolveStorageLocationPath(settingsProvider.CurrentValue.Server.Launcher.StoragePath, fileName);
 
         if (!File.Exists(path) || !settingsProvider.CurrentValue.Server.Launcher.HostUpdates)
         {

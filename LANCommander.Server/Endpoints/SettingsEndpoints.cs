@@ -30,7 +30,14 @@ public static class SettingsEndpoints
             Authentication = new
             {
                 AllowRegistration = settingsProvider.CurrentValue.Server.Authentication.AllowRegistration,
+                AllowPassword = settingsProvider.CurrentValue.Server.Authentication.AllowPassword,
                 AutoRedirectToProvider = settingsProvider.CurrentValue.Server.Authentication.AutoRedirectToProvider,
+                // Surfaced so the launcher can show the password requirements before the user submits.
+                PasswordRequiredLength = settingsProvider.CurrentValue.Server.Authentication.PasswordRequiredLength,
+                PasswordRequireDigit = settingsProvider.CurrentValue.Server.Authentication.PasswordRequireDigit,
+                PasswordRequireLowercase = settingsProvider.CurrentValue.Server.Authentication.PasswordRequireLowercase,
+                PasswordRequireUppercase = settingsProvider.CurrentValue.Server.Authentication.PasswordRequireUppercase,
+                PasswordRequireNonAlphanumeric = settingsProvider.CurrentValue.Server.Authentication.PasswordRequireNonAlphanumeric,
             }
         };
 

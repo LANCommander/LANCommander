@@ -28,7 +28,7 @@ public partial class DepotViewModel : ViewModelBase
 
     // ── State ────────────────────────────────────────────────────────────────
 
-    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private bool _isOfflineMode;

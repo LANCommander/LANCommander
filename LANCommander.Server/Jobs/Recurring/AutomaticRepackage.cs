@@ -14,15 +14,12 @@ public sealed class AutomaticRepackage(
     {
         get
         {
-            var minutes = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery % 60;
-            var hours = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery / 60;
-            var days = hours % 24;
+            var hours = Math.Max(1, settingsProvider.CurrentValue.Server.Scripts.RepackageEvery);
 
-            var minuteExpression = minutes > 0 ? $"*/{minutes}" : "*";
-            var hourExpression = hours > 0 ? $"*/{hours}" : "*";
-            var dayExpression = days > 0 ? $"*/{days}" : "*";
+            if (hours < 24)
+                return $"0 */{hours} * * *";
 
-            return $"{minuteExpression} {hourExpression} {dayExpression} * *";
+            return $"0 0 */{Math.Clamp(hours / 24, 1, 31)} * *";
         }
     }
 
@@ -30,7 +27,7 @@ public sealed class AutomaticRepackage(
     {
         if (!settingsProvider.CurrentValue.Server.Scripts.EnableAutomaticRepackaging)
         {
-            logger.LogWarning("The automatic repackaging job attempted to execute, but automatic repackaging is disabled");
+            logger.LogDebug("The automatic repackaging job attempted to execute, but automatic repackaging is disabled");
             return;
         }
         

@@ -20,8 +20,8 @@
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
   </ItemGroup>
   <ItemGroup Label="AntDesign">
-    <PackageVersion Include="AntDesign" Version="1.5.0" />
-    <PackageVersion Include="AntDesign.Charts" Version="0.8.0" />
+    <PackageVersion Include="AntDesign" Version="1.6.2" />
+    <PackageVersion Include="AntDesign.Charts" Version="0.9.0" />
   </ItemGroup>
   <ItemGroup Label="Blazor">
     <PackageVersion Include="BlazorMonaco" Version="3.4.0" />
@@ -47,7 +47,7 @@
   <ItemGroup Label="ASP.NET Core">
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.1" />

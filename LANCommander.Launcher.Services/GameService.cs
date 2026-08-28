@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Plugins;
@@ -59,7 +60,10 @@ namespace LANCommander.Launcher.Services
 
                     await gameClient.UninstallAsync(game.InstallDirectory, game.Id);
 
-                    if (game.BaseGameId.HasValue)
+                    // Only addons that share the base game's install directory (Mod/Expansion)
+                    // may clean up orphaned base game files. Standalone types keep an independent
+                    // lifecycle, so uninstalling them must leave the base game installed.
+                    if (game.BaseGameId.HasValue && (game.Type == GameType.Mod || game.Type == GameType.Expansion))
                     {
                         var libraryService = serviceProvider.GetService<LibraryService>();
                         var isInstalled = await libraryService!.IsInstalledAsync(game.BaseGameId.Value);

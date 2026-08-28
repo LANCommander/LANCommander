@@ -80,6 +80,7 @@ public static class DownloadEndpoints
         var save = await gameSaveService
             .Include(s => s.Game!)
             .Include(s => s.User!)
+            .Include(s => s.StorageLocation!)
             .GetAsync(id);
 
         if (user == null || user.Identity?.Name != save.User?.UserName && !user.IsInRole(RoleService.AdministratorRoleName))

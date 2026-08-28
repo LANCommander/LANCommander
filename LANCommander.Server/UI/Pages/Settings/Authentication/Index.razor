@@ -23,6 +23,10 @@
             <Switch @bind-Checked="context.Server.Authentication.AllowRegistration" />
         </FormItem>
 
+        <FormItem Label="Allow password authentication" Help="When disabled, users can only sign in through external providers and cannot set or change a password.">
+            <Switch @bind-Checked="context.Server.Authentication.AllowPassword" />
+        </FormItem>
+
         <FormItem Label="Require Account Approval">
             <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
         </FormItem>
@@ -36,6 +40,21 @@
         </FormItem>
         <FormItem Label="Token Lifetime">
             <AntDesign.InputNumber @bind-Value="context.Server.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
+        </FormItem>
+
+        <Divider Text="User Profile Restrictions" />
+
+        <FormItem Label="Allow users to change their username">
+            <Switch @bind-Checked="context.Server.Authentication.AllowUsernameChange" />
+        </FormItem>
+        <FormItem Label="Allow users to set an alias">
+            <Switch @bind-Checked="context.Server.Authentication.AllowAliasChange" />
+        </FormItem>
+        <FormItem Label="Allow users to upload an avatar">
+            <Switch @bind-Checked="context.Server.Authentication.AllowAvatarUpload" />
+        </FormItem>
+        <FormItem Label="Allow users to change their email">
+            <Switch @bind-Checked="context.Server.Authentication.AllowEmailChange" />
         </FormItem>
 
         <Divider Text="Password Requirements" />

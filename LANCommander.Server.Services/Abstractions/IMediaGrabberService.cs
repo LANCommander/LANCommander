@@ -9,12 +9,26 @@ namespace LANCommander.Server.Services.Abstractions
         string Name { get; }
         MediaType[] SupportedMediaTypes { get; }
         Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0);
+
+        Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, string? subProvider, int page = 0)
+            => SearchAsync(type, keywords, page);
+
         Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result);
 
         Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result, IProgress<MediaDownloadProgress>? progress)
             => DownloadAsync(result);
 
         IEnumerable<string> GetGrabberNames() => [Name];
+
+        /// <summary>
+        /// Sub-providers this grabber can search through (e.g. the providers exposed via LANCommander HQ).
+        /// Grabbers without sub-providers should leave this null.
+        /// </summary>
+        Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync()
+            => Task.FromResult<IEnumerable<(string Slug, string Name)>?>(null);
+
+        Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync(string grabberName)
+            => GetSubProvidersAsync();
 
         /// <summary>
         /// Whether this grabber can return additional pages of results for a given game/group.
@@ -32,7 +46,7 @@ namespace LANCommander.Server.Services.Abstractions
         }
 
         IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
-            MediaType type, string keywords, string? grabberName, int page,
+            MediaType type, string keywords, string? grabberName, string? subProvider, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
             => SearchStreamAsync(type, keywords, page, cancellationToken);
     }

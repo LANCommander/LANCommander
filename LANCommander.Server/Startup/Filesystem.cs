@@ -23,9 +23,14 @@ public static class Filesystem
 
         foreach (var directory in directories)
         {
-            logger.LogDebug("Ensuring directory {Directory} exists", directory);
-            if (!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+            if (string.IsNullOrWhiteSpace(directory))
+                continue;
+
+            var resolved = AppPaths.ResolveStorageLocationPath(directory);
+
+            logger.LogDebug("Ensuring directory {Directory} exists", resolved);
+            if (!Directory.Exists(resolved))
+                Directory.CreateDirectory(resolved);
         }
 
         return app;

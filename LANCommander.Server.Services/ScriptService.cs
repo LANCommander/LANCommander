@@ -141,6 +141,8 @@ namespace LANCommander.Server.Services
                 });
             }
 
+            storagePath = AppPaths.ResolveStorageLocationPath(storagePath);
+
             if (!Directory.Exists(storagePath))
                 Directory.CreateDirectory(storagePath);
 

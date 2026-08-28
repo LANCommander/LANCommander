@@ -115,15 +115,20 @@ namespace LANCommander.SDK.Helpers
         // ── Linux helpers ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Parses <c>xrandr</c> output to find the active resolution and refresh rate.
-        /// Works on X11 and XWayland.
+        /// Parses <c>xrandr</c> output to find the primary display's active resolution
+        /// and refresh rate. Works on X11 and XWayland.
+        ///
+        /// We deliberately parse the primary output's connected line rather than the
+        /// "Screen 0: ... current W x H" summary, because that summary reports the
+        /// combined bounding box of all displays in a multi-monitor setup.
         ///
         /// Example xrandr output:
         /// <code>
-        /// Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 16384 x 16384
-        /// DP-1 connected primary 1920x1080+0+0 ...
-        ///    1920x1080     60.00*+  50.00   59.94
-        ///    1280x720      60.00    59.94
+        /// Screen 0: minimum 16 x 16, current 4480 x 1440, maximum 32767 x 32767
+        /// DP-1 connected 1920x1200+2560+0 ...
+        ///    1920x1200     59.88*+
+        /// DP-3 connected primary 2560x1440+0+0 ...
+        ///    2560x1440    164.85*+
         /// </code>
         /// </summary>
         private static bool TryGetScreenFromXrandr(out Bounds bounds, out int refreshRate, out int bitsPerPixel)
@@ -138,24 +143,50 @@ namespace LANCommander.SDK.Helpers
                 if (string.IsNullOrWhiteSpace(output))
                     return false;
 
-                // "Screen 0: ... current 1920 x 1080 ..."
-                var screenMatch = Regex.Match(output, @"current\s+(\d+)\s*x\s*(\d+)");
-                if (!screenMatch.Success)
+                var lines = output.Split('\n');
+
+                var connectedLine = @"^\S+\s+connected(\s+primary)?\s+(\d+)x(\d+)\+\d+\+\d+";
+
+                var primaryIndex = -1;
+                var fallbackIndex = -1;
+
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var match = Regex.Match(lines[i], connectedLine);
+                    if (!match.Success)
+                        continue;
+
+                    if (match.Groups[1].Success && primaryIndex == -1)
+                        primaryIndex = i;
+
+                    if (fallbackIndex == -1)
+                        fallbackIndex = i;
+                }
+
+                var displayIndex = primaryIndex != -1 ? primaryIndex : fallbackIndex;
+                if (displayIndex == -1)
                     return false;
 
-                bounds.Width  = int.Parse(screenMatch.Groups[1].Value);
-                bounds.Height = int.Parse(screenMatch.Groups[2].Value);
+                var displayMatch = Regex.Match(lines[displayIndex], connectedLine);
+                bounds.Width  = int.Parse(displayMatch.Groups[2].Value);
+                bounds.Height = int.Parse(displayMatch.Groups[3].Value);
 
-                // A mode line looks like:  "   1920x1080     60.00*+  50.00  59.94"
-                // The active refresh rate is the one immediately followed by '*'.
-                var refreshMatch = Regex.Match(output, @"(\d+\.\d+)\*");
-                if (refreshMatch.Success &&
-                    float.TryParse(refreshMatch.Groups[1].Value,
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        out var rate))
+                for (var i = displayIndex + 1; i < lines.Length; i++)
                 {
-                    refreshRate = (int)Math.Round(rate);
+                    // A non-indented, non-empty line starts the next output's block.
+                    if (lines[i].Length > 0 && !char.IsWhiteSpace(lines[i][0]))
+                        break;
+
+                    var refreshMatch = Regex.Match(lines[i], @"(\d+\.\d+)\*");
+                    if (refreshMatch.Success &&
+                        float.TryParse(refreshMatch.Groups[1].Value,
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var rate))
+                    {
+                        refreshRate = (int)Math.Round(rate);
+                        break;
+                    }
                 }
 
                 return bounds.Width > 0 && bounds.Height > 0;

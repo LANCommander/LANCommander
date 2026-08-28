@@ -38,15 +38,15 @@ public static class ApplicationSettings
 
             var logs = options.Server.Logs;
             if (logs.Providers != null)
-                logs.Providers = logs.Providers.DistinctBy(p => p.Name).ToList();
+                logs.Providers = logs.Providers.GroupBy(p => p.Name).Select(g => g.Last()).ToList();
 
             var media = options.Server.Media;
             if (media.MediaTypes != null)
-                media.MediaTypes = media.MediaTypes.DistinctBy(m => m.Type).ToList();
+                media.MediaTypes = media.MediaTypes.GroupBy(m => m.Type).Select(g => g.Last()).ToList();
 
             var gameServers = options.Server.GameServers;
             if (gameServers.ServerEngines != null)
-                gameServers.ServerEngines = gameServers.ServerEngines.DistinctBy(e => e.Name).ToList();
+                gameServers.ServerEngines = gameServers.ServerEngines.GroupBy(e => e.Name).Select(g => g.Last()).ToList();
         }
     }
 

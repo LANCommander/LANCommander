@@ -42,8 +42,9 @@ namespace LANCommander.Server.Services
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
         {
             var currentVersion = versionProvider.GetCurrentVersion();
-            var downloadedLaunchers = Directory.GetFiles(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
-            var downloadedInstallers = Directory.GetFiles(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
+            var launcherStoragePath = AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Launcher.StoragePath);
+            var downloadedLaunchers = Directory.GetFiles(launcherStoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
+            var downloadedInstallers = Directory.GetFiles(launcherStoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
 
             var downloads = downloadedLaunchers.Concat(downloadedInstallers).Distinct();
 
@@ -149,7 +150,7 @@ namespace LANCommander.Server.Services
                 client.DownloadFileCompleted += ReleaseDownloaded;
                 client.QueryString.Add("Version", release.TagName);
 
-                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
+                await client.DownloadFileTaskAsync(new Uri(releaseFile), AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
             }
         }
         
@@ -181,7 +182,7 @@ namespace LANCommander.Server.Services
                     var uri = new Uri(releaseFile);
 
                     client.QueryString.Add("Version", release.TagName);
-                    await client.DownloadFileTaskAsync(uri, Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
+                    await client.DownloadFileTaskAsync(uri, AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
                 }
             }
         }
@@ -216,7 +217,7 @@ namespace LANCommander.Server.Services
         private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             string version = ((WebClient)sender).QueryString["Version"];
-            string path = Path.Combine(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{version}.zip");
+            string path = AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{version}.zip");
 
             _logger?.LogInformation("Update version {Version} has been downloaded", version);
 
@@ -242,7 +243,7 @@ namespace LANCommander.Server.Services
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{_settingsProvider.CurrentValue.Server.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
+            process.Arguments = $"-Version {version} -Path \"{AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath)}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);
@@ -256,13 +257,11 @@ namespace LANCommander.Server.Services
             GetLauncherFileLocation(artifact.Name);
 
         public string GetLauncherFileLocation(string objectKey) =>
-            Path.IsPathRooted(_settingsProvider.CurrentValue.Server.Launcher.StoragePath) ?
-                Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey) :
-                Path.Combine(AppPaths.GetConfigDirectory(), _settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
+            AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
 
         public LauncherArtifact GetLauncherArtifact(string objectKey)
         {
-            string name = Path.Combine(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
+            string name = AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Launcher.StoragePath, objectKey);
             return GetArtifactFromName(name);
         }
     }

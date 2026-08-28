@@ -12,6 +12,8 @@ public class HqMediaGrabber(
     SettingsProvider<Settings.Settings> settingsProvider,
     ILogger<HqMediaGrabber> logger) : IMediaGrabberService
 {
+    private IReadOnlyList<HqModels.ProviderInfo>? _cachedProviders;
+
     public string Name => "LANCommander HQ";
 
     public MediaType[] SupportedMediaTypes =>
@@ -36,7 +38,28 @@ public class HqMediaGrabber(
         { MediaType.Manual, HqModels.MediaType.Manual },
     };
 
-    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
+    public Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
+        => SearchAsync(type, keywords, null, page);
+
+    public async Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync()
+    {
+        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+            return null;
+
+        try
+        {
+            _cachedProviders ??= await hqClient.Providers.ListAsync();
+
+            return _cachedProviders.Select(p => (p.Slug, p.Name));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fetch HQ sub-providers");
+            return null;
+        }
+    }
+
+    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, string? subProvider, int page = 0)
     {
         // HQ returns all matching media for a game in a single request,
         // so there are no further pages to load.
@@ -51,8 +74,13 @@ public class HqMediaGrabber(
 
         try
         {
-            var providers = await hqClient.Providers.ListAsync();
-            var providerSlug = providers.FirstOrDefault()?.Slug;
+            var providerSlug = subProvider;
+
+            if (string.IsNullOrWhiteSpace(providerSlug))
+            {
+                _cachedProviders ??= await hqClient.Providers.ListAsync();
+                providerSlug = _cachedProviders.FirstOrDefault()?.Slug;
+            }
 
             if (providerSlug is null)
                 return [];

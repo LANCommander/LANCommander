@@ -4,6 +4,7 @@ using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -35,7 +36,7 @@ public static class KeysEndpoints
 
             var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
             var game = await gameService
-                .Include(g => g.Keys)
+                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
                 .GetAsync(keyRequest.GameId);
 
             if (game == null)
@@ -96,7 +97,7 @@ public static class KeysEndpoints
 
             var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
             var game = await gameService
-                .Include(g => g.Keys)
+                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
                 .GetAsync(id);
 
             if (game == null)
@@ -157,7 +158,7 @@ public static class KeysEndpoints
 
             var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
             var game = await gameService
-                .Include(g => g.Keys)
+                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
                 .GetAsync(id);
 
             if (game == null)

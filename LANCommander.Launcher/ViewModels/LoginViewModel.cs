@@ -12,6 +12,7 @@ using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
 using AuthenticationProvider = LANCommander.SDK.Models.AuthenticationProvider;
+using ErrorResponse = LANCommander.SDK.Models.ErrorResponse;
 
 namespace LANCommander.Launcher.ViewModels;
 
@@ -33,11 +34,25 @@ public partial class LoginViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
     private bool _isRegistering;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
+    private string _passwordRequirements = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
     private bool _allowRegistration = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
+    [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
+    [NotifyPropertyChangedFor(nameof(ShowProviderSeparator))]
+    private bool _allowPassword = true;
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -58,6 +73,7 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCredentialFields))]
     [NotifyPropertyChangedFor(nameof(ShowPasswordConfirmation))]
+    [NotifyPropertyChangedFor(nameof(ShowPasswordRequirements))]
     [NotifyPropertyChangedFor(nameof(ShowPrimaryButtons))]
     [NotifyPropertyChangedFor(nameof(ShowRegisterToggle))]
     [NotifyPropertyChangedFor(nameof(ShowProviderButtons))]
@@ -66,14 +82,16 @@ public partial class LoginViewModel : ViewModelBase
 
     public ObservableCollection<AuthenticationProvider> AuthenticationProviders { get; } = new();
 
-    // When auto-redirect is enabled, the username/password login path is hidden entirely.
-    public bool ShowCredentialFields => !AutoRedirectToProvider;
+    // When auto-redirect is enabled, or the server disables password auth, the username/password login path is hidden entirely.
+    public bool ShowCredentialFields => !AutoRedirectToProvider && AllowPassword;
 
-    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider;
+    public bool ShowPasswordConfirmation => IsRegistering && !AutoRedirectToProvider && AllowPassword;
 
-    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider;
+    public bool ShowPasswordRequirements => ShowPasswordConfirmation && !string.IsNullOrWhiteSpace(PasswordRequirements);
 
-    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider;
+    public bool ShowPrimaryButtons => !IsLoading && !AutoRedirectToProvider && AllowPassword;
+
+    public bool ShowRegisterToggle => AllowRegistration && !AutoRedirectToProvider && AllowPassword;
 
     // Hide provider buttons only in the case the launcher auto-redirects (auto-redirect on + exactly one provider).
     public bool ShowProviderButtons => AutoRedirectToProvider
@@ -81,7 +99,7 @@ public partial class LoginViewModel : ViewModelBase
         : AuthenticationProviders.Count >= 1;
 
     // The "or" separator only makes sense when both credential fields and provider buttons are shown.
-    public bool ShowProviderSeparator => !AutoRedirectToProvider && ShowProviderButtons;
+    public bool ShowProviderSeparator => !AutoRedirectToProvider && AllowPassword && ShowProviderButtons;
 
     public event EventHandler? LoginSucceeded;
     public event EventHandler? ChangeServerRequested;
@@ -125,10 +143,15 @@ public partial class LoginViewModel : ViewModelBase
             // External providers unavailable - username/password login still works
         }
 
+        AllowPassword = await _authenticationClient.GetPasswordAllowedAsync();
+
         AllowRegistration = await _authenticationClient.GetRegistrationAllowedAsync();
 
-        if (!AllowRegistration && IsRegistering)
+        if ((!AllowRegistration || !AllowPassword) && IsRegistering)
             IsRegistering = false;
+
+        if (AllowRegistration)
+            PasswordRequirements = (await _authenticationClient.GetPasswordPolicyAsync())?.Describe() ?? string.Empty;
 
         AutoRedirectToProvider = await _authenticationClient.GetAutoRedirectToProviderAsync();
     }
@@ -149,6 +172,13 @@ public partial class LoginViewModel : ViewModelBase
         if (IsServerOffline)
         {
             StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (!AllowPassword)
+        {
+            StatusMessage = "Password authentication is disabled. Please sign in with an external provider.";
             HasError = true;
             return;
         }
@@ -180,6 +210,11 @@ public partial class LoginViewModel : ViewModelBase
             StatusMessage = "Login successful!";
             LoginSucceeded?.Invoke(this, EventArgs.Empty);
         }
+        catch (AuthFailedException ex)
+        {
+            StatusMessage = FormatError(ex.ErrorData, $"Login failed: {ex.Message}");
+            HasError = true;
+        }
         catch (Exception ex)
         {
             StatusMessage = $"Login failed: {ex.Message}";
@@ -197,6 +232,13 @@ public partial class LoginViewModel : ViewModelBase
         if (IsServerOffline)
         {
             StatusMessage = "Server is offline. Please try again later or change server.";
+            HasError = true;
+            return;
+        }
+
+        if (!AllowPassword)
+        {
+            StatusMessage = "Password authentication is disabled. Please sign in with an external provider.";
             HasError = true;
             return;
         }
@@ -228,13 +270,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (RegisterFailedException ex)
         {
-            if (ex.ErrorData?.DetailsMessages?.Any() == true)
-                StatusMessage = string.Join(" ", ex.ErrorData.DetailsMessages);
-            else if (!string.IsNullOrWhiteSpace(ex.ErrorData?.Message))
-                StatusMessage = ex.ErrorData.Message;
-            else
-                StatusMessage = ex.Message;
-
+            StatusMessage = FormatError(ex.ErrorData, ex.Message);
             HasError = true;
         }
         catch (Exception ex)
@@ -255,6 +291,25 @@ public partial class LoginViewModel : ViewModelBase
         HasError = false;
         StatusMessage = string.Empty;
         PasswordConfirmation = string.Empty;
+    }
+
+    /// <summary>
+    /// Prefer the server's per-error detail (password complexity rules, username availability, ...)
+    /// over the SDK's generic exception message.
+    /// </summary>
+    private static string FormatError(ErrorResponse? errorData, string fallback)
+    {
+        var details = errorData?.DetailsMessages?
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .ToArray();
+
+        if (details?.Length > 0)
+            return string.Join(Environment.NewLine, details);
+
+        if (!string.IsNullOrWhiteSpace(errorData?.Message))
+            return errorData.Message;
+
+        return fallback;
     }
 
     [RelayCommand]

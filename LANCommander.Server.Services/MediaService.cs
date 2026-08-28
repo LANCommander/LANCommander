@@ -95,9 +95,7 @@ namespace LANCommander.Server.Services
             GetMediaPath(entity.FileId, entity.StorageLocation);
 
         public static string GetMediaPath(Guid id, StorageLocation storageLocation) =>
-            Path.IsPathRooted(storageLocation.Path)
-                ? Path.Combine(storageLocation.Path, id.ToString())
-                : Path.Combine(AppPaths.GetConfigDirectory(), storageLocation.Path, id.ToString());
+            AppPaths.ResolveStorageLocationPath(storageLocation.Path, id.ToString());
 
         public async Task<string> GetThumbnailPathAsync(Guid id)
         {

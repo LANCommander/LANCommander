@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.8** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.11** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -586,9 +586,94 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 </details>
 
+### 2.1.9
+<details>
+<summary>View 2.1.9 patch notes</summary>
+
+#### Improvements
+- Path resolution has been unified across the server so that storage paths are resolved consistently everywhere. A migration aligns existing settings storage paths automatically on upgrade.
+- Depot queries have been optimized for better performance.
+- Server notifications now use a shorter timeout so a slow or unreachable server no longer holds up the launcher.
+- Updated SharpCompress to the latest version. This should resolve most extraction issues for games with large archives.
+
+#### Bug Fixes
+- Fixed detection of the primary display's resolution on some Linux multi-display configurations.
+- Fixed application path resolution on the server, correcting how saves, media, archives, and updates are located.
+- Improved handling of the bypass execution policy for scripts.
+- Fixed installation of wine32 and winetricks.
+
+<ReleaseDownloads release="v2.1.9" />
+
+</details>
+
+### 2.1.10
+<details>
+<summary>View 2.1.10 patch notes</summary>
+
+#### Improvements
+- Windows binaries are now code-signed as part of the release process, reducing SmartScreen and antivirus warnings on install.
+- Updated AntDesign to the latest version.
+
+#### Bug Fixes
+- Fixed standalone mods so uninstalling them no longer removes the base game. Only mods and expansions that share the base game's install directory can clean up orphaned base game files.
+
+<ReleaseDownloads release="v2.1.10" />
+
+</details>
+
+### 2.1.11
+<details>
+<summary>View 2.1.11 patch notes</summary>
+
+#### Improvements
+- Better support for "compatibility runtimes" have been added to redistributables. This should provide a better feature set for runtimes such as `umu-launcher`, WINE, etc.
+- Added additional user profile restriction to server settings.
+- The media grabber dialog now lists HQ sub-providers when searching for media.
+- Password requirements are now shown in the launcher during sign-in and registration.
+- Removing an external authentication provider now prompts for confirmation.
+- Added claim mapping details for the Discord authentication provider.
+- The launcher now defaults to the library view on startup.
+- Loading indicators are now shown while the library and depot load, with the library indicator moved to an overlay.
+
+#### Bug Fixes
+- Fixed game key allocation.
+- Fixed grabbing the auth token for HQ.
+- Fixed a stale JS bundle that caused a `setModuleFunctions` interop error.
+- Fixed the logging minimum level not being applied.
+- Fixed the confirm action when deleting a provider.
+- Fixed the automatic package cron job.
+- Fixed the title on the IGDB settings page.
+- Fixed local file path resolution.
+- Fixed resolution of the manual media path.
+
+<ReleaseDownloads release="v2.1.11" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.11" />
+
+<details>
+<summary>View 2.1.10 downloads</summary>
+
+<ReleaseDownloads release="v2.1.10" />
+
+</details>
+
+<details>
+<summary>View 2.1.9 downloads</summary>
+
+<ReleaseDownloads release="v2.1.9" />
+
+</details>
+
+<details>
+<summary>View 2.1.8 downloads</summary>
+
 <ReleaseDownloads release="v2.1.8" />
+
+</details>
 
 <details>
 <summary>View 2.1.7 downloads</summary>
@@ -648,4 +733,4 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.8" />
+<ContributorGrid from="v2.0.2" to="v2.1.11" />

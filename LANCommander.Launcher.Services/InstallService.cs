@@ -801,7 +801,7 @@ namespace LANCommander.Launcher.Services
                 {
                     foreach (var manual in remoteGame.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
                     {
-                        var localPath = Path.Combine(_mediaClient.GetLocalPath(manual), $"{manual.FileId}-{manual.Crc32}");
+                        var localPath = _mediaClient.GetLocalPath(manual);
 
                         if (!File.Exists(localPath))
                         {

@@ -80,8 +80,10 @@ namespace LANCommander.Server.UI.Pages.Account
         public string ErrorMessage { get; set; }
         
         public AuthToken Token { get; set; }
-        
+
         public string ScreenshotUrl { get; set; }
+
+        public bool AllowPassword => Settings.Value.Server.Authentication.AllowPassword;
 
         public async Task<IActionResult> OnGetAsync(string returnUrl = null, string code = null, string error = null)
         {
@@ -157,6 +159,12 @@ namespace LANCommander.Server.UI.Pages.Account
 
             if (screenshots.Any())
                 ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
+
+            if (!AllowPassword)
+            {
+                ModelState.AddModelError(string.Empty, "Password authentication is disabled. Please sign in with an external provider.");
+                return Page();
+            }
 
             if (ModelState.IsValid)
             {

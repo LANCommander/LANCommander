@@ -110,6 +110,8 @@ jobs:
       build_arch: x64
       build_platform: Linux
       build_configuration: Debug
+      # The development release assets are the durable copy of these.
+      retention_days: 2
 
   build_server_win_x64:
     needs: [prep]
@@ -123,6 +125,8 @@ jobs:
       build_arch: x64
       build_platform: Windows
       build_configuration: Debug
+      # The development release assets are the durable copy of these.
+      retention_days: 2
 
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:development
@@ -212,6 +216,7 @@ jobs:
         with:
           name: version.${{ needs.prep.outputs.version_tag }}
           path: version.txt
+          retention-days: 2
   publish_development_release:
     runs-on: ubuntu-latest
     needs:

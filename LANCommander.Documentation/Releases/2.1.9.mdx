@@ -1,0 +1,32 @@
+---
+title: 2.1.9
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.9 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- Path resolution has been unified across the server so that storage paths are resolved consistently everywhere. A migration aligns existing settings storage paths automatically on upgrade.
+- Depot queries have been optimized for better performance.
+- Server notifications now use a shorter timeout so a slow or unreachable server no longer holds up the launcher.
+- Updated SharpCompress to the latest version. This should resolve most extraction issues for games with large archives.
+
+## Bug Fixes
+- Fixed detection of the primary display's resolution on some Linux multi-display configurations.
+- Fixed application path resolution on the server, correcting how saves, media, archives, and updates are located.
+- Improved handling of the bypass execution policy for scripts.
+- Fixed installation of wine32 and winetricks.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.9" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.8" to="v2.1.9" />

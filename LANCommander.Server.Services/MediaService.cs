@@ -306,7 +306,17 @@ namespace LANCommander.Server.Services
                 return;
             }
 
-            var crf = config.AnimatedImage.Quality;
+            var encoder = await mediaToolService.GetH264EncoderAsync(ffmpegPath);
+
+            if (encoder == null)
+            {
+                _logger?.LogWarning(
+                    "No supported H.264 encoder in the ffmpeg at {Path} — skipping APNG to video conversion for media {MediaId}",
+                    ffmpegPath, media.Id);
+                return;
+            }
+
+            var encoderArguments = MediaToolService.BuildH264Arguments(encoder, config.AnimatedImage.Quality);
             var tempOutput = path + ".mp4";
 
             try
@@ -315,7 +325,7 @@ namespace LANCommander.Server.Services
                 process.StartInfo = new ProcessStartInfo
                 {
                     FileName = ffmpegPath,
-                    Arguments = $"-y -i \"{path}\" -c:v libx264 -pix_fmt yuv420p -crf {crf} -movflags +faststart -an \"{tempOutput}\"",
+                    Arguments = $"-y -i \"{path}\" {encoderArguments} -pix_fmt yuv420p -movflags +faststart -an \"{tempOutput}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

@@ -56,11 +56,47 @@ apt_install() {
   apt-get install -y --no-install-recommends "$@"
 }
 
-# ---------- yt-dlp + ffmpeg ----------
-install_ytdlp() {
-  echo "Installing yt-dlp and ffmpeg..."
+# ---------- ffmpeg ----------
+install_ffmpeg() {
+  if [[ -x "/usr/local/bin/ffmpeg" ]]; then
+    echo "ffmpeg already installed. Skipping download."
+    return
+  fi
 
-  apt_install ffmpeg curl ca-certificates
+  # A static LGPL build rather than Debian's "ffmpeg" package, which is a GPL build.
+  # This also avoids re-resolving a large apt dependency tree on every container start.
+  # No libx264 here - MediaToolService probes for an encoder and uses libopenh264.
+  case "$(uname -m)" in
+    aarch64|arm64) ffmpeg_arch="linuxarm64" ;;
+    *)             ffmpeg_arch="linux64" ;;
+  esac
+
+  echo "Downloading ffmpeg (${ffmpeg_arch}, LGPL build)..."
+  ffmpeg_tmp="$(mktemp -d)"
+  curl -fsSL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-${ffmpeg_arch}-lgpl.tar.xz" \
+    -o "$ffmpeg_tmp/ffmpeg.tar.xz"
+  tar -xf "$ffmpeg_tmp/ffmpeg.tar.xz" -C "$ffmpeg_tmp"
+
+  # Only ffmpeg itself: ffprobe is never invoked by the server.
+  find "$ffmpeg_tmp" -type f -name ffmpeg -perm -u+x -exec install -m 0755 {} /usr/local/bin/ffmpeg \;
+  rm -rf "$ffmpeg_tmp"
+
+  if [[ -x "/usr/local/bin/ffmpeg" ]]; then
+    echo "ffmpeg installed."
+  else
+    echo "WARNING: ffmpeg install failed; video media processing will be skipped." >&2
+  fi
+}
+
+# ---------- yt-dlp ----------
+install_ytdlp() {
+  echo "Installing yt-dlp..."
+
+  apt_install curl ca-certificates xz-utils
+
+  # yt-dlp shells out to ffmpeg to mux the separate video and audio streams that
+  # "bestvideo+bestaudio" downloads, so it has to be on PATH before yt-dlp runs.
+  install_ffmpeg
 
   if [[ -x "/usr/local/bin/yt-dlp" ]]; then
     echo "yt-dlp already installed. Skipping download."

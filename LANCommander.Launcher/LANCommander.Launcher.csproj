@@ -10,6 +10,39 @@
     <ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- Plugin allowlist for the bundled VLC runtime. Imported before the NuGet's own
+       targets so its "copy everything" defaults never apply. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\build\VlcPlugins.props" />
+
+  <!-- VideoLAN.LibVLC.Windows copies win-x86, win-x64 *and* win-arm64 into every
+       build, because its targets key off $(Platform) (AnyCPU for us) rather than
+       $(RuntimeIdentifier). That put ~180 MB of foreign-architecture binaries into
+       every publish and every local build. Disable all three, then re-enable only
+       the one we are actually building for. -->
+  <PropertyGroup>
+    <VlcWindowsX64Enabled>false</VlcWindowsX64Enabled>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x86'">
+    <VlcWindowsX86Enabled>true</VlcWindowsX86Enabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-arm64'">
+    <VlcWindowsArm64Enabled>true</VlcWindowsArm64Enabled>
+  </PropertyGroup>
+  <!-- No RID means a local build or `dotnet run`; x64 is the sensible default there. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR '$(RuntimeIdentifier)' == ''">
+    <VlcWindowsX64Enabled>true</VlcWindowsX64Enabled>
+  </PropertyGroup>
+
+  <!-- Ships alongside the bundled libvlc/FFmpeg it covers. LGPL requires the notice to
+       reach the user, not just the repository. -->
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)..\THIRD-PARTY-NOTICES.md"
+             Link="THIRD-PARTY-NOTICES.md"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />

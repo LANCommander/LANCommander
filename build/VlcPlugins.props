@@ -1,0 +1,135 @@
+<Project>
+
+  <!--
+    Single source of truth for the VLC plugin allowlist.
+
+    The launcher uses libvlc for exactly one thing: decoding game trailers into an
+    Avalonia bitmap via MediaPlayer.SetVideoCallbacks (see VideoFrameRenderer.cs).
+    VideoLAN's packages ship a general-purpose media player - SRT streaming, Blu-ray,
+    DCP cinema, Chromecast, visualizations, MIDI synthesis, and video *encoders* - none
+    of which we ever invoke. Shipping all of it cost ~99 MB of plugins per architecture
+    and pulled in GPL components (libx26410b = x264, libcrystalhd) that are incompatible
+    with keeping LANCommander's own MIT licensing free of copyleft obligations.
+
+    Entries are extension-less, plugin-relative stems ("<subdir>/<libname>_plugin").
+    Each consumer appends its own platform suffix:
+      Windows (this file)   -> plugins\<stem>*      (.dll)
+      Linux/macOS (CI)      -> plugins/<stem>*      (.so / .dylib)
+    build/prune-vlc.sh parses the _LcVlcPlugin lines below, so this file stays the only
+    place the list is maintained.
+
+    The trailing "*" matters: it makes every entry a glob rather than a literal path.
+    Globs match nothing when a file is absent instead of failing the build, which is
+    required because the architectures differ - win-arm64 has no _mmx/_sse2 chroma
+    converters, and the Linux/macOS audio backends have no Windows equivalent.
+
+    Adding a codec: add its decoder under codec/, its demuxer under demux/, and its
+    packetizer under packetizer/. Missing any one of the three fails at runtime as
+    "no suitable decoder module", not at build time - so test playback after editing.
+
+    Note: this bundle intentionally ships no plugins.dat. VLC scans the plugin
+    directory at startup instead, so pruning can never leave a stale module cache
+    behind. If a future VLC bump starts shipping one, it must be regenerated with
+    vlc-cache-gen *after* pruning or module lookup will fail.
+  -->
+
+  <ItemGroup>
+    <!-- Input: local files and the server's HTTPS media streaming endpoint. -->
+    <_LcVlcPlugin Include="access/libfilesystem_plugin" />
+    <_LcVlcPlugin Include="access/libhttp_plugin" />
+    <_LcVlcPlugin Include="access/libhttps_plugin" />
+    <_LcVlcPlugin Include="access/libtcp_plugin" />
+    <_LcVlcPlugin Include="misc/libgnutls_plugin" />
+    <_LcVlcPlugin Include="misc/libxml_plugin" />
+
+    <!-- Buffering and seeking over those inputs. skiptags strips ID3; inflate handles
+         gzip-encoded HTTP responses. -->
+    <_LcVlcPlugin Include="stream_filter/libcache_read_plugin" />
+    <_LcVlcPlugin Include="stream_filter/libcache_block_plugin" />
+    <_LcVlcPlugin Include="stream_filter/libprefetch_plugin" />
+    <_LcVlcPlugin Include="stream_filter/libskiptags_plugin" />
+    <_LcVlcPlugin Include="stream_filter/libinflate_plugin" />
+
+    <!-- Containers. mp4 is what the server produces; mkv covers WebM, which the
+         server emits when its ffmpeg build has no H.264 encoder available. -->
+    <_LcVlcPlugin Include="demux/libmp4_plugin" />
+    <_LcVlcPlugin Include="demux/libes_plugin" />
+    <_LcVlcPlugin Include="demux/libh26x_plugin" />
+    <_LcVlcPlugin Include="demux/libmkv_plugin" />
+    <_LcVlcPlugin Include="demux/libogg_plugin" />
+
+    <!-- Elementary stream framing, required before the decoder sees anything. -->
+    <_LcVlcPlugin Include="packetizer/libpacketizer_h264_plugin" />
+    <_LcVlcPlugin Include="packetizer/libpacketizer_mpeg4audio_plugin" />
+    <_LcVlcPlugin Include="packetizer/libpacketizer_copy_plugin" />
+
+    <!-- Decoding. avcodec (FFmpeg, LGPL) is the portable baseline; d3d11va/dxva2 are
+         hardware acceleration modules that plug into it, and mft is a Windows-native
+         fallback. Deliberately excluded: libx26410b (x264, GPLv2+), libcrystalhd
+         (GPL), and every other encoder - we decode only. -->
+    <_LcVlcPlugin Include="codec/libavcodec_plugin" />
+    <_LcVlcPlugin Include="codec/libd3d11va_plugin" />
+    <_LcVlcPlugin Include="codec/libdxva2_plugin" />
+    <_LcVlcPlugin Include="codec/libmft_plugin" />
+    <_LcVlcPlugin Include="codec/libaraw_plugin" />
+
+    <!-- Colour conversion into the RGBA buffer handed to Avalonia. swscale is the
+         general fallback; the i420_rgb variants are the fast paths where present. -->
+    <_LcVlcPlugin Include="video_chroma/libswscale_plugin" />
+    <_LcVlcPlugin Include="video_chroma/libchain_plugin" />
+    <_LcVlcPlugin Include="video_chroma/libi420_rgb" />
+    <_LcVlcPlugin Include="video_chroma/librv32_plugin" />
+    <_LcVlcPlugin Include="video_chroma/libi422_i420_plugin" />
+    <_LcVlcPlugin Include="video_chroma/libyuy2_i420_plugin" />
+
+    <!-- vmem is what SetVideoCallbacks resolves to; without it playback silently
+         produces no frames. -->
+    <_LcVlcPlugin Include="video_output/libvmem_plugin" />
+    <_LcVlcPlugin Include="video_output/libvdummy_plugin" />
+    <_LcVlcPlugin Include="video_filter/libdeinterlace_plugin" />
+
+    <!-- Audio output backends, one set per platform; the irrelevant ones glob to
+         nothing. adummy keeps muted playback working with no device present. -->
+    <_LcVlcPlugin Include="audio_output/libmmdevice_plugin" />
+    <_LcVlcPlugin Include="audio_output/libwasapi_plugin" />
+    <_LcVlcPlugin Include="audio_output/libdirectsound_plugin" />
+    <_LcVlcPlugin Include="audio_output/libpulse_plugin" />
+    <_LcVlcPlugin Include="audio_output/libalsa_plugin" />
+    <_LcVlcPlugin Include="audio_output/libauhal_plugin" />
+    <_LcVlcPlugin Include="audio_output/libadummy_plugin" />
+    <_LcVlcPlugin Include="audio_output/libamem_plugin" />
+
+    <!-- Format/rate/channel adaptation between the decoder and the audio device. -->
+    <_LcVlcPlugin Include="audio_filter/libaudio_format_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libtrivial_channel_mixer_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libsimple_channel_mixer_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libremap_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libgain_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libscaletempo_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libugly_resampler_plugin" />
+    <_LcVlcPlugin Include="audio_filter/libspeex_resampler_plugin" />
+  </ItemGroup>
+
+  <!--
+    Translate the shared stems into the include lists VideoLAN.LibVLC.Windows expects.
+    Its targets only apply their own "copy everything" default when these are empty
+    (see VideoLAN.LibVLC.Windows.targets), so populating them here at evaluation time
+    replaces that default rather than adding to it.
+
+    "%2A" is an escaped asterisk. It has to stay escaped so MSBuild treats it as a
+    literal character here; the package unescapes it into a real glob later, when the
+    paths are resolved relative to its own payload directory. An unescaped "*" would
+    be glob-expanded against this repo instead and silently match nothing.
+
+    Only libvlc.dll/libvlccore.dll are taken from the package root - not the default
+    "libvlc.*", which also drags in the .lib import libraries (857 KB, link-time only
+    and useless at runtime) - and hrtfs/ and lua/ are dropped entirely along with the
+    spatial-audio and Lua interface plugins that would have used them.
+  -->
+  <ItemGroup>
+    <VlcWindowsX64IncludeFiles Include="libvlc.dll;libvlccore.dll;@(_LcVlcPlugin->'plugins\%(Identity)%2A')" />
+    <VlcWindowsX86IncludeFiles Include="libvlc.dll;libvlccore.dll;@(_LcVlcPlugin->'plugins\%(Identity)%2A')" />
+    <VlcWindowsArm64IncludeFiles Include="libvlc.dll;libvlccore.dll;@(_LcVlcPlugin->'plugins\%(Identity)%2A')" />
+  </ItemGroup>
+
+</Project>

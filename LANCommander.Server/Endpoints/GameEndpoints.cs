@@ -4,6 +4,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.ImportExport;
+using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.Server.Services.Mappers;
@@ -35,7 +36,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Updates", GetUpdatesAsync);
         group.MapGet("/{id:guid}/CheckForUpdate", CheckForUpdateAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync).AllowAnonymous();
-        group.MapGet("/{id:guid}/Import", ImportAsync).RequireAuthorization(RoleService.AdministratorRoleName);
+        group.MapPost("/Import/{objectKey:guid}", ImportAsync).RequireAuthorization(RoleService.AdministratorRoleName);
         group.MapPost("/UploadArchive", UploadArchiveAsync).RequireAuthorization(RoleService.AdministratorRoleName);
     }
 
@@ -529,23 +530,29 @@ public static class GameEndpoints
     }
 
     internal static async Task<IResult> ImportAsync(
-        [FromServices] ArchiveService archiveService,
-        [FromServices] ImportContext importContext,
+        [FromServices] ImportRunner importRunner,
         [FromServices] ILogger<Game> logger,
-        Guid id)
+        Guid objectKey,
+        [FromBody] SDK.Models.ImportRequest request = null)
     {
         try
         {
-            var path = await archiveService.GetArchiveFileLocationAsync(id.ToString());
+            var result = await importRunner.RunAsync(
+                objectKey,
+                request?.StorageLocationId,
+                ManifestType.Game);
 
-            var result = await importContext.InitializeImportAsync(path);
-
-            return TypedResults.Ok(result);
+            return TypedResults.Ok(new SDK.Models.ImportResponse
+            {
+                RecordId = result.RecordId,
+                ManifestType = result.ManifestType,
+                ImportedCount = result.ImportedCount,
+            });
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", id);
-            
+            logger?.LogError(ex, "Failed to import game with object key {ObjectKey}", objectKey);
+
             return TypedResults.BadRequest(ex.Message);
         }
     }

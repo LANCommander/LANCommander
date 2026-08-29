@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:components="using:LANCommander.Launcher.ViewModels.Components"
+             x:Class="LANCommander.Launcher.Views.Packaging.RegistrySelectionStepView"
+             x:DataType="vm:RegistrySelectionStepViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
+                <Button Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
+            </StackPanel>
+
+            <TextBlock Text="Choose the registry changes to recreate"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+        </DockPanel>
+
+        <Border Grid.Row="1"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <TreeView ItemsSource="{Binding Roots}" Padding="6">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate x:DataType="components:CheckableTreeNode"
+                                      ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      MinWidth="0" />
+
+                            <TextBlock Text="+"
+                                       Foreground="#7FBF7F"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       ToolTip.Tip="Key created"
+                                       IsVisible="{Binding IsCreate}" />
+
+                            <TextBlock Text="~"
+                                       Foreground="#7FA8BF"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       ToolTip.Tip="Value written"
+                                       IsVisible="{Binding IsUpdate}" />
+
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </Border>
+
+        <TextBlock Grid.Row="2"
+                   Margin="0,8,0,0"
+                   Text="{Binding Summary}"
+                   FontSize="12"
+                   Opacity="0.7"
+                   TextWrapping="Wrap" />
+    </Grid>
+</UserControl>

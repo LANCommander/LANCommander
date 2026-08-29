@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.ViewModels.Packaging;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
@@ -47,6 +48,7 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel gd   => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
         SettingsViewModel _      => "Settings",
         DownloadQueueViewModel _ => "Downloads",
+        PackagingWizardViewModel _ => "Package a Game",
         _ => string.Empty
     };
 
@@ -65,6 +67,12 @@ public partial class ShellViewModel : ViewModelBase
             oldBrowse.PropertyChanged -= OnDepotBrowsePropertyChanged;
         if (newValue is DepotBrowseViewModel newBrowse)
             newBrowse.PropertyChanged += OnDepotBrowsePropertyChanged;
+
+        // Navigating away from the wizard ends any capture in progress. A forgotten session
+        // would otherwise keep workers injecting into the user's machine indefinitely.
+        // This only fires when the view actually changed, so the new view is never the wizard.
+        if (oldValue is PackagingWizardViewModel wizard)
+            _ = wizard.ShutdownAsync();
     }
 
     private void OnGameDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -126,6 +134,18 @@ public partial class ShellViewModel : ViewModelBase
     public SettingsViewModel        SettingsViewModel        { get; private set; } = null!;
     public ProfileViewModel         Profile                  { get; private set; } = null!;
     public ChatWindowViewModel      Chat                     { get; private set; } = null!;
+    public PackagingWizardViewModel PackagingWizardViewModel { get; private set; } = null!;
+
+    /// <summary>
+    /// Whether the packaging entry point is offered.
+    /// </summary>
+    /// <remarks>
+    /// Gated on the same Administrator role the server's upload and import endpoints enforce, so
+    /// the UI cannot offer something the server will refuse. Also requires a platform where
+    /// packaging can actually run, and a live connection to publish to.
+    /// </remarks>
+    [ObservableProperty]
+    private bool _canPackageGames;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnreadChat))]
@@ -179,6 +199,14 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel      = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
+        PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
+
+        var authenticationService = _serviceProvider.GetRequiredService<AuthenticationService>();
+
+        CanPackageGames =
+            PackagingWizardViewModel.Session.IsSupported &&
+            !IsOfflineMode &&
+            authenticationService.CanManageGames();
         // Profile is already created in the constructor; reuse it here
 
         Chat = new ChatWindowViewModel(_serviceProvider);
@@ -676,8 +704,21 @@ public partial class ShellViewModel : ViewModelBase
     private void ShowSettings()
     {
         SettingsViewModel.Load();
-        
+
         _navigationService.NavigateTo(SettingsViewModel);
+    }
+
+    [RelayCommand]
+    private async Task ShowPackagingAsync()
+    {
+        if (!CanPackageGames)
+            return;
+
+        // Start from a clean package each time; a half-finished capture from a previous visit
+        // would silently contaminate the next one.
+        await PackagingWizardViewModel.ResetAsync();
+
+        _navigationService.NavigateTo(PackagingWizardViewModel);
     }
 
     [RelayCommand]

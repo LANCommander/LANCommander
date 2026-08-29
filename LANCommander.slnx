@@ -26,6 +26,8 @@
     <Project Path="LANCommander.Launcher.IntegrationTests\LANCommander.Launcher.IntegrationTests.csproj" />
     <Project Path="LANCommander.Launcher.Tests\LANCommander.Launcher.Tests.csproj" />
     <Project Path="LANCommander.Launcher.Services.Tests\LANCommander.Launcher.Services.Tests.csproj" />
+    <Project Path="LANCommander.Packaging.Tests\LANCommander.Packaging.Tests.csproj" />
+    <Project Path="LANCommander.Packaging.Worker.Tests\LANCommander.Packaging.Worker.Tests.csproj" />
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
     <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" Type="C#" />
     <Project Path="LANCommander.Server.UI.Tests\LANCommander.Server.UI.Tests.csproj" />
@@ -44,7 +46,9 @@
   <Project Path="LANCommander.Steam\LANCommander.Steam.csproj" />
   <Project Path="LANCommander.UI\LANCommander.UI.csproj" />
   <Project Path="LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj" />
-  <Project Path="LANCommander.Packager\LANCommander.Packager.csproj" />
+  <Project Path="LANCommander.Packaging\LANCommander.Packaging.csproj" />
+  <Project Path="LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
+  <Project Path="LANCommander.Packaging.Worker\LANCommander.Packaging.Worker.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
   <Folder Name="/Plugins/">
     <Project Path="LANCommander.SamplePlugin\LANCommander.SamplePlugin.csproj" />

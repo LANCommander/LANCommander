@@ -97,6 +97,48 @@ jobs:
           -p:EnableCompressionInSingleFile=true \
           -p:DebugType=embedded
 
+    # DLL injection only works between processes of the same bitness, so packaging ships one
+    # small worker per architecture instead of an entire per-architecture application. These are
+    # published as loose files beside the launcher rather than as launcher content: as content,
+    # IncludeAllContentForSelfExtract would bundle ~40 MB into the single file and re-extract it
+    # to %TEMP% on every launch.
+    #
+    # Cross-publishing Windows RIDs from the Linux runner is fine here — nothing native is
+    # compiled, the Interposer DLLs arrive prebuilt from the NuGet package, and the package's
+    # buildTransitive targets pick the right one per RuntimeIdentifier.
+    #
+    # Runs for every Windows launcher RID, including win-arm64: Windows on ARM emulates both x64
+    # and x86, so both workers are usable there.
+    - name: Publish packaging workers (Windows)
+      if: inputs.build_platform == 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        RAW_VERSION="${{ inputs.version_tag }}"
+        SEMVER="${RAW_VERSION#v}"
+
+        PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
+
+        for RID in win-x64 win-x86; do
+          dotnet publish "./LANCommander.Packaging.Worker/LANCommander.Packaging.Worker.csproj" \
+            -c "${{ inputs.build_configuration }}" \
+            --self-contained \
+            --runtime "$RID" \
+            -p:Version="$SEMVER" \
+            -p:PublishSingleFile=false \
+            -p:PublishTrimmed=true \
+            -p:DebugType=none \
+            -o "$PUBLISH_DIR/Packaging/$RID"
+        done
+
+        # Fail the build rather than shipping a launcher whose packaging feature silently does
+        # not work.
+        for RID in win-x64 win-x86; do
+          test -f "$PUBLISH_DIR/Packaging/$RID/LANCommander.Packaging.Worker.exe"
+          test -f "$PUBLISH_DIR/Packaging/$RID/LANCommander.Interposer.dll"
+        done
+
     - name: Bundle libvlc (Linux)
       if: inputs.build_platform == 'Linux'
       shell: bash

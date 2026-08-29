@@ -131,6 +131,11 @@
                         Padding="8,4">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <!-- Only shown to accounts that may create games on the server, and
+                                 only where packaging can actually run. -->
+                            <MenuItem Header="Package a Game..."
+                                      Command="{Binding ShellViewModel.ShowPackagingCommand}"
+                                      IsVisible="{Binding ShellViewModel.CanPackageGames}" />
                             <MenuItem Header="Settings"
                                       Command="{Binding ShellViewModel.ShowSettingsCommand}" />
                             <MenuItem Header="Big Screen Mode"

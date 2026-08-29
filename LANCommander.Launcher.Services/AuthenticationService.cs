@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
@@ -188,6 +189,41 @@ public class AuthenticationService(
 
         return decodedToken.Claims?.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value ?? string.Empty;
     }
+
+    /// <summary>
+    /// True when the signed-in account holds <paramref name="role"/> on the server.
+    /// </summary>
+    /// <remarks>
+    /// The server writes one <see cref="ClaimTypes.Role"/> claim per role into the access token,
+    /// so the token is the authoritative client-side source — no profile endpoint returns roles.
+    /// The short claim names are matched as well as the full URI: the server currently builds
+    /// its token by constructing JwtSecurityToken directly, which leaves claim types untouched,
+    /// but a future move to SecurityTokenDescriptor would apply the outbound claim type map and
+    /// silently break a check that only looked for one form.
+    /// </remarks>
+    public bool IsInRole(string role)
+    {
+        if (String.IsNullOrWhiteSpace(role))
+            return false;
+
+        var decodedToken = DecodeToken();
+
+        if (decodedToken?.Claims == null)
+            return false;
+
+        return decodedToken.Claims.Any(claim =>
+            (claim.Type == ClaimTypes.Role || claim.Type == "role" || claim.Type == "roles") &&
+            claim.Value.Equals(role, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// True when the signed-in account may create or edit games on the server.
+    /// </summary>
+    /// <remarks>
+    /// Administrator is the role the upload and import endpoints actually enforce, so gating
+    /// the UI on the same role means the two cannot drift apart.
+    /// </remarks>
+    public bool CanManageGames() => IsInRole(Roles.Administrator);
 
     public JwtSecurityToken? DecodeToken()
     {

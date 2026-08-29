@@ -20,7 +20,7 @@ namespace LANCommander.Server.Services
         CollectionService collectionService,
         IdentityContextFactory identityContextFactory) : BaseDatabaseService<Role>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
-        public const string AdministratorRoleName = "Administrator";
+        public const string AdministratorRoleName = SDK.Roles.Administrator;
 
         public override async Task<Role> AddAsync(Role role)
         {

@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Out-of-process API-hook monitor.
+
+    DLL injection via CreateRemoteThread/LoadLibraryW only works when the injector and the
+    target share a bitness, so this is published once per architecture (win-x86 and win-x64)
+    and the launcher routes work to whichever worker matches a given process. That is the whole
+    reason this project exists: it means only this small executable ships per architecture
+    rather than an entire copy of the application.
+  -->
+  <PropertyGroup>
+    <!-- WinExe, not Exe: the elevated worker is started with ShellExecute/runas, which ignores
+         CreateNoWindow, so a console subsystem binary would flash a window on every launch. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LANCommander.Packaging.Worker</RootNamespace>
+    <AssemblyName>LANCommander.Packaging.Worker</AssemblyName>
+
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Loose files rather than a single file: keeps each architecture's native
+         LANCommander.Interposer.dll beside its own worker, and avoids extracting an executable
+         that injects DLLs into %TEMP% on every launch. -->
+    <PublishSingleFile>false</PublishSingleFile>
+
+    <!-- asInvoker; the worker escalates on demand rather than prompting every session.
+         See app.manifest. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LANCommander.Interposer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Packaging.Worker.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

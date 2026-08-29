@@ -15,6 +15,7 @@ public static class IServiceCollectionExtensions
 
         #region Import
         services.AddScoped<ImportContextFactory>();
+        services.AddScoped<ImportRunner>();
         services.AddScoped<ImportContext>();
         
         services.AddScoped<GameImporter>();

@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:components="using:LANCommander.Launcher.ViewModels.Components"
+             x:Class="LANCommander.Launcher.Views.Packaging.FileSelectionStepView"
+             x:DataType="vm:FileSelectionStepViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
+                <Button Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
+                <Button Content="Rescan" Command="{Binding RefreshCommand}" Padding="12,5" />
+            </StackPanel>
+
+            <TextBlock Text="Choose the files to include"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+        </DockPanel>
+
+        <!-- The disk sweep recovers files written by processes that could not be instrumented
+             in time, which is the main practical mitigation for the injection race. -->
+        <TextBlock Grid.Row="1"
+                   Margin="0,0,0,8"
+                   FontSize="12"
+                   Foreground="#7FBF7F"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasSweptFiles}"
+                   Text="{Binding SweptFileCount, StringFormat='{}Found {0} additional file(s) in the install folder that were not captured while monitoring. They are included by default.'}" />
+
+        <Border Grid.Row="2"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <TreeView ItemsSource="{Binding Roots}" Padding="6">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate x:DataType="components:CheckableTreeNode"
+                                      ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      MinWidth="0" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </Border>
+
+        <TextBlock Grid.Row="3"
+                   Margin="0,8,0,0"
+                   Text="{Binding Summary}"
+                   FontSize="12"
+                   Opacity="0.7" />
+    </Grid>
+</UserControl>

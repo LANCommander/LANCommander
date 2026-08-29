@@ -60,10 +60,10 @@ LANCommander is an open-source, self-hostable digital game platform. Host your o
 - **Play session tracking** and statistics
 
 ### Game Packaging
-- **Dedicated Packager tool** with step-by-step wizard for creating game packages
+- **Built into the launcher** - a step-by-step wizard for creating game packages
 - **Automatic metadata lookup** - search IGDB and auto-fill game details
-- **Registry capture** and installer monitoring
-- **Direct upload** to your LANCommander server
+- **Registry capture** and installer monitoring, across 32- and 64-bit installers
+- **Direct publishing** to your LANCommander server, using the session you are already signed in with
 
 ### Developer SDK
 - **Published on NuGet** - [`LANCommander.SDK`](https://www.nuget.org/packages/LANCommander.SDK)
@@ -75,9 +75,10 @@ LANCommander is an open-source, self-hostable digital game platform. Host your o
 |-----------|:-------:|:-----:|:-----:|
 | Server    | x64, arm64 | x64, arm64 | x64, arm64 |
 | Launcher  | x64, arm64 | x64, arm64 | x64, arm64 |
-| Packager  | x86     | -     | -     |
 
 > **Note:** The launcher is primarily tested on Windows. Linux and macOS builds are provided but may have limited functionality.
+>
+> Game packaging is Windows-only: it works by injecting a hook DLL into the installer, which has no equivalent on other platforms.
 
 ## Quick Start
 

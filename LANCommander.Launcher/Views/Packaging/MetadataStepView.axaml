@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:models="using:LANCommander.SDK.Models"
+             x:Class="LANCommander.Launcher.Views.Packaging.MetadataStepView"
+             x:DataType="vm:MetadataStepViewModel">
+
+    <Panel>
+        <ScrollViewer>
+            <StackPanel Spacing="10" MaxWidth="620" HorizontalAlignment="Stretch">
+
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="Look up..."
+                            Command="{Binding OpenSearchCommand}"
+                            Margin="8,0,0,0"
+                            Padding="14,6" />
+
+                    <TextBlock Text="Describe the game"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </DockPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Title" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding GameTitle}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Sort title" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding SortTitle}" Watermark="Defaults to the title" />
+                </StackPanel>
+
+                <!-- DatePicker lays out three sub-fields; the fixed 200px wrapper it used to
+                     sit in clipped them, so it now sizes to its own content. -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <StackPanel Spacing="4" Width="140">
+                        <TextBlock Text="Version" FontSize="12" Opacity="0.7" />
+                        <TextBox Text="{Binding Version}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Released on" FontSize="12" Opacity="0.7" />
+                        <DatePicker SelectedDate="{Binding ReleasedOn}"
+                                    HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <CheckBox Content="Singleplayer"
+                              IsChecked="{Binding Singleplayer}"
+                              VerticalAlignment="Bottom"
+                              Margin="0,0,0,6" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Description" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding Description}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="90" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Notes" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding Notes}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="60" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Metadata lookup, as an overlay rather than a separate window — the launcher's own
+             idiom for this kind of transient panel. -->
+        <Border IsVisible="{Binding IsSearchOpen}"
+                Background="#CC000000">
+            <Border MaxWidth="620"
+                    MaxHeight="520"
+                    Margin="24"
+                    Padding="16"
+                    CornerRadius="6"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                    <TextBlock Grid.Row="0"
+                               Text="Look up metadata"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10" />
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                        <ComboBox ItemsSource="{Binding Providers}"
+                                  SelectedItem="{Binding SelectedProvider}"
+                                  PlaceholderText="Provider"
+                                  MinWidth="150" />
+
+                        <ComboBox ItemsSource="{Binding SubProviders}"
+                                  SelectedItem="{Binding SelectedSubProvider}"
+                                  PlaceholderText="All"
+                                  MinWidth="150"
+                                  IsVisible="{Binding SubProviders.Count}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:MetadataSubProvider">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <DockPanel Grid.Row="2" Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right"
+                                Content="Search"
+                                Classes="Primary"
+                                Command="{Binding SearchCommand}"
+                                Margin="8,0,0,0"
+                                Padding="16,6" />
+
+                        <TextBox Text="{Binding SearchQuery}" Watermark="Game title" />
+                    </DockPanel>
+
+                    <Border Grid.Row="3"
+                            CornerRadius="4"
+                            Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                        <Panel>
+                            <ListBox ItemsSource="{Binding SearchResults}"
+                                     SelectedItem="{Binding SelectedResult}"
+                                     SelectionMode="Single">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:MetadataSearchResult">
+                                        <StackPanel Spacing="2" Margin="0,4">
+                                            <TextBlock Text="{Binding Data.Title}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Data.Description}"
+                                                       FontSize="11"
+                                                       Opacity="0.7"
+                                                       MaxLines="2"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="{Binding SearchError}"
+                                       Foreground="#E05A5A"
+                                       Margin="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Top"
+                                       IsVisible="{Binding SearchError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                            <ProgressBar IsIndeterminate="True"
+                                         VerticalAlignment="Top"
+                                         IsVisible="{Binding IsSearching}" />
+                        </Panel>
+                    </Border>
+
+                    <StackPanel Grid.Row="4"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                HorizontalAlignment="Right"
+                                Margin="0,10,0,0">
+                        <Button Content="Cancel" Command="{Binding CloseSearchCommand}" Padding="16,6" />
+                        <Button Content="Use selected"
+                                Classes="Primary"
+                                Command="{Binding ApplySelectedResultCommand}"
+                                Padding="16,6" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+    </Panel>
+</UserControl>

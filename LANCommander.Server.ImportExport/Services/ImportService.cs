@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using LANCommander.SDK;
 using LANCommander.Server.ImportExport.Models;
 
@@ -9,8 +10,10 @@ public class ImportService : IDisposable
     public AsyncEventHandler<ImportStatusUpdate> OnImportComplete = new();
     public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate = new();
     public AsyncEventHandler<ImportStatusUpdate> OnImportError = new();
-    
-    private Dictionary<Guid, ImportContext> _importContexts = new();
+
+    // Concurrent because contexts are now created from API requests as well as Blazor
+    // circuits, so several threads can add and remove at once.
+    private readonly ConcurrentDictionary<Guid, ImportContext> _importContexts = new();
 
     public Guid AddContext(ImportContext context)
     {
@@ -18,7 +21,7 @@ public class ImportService : IDisposable
         
         context.SetId(id);
         
-        _importContexts.Add(id, context);
+        _importContexts[id] = context;
         
         context.OnImportStarted = OnImportStarted;
         context.OnImportComplete = OnImportComplete;
@@ -30,7 +33,7 @@ public class ImportService : IDisposable
 
     public void RemoveContext(Guid id)
     {
-        _importContexts.Remove(id);
+        _importContexts.TryRemove(id, out _);
     }
 
     public IEnumerable<ImportContext> GetContexts()

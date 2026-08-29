@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Import.Factories;
 using LANCommander.Launcher.Services.Import.Importers;
+using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Launcher.Services.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,22 @@ namespace LANCommander.Launcher.Services.Extensions
 
             services.AddSingleton<ICurrentProcessInfo, CurrentProcessInfo>();
             services.AddSingleton<IElevatedProcessLauncher, ElevatedProcessLauncher>();
+
+            #region Packaging
+            // Singleton because a capture session outlives any DI scope, and because several
+            // workers report into one merged change set. Selected by platform so view models
+            // can bind to IsSupported instead of branching on the OS.
+            if (OperatingSystem.IsWindows())
+            {
+                services.AddSingleton<IPackagingWorkerFactory, PackagingWorkerFactory>();
+                services.AddSingleton<IPackagingSessionService, PackagingSessionService>();
+            }
+            else
+            {
+                services.AddSingleton<IPackagingSessionService, UnsupportedPackagingSessionService>();
+            }
+            #endregion
+
             services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
             services.AddSingleton<ScriptDebugger>();
             services.AddSingleton<IScriptDebugger>(sp =>

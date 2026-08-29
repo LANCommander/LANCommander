@@ -1,6 +1,7 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
+using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
@@ -109,19 +110,25 @@ public static class ToolsEndpoints
 
     internal static async Task<IResult> ImportAsync(
         Guid objectKey,
-        [FromServices] ArchiveService archiveService,
-        [FromServices] ImportContext importContext,
-        [FromServices] ILoggerFactory loggerFactory)
+        [FromServices] ImportRunner importRunner,
+        [FromServices] ILoggerFactory loggerFactory,
+        [FromBody] SDK.Models.ImportRequest request = null)
     {
         var logger = loggerFactory.CreateLogger("ToolsApi");
 
         try
         {
-            var uploadedPath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var result = await importRunner.RunAsync(
+                objectKey,
+                request?.StorageLocationId,
+                SDK.Enums.ManifestType.Tool);
 
-            var result = await importContext.InitializeImportAsync(uploadedPath);
-
-            return TypedResults.Ok(result);
+            return TypedResults.Ok(new SDK.Models.ImportResponse
+            {
+                RecordId = result.RecordId,
+                ManifestType = result.ManifestType,
+                ImportedCount = result.ImportedCount,
+            });
         }
         catch (Exception ex)
         {

@@ -2680,7 +2680,19 @@ namespace LANCommander.SDK.Services
             return !_running[gameId].IsCancellationRequested;
         }
 
-        public async Task ImportAsync(string archivePath)
+        /// <summary>
+        /// Uploads an .lcx package and imports it, creating or updating the game it describes.
+        /// </summary>
+        /// <param name="archivePath">Path to the .lcx file.</param>
+        /// <param name="storageLocationId">
+        /// Archive storage location to import into. Falls back to the server's default.
+        /// </param>
+        /// <param name="uploadProgress">Receives the number of bytes uploaded so far.</param>
+        /// <returns>The import result, including the id of the created or updated game.</returns>
+        public async Task<ImportResponse> ImportAsync(
+            string archivePath,
+            Guid? storageLocationId = null,
+            IProgress<long> uploadProgress = null)
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
@@ -2688,15 +2700,19 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+                    .UploadInChunksAsync(
+                        settingsProvider.CurrentValue.Archives.UploadChunkSize, fs, uploadProgress);
 
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute($"/api/Games/Import/{objectKey}")
-                        .PostAsync();
+                if (objectKey == Guid.Empty)
+                    throw new Exception("Failed to upload package: the server did not return an object key.");
+
+                return await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Games/Import/{objectKey}")
+                    .AddBody(new ImportRequest { StorageLocationId = storageLocationId })
+                    .PostAsync<ImportResponse>();
             }
         }
 

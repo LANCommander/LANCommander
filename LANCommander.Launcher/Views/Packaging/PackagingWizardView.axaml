@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.PackagingWizardView"
+             x:DataType="vm:PackagingWizardViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Step rail -->
+        <Border Grid.Row="0"
+                Padding="16,52,16,10"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <!-- No title here: the shell titlebar already shows "Package a Game". -->
+            <StackPanel Spacing="8">
+                <ItemsControl ItemsSource="{Binding ApplicableSteps}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="6" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PackagingStepViewModel">
+                            <Border Padding="10,4"
+                                    CornerRadius="3"
+                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                                <TextBlock Text="{Binding Title}" FontSize="12" Opacity="0.85" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock FontSize="12" Opacity="0.7">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat="Step {0} of {1} — {2}">
+                            <Binding Path="StepNumber" />
+                            <Binding Path="StepCount" />
+                            <Binding Path="CurrentStep.Title" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Current step. Uses the shared view registry so each step resolves to its own view,
+             which also lets a plugin replace an individual step later. -->
+        <ContentControl Grid.Row="1"
+                        x:Name="StepHost"
+                        Margin="16,12"
+                        Content="{Binding CurrentStep}" />
+
+        <!-- Footer -->
+        <Border Grid.Row="2"
+                Padding="16,10"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="#E05A5A"
+                           TextWrapping="Wrap"
+                           MaxWidth="600"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            HorizontalAlignment="Right">
+                    <Button Content="Back"
+                            Command="{Binding BackCommand}"
+                            IsEnabled="{Binding CanGoBack}"
+                            Padding="16,6" />
+
+                    <Button Content="{Binding NextLabel}"
+                            Classes="Primary"
+                            Command="{Binding NextCommand}"
+                            IsEnabled="{Binding CurrentStep.CanGoNext}"
+                            IsVisible="{Binding !IsLastStep}"
+                            Padding="16,6" />
+                </StackPanel>
+
+                <Panel />
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

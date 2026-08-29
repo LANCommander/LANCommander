@@ -20,6 +20,9 @@ using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
+using LANCommander.Launcher.ViewModels.Packaging;
+using LANCommander.Launcher.Views.Packaging;
+using LANCommander.Launcher.Services.Packaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,6 +194,11 @@ public partial class App : Application
                 _logger?.LogInformation("Database migrations complete");
             }
 
+            // Report which packaging workers were found. Worker discovery works under
+            // `dotnet run` and can silently fail in a packaged build where the files were never
+            // copied; without this the only symptom is a menu entry that never appears.
+            (Services!.GetService<IPackagingWorkerFactory>() as PackagingWorkerFactory)?.LogDiscovery();
+
             // Initialize the view model on the UI thread
             var mainViewModel = Services!.GetRequiredService<MainWindowViewModel>();
             _logger?.LogInformation("Initializing view model...");
@@ -347,6 +355,18 @@ public partial class App : Application
             registry.Register<GameDetailViewModel>(() => new GameDetailView());
             registry.Register<SettingsViewModel>(() => new SettingsView());
             registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
+
+            // Packaging wizard, plus each of its steps. Registering the steps in the same
+            // registry is what lets the wizard host them in a ContentControl, and leaves room
+            // for a plugin to replace an individual step later.
+            registry.Register<PackagingWizardViewModel>(() => new PackagingWizardView());
+            registry.Register<MonitorStepViewModel>(() => new MonitorStepView());
+            registry.Register<InstallDirectoryStepViewModel>(() => new InstallDirectoryStepView());
+            registry.Register<FileSelectionStepViewModel>(() => new FileSelectionStepView());
+            registry.Register<RegistrySelectionStepViewModel>(() => new RegistrySelectionStepView());
+            registry.Register<MetadataStepViewModel>(() => new MetadataStepView());
+            registry.Register<ActionStepViewModel>(() => new ActionStepView());
+            registry.Register<OutputStepViewModel>(() => new OutputStepView());
 
             return registry;
         });

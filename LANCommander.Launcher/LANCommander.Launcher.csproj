@@ -8,6 +8,9 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
+    <!-- Single source of truth: derives AssemblyVersion, FileVersion and InformationalVersion.
+         Release builds override it with -p:Version from the tag. -->
+    <Version>2.1.10</Version>
   </PropertyGroup>
 
   <!-- Plugin allowlist for the bundled VLC runtime. Imported before the NuGet's own
@@ -107,4 +110,101 @@
     <AvaloniaXaml Remove="Theme\LANCommander.axaml" />
     <AvaloniaResource Include="Theme\LANCommander.axaml" />
   </ItemGroup>
+
+  <!--
+    Packaging workers.
+
+    DLL injection requires the injector and its target to share a bitness, so one worker is
+    published per architecture into Packaging\{rid}\ beside the launcher. They are deliberately
+    NOT publish inputs of the launcher: as Content they would be swept into the single-file
+    bundle by IncludeAllContentForSelfExtract and re-extracted to %TEMP% on every launch, which
+    is slow and makes an executable that injects DLLs look exactly like a dropper.
+
+    CI publishes them with an explicit step (see .github/workflows/LANCommander.Launcher.yml).
+    This target covers local development so `dotnet run` finds them.
+  -->
+  <PropertyGroup>
+    <PackagingWorkerProject>$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Worker\LANCommander.Packaging.Worker.csproj</PackagingWorkerProject>
+
+    <!-- Set BuildPackagingWorkers=false to skip the worker publish entirely. -->
+    <BuildPackagingWorkers Condition="'$(BuildPackagingWorkers)' == '' AND '$(OS)' == 'Windows_NT'">true</BuildPackagingWorkers>
+    <BuildPackagingWorkers Condition="'$(BuildPackagingWorkers)' == ''">false</BuildPackagingWorkers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackagingWorkerSource Include="$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Worker\**\*.cs"
+                           Exclude="$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Worker\bin\**;$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Worker\obj\**" />
+    <PackagingWorkerSource Include="$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Abstractions\**\*.cs"
+                           Exclude="$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Abstractions\bin\**;$(MSBuildThisFileDirectory)..\LANCommander.Packaging.Abstractions\obj\**" />
+    <PackagingWorkerSource Include="$(PackagingWorkerProject)" />
+  </ItemGroup>
+
+  <!-- OutDir is defined by the common targets, which import after this file's body, so output
+       paths have to be computed at execution time rather than in a body PropertyGroup. -->
+  <Target Name="ResolvePackagingWorkerPaths">
+    <PropertyGroup>
+      <!-- Staging is shared across target frameworks and the properties passed to the worker
+           publish are identical from every inner build, so MSBuild coalesces them into one
+           build rather than running two concurrently over the same obj directory. -->
+      <PackagingWorkersStagingDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\artifacts\packaging-workers\$(Configuration)\'))</PackagingWorkersStagingDir>
+
+      <!-- The stamp is per target framework. A shared one is what two inner builds actually
+           collide on (MSB3371), because each writes its own. -->
+      <PackagingWorkersOutputDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)$(OutDir)Packaging\'))</PackagingWorkersOutputDir>
+      <PackagingWorkersStamp>$(PackagingWorkersOutputDir).stamp</PackagingWorkersStamp>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Inputs/Outputs matter here: without them every incremental build would re-publish two
+       self-contained trimmed applications, which takes minutes. -->
+  <Target Name="PublishPackagingWorkers"
+          AfterTargets="Build"
+          DependsOnTargets="ResolvePackagingWorkerPaths"
+          Condition="'$(BuildPackagingWorkers)' == 'true' AND '$(DesignTimeBuild)' != 'true'"
+          Inputs="@(PackagingWorkerSource)"
+          Outputs="$(PackagingWorkersStamp)">
+
+    <Message Importance="high" Text="Publishing packaging workers to $(PackagingWorkersStagingDir)" />
+
+    <!-- TargetFramework must be set explicitly. The MSBuild task passes the calling project's
+         global properties through, and this launcher is multi-targeted, so its
+         net10.0-windows inner build would otherwise ask the worker — which only targets
+         net10.0 — to build for a framework it does not have (NETSDK1005). -->
+    <MSBuild Projects="$(PackagingWorkerProject)"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=false;PublishDir=$(PackagingWorkersStagingDir)win-x64\" />
+
+    <MSBuild Projects="$(PackagingWorkerProject)"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=win-x86;SelfContained=true;PublishSingleFile=false;PublishDir=$(PackagingWorkersStagingDir)win-x86\" />
+
+    <!-- Copy into this target framework's output so `dotnet run -f <tfm>` and an IDE run
+         configuration both find the workers, whichever framework they use. -->
+    <ItemGroup>
+      <StagedPackagingWorkerFile Include="$(PackagingWorkersStagingDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(StagedPackagingWorkerFile)"
+          DestinationFiles="@(StagedPackagingWorkerFile->'$(PackagingWorkersOutputDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Touch Files="$(PackagingWorkersStamp)" AlwaysCreate="true" />
+  </Target>
+
+  <!-- CI publishes the workers with its own step (the runner is Linux, where the target above
+       does not run). This mirrors that for a local publish so a developer can test a packaged
+       build without reproducing the workflow by hand. -->
+  <Target Name="CopyPackagingWorkersToPublishDir"
+          AfterTargets="Publish"
+          DependsOnTargets="PublishPackagingWorkers"
+          Condition="'$(BuildPackagingWorkers)' == 'true' AND '$(DesignTimeBuild)' != 'true'">
+
+    <ItemGroup>
+      <PackagingWorkerFile Include="$(PackagingWorkersStagingDir)**\*" Exclude="$(PackagingWorkersStamp)" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(PackagingWorkerFile)"
+          DestinationFiles="@(PackagingWorkerFile->'$(PublishDir)Packaging\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

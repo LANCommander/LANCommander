@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.OutputStepView"
+             x:DataType="vm:OutputStepViewModel">
+
+    <ScrollViewer>
+        <!-- Stretch, not Left: a left-aligned StackPanel collapses to its widest child, which
+             left the Options expander sized to its header instead of the column width. -->
+        <StackPanel Spacing="12" MaxWidth="620" HorizontalAlignment="Stretch">
+
+            <TextBlock Text="Build the package"
+                       FontSize="15"
+                       FontWeight="SemiBold" />
+
+            <!-- Save and publish are independent: either, both, or the build button stays off. -->
+            <StackPanel Spacing="6">
+                <CheckBox Content="Save an .lcx file" IsChecked="{Binding SaveToDisk}" />
+
+                <DockPanel Margin="24,0,0,0" IsEnabled="{Binding SaveToDisk}">
+                    <Button DockPanel.Dock="Right"
+                            Content="Browse..."
+                            Click="OnBrowseClick"
+                            Margin="8,0,0,0"
+                            Padding="14,6" />
+
+                    <TextBox Text="{Binding OutputPath}" Watermark="Output file" />
+                </DockPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <CheckBox Content="Publish to the connected server"
+                          IsChecked="{Binding PublishToServer}"
+                          IsEnabled="{Binding CanPublish}" />
+
+                <TextBlock Margin="24,0,0,0"
+                           FontSize="12"
+                           Opacity="0.7"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !CanPublish}"
+                           Text="Publishing needs an account with permission to create games on the server." />
+            </StackPanel>
+
+            <Expander Header="Options"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="12" Margin="0,8" HorizontalAlignment="Stretch">
+                    <CheckBox Content="Patch GameSpy references for OpenSpy"
+                              IsChecked="{Binding PatchGameSpy}"
+                              HorizontalAlignment="Left" />
+
+                    <StackPanel Spacing="4" HorizontalAlignment="Left" Width="240">
+                        <TextBlock Text="Compression" FontSize="12" Opacity="0.7" />
+                        <ComboBox SelectedItem="{Binding CompressionLevel}"
+                                  ItemsSource="{Binding CompressionLevels}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+
+            <Button Content="Build package"
+                    Classes="Primary"
+                    Command="{Binding BuildCommand}"
+                    IsEnabled="{Binding CanBuild}"
+                    HorizontalAlignment="Left"
+                    Padding="20,8" />
+
+            <StackPanel Spacing="6" IsVisible="{Binding IsBuilding}">
+                <ProgressBar Value="{Binding Progress}"
+                             Maximum="100"
+                             IsIndeterminate="{Binding IsProgressIndeterminate}"
+                             Height="6" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding Status}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <Border Padding="10"
+                    CornerRadius="4"
+                    Background="#3A2020"
+                    BorderBrush="#E05A5A"
+                    BorderThickness="1"
+                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#FFB0B0"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <Border Padding="10"
+                    CornerRadius="4"
+                    Background="#203A20"
+                    BorderBrush="#7FBF7F"
+                    BorderThickness="1"
+                    IsVisible="{Binding IsComplete}">
+                <TextBlock Text="Done."
+                           Foreground="#B0FFB0"
+                           TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

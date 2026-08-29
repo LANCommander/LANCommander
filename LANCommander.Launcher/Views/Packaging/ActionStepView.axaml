@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.ActionStepView"
+             x:DataType="vm:ActionStepViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <TextBlock Grid.Row="0"
+                   Text="How should the game be launched?"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,10" />
+
+        <StackPanel Grid.Row="1" Spacing="10" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <StackPanel Spacing="4" Width="200">
+                    <TextBlock Text="Action name" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding ActionName}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4" Width="260">
+                    <TextBlock Text="Arguments" FontSize="12" Opacity="0.7" />
+                    <TextBox Text="{Binding Arguments}" Watermark="Optional" />
+                </StackPanel>
+            </StackPanel>
+
+            <CheckBox Content="Show every executable"
+                      IsChecked="{Binding ShowAllExecutables}"
+                      ToolTip.Tip="Installers, uninstallers and redistributables are hidden by default" />
+        </StackPanel>
+
+        <Border Grid.Row="2"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <ListBox ItemsSource="{Binding Executables}"
+                     SelectedItem="{Binding SelectedExecutable}"
+                     SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <TextBlock Grid.Row="3"
+                   Margin="0,8,0,0"
+                   Text="{Binding Summary}"
+                   FontSize="12"
+                   Opacity="0.7" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    UI-free, database-free packaging domain logic: turning a captured set of file and registry
+    changes into an .lcx package. Shared by the launcher and testable headlessly.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LANCommander.Packaging</RootNamespace>
+    <AssemblyName>LANCommander.Packaging</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+</Project>

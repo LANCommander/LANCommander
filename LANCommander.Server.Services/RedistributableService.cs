@@ -142,16 +142,14 @@ namespace LANCommander.Server.Services
 
                     if (package == null)
                     {
-                        var message = $"Could not package redistributable {redistributable.Name}, the package script did not return a result";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger?.LogError("Could not package redistributable '{RedistributableName}', the package script did not return a result", redistributable.Name);
+                        return;
                     }
 
                     if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
-                        var message = $"Could not package redistributable {redistributable.Name}, the path {package.Path} could not be found";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger?.LogError("Could not package redistributable '{RedistributableName}', the path {Path} could not be found", redistributable.Name, package.Path);
+                        return;
                     }
 
                     var archive = new Archive
@@ -176,9 +174,8 @@ namespace LANCommander.Server.Services
             }
             else
             {
-                var message = $"Could not package redistributable {redistributable.Name}, no packaging scripts are defined";
-                logger?.LogWarning(message);
-                throw new Exception(message);
+                logger?.LogWarning("Could not package redistributable '{RedistributableName}', no packaging scripts are defined", redistributable.Name);
+                return;
             }
         }
     }

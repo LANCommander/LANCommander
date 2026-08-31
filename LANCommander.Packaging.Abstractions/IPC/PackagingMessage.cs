@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using LANCommander.Packaging.Changes;
 
-namespace LANCommander.Packaging.Ipc;
+namespace LANCommander.Packaging.IPC;
 
 /// <summary>
 /// Base for every message exchanged between the launcher and a packaging worker.
@@ -19,6 +19,7 @@ namespace LANCommander.Packaging.Ipc;
 [JsonDerivedType(typeof(LaunchInstallerCommand), "launchInstaller")]
 [JsonDerivedType(typeof(InjectCommand), "inject")]
 [JsonDerivedType(typeof(AdoptSubtreeCommand), "adoptSubtree")]
+[JsonDerivedType(typeof(TerminateProcessesCommand), "terminateProcesses")]
 [JsonDerivedType(typeof(StopCommand), "stop")]
 [JsonDerivedType(typeof(PingCommand), "ping")]
 [JsonDerivedType(typeof(PongMessage), "pong")]
@@ -106,6 +107,22 @@ public class AdoptSubtreeCommand : PackagingMessage
     public int RootProcessId { get; set; }
 }
 
+/// <summary>
+/// Kills specific processes and waits for them to exit.
+/// </summary>
+/// <remarks>
+/// Sent to a freshly elevated worker when a capture is being restarted, to clear out the
+/// previous run's installer. It has to be the elevated worker that does this: an installer that
+/// asked for administrator rights runs at a higher integrity level than the worker that
+/// launched it, and a lower-integrity process cannot terminate it.
+/// </remarks>
+public class TerminateProcessesCommand : PackagingMessage
+{
+    public Guid CorrelationId { get; set; }
+
+    public int[] ProcessIds { get; set; } = [];
+}
+
 /// <summary>Stops monitoring and shuts the worker down cleanly.</summary>
 public class StopCommand : PackagingMessage
 {
@@ -179,6 +196,20 @@ public class ProcessDiscoveredMessage : PackagingMessage
 
     /// <summary>Populated when this worker tried to inject and failed.</summary>
     public string? InjectionError { get; set; }
+
+    /// <summary>Win32 error from a failed injection, or 0.</summary>
+    public int Win32Error { get; set; }
+
+    /// <summary>
+    /// True when injection failed only because the worker is not elevated.
+    /// </summary>
+    /// <remarks>
+    /// Carried on discovery rather than being inferred from a failed InjectCommand. A process
+    /// of the worker's own architecture is never routed anywhere so without this the launcher
+    /// would have no way to learn that the installer escalated, and would never offer to
+    /// restart elevated.
+    /// </remarks>
+    public bool RequiresElevation { get; set; }
 }
 
 public class ProcessExitedMessage : PackagingMessage

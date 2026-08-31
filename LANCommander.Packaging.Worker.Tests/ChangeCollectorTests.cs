@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using LANCommander.Packaging.Worker;
 using Shouldly;
 
@@ -13,7 +13,7 @@ public class ChangeCollectorTests
     {
         await using var harness = new Harness();
 
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -27,8 +27,8 @@ public class ChangeCollectorTests
         // the source is what keeps the channel from being the bottleneck.
         await using var harness = new Harness();
 
-        harness.Collector.AddFile("FILE READ", @"C:\Windows\System32\kernel32.dll", 42);
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE READ", @"C:\Windows\System32\kernel32.dll", null, 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -42,8 +42,8 @@ public class ChangeCollectorTests
 
         harness.Collector.Filter = new ChangeFilter { IgnoredPathPrefixes = [@"C:\Temp"] };
 
-        harness.Collector.AddFile("FILE WRITE", @"C:\Temp\extracted.tmp", 42);
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Temp\extracted.tmp", null, 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -56,7 +56,7 @@ public class ChangeCollectorTests
         await using var harness = new Harness();
 
         for (var i = 0; i < 100; i++)
-            harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+            harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -68,9 +68,9 @@ public class ChangeCollectorTests
     {
         await using var harness = new Harness();
 
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
-        harness.Collector.AddFile("FILE WRITE", @"\\?\C:\Games\Example\game.exe", 42);
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\..\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
+        harness.Collector.AddFile("FILE WRITE", @"\\?\C:\Games\Example\game.exe", null, 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\..\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -82,8 +82,8 @@ public class ChangeCollectorTests
     {
         await using var harness = new Harness();
 
-        harness.Collector.AddFile("FILE COPY", @"C:\Games\Example\game.exe", 42);
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE COPY", @"C:\Games\Example\game.exe", null, 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         var batch = await harness.WaitForBatchAsync();
 
@@ -144,7 +144,7 @@ public class ChangeCollectorTests
         // The tail of a capture would otherwise be lost when the installer exits.
         await using var harness = new Harness();
 
-        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", 42);
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
 
         await harness.Collector.FlushAsync();
 
@@ -163,13 +163,77 @@ public class ChangeCollectorTests
         var start = Environment.TickCount64;
 
         for (var i = 0; i < PackagingProtocol.ChangeQueueCapacity + 5_000; i++)
-            harness.Collector.AddFile("FILE WRITE", $@"C:\Games\Example\file{i}.dat", 42);
+            harness.Collector.AddFile("FILE WRITE", $@"C:\Games\Example\file{i}.dat", null, 42);
 
         var elapsed = Environment.TickCount64 - start;
 
         gate.SetResult();
 
         elapsed.ShouldBeLessThan(20_000);
+    }
+
+    [Theory]
+    [InlineData("FILE COPY")]
+    [InlineData("FILE MOVE")]
+    public async Task RecordsTheDestinationOfACopyOrMove(string verb)
+    {
+        // The hooks report these as (verb, source, destination). Installers place their content
+        // by copying it off their own media, so recording the source captured the file being
+        // read from the CD rather than the one created on disk — which then made install
+        // directory detection point at the installer's source folder.
+        await using var harness = new Harness();
+
+        harness.Collector.AddFile(
+            verb,
+            @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\intro.wav",
+            @"C:\Games\Close Combat\SOUNDS\intro.wav",
+            42);
+
+        var batch = await harness.WaitForBatchAsync();
+
+        batch.Files.ShouldHaveSingleItem().Path.ShouldBe(@"C:\Games\Close Combat\SOUNDS\intro.wav");
+    }
+
+    [Fact]
+    public async Task KeepsThePrimaryPathForAPlainWrite()
+    {
+        await using var harness = new Harness();
+
+        harness.Collector.AddFile("FILE WRITE", @"C:\Games\Example\game.exe", null, 42);
+
+        var batch = await harness.WaitForBatchAsync();
+
+        batch.Files.ShouldHaveSingleItem().Path.ShouldBe(@"C:\Games\Example\game.exe");
+    }
+
+    [Fact]
+    public async Task FallsBackToThePrimaryPathWhenACopyHasNoDestination()
+    {
+        await using var harness = new Harness();
+
+        harness.Collector.AddFile("FILE COPY", @"C:\Games\Example\game.exe", null, 42);
+
+        var batch = await harness.WaitForBatchAsync();
+
+        batch.Files.ShouldHaveSingleItem().Path.ShouldBe(@"C:\Games\Example\game.exe");
+    }
+
+    [Fact]
+    public async Task AppliesIgnoredPrefixesToTheDestinationNotTheSource()
+    {
+        // A copy out of a normal folder into temp is not part of the install.
+        await using var harness = new Harness();
+
+        harness.Collector.Filter = new ChangeFilter { IgnoredPathPrefixes = [@"C:\Temp"] };
+
+        harness.Collector.AddFile(
+            "FILE COPY", @"C:\Games\Example\game.exe", @"C:\Temp\staged.exe", 42);
+        harness.Collector.AddFile(
+            "FILE COPY", @"G:\Source\data.dat", @"C:\Games\Example\data.dat", 42);
+
+        var batch = await harness.WaitForBatchAsync();
+
+        batch.Files.ShouldHaveSingleItem().Path.ShouldBe(@"C:\Games\Example\data.dat");
     }
 
     private sealed class Harness : IAsyncDisposable

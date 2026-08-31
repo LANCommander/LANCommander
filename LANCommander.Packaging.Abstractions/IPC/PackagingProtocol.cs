@@ -1,4 +1,4 @@
-namespace LANCommander.Packaging.Ipc;
+namespace LANCommander.Packaging.IPC;
 
 /// <summary>
 /// Constants shared by both ends of the launcher &lt;-&gt; worker channel.

@@ -2,7 +2,7 @@ using System.IO.Compression;
 using LANCommander.Packaging.Models;
 using LANCommander.SDK.Helpers;
 
-namespace LANCommander.Packaging.Lcx;
+namespace LANCommander.Packaging.LCX;
 
 /// <summary>
 /// Writes an .lcx package.
@@ -12,7 +12,7 @@ namespace LANCommander.Packaging.Lcx;
 /// (each itself a zip of install-directory-relative paths), and one <c>Scripts/{id}</c> entry
 /// per script. This mirrors what the server's exporter produces so packages round-trip.
 /// </remarks>
-public static class LcxBuilder
+public static class LCXBuilder
 {
     public const string CreatedBy = "LANCommander.Launcher";
     public const string ManifestVersion = "1.0.0";

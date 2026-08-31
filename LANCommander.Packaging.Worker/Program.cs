@@ -3,7 +3,7 @@ using System.Runtime.Versioning;
 using System.Security.Principal;
 using LANCommander.Packaging;
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using LANCommander.Packaging.Worker;
 
 // Exit codes are for diagnostics only; the launcher learns about failures over the pipe.
@@ -137,6 +137,12 @@ static async Task<string> PumpAsync(
 
                 case AdoptSubtreeCommand adopt:
                     await connection.SendAsync(await monitor.AdoptSubtreeAsync(adopt), shutdown.Token);
+                    break;
+
+                // Handled inline and awaited, so a LaunchInstaller sent straight after this is
+                // not processed until the old processes are actually gone.
+                case TerminateProcessesCommand terminate:
+                    await connection.SendAsync(await monitor.TerminateAsync(terminate), shutdown.Token);
                     break;
 
                 case StopCommand stop:

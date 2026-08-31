@@ -26,6 +26,35 @@ public class ChangeFilter
         "REG CREATE",
     ];
 
+    /// <summary>
+    /// Verbs where the file that changed is the operation's destination, not its primary path.
+    /// </summary>
+    /// <remarks>
+    /// The hooks report copies and moves as <c>(verb, source, destination)</c>. Installers place
+    /// their content by copying it off their media, so taking the primary path here records the
+    /// file being read from the installer's source rather than the one created on disk.
+    /// </remarks>
+    public static readonly string[] DestinationVerbs =
+    [
+        "FILE COPY",
+        "FILE MOVE",
+    ];
+
+    /// <summary>
+    /// The path that actually changed, given an event's primary and secondary paths.
+    /// </summary>
+    public static string? ResolveChangedPath(string? verb, string? path, string? secondaryPath)
+    {
+        if (verb != null &&
+            !string.IsNullOrEmpty(secondaryPath) &&
+            DestinationVerbs.Any(v => verb.Equals(v, StringComparison.OrdinalIgnoreCase)))
+        {
+            return secondaryPath;
+        }
+
+        return path;
+    }
+
     public IReadOnlyList<string> WriteVerbs { get; set; } = DefaultWriteVerbs;
 
     public IReadOnlyList<string> RegistryWriteVerbs { get; set; } = DefaultRegistryWriteVerbs;

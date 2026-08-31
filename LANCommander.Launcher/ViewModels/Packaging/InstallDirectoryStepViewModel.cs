@@ -30,8 +30,10 @@ public partial class InstallDirectoryStepViewModel : PackagingStepViewModel
     {
         if (string.IsNullOrWhiteSpace(InstallDirectory))
         {
+            // Pass the changes, not just their paths: the verb decides whether a directory is
+            // somewhere the installer wrote to or merely opened with write access.
             InstallDirectory = InstallDirectoryDetector.Detect(
-                Package.FileChanges.Select(f => f.Path),
+                Package.FileChanges,
                 ChangeFilter.BuildDefaultIgnoredPathPrefixes());
         }
 

@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using LANCommander.Interposer;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 
 namespace LANCommander.Packaging.Worker;
 
@@ -77,6 +77,18 @@ internal sealed class InstallerMonitor : IAsyncDisposable
             await _connection.LogAsync(
                 PackagingLogLevel.Information,
                 $"Launched and injected {Path.GetFileName(executablePath)} (PID {process.Id}).");
+
+            // Report the root like any other process so the launcher's ledger knows about it.
+            // Without this the installer we started ourselves is the one process the session
+            // cannot later terminate.
+            await _connection.SendAsync(new ProcessDiscoveredMessage
+            {
+                ProcessId = process.Id,
+                ParentProcessId = Environment.ProcessId,
+                ImagePath = executablePath,
+                Architecture = _architecture,
+                InjectedLocally = true,
+            });
 
             WatchForExit(process, isRoot: true);
             StartPolling();
@@ -162,7 +174,7 @@ internal sealed class InstallerMonitor : IAsyncDisposable
 
         // These handlers run on the Interposer's pipe-reader task. They must not block: the
         // collector's ingest is a non-blocking enqueue for exactly that reason.
-        interposer.FileAccessed += (_, e) => _collector.AddFile(e.Verb, e.Path, 0);
+        interposer.FileAccessed += (_, e) => _collector.AddFile(e.Verb, e.Path, e.SecondaryPath, 0);
 
         interposer.RegistryAccessed += (_, e) =>
             _collector.AddRegistry(e.Verb, e.KeyPath, e.ValueName, 0, _architecture);
@@ -247,11 +259,34 @@ internal sealed class InstallerMonitor : IAsyncDisposable
             {
                 _injected.TryRemove(entry.ProcessId, out _);
 
+                var code = FindWin32Exception(ex)?.NativeErrorCode ?? 0;
+
                 message.InjectionError = ex.Message;
+                message.Win32Error = code;
+
+                // Both mean the target is out of this worker's reach rather than wrong in some
+                // way. The launcher turns this into the offer to restart with elevation.
+                message.RequiresElevation =
+                    code is NativeMethods.ErrorAccessDenied or NativeMethods.ErrorElevationRequired;
             }
         }
 
         await _connection.SendAsync(message, cancellationToken);
+
+        // Report child exits too, not just the root's. The launcher decides whether a capture
+        // is finished by whether anything it discovered is still running, and an installer that
+        // hands off to an elevated copy relies on exactly that.
+        try
+        {
+            WatchForExit(Process.GetProcessById(entry.ProcessId), isRoot: false);
+        }
+        catch (ArgumentException)
+        {
+            // Exited between discovery and here; report it so the ledger does not hold it open.
+            await _connection.SendAsync(
+                new ProcessExitedMessage { ProcessId = entry.ProcessId, ExitCode = 0 },
+                cancellationToken);
+        }
     }
 
     /// <summary>
@@ -261,11 +296,39 @@ internal sealed class InstallerMonitor : IAsyncDisposable
     /// Used when the session is about to relaunch the same installer elevated. Returning before
     /// the old run has exited would leave two copies of the installer writing to the same place.
     /// </remarks>
-    public async Task TerminateTargetsAsync(CancellationToken cancellationToken = default)
+    public Task TerminateTargetsAsync(CancellationToken cancellationToken = default) =>
+        // Everything ever reported, not just what was injected into: a process we failed to
+        // inject into (an installer that self-elevated, typically) is precisely the one most
+        // likely to still be running.
+        TerminateProcessesAsync(
+            _watchedRoots.Keys.Concat(_injected.Keys).Concat(_reported.Keys).Distinct(),
+            cancellationToken);
+
+    /// <summary>
+    /// Kills the given processes and waits for them to exit.
+    /// </summary>
+    public async Task<CommandResultMessage> TerminateAsync(TerminateProcessesCommand command)
     {
-        // Roots first: killing a process tree takes its children with it, so the remaining
-        // per-pid passes usually find nothing left to do.
-        var targets = _watchedRoots.Keys.Concat(_injected.Keys).Distinct().ToList();
+        try
+        {
+            await TerminateProcessesAsync(command.ProcessIds, CancellationToken.None);
+
+            return new CommandResultMessage
+            {
+                CorrelationId = command.CorrelationId,
+                Success = true,
+            };
+        }
+        catch (Exception ex)
+        {
+            return Failure(command.CorrelationId, ex);
+        }
+    }
+
+    private async Task TerminateProcessesAsync(
+        IEnumerable<int> processIds, CancellationToken cancellationToken)
+    {
+        var targets = processIds.Distinct().ToList();
 
         foreach (var processId in targets)
         {
@@ -312,6 +375,20 @@ internal sealed class InstallerMonitor : IAsyncDisposable
             {
                 // A process that will not die should not block the restart; the elevated run
                 // will surface the conflict itself if there really is one.
+            }
+
+            // Report the exit explicitly. The worker that had been watching these has already
+            // been torn down, so nothing else will — and the launcher treats a process it still
+            // believes is running as a reason to keep monitoring after the install has finished.
+            try
+            {
+                await _connection.SendAsync(
+                    new ProcessExitedMessage { ProcessId = processId, ExitCode = 0 },
+                    cancellationToken);
+            }
+            catch (Exception)
+            {
+                // The channel is torn down elsewhere; nothing useful to do here.
             }
         }
     }

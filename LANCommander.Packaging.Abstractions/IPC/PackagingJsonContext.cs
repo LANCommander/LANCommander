@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LANCommander.Packaging.Ipc;
+namespace LANCommander.Packaging.IPC;
 
 /// <summary>
 /// Source-generated serialization for the packaging protocol.

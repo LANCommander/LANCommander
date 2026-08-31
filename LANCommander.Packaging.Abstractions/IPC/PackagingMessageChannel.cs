@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text.Json;
 
-namespace LANCommander.Packaging.Ipc;
+namespace LANCommander.Packaging.IPC;
 
 /// <summary>
 /// Length-prefixed JSON message framing over a duplex stream.
@@ -64,7 +64,7 @@ public sealed class PackagingMessageChannel : IDisposable
     /// </summary>
     /// <exception cref="InvalidDataException">
     /// The frame header was implausible, which means the stream is out of sync and cannot be
-    /// recovered — the caller should tear the connection down.
+    /// recovered. The caller should tear the connection down.
     /// </exception>
     public async Task<PackagingMessage?> ReadAsync(CancellationToken cancellationToken = default)
     {

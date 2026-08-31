@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.Versioning;
 using LANCommander.Packaging;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services.Packaging;
@@ -225,7 +225,14 @@ internal sealed class NamedPipeWorkerChannel : IPackagingWorkerChannel
             {
                 var sequence = Interlocked.Increment(ref _pingSequence);
 
-                await SendAsync(new PingCommand { Sequence = sequence }, cancellationToken);
+                // Bounded so a blocked write cannot hold the channel's write lock forever. A
+                // ping is exactly the write most likely to block against a wedged worker, and
+                // holding that lock would stall the stop command behind it.
+                using var writeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                writeTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+
+                await SendAsync(new PingCommand { Sequence = sequence }, writeTimeout.Token);
 
                 if (sequence - Interlocked.Read(ref _lastPongSequence) <= 1)
                     continue;
@@ -255,24 +262,22 @@ internal sealed class NamedPipeWorkerChannel : IPackagingWorkerChannel
         Faulted?.Invoke(this, reason);
     }
 
+    /// <summary>
+    /// Tears the channel down without ever waiting indefinitely.
+    /// </summary>
+    /// <remarks>
+    /// Every wait here is bounded on purpose. A wedged worker leaves a pipe write blocked on a
+    /// full buffer with nobody reading, and the loops that own the write lock never return —
+    /// which used to hang teardown, so Stop never completed and the wizard was left with every
+    /// button disabled. Closing the pipe first is what unblocks those loops.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         await _cts.CancelAsync();
 
-        foreach (var task in new[] { _readTask, _pingTask })
-        {
-            if (task == null)
-                continue;
-
-            try
-            {
-                await task;
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
+        // Before waiting on anything: closing the transport unblocks a read or write that
+        // cancellation alone cannot interrupt, and it is also how the worker learns to exit —
+        // its read returns zero bytes and it shuts itself down.
         _channel.Dispose();
 
         try
@@ -287,9 +292,38 @@ internal sealed class NamedPipeWorkerChannel : IPackagingWorkerChannel
 
         await _pipe.DisposeAsync();
 
+        await WaitForLoopsAsync();
+
         await WaitForProcessExitAsync();
 
         _cts.Dispose();
+    }
+
+    /// <summary>
+    /// Gives the read and ping loops a moment to unwind, then moves on regardless.
+    /// </summary>
+    private async Task WaitForLoopsAsync()
+    {
+        var running = new[] { _readTask, _pingTask }.Where(t => t != null).Select(t => t!).ToArray();
+
+        if (running.Length == 0)
+            return;
+
+        try
+        {
+            await Task.WhenAll(running).WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning(
+                "A packaging worker's loops did not stop within 3s; continuing to shut down anyway");
+        }
+        catch (Exception ex)
+        {
+            // A loop that will not unwind must not keep the session from shutting down; killing
+            // the process below is the backstop.
+            _logger.LogDebug(ex, "A packaging worker loop did not stop cleanly");
+        }
     }
 
     /// <summary>
@@ -303,7 +337,7 @@ internal sealed class NamedPipeWorkerChannel : IPackagingWorkerChannel
 
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 
             await _process.WaitForExitAsync(timeout.Token);
         }

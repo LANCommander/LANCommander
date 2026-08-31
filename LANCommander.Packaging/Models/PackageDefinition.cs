@@ -1,12 +1,13 @@
 using System.IO.Compression;
 using LANCommander.Packaging.Changes;
+using LANCommander.Packaging.LCX;
 using LANCommander.SDK.Models.Manifest;
 
 namespace LANCommander.Packaging.Models;
 
 /// <summary>
 /// Everything the wizard has gathered about a package in progress. Carried across every step
-/// and consumed by <see cref="Lcx.LcxBuilder"/>.
+/// and consumed by <see cref="LCXBuilder"/>.
 /// </summary>
 public class PackageDefinition
 {

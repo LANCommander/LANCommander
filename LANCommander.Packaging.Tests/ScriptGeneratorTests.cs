@@ -1,5 +1,5 @@
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Lcx;
+using LANCommander.Packaging.LCX;
 using LANCommander.Packaging.Models;
 using LANCommander.SDK.Enums;
 using Shouldly;

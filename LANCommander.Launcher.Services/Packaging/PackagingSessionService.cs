@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using LANCommander.Packaging;
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services.Packaging;
@@ -93,14 +93,22 @@ public class PackagingSessionService : IPackagingSessionService
             if (_elevated)
                 return;
 
-            // The installer is about to be launched again from scratch, so the un-elevated run
-            // has to go. Leaving it would put two copies of the same installer on screen, both
-            // writing to the same place.
-            await TearDownWorkersAsync(terminateTargets: true);
+            // Everything still alive from the un-elevated attempt. This has to be collected
+            // before the workers go away, and it deliberately includes processes injection
+            // failed on — an installer that self-elevated is exactly the one still running.
+            var leftovers = _processes.Values
+                .Where(p => !p.HasExited)
+                .Select(p => p.ProcessId)
+                .ToArray();
+
+            // The old workers cannot do the killing: they run at the launcher's integrity level
+            // and the installer escalated above them. The new elevated workers can, so the
+            // termination is handed to them instead.
+            await TearDownWorkersAsync(terminateTargets: false);
 
             // Anything captured before escalation came from the same installer, so it is kept;
             // the keyed stores make re-reported changes collapse rather than duplicate.
-            await StartInternalAsync(elevated: true, cancellationToken);
+            await StartInternalAsync(elevated: true, cancellationToken, leftovers);
         }
         finally
         {
@@ -108,7 +116,14 @@ public class PackagingSessionService : IPackagingSessionService
         }
     }
 
-    private async Task StartInternalAsync(bool elevated, CancellationToken cancellationToken)
+    /// <param name="terminateFirst">
+    /// Processes the new workers should kill before launching anything. Used when restarting a
+    /// capture elevated, so the previous run's installer is gone before its replacement starts.
+    /// </param>
+    private async Task StartInternalAsync(
+        bool elevated,
+        CancellationToken cancellationToken,
+        IReadOnlyList<int>? terminateFirst = null)
     {
         State = PackagingSessionState.Starting;
 
@@ -138,14 +153,33 @@ public class PackagingSessionService : IPackagingSessionService
             worker.MessageReceived += OnWorkerMessage;
             worker.Faulted += OnWorkerFaulted;
 
-            await worker.SendAsync(BuildFilterCommand(), cancellationToken);
+            await TrySendAsync(worker, BuildFilterCommand(), cancellationToken);
         }
 
         _counterTask ??= Task.Run(() => PublishCountersAsync(_sessionCts.Token));
 
         var launchTarget = ResolveLaunchWorker(workers);
 
-        await launchTarget.SendAsync(
+        // Sent before the launch on the same channel. The worker processes messages in order
+        // and awaits each one, so the old installer is gone — not merely signalled — before the
+        // replacement starts. Otherwise the new instance trips over "setup is already running".
+        if (terminateFirst is { Count: > 0 })
+        {
+            Log(PackagingLogLevel.Information,
+                $"Closing {terminateFirst.Count} process(es) left over from the previous attempt...");
+
+            await TrySendAsync(
+                launchTarget,
+                new TerminateProcessesCommand
+                {
+                    CorrelationId = Guid.NewGuid(),
+                    ProcessIds = [.. terminateFirst],
+                },
+                cancellationToken);
+        }
+
+        await TrySendAsync(
+            launchTarget,
             new LaunchInstallerCommand
             {
                 CorrelationId = Guid.NewGuid(),
@@ -169,6 +203,47 @@ public class PackagingSessionService : IPackagingSessionService
         return workers.FirstOrDefault(w => w.Architecture == architecture) ?? workers[0];
     }
 
+    /// <summary>
+    /// Sends a command, giving up rather than waiting forever.
+    /// </summary>
+    /// <remarks>
+    /// Every send to a worker goes through here. A write to a wedged worker blocks on a full
+    /// pipe buffer with nobody draining it, and cancellation alone does not always interrupt
+    /// pending pipe I/O — so an unbounded send hangs whatever called it. That is what left the
+    /// wizard unusable, since the monitoring step disables every control while a capture runs.
+    /// </remarks>
+    /// <param name="timeoutSeconds">
+    /// Generous for a pipe write, which normally completes in microseconds — this only has to
+    /// absorb a briefly busy worker, not a wedged one.
+    /// </param>
+    private async Task<bool> TrySendAsync(
+        IPackagingWorkerChannel worker,
+        PackagingMessage message,
+        CancellationToken cancellationToken,
+        int timeoutSeconds = 5)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
+        try
+        {
+            await worker.SendAsync(message, timeout.Token);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Could not send {Message} to the {Architecture} packaging worker",
+                message.GetType().Name,
+                worker.Architecture);
+
+            return false;
+        }
+    }
+
     private SetFilterCommand BuildFilterCommand() => new()
     {
         WriteVerbs = [.. ChangeFilter.DefaultWriteVerbs],
@@ -189,7 +264,7 @@ public class PackagingSessionService : IPackagingSessionService
                 break;
 
             case ProcessDiscoveredMessage discovered:
-                _ = HandleProcessDiscoveredAsync(discovered);
+                _ = HandleProcessDiscoveredAsync(discovered, worker);
                 break;
 
             case ProcessExitedMessage exited:
@@ -235,7 +310,12 @@ public class PackagingSessionService : IPackagingSessionService
     /// Records a discovered process and, when the reporting worker could not inject into it,
     /// routes the injection to the worker that can. This is the cross-architecture handoff.
     /// </summary>
-    private async Task HandleProcessDiscoveredAsync(ProcessDiscoveredMessage discovered)
+    /// <param name="reporter">
+    /// The worker that discovered it. Injection is never routed back to this one — if it could
+    /// have handled the process it would already have done so.
+    /// </param>
+    private async Task HandleProcessDiscoveredAsync(
+        ProcessDiscoveredMessage discovered, IPackagingWorkerChannel reporter)
     {
         var entry = _processes.GetOrAdd(discovered.ProcessId, _ => new ProcessLedgerEntry
         {
@@ -245,10 +325,15 @@ public class PackagingSessionService : IPackagingSessionService
             Architecture = discovered.Architecture,
         });
 
+        var name = DescribeProcess(discovered.ProcessId, discovered.ImagePath);
+
         if (discovered.InjectedLocally)
         {
             entry.Instrumented = true;
             entry.InstrumentationError = null;
+
+            Log(PackagingLogLevel.Information,
+                $"Monitoring {name} [{discovered.Architecture}]");
 
             return;
         }
@@ -258,7 +343,19 @@ public class PackagingSessionService : IPackagingSessionService
 
         entry.InstrumentationError = discovered.InjectionError;
 
+        // Raised from discovery, not from a failed InjectCommand. A process of the reporting
+        // worker's own architecture is never routed anywhere, so there would otherwise be no
+        // command to fail and no way to learn that the installer escalated.
+        if (discovered.RequiresElevation)
+            RequestElevation(discovered.InjectionError);
+
         var target = FindWorker(discovered.Architecture);
+
+        // Same worker that just failed on it: retrying would fail identically. This is the
+        // normal outcome when an installer escalates — the process is the right architecture,
+        // it is simply out of reach until the workers are elevated.
+        if (target == reporter)
+            target = null;
 
         if (target == null)
         {
@@ -267,40 +364,56 @@ public class PackagingSessionService : IPackagingSessionService
                 : $"No {discovered.Architecture} packaging worker is available.";
 
             Log(PackagingLogLevel.Warning,
-                $"PID {discovered.ProcessId} ({Path.GetFileName(discovered.ImagePath)}) could not be " +
-                $"instrumented: {entry.InstrumentationError}");
+                $"NOT monitoring {name} [{discovered.Architecture}]: {entry.InstrumentationError}");
 
             return;
         }
+
+        Log(PackagingLogLevel.Information,
+            $"Routing {name} [{discovered.Architecture}] to the {target.Architecture} worker");
 
         // Both workers poll the same subtrees, so the same child is routinely discovered twice
         // within milliseconds. Only the first report gets to route it.
         if (!entry.TryBeginInjection())
             return;
 
-        try
-        {
-            await target.SendAsync(new InjectCommand
+        if (!await TrySendAsync(target, new InjectCommand
             {
                 CorrelationId = Guid.NewGuid(),
                 ProcessId = discovered.ProcessId,
-            });
-        }
-        catch (Exception ex)
+            },
+            CancellationToken.None))
         {
-            entry.InstrumentationError = ex.Message;
+            entry.InstrumentationError = "The packaging worker did not accept the injection request.";
 
             // The command never reached a worker, so let a later discovery try again.
             entry.ReleaseInjectionClaim();
-
-            _logger.LogWarning(ex, "Could not route injection for PID {ProcessId}", discovered.ProcessId);
         }
+    }
+
+    /// <summary>
+    /// "name.exe (PID 1234)", falling back to the id alone when the image path is unknown.
+    /// </summary>
+    private static string DescribeProcess(int processId, string? imagePath)
+    {
+        var name = string.IsNullOrWhiteSpace(imagePath)
+            ? null
+            : Path.GetFileName(imagePath);
+
+        return string.IsNullOrEmpty(name)
+            ? $"PID {processId}"
+            : $"{name} (PID {processId})";
     }
 
     private void HandleProcessExited(ProcessExitedMessage exited)
     {
         if (_processes.TryGetValue(exited.ProcessId, out var entry))
+        {
             entry.HasExited = true;
+
+            Log(PackagingLogLevel.Information,
+                $"Exited: {DescribeProcess(exited.ProcessId, entry.ImagePath)} (code {exited.ExitCode})");
+        }
 
         if (exited.IsRoot)
             InstallerExited?.Invoke(this, EventArgs.Empty);
@@ -327,22 +440,31 @@ public class PackagingSessionService : IPackagingSessionService
 
         if (result.RequiresElevation && !_elevated)
         {
-            // Raise this once per session; a failing installer can produce a long stream of
-            // access-denied results and the user only needs to be asked once.
-            if (Interlocked.Exchange(ref _elevationRequested, 1) == 0)
-            {
-                Log(PackagingLogLevel.Warning,
-                    "The installer requires administrator rights. Packaging needs to restart with elevation.");
-
-                ElevationRequired?.Invoke(
-                    this,
-                    result.Error ?? "The installer requires administrator rights to be monitored.");
-            }
+            RequestElevation(result.Error);
 
             return;
         }
 
         Log(PackagingLogLevel.Error, result.Error ?? "A packaging worker command failed.");
+    }
+
+    /// <summary>
+    /// Offers to restart the capture elevated, at most once per session.
+    /// </summary>
+    /// <remarks>
+    /// An installer that escalates produces a steady stream of access-denied results as its
+    /// children are discovered; the user only needs to be asked once.
+    /// </remarks>
+    private void RequestElevation(string? reason)
+    {
+        if (_elevated || Interlocked.Exchange(ref _elevationRequested, 1) != 0)
+            return;
+
+        Log(PackagingLogLevel.Warning,
+            "The installer requires administrator rights. Packaging needs to restart with elevation.");
+
+        ElevationRequired?.Invoke(
+            this, reason ?? "The installer requires administrator rights to be monitored.");
     }
 
     private void OnWorkerFaulted(object? sender, string reason)
@@ -480,19 +602,24 @@ public class PackagingSessionService : IPackagingSessionService
             _workers.Clear();
         }
 
-        foreach (var worker in workers)
+        // Torn down in parallel. Each worker's shutdown has its own bounded waits, and doing
+        // them one after another made the total long enough to hit the caller's timeout.
+        await Task.WhenAll(workers.Select(ShutDownWorkerAsync));
+
+        return;
+
+        async Task ShutDownWorkerAsync(IPackagingWorkerChannel worker)
         {
             worker.MessageReceived -= OnWorkerMessage;
             worker.Faulted -= OnWorkerFaulted;
 
-            try
-            {
-                await worker.SendAsync(new StopCommand { TerminateTargets = terminateTargets });
-            }
-            catch
-            {
-                // The worker may already be gone; disposal below is what actually matters.
-            }
+            // Disposal below closes the pipe, which the worker treats as its signal to exit,
+            // so a stop command that never lands is not fatal.
+            await TrySendAsync(
+                worker,
+                new StopCommand { TerminateTargets = terminateTargets },
+                CancellationToken.None,
+                timeoutSeconds: 2);
 
             try
             {

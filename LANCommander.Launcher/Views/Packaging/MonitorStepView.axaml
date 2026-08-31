@@ -109,23 +109,29 @@
             </StackPanel>
         </Border>
 
-        <!-- Log -->
-        <Border Grid.Row="4"
-                CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-            <ScrollViewer Padding="10">
-                <ItemsControl ItemsSource="{Binding Log}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <TextBlock Text="{Binding}"
-                                       FontFamily="Consolas,Menlo,monospace"
-                                       FontSize="11"
-                                       Opacity="0.8"
-                                       TextWrapping="Wrap" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Border>
+        <!-- Log. A read-only TextBox rather than a list of TextBlocks so the capture summary
+             can be selected and copied out. -->
+        <Grid Grid.Row="4" RowDefinitions="Auto,*">
+            <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Copy log" Click="OnCopyLogClick" Padding="12,4" />
+                    <Button Content="Save log..." Click="OnSaveLogClick" Padding="12,4" />
+                </StackPanel>
+
+                <TextBlock Text="Log" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <TextBox Grid.Row="1"
+                     x:Name="LogBox"
+                     Text="{Binding LogText}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="Consolas,Menlo,monospace"
+                     FontSize="11"
+                     VerticalContentAlignment="Top"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+        </Grid>
     </Grid>
 </UserControl>

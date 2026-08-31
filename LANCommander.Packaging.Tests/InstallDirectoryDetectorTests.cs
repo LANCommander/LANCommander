@@ -1,3 +1,4 @@
+using LANCommander.Packaging.Changes;
 using LANCommander.Packaging.Analysis;
 using Shouldly;
 
@@ -51,9 +52,78 @@ public class InstallDirectoryDetectorTests
     }
 
     [Fact]
+    public void PicksTheInstallRootNotTheInstallersSourceMedia()
+    {
+        // Reported case: detection returned G:\Ripping\Close Combat\_CD\DATA\SOUNDS. Those were
+        // the installer's own source files, recorded because copies were logged against their
+        // source path instead of their destination. With destinations recorded, the common
+        // ancestor is the install root.
+        var paths = new[]
+        {
+            @"G:\Ripping\Close Combat\CC.exe",
+            @"G:\Ripping\Close Combat\DATA\game.dat",
+            @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\intro.wav",
+            @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\battle.wav",
+            @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\end.wav",
+        };
+
+        InstallDirectoryDetector.Detect(paths).ShouldBe(@"G:\Ripping\Close Combat");
+    }
+
+    [Fact]
+    public void IgnoresReadWriteOpensOfTheInstallersOwnMedia()
+    {
+        // Reported case. The hooks derive "FILE R/W" from the access mask a caller asked for,
+        // not from anything being written, so an installer that opens its source files with
+        // GENERIC_READ | GENERIC_WRITE makes its own media look written to. Those paths must
+        // not outvote the directory it actually wrote into.
+        var changes = new[]
+        {
+            Change("FILE R/W", @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\intro.wav"),
+            Change("FILE R/W", @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\battle.wav"),
+            Change("FILE R/W", @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\end.wav"),
+            Change("FILE R/W", @"G:\Ripping\Close Combat\_CD\DATA\SOUNDS\menu.wav"),
+            Change("FILE WRITE", @"C:\Games\Close Combat\CC.exe"),
+            Change("FILE COPY", @"C:\Games\Close Combat\DATA\game.dat"),
+        };
+
+        InstallDirectoryDetector.Detect(changes).ShouldBe(@"C:\Games\Close Combat");
+    }
+
+    [Fact]
+    public void FallsBackToEverythingWhenNothingWasDemonstrablyWritten()
+    {
+        // An installer whose every write came through a read/write handle should still get a
+        // sensible answer rather than nothing at all.
+        var changes = new[]
+        {
+            Change("FILE R/W", @"C:\Games\Example\game.exe"),
+            Change("FILE R/W", @"C:\Games\Example\Data\a.dat"),
+        };
+
+        InstallDirectoryDetector.Detect(changes).ShouldBe(@"C:\Games\Example");
+    }
+
+    [Fact]
+    public void CopiesAndMovesCountAsWrites()
+    {
+        var changes = new[]
+        {
+            Change("FILE COPY", @"C:\Games\Example\game.exe"),
+            Change("FILE MOVE", @"C:\Games\Example\Data\a.dat"),
+            Change("FILE R/W", @"G:\Source\Media\big.bin"),
+        };
+
+        InstallDirectoryDetector.Detect(changes).ShouldBe(@"C:\Games\Example");
+    }
+
+    private static FileChange Change(string verb, string path) =>
+        new() { Verb = verb, Path = path };
+
+    [Fact]
     public void ReturnsEmptyWhenNothingWasCaptured()
     {
-        InstallDirectoryDetector.Detect([]).ShouldBe(string.Empty);
+        InstallDirectoryDetector.Detect(Array.Empty<string>()).ShouldBe(string.Empty);
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Packaging;
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;

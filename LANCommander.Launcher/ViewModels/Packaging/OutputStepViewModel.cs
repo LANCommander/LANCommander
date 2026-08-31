@@ -6,7 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
-using LANCommander.Packaging.Lcx;
+using LANCommander.Packaging.LCX;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,7 +139,7 @@ public partial class OutputStepViewModel : PackagingStepViewModel
             var progress = new Progress<string>(message =>
                 Dispatcher.UIThread.Post(() => Status = message));
 
-            await Task.Run(() => LcxBuilder.BuildAsync(Package, progress));
+            await Task.Run(() => LCXBuilder.BuildAsync(Package, progress));
 
             if (PublishToServer)
                 await PublishAsync(targetPath);

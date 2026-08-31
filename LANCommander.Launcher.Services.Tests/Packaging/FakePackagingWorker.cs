@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Packaging;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 
 namespace LANCommander.Launcher.Services.Tests.Packaging;
 

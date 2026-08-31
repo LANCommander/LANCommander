@@ -1,5 +1,5 @@
 using System.IO.Pipes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 
 namespace LANCommander.Packaging.Worker;
 

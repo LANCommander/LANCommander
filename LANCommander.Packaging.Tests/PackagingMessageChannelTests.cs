@@ -1,5 +1,5 @@
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using Shouldly;
 
 namespace LANCommander.Packaging.Tests;

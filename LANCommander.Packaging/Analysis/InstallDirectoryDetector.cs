@@ -1,3 +1,5 @@
+using LANCommander.Packaging.Changes;
+
 namespace LANCommander.Packaging.Analysis;
 
 /// <summary>
@@ -5,6 +7,44 @@ namespace LANCommander.Packaging.Analysis;
 /// </summary>
 public static class InstallDirectoryDetector
 {
+    /// <summary>
+    /// Verbs that are real evidence the installer put a file somewhere.
+    /// </summary>
+    /// <remarks>
+    /// "FILE R/W" is deliberately absent. The hooks derive that verb from the access mask a
+    /// caller asked for, not from anything actually being written, so an installer that opens
+    /// its own source files with GENERIC_READ | GENERIC_WRITE reports its media as written to.
+    /// Detection based on those paths lands on the installer's source folder.
+    /// </remarks>
+    private static readonly string[] StrongWriteVerbs =
+    [
+        "FILE WRITE",
+        "FILE COPY",
+        "FILE MOVE",
+    ];
+
+    /// <summary>
+    /// Picks the install directory, preferring paths the installer demonstrably wrote to.
+    /// </summary>
+    public static string Detect(
+        IEnumerable<FileChange> changes, IEnumerable<string>? ignoredPathPrefixes = null)
+    {
+        var all = changes.ToList();
+        var ignored = ignoredPathPrefixes?.ToArray() ?? [];
+
+        var strong = all
+            .Where(c => StrongWriteVerbs.Any(v => v.Equals(c.Verb, StringComparison.OrdinalIgnoreCase)))
+            .Select(c => c.Path)
+            .ToList();
+
+        var detected = Detect(strong, ignored);
+
+        // Nothing conclusive, so fall back to everything captured rather than give up.
+        return string.IsNullOrEmpty(detected)
+            ? Detect(all.Select(c => c.Path), ignored)
+            : detected;
+    }
+
     /// <summary>
     /// Picks the most likely install directory out of a set of written file paths.
     /// </summary>

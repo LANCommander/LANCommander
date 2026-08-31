@@ -4,7 +4,7 @@ using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using LANCommander.Packaging;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services.Packaging;

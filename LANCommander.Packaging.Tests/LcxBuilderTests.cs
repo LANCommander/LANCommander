@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using LANCommander.Packaging.Changes;
-using LANCommander.Packaging.Lcx;
+using LANCommander.Packaging.LCX;
 using LANCommander.Packaging.Models;
 using LANCommander.SDK.Helpers;
 using Shouldly;
@@ -19,7 +19,7 @@ public class LcxBuilderTests : IDisposable
     {
         var package = BuildPackage(("game.exe", "binary"), (@"Data\config.ini", "settings"));
 
-        await LcxBuilder.BuildAsync(package);
+        await LCXBuilder.BuildAsync(package);
 
         using var archive = ZipFile.OpenRead(package.OutputPath);
 
@@ -32,7 +32,7 @@ public class LcxBuilderTests : IDisposable
     {
         var package = BuildPackage(("game.exe", "binary"), (@"Data\config.ini", "settings"));
 
-        await LcxBuilder.BuildAsync(package);
+        await LCXBuilder.BuildAsync(package);
 
         using var archive = ZipFile.OpenRead(package.OutputPath);
 
@@ -60,7 +60,7 @@ public class LcxBuilderTests : IDisposable
         // would have been outright wrong for a second archive.
         var package = BuildPackage(("game.exe", new string('a', 4096)));
 
-        await LcxBuilder.BuildAsync(package);
+        await LCXBuilder.BuildAsync(package);
 
         var manifest = await ReadManifestAsync(package.OutputPath);
 
@@ -83,7 +83,7 @@ public class LcxBuilderTests : IDisposable
             ValueName = "InstallPath",
         });
 
-        await LcxBuilder.BuildAsync(package);
+        await LCXBuilder.BuildAsync(package);
 
         using var archive = ZipFile.OpenRead(package.OutputPath);
 
@@ -105,13 +105,13 @@ public class LcxBuilderTests : IDisposable
     {
         var package = BuildPackage(("game.exe", "binary"));
 
-        await LcxBuilder.BuildAsync(package);
+        await LCXBuilder.BuildAsync(package);
 
         var manifest = await ReadManifestAsync(package.OutputPath);
 
         manifest.Id.ShouldNotBe(Guid.Empty);
-        manifest.ManifestVersion.ShouldBe(LcxBuilder.ManifestVersion);
-        manifest.CreatedBy.ShouldBe(LcxBuilder.CreatedBy);
+        manifest.ManifestVersion.ShouldBe(LCXBuilder.ManifestVersion);
+        manifest.CreatedBy.ShouldBe(LCXBuilder.CreatedBy);
         manifest.IsLegacyManifest().ShouldBeFalse();
     }
 
@@ -122,7 +122,7 @@ public class LcxBuilderTests : IDisposable
 
         package.SelectedFiles.Add(Path.Combine(package.InstallDirectory, "deleted.dat"));
 
-        await Should.NotThrowAsync(() => LcxBuilder.BuildAsync(package));
+        await Should.NotThrowAsync(() => LCXBuilder.BuildAsync(package));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class LcxBuilderTests : IDisposable
 
         package.OutputPath = string.Empty;
 
-        await Should.ThrowAsync<InvalidOperationException>(() => LcxBuilder.BuildAsync(package));
+        await Should.ThrowAsync<InvalidOperationException>(() => LCXBuilder.BuildAsync(package));
     }
 
     private static async Task<SDK.Models.Manifest.Game> ReadManifestAsync(string lcxPath)

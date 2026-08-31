@@ -1,5 +1,5 @@
 using LANCommander.Packaging;
-using LANCommander.Packaging.Ipc;
+using LANCommander.Packaging.IPC;
 
 namespace LANCommander.Launcher.Services.Packaging;
 

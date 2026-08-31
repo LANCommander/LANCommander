@@ -61,6 +61,8 @@ public partial class PackagingWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsLastStep))]
     private PackagingStepViewModel _currentStep;
 
+    partial void OnCurrentStepChanged(PackagingStepViewModel value) => SyncStepIndicators();
+
     [ObservableProperty]
     private bool _isBusy;
 
@@ -123,6 +125,10 @@ public partial class PackagingWizardViewModel : ViewModelBase
         CurrentStep = Steps[0];
 
         await CurrentStep.OnEnterAsync();
+
+        // The new package changes which steps apply, and CurrentStep may not have moved, so the
+        // derived state has to be pushed explicitly rather than riding on the assignment above.
+        RefreshNavigation();
     }
 
     [RelayCommand]
@@ -199,12 +205,37 @@ public partial class PackagingWizardViewModel : ViewModelBase
     /// </summary>
     private void RefreshNavigation()
     {
+        // Before the notification below: raising it re-materializes ApplicableSteps and rebuilds
+        // every indicator container, which reads this state as it goes.
+        SyncStepIndicators();
+
         OnPropertyChanged(nameof(ApplicableSteps));
         OnPropertyChanged(nameof(StepNumber));
         OnPropertyChanged(nameof(StepCount));
         OnPropertyChanged(nameof(IsLastStep));
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(NextLabel));
+    }
+
+    /// <summary>
+    /// Numbers the applicable steps and marks which are done, current, and still ahead, so the
+    /// step indicator can style each one. Numbering skips inapplicable steps, so it has to be
+    /// recomputed rather than baked into the steps themselves.
+    /// </summary>
+    private void SyncStepIndicators()
+    {
+        var applicable = ApplicableSteps;
+        var currentIndex = StepNumber - 1;
+
+        for (var i = 0; i < applicable.Count; i++)
+        {
+            var step = applicable[i];
+
+            step.DisplayNumber = i + 1;
+            step.IsFirst = i == 0;
+            step.IsCurrent = step == CurrentStep;
+            step.IsComplete = currentIndex >= 0 && i < currentIndex;
+        }
     }
 
     /// <summary>

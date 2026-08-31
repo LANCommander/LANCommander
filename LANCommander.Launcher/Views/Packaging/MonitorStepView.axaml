@@ -78,7 +78,11 @@
                 CornerRadius="4"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
             <StackPanel Spacing="6">
-                <StackPanel Orientation="Horizontal" Spacing="24">
+                <!-- Uniform columns so the counters hold their position as the numbers climb
+                     during a capture instead of shuffling sideways on every tick. -->
+                <UniformGrid Columns="3"
+                             MinWidth="240"
+                             HorizontalAlignment="Left">
                     <StackPanel>
                         <TextBlock Text="Files" FontSize="11" Opacity="0.7" />
                         <TextBlock Text="{Binding FileCount}" FontSize="20" FontWeight="Bold" />
@@ -91,7 +95,7 @@
                         <TextBlock Text="Processes" FontSize="11" Opacity="0.7" />
                         <TextBlock Text="{Binding ProcessCount}" FontSize="20" FontWeight="Bold" />
                     </StackPanel>
-                </StackPanel>
+                </UniformGrid>
 
                 <!-- Injection is a poll-and-inject race; a short-lived child can finish before it
                      can be hooked. Say so rather than quietly producing a partial capture. -->

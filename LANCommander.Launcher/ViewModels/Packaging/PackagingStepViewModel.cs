@@ -22,11 +22,26 @@ public abstract partial class PackagingStepViewModel : ViewModelBase
 
     protected PackageDefinition Package => Wizard.Package;
 
-    /// <summary>Shown in the step rail.</summary>
+    /// <summary>Shown in the step indicator.</summary>
     public abstract string Title { get; }
 
     [ObservableProperty]
     private bool _canGoNext = true;
+
+    /// <summary>1-based position among the applicable steps. Assigned by the wizard.</summary>
+    [ObservableProperty]
+    private int _displayNumber;
+
+    [ObservableProperty]
+    private bool _isCurrent;
+
+    /// <summary>Already passed through; drawn with a check instead of a number.</summary>
+    [ObservableProperty]
+    private bool _isComplete;
+
+    /// <summary>Suppresses the leading connector line on the first step.</summary>
+    [ObservableProperty]
+    private bool _isFirst;
 
     /// <summary>Whether Back is meaningful here. Monitoring cannot be re-entered.</summary>
     public virtual bool CanGoBack => true;

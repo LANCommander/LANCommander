@@ -4,82 +4,148 @@
              x:Class="LANCommander.Launcher.Views.Packaging.PackagingWizardView"
              x:DataType="vm:PackagingWizardViewModel">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <UserControl.Styles>
+        <!-- Step indicator. Display only: Back/Next remain the only navigation, so a step cannot
+             be entered without OnLeaveAsync having run on the one before it. -->
+        <Style Selector="Rectangle.connector">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource InputBorderBrush}" />
+        </Style>
 
-        <!-- Step rail -->
-        <Border Grid.Row="0"
-                Padding="16,52,16,10"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <!-- No title here: the shell titlebar already shows "Package a Game". -->
-            <StackPanel Spacing="8">
-                <ItemsControl ItemsSource="{Binding ApplicableSteps}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="6" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PackagingStepViewModel">
-                            <Border Padding="10,4"
-                                    CornerRadius="3"
-                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-                                <TextBlock Text="{Binding Title}" FontSize="12" Opacity="0.85" />
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.marker.complete">
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+        </Style>
+        <!-- After .complete so the current step wins if both ever applied. -->
+        <Style Selector="Border.marker.current">
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+        </Style>
 
-                <TextBlock FontSize="12" Opacity="0.7">
-                    <TextBlock.Text>
-                        <MultiBinding StringFormat="Step {0} of {1} — {2}">
-                            <Binding Path="StepNumber" />
-                            <Binding Path="StepCount" />
-                            <Binding Path="CurrentStep.Title" />
-                        </MultiBinding>
-                    </TextBlock.Text>
-                </TextBlock>
-            </StackPanel>
-        </Border>
+        <Style Selector="TextBlock.markerNumber">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+        </Style>
+        <Style Selector="TextBlock.markerNumber.current">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.stepLabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+        </Style>
+        <Style Selector="TextBlock.stepLabel.complete">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.stepLabel.current">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="*,Auto">
 
         <!-- Current step. Uses the shared view registry so each step resolves to its own view,
-             which also lets a plugin replace an individual step later. -->
-        <ContentControl Grid.Row="1"
+             which also lets a plugin replace an individual step later.
+             The 52px top inset clears the floating shell titlebar. -->
+        <ContentControl Grid.Row="0"
                         x:Name="StepHost"
-                        Margin="16,12"
+                        Margin="16,52,16,12"
                         Content="{Binding CurrentStep}" />
 
-        <!-- Footer -->
-        <Border Grid.Row="2"
+        <!-- Footer: the step indicator and the navigation buttons share a row. -->
+        <Border Grid.Row="1"
                 Padding="16,10"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Left"
+            <Grid RowDefinitions="Auto,Auto">
+
+                <TextBlock Grid.Row="0"
                            Text="{Binding ErrorMessage}"
-                           Foreground="#E05A5A"
+                           Foreground="{DynamicResource ErrorBrush}"
                            TextWrapping="Wrap"
-                           MaxWidth="600"
-                           VerticalAlignment="Center"
+                           Margin="0,0,0,8"
                            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                <StackPanel DockPanel.Dock="Right"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            HorizontalAlignment="Right">
-                    <Button Content="Back"
-                            Command="{Binding BackCommand}"
-                            IsEnabled="{Binding CanGoBack}"
-                            Padding="16,6" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
 
-                    <Button Content="{Binding NextLabel}"
-                            Classes="Primary"
-                            Command="{Binding NextCommand}"
-                            IsEnabled="{Binding CurrentStep.CanGoNext}"
-                            IsVisible="{Binding !IsLastStep}"
-                            Padding="16,6" />
-                </StackPanel>
+                    <!-- Clips rather than pushing the buttons off-screen if the steps ever outgrow
+                         the 900px minimum window width. -->
+                    <ScrollViewer Grid.Column="0"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding ApplicableSteps}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PackagingStepViewModel">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Rectangle Classes="connector" IsVisible="{Binding !IsFirst}" />
 
-                <Panel />
-            </DockPanel>
+                                        <Border Classes="marker"
+                                                Classes.current="{Binding IsCurrent}"
+                                                Classes.complete="{Binding IsComplete}">
+                                            <Panel>
+                                                <TextBlock Classes="markerNumber"
+                                                           Classes.current="{Binding IsCurrent}"
+                                                           Text="{Binding DisplayNumber}"
+                                                           IsVisible="{Binding !IsComplete}" />
+
+                                                <Icon Type="Bold"
+                                                      Value="Check"
+                                                      Width="11"
+                                                      Height="11"
+                                                      Foreground="{DynamicResource ButtonPrimaryBgBrush}"
+                                                      IsVisible="{Binding IsComplete}" />
+                                            </Panel>
+                                        </Border>
+
+                                        <TextBlock Classes="stepLabel"
+                                                   Classes.current="{Binding IsCurrent}"
+                                                   Classes.complete="{Binding IsComplete}"
+                                                   Text="{Binding Title}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                Margin="16,0,0,0">
+                        <Button Content="Back"
+                                Command="{Binding BackCommand}"
+                                IsEnabled="{Binding CanGoBack}"
+                                Padding="16,6" />
+
+                        <Button Content="{Binding NextLabel}"
+                                Classes="Primary"
+                                Command="{Binding NextCommand}"
+                                IsEnabled="{Binding CurrentStep.CanGoNext}"
+                                IsVisible="{Binding !IsLastStep}"
+                                Padding="16,6" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

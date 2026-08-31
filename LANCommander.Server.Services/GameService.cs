@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
@@ -297,12 +297,12 @@ namespace LANCommander.Server.Services
                 .Include(g => g.Scripts)
                 .GetAsync(id);
             
-            logger?.LogInformation("Packaging game {GameTitle}", game.Title);
+            logger.LogInformation("Packaging game {GameTitle}", game.Title);
 
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
-            string latestArchivePath = null;
+            string? latestArchivePath = null;
             if (latestArchive != null)
                 latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
 
@@ -310,22 +310,23 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
+                    logger.LogInformation("Running script {Name} for game {GameTitle}", script.Name, game.Title);
+                    var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
 
-                    if (package == null)
+                    if (package is null)
                     {
-                        var message = $"Could not package game {game.Title}, the package script did not return a result";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger.LogError("Could not package game '{Title} ({Id})', the package script did not return a result", game.Title, game.Id);
+                        return;
                     }
 
-                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
+                    if (string.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
-                        var message = $"Could not package game {game.Title}, the path {package.Path} could not be found";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger.LogError("Could not package game '{Title} ({Id})', the path {Path} could not be found", game.Title, game.Id, package.Path);
+                        return;
                     }
-                    
+
+                    logger.LogInformation("New archive for game {GameTitle} will be created with version number {GameVersion}", game.Title, package.Version);
+
                     var archive = new Archive
                     {
                         Version = package.Version,
@@ -343,14 +344,13 @@ namespace LANCommander.Server.Services
 
                     await archiveService.RecalculateFileSizeArchiveAsync(archive);
 
-                    logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
+                    logger.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }
             }
             else
             {
-                var message = $"Could not package game {game.Title}, no packaging scripts are defined";
-                logger?.LogWarning(message);
-                throw new Exception(message);
+                logger.LogWarning("Could not package game '{GameTitle}', no packaging scripts are defined", game.Title);
+                return;
             }
         }
     }

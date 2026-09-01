@@ -21,17 +21,15 @@ namespace LANCommander.SDK.PowerShell
     public class PowerShellScript
     {
         public ScriptType Type { get; private set; }
-        private string Contents { get; set; }           = "";
-        public string WorkingDirectory { get; private set; }   = "";
-        private bool ShellExecute { get; set; }         = false;
-        public bool RunAsAdmin { get; private set; }       = false;
-        private bool IgnoreWow64 { get; set; }          = false;
-        private bool Debug { get; set; }                = false;
+        private string Contents { get; set; } = "";
+        public string WorkingDirectory { get; private set; } = "";
+        private bool ShellExecute { get; set; } = false;
+        public bool RunAsAdmin { get; private set; } = false;
+        private bool IgnoreWow64 { get; set; } = false;
+        private bool Debug { get; set; } = false;
         public PowerShellVariableList Variables { get; private set; }
         public Dictionary<string, string> Arguments { get; private set; }
 
-        private TaskCompletionSource<string> Input { get; set; }
-        
         private IntPtr _wow64 = IntPtr.Zero;
         private readonly IServiceProvider ServiceProvider;
         private readonly ILogger<PowerShellScript> Logger;
@@ -52,19 +50,18 @@ namespace LANCommander.SDK.PowerShell
             ScriptType type,
             IOptions<Settings> settings)
         {
-            
             Type = type;
-            Variables = new PowerShellVariableList();
-            Arguments = new Dictionary<string, string>();
-            
+            Variables = [];
+            Arguments = [];
+
             // Instantiate a new scope
             ServiceProvider = serviceProvider;
             Logger = ServiceProvider.GetRequiredService<ILogger<PowerShellScript>>();
 
             var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
-            
+
             Debug = settingsProvider.CurrentValue.Debug.EnableScriptDebugging;
-            
+
             IgnoreWow64Redirection();
         }
 
@@ -166,7 +163,7 @@ namespace LANCommander.SDK.PowerShell
         private bool RequiresAdmin()
         {
             var pattern = @"^#(\s?Requires\s?Admin|Requires -RunAsAdministrator)\s*";
-            
+
             return Regex.IsMatch(Contents, pattern);
         }
 
@@ -219,167 +216,140 @@ namespace LANCommander.SDK.PowerShell
             }
         }
 
-        public async Task<T> ExecuteAsync<T>()
+        public async Task<T?> ExecuteAsync<T>()
         {
-            T result = default;
+            T? result = default;
 
             DisableWow64Redirection();
 
-            using (Runspace runspace = OpenRunspace())
-            {
-                var modulesPath = AppPaths.GetConfigPath("Modules");
-                
-                if (Directory.Exists(modulesPath))
-                {
-                    foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
-                    {
-                        try
-                        {
-                            using var import = System.Management.Automation.PowerShell.Create();
-                            
-                            import.Runspace = runspace;
-                                
-                            import.AddCommand("Import-Module")
-                                .AddParameter("Name", moduleDirectory)
-                                .AddParameter("ErrorAction", "Stop");
-                                
-                            import.Invoke();
+            using Runspace runspace = OpenRunspace();
 
-                            if (import.HadErrors)
-                                foreach (var error in import.Streams.Error)
-                                    Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
-                        }
-                        catch (Exception ex)
+            var modulesPath = AppPaths.GetConfigPath("Modules");
+
+            if (Directory.Exists(modulesPath))
+            {
+                foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
+                {
+                    ImportModuleIntoRunspace(runspace, moduleDirectory);
+                }
+            }
+
+            // Ensure TLS 1.2 is available for web requests (GitHub, etc.)
+            using (var tls = System.Management.Automation.PowerShell.Create())
+            {
+                Logger.LogInformation("Ensuring TLS 1.2 is enabled for PowerShell runspace");
+                tls.Runspace = runspace;
+                tls.AddScript("[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12");
+                tls.Invoke();
+            }
+
+            runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
+
+            foreach (var variable in Variables)
+            {
+                Logger.LogInformation("Setting PowerShell variable ${VariableName} = {VariableValue}", variable.Name, variable.Value);
+                runspace.SessionStateProxy.SetVariable(variable.Name, variable.Value);
+            }
+
+            runspace.SessionStateProxy.SetVariable("Logo", Logo);
+            runspace.SessionStateProxy.SetVariable("ScriptType", Type);
+            runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
+
+            // Store services in session state for cmdlets to access
+            var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
+            if (settingsProvider is not null)
+            {
+                runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
+            }
+
+            var apiRequestFactory = ServiceProvider.GetService<ApiRequestFactory>();
+            if (apiRequestFactory is not null)
+            {
+                runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ApiRequestFactory", apiRequestFactory);
+            }
+
+            // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
+
+            Context = System.Management.Automation.PowerShell.Create();
+
+            Context.Runspace = runspace;
+
+            DebugContext = new PowerShellDebugContext(Context);
+
+            await DebugAsync(async dbg =>
+            {
+                await dbg.StartAsync(DebugContext);
+            });
+
+            Context.AddScript("Write-Host $Logo");
+            Context.AddScript(Contents);
+
+            Context.Streams.Information.DataAdded += Information_DataAdded;
+            Context.Streams.Verbose.DataAdded += Verbose_DataAdded;
+            Context.Streams.Debug.DataAdded += Debug_DataAdded;
+            Context.Streams.Warning.DataAdded += Warning_DataAdded;
+            Context.Streams.Error.DataAdded += Error_DataAdded;
+
+            if (Debug)
+            {
+                AddDebugHeader();
+            }
+
+            try
+            {
+                Logger.LogInformation("Executing PowerShell script of type {ScriptType}", Type);
+                var results = await Context.InvokeAsync();
+
+                if (Context.HadErrors)
+                {
+                    foreach (var error in Context.Streams.Error)
+                    {
+                        Logger.LogError("Script error: {InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+
+                        await DebugAsync(async dbg =>
                         {
-                            Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
-                        }
+                            await dbg.OutputAsync(DebugContext, LogLevel.Error, "{InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+                        });
                     }
                 }
 
-                // Ensure TLS 1.2 is available for web requests (GitHub, etc.)
-                using (var tls = System.Management.Automation.PowerShell.Create())
+                var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
+
+                if (returnValue is null && results is { Count: > 0 })
+                    returnValue = results[^1];
+
+                if (returnValue is not null)
                 {
-                    tls.Runspace = runspace;
-                    tls.AddScript("[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12");
-                    tls.Invoke();
+                    result = ConvertResult<T>(returnValue);
+
+                    if (result is null)
+                        Logger.LogWarning("Script returned a value but it could not be converted to {ExpectedType}", typeof(T).Name);
                 }
-
-                runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
-
-                foreach (var variable in Variables)
+                else
                 {
-                    runspace.SessionStateProxy.SetVariable(variable.Name, variable.Value);
+                    Logger.LogWarning("Script did not return a value via $Return or the pipeline");
                 }
-
-                runspace.SessionStateProxy.SetVariable("Logo", Logo);
-                runspace.SessionStateProxy.SetVariable("ScriptType", Type);
-                runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
-                
-                // Store services in session state for cmdlets to access
-                var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
-                if (settingsProvider != null)
-                {
-                    runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
-                }
-
-                var apiRequestFactory = ServiceProvider.GetService<ApiRequestFactory>();
-                if (apiRequestFactory != null)
-                {
-                    runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ApiRequestFactory", apiRequestFactory);
-                }
-                
-                // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
-                
-                Context = System.Management.Automation.PowerShell.Create();
-
-                Context.Runspace = runspace;
-
-                DebugContext = new PowerShellDebugContext(Context);
-
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not execute script");
+            }
+            finally
+            {
                 await DebugAsync(async dbg =>
                 {
-                    await dbg.StartAsync(DebugContext);
+                    await dbg.EndAsync(DebugContext);
                 });
 
-                Context.AddScript("Write-Host $Logo");
-                Context.AddScript(Contents);
-
-                Context.Streams.Information.DataAdded += Information_DataAdded;
-                Context.Streams.Verbose.DataAdded += Verbose_DataAdded;
-                Context.Streams.Debug.DataAdded += Debug_DataAdded;
-                Context.Streams.Warning.DataAdded += Warning_DataAdded;
-                Context.Streams.Error.DataAdded += Error_DataAdded;
-
-                if (Debug) {
-                    Context.AddScript("Write-Host '--------- DEBUG ---------'");
-                    Context.AddScript("Write-Host \"Script Type: $ScriptType\"");
-                    Context.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
-                    Context.AddScript("Write-Host 'Variables:'");
-
-                    foreach (var variable in Variables)
-                    {
-                        Context.AddScript($"Write-Host '    ${variable.Name}'");
-                    }
-
-                    Context.AddScript("Write-Host ''");
-                    Context.AddScript("Write-Host 'Enter \"exit\" to continue'");
-                }
-
-                try
-                {
-                    var results = await Context.InvokeAsync();
-
-                    if (Context.HadErrors)
-                    {
-                        foreach (var error in Context.Streams.Error)
-                        {
-                            Logger.LogError("Script error: {InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
-
-                            await DebugAsync(async dbg =>
-                            {
-                                await dbg.OutputAsync(DebugContext, LogLevel.Error, "{InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
-                            });
-                        }
-                    }
-
-                    var returnValue = Context.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
-
-                    if (returnValue == null && results != null && results.Count > 0)
-                        returnValue = results[results.Count - 1];
-
-                    if (returnValue != null)
-                    {
-                        result = ConvertResult<T>(returnValue);
-
-                        if (result == null)
-                            Logger.LogWarning("Script returned a value but it could not be converted to {ExpectedType}", typeof(T).Name);
-                    }
-                    else
-                    {
-                        Logger.LogWarning("Script did not return a value via $Return or the pipeline");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Could not execute script");
-                }
-                finally
+                if (Debug)
                 {
                     await DebugAsync(async dbg =>
                     {
-                        await dbg.EndAsync(DebugContext);
+                        await dbg.BreakAsync(DebugContext);
                     });
-
-                    if (Debug)
-                    {
-                        await DebugAsync(async dbg =>
-                        {
-                            await dbg.BreakAsync(DebugContext);
-                        });
-                    }
-
-                    Context.Dispose();
                 }
+
+                Context.Dispose();
             }
 
             RevertWow64Redirection();
@@ -387,7 +357,48 @@ namespace LANCommander.SDK.PowerShell
             return result;
         }
 
-        private static T ConvertResult<T>(object value)
+        private void AddDebugHeader()
+        {
+            Context.AddScript("Write-Host '--------- DEBUG ---------'");
+            Context.AddScript("Write-Host \"Script Type: $ScriptType\"");
+            Context.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
+            Context.AddScript("Write-Host 'Variables:'");
+
+            foreach (var variable in Variables)
+            {
+                Context.AddScript($"Write-Host '    ${variable.Name}'");
+            }
+
+            Context.AddScript("Write-Host ''");
+            Context.AddScript("Write-Host 'Enter \"exit\" to continue'");
+        }
+
+        private void ImportModuleIntoRunspace(Runspace runspace, string moduleDirectory)
+        {
+            Logger.LogInformation("Importing PowerShell module from {ModuleDirectory}", moduleDirectory);
+            try
+            {
+                using var import = System.Management.Automation.PowerShell.Create();
+
+                import.Runspace = runspace;
+
+                import.AddCommand("Import-Module")
+                    .AddParameter("Name", moduleDirectory)
+                    .AddParameter("ErrorAction", "Stop");
+
+                import.Invoke();
+
+                if (import.HadErrors)
+                    foreach (var error in import.Streams.Error)
+                        Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
+            }
+        }
+
+        private static T? ConvertResult<T>(object value)
         {
             // Unwrap PSObject wrapper
             var psObj = value as PSObject;
@@ -439,8 +450,7 @@ namespace LANCommander.SDK.PowerShell
 
         private async Task DebugAsync(Func<IScriptDebugger, Task> action)
         {
-            if (Debuggers == null)
-                Debuggers = ServiceProvider.GetServices<IScriptDebugger>();
+            Debuggers ??= ServiceProvider.GetServices<IScriptDebugger>();
 
             foreach (var debugger in Debuggers)
             {
@@ -448,8 +458,11 @@ namespace LANCommander.SDK.PowerShell
             }
         }
 
-        private async void Error_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Error_DataAdded(object? sender, DataAddedEventArgs e)
         {
+            if (sender is null)
+                return;
+
             var record = ((PSDataCollection<ErrorRecord>)sender)[e.Index];
 
             await DebugAsync(async dbg =>
@@ -459,18 +472,24 @@ namespace LANCommander.SDK.PowerShell
             });
         }
 
-        private async void Warning_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Warning_DataAdded(object? sender, DataAddedEventArgs e)
         {
+            if (sender is null)
+                return;
+
             var record = ((PSDataCollection<WarningRecord>)sender)[e.Index];
-            
+
             await DebugAsync(async dbg =>
             {
                 await dbg.OutputAsync(DebugContext, LogLevel.Warning, record.Message);
             });
         }
 
-        private async void Debug_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Debug_DataAdded(object? sender, DataAddedEventArgs e)
         {
+            if (sender is null)
+                return;
+
             var record = ((PSDataCollection<DebugRecord>)sender)[e.Index];
 
             await DebugAsync(async dbg =>
@@ -479,8 +498,11 @@ namespace LANCommander.SDK.PowerShell
             });
         }
 
-        private async void Verbose_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Verbose_DataAdded(object? sender, DataAddedEventArgs e)
         {
+            if (sender is null)
+                return;
+
             var record = ((PSDataCollection<VerboseRecord>)sender)[e.Index];
 
             await DebugAsync(async dbg =>
@@ -489,10 +511,13 @@ namespace LANCommander.SDK.PowerShell
             });
         }
 
-        private async void Information_DataAdded(object sender, DataAddedEventArgs e)
+        private async void Information_DataAdded(object? sender, DataAddedEventArgs e)
         {
+            if (sender is null)
+                return;
+
             var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
-            
+
             await DebugAsync(async dbg =>
             {
                 await dbg.OutputAsync(DebugContext, LogLevel.Information, (record.MessageData as HostInformationMessage).Message);

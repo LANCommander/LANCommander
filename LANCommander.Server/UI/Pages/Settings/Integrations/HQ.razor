@@ -1,11 +1,12 @@
 @page "/Settings/Integrations/HQ"
 @using LANCommander.Server.Settings
-@using LANCommander.HQ.SDK
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
-@implements IDisposable
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject HQClient HqClient
+@inject IHqConnectionState HqConnection
+@inject HqAuthorizationStateStore HqAuthorizationState
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -22,96 +23,129 @@
 </PageHeader>
 
 <PageContent>
-    @if (_connected)
-    {
-        @if (_isPremium)
+    @* Named context so it does not collide with the settings Form's context below. *@
+    <HqConnectionProvider Context="connection" OnConnectionChanged="OnConnectionChanged">
+        @switch (connection.Status)
         {
-            <Result Status="ResultStatus.Success" Title="Premium Account" SubTitle="Thank you for supporting LANCommander!">
-                <Extra>
-                    <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Account</a>
-                    <Button Danger OnClick="Disconnect">Unlink</Button>
-                </Extra>
-            </Result>
-        }
-        else
-        {
-            <Result Status="ResultStatus.Success" Title="Basic Account">
-                <ChildContent>
-                    <Text>Your server is linked to a basic account. Upgrade your account to access the following features:</Text>
-                    <ul>
-                        <li>Access premium metadata providers</li>
-                        <li>Curated/enhanced metadata</li>
-                        <li>Support future LANCommander development!</li>
-                    </ul>
-                </ChildContent>
-                <Extra>
-                    <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Upgrade</a>
-                    <Button Danger OnClick="Disconnect">Unlink</Button>
-                </Extra>
-            </Result>
-        }
-    }
-    else
-    {
-        <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
-            <Text>Connect your server to LANCommander HQ for access to expanded metadata providers, faster lookups, and premium features. All through one account.</Text>
-        
-            <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" />
-            
-            <Flex Gap="FlexGap.Middle" Justify="FlexJustify.Center">
-                <Card Title="Basic" Class="hq-feature-card hq-feature-card-basic">
-                    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
-                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                            <Icon Type="check" Theme="IconThemeType.Outline"/>
-                            <Text>Access more metadata providers</Text>
-                        </Flex>
-                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                            <Icon Type="check" Theme="IconThemeType.Outline"/>
-                            <Text>Faster metadata lookups</Text>
-                        </Flex>
-                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                            <Icon Type="check" Theme="IconThemeType.Outline"/>
-                            <Text>One-time authentication</Text>
-                        </Flex>
-                        <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                            <Icon Type="check" Theme="IconThemeType.Outline"/>
-                            <Text>No additional server setup</Text>
-                        </Flex>
-                    </Flex>
-                </Card>
-                
-                <Card Title="Premium" Class="hq-feature-card hq-feature-card-premium">
-                    <Extra>
-                        $5/mo
-                    </Extra>
-                    <ChildContent>
-                        <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
-                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                                <Icon Type="check" Theme="IconThemeType.Outline"/>
-                                <Text>Everything in Basic</Text>
-                            </Flex>
-                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                                <Icon Type="check" Theme="IconThemeType.Outline"/>
-                                <Text>Premium metadata providers</Text>
-                            </Flex>
-                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                                <Icon Type="check" Theme="IconThemeType.Outline"/>
-                                <Text>Curated & enhanced metadata</Text>
-                            </Flex>
-                            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                                <Icon Type="check" Theme="IconThemeType.Outline"/>
-                                <Text>Supports LANCommander development</Text>
-                            </Flex>
-                        </Flex>
-                    </ChildContent>
-                </Card>
-            </Flex>
+            case HqConnectionStatus.Unknown:
+                <Flex Justify="FlexJustify.Center" Style="padding: 32px;">
+                    <Spin Tip="Checking your connection to LANCommander HQ..." />
+                </Flex>
+                break;
 
-            <Flex Justify="FlexJustify.Center">
-                <Button Block Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth" Style="max-width: 33%">Connect to HQ</Button>
-            </Flex>
-        </Flex>
-    }
+            case HqConnectionStatus.Connected when connection.IsPremium:
+                <Result Status="ResultStatus.Success" Title="Premium Account" SubTitle="@($"Thank you for supporting LANCommander{(connection.Username is null ? "" : $", {connection.Username}")}!")">
+                    <Extra>
+                        <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Account</a>
+                        <Button Danger OnClick="Disconnect">Unlink</Button>
+                    </Extra>
+                </Result>
+                break;
+
+            case HqConnectionStatus.Connected:
+                <Result Status="ResultStatus.Success" Title="Basic Account" SubTitle="@connection.Username">
+                    <ChildContent>
+                        <Text>Your server is linked to a basic account. Upgrade your account to access the following features:</Text>
+                        <ul>
+                            <li>Access premium metadata providers</li>
+                            <li>Curated/enhanced metadata</li>
+                            <li>Support future LANCommander development!</li>
+                        </ul>
+                    </ChildContent>
+                    <Extra>
+                        <a href="https://hq.lancommander.app/Account" class="ant-btn ant-btn-primary">Upgrade</a>
+                        <Button Danger OnClick="Disconnect">Unlink</Button>
+                    </Extra>
+                </Result>
+                break;
+
+            case HqConnectionStatus.Unauthorized:
+                <Result Status="ResultStatus.Warning" Title="Reconnect to LANCommander HQ" SubTitle="@UnauthorizedSubtitle">
+                    <ChildContent>
+                        <Text Type="TextElementType.Secondary">@connection.LastError</Text>
+                    </ChildContent>
+                    <Extra>
+                        <Button Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth">Reconnect</Button>
+                        <Button Danger OnClick="Disconnect">Unlink</Button>
+                    </Extra>
+                </Result>
+                break;
+
+            case HqConnectionStatus.Unreachable:
+                @* The credential is not implicated here, so it is deliberately left in place. *@
+                <Result Status="ResultStatus.Warning" Title="Can't reach LANCommander HQ" SubTitle="@UnreachableSubtitle(connection)">
+                    <ChildContent>
+                        <Text Type="TextElementType.Secondary">@connection.LastError</Text>
+                    </ChildContent>
+                    <Extra>
+                        <Button Type="ButtonType.Primary" OnClick="Retry" Loading="_retrying">Retry</Button>
+                        <Button Danger OnClick="Disconnect">Unlink</Button>
+                    </Extra>
+                </Result>
+                break;
+
+            default:
+                <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
+                    <Text>Connect your server to LANCommander HQ for access to expanded metadata providers, faster lookups, and premium features. All through one account.</Text>
+
+                    <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" />
+
+                    <Flex Gap="FlexGap.Middle" Justify="FlexJustify.Center">
+                        <Card Title="Basic" Class="hq-feature-card hq-feature-card-basic">
+                            <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                    <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                    <Text>Access more metadata providers</Text>
+                                </Flex>
+                                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                    <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                    <Text>Faster metadata lookups</Text>
+                                </Flex>
+                                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                    <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                    <Text>One-time authentication</Text>
+                                </Flex>
+                                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                    <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                    <Text>No additional server setup</Text>
+                                </Flex>
+                            </Flex>
+                        </Card>
+
+                        <Card Title="Premium" Class="hq-feature-card hq-feature-card-premium">
+                            <Extra>
+                                $5/mo
+                            </Extra>
+                            <ChildContent>
+                                <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+                                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                        <Text>Everything in Basic</Text>
+                                    </Flex>
+                                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                        <Text>Premium metadata providers</Text>
+                                    </Flex>
+                                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                        <Text>Curated & enhanced metadata</Text>
+                                    </Flex>
+                                    <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
+                                        <Icon Type="check" Theme="IconThemeType.Outline"/>
+                                        <Text>Supports LANCommander development</Text>
+                                    </Flex>
+                                </Flex>
+                            </ChildContent>
+                        </Card>
+                    </Flex>
+
+                    <Flex Justify="FlexJustify.Center">
+                        <Button Block Type="ButtonType.Primary" OnClick="Connect" Loading="_awaitingAuth" Style="max-width: 33%">Connect to HQ</Button>
+                    </Flex>
+                </Flex>
+                break;
+        }
+    </HqConnectionProvider>
 
     <Divider Text="Advanced" />
 
@@ -123,95 +157,82 @@
 </PageContent>
 
 @code {
-    bool _connected;
-    bool _isPremium;
     bool _awaitingAuth;
+    bool _retrying;
 
-    Timer? _pollTimer;
+    // Deliberately not phrased around the access token expiring — that is renewed automatically
+    // now. Reaching this state means the session itself ended: revoked from the account page,
+    // idled out, or invalidated because the credential was used from somewhere else.
+    const string UnauthorizedSubtitle =
+        "This server's connection to LANCommander HQ has ended and must be set up again.";
 
-    protected override async Task OnInitializedAsync()
+    static string UnreachableSubtitle(HqConnectionSnapshot connection) =>
+        connection.Username is null
+            ? "Your credentials are still stored and will be used once HQ is reachable again."
+            : $"Still linked to {connection.Username}. Your credentials are stored and will be used once HQ is reachable again.";
+
+    Task OnConnectionChanged(HqConnectionSnapshot connection)
     {
-        await CheckStatus();
-    }
-
-    async Task CheckStatus()
-    {
-        _connected = false;
-        _isPremium = false;
-
-        var hqSettings = SettingsProvider.CurrentValue.Server.HQ;
-
-        if (!hqSettings.IsAuthenticated)
-            return;
-
-        try
+        // The callback endpoint verifies before it responds, so a status change is the signal that
+        // the popup finished. This replaces polling the stored token string every two seconds.
+        if (_awaitingAuth)
         {
-            var client = new HQClient(new HQClientOptions
-            {
-                BaseAddress = new Uri(hqSettings.BaseUrl),
-                Token = hqSettings.AccessToken,
-            });
+            _awaitingAuth = false;
 
-            var profile = await client.Auth.GetCurrentUserAsync();
+            if (connection.Status == HqConnectionStatus.Connected)
+                MessageService.Success("Successfully connected to LANCommander HQ!");
+            else if (connection.Status != HqConnectionStatus.Disconnected)
+                MessageService.Error("Connected to LANCommander HQ, but your account could not be verified. Check the server logs for details.");
+        }
 
-            if (profile is not null)
-            {
-                _connected = true;
-                _isPremium = profile.IsPremium;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to verify connection to LANCommander HQ.");
-        }
+        return Task.CompletedTask;
     }
 
     async Task Connect()
     {
         var baseUrl = Settings.Value.Server.HQ.BaseUrl.TrimEnd('/');
-        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/hq/callback";
+        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/HQ/Callback";
         var tokenRelayUrl = $"{baseUrl}/Auth/TokenRelay?returnUrl={Uri.EscapeDataString(callbackUrl)}";
         var loginUrl = $"{baseUrl}/Auth/Login?returnUrl={Uri.EscapeDataString(tokenRelayUrl)}";
 
-        var initialToken = SettingsProvider.CurrentValue.Server.HQ.AccessToken;
+        // Marks this administrator as having started the flow. The callback rejects tokens that
+        // don't correspond to a login someone deliberately began here.
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
+        HqAuthorizationState.Issue(authState.User.Identity?.Name);
 
         _awaitingAuth = true;
 
-        _pollTimer = new Timer(async _ =>
+        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
+    }
+
+    async Task Retry()
+    {
+        _retrying = true;
+
+        try
         {
-            var currentToken = SettingsProvider.CurrentValue.Server.HQ.AccessToken;
-
-            if (!string.IsNullOrWhiteSpace(currentToken) && currentToken != initialToken)
-            {
-                await InvokeAsync(async () =>
-                {
-                    _awaitingAuth = false;
-                    StopPolling();
-                    await CheckStatus();
-
-                    if (_connected)
-                        MessageService.Success("Successfully connected to LANCommander HQ!");
-                    else
-                        MessageService.Error("Connected to LANCommander HQ, but your account could not be verified. Check the server logs for details.");
-
-                    StateHasChanged();
-                });
-            }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+            await HqConnection.VerifyAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to verify connection to LANCommander HQ.");
+        }
+        finally
+        {
+            _retrying = false;
+        }
     }
 
     async Task Disconnect()
     {
-        SettingsProvider.Update(s =>
-        {
-            s.Server.HQ.AccessToken = string.Empty;
-            s.Server.HQ.TokenExpiresAt = null;
-        });
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        _connected = false;
-        _isPremium = false;
+        HqAuthorizationState.Revoke(authState.User.Identity?.Name);
+
+        await HqConnection.DisconnectAsync();
+
+        _awaitingAuth = false;
 
         MessageService.Success("Disconnected from LANCommander HQ.");
     }
@@ -232,16 +253,5 @@
             MessageService.Error("An unknown error occurred.");
             Logger.LogError(ex, "An unknown error occurred.");
         }
-    }
-
-    void StopPolling()
-    {
-        _pollTimer?.Dispose();
-        _pollTimer = null;
-    }
-
-    public void Dispose()
-    {
-        StopPolling();
     }
 }

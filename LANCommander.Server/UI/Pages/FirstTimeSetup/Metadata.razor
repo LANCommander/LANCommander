@@ -1,13 +1,14 @@
 @page "/FirstTimeSetup/Metadata"
 @using LANCommander.Server.Settings
-@using LANCommander.HQ.SDK
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
-@implements IDisposable
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IOptions<Settings> Settings
-@inject HQClient HqClient
+@inject IHqConnectionState HqConnection
+@inject HqAuthorizationStateStore HqAuthorizationState
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -97,55 +98,57 @@ else if (_metadataChoice == MetadataChoice.HQ)
         Connect your server to LANCommander HQ.
     </p>
 
-    @if (_hqConnected)
-    {
-        @if (_hqIsPremium)
+    <HqConnectionProvider Context="connection" OnConnectionChanged="OnHqConnectionChanged">
+        @if (connection.Status == HqConnectionStatus.Connected)
         {
-            <Result Status="ResultStatus.Success" Title="Premium Account" SubTitle="Thank you for supporting LANCommander!">
+            <Result Status="ResultStatus.Success" Title="@(connection.IsPremium ? "Premium Account" : "Connected")" SubTitle="@(connection.IsPremium ? "Thank you for supporting LANCommander!" : "Your server is linked to LANCommander HQ.")">
                 <Extra>
                     <Button Danger OnClick="DisconnectHQ">Unlink</Button>
                 </Extra>
             </Result>
+
+            <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
+                <GridCol>
+                    <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
+                </GridCol>
+                <GridCol>
+                    <Button Type="ButtonType.Primary" OnClick="Next">
+                        Next
+                    </Button>
+                </GridCol>
+            </GridRow>
         }
         else
         {
-            <Result Status="ResultStatus.Success" Title="Connected" SubTitle="Your server is linked to LANCommander HQ.">
-                <Extra>
-                    <Button Danger OnClick="DisconnectHQ">Unlink</Button>
-                </Extra>
-            </Result>
+            @if (connection.Status == HqConnectionStatus.Unauthorized)
+            {
+                <Alert Type="AlertType.Warning" Message="Your LANCommander HQ session has expired. Connect again to continue." ShowIcon="true" Style="margin-bottom: 16px;" />
+            }
+            else if (connection.Status == HqConnectionStatus.Unreachable)
+            {
+                <Alert Type="AlertType.Warning" Message="LANCommander HQ could not be reached. Check your internet connection and try again." ShowIcon="true" Style="margin-bottom: 16px;" />
+            }
+            else
+            {
+                <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" Style="margin-bottom: 16px;" />
+            }
+
+            <Flex Justify="FlexJustify.Center" Style="margin-bottom: 16px;">
+                <Button Type="ButtonType.Primary" OnClick="ConnectHQ" Loading="_awaitingAuth" Size="ButtonSize.Large">Connect to HQ</Button>
+            </Flex>
+
+            <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
+                <GridCol>
+                    <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
+                </GridCol>
+                <GridCol>
+                    <Button Type="ButtonType.Default" OnClick="Next">
+                        Skip
+                    </Button>
+                </GridCol>
+            </GridRow>
         }
-
-        <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
-            <GridCol>
-                <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
-            </GridCol>
-            <GridCol>
-                <Button Type="ButtonType.Primary" OnClick="Next">
-                    Next
-                </Button>
-            </GridCol>
-        </GridRow>
-    }
-    else
-    {
-        <Alert Type="AlertType.Info" Message="Not Connected" ShowIcon="true" Style="margin-bottom: 16px;" />
-
-        <Flex Justify="FlexJustify.Center" Style="margin-bottom: 16px;">
-            <Button Type="ButtonType.Primary" OnClick="ConnectHQ" Loading="_awaitingAuth" Size="ButtonSize.Large">Connect to HQ</Button>
-        </Flex>
-
-        <GridRow Justify="RowJustify.SpaceBetween" Style="margin-top: 16px;">
-            <GridCol>
-                <Button OnClick="() => _metadataChoice = MetadataChoice.None">Back</Button>
-            </GridCol>
-            <GridCol>
-                <Button Type="ButtonType.Default" OnClick="Next">
-                    Skip
-                </Button>
-            </GridCol>
-        </GridRow>
-    }
+    </HqConnectionProvider>
 }
 else if (_metadataChoice == MetadataChoice.OwnProviders)
 {
@@ -195,11 +198,7 @@ else if (_metadataChoice == MetadataChoice.OwnProviders)
     bool Loading = false;
 
     MetadataChoice _metadataChoice = MetadataChoice.None;
-    bool _hqConnected;
-    bool _hqIsPremium;
     bool _awaitingAuth;
-    Timer? _pollTimer;
-    bool _disposed;
 
     enum MetadataChoice
     {
@@ -218,81 +217,52 @@ else if (_metadataChoice == MetadataChoice.OwnProviders)
         }
 
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
-
-        await CheckHQStatus();
     }
 
-    async Task CheckHQStatus()
+    Task OnHqConnectionChanged(HqConnectionSnapshot connection)
     {
-        try
+        // The callback endpoint verifies the new token before it responds, so a status change is
+        // the signal that the popup finished. This replaces the old two-second poll, which assumed
+        // success purely because the stored token string had changed.
+        if (_awaitingAuth)
         {
-            if (!SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
-            {
-                _hqConnected = false;
-                return;
-            }
+            _awaitingAuth = false;
 
-            var profile = await HqClient.Auth.GetCurrentUserAsync();
+            if (connection.Status == HqConnectionStatus.Connected)
+                MessageService.Success("Successfully connected to LANCommander HQ!");
+            else if (connection.Status != HqConnectionStatus.Disconnected)
+                MessageService.Error("Connected to LANCommander HQ, but your account could not be verified. Check the server logs for details.");
+        }
 
-            if (profile is not null)
-            {
-                _hqConnected = true;
-                _hqIsPremium = profile.IsPremium;
-            }
-            else
-                _hqConnected = false;
-        }
-        catch
-        {
-            _hqConnected = false;
-        }
+        return Task.CompletedTask;
     }
 
     async Task ConnectHQ()
     {
         var baseUrl = Settings.Value.Server.HQ.BaseUrl.TrimEnd('/');
-        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/hq/callback";
+        var callbackUrl = NavigationManager.BaseUri.TrimEnd('/') + "/api/HQ/Callback";
         var tokenRelayUrl = $"{baseUrl}/Auth/TokenRelay?returnUrl={Uri.EscapeDataString(callbackUrl)}";
         var loginUrl = $"{baseUrl}/Auth/Login?returnUrl={Uri.EscapeDataString(tokenRelayUrl)}";
 
-        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
+        // Marks this administrator as having started the flow, which the callback requires.
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        HqAuthorizationState.Issue(authState.User.Identity?.Name);
 
         _awaitingAuth = true;
 
-        _pollTimer = new Timer(async _ =>
-        {
-            if (_disposed)
-                return;
-
-            if (SettingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
-            {
-                await InvokeAsync(async () =>
-                {
-                    if (_disposed)
-                        return;
-
-                    _awaitingAuth = false;
-                    _hqConnected = true;
-                    StopPolling();
-
-                    MessageService.Success("Successfully connected to LANCommander HQ!");
-
-                    StateHasChanged();
-                });
-            }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+        await JS.InvokeVoidAsync("open", loginUrl, "hq_auth", "width=600,height=700,menubar=no,toolbar=no");
     }
 
     async Task DisconnectHQ()
     {
-        SettingsProvider.Update(s =>
-        {
-            s.Server.HQ.AccessToken = string.Empty;
-            s.Server.HQ.TokenExpiresAt = null;
-        });
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        _hqConnected = false;
-        _hqIsPremium = false;
+        HqAuthorizationState.Revoke(authState.User.Identity?.Name);
+
+        await HqConnection.DisconnectAsync();
+
+        _awaitingAuth = false;
 
         MessageService.Success("Disconnected from LANCommander HQ.");
     }
@@ -317,17 +287,5 @@ else if (_metadataChoice == MetadataChoice.OwnProviders)
     void Next()
     {
         NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
-    }
-
-    void StopPolling()
-    {
-        _pollTimer?.Dispose();
-        _pollTimer = null;
-    }
-
-    public void Dispose()
-    {
-        _disposed = true;
-        StopPolling();
     }
 }

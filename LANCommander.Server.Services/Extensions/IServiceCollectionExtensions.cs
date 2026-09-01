@@ -10,7 +10,9 @@ using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
 using LANCommander.HQ.SDK;
+using LANCommander.HQ.SDK.Authentication;
 using LANCommander.Server.Services.Providers;
+using LANCommander.Server.Services.HQ;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,16 +53,28 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RedistributableService>();
         services.AddScoped<ConfigToOptionSchemaService>();
         services.AddScoped<ToolService>();
-        services.AddScoped(sp =>
+        services.AddSingleton<IHQTokenStore, SettingsHqTokenStore>();
+        services.AddSingleton(sp =>
         {
             var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
             var hqSettings = settings.CurrentValue.Server.HQ;
+
             return new HQClient(new HQClientOptions
             {
                 BaseAddress = new Uri(hqSettings.BaseUrl),
-                Token = hqSettings.IsAuthenticated ? hqSettings.AccessToken : null,
+                Timeout = TimeSpan.FromSeconds(30),
+                TokenStore = sp.GetRequiredService<IHQTokenStore>(),
+
+                ClientName = string.IsNullOrWhiteSpace(hqSettings.ClientName)
+                    ? $"LANCommander Server ({Environment.MachineName})"
+                    : hqSettings.ClientName,
             });
         });
+        services.AddSingleton<IHqAuthApi, HqAuthApi>();
+        services.AddSingleton<HqConnectionService>();
+        services.AddSingleton<IHqConnectionState>(sp => sp.GetRequiredService<HqConnectionService>());
+        services.AddSingleton<HqAuthorizationStateStore>();
+        services.AddHostedService<HqConnectionMonitor>();
         services.AddScoped<HqMediaGrabber>();
         services.AddScoped<SteamMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();

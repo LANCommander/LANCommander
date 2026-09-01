@@ -10,9 +10,9 @@ namespace LANCommander.Server.Data.Models
         public string? Notes { get; set; }
         public string? OptionSchema { get; set; }
 
-        public ICollection<Archive>? Archives { get; set; }
-        public ICollection<Script>? Scripts { get; set; }
-        public ICollection<Game>? Games { get; set; }
-        public ICollection<Page>? Pages { get; set; }
+        public ICollection<Archive> Archives { get; set; } = [];
+        public ICollection<Script> Scripts { get; set; } = [];
+        public ICollection<Game> Games { get; set; } = [];
+        public ICollection<Page> Pages { get; set; } = [];
     }
 }

@@ -53,7 +53,10 @@ public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
         if (user != null)
             return user;
 
-        roleService.AddAsync(new Role
+        // This must be awaited: AddToRoleAsync below depends on the role row already existing,
+        // and an unawaited fire-and-forget add here previously raced with it intermittently
+        // depending on which test happened to run first and trigger user creation.
+        await roleService.AddAsync(new Role
         {
             Name = RoleService.AdministratorRoleName,
         });

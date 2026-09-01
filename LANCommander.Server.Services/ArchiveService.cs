@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using AutoMapper;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Exceptions;
 using YamlDotNet.Serialization;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
@@ -98,6 +99,9 @@ namespace LANCommander.Server.Services
         
         public override async Task DeleteAsync(Archive archive)
         {
+            await EnsureNotExplicitDefaultAsync(archive);
+            await DeleteRelatedPatchesAsync(archive.Id);
+
             FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
 
             await cache.ExpireGameCacheAsync(archive.GameId);
@@ -108,6 +112,9 @@ namespace LANCommander.Server.Services
 
         public async Task DeleteAsync(Archive archive, StorageLocation storageLocation = null)
         {
+            await EnsureNotExplicitDefaultAsync(archive);
+            await DeleteRelatedPatchesAsync(archive.Id);
+
             if (storageLocation == null)
                 FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
             else
@@ -116,6 +123,68 @@ namespace LANCommander.Server.Services
             await cache.ExpireGameCacheAsync(archive.GameId);
 
             await base.DeleteAsync(archive);
+        }
+
+        /// <summary>
+        /// Service-level backstop for the "clear or reassign the default before deleting it" UX
+        /// rule: rejects deleting an archive that is still a game's explicit
+        /// <see cref="Game.DefaultArchiveId"/>, so a direct API/service call that bypasses the
+        /// admin UI cannot silently leave the game's default pointer to be papered over by the
+        /// database's ON DELETE SET NULL behavior. Always re-reads the current value from the
+        /// database rather than trusting <c>archive.Game</c>, which may be a stale/detached
+        /// navigation property on the entity passed in.
+        /// </summary>
+        private async Task EnsureNotExplicitDefaultAsync(Archive archive)
+        {
+            if (!archive.GameId.HasValue)
+                return;
+
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            var defaultArchiveId = await context.Set<Game>()
+                .Where(g => g.Id == archive.GameId.Value)
+                .Select(g => g.DefaultArchiveId)
+                .FirstOrDefaultAsync();
+
+            if (defaultArchiveId.HasValue && defaultArchiveId.Value == archive.Id)
+                throw new CannotDeleteDefaultArchiveException(archive.GameId.Value, archive.Id);
+        }
+
+        /// <summary>
+        /// Deletes any <see cref="ArchivePatch"/> artifacts (and their backing files) that reference
+        /// the given archive as either endpoint. Patches are derived data with no independent meaning
+        /// once one of the two full archives they link is gone, so they are cleaned up alongside the
+        /// archive itself rather than left as orphaned rows/files.
+        /// </summary>
+        private async Task DeleteRelatedPatchesAsync(Guid archiveId)
+        {
+            using var context = await dbContextFactory.CreateDbContextAsync();
+
+            var patches = await context.Set<ArchivePatch>()
+                .Include(p => p.StorageLocation)
+                .Where(p => p.FromArchiveId == archiveId || p.ToArchiveId == archiveId)
+                .ToListAsync();
+
+            if (patches.Count == 0)
+                return;
+
+            foreach (var patch in patches)
+            {
+                try
+                {
+                    var path = AppPaths.ResolveStorageLocationPath(patch.StorageLocation.Path, patch.ObjectKey);
+
+                    FileHelpers.DeleteIfExists(path);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Could not delete archive patch file for patch {ArchivePatchId}", patch.Id);
+                }
+            }
+
+            context.Set<ArchivePatch>().RemoveRange(patches);
+
+            await context.SaveChangesAsync();
         }
 
         public async Task<SDK.Models.Manifest.Game> ReadManifestAsync(string objectKey)
@@ -414,71 +483,6 @@ namespace LANCommander.Server.Services
             await UpdateAsync(archive);
 
             return archive;
-        }
-
-        public async Task PatchArchiveAsync(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)
-        {
-            var alteredZipPath = await GetArchiveFileLocationAsync(alteredArchive);
-            var patchZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-
-            ZipArchive originalZip = ZipFile.Open(await GetArchiveFileLocationAsync(originalArchive), ZipArchiveMode.Update);
-            ZipArchive alteredZip = ZipFile.OpenRead(alteredZipPath);
-            ZipArchive patchZip = ZipFile.Open(patchZipPath, ZipArchiveMode.Create);
-
-            int i = 0;
-
-            foreach (var entry in alteredZip.Entries)
-            {
-                var originalEntry = originalZip.GetEntry(entry.FullName);
-
-                if (originalEntry == null || originalEntry.Crc32 != entry.Crc32)
-                {
-                    originalEntry?.Delete();
-
-                    var updatedEntry = originalZip.CreateEntry(entry.FullName, compressionLevel);
-                    var patchEntry = patchZip.CreateEntry(entry.FullName, compressionLevel);
-
-                    // Copy the contents of the entry from the altered archive to the original archive
-                    using (var updatedStream = updatedEntry.Open())
-                    using (var alteredStream = entry.Open())
-                    {
-                        await alteredStream.CopyToAsync(updatedStream);
-
-                        _logger?.LogInformation("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
-                    }
-
-                    // Copy the contents of the entry from the altered archive to the patch archive
-                    using (var patchStream = patchEntry.Open())
-                    using (var alteredStream = entry.Open())
-                    {
-                        await alteredStream.CopyToAsync(patchStream);
-
-                        _logger?.LogInformation("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
-                    }
-                }
-
-                i++;
-
-                _logger?.LogInformation("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
-            }
-
-            originalZip.Dispose();
-            alteredZip.Dispose();
-            patchZip.Dispose();
-
-            // Replace the uploaded altered ZIP with the new patch ZIP
-            if (File.Exists(alteredZipPath))
-                File.Delete(alteredZipPath);
-
-            File.Move(patchZipPath, alteredZipPath);
-
-            alteredArchive.CompressedSize = new FileInfo(await GetArchiveFileLocationAsync(alteredArchive)).Length;
-            originalArchive.CompressedSize = new FileInfo(await GetArchiveFileLocationAsync(originalArchive)).Length;
-
-            await UpdateAsync(alteredArchive);
-            await UpdateAsync(originalArchive);
-
-            _logger?.LogInformation("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
         }
     }
 }

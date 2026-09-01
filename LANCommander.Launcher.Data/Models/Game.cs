@@ -15,11 +15,75 @@ namespace LANCommander.Launcher.Data.Models
         public string? Description { get; set; }
         public string? Notes { get; set; }
 
+        // Legacy single-install fields. Retained for transitional compatibility while
+        // GameInstallation-based side-by-side installs are phased in (see Installations below);
+        // do not remove until callers are migrated to installation instances in a later phase.
         public bool Installed { get; set; }
         public string? InstallDirectory { get; set; }
         public string? InstalledVersion { get; set; }
         public DateTime? InstalledOn { get; set; }
         public string? LatestVersion { get; set; }
+
+        /// <summary>
+        /// All local installation instances of this game. A game may have zero (not installed),
+        /// one, or several side-by-side installations, each pinned to its own directory and
+        /// (optionally) server archive.
+        /// </summary>
+        public virtual ICollection<GameInstallation> Installations { get; set; } = new List<GameInstallation>();
+
+        /// <summary>
+        /// Convenience pointer to the currently active/selected installation, kept in sync with
+        /// the corresponding <see cref="GameInstallation.IsSelected"/> flag by
+        /// <c>GameInstallationService</c>. Prefer <see cref="SelectedInstallation"/> or
+        /// <see cref="CurrentInstallation"/> for reads; this FK exists mainly so the selected
+        /// installation can be resolved without loading the whole <see cref="Installations"/>
+        /// collection.
+        /// </summary>
+        public Guid? SelectedInstallationId { get; set; }
+        [ForeignKey(nameof(SelectedInstallationId))]
+        public virtual GameInstallation? SelectedInstallation { get; set; }
+
+        /// <summary>
+        /// True when this game has at least one local installation instance. Prefer this over the
+        /// legacy <see cref="Installed"/> flag once callers are migrated to installation instances.
+        /// </summary>
+        [NotMapped]
+        public bool HasInstallations => Installations != null && Installations.Count > 0;
+
+        /// <summary>
+        /// The installation instance currently marked as selected/active, derived from the loaded
+        /// <see cref="Installations"/> collection. Falls back to <see cref="SelectedInstallation"/>
+        /// when <see cref="Installations"/> has not been loaded, and finally to the single legacy
+        /// installation shape (so existing single-install callers keep working) by synthesizing a
+        /// transient instance from the legacy fields when no installation instances exist yet.
+        /// </summary>
+        [NotMapped]
+        public GameInstallation? CurrentInstallation
+        {
+            get
+            {
+                if (Installations != null && Installations.Count > 0)
+                    return Installations.FirstOrDefault(i => i.IsSelected) ?? Installations.First();
+
+                if (SelectedInstallation != null)
+                    return SelectedInstallation;
+
+                if (Installed && !string.IsNullOrEmpty(InstallDirectory))
+                {
+                    return new GameInstallation
+                    {
+                        GameId = Id,
+                        Game = this,
+                        Version = InstalledVersion,
+                        InstallDirectory = InstallDirectory,
+                        InstalledOn = InstalledOn,
+                        IsSelected = true,
+                    };
+                }
+
+                return null;
+            }
+        }
 
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }

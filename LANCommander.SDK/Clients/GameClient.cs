@@ -120,14 +120,100 @@ namespace LANCommander.SDK.Services
                 .GetAsync<Game>();
         }
 
-        public async Task<Models.Manifest.Game> GetManifestAsync(Guid id)
+        public async Task<Models.Manifest.Game> GetManifestAsync(Guid id, Guid? archiveId = null)
+        {
+            var route = archiveId.HasValue
+                ? $"/api/Games/{id}/Manifest?archiveId={archiveId}"
+                : $"/api/Games/{id}/Manifest";
+
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute(route)
+                .GetAsync<Models.Manifest.Game>();
+        }
+
+        /// <summary>
+        /// Lists a game's selectable archives (version, changelog, sizes, CreatedOn, and
+        /// explicit/effective default flags). Under the immutable-archive model every archive
+        /// belonging to the game is a complete, installable snapshot, so all of them are selectable.
+        /// </summary>
+        public async Task<IEnumerable<Archive>> GetArchivesAsync(Guid gameId)
         {
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{id}/Manifest")
-                .GetAsync<Models.Manifest.Game>();
+                .UseRoute($"/api/Games/{gameId}/Archives")
+                .GetAsync<IEnumerable<Archive>>();
+        }
+
+        /// <summary>
+        /// Resolves a single archive server-side: the explicit <paramref name="archiveId"/> when
+        /// provided (validated to belong to the game), otherwise the game's effective default.
+        /// Callers that will act on the result later (e.g. install-plan generation) should resolve
+        /// exactly once through this method and record the returned archive's ID, rather than
+        /// re-deriving "latest" themselves afterwards.
+        /// </summary>
+        public async Task<Archive> ResolveArchiveAsync(Guid gameId, Guid? archiveId = null)
+        {
+            var route = archiveId.HasValue
+                ? $"/api/Games/{gameId}/Archives/Resolve?archiveId={archiveId}"
+                : $"/api/Games/{gameId}/Archives/Resolve";
+
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute(route)
+                .GetAsync<Archive>();
+        }
+
+        /// <summary>
+        /// Resolves an archive exactly like <see cref="ResolveArchiveAsync"/>, but returns null
+        /// instead of throwing for the two "there is nothing to resolve" answers the server gives:
+        /// 404 (the game has no archives at all, or does not exist) and 400 (the requested archive
+        /// does not belong to this game — including a pinned archive an administrator has since
+        /// deleted). Every other failure — auth, transport, server error — still propagates.
+        ///
+        /// Use this only where an unresolvable archive is a legitimate, non-fatal outcome for the
+        /// operation at hand: skipping an add-on the server has no archive for, or modifying/moving
+        /// an existing installation that never re-downloads its base archive. It deliberately does
+        /// NOT fall back to the game's effective default — silently re-pointing an explicitly
+        /// pinned request at a different archive is exactly what
+        /// <c>ArchiveNotFoundForGameException</c> exists to prevent.
+        /// </summary>
+        public async Task<Archive> TryResolveArchiveAsync(Guid gameId, Guid? archiveId = null)
+        {
+            try
+            {
+                return await ResolveArchiveAsync(gameId, archiveId);
+            }
+            catch (HttpRequestException ex) when (
+                ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.BadRequest)
+            {
+                logger?.LogWarning(
+                    "Could not resolve archive {ArchiveId} for game {GameId} ({StatusCode}); treating it as unavailable",
+                    archiveId, gameId, ex.StatusCode);
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Sets (or, when <paramref name="archiveId"/> is null, clears) a game's explicit default
+        /// archive. Requires an administrator role on the server.
+        /// </summary>
+        public async Task SetDefaultArchiveAsync(Guid gameId, Guid? archiveId)
+        {
+            await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{gameId}/DefaultArchive")
+                .AddBody(new SetDefaultArchiveRequest { ArchiveId = archiveId })
+                .PostAsync();
         }
 
         public async Task<ICollection<Models.Manifest.Game>> GetManifestsAsync(string installDirectory, Guid id)
@@ -330,33 +416,53 @@ namespace LANCommander.SDK.Services
                 .GetAsync<IEnumerable<Script>>();
         }
 
-        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
+        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion, Guid? archiveId = null)
         {
+            var route = $"/api/Games/{id}/CheckForUpdate?version={currentVersion}";
+
+            if (archiveId.HasValue)
+                route += $"&archiveId={archiveId}";
+
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{id}/CheckForUpdate?version={currentVersion}")
+                .UseRoute(route)
                 .GetAsync<bool>();
         }
 
-        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version, Guid? archiveId = null)
         {
+            var route = $"/api/Games/{gameId}/Updates?version={version}";
+
+            if (archiveId.HasValue)
+                route += $"&archiveId={archiveId}";
+
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{gameId}/Updates?version={version}")
+                .UseRoute(route)
                 .GetAsync<IEnumerable<Archive>>();
         }
 
-        private async Task<TrackableStream> StreamArchiveAsync(Guid archiveId)
+        /// <summary>
+        /// Streams one exact archive of a game through the game-scoped download endpoint. This
+        /// route — not the raw <c>/Download/Archive/{id}</c> one — is the only correct way to
+        /// download a <em>game</em> archive: it is the endpoint that enforces
+        /// <c>Server.Archives.AllowInsecureDownloads</c> and validates that the archive actually
+        /// belongs to the requested game (rejecting a cross-game archive id outright rather than
+        /// serving it). Because normal generated install plans always pin an ArchiveId, routing
+        /// pinned downloads anywhere else would mean the policy gate applied to virtually no real
+        /// download at all.
+        /// </summary>
+        private async Task<TrackableStream> StreamArchiveAsync(Guid gameId, Guid archiveId)
         {
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/Download/Archive/{archiveId}")
+                .UseRoute($"/api/Games/{gameId}/Download?archiveId={archiveId}")
                 .StreamAsync();
         }
 
@@ -404,7 +510,7 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                var stream = await StreamArchiveAsync(archiveId);
+                var stream = await StreamArchiveAsync(game.Id, archiveId);
 
                 var monitor = new FileTransferMonitor(stream.Length);
                 var progress = new Progress<ProgressReport>(report =>
@@ -483,6 +589,15 @@ namespace LANCommander.SDK.Services
             {
                 logger?.LogTrace(ex, "User cancelled the download");
                 extractionResult.Canceled = true;
+            }
+            catch (HttpRequestException ex)
+            {
+                // The download itself was refused (unauthorized, archive not found / not this
+                // game's, ...). Surface that as-is rather than mislabeling it as a corrupt archive.
+                logger?.LogError(ex, "Could not download archive {ArchiveId} for game {GameTitle} ({GameId}): {StatusCode}",
+                    archiveId, game.Title, game.Id, ex.StatusCode);
+
+                throw;
             }
             catch (Exception ex)
             {
@@ -724,12 +839,19 @@ namespace LANCommander.SDK.Services
 
             logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
+            // An overlay (expansion/mod/standalone mod) extracts into its base game's directory,
+            // which it does not own — a failed or canceled download there must never be allowed to
+            // delete the base game's installation. Everything else gets its own directory.
+            var destinationOwnership = IsOverlayInstallType(game)
+                ? InstallDestinationOwnership.ExistingInstallation
+                : InstallDestinationOwnership.Fresh;
+
             // Download and extract
             var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
             {
                 logger?.LogTrace("Attempting to download and extract game");
 
-                return await Task.Run(async () => await DownloadAndExtractAsync(game, destination, cancellationToken));
+                return await Task.Run(async () => await DownloadAndExtractAsync(game, destination, cancellationToken, skipFiles: null, archiveId: null, destinationOwnership));
             });
 
             if (!result.Success && !result.Canceled)
@@ -927,57 +1049,25 @@ namespace LANCommander.SDK.Services
         }
 
         /// <summary>
-        /// Generates an install plan for a game, producing a list of queue items and their tasks
-        /// without executing anything.
+        /// Builds the standard ordered task list for a full base-game/standalone-mod install or
+        /// in-place update: verify local files, download+extract the exact
+        /// <paramref name="archiveId"/> snapshot, write the manifest, save scripts, download
+        /// saves, and (when the game has scripts) run install/key-change/name-change scripts,
+        /// plus a manual-download task when the game has manuals. Pure — takes only the
+        /// already-resolved <paramref name="game"/>/archive and makes no network calls of its
+        /// own — so both a fresh install (<see cref="GenerateInstallPlanAsync"/>) and an explicit
+        /// in-place version change (the launcher's InstallService.ChangeVersionAsync) share
+        /// exactly the same task shape. This guarantees an in-place transition can never silently
+        /// "succeed" having skipped the actual download/extract/manifest work a fresh install
+        /// always performs, and that any future change to that task shape can't accidentally
+        /// drift the two flows apart.
         /// </summary>
-        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null, Guid[] toolIds = null)
+        public static List<InstallTaskDefinition> BuildGameInstallTasks(Game game, Guid? archiveId, string archiveVersion)
         {
-            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: gameId={GameId}, installDir={InstallDir}, addonIds={AddonIds}",
-                gameId, installDirectory, addonIds != null ? string.Join(",", addonIds) : "none");
-
-            var plan = new InstallPlan();
-            var game = await GetAsync(gameId);
-
-            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Fetched game {Title} ({Id}), type={Type}, baseGameId={BaseGameId}, redistCount={RedistCount}, scriptCount={ScriptCount}",
-                game?.Title, game?.Id, game?.Type, game?.BaseGameId, game?.Redistributables?.Count() ?? 0, game?.Scripts?.Count() ?? 0);
-
-            if (string.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
-
-            var destination = await GetInstallDirectory(game, installDirectory);
-
-            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
-
-            // Handle standalone mods — the base game must be installed first, and the
-            // standalone mod's archive extracts into the base game's directory. The mod is
-            // still a separate library entity with an independent lifecycle from the base game.
-            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
-            {
-                var baseGame = await GetAsync(game.BaseGameId);
-                var baseDestination = await GetInstallDirectory(baseGame, installDirectory);
-
-                if (!Directory.Exists(baseDestination))
-                {
-                    var basePlan = await GenerateInstallPlanAsync(game.BaseGameId, installDirectory);
-                    plan.Items.AddRange(basePlan.Items);
-                }
-
-                destination = baseDestination;
-            }
-
-            // Base game item
-            var gameItem = new InstallPlanItem
-            {
-                EntityId = game.Id,
-                Title = game.Title,
-                Type = InstallPlanItemType.Game,
-                InstallDirectory = destination,
-                Order = plan.Items.Count,
-            };
-
+            var tasks = new List<InstallTaskDefinition>();
             int taskOrder = 0;
 
-            gameItem.Tasks.Add(new InstallTaskDefinition
+            tasks.Add(new InstallTaskDefinition
             {
                 Type = InstallTaskType.VerifyFiles,
                 Title = "Verify local files",
@@ -987,7 +1077,7 @@ namespace LANCommander.SDK.Services
                 IsCritical = false,
             });
 
-            gameItem.Tasks.Add(new InstallTaskDefinition
+            tasks.Add(new InstallTaskDefinition
             {
                 Type = InstallTaskType.DownloadAndExtract,
                 Title = $"Download {game.Title}",
@@ -996,9 +1086,14 @@ namespace LANCommander.SDK.Services
                 TargetName = game.Title,
                 IsCritical = true,
                 ReportsProgress = true,
+                Parameters = new Dictionary<string, string>
+                {
+                    ["ArchiveId"] = archiveId?.ToString() ?? string.Empty,
+                    ["ArchiveVersion"] = archiveVersion ?? string.Empty,
+                },
             });
 
-            gameItem.Tasks.Add(new InstallTaskDefinition
+            tasks.Add(new InstallTaskDefinition
             {
                 Type = InstallTaskType.WriteManifest,
                 Title = "Write manifest",
@@ -1008,7 +1103,7 @@ namespace LANCommander.SDK.Services
                 IsCritical = true,
             });
 
-            gameItem.Tasks.Add(new InstallTaskDefinition
+            tasks.Add(new InstallTaskDefinition
             {
                 Type = InstallTaskType.WriteScripts,
                 Title = "Save scripts",
@@ -1018,7 +1113,7 @@ namespace LANCommander.SDK.Services
                 IsCritical = false,
             });
 
-            gameItem.Tasks.Add(new InstallTaskDefinition
+            tasks.Add(new InstallTaskDefinition
             {
                 Type = InstallTaskType.DownloadSaves,
                 Title = "Download saves",
@@ -1031,7 +1126,7 @@ namespace LANCommander.SDK.Services
 
             if (game.Scripts != null && game.Scripts.Any())
             {
-                gameItem.Tasks.Add(new InstallTaskDefinition
+                tasks.Add(new InstallTaskDefinition
                 {
                     Type = InstallTaskType.RunInstallScript,
                     Title = "Run install script",
@@ -1041,7 +1136,7 @@ namespace LANCommander.SDK.Services
                     IsCritical = false,
                 });
 
-                gameItem.Tasks.Add(new InstallTaskDefinition
+                tasks.Add(new InstallTaskDefinition
                 {
                     Type = InstallTaskType.RunKeyChangeScript,
                     Title = "Apply key",
@@ -1051,7 +1146,7 @@ namespace LANCommander.SDK.Services
                     IsCritical = false,
                 });
 
-                gameItem.Tasks.Add(new InstallTaskDefinition
+                tasks.Add(new InstallTaskDefinition
                 {
                     Type = InstallTaskType.RunNameChangeScript,
                     Title = "Apply player name",
@@ -1068,7 +1163,7 @@ namespace LANCommander.SDK.Services
                     .Where(m => m.Type == MediaType.Manual)
                     .Select(m => m.Id.ToString());
 
-                gameItem.Tasks.Add(new InstallTaskDefinition
+                tasks.Add(new InstallTaskDefinition
                 {
                     Type = InstallTaskType.DownloadManual,
                     Title = "Download manuals",
@@ -1083,6 +1178,105 @@ namespace LANCommander.SDK.Services
                 });
             }
 
+            return tasks;
+        }
+
+        /// <summary>
+        /// Generates an install plan for a game, producing a list of queue items and their tasks
+        /// without executing anything.
+        /// </summary>
+        /// <param name="requireResolvableArchive">
+        /// Whether the base game's archive target must actually resolve server-side. True (the
+        /// default) for any operation that will really install files — a fresh install or an
+        /// explicit version change — so an unresolvable target fails loudly instead of producing a
+        /// plan that cannot install anything. Pass false for operations against an
+        /// already-installed, archive-pinned installation that never re-download the base archive
+        /// (modify, move): those must keep working even when an administrator has deleted the
+        /// archive the installation is pinned to. In that case <paramref name="archiveId"/> is
+        /// carried onto the plan verbatim — the pinned archive is never reinterpreted as, or
+        /// silently replaced by, the game's current effective default.
+        /// </param>
+        /// <param name="destinationOwnership">
+        /// Whether the resolved destination belongs to this install (a brand-new side-by-side or
+        /// first install) or to an existing installation it is being applied on top of (an in-place
+        /// version change, a legacy exact-directory update, an overlay add-on's shared base game
+        /// directory). Only the caller that resolved the destination knows this, and it decides
+        /// whether a canceled/failed download is allowed to recursively delete that directory, so
+        /// it defaults to the safe <see cref="InstallDestinationOwnership.ExistingInstallation"/>.
+        /// </param>
+        public async Task<InstallPlan> GenerateInstallPlanAsync(Guid gameId, string installDirectory, Guid[] addonIds = null, Guid[] toolIds = null, Guid? archiveId = null, bool useExactInstallDirectory = false, bool requireResolvableArchive = true, InstallDestinationOwnership destinationOwnership = InstallDestinationOwnership.ExistingInstallation)
+        {
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: gameId={GameId}, installDir={InstallDir}, addonIds={AddonIds}",
+                gameId, installDirectory, addonIds != null ? string.Join(",", addonIds) : "none");
+
+            var plan = new InstallPlan();
+            var game = await GetAsync(gameId);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Fetched game {Title} ({Id}), type={Type}, baseGameId={BaseGameId}, redistCount={RedistCount}, scriptCount={ScriptCount}",
+                game?.Title, game?.Id, game?.Type, game?.BaseGameId, game?.Redistributables?.Count() ?? 0, game?.Scripts?.Count() ?? 0);
+
+            // Resolve the base game's archive exactly once, here, and pin it onto the plan item so
+            // execution downloads this exact archive later rather than re-resolving "latest" and
+            // potentially picking up an archive uploaded after the plan was generated.
+            var resolvedArchive = requireResolvableArchive
+                ? await ResolveArchiveAsync(gameId, archiveId)
+                : await TryResolveArchiveAsync(gameId, archiveId);
+
+            // Falling back to the requested id (rather than to the effective default) keeps a
+            // pinned-but-deleted archive pinned: modify/move don't need it, and anything that
+            // genuinely has to download will fail against that exact id instead of quietly
+            // installing a different version than the one the installation is pinned to.
+            var resolvedArchiveId = resolvedArchive?.Id ?? archiveId;
+            var resolvedArchiveVersion = resolvedArchive?.Version;
+
+            if (string.IsNullOrWhiteSpace(installDirectory))
+                installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
+
+            // Callers that have already resolved a collision-safe, exact destination (e.g. the
+            // launcher picking a versioned sibling directory for a side-by-side installation) pass
+            // useExactInstallDirectory so it is used verbatim instead of being re-suffixed with the
+            // game's title, which is only correct for the "installDirectory is a parent folder" case.
+            var destination = useExactInstallDirectory
+                ? installDirectory
+                : await GetInstallDirectory(game, installDirectory);
+
+            logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
+
+            // Handle standalone mods — the base game must be installed first, and the
+            // standalone mod's archive extracts into the base game's directory. The mod is
+            // still a separate library entity with an independent lifecycle from the base game.
+            if (!useExactInstallDirectory && game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
+            {
+                var baseGame = await GetAsync(game.BaseGameId);
+                var baseDestination = await GetInstallDirectory(baseGame, installDirectory);
+
+                if (!Directory.Exists(baseDestination))
+                {
+                    var basePlan = await GenerateInstallPlanAsync(game.BaseGameId, installDirectory, destinationOwnership: InstallDestinationOwnership.Fresh);
+                    plan.Items.AddRange(basePlan.Items);
+                }
+
+                destination = baseDestination;
+
+                // The mod extracts into the base game's directory — whether the base game was just
+                // planned above or was already installed, this item never owns that directory.
+                destinationOwnership = InstallDestinationOwnership.ExistingInstallation;
+            }
+
+            // Base game item
+            var gameItem = new InstallPlanItem
+            {
+                EntityId = game.Id,
+                Title = game.Title,
+                Type = InstallPlanItemType.Game,
+                InstallDirectory = destination,
+                Order = plan.Items.Count,
+                ArchiveId = resolvedArchiveId,
+                ArchiveVersion = resolvedArchiveVersion,
+                DestinationOwnership = destinationOwnership,
+                Tasks = BuildGameInstallTasks(game, resolvedArchiveId, resolvedArchiveVersion),
+            };
+
             plan.Items.Add(gameItem);
 
             // Addon items
@@ -1092,6 +1286,28 @@ namespace LANCommander.SDK.Services
                 {
                     var addon = await GetAsync(addonId);
 
+                    if (addon == null)
+                    {
+                        logger?.LogWarning("[InstallQueue] GenerateInstallPlan: Addon {AddonId} could not be fetched, skipping it", addonId);
+                        continue;
+                    }
+
+                    // Resolve each addon's own effective default archive exactly once so its plan
+                    // item, like the base game's, stays pinned to the archive chosen at
+                    // generation time. An addon the server has no archive for cannot contribute
+                    // anything to this install: its plan item's DownloadAndExtract task is
+                    // critical, so including it would guarantee a failure, and letting the
+                    // resolve call throw would abort the entire base game plan over one
+                    // unavailable addon. Skip just that addon instead — and never substitute a
+                    // different archive for an explicitly selected one.
+                    var resolvedAddonArchive = await TryResolveArchiveAsync(addonId);
+
+                    if (resolvedAddonArchive == null)
+                    {
+                        logger?.LogWarning("[InstallQueue] GenerateInstallPlan: Addon {AddonTitle} ({AddonId}) has no installable archive on the server, skipping it", addon.Title, addonId);
+                        continue;
+                    }
+
                     var addonItem = new InstallPlanItem
                     {
                         EntityId = addon.Id,
@@ -1099,7 +1315,17 @@ namespace LANCommander.SDK.Services
                         Type = InstallPlanItemType.Addon,
                         InstallDirectory = destination,
                         Order = plan.Items.Count,
-                        DependsOnId = game.Id,
+                        // References the base game item's plan-scoped identity, not its raw
+                        // EntityId — two concurrently queued plans for different versions of the
+                        // same game each have their own gameItem.PlanItemId, so an addon item
+                        // always resolves back to the correct sibling base game item.
+                        DependsOnId = gameItem.PlanItemId,
+                        ArchiveId = resolvedAddonArchive.Id,
+                        ArchiveVersion = resolvedAddonArchive.Version,
+                        // An add-on always overlays the base game's directory, which the base game
+                        // item owns. A failed/canceled add-on download must leave the base game's
+                        // files (and any sibling add-on's) completely intact.
+                        DestinationOwnership = InstallDestinationOwnership.ExistingInstallation,
                     };
 
                     int addonTaskOrder = 0;
@@ -1113,6 +1339,11 @@ namespace LANCommander.SDK.Services
                         TargetName = addon.Title,
                         IsCritical = true,
                         ReportsProgress = true,
+                        Parameters = new Dictionary<string, string>
+                        {
+                            ["ArchiveId"] = resolvedAddonArchive.Id.ToString(),
+                            ["ArchiveVersion"] = resolvedAddonArchive.Version ?? string.Empty,
+                        },
                     });
 
                     addonItem.Tasks.Add(new InstallTaskDefinition
@@ -1199,7 +1430,10 @@ namespace LANCommander.SDK.Services
                 foreach (var toolPlanItem in toolPlan.Items)
                 {
                     toolPlanItem.Order = plan.Items.Count;
-                    toolPlanItem.DependsOnId = game.Id;
+                    // References the base game's plan-scoped identity (see the addon items above)
+                    // so tool items resolve to the correct base game item when two versions of the
+                    // same game are queued at once.
+                    toolPlanItem.DependsOnId = gameItem.PlanItemId;
                     plan.Items.Add(toolPlanItem);
                 }
             }
@@ -1216,7 +1450,7 @@ namespace LANCommander.SDK.Services
                         Type = InstallPlanItemType.Redistributable,
                         InstallDirectory = destination,
                         Order = plan.Items.Count,
-                        DependsOnId = game.Id,
+                        DependsOnId = gameItem.PlanItemId,
                     };
 
                     redistItem.Tasks.Add(new InstallTaskDefinition
@@ -1314,7 +1548,10 @@ namespace LANCommander.SDK.Services
 
                 var taskProgress = new InstallTaskProgress
                 {
-                    QueueItemId = planItem.EntityId,
+                    // PlanItemId, not EntityId: two concurrently queued installs of different
+                    // versions of the same game share an EntityId but never a PlanItemId, so this
+                    // is what lets the launcher's queue match progress to the right queue item.
+                    QueueItemId = planItem.PlanItemId,
                     TaskId = taskDef.Id,
                     TaskType = taskDef.Type,
                     TaskTitle = taskDef.Title,
@@ -1337,7 +1574,7 @@ namespace LANCommander.SDK.Services
                             var maxAttempts = Math.Max(1, settingsProvider.CurrentValue.Games.MaxInstallAttempts);
                             var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
                             {
-                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken, skipFiles));
+                                return await Task.Run(async () => await DownloadAndExtractAsync(game, planItem.InstallDirectory, cancellationToken, skipFiles, planItem.ArchiveId, planItem.DestinationOwnership));
                             });
 
                             if (!result.Success && !result.Canceled)
@@ -1362,7 +1599,7 @@ namespace LANCommander.SDK.Services
                         case InstallTaskType.WriteManifest:
                             manifest = await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), (SDK.Models.Manifest.Game)null, async () =>
                             {
-                                return await WriteManifestAsync(planItem.InstallDirectory, game);
+                                return await WriteManifestAsync(planItem.InstallDirectory, game, planItem.ArchiveId);
                             });
 
                             if (manifest == null)
@@ -1435,7 +1672,7 @@ namespace LANCommander.SDK.Services
 
             var taskProgress = new InstallTaskProgress
             {
-                QueueItemId = planItem.EntityId,
+                QueueItemId = planItem.PlanItemId,
                 TaskId = firstTask.Id,
                 TaskType = firstTask.Type,
                 TaskTitle = firstTask.Title,
@@ -1465,7 +1702,7 @@ namespace LANCommander.SDK.Services
                 {
                     OnTaskProgress?.Invoke(new InstallTaskProgress
                     {
-                        QueueItemId = planItem.EntityId,
+                        QueueItemId = planItem.PlanItemId,
                         TaskId = taskDef.Id,
                         TaskType = taskDef.Type,
                         TaskTitle = taskDef.Title,
@@ -1715,6 +1952,17 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> MoveAsync(Game game, string oldInstallDirectory, string newInstallDirectory)
         {
+            // Defense in depth: a caller that mis-resolves the destination (e.g. re-deriving it
+            // from an already-installed directory instead of a fresh parent-folder hint) could
+            // otherwise ask to "move" a directory into itself/a subdirectory of itself. Since the
+            // implementation below copies to newInstallDirectory and then recursively deletes
+            // oldInstallDirectory, a destination equal to or nested under the source would delete
+            // the copies it just made along with the source — total data loss. Reject that
+            // outright rather than ever attempting it.
+            if (IsSameOrNestedPath(oldInstallDirectory, newInstallDirectory))
+                throw new InvalidOperationException(
+                    $"Cannot move install directory '{oldInstallDirectory}' to '{newInstallDirectory}': the destination is the same as, or nested under, the source directory.");
+
             var gameAndAddons = new List<Game>();
 
             _installProgress.Game = game;
@@ -1820,6 +2068,27 @@ namespace LANCommander.SDK.Services
             return newInstallDirectory;
         }
 
+        /// <summary>
+        /// True when <paramref name="candidatePath"/> is the same directory as
+        /// <paramref name="basePath"/>, or a subdirectory nested anywhere under it. Used to guard
+        /// destructive directory operations (e.g. <see cref="MoveAsync(Game, string, string)"/>)
+        /// that delete <paramref name="basePath"/> after copying into <paramref name="candidatePath"/>
+        /// — if the candidate were nested under the base, that delete would also destroy the
+        /// copies it just made.
+        /// </summary>
+        public static bool IsSameOrNestedPath(string basePath, string candidatePath)
+        {
+            var normalizedBase = Path.GetFullPath(basePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var normalizedCandidate = Path.GetFullPath(candidatePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (string.Equals(normalizedBase, normalizedCandidate, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return normalizedCandidate.StartsWith(
+                normalizedBase + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
         public async Task<bool> IsInstalled(string installDirectory, Game game, Guid? addonId = null)
         {
             installDirectory = await GetInstallDirectory(game, installDirectory);
@@ -1829,22 +2098,65 @@ namespace LANCommander.SDK.Services
             return File.Exists(metadataPath);
         }
 
-        public async Task UpdateGameInstallationAsync(string installDirectory, Game game)
+        public async Task UpdateGameInstallationAsync(string installDirectory, Game game, Guid? archiveId = null)
         {
             // update game and scripts locally
-            await WriteManifestAsync(installDirectory, game);
+            await WriteManifestAsync(installDirectory, game, archiveId);
             await WriteScriptsAsync(installDirectory, game);
         }
 
         /// <summary>
-        /// Refreshes the on-disk manifest and scripts for an installed game by fetching the latest
-        /// versions from the server and writing them to the game's install directory.
+        /// Refreshes an installation's on-disk manifest and scripts for its own pinned
+        /// <paramref name="archiveId"/>, but leaves the existing manifest exactly as it is on disk
+        /// when — and only when — the server tells us that exact archive is no longer available
+        /// (404/`ArchiveNotFoundForGameException` → 400). An administrator deleting an archive some
+        /// installation is still pinned to must not break operations that never re-download it
+        /// (add-on/tool changes), and it must certainly not cause that installation to be silently
+        /// re-identified as the game's current effective default: the manifest on disk is the only
+        /// remaining record of what is actually installed there, so preserving it verbatim is the
+        /// only non-destructive answer. Every other failure (auth, transport, server error) still
+        /// propagates so genuine problems are never mistaken for a deleted archive.
         /// </summary>
-        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Guid gameId)
+        /// <returns>
+        /// True when the manifest was refreshed from the server; false when the pinned archive was
+        /// unavailable and the existing on-disk manifest was preserved instead.
+        /// </returns>
+        public async Task<bool> TryUpdateGameInstallationAsync(string installDirectory, Game game, Guid? archiveId = null)
+        {
+            var refreshed = true;
+
+            try
+            {
+                await WriteManifestAsync(installDirectory, game, archiveId);
+            }
+            catch (HttpRequestException ex) when (archiveId.HasValue && (
+                ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.BadRequest))
+            {
+                logger?.LogWarning(ex,
+                    "Archive {ArchiveId} is no longer available for game {GameTitle} ({GameId}); preserving the existing manifest in {InstallDirectory} instead of refreshing it",
+                    archiveId, game?.Title, game?.Id, installDirectory);
+
+                refreshed = false;
+            }
+
+            await WriteScriptsAsync(installDirectory, game);
+
+            return refreshed;
+        }
+
+        /// <summary>
+        /// Refreshes the on-disk manifest and scripts for an installed game by fetching the latest
+        /// versions from the server and writing them to the game's install directory. When
+        /// <paramref name="archiveId"/> is supplied (the installation's own pinned archive), the
+        /// manifest is written for that exact archive rather than the server's effective default,
+        /// so refreshing metadata for a pinned installation never silently reports a different
+        /// version than what is actually on disk.
+        /// </summary>
+        public async Task RefreshManifestAndScriptsAsync(string installDirectory, Guid gameId, Guid? archiveId = null)
         {
             logger?.LogTrace("Refreshing manifest and scripts for game {GameId} in {InstallDirectory}", gameId, installDirectory);
 
-            var manifest = await GetManifestAsync(gameId);
+            var manifest = await GetManifestAsync(gameId, archiveId);
             await ManifestHelper.WriteAsync(manifest, installDirectory);
 
             var scripts = await GetScriptsAsync(gameId);
@@ -1858,11 +2170,11 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private async Task<Models.Manifest.Game> WriteManifestAsync(string installDirectory, Game game)
+        private async Task<Models.Manifest.Game> WriteManifestAsync(string installDirectory, Game game, Guid? archiveId = null)
         {
             logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
             
-            var manifest = await GetManifestAsync(game.Id);
+            var manifest = await GetManifestAsync(game.Id, archiveId);
             
             logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
             
@@ -1945,7 +2257,7 @@ namespace LANCommander.SDK.Services
             return verified;
         }
 
-        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default, HashSet<string> skipFiles = null)
+        private async Task<ExtractionResult> DownloadAndExtractAsync(Game game, string destination, CancellationToken cancellationToken = default, HashSet<string> skipFiles = null, Guid? archiveId = null, InstallDestinationOwnership destinationOwnership = InstallDestinationOwnership.ExistingInstallation)
         {
             if (game == null)
             {
@@ -1956,12 +2268,30 @@ namespace LANCommander.SDK.Services
 
             logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 
+            // Decide, *before* anything is written, whether failure cleanup is allowed to delete
+            // this destination. Cleanup is recursive, so getting this wrong destroys an existing
+            // installation (or, for an overlay add-on, the base game's shared directory) on a
+            // cancel, a dropped connection, or a corrupt archive. Both conditions must hold: the
+            // caller has to declare the destination is a fresh install's own, and the directory
+            // must not already contain anything this extraction did not put there. A fresh
+            // destination may legitimately be pre-created empty, which is why the declared intent
+            // is threaded through rather than inferred solely from Directory.Exists.
+            var ownsDestination = destinationOwnership == InstallDestinationOwnership.Fresh
+                && !DirectoryHasContent(destination);
+
+            if (!ownsDestination)
+                logger?.LogTrace("Destination {Destination} is not owned by this install ({Ownership}); it will never be recursively deleted during cleanup", destination, destinationOwnership);
+
             var extractionResult = new ExtractionResult
             {
                 Canceled = false,
             };
 
-            if (!await CanStreamLatestArchiveAsync(game.Id))
+            // Both branches below go through the game-scoped, policy-gated download endpoint. Only
+            // the unpinned "latest" case pre-checks availability with a HEAD: a pinned archive is
+            // requested by exact id, so a failure there is a real error worth surfacing rather
+            // than something to quietly downgrade into a cancellation.
+            if (!archiveId.HasValue && !await CanStreamLatestArchiveAsync(game.Id))
             {
                 extractionResult.Success = false;
                 extractionResult.Canceled = true;
@@ -1981,7 +2311,9 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                stream = await StreamLatestArchiveAsync(game.Id);
+                stream = archiveId.HasValue
+                    ? await StreamArchiveAsync(game.Id, archiveId.Value)
+                    : await StreamLatestArchiveAsync(game.Id);
 
                 var monitor = new FileTransferMonitor(stream.Length);
                 var progress = new Progress<ProgressReport>(report =>
@@ -2024,7 +2356,17 @@ namespace LANCommander.SDK.Services
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {
                     if (_reader.Cancelled)
+                    {
+                        // Bailing out of the entry loop mid-archive leaves a partial extraction
+                        // behind, so it has to be reported as a cancellation. Falling through as a
+                        // success would write a FileList.txt describing a half-extracted install
+                        // and let the caller persist it as a completed installation.
+                        logger?.LogTrace("The reader was cancelled after {EntriesProcessed} entries for game {GameTitle} ({GameId})", entriesProcessed, game.Title, game.Id);
+
+                        extractionResult.Canceled = true;
+
                         break;
+                    }
 
                     try
                     {
@@ -2089,25 +2431,35 @@ namespace LANCommander.SDK.Services
                 logger?.LogTrace(ex, "User cancelled the download");
 
                 extractionResult.Canceled = true;
+            }
+            catch (HttpRequestException ex)
+            {
+                // The download itself was refused (unauthorized, archive not found / not this
+                // game's, ...). Surface that as-is rather than mislabeling it as a corrupt archive.
+                logger?.LogError(ex, "Could not download archive {ArchiveId} for game {GameTitle} ({GameId}) to {Destination}: {StatusCode}",
+                    archiveId, game.Title, game.Id, destination, ex.StatusCode);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
+                CleanUpFailedExtraction(destination, ownsDestination, game, "failed download");
 
-                    Directory.Delete(destination, true);
-                }
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                // A cancellation observed through the CancellationToken rather than through the
+                // reader's own Cancel(). It must stay classified as a cancellation: rethrowing it
+                // as a generic extraction failure would make RetryHelper retry a download the user
+                // just canceled, and would surface "is the archive corrupted?" to the caller
+                // instead of a cancellation.
+                logger?.LogTrace(ex, "The download was canceled for game {GameTitle} ({GameId})", game.Title, game.Id);
+
+                extractionResult.Canceled = true;
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Could not extract game {GameTitle} ({GameId}) to {Destination}. Failed on entry {EntryKey} (entry #{EntriesProcessed}) at {Position}/{Length} bytes with {ExceptionType} (HResult 0x{HResult:X8})",
                     game.Title, game.Id, destination, currentEntryKey, entriesProcessed, stream?.Position, stream?.Length, ex.GetType().Name, ex.HResult);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpFailedExtraction(destination, ownsDestination, game, "bad install");
 
                 throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
             }
@@ -2127,16 +2479,90 @@ namespace LANCommander.SDK.Services
 
                 logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }
+            else
+            {
+                // Covers every way this extraction can be canceled — the reader throwing, the
+                // cancellation token being observed, and the reader reporting cancellation from
+                // inside the entry loop — all of which leave a partial extraction behind.
+                CleanUpFailedExtraction(destination, ownsDestination, game, "canceled install");
+            }
 
             return extractionResult;
         }
+
+        /// <summary>
+        /// True when <paramref name="directory"/> exists and already contains anything at all.
+        /// Deliberately treats an unreadable/erroring directory as "has content" so a failure to
+        /// inspect it can never be what authorizes a recursive delete.
+        /// </summary>
+        private bool DirectoryHasContent(string directory)
+        {
+            try
+            {
+                return Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not inspect {Directory} to determine install destination ownership; treating it as pre-existing", directory);
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Removes the partial results of a canceled/failed extraction, but only from a destination
+        /// this extraction actually owns (see <see cref="InstallDestinationOwnership"/>). A
+        /// destination that belongs to an existing installation — an in-place version change, a
+        /// legacy exact-directory update, or an overlay add-on sharing its base game's folder — is
+        /// left completely untouched: a canceled download or a corrupt archive must never be able
+        /// to delete a working installation. Partial files may be left behind in that case, which
+        /// the next install/repair overwrites.
+        /// </summary>
+        private void CleanUpFailedExtraction(string destination, bool ownsDestination, Game game, string reason)
+        {
+            if (!ownsDestination)
+            {
+                logger?.LogWarning("Not cleaning up {Destination} after {Reason} for game {GameTitle} ({GameId}): the directory belongs to an existing installation and may only be overwritten, never deleted",
+                    destination, reason, game?.Title, game?.Id);
+
+                return;
+            }
+
+            try
+            {
+                if (Directory.Exists(destination))
+                {
+                    logger?.LogTrace("Cleaning up orphaned files in {Destination} after {Reason}", destination, reason);
+
+                    Directory.Delete(destination, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not clean up {Destination} after {Reason}", destination, reason);
+            }
+        }
+
+        /// <summary>
+        /// True when this game type installs as an overlay into its base game's existing
+        /// directory (Expansion/Mod/StandaloneMod with a real <see cref="Game.BaseGameId"/>)
+        /// rather than getting its own independent install directory. This is the single source
+        /// of truth for that sharing rule — mirrored exactly by <see cref="GetInstallDirectory"/>
+        /// below — so callers deciding whether to divert a destination to a collision-safe
+        /// sibling path (see <c>InstallService.Add</c>) can never disagree with how the
+        /// destination is actually resolved.
+        /// </summary>
+        public static bool IsOverlayInstallType(Game game) =>
+            game != null
+            && game.BaseGameId != Guid.Empty
+            && (game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod);
 
         public async Task<string> GetInstallDirectory(Game game, string installDirectory)
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
 
-            if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
+            if (IsOverlayInstallType(game))
             {
                 // modify installation passes the original installation of the game including the game folder, use the existing folder,
                 // otherwise a name change could lead to installing files into differnt folder
@@ -2777,34 +3203,82 @@ namespace LANCommander.SDK.Services
         }
 
         /// <summary>
-        /// Downloads the specified files for multiple games (base game, mods, expansions).
+        /// Downloads the specified files for multiple games (base game, mods, expansions) from
+        /// each game's effective default archive. Back-compat overload — prefer the
+        /// archive-aware overload so files belonging to an installation pinned to a
+        /// non-default archive are repaired from that exact archive.
         /// </summary>
         /// <param name="installDirectory">The directory where the games are installed.</param>
         /// <param name="entries">
         /// A collection of tuples containing the game ID and the corresponding file path.
         /// </param>
-        public async Task DownloadFilesAsync(string installDirectory, IEnumerable<(Guid GameId, string FilePath)> entries)
+        public Task DownloadFilesAsync(string installDirectory, IEnumerable<(Guid GameId, string FilePath)> entries)
         {
-            var groups = entries.GroupBy(x => x.GameId);
+            return DownloadFilesAsync(
+                installDirectory,
+                entries.Select(x => (x.GameId, (Guid?)null, x.FilePath)));
+        }
+
+        /// <summary>
+        /// Downloads the specified files for multiple games (base game, mods, expansions), each
+        /// from the exact archive supplied alongside it. A null ArchiveId means "archive identity
+        /// is not known for this game here" and falls back to its effective default archive.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the games are installed.</param>
+        /// <param name="entries">
+        /// A collection of tuples containing the game ID, the archive to pull the file from (or
+        /// null for the game's effective default), and the corresponding file path.
+        /// </param>
+        public async Task DownloadFilesAsync(string installDirectory, IEnumerable<(Guid GameId, Guid? ArchiveId, string FilePath)> entries, CancellationToken cancellationToken = default)
+        {
+            var groups = entries.GroupBy(x => (x.GameId, x.ArchiveId));
+
             foreach (var group in groups)
             {
-                await DownloadFilesAsync(installDirectory, group.Key, group.Select(x => x.FilePath).ToList());
+                await DownloadFilesAsync(
+                    installDirectory,
+                    group.Key.GameId,
+                    group.Select(x => x.FilePath).ToList(),
+                    group.Key.ArchiveId,
+                    cancellationToken);
             }
         }
 
         /// <summary>
-        /// Downloads the specified files for a single game.
+        /// Downloads the specified files for a single game from its effective default archive.
+        /// Back-compat overload — prefer the archive-aware overload for anything repairing an
+        /// installation that may be pinned to a non-default archive.
         /// </summary>
         /// <param name="installDirectory">The directory where the game is installed.</param>
         /// <param name="gameId">The unique identifier of the game.</param>
         /// <param name="entries">A collection of file paths to download.</param>
-        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, CancellationToken cancellationToken = default)
+        public Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, CancellationToken cancellationToken = default)
+        {
+            return DownloadFilesAsync(installDirectory, gameId, entries, archiveId: null, cancellationToken);
+        }
+
+        /// <summary>
+        /// Downloads the specified files for a single game out of one exact archive.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the game is installed.</param>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <param name="entries">A collection of file paths to download.</param>
+        /// <param name="archiveId">
+        /// The exact archive to extract the files from — normally the installation's own pinned
+        /// archive. Pulling from the game's effective default instead (what a null here falls back
+        /// to) would repair a non-default installation with files from a completely different
+        /// version, silently corrupting it. Routed through the game-scoped, policy-gated download
+        /// endpoint (see <see cref="StreamArchiveAsync"/>), exactly like a pinned install.
+        /// </param>
+        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, Guid? archiveId, CancellationToken cancellationToken = default)
         {
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
             try
             {
-                var stream = await StreamLatestArchiveAsync(gameId);
+                var stream = archiveId.HasValue
+                    ? await StreamArchiveAsync(gameId, archiveId.Value)
+                    : await StreamLatestArchiveAsync(gameId);
                 _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
@@ -2856,7 +3330,24 @@ namespace LANCommander.SDK.Services
             }
         }
 
+        /// <summary>
+        /// Restores base-game/add-on files that an add-on install/uninstall removed or overwrote,
+        /// pulling each game's replacements from its effective default archive. Back-compat
+        /// overload — prefer the archive-aware overload.
+        /// </summary>
         public Task RestoreFilesAsync(string installDirectory, Guid gameId, GameInstallationFileList fileListRemoved, GameInstallationFileList fileListAdded)
+        {
+            return RestoreFilesAsync(installDirectory, gameId, fileListRemoved, fileListAdded, archiveId: null);
+        }
+
+        /// <summary>
+        /// Restores base-game/add-on files that an add-on install/uninstall removed or overwrote.
+        /// </summary>
+        /// <param name="archiveId">
+        /// The installation's own pinned archive, used for the base game's own files. See the
+        /// <see cref="RestoreFilesAsync(string, Guid, IEnumerable{string}, Guid?)"/> overload.
+        /// </param>
+        public Task RestoreFilesAsync(string installDirectory, Guid gameId, GameInstallationFileList fileListRemoved, GameInstallationFileList fileListAdded, Guid? archiveId)
         {
             var listRemoved = fileListRemoved?.ToFlatDistinctFileEntries() ?? [];
             var listAdded = fileListAdded?.ToFlatDistinctFileEntries() ?? [];
@@ -2864,7 +3355,20 @@ namespace LANCommander.SDK.Services
             var uniqueList = listRemoved.ExceptBy(listAdded.Select(x => x.EntryPath), x => x.EntryPath, StringComparer.OrdinalIgnoreCase);
             var possibleRestoreEntries = uniqueList.Select(x => x.EntryPath).ToArray();
             
-            return RestoreFilesAsync(installDirectory, gameId, possibleRestoreEntries);
+            return RestoreFilesAsync(installDirectory, gameId, possibleRestoreEntries, archiveId);
+        }
+
+        /// <summary>
+        /// Restores invalidated files matching the specified files, pulling the base game's own
+        /// files from its effective default archive. Back-compat overload — prefer the
+        /// archive-aware overload.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the game is installed.</param>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <param name="entries">A collection of file paths to check and compare with invalidated files.</param>
+        public Task RestoreFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
+        {
+            return RestoreFilesAsync(installDirectory, gameId, entries, archiveId: null);
         }
 
         /// <summary>
@@ -2873,7 +3377,16 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The directory where the game is installed.</param>
         /// <param name="gameId">The unique identifier of the game.</param>
         /// <param name="entries">A collection of file paths to check and compare with invalidated files.</param>
-        public async Task RestoreFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
+        /// <param name="archiveId">
+        /// The archive <paramref name="gameId"/> is actually installed from — i.e. the
+        /// installation's own pinned archive. Only conflicts belonging to the base game itself can
+        /// use it: repairing them from the game's *effective default* archive instead would
+        /// overwrite a pinned, non-default installation with files from a different version.
+        /// Conflicts owned by another game (an add-on overlaying the same directory) keep the
+        /// previous effective-default behavior, since their own archive identity is not knowable
+        /// from here.
+        /// </param>
+        public async Task RestoreFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries, Guid? archiveId)
         {
             // early out if no files were removed which would require checking
             if (entries == null || !entries.Any())
@@ -2885,9 +3398,86 @@ namespace LANCommander.SDK.Services
             // build list of files to download by matching up removed files with conflicting files, split by game/addon
             var downloadEntries = conflicts
                 .IntersectBy(entries, x => x.FullName, StringComparer.OrdinalIgnoreCase)
-                .Select(x => (x.GameId ?? gameId, x.FullName)).ToArray();
+                .Select(x =>
+                {
+                    var conflictGameId = x.GameId ?? gameId;
+
+                    return (
+                        GameId: conflictGameId,
+                        ArchiveId: conflictGameId == gameId ? archiveId : null,
+                        FilePath: x.FullName);
+                })
+                .ToArray();
 
             await DownloadFilesAsync(installDirectory, downloadEntries);
+        }
+
+        /// <summary>
+        /// Whether every archive listing a post-removal file restore of this installation will need
+        /// is still retrievable from the server.
+        ///
+        /// <see cref="RestoreFilesAsync(string, Guid, IEnumerable{string}, Guid?)"/> puts back files
+        /// an add-on removal deleted or overwrote, and it can only do so by listing (and then
+        /// downloading from) the exact archives named by the on-disk manifests. It does that through
+        /// <see cref="ValidateFilesAsync"/>, which queries the archive contents of the base game
+        /// *and of every add-on manifest still on disk* — so a single missing listing anywhere in
+        /// that set makes the restore throw. Once an administrator deletes one of those archives
+        /// there is no safe source for the affected files at all — the game's current default
+        /// archive is a different version and would silently corrupt the installation — so callers
+        /// that are about to mutate the installation on disk must check this *first* and refuse,
+        /// rather than deleting files they then cannot restore.
+        ///
+        /// <paramref name="removingAddonIds"/> lists add-ons this operation is about to uninstall.
+        /// Their manifests are deleted by the uninstall before the restore runs, so the restore
+        /// never queries their archives — a deleted archive belonging to an add-on that is on its
+        /// way out must not block the very removal that gets rid of it.
+        ///
+        /// Returns true when nothing is installed to restore (no manifest on disk), since restoring
+        /// is a no-op in that case. Only the server's two "that exact archive is gone" answers
+        /// (404, and 400 for <c>ArchiveNotFoundForGameException</c>) count as unavailable; every
+        /// other failure — auth, transport, server error — propagates, so a transient outage is
+        /// never mistaken for a deleted archive.
+        /// </summary>
+        public async Task<bool> CanRestoreInstallationFilesAsync(string installDirectory, Guid gameId, IEnumerable<Guid> removingAddonIds = null)
+        {
+            // Deliberately the same enumeration ValidateFilesAsync/GetGameInstallationArchivesEntries
+            // use, so the probed set is exactly the set the restore will query — no more, no less.
+            var manifests = await GetManifestsAsync(installDirectory, gameId);
+
+            if (manifests == null || manifests.Count == 0)
+                return true;
+
+            var removing = new HashSet<Guid>(removingAddonIds ?? Enumerable.Empty<Guid>());
+
+            foreach (var manifest in manifests)
+            {
+                if (manifest == null)
+                    continue;
+
+                if (manifest.Id != gameId && removing.Contains(manifest.Id))
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(manifest.Version))
+                {
+                    logger?.LogWarning("Installed manifest {ManifestId} in {InstallDirectory} has no version recorded, so its archive contents cannot be identified for a file restore", manifest.Id, installDirectory);
+
+                    return false;
+                }
+
+                try
+                {
+                    await GetGameInstallationArchiveEntries(gameId, manifest);
+                }
+                catch (HttpRequestException ex) when (
+                    ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    logger?.LogWarning(ex, "Archive contents for version {Version} of game {ManifestId} are no longer available ({StatusCode}); files of installation {InstallDirectory} could not be restored from it", manifest.Version, manifest.Id, ex.StatusCode, installDirectory);
+
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)

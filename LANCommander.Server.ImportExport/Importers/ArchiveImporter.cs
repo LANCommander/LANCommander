@@ -95,6 +95,8 @@ public class ArchiveImporter(
             
             archive = await archiveService.AddAsync(newArchive);
 
+            await RestoreDefaultArchiveAsync(record);
+
             return true;
         }
         catch (Exception ex)
@@ -104,6 +106,27 @@ public class ArchiveImporter(
             
             logger.LogError(ex, "Could not add archive | {Key}", GetKey(record));
             return false;
+        }
+    }
+
+    /// <summary>
+    /// If the imported manifest is a Game that recorded this archive as its default, restore that
+    /// selection now that the archive has been imported. This must happen after the archive record
+    /// exists in the database, since <see cref="GameService.SetDefaultArchiveAsync"/> validates that
+    /// the archive belongs to the game. Failures here are logged but do not fail the archive import.
+    /// </summary>
+    private async Task RestoreDefaultArchiveAsync(Archive record)
+    {
+        if (ImportContext.Manifest is Game game && game.DefaultArchiveId.HasValue && game.DefaultArchiveId.Value == record.Id)
+        {
+            try
+            {
+                await gameService.SetDefaultArchiveAsync(game.Id, record.Id);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Could not restore default archive | {Key}", GetKey(record));
+            }
         }
     }
 
@@ -151,6 +174,8 @@ public class ArchiveImporter(
             }
             
             await archiveService.UpdateAsync(existing);
+
+            await RestoreDefaultArchiveAsync(archive);
 
             return true;
         }

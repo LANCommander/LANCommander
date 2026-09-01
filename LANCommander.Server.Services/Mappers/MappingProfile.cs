@@ -109,8 +109,8 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Engine, SDK.Models.Manifest.Engine>().ReverseMap();
             CreateMap<Data.Models.Game, SDK.Models.Manifest.Game>()
                 .ForMember(dest => dest.Version, opt => opt.MapFrom(src =>
-                    src.Archives != null && src.Archives.Any()
-                        ? src.Archives.OrderByDescending(a => a.CreatedOn).First().Version
+                    GameService.ResolveEffectiveDefaultArchive(src) != null
+                        ? GameService.ResolveEffectiveDefaultArchive(src).Version
                         : null))
                 .ForMember(dest => dest.BaseGameId, opt => opt.MapFrom(src => src.BaseGameId ?? Guid.Empty))
                 .ForMember(dest => dest.BaseGame, opt => opt.MapFrom(src => src.BaseGame != null ? src.BaseGame.Title : null))

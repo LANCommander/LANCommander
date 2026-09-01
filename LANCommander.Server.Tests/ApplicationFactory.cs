@@ -64,10 +64,14 @@ public class ApplicationFactory<TProgram>
             #region JWT signing key alignment
             // The server snapshots the JWT signing secret from configuration when AddIdentity runs,
             // but ValidateSettings regenerates the secret at startup whenever it is missing (which is
-            // always the case in tests, where no persisted settings file provides one). That leaves the
-            // bearer validation key pinned to the empty pre-regeneration value while tokens are signed
-            // with the regenerated secret, so every authenticated API call fails with 401. Re-bind the
-            // validation key from the live settings provider once the regenerated secret exists.
+            // always the case in tests, where no persisted settings file provides one). Worse, the
+            // secret can be regenerated more than once during a long test run (e.g. via repeated
+            // settings saves triggered by storage-location setup), so pinning the validation key to a
+            // single snapshot (even one taken after the first regeneration) can still go stale later
+            // and start failing every bearer-token validation with IDX10517 (signature/kid mismatch).
+            // Use a resolver that reads the *live* secret from the settings provider on every
+            // validation instead of a one-time snapshot, so it can never drift out of sync with
+            // whatever secret AuthenticationService most recently signed tokens with.
             services.AddSingleton<IPostConfigureOptions<JwtBearerOptions>, AlignJwtSigningKey>();
             #endregion
         });
@@ -78,10 +82,11 @@ public class ApplicationFactory<TProgram>
     {
         public void PostConfigure(string? name, JwtBearerOptions options)
         {
-            var secret = settingsProvider.CurrentValue.Server.Authentication.TokenSecret;
-
-            options.TokenValidationParameters.IssuerSigningKey =
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+            options.TokenValidationParameters.IssuerSigningKeyResolver = (_, _, _, _) =>
+            [
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(settingsProvider.CurrentValue.Server.Authentication.TokenSecret))
+            ];
         }
     }
 }

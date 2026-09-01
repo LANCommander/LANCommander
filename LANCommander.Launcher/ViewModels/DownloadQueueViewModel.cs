@@ -489,7 +489,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
         
-        await shell.NavigateToGameByIdAsync(item.Id);
+        await shell.NavigateToGameByIdAsync(item.EntityId);
     }
 
     [RelayCommand]
@@ -499,7 +499,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
         var shell = _serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
         
-        await shell.NavigateToGameByIdAsync(item.Id);
+        await shell.NavigateToGameByIdAsync(item.EntityId);
         await shell.GameDetailViewModel.ActionBar.PlayCommand.ExecuteAsync(null);
     }
 
@@ -519,6 +519,15 @@ public partial class InstallQueueItemViewModel : ViewModelBase
 {
     [ObservableProperty]
     private Guid _id;
+
+    /// <summary>
+    /// The underlying game/tool/redistributable id (IInstallQueueItem.EntityId) — use this for
+    /// server lookups and library navigation. Id is a distinct per-queue-item identity that two
+    /// entries can share an EntityId with (e.g. installing two versions of the same game) but
+    /// never collides on Id.
+    /// </summary>
+    [ObservableProperty]
+    private Guid _entityId;
 
     [ObservableProperty]
     private string _title = string.Empty;
@@ -664,6 +673,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     {
         InitSpeedChart();
         Id = item.Id;
+        EntityId = item.EntityId;
         Title = item.Title;
         CoverId = item.CoverId;
         IconId = item.IconId;

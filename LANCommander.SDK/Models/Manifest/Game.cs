@@ -23,6 +23,11 @@ namespace LANCommander.SDK.Models.Manifest
         public Engine Engine { get; set; }
         public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
         public virtual ICollection<Archive> Archives { get; set; } = new List<Archive>();
+        /// <summary>
+        /// The explicitly configured default archive for this game, or null when no explicit
+        /// default is set (in which case the effective default is the newest archive).
+        /// </summary>
+        public Guid? DefaultArchiveId { get; set; }
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<GameCustomField> CustomFields { get; set; } = new List<GameCustomField>();
         public virtual ICollection<Company> Developers { get; set; } = new List<Company>();

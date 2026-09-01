@@ -2,6 +2,7 @@ using System.IO.Compression;
 using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
@@ -38,6 +39,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.Categories);
                 await context.UpdateRelationshipAsync(g => g.Collections);
                 await context.UpdateRelationshipAsync(g => g.CustomFields);
+                await context.UpdateRelationshipAsync(g => g.DefaultArchive);
                 await context.UpdateRelationshipAsync(g => g.Developers);
                 await context.UpdateRelationshipAsync(g => g.Engine);
                 await context.UpdateRelationshipAsync(g => g.Genres);
@@ -79,6 +81,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.Categories);
                 await context.UpdateRelationshipAsync(g => g.Collections);
                 await context.UpdateRelationshipAsync(g => g.CustomFields);
+                await context.UpdateRelationshipAsync(g => g.DefaultArchive);
                 await context.UpdateRelationshipAsync(g => g.Developers);
                 await context.UpdateRelationshipAsync(g => g.Engine);
                 await context.UpdateRelationshipAsync(g => g.Genres);
@@ -106,6 +109,14 @@ namespace LANCommander.Server.Services
                 g => g.Media)
                 .GetAsync(game.Id);
 
+            // Clear the explicit default-archive pointer before deleting the game's archives:
+            // ArchiveService rejects deleting a game's current explicit default so bypassing the
+            // admin UI can't leave that pointer dangling, but the whole Game row (and with it
+            // DefaultArchiveId) is being removed here anyway, so clearing it first is a
+            // deliberate, intentional "clear" rather than a bypass of that protection.
+            if (game.DefaultArchiveId.HasValue)
+                await SetDefaultArchiveAsync(game.Id, null);
+
             if (game.Archives != null)
                 foreach (var archive in game.Archives.ToList())
                     await archiveService.DeleteAsync(archive);
@@ -125,7 +136,43 @@ namespace LANCommander.Server.Services
 
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
-            var game = await Query(q =>
+            var game = await GetManifestGameEntityAsync(id);
+
+            return await GetManifestAsync(game);
+        }
+
+        /// <summary>
+        /// Builds the game manifest for a specific archive rather than the effective default. The
+        /// resulting manifest's <see cref="SDK.Models.Manifest.Game.Version"/> reflects the
+        /// selected archive, not whichever archive would otherwise resolve as the default.
+        /// </summary>
+        /// <exception cref="ArchiveNotFoundForGameException">
+        /// <paramref name="archiveId"/> does not identify an archive belonging to the game.
+        /// </exception>
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id, Guid? archiveId)
+        {
+            if (!archiveId.HasValue)
+                return await GetManifestAsync(id);
+
+            var game = await GetManifestGameEntityAsync(id);
+
+            if (game == null)
+                return null;
+
+            var archive = game.Archives?.FirstOrDefault(a => a.Id == archiveId.Value);
+
+            if (archive == null)
+                throw new ArchiveNotFoundForGameException(id, archiveId.Value);
+
+            var manifest = await GetManifestAsync(game);
+            manifest.Version = archive.Version;
+
+            return manifest;
+        }
+
+        private async Task<Game> GetManifestGameEntityAsync(Guid id)
+        {
+            return await Query(q =>
             {
                 return q
                     .AsNoTracking()
@@ -151,8 +198,6 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Tags)
                     .Include(g => g.ExternalIds);
             }).GetAsync(id);
-
-            return await GetManifestAsync(game);
         }
         
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
@@ -242,16 +287,36 @@ namespace LANCommander.Server.Services
             return await GetCustomFieldAsync(id, name);
         }
 
+        /// <summary>
+        /// Resolves a game's effective default archive: the explicit <see cref="Game.DefaultArchiveId"/>
+        /// when it identifies an archive that belongs to this game, otherwise the newest archive by
+        /// <see cref="Archive.CreatedOn"/>. Returns null when the game has no archives at all.
+        /// </summary>
+        /// <param name="game">A game with its <see cref="Game.Archives"/> collection loaded.</param>
+        public static Archive? ResolveEffectiveDefaultArchive(Game game)
+        {
+            if (game?.Archives == null || !game.Archives.Any())
+                return null;
+
+            if (game.DefaultArchiveId.HasValue)
+            {
+                var explicitDefault = game.Archives.FirstOrDefault(a => a.Id == game.DefaultArchiveId.Value);
+
+                if (explicitDefault != null)
+                    return explicitDefault;
+            }
+
+            return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+        }
+
         public async Task<Archive> GetLatestArchiveAsync(Guid id)
         {
             var game = await AsNoTracking()
                 .AsSplitQuery()
                 .Include(g => g.Archives)
                 .GetAsync(id);
-            
-            var latestArchive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-            
-            return latestArchive;
+
+            return ResolveEffectiveDefaultArchive(game);
         }
 
         public async Task<string> GetVersionAsync(Guid id)
@@ -261,7 +326,101 @@ namespace LANCommander.Server.Services
             return latestArchive?.Version ?? String.Empty;
         }
 
-        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        /// <summary>
+        /// Resolves a single archive server-side, either the explicitly requested
+        /// <paramref name="archiveId"/> (validated to belong to the game) or, when omitted, the
+        /// game's effective default. Callers such as install-plan generation must resolve exactly
+        /// once through this method and record the returned archive's ID rather than re-deriving
+        /// "latest" themselves later.
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">The game does not exist.</exception>
+        /// <exception cref="ArchiveNotFoundForGameException">
+        /// <paramref name="archiveId"/> was provided but does not identify an archive belonging to
+        /// the game.
+        /// </exception>
+        public async Task<Archive> ResolveArchiveAsync(Guid gameId, Guid? archiveId)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .GetAsync(gameId);
+
+            if (game == null)
+                throw new KeyNotFoundException($"Game '{gameId}' was not found");
+
+            if (archiveId.HasValue)
+            {
+                var requested = game.Archives?.FirstOrDefault(a => a.Id == archiveId.Value);
+
+                if (requested == null)
+                    throw new ArchiveNotFoundForGameException(gameId, archiveId.Value);
+
+                return requested;
+            }
+
+            return ResolveEffectiveDefaultArchive(game);
+        }
+
+        /// <summary>
+        /// Returns a game's selectable full archives (every stored archive is a complete,
+        /// installable snapshot under the immutable-archive model) alongside the game entity so
+        /// callers can compare against <see cref="Game.DefaultArchiveId"/> and the effective
+        /// default. Returns a null <c>Game</c> when the game does not exist.
+        /// </summary>
+        public async Task<(Game? Game, Archive? EffectiveDefault)> GetSelectableArchivesAsync(Guid gameId)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .GetAsync(gameId);
+
+            if (game == null)
+                return (null, null);
+
+            return (game, ResolveEffectiveDefaultArchive(game));
+        }
+
+        /// <summary>
+        /// Sets (or clears) the game's explicit default archive. Validates that the archive belongs
+        /// to the game before assigning it; passing null clears the explicit default so the effective
+        /// default falls back to the newest archive by <c>CreatedOn</c>.
+        /// </summary>
+        /// <exception cref="InvalidDefaultArchiveException">
+        /// Thrown when <paramref name="archiveId"/> does not identify an archive belonging to the game.
+        /// </exception>
+        public async Task<Game> SetDefaultArchiveAsync(Guid gameId, Guid? archiveId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var game = await context.Games
+                .Include(g => g.Archives)
+                .FirstOrDefaultAsync(g => g.Id == gameId);
+
+            if (game == null)
+                throw new KeyNotFoundException($"Game '{gameId}' was not found");
+
+            if (archiveId.HasValue && (game.Archives == null || game.Archives.All(a => a.Id != archiveId.Value)))
+                throw new InvalidDefaultArchiveException(gameId, archiveId.Value);
+
+            game.DefaultArchiveId = archiveId;
+            game.UpdatedOn = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            await cache.ExpireGameCacheAsync(gameId);
+
+            return game;
+        }
+
+        /// <summary>
+        /// Returns archives newer than whatever is currently installed. When
+        /// <paramref name="installedArchiveId"/> is supplied it takes precedence over
+        /// <paramref name="version"/> for identifying the installed archive, since an exact archive
+        /// ID is unambiguous while a version string could theoretically collide across archives;
+        /// <paramref name="version"/> remains supported alone for existing callers that don't yet
+        /// track the exact archive they installed.
+        /// </summary>
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version, Guid? installedArchiveId = null)
         {
             var game = await AsNoTracking()
                 .AsSplitQuery()
@@ -273,10 +432,15 @@ namespace LANCommander.Server.Services
 
             var orderedArchives = game.Archives.OrderBy(a => a.CreatedOn).ToList();
 
-            if (string.IsNullOrWhiteSpace(version))
+            Archive installedArchive = null;
+
+            if (installedArchiveId.HasValue)
+                installedArchive = orderedArchives.FirstOrDefault(a => a.Id == installedArchiveId.Value);
+
+            if (installedArchive == null && string.IsNullOrWhiteSpace(version))
                 return [orderedArchives.Last()];
 
-            var installedArchive = orderedArchives.FirstOrDefault(a => a.Version == version);
+            installedArchive ??= orderedArchives.FirstOrDefault(a => a.Version == version);
 
             if (installedArchive == null)
                 return [orderedArchives.Last()];
@@ -299,7 +463,7 @@ namespace LANCommander.Server.Services
             
             logger.LogInformation("Packaging game {GameTitle}", game.Title);
 
-            var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+            var latestArchive = ResolveEffectiveDefaultArchive(game);
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
             string? latestArchivePath = null;

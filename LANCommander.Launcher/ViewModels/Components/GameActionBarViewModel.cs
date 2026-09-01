@@ -72,6 +72,41 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string? _installDirectory;
 
+    // Installation selection (side-by-side installs). Populated from GameInstallationService
+    // rather than solely the legacy single-install Game fields, so IsInstalled/InstallDirectory
+    // reflect actual installation instances (see LoadInstallationsAsync).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMultipleInstallations))]
+    private ObservableCollection<GameInstallationItemViewModel> _installations = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UninstallMenuLabel))]
+    [NotifyPropertyChangedFor(nameof(ChangeVersionMenuLabel))]
+    private GameInstallationItemViewModel? _selectedInstallationItem;
+
+    /// <summary>Shows the installation selector only when there's an actual choice to make.</summary>
+    public bool HasMultipleInstallations => Installations.Count > 1;
+
+    /// <summary>
+    /// Menu wording for the version-scoped uninstall action. Once a game has more than one
+    /// side-by-side installation, "Uninstall" alone is ambiguous, so this names the specific
+    /// version/path that will be removed.
+    /// </summary>
+    public string UninstallMenuLabel =>
+        HasMultipleInstallations && SelectedInstallationItem != null
+            ? $"Uninstall This Version ({SelectedInstallationItem.Label})"
+            : "Uninstall";
+
+    /// <summary>Menu wording for the installation-scoped change-version action.</summary>
+    public string ChangeVersionMenuLabel =>
+        SelectedInstallationItem != null
+            ? $"Change Version ({SelectedInstallationItem.Label})…"
+            : "Change Version…";
+
+    // Guards against SelectInstallationAsync re-firing while LoadInstallationsAsync itself is
+    // assigning SelectedInstallationItem to reflect what's already selected in the database.
+    private bool _suppressInstallationSelectionHandling;
+
     // Play state
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
@@ -187,6 +222,145 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<GameActionBarViewModel>>();
     }
+    /// <summary>
+    /// Fires when the user picks a different entry in the installation selector. Switches the
+    /// active installation via <see cref="GameInstallationService.SelectInstallationAsync"/> and
+    /// refreshes this view model's state to match. Ignored while <see cref="LoadInstallationsAsync"/>
+    /// itself is assigning the property to reflect what's already selected in the database.
+    /// </summary>
+    partial void OnSelectedInstallationItemChanged(GameInstallationItemViewModel? value)
+    {
+        if (_suppressInstallationSelectionHandling || value == null)
+            return;
+
+        _ = ApplyInstallationSelectionAsync(value.Id);
+    }
+
+    /// <summary>
+    /// Loads this game's local installation instances (side-by-side versions) into
+    /// <see cref="Installations"/> and derives <see cref="IsInstalled"/>/<see cref="InstallDirectory"/>
+    /// from them — <c>Installations.Count > 0</c>, not the legacy <c>Game.Installed</c> mirror —
+    /// so the action bar always reflects actual installation rows whenever any exist.
+    ///
+    /// When a game has NO installation rows at all, install state falls back to the local
+    /// <see cref="Game.CurrentInstallation"/> view of the legacy Installed/InstallDirectory
+    /// fields. That fallback is not vestigial: overlay install types (Expansion/Mod/StandaloneMod
+    /// with a base game) deliberately never get their own <see cref="GameInstallation"/> row —
+    /// they install into their base game's directory and are tracked as
+    /// <see cref="GameInstallationAddon"/> rows against the base installation, with their own
+    /// legacy Game fields kept mirrored by
+    /// <see cref="GameInstallationService.SyncLegacyMirrorsAsync"/> (the launcher migration
+    /// explicitly excludes them from GameInstallations for exactly this reason). Deriving
+    /// installed state purely from installation rows therefore reported an installed add-on as
+    /// "not installed". The installation selector still only ever lists real installation rows,
+    /// so a legacy/overlay-only game shows installed state without ever offering a bogus
+    /// multi-installation choice.
+    ///
+    /// Also (re)assigns <see cref="GameId"/> so this method is safe to call standalone, not only
+    /// as part of one of the Load*/RefreshAsync methods that already set it beforehand. Safe to
+    /// call on its own (it only touches <see cref="GameInstallationService"/>/<see cref="GameService"/>
+    /// and the local DB, no network), which keeps it independently testable.
+    /// </summary>
+    public async Task LoadInstallationsAsync(Guid gameId)
+    {
+        GameId = gameId;
+
+        using var scope = _serviceProvider.CreateScope();
+        var installationService = scope.ServiceProvider.GetRequiredService<GameInstallationService>();
+
+        var installations = await installationService.GetInstallationsForGameAsync(gameId);
+
+        _suppressInstallationSelectionHandling = true;
+        try
+        {
+            Installations.Clear();
+
+            foreach (var installation in installations)
+                Installations.Add(new GameInstallationItemViewModel(installation));
+
+            var selected = Installations.FirstOrDefault(i => i.IsSelected) ?? Installations.FirstOrDefault();
+            SelectedInstallationItem = selected;
+
+            if (selected != null)
+            {
+                IsInstalled = true;
+                InstallDirectory = selected.InstallDirectory;
+            }
+            else
+            {
+                var legacyInstallation = await ResolveLegacyInstallationAsync(scope.ServiceProvider, gameId);
+
+                IsInstalled = legacyInstallation != null;
+                InstallDirectory = legacyInstallation?.InstallDirectory;
+            }
+
+            // Installations was mutated in place (Clear/Add), not reassigned, so the generated
+            // [NotifyPropertyChangedFor(nameof(HasMultipleInstallations))] hookup on the
+            // Installations property's own setter never fires on its own — raise it (and the
+            // labels that also read it) explicitly so anything bound to them always reflects the
+            // current installation count, even when SelectedInstallationItem above happened not
+            // to change (its own setter would otherwise be the only other source of these
+            // notifications, and SetProperty short-circuits when the value is unchanged).
+            OnPropertyChanged(nameof(HasMultipleInstallations));
+            OnPropertyChanged(nameof(UninstallMenuLabel));
+            OnPropertyChanged(nameof(ChangeVersionMenuLabel));
+        }
+        finally
+        {
+            _suppressInstallationSelectionHandling = false;
+        }
+    }
+
+    /// <summary>
+    /// Resolves the legacy single-install view of a game — <see cref="Game.CurrentInstallation"/>,
+    /// synthesized from Game.Installed/InstallDirectory when the game has no
+    /// <see cref="GameInstallation"/> rows — or null when the game is genuinely not installed
+    /// (or isn't present locally at all). Used only as the fallback in
+    /// <see cref="LoadInstallationsAsync"/> for games that legitimately never get installation
+    /// rows (overlay add-ons) or that predate them.
+    /// </summary>
+    private async Task<GameInstallation?> ResolveLegacyInstallationAsync(IServiceProvider scopedServices, Guid gameId)
+    {
+        try
+        {
+            var gameService = scopedServices.GetRequiredService<GameService>();
+            var localGame = await gameService.GetAsync(gameId);
+
+            return localGame?.CurrentInstallation;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not resolve legacy installation state for game {GameId}", gameId);
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Switches the game's selected/active installation: marks it selected via
+    /// <see cref="GameInstallationService.SelectInstallationAsync"/>, mirrors the change onto the
+    /// legacy Game/GameTool fields every other transitional reader still uses via
+    /// <see cref="GameInstallationService.SyncLegacyMirrorsAsync"/>, then refreshes this view
+    /// model's own state (install directory, actions, update status) to match.
+    /// </summary>
+    private async Task ApplyInstallationSelectionAsync(Guid installationId)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var installationService = scope.ServiceProvider.GetRequiredService<GameInstallationService>();
+
+            await installationService.SelectInstallationAsync(installationId);
+            await installationService.SyncLegacyMirrorsAsync(GameId);
+
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to switch installation {InstallationId} for game {GameId}", installationId, GameId);
+            StatusMessage = $"Failed to switch version: {ex.Message}";
+        }
+    }
 
     /// <summary>
     /// Loads the action bar state for a game from local database
@@ -195,9 +369,10 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         GameId = game.Id;
         Title = game.Title ?? "Unknown";
-        IsInstalled = game.Installed;
-        InstallDirectory = game.InstallDirectory;
-        IsUpdateAvailable = game.Installed
+
+        await LoadInstallationsAsync(game.Id);
+
+        IsUpdateAvailable = IsInstalled
             && !string.IsNullOrWhiteSpace(game.LatestVersion)
             && game.InstalledVersion != game.LatestVersion;
 
@@ -215,7 +390,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         StartRunningCheck();
 
         // Check server for updates if installed and not already detected locally
-        if (game.Installed && !IsUpdateAvailable)
+        if (IsInstalled && !IsUpdateAvailable)
             _ = CheckForUpdateFromServerAsync(game.Id, game.InstalledVersion);
     }
 
@@ -245,9 +420,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         
         if (localGame != null)
         {
-            IsInstalled = localGame.Installed;
-            InstallDirectory = localGame.InstallDirectory;
-            IsUpdateAvailable = localGame.Installed
+            await LoadInstallationsAsync(localGame.Id);
+            IsUpdateAvailable = IsInstalled
                 && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                 && localGame.InstalledVersion != localGame.LatestVersion;
             
@@ -277,9 +451,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         var localGame = await gameService.GetAsync(game.Id);
         if (localGame != null)
         {
-            IsInstalled = localGame.Installed;
-            InstallDirectory = localGame.InstallDirectory;
-            IsUpdateAvailable = localGame.Installed
+            await LoadInstallationsAsync(localGame.Id);
+            IsUpdateAvailable = IsInstalled
                 && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                 && localGame.InstalledVersion != localGame.LatestVersion;
             await LoadPlayStatsAsync(localGame.Id);
@@ -290,6 +463,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             IsInstalled = false;
             InstallDirectory = null;
             IsUpdateAvailable = false;
+            Installations.Clear();
+            SelectedInstallationItem = null;
             PlayTime = Localize("PlayStatNone");
             LastPlayed = Localize("LastPlayedNever");
             Manuals.Clear();
@@ -313,7 +488,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         StartRunningCheck();
 
         // Check server for updates if installed and not already detected locally
-        if (localGame != null && localGame.Installed && !IsUpdateAvailable)
+        if (localGame != null && IsInstalled && !IsUpdateAvailable)
             _ = CheckForUpdateFromServerAsync(localGame.Id, localGame.InstalledVersion);
     }
 
@@ -325,6 +500,24 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         while (size >= 1024 && order < sizes.Length - 1) { order++; size /= 1024; }
         return $"{size:0.##} {sizes[order]}";
     }
+
+    /// <summary>
+    /// Drops add-ons the server has no archive for. Such an add-on can never actually be
+    /// downloaded, so offering it in the install/modify dialog only lets the user pick something
+    /// impossible — install-plan generation skips it anyway. This mirrors the same
+    /// <c>Archives?.Any()</c> filter already applied to tools alongside every call site.
+    /// </summary>
+    /// <param name="installedAddonIds">
+    /// Add-ons that are already installed locally. These are always kept regardless of archive
+    /// availability so an add-on whose archives were deleted server-side after it was installed
+    /// is still listed — and can still be deselected/uninstalled — in the modify dialog.
+    /// </param>
+    internal static SDK.Models.Game[] FilterInstallableAddons(
+        IEnumerable<SDK.Models.Game>? addons,
+        ISet<Guid>? installedAddonIds = null) =>
+        (addons ?? [])
+            .Where(a => (a.Archives?.Any() ?? false) || (installedAddonIds?.Contains(a.Id) ?? false))
+            .ToArray();
 
     /// <summary>
     /// Loads available actions for the current game
@@ -401,16 +594,19 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             using var scope = _serviceProvider.CreateScope();
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
 
             var localGame = await gameService.GetAsync(GameId);
             if (localGame != null)
             {
-                IsInstalled = localGame.Installed;
-                InstallDirectory = localGame.InstallDirectory;
-                IsUpdateAvailable = localGame.Installed
+                // Core installation-derived state first, so a failure in an unrelated refresh
+                // step below (library/actions/play-stats) never leaves
+                // IsInstalled/InstallDirectory/Installations stale.
+                await LoadInstallationsAsync(localGame.Id);
+                IsUpdateAvailable = IsInstalled
                     && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                     && localGame.InstalledVersion != localGame.LatestVersion;
+
+                var libraryService = scope.ServiceProvider.GetRequiredService<LibraryService>();
                 IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
                 await LoadPlayStatsAsync(localGame.Id);
                 LoadManuals(localGame);
@@ -679,16 +875,58 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var installationService = scope.ServiceProvider.GetRequiredService<GameInstallationService>();
 
-            var localGame = await gameService.GetAsync(GameId);
-            if (localGame == null)
-                throw new InvalidOperationException("Game not found in local database");
+            // Installation-scoped: act on whichever installation is actually selected in the UI
+            // (or the game's own selected installation as a back-compat fallback) — never re-derive
+            // a directory hint from the legacy Game.InstallDirectory field. Passing that existing
+            // folder straight back into Add() as an "installDirectory hint" made GetInstallDirectory
+            // re-suffix it with the game's title, nesting the computed destination under the
+            // installation's own existing directory, which Move() would then delete as the "old"
+            // source — destroying the very files it had just copied into the nested destination.
+            var installation = SelectedInstallationItem != null
+                ? await installationService.GetAsync(SelectedInstallationItem.Id)
+                : await installationService.GetSelectedInstallationAsync(GameId);
 
-            _logger.LogInformation("Adding game {GameId} ({Title}) to update queue", GameId, Title);
+            if (installation == null)
+            {
+                // No installation row at all. That is not an error state: overlay add-ons
+                // (Expansion/Mod/StandaloneMod installed into their base game's directory) are
+                // deliberately never given one, and pre-migration installs may not have one yet —
+                // and LoadInstallationsAsync reports both as installed from the legacy Game
+                // fields, so PrimaryAction routes their "update available" straight here. Fall
+                // back to the legacy update flow instead of throwing.
+                await UpdateLegacyInstallationAsync(scope.ServiceProvider, installService);
+                return;
+            }
 
-            await installService.Add(localGame, localGame.InstallDirectory);
+            // An explicit Update always follows the server's effective default archive (the
+            // admin-pinned default, otherwise the newest) — unlike Add()'s no-archiveId default
+            // behavior (which intentionally keeps whatever's already pinned so a *passive* check
+            // never silently drifts an existing installation), a user-initiated Update is exactly
+            // the explicit "follow the target" case that must resolve fresh.
+            var resolvedArchive = await gameClient.ResolveArchiveAsync(GameId, null)
+                ?? throw new InvalidOperationException("No archive is available on the server for this game");
+
+            if (resolvedArchive.Id == installation.ArchiveId)
+            {
+                // Nothing has actually changed since this installation was pinned — avoid queuing
+                // a same-archive "update" that would otherwise be routed to Modify() and could
+                // reprocess add-ons/tools with no selection context.
+                StatusMessage = "Already up to date";
+                IsUpdateAvailable = false;
+                return;
+            }
+
+            _logger.LogInformation(
+                "Updating installation {InstallationId} of game {GameId} ({Title}) from archive {FromArchiveId} to {ToArchiveId}",
+                installation.Id, GameId, Title, installation.ArchiveId, resolvedArchive.Id);
+
+            // inPlace: true — this is the one caller that must transition the selected
+            // installation's own directory/archive, never spin up a side-by-side installation.
+            await installService.ChangeVersionAsync(installation, resolvedArchive.Id, inPlace: true);
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
@@ -703,6 +941,49 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalling = false;
         }
+    }
+
+    /// <summary>
+    /// Updates a game that legitimately has no <see cref="GameInstallation"/> row: an overlay
+    /// add-on (Expansion/Mod/StandaloneMod installed into its base game's directory, deliberately
+    /// excluded from installation rows so it can never collide with the base game's own row) or a
+    /// legacy install that predates them. Both are reported as installed from the legacy
+    /// Game.Installed/InstallDirectory fields by <see cref="LoadInstallationsAsync"/>, so
+    /// <see cref="PrimaryActionAsync"/> routes their "update available" state into
+    /// <see cref="UpdateGameAsync"/> — which would otherwise fail outright for having no
+    /// installation to act on.
+    ///
+    /// Mirrors the pre-installation-instances behavior: queue an <see cref="InstallService.Add"/>
+    /// against the entry's own existing directory with no explicit archive, so the server's
+    /// effective default is resolved exactly once and installed over the existing files in place.
+    /// The directory is passed as the *exact* destination (never as a parent hint) so it is
+    /// neither re-suffixed into a nested "&lt;existing&gt;/&lt;Title&gt;" folder nor diverted to a
+    /// collision-safe sibling — both of which would leave the real installation behind.
+    /// </summary>
+    private async Task UpdateLegacyInstallationAsync(IServiceProvider scopedServices, InstallService installService)
+    {
+        var gameService = scopedServices.GetRequiredService<GameService>();
+
+        var localGame = await gameService.GetAsync(GameId)
+            ?? throw new InvalidOperationException("Game not found in local database");
+
+        var legacyInstallation = localGame.CurrentInstallation;
+
+        if (legacyInstallation == null || string.IsNullOrWhiteSpace(legacyInstallation.InstallDirectory))
+            throw new InvalidOperationException("No installation found to update");
+
+        _logger.LogInformation(
+            "Updating legacy installation of game {GameId} ({Title}) in place at {InstallDirectory} (overlay={IsOverlay})",
+            GameId, Title, legacyInstallation.InstallDirectory, InstallService.IsOverlayInstall(localGame));
+
+        await installService.Add(
+            localGame,
+            legacyInstallation.InstallDirectory,
+            archiveId: null,
+            useExactInstallDirectory: true);
+
+        StatusMessage = "Added to download queue";
+        InstallRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -955,11 +1236,12 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
             var availableAddons    = Array.Empty<SDK.Models.Game>();
             var availableTools     = Array.Empty<SDK.Models.Tool>();
+            var availableArchives  = Array.Empty<SDK.Models.Archive>();
 
             try
             {
                 var addons = await gameClient.GetAddonsAsync(GameId);
-                availableAddons = addons?.ToArray() ?? [];
+                availableAddons = FilterInstallableAddons(addons);
             }
             catch (Exception ex)
             {
@@ -976,7 +1258,18 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
             }
 
-            var needsDialog = availableAddons.Length > 0 || availableTools.Length > 0 || installDirectories.Length > 1;
+            try
+            {
+                // Fetch via the dedicated archives endpoint (not Game.Archives from GetAsync,
+                // which never carries real IsDefault/IsEffectiveDefault flags) so the version
+                // selector's preselection reflects the server's actual effective default.
+                var archives = await gameClient.GetArchivesAsync(GameId);
+                availableArchives = archives?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch archives for {GameId}", GameId);
+            }
 
             // ── Build options VM ───────────────────────────────────────────────
             var optionsVm = new InstallOptionsViewModel();
@@ -989,15 +1282,13 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             optionsVm.DialogTitle = $"Install {optionsVm.GameTitle}";
             optionsVm.ConfirmButtonText = "Install";
 
-            // Fetch base game archive sizes
-            try
-            {
-                var game = await gameClient.GetAsync(GameId);
-                var archives = game?.Archives?.ToArray() ?? [];
-                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
-                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
-            }
-            catch { /* sizes will show as 0 */ }
+            // Base-game version selector: preselects the server's effective default (or newest)
+            // and seeds the base download/space-required sizes from that single archive only —
+            // never a sum across every historical archive.
+            optionsVm.PopulateArchives(availableArchives);
+
+            var needsDialog = availableAddons.Length > 0 || availableTools.Length > 0
+                || installDirectories.Length > 1 || optionsVm.ShowVersionSelector;
 
             // Add addons sorted by type, then name
             foreach (var addon in availableAddons
@@ -1050,13 +1341,14 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
             // ── Queue the install ──────────────────────────────────────────────
             StatusMessage = "Starting installation...";
-            _logger.LogInformation("Adding game {GameId} ({Title}) to install queue", GameId, Title);
+            _logger.LogInformation("Adding game {GameId} ({Title}) to install queue, archiveId={ArchiveId}", GameId, Title, optionsVm.SelectedArchive?.Id);
 
             await installService.Add(
                 localGame,
                 optionsVm.SelectedInstallDirectory,
                 optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
-                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null,
+                archiveId: optionsVm.SelectedArchive?.Id);
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
@@ -1073,37 +1365,43 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Queues a brand-new, side-by-side installation of a different version for a game that
+    /// already has at least one installation. Uses the same dialog as a fresh install (with the
+    /// version selector always shown, since choosing a version is the whole point) and the same
+    /// <see cref="InstallService.Add"/> path — an explicit archive id that no installation is
+    /// already pinned to always results in a new, collision-safe sibling installation rather than
+    /// touching the existing one(s).
+    /// </summary>
     [RelayCommand]
-    private async Task ModifyAsync()
+    private async Task InstallAnotherVersionAsync()
     {
-        if (!IsInstalled) return;
+        if (!IsInstalled || IsInstalling) return;
+
+        IsInstalling = true;
+        StatusMessage = "Preparing to install another version...";
 
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var gameService        = scope.ServiceProvider.GetRequiredService<GameService>();
-            var installService     = scope.ServiceProvider.GetRequiredService<InstallService>();
-            var gameClient         = scope.ServiceProvider.GetRequiredService<GameClient>();
-            var settingsProvider   = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+            var gameService      = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService   = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient       = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
 
-            var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
-
-            var localGame = await dbContext.Set<Data.Models.Game>()
-                .Include(g => g.GameTools)
-                .FirstOrDefaultAsync(g => g.Id == GameId);
-
+            var localGame = await gameService.GetAsync(GameId);
             if (localGame == null)
                 throw new InvalidOperationException("Game not found in local database");
 
-            // ── Gather options ─────────────────────────────────────────────────
             var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
             var availableAddons    = Array.Empty<SDK.Models.Game>();
             var availableTools     = Array.Empty<SDK.Models.Tool>();
+            var availableArchives  = Array.Empty<SDK.Models.Archive>();
 
             try
             {
                 var addons = await gameClient.GetAddonsAsync(GameId);
-                availableAddons = addons?.ToArray() ?? [];
+                availableAddons = FilterInstallableAddons(addons);
             }
             catch (Exception ex)
             {
@@ -1120,15 +1418,285 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
             }
 
-            // Build set of currently installed addon IDs. Addons install as their own Game
-            // records (with Installed set), and the local DependentGames relationship is not
-            // populated during import, so look the available addons up directly by ID.
-            var availableAddonIds = availableAddons.Select(a => a.Id).ToArray();
-            var installedAddonIds = new HashSet<Guid>(
-                await dbContext.Set<Data.Models.Game>()
-                    .Where(g => availableAddonIds.Contains(g.Id) && g.Installed)
-                    .Select(g => g.Id)
-                    .ToListAsync());
+            try
+            {
+                // Fetch via the dedicated archives endpoint (not Game.Archives from GetAsync,
+                // which never carries real IsDefault/IsEffectiveDefault flags) so the version
+                // selector's preselection reflects the server's actual effective default.
+                var archives = await gameClient.GetArchivesAsync(GameId);
+                availableArchives = archives?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch archives for {GameId}", GameId);
+            }
+
+            if (availableArchives.Length == 0)
+            {
+                StatusMessage = null;
+                await Views.AlertOverlay.ShowAsync("Install Another Version", "No versions are available on the server for this game.");
+                return;
+            }
+
+            var optionsVm = new InstallOptionsViewModel();
+
+            foreach (var dir in installDirectories)
+                optionsVm.InstallDirectories.Add(dir);
+
+            optionsVm.SelectedInstallDirectory = installDirectories.FirstOrDefault() ?? string.Empty;
+            optionsVm.GameTitle = Title ?? "Game";
+            optionsVm.DialogTitle = $"Install Another Version of {optionsVm.GameTitle}";
+            optionsVm.ConfirmButtonText = "Install";
+            // The natural default directory is already claimed by an existing installation, so
+            // the destination for this side-by-side install always matters here.
+            optionsVm.AlwaysShowDirectory = true;
+
+            optionsVm.PopulateArchives(availableArchives);
+
+            foreach (var addon in availableAddons
+                         .OrderBy(a => a.Type)
+                         .ThenBy(a => a.Title ?? string.Empty))
+                optionsVm.Addons.Add(new InstallAddonItemViewModel(addon, selectedByDefault: false));
+
+            foreach (var tool in availableTools.OrderBy(t => t.Name ?? string.Empty))
+                optionsVm.Tools.Add(new InstallToolItemViewModel(tool, selectedByDefault: false));
+
+            // Always show the dialog: the user explicitly asked to install another version and
+            // must at least confirm/adjust the destination directory and chosen version.
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.InstallOptionsOverlay
+                {
+                    DataContext = optionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+            });
+
+            var confirmed = await tcs.Task;
+
+            if (confirmed != true)
+            {
+                StatusMessage = null;
+                return;
+            }
+
+            if (optionsVm.SelectedArchive == null)
+            {
+                StatusMessage = "No version selected";
+                return;
+            }
+
+            StatusMessage = "Starting installation...";
+            _logger.LogInformation("Installing another version of game {GameId} ({Title}), archiveId={ArchiveId}",
+                GameId, Title, optionsVm.SelectedArchive.Id);
+
+            await installService.Add(
+                localGame,
+                optionsVm.SelectedInstallDirectory,
+                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
+                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null,
+                archiveId: optionsVm.SelectedArchive.Id);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to install another version of game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to install: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Install", ex.Message);
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    /// <summary>
+    /// Opens a version-only picker for the currently selected installation and, when confirmed,
+    /// queues the change via <see cref="InstallService.ChangeVersionAsync"/>. Always side-by-side
+    /// (a brand-new installation pinned to the chosen archive) — an unsafe silent in-place
+    /// replacement is intentionally not exposed here.
+    /// </summary>
+    [RelayCommand]
+    private async Task ChangeVersionAsync()
+    {
+        if (!IsInstalled) return;
+
+        var targetInstallationId = SelectedInstallationItem?.Id;
+
+        if (targetInstallationId == null)
+        {
+            StatusMessage = "No installation selected";
+            return;
+        }
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient     = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var installService = scope.ServiceProvider.GetRequiredService<InstallService>();
+
+            var availableArchives = Array.Empty<SDK.Models.Archive>();
+
+            try
+            {
+                // Fetch via the dedicated archives endpoint (not Game.Archives from GetAsync,
+                // which never carries real IsDefault/IsEffectiveDefault flags) so the version
+                // selector's preselection reflects the server's actual effective default.
+                var archives = await gameClient.GetArchivesAsync(GameId);
+                availableArchives = archives?.ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch archives for {GameId}", GameId);
+            }
+
+            if (availableArchives.Length == 0)
+            {
+                await Views.AlertOverlay.ShowAsync("Change Version", "No versions are available on the server for this game.");
+                return;
+            }
+
+            var optionsVm = new InstallOptionsViewModel
+            {
+                GameTitle = Title ?? "Game",
+                DialogTitle = $"Change Version — {Title}",
+                ConfirmButtonText = "Change Version",
+            };
+            optionsVm.PopulateArchives(availableArchives);
+
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var overlay = new Views.InstallOptionsOverlay
+                {
+                    DataContext = optionsVm,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
+                };
+
+                overlay.DialogClosed += (_, result) => tcs.TrySetResult(result);
+
+                var mainWindow = (Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+                var layer = OverlayLayer.GetOverlayLayer(mainWindow);
+
+                if (layer is not null)
+                {
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty, new Binding("Bounds.Width") { Source = layer });
+                    overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty, new Binding("Bounds.Height") { Source = layer });
+
+                    layer.Children.Add(overlay);
+                }
+            });
+
+            var confirmed = await tcs.Task;
+
+            if (confirmed != true || optionsVm.SelectedArchive == null)
+                return;
+
+            _logger.LogInformation(
+                "Changing version for installation {InstallationId} of game {GameId} ({Title}) to archive {ArchiveId}",
+                targetInstallationId, GameId, Title, optionsVm.SelectedArchive.Id);
+
+            await installService.ChangeVersionAsync(targetInstallationId.Value, optionsVm.SelectedArchive.Id, inPlace: false);
+
+            StatusMessage = "Added to download queue";
+            InstallRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to change version for game {GameId} ({Title})", GameId, Title);
+            StatusMessage = $"Failed to change version: {ex.Message}";
+            await Views.AlertOverlay.ShowAsync("Failed to Change Version", ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ModifyAsync()
+    {
+        if (!IsInstalled) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameService          = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installService       = scope.ServiceProvider.GetRequiredService<InstallService>();
+            var gameClient           = scope.ServiceProvider.GetRequiredService<GameClient>();
+            var settingsProvider     = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+            var installationService  = scope.ServiceProvider.GetRequiredService<GameInstallationService>();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+
+            var localGame = await dbContext.Set<Data.Models.Game>()
+                .Include(g => g.GameTools)
+                .FirstOrDefaultAsync(g => g.Id == GameId);
+
+            if (localGame == null)
+                throw new InvalidOperationException("Game not found in local database");
+
+            var selectedInstallation = await installationService.GetSelectedInstallationAsync(GameId);
+
+            // ── Gather options ─────────────────────────────────────────────────
+            var installDirectories = settingsProvider.CurrentValue.Games.InstallDirectories ?? [];
+            var availableAddons    = Array.Empty<SDK.Models.Game>();
+            var availableTools     = Array.Empty<SDK.Models.Tool>();
+            var installedAddonIds  = new HashSet<Guid>();
+
+            try
+            {
+                var addons = (await gameClient.GetAddonsAsync(GameId))?.ToArray() ?? [];
+
+                // Build set of currently installed addon IDs. Addons install as their own Game
+                // records (with Installed set), and the local DependentGames relationship is not
+                // populated during import, so look the available addons up directly by ID. This
+                // is computed against the UNFILTERED list so an already-installed addon is never
+                // hidden by the archive filter below.
+                var addonIds = addons.Select(a => a.Id).ToArray();
+
+                installedAddonIds = new HashSet<Guid>(
+                    await dbContext.Set<Data.Models.Game>()
+                        .Where(g => addonIds.Contains(g.Id) && g.Installed)
+                        .Select(g => g.Id)
+                        .ToListAsync());
+
+                availableAddons = FilterInstallableAddons(addons, installedAddonIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch addons for {GameId}", GameId);
+            }
+
+            try
+            {
+                var tools = await gameClient.GetToolsAsync(GameId);
+                availableTools = tools?.Where(t => (t.Archives?.Any() ?? false) && !t.AlwaysInstall).ToArray() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fetch tools for {GameId}", GameId);
+            }
 
             // Build set of currently installed tool IDs (tracked per game)
             var installedToolIds = new HashSet<Guid>(
@@ -1162,13 +1730,22 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             optionsVm.ConfirmButtonText = "Apply";
             optionsVm.AlwaysShowDirectory = true;
 
-            // Fetch base game archive sizes
+            // Base archive size for display only: use the installation's own pinned archive so
+            // this preview matches what's actually on disk. Modify must not silently change the
+            // installed version (see the dedicated Change Version action for that), so — unlike
+            // Install/Install Another Version/Change Version — no version selector is shown here.
             try
             {
-                var game = await gameClient.GetAsync(GameId);
-                var archives = game?.Archives?.ToArray() ?? [];
-                optionsVm.BaseDownloadSize  = archives.Sum(a => a.CompressedSize);
-                optionsVm.BaseSpaceRequired = archives.Sum(a => a.UncompressedSize);
+                // Fetch via the dedicated archives endpoint (not Game.Archives from GetAsync,
+                // which never carries real IsDefault/IsEffectiveDefault flags) so this sizing
+                // preview's IsEffectiveDefault fallback reflects the server's actual default.
+                var archives = (await gameClient.GetArchivesAsync(GameId))?.ToArray() ?? [];
+                var sizingArchive = archives.FirstOrDefault(a => a.Id == selectedInstallation?.ArchiveId)
+                    ?? archives.FirstOrDefault(a => a.IsEffectiveDefault)
+                    ?? archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+                optionsVm.BaseDownloadSize  = sizingArchive?.CompressedSize ?? 0;
+                optionsVm.BaseSpaceRequired = sizingArchive?.UncompressedSize ?? 0;
             }
             catch { /* sizes will show as 0 */ }
 
@@ -1219,11 +1796,15 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             _logger.LogInformation("Modifying game {GameId} ({Title}): install dir={Dir}, addons={AddonCount}, tools={ToolCount}",
                 GameId, Title, optionsVm.SelectedInstallDirectory, optionsVm.SelectedAddons.Length, optionsVm.SelectedTools.Length);
 
+            // Pass the dialog's selections through verbatim (never coalesced to null when empty):
+            // this is always an explicit, deliberate selection — the user may genuinely want zero
+            // addons/tools installed — and Modify() distinguishes "explicitly none" (empty array)
+            // from "not supplied at all" (null, meaning preserve whatever's currently installed).
             await installService.Add(
                 localGame,
                 optionsVm.SelectedInstallDirectory,
-                optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
-                optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
+                optionsVm.SelectedAddons,
+                optionsVm.SelectedTools);
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);
@@ -1247,6 +1828,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             using var scope = _serviceProvider.CreateScope();
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var installationService = scope.ServiceProvider.GetRequiredService<GameInstallationService>();
 
             var localGame = await gameService.GetAsync(GameId);
             if (localGame == null)
@@ -1254,14 +1836,27 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 throw new InvalidOperationException("Game not found in local database");
             }
 
-            _logger.LogInformation("Uninstalling game {GameId} ({Title})", GameId, Title);
+            // Act on the selected installation explicitly rather than relying solely on
+            // GameService.UninstallAsync's own selected-installation lookup, so uninstall always
+            // removes exactly the version/path currently shown in the installation selector.
+            var installation = SelectedInstallationItem != null
+                ? await installationService.GetAsync(SelectedInstallationItem.Id)
+                : await installationService.GetSelectedInstallationAsync(GameId);
 
-            await gameService.UninstallAsync(localGame);
+            _logger.LogInformation("Uninstalling game {GameId} ({Title}), installation path={InstallDirectory}",
+                GameId, Title, installation?.InstallDirectory ?? localGame.InstallDirectory);
 
-            IsInstalled = false;
-            InstallDirectory = null;
+            if (installation != null)
+                await gameService.UninstallAsync(localGame, installation);
+            else
+                await gameService.UninstallAsync(localGame);
+
+            // Refresh from the database rather than assuming nothing is installed anymore — a
+            // sibling side-by-side installation may still exist and should remain selected.
+            await LoadInstallationsAsync(GameId);
+
             StatusMessage = "Uninstalled";
-            _logger.LogInformation("Game {GameId} ({Title}) uninstalled", GameId, Title);
+            _logger.LogInformation("Game {GameId} ({Title}) uninstalled; {RemainingCount} installation(s) remain", GameId, Title, Installations.Count);
 
             // Notify that library has changed (install status changed)
             LibraryChanged?.Invoke(this, EventArgs.Empty);
@@ -1303,7 +1898,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 StatusMessage = $"{conflictList.Count} file(s) need repair, restoring...";
                 _logger.LogInformation("File verification found {Count} conflict(s) for game {GameId} ({Title}), restoring", conflictList.Count, GameId, Title);
 
-                await gameClient.RestoreFilesAsync(InstallDirectory, GameId, conflictList.Select(c => c.FullName));
+                await gameClient.RestoreFilesAsync(InstallDirectory, GameId, conflictList.Select(c => c.FullName), SelectedInstallationItem?.ArchiveId);
 
                 StatusMessage = $"{conflictList.Count} file(s) restored";
                 _logger.LogInformation("File restoration complete for game {GameId} ({Title})", GameId, Title);
@@ -1700,5 +2295,51 @@ public class GameActionsOverlayViewModel
     {
         GameTitle = gameTitle;
         Actions = actions.ToList();
+    }
+}
+
+/// <summary>
+/// Display wrapper around a local <see cref="GameInstallation"/> for the action bar's
+/// installation selector: a version/label plus its install directory, so the user can tell two
+/// side-by-side installations of the same game apart at a glance.
+/// </summary>
+public class GameInstallationItemViewModel
+{
+    public Guid Id { get; }
+    public Guid? ArchiveId { get; }
+    public string? Version { get; }
+    public string InstallDirectory { get; }
+    public string? DisplayLabel { get; }
+    public DateTime? InstalledOn { get; }
+    public bool IsSelected { get; }
+
+    /// <summary>
+    /// User-facing label combining the custom display label (if set) or version with the install
+    /// path — used by the selector itself and by the version/path-scoped Change Version and
+    /// Uninstall action wording (e.g. "1.2.0 (C:\Games\Foo)").
+    /// </summary>
+    public string Label
+    {
+        get
+        {
+            var name = !string.IsNullOrWhiteSpace(DisplayLabel)
+                ? DisplayLabel!
+                : !string.IsNullOrWhiteSpace(Version)
+                    ? Version!
+                    : "Unknown version";
+
+            return $"{name} ({InstallDirectory})";
+        }
+    }
+
+    public GameInstallationItemViewModel(GameInstallation installation)
+    {
+        Id = installation.Id;
+        ArchiveId = installation.ArchiveId;
+        Version = installation.Version;
+        InstallDirectory = installation.InstallDirectory;
+        DisplayLabel = installation.DisplayLabel;
+        InstalledOn = installation.InstalledOn;
+        IsSelected = installation.IsSelected;
     }
 }

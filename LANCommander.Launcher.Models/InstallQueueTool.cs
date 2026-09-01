@@ -6,6 +6,7 @@ namespace LANCommander.Launcher.Models;
 public class InstallQueueTool : IInstallQueueItem
 {
     public Guid Id { get; set; }
+    public Guid EntityId { get; set; }
     public string Title { get; set; }
     public string Version { get; set; }
     public string InstallDirectory { get; set; }
@@ -44,6 +45,21 @@ public class InstallQueueTool : IInstallQueueItem
     public Guid? DependsOnId { get; set; }
     public List<InstallTaskDefinition> Tasks { get; set; } = new();
     public Guid? CurrentTaskId { get; set; }
+    public Guid? ArchiveId { get; set; }
+    public string? ArchiveVersion { get; set; }
+
+    /// <summary>
+    /// The id of the game this tool is being installed for, set directly by InstallService.Add
+    /// (not derived from DependsOnId, which references the base game queue item's own distinct
+    /// Id rather than its EntityId now that side-by-side installs are supported).
+    /// </summary>
+    public Guid? ParentGameId { get; set; }
+
+    /// <summary>
+    /// The GameInstallation id this tool was actually installed against, resolved at execution
+    /// time from the parent game queue item's own ResolvedInstallationId.
+    /// </summary>
+    public Guid? ResolvedInstallationId { get; set; }
 
     public float Progress {
         get
@@ -60,7 +76,10 @@ public class InstallQueueTool : IInstallQueueItem
     public InstallQueueTool(SDK.Models.Tool tool)
     {
         Tool = tool;
-        Id = tool.Id;
+        // Distinct queue identity by default; overwritten below with the plan's PlanItemId when
+        // this item was built from a generated plan.
+        Id = Guid.NewGuid();
+        EntityId = tool.Id;
         Title = tool.Name;
         Version = tool.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version ?? "";
         QueuedOn = DateTime.Now;
@@ -69,8 +88,11 @@ public class InstallQueueTool : IInstallQueueItem
 
     public InstallQueueTool(InstallPlanItem planItem, SDK.Models.Tool tool) : this(tool)
     {
+        Id = planItem.PlanItemId;
         InstallDirectory = planItem.InstallDirectory;
         DependsOnId = planItem.DependsOnId;
         Tasks = planItem.Tasks;
+        ArchiveId = planItem.ArchiveId;
+        ArchiveVersion = planItem.ArchiveVersion;
     }
 }

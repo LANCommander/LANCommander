@@ -1,3 +1,4 @@
+using System.Reflection;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Interceptors;
@@ -101,6 +102,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IMetadataProvider, HqMetadataProvider>();
         services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
         services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
+        services.AddPcGamingWikiClient();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
@@ -125,6 +127,47 @@ public static class IServiceCollectionExtensions
 
         services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
         services.AddFusionCache();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the HTTP client used to talk to PCGamingWiki.
+    /// <para>
+    /// Their API requires a descriptive User-Agent with contact information (a generic one gets
+    /// blocked with a 403) and caps us at 60 requests per minute, where an overrun blocks the
+    /// server's IP for a full minute. The throttling handler and the session are singletons so the
+    /// request window and the login cookies are shared across the scoped provider instances.
+    /// </para>
+    /// </summary>
+    private static IServiceCollection AddPcGamingWikiClient(this IServiceCollection services)
+    {
+        services.AddSingleton<PcGamingWikiSession>();
+        services.AddSingleton<PcGamingWikiRateLimiter>();
+
+        // The factory owns and disposes the handlers it builds, so this has to be transient. The
+        // state that needs to survive a rebuild lives in the singletons above.
+        services.AddTransient<PcGamingWikiThrottlingHandler>();
+
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+
+        services
+            .AddHttpClient(PcGamingWikiMetadataProvider.HttpClientName, client =>
+            {
+                // The apex domain redirects to www on every request, which would double what we
+                // spend against the rate limit.
+                client.BaseAddress = new Uri("https://www.pcgamingwiki.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                    $"LANCommander/{version} (https://lancommander.app; https://github.com/LANCommander/LANCommander) .NET/{Environment.Version}");
+            })
+            .ConfigurePrimaryHttpMessageHandler(provider => new HttpClientHandler
+            {
+                // Handlers get recycled on a timer, so the container has to outlive them or we
+                // silently lose the login session.
+                CookieContainer = provider.GetRequiredService<PcGamingWikiSession>().Cookies,
+                UseCookies = true,
+            })
+            .AddHttpMessageHandler<PcGamingWikiThrottlingHandler>();
 
         return services;
     }

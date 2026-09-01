@@ -217,6 +217,7 @@ else if (_stage == ModalStage.Merge)
     ITable? ResultsTable;
 
     MetadataSearchResultsCollection<SDK.Models.Manifest.Game>? _results;
+    IReadOnlyCollection<SDK.Models.Manifest.GameExternalId> _externalIds = [];
 
     IEnumerable<MetadataSearchResult<SDK.Models.Manifest.Game>> SelectedResults { get; set; }
     bool _loading = false;
@@ -254,6 +255,21 @@ else if (_stage == ModalStage.Merge)
     {
         _availableProviders = MetadataService.GetProviderNames();
         _selectedProvider = _availableProviders.FirstOrDefault() ?? string.Empty;
+
+        if (GameId != Guid.Empty)
+        {
+            try
+            {
+                _externalIds = (await GameService.GetManifestAsync(GameId))?.ExternalIds?.ToList() ?? [];
+            }
+            catch (Exception ex)
+            {
+                // Seeding from a store ID is a convenience on top of the title search, so it must
+                // never stop the panel from opening.
+                Logger.LogWarning(ex, "Could not read external IDs for game {GameId}", GameId);
+            }
+        }
+
         await UpdateSubProvidersAsync();
     }
 
@@ -330,6 +346,9 @@ else if (_stage == ModalStage.Merge)
                 ? await provider.SearchGamesAsync(title, _selectedSubProvider, _limit, _offset)
                 : await provider.SearchGamesAsync(title, _limit, _offset);
 
+            if (newSearch)
+                await SeedFromExternalIdsAsync(provider);
+
             _loading = false;
         }
         catch (Exception ex)
@@ -338,6 +357,46 @@ else if (_stage == ModalStage.Merge)
 
             _loading = false;
             _errorMessage = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// When the game already carries an ID from another store, ask the provider to resolve it
+    /// directly and float that result to the top. A store ID is an exact match, where matching on
+    /// title is a guess.
+    /// </summary>
+    private async Task SeedFromExternalIdsAsync(IMetadataProvider provider)
+    {
+        if (_externalIds.Count == 0)
+            return;
+
+        foreach (var externalId in _externalIds)
+        {
+            if (string.IsNullOrWhiteSpace(externalId.Provider) || string.IsNullOrWhiteSpace(externalId.ExternalId))
+                continue;
+
+            var resolved = await provider.ResolveByExternalIdAsync(externalId.Provider, externalId.ExternalId);
+
+            if (resolved is null)
+                continue;
+
+            var results = _results?.Results.ToList() ?? [];
+            var existingIndex = results.FindIndex(r => r.Id == resolved.Id);
+
+            // Prefer the search result if the page is already there; it carries the release date
+            // and developers that the ID lookup doesn't return.
+            if (existingIndex >= 0)
+            {
+                resolved = results[existingIndex];
+                results.RemoveAt(existingIndex);
+            }
+
+            results.Insert(0, resolved);
+
+            _results = new MetadataSearchResultsCollection<SDK.Models.Manifest.Game>(
+                results, _results?.More ?? false, _limit, _offset);
+
+            return;
         }
     }
 

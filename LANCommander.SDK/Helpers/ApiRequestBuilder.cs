@@ -48,6 +48,13 @@ public class ApiRequestBuilder(
         }
     }
 
+    // Almost every request in a session talks to the same server, so the X-API-Version header
+    // value is identical response after response. Cache the raw header string alongside the
+    // outcome of the last check (whether it was a mismatch, and the versions involved) so that
+    // repeated calls with the same value skip SemVersion parsing/allocation entirely.
+    private static string _lastCheckedServerRaw = string.Empty;
+    private static (SemVersion Client, SemVersion Server)? _lastMismatch;
+
     /// <summary>
     /// The server advertises its API version on every response via the <c>X-API-Version</c>
     /// header. When the server's major version differs from ours the payload schemas are
@@ -61,17 +68,39 @@ public class ApiRequestBuilder(
 
         var serverRaw = values.FirstOrDefault();
 
-        if (String.IsNullOrWhiteSpace(serverRaw)
-            || !SemVersion.TryParse(serverRaw, SemVersionStyles.Any, out var serverVersion))
+        if (string.IsNullOrWhiteSpace(serverRaw))
             return;
+
+        if (string.Equals(serverRaw, _lastCheckedServerRaw, StringComparison.Ordinal))
+        {
+            if (_lastMismatch is { } cached)
+                ThrowMismatch(cached.Client, cached.Server);
+
+            return;
+        }
+
+        if (!SemVersion.TryParse(serverRaw, SemVersionStyles.Any, out var serverVersion))
+        {
+            _lastCheckedServerRaw = serverRaw;
+            _lastMismatch = null;
+            return;
+        }
 
         var clientVersion = VersionHelper.GetCurrentVersion();
 
-        if (serverVersion.Major != clientVersion.Major)
-            throw new ApiVersionMismatchException(clientVersion, serverVersion,
-                $"This launcher (v{clientVersion}) is not compatible with the server (v{serverVersion}). " +
-                "Update the launcher or server so their major versions match.");
+        _lastCheckedServerRaw = serverRaw;
+        _lastMismatch = serverVersion.Major != clientVersion.Major
+            ? (clientVersion, serverVersion)
+            : null;
+
+        if (_lastMismatch is { } mismatch)
+            ThrowMismatch(mismatch.Client, mismatch.Server);
     }
+
+    private static void ThrowMismatch(SemVersion clientVersion, SemVersion serverVersion) =>
+        throw new ApiVersionMismatchException(clientVersion, serverVersion,
+            $"This launcher (v{clientVersion}) is not compatible with the server (v{serverVersion}). " +
+            "Update the launcher or server so their major versions match.");
 
     public ApiRequestBuilder UseAuthenticationToken()
     {

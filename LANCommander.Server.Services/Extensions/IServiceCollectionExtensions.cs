@@ -55,21 +55,52 @@ public static class IServiceCollectionExtensions
         services.AddScoped<ConfigToOptionSchemaService>();
         services.AddScoped<ToolService>();
         services.AddSingleton<IHQTokenStore, SettingsHqTokenStore>();
+
+        // Constructed here rather than left to HQClient, which would build one internally and never
+        // hand it back. We need the reference: seeding the credential after a code exchange, and
+        // dropping it on unlink, both have to go through the provider so its cache agrees with the
+        // store. Writing round the back of it leaves a revoked token being served from memory.
+        //
+        // Singleton, and exactly one: refresh tokens are single-use, so two providers over the same
+        // store would rotate against each other and trip HQ's reuse detection.
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var baseUrl = settings.CurrentValue.Server.HQ.BaseUrl;
+
+            // The provider resolves "Auth/Token/Refresh" relative to this, so the trailing slash is
+            // load-bearing — HQClient's own normalisation happens too late to help here.
+            var baseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+
+            return new RefreshingTokenProvider(baseAddress, sp.GetRequiredService<IHQTokenStore>());
+        });
+
         services.AddSingleton(sp =>
         {
             var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
             var hqSettings = settings.CurrentValue.Server.HQ;
 
-            return new HQClient(new HQClientOptions
+            // TokenStore is deliberately not set: the supplied provider wins, and setting it would
+            // only imply a second provider that never gets built.
+            var options = new HQClientOptions
             {
                 BaseAddress = new Uri(hqSettings.BaseUrl),
                 Timeout = TimeSpan.FromSeconds(30),
-                TokenStore = sp.GetRequiredService<IHQTokenStore>(),
 
                 ClientName = string.IsNullOrWhiteSpace(hqSettings.ClientName)
                     ? $"LANCommander Server ({Environment.MachineName})"
                     : hqSettings.ClientName,
+            };
+
+            // Lives for the process, so it needs an explicit connection lifetime — a long-lived
+            // HttpClient otherwise pins the first resolved address and never notices DNS changes.
+            var http = new HttpClient(new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             });
+
+            // BaseAddress left unset on the HttpClient so HQClient normalises it from the options.
+            return new HQClient(http, options, sp.GetRequiredService<RefreshingTokenProvider>());
         });
         services.AddSingleton<IHqAuthApi, HqAuthApi>();
         services.AddSingleton<HqConnectionService>();

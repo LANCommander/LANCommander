@@ -173,16 +173,27 @@
 
     Task OnConnectionChanged(HqConnectionSnapshot connection)
     {
-        // The callback endpoint verifies before it responds, so a status change is the signal that
-        // the popup finished. This replaces polling the stored token string every two seconds.
+        // The callback endpoint verifies before it responds, so this event is the signal that the
+        // popup finished. It fires unconditionally for that path, so a retry that fails exactly as
+        // the last one did still reaches us. This replaces polling the stored token every two
+        // seconds.
         if (_awaitingAuth)
         {
             _awaitingAuth = false;
 
             if (connection.Status == HqConnectionStatus.Connected)
+            {
                 MessageService.Success("Successfully connected to LANCommander HQ!");
-            else if (connection.Status != HqConnectionStatus.Disconnected)
-                MessageService.Error("Connected to LANCommander HQ, but your account could not be verified. Check the server logs for details.");
+            }
+            else
+            {
+                // Not "connected but unverified" — the exchange itself can fail, in which case the
+                // server never connected at all. Disconnected lands here too; it used to fall
+                // through silently and leave the administrator with no feedback whatsoever.
+                MessageService.Error(string.IsNullOrWhiteSpace(connection.LastError)
+                    ? "Could not connect to LANCommander HQ. Check the server logs for details."
+                    : connection.LastError);
+            }
         }
 
         return Task.CompletedTask;

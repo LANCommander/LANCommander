@@ -1,6 +1,7 @@
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.HQ;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using System.Security.Claims;
 
 namespace LANCommander.Server.Endpoints;
@@ -39,25 +40,54 @@ public static class HqEndpoints
         // Exchanges the code, persists the resulting token pair, and verifies against HQ before we
         // reply — so the page that opened this popup can react to a real result rather than poll
         // for a changed token string.
-        await hqConnection.AcceptAuthorizationCodeAsync(code, cancellationToken);
+        var snapshot = await hqConnection.AcceptAuthorizationCodeAsync(code, cancellationToken);
 
-        var html = """
+        return TypedResults.Content(ResultPage(snapshot), "text/html");
+    }
+
+    /// <summary>
+    /// The page the popup lands on, reporting what actually happened.
+    /// </summary>
+    /// <remarks>
+    /// This used to announce success unconditionally, discarding the snapshot it was handed. A
+    /// failed exchange therefore left the administrator reading "Successfully connected" while the
+    /// server logged the opposite — the single most confusing way to fail.
+    /// </remarks>
+    private static string ResultPage(HqConnectionSnapshot snapshot)
+    {
+        var connected = snapshot.Status == HqConnectionStatus.Connected;
+
+        var title = connected
+            ? "Connected to LANCommander HQ"
+            : "Could not connect to LANCommander HQ";
+
+        var message = connected
+            ? "Successfully connected to LANCommander HQ. You may close this window."
+            : "Could not connect to LANCommander HQ. Check the server logs for details.";
+
+        // LastError is built from an HQ response, so it is not ours to trust into markup.
+        var detail = connected || string.IsNullOrWhiteSpace(snapshot.LastError)
+            ? string.Empty
+            : $"<p>{WebUtility.HtmlEncode(snapshot.LastError)}</p>";
+
+        // Only a success closes itself. A failure stays open so the reason can be read.
+        var script = connected
+            ? "if (window.opener) { window.opener.postMessage('hq-connected', '*'); window.close(); }"
+            : "if (window.opener) { window.opener.postMessage('hq-failed', '*'); }";
+
+        return $"""
             <!DOCTYPE html>
             <html>
-            <head><title>Connected to LANCommander HQ</title></head>
+            <head><title>{title}</title></head>
             <body>
-                <p>Successfully connected to LANCommander HQ. You may close this window.</p>
+                <p>{message}</p>
+                {detail}
                 <script>
-                    if (window.opener) {
-                        window.opener.postMessage('hq-connected', '*');
-                        window.close();
-                    }
+                    {script}
                 </script>
             </body>
             </html>
             """;
-
-        return TypedResults.Content(html, "text/html");
     }
 
     private static async Task<IResult> StatusAsync(

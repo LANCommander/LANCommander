@@ -1,7 +1,7 @@
 using System.Net;
 using LANCommander.HQ.SDK;
 using LANCommander.Server.Services.HQ;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using ServerSettings = LANCommander.Server.Settings.Settings;
@@ -27,6 +27,7 @@ public class HqConnectionServiceTests : IDisposable
         public int CurrentUserCalls;
         public int ExchangeCalls;
         public int RevokeCalls;
+        public int ClearCalls;
         public int MaxConcurrentCalls;
 
         public string? ExchangedCode;
@@ -43,6 +44,9 @@ public class HqConnectionServiceTests : IDisposable
 
         /// <summary>Stands in for the token store the real implementation writes through.</summary>
         public Action? OnExchanged { get; set; }
+
+        /// <summary>Stands in for the SDK token provider clearing store and cache together.</summary>
+        public Action? OnCleared { get; set; }
 
         public async Task<HqUserProfile?> GetCurrentUserAsync(CancellationToken cancellationToken = default)
         {
@@ -95,6 +99,15 @@ public class HqConnectionServiceTests : IDisposable
             return Task.CompletedTask;
         }
 
+        public Task ClearCredentialAsync(CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref ClearCalls);
+
+            OnCleared?.Invoke();
+
+            return Task.CompletedTask;
+        }
+
         private static void InterlockedMax(ref int target, int value)
         {
             int current;
@@ -104,6 +117,27 @@ public class HqConnectionServiceTests : IDisposable
                 if (Interlocked.CompareExchange(ref target, value, current) == current)
                     return;
             }
+        }
+    }
+
+    /// <summary>Records what was logged, so the wording rules below are actually assertable.</summary>
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            lock (Messages)
+                Messages.Add(formatter(state, exception));
         }
     }
 
@@ -127,7 +161,8 @@ public class HqConnectionServiceTests : IDisposable
     private sealed record Harness(
         HqConnectionService Service,
         ServerSettings Settings,
-        FakeHqAuthApi Api);
+        FakeHqAuthApi Api,
+        CapturingLogger<HqConnectionService> Log);
 
     private Harness Create(bool connected = true)
     {
@@ -143,13 +178,25 @@ public class HqConnectionServiceTests : IDisposable
 
         var api = new FakeHqAuthApi();
 
+        // The real implementation clears through the SDK token provider, which writes the blanked
+        // set to settings on the way past. Mirror that so the assertions below stay meaningful.
+        api.OnCleared = () =>
+        {
+            settings.Server.HQ.AccessToken = string.Empty;
+            settings.Server.HQ.AccessTokenExpiresAt = null;
+            settings.Server.HQ.RefreshToken = string.Empty;
+            settings.Server.HQ.RefreshTokenExpiresAt = null;
+        };
+
+        var log = new CapturingLogger<HqConnectionService>();
+
         var service = new HqConnectionService(
             api,
             new SettingsProvider<ServerSettings>(
                 new StubOptionsMonitor<ServerSettings>(settings), _settingsPath),
-            NullLogger<HqConnectionService>.Instance);
+            log);
 
-        return new Harness(service, settings, api);
+        return new Harness(service, settings, api, log);
     }
 
     // ── No credential ────────────────────────────────────────────────────────────────────────
@@ -401,6 +448,57 @@ public class HqConnectionServiceTests : IDisposable
         harness.Api.CurrentUserCalls.ShouldBe(0);
     }
 
+    [Fact]
+    public async Task AFailedExchangeStillRaisesTheEventWhenTheStatusIsUnchanged()
+    {
+        // The settings page opens the login popup and then waits on this event to learn how it
+        // went. A retry that fails the same way as the last one changes nothing about the
+        // snapshot, so the usual "only on change" rule would leave that page waiting forever.
+        var harness = Create();
+
+        harness.Api.ThrowOnCurrentUser = SessionEnded();
+        await harness.Service.VerifyAsync();
+        harness.Service.Current.Status.ShouldBe(HqConnectionStatus.Unauthorized);
+
+        var raised = 0;
+        harness.Service.ConnectionChanged += (_, _) => Interlocked.Increment(ref raised);
+
+        harness.Api.ThrowOnExchange = SessionEnded();
+
+        var snapshot = await harness.Service.AcceptAuthorizationCodeAsync("stale-code");
+
+        snapshot.Status.ShouldBe(HqConnectionStatus.Unauthorized);
+        raised.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task AFailedExchangeDoesNotClaimAnExistingSessionEnded()
+    {
+        // Nothing had started, so nothing ended. The old wording told an administrator connecting
+        // for the very first time that their session had been revoked.
+        var harness = Create(connected: false);
+
+        harness.Api.ThrowOnExchange = SessionEnded();
+
+        await harness.Service.AcceptAuthorizationCodeAsync("stale-code");
+
+        harness.Log.Messages.ShouldContain(m => m.Contains("Failed to exchange"));
+        harness.Log.Messages.ShouldNotContain(m => m.Contains("session has ended"));
+    }
+
+    [Fact]
+    public async Task AnEndedSessionOnAnEstablishedConnectionStillSaysSo()
+    {
+        // The counterpart: outside bootstrap the wording is accurate and must survive.
+        var harness = Create();
+
+        harness.Api.ThrowOnCurrentUser = SessionEnded();
+
+        await harness.Service.VerifyAsync();
+
+        harness.Log.Messages.ShouldContain(m => m.Contains("session has ended"));
+    }
+
     // ── Concurrency ──────────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -463,6 +561,10 @@ public class HqConnectionServiceTests : IDisposable
 
         harness.Api.RevokeCalls.ShouldBe(1);
         harness.Api.RevokedRefreshToken.ShouldBe("refresh-token");
+
+        // Cleared through the SDK token provider, not by editing settings behind its back: it
+        // caches the access token, and would otherwise keep serving the credential we just revoked.
+        harness.Api.ClearCalls.ShouldBe(1);
         harness.Settings.Server.HQ.AccessToken.ShouldBeEmpty();
         harness.Settings.Server.HQ.RefreshToken.ShouldBeEmpty();
         harness.Settings.Server.HQ.RefreshTokenExpiresAt.ShouldBeNull();
@@ -493,6 +595,7 @@ public class HqConnectionServiceTests : IDisposable
         await harness.Service.DisconnectAsync();
 
         harness.Api.RevokeCalls.ShouldBe(0);
+        harness.Api.ClearCalls.ShouldBe(1);
         harness.Service.Current.Status.ShouldBe(HqConnectionStatus.Disconnected);
     }
 }

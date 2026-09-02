@@ -221,17 +221,24 @@ else if (_metadataChoice == MetadataChoice.OwnProviders)
 
     Task OnHqConnectionChanged(HqConnectionSnapshot connection)
     {
-        // The callback endpoint verifies the new token before it responds, so a status change is
-        // the signal that the popup finished. This replaces the old two-second poll, which assumed
-        // success purely because the stored token string had changed.
+        // The callback endpoint verifies the new token before it responds, so this event is the
+        // signal that the popup finished. It fires unconditionally for that path, so a retry that
+        // fails exactly as the last one did still reaches us. This replaces the old two-second
+        // poll, which assumed success purely because the stored token string had changed.
         if (_awaitingAuth)
         {
             _awaitingAuth = false;
 
             if (connection.Status == HqConnectionStatus.Connected)
+            {
                 MessageService.Success("Successfully connected to LANCommander HQ!");
-            else if (connection.Status != HqConnectionStatus.Disconnected)
-                MessageService.Error("Connected to LANCommander HQ, but your account could not be verified. Check the server logs for details.");
+            }
+            else
+            {
+                MessageService.Error(string.IsNullOrWhiteSpace(connection.LastError)
+                    ? "Could not connect to LANCommander HQ. Check the server logs for details."
+                    : connection.LastError);
+            }
         }
 
         return Task.CompletedTask;

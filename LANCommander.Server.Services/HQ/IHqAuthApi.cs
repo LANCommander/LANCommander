@@ -33,4 +33,14 @@ public interface IHqAuthApi
     /// it, so unlinking here actually disconnects rather than just forgetting the credential.
     /// </summary>
     Task RevokeSessionAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets the credential locally — both the copy in settings and the SDK's in-memory cache.
+    /// </summary>
+    /// <remarks>
+    /// Clearing settings alone is not enough. The SDK's token provider caches the access token and
+    /// would keep serving it, then present the revoked refresh token on the 401 that follows —
+    /// which HQ reads as reuse and answers by revoking the successor session too.
+    /// </remarks>
+    Task ClearCredentialAsync(CancellationToken cancellationToken = default);
 }

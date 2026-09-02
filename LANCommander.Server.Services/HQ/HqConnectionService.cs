@@ -59,7 +59,10 @@ public sealed class HqConnectionService(
     }
 
     /// <summary>Establishes connection state by actually talking to HQ.</summary>
-    public async Task<HqConnectionSnapshot> VerifyAsync(CancellationToken cancellationToken = default)
+    public Task<HqConnectionSnapshot> VerifyAsync(CancellationToken cancellationToken = default)
+        => VerifyAsync(cancellationToken, forceNotify: false);
+
+    private async Task<HqConnectionSnapshot> VerifyAsync(CancellationToken cancellationToken, bool forceNotify)
     {
         await _verifyGate.WaitAsync(cancellationToken);
 
@@ -68,7 +71,7 @@ public sealed class HqConnectionService(
             var now = DateTimeOffset.UtcNow;
 
             if (!settingsProvider.CurrentValue.Server.HQ.HasCredential)
-                return Publish(HqConnectionSnapshot.Disconnected with { LastCheckedAt = now });
+                return Publish(HqConnectionSnapshot.Disconnected with { LastCheckedAt = now }, forceNotify);
 
             try
             {
@@ -80,13 +83,13 @@ public sealed class HqConnectionService(
                         HqConnectionStatus.Unauthorized,
                         null, false, false, null,
                         now, CurrentExpiry(),
-                        "LANCommander HQ did not return an account for this token."));
+                        "LANCommander HQ did not return an account for this token."), forceNotify);
                 }
 
                 return Publish(new HqConnectionSnapshot(
                     HqConnectionStatus.Connected,
                     profile.Username, profile.IsPremium, profile.IsEditor, profile.PreferredLocale,
-                    now, CurrentExpiry(), null));
+                    now, CurrentExpiry(), null), forceNotify);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -95,7 +98,7 @@ public sealed class HqConnectionService(
             }
             catch (Exception ex)
             {
-                return Publish(Classify(ex, now));
+                return Publish(Classify(ex, now), forceNotify);
             }
         }
         finally
@@ -109,6 +112,12 @@ public sealed class HqConnectionService(
     /// then verifies it. Called by the OAuth callback so the UI can react to a real result instead
     /// of polling for a changed token string.
     /// </summary>
+    /// <remarks>
+    /// Notifies unconditionally, unlike every other path. A page that opened the login popup is
+    /// waiting on the event to learn how it went, and a second failed attempt from an already
+    /// <see cref="HqConnectionStatus.Unauthorized"/> state changes nothing about the snapshot — so
+    /// the usual "only on change" rule would leave that page waiting forever.
+    /// </remarks>
     public async Task<HqConnectionSnapshot> AcceptAuthorizationCodeAsync(
         string code,
         CancellationToken cancellationToken = default)
@@ -121,10 +130,10 @@ public sealed class HqConnectionService(
         {
             logger.LogError(ex, "Failed to exchange the LANCommander HQ authorization code.");
 
-            return Publish(Classify(ex, DateTimeOffset.UtcNow));
+            return Publish(Classify(ex, DateTimeOffset.UtcNow, bootstrapping: true), forceNotify: true);
         }
 
-        return await VerifyAsync(cancellationToken);
+        return await VerifyAsync(cancellationToken, forceNotify: true);
     }
 
     /// <summary>Records that a live HQ request succeeded, so state recovers without waiting for a poll.</summary>
@@ -215,20 +224,20 @@ public sealed class HqConnectionService(
             }
         }
 
-        settingsProvider.Update(s =>
-        {
-            s.Server.HQ.AccessToken = string.Empty;
-            s.Server.HQ.AccessTokenExpiresAt = null;
-            s.Server.HQ.RefreshToken = string.Empty;
-            s.Server.HQ.RefreshTokenExpiresAt = null;
-        });
-
-        await settingsProvider.FlushAsync(cancellationToken);
+        // Through the SDK token provider rather than editing settings directly: it clears the
+        // store *and* its own cache. Blanking only the settings would leave the provider serving
+        // the access token it still holds, and re-presenting the refresh token we just revoked.
+        await api.ClearCredentialAsync(cancellationToken);
 
         Publish(HqConnectionSnapshot.Disconnected with { LastCheckedAt = DateTimeOffset.UtcNow });
     }
 
-    private HqConnectionSnapshot Classify(Exception exception, DateTimeOffset now)
+    /// <param name="bootstrapping">
+    /// True when this is the failure of an initial code exchange rather than of an established
+    /// connection. Suppresses the terminal-session wording below: nothing ended, because nothing
+    /// had started, and <see cref="AcceptAuthorizationCodeAsync"/> has already logged the cause.
+    /// </param>
+    private HqConnectionSnapshot Classify(Exception exception, DateTimeOffset now, bool bootstrapping = false)
     {
         var status = HqStatusMapper.Map(exception) ?? HqConnectionStatus.Unreachable;
         var detail = HqStatusMapper.Describe(exception);
@@ -247,16 +256,21 @@ public sealed class HqConnectionService(
             };
         }
 
-        if (HqStatusMapper.IsTerminal(exception))
+        // Silent while bootstrapping: the caller has already logged the exchange failure, and
+        // every wording below describes the end of a session that never began.
+        if (!bootstrapping)
         {
-            // The SDK has already cleared the token store, so the settings no longer hold anything
-            // usable. Say so plainly rather than implying a retry might help.
-            logger.LogWarning(exception,
-                "The LANCommander HQ session has ended and the stored credential has been cleared. An administrator must reconnect.");
-        }
-        else
-        {
-            logger.LogWarning(exception, "LANCommander HQ rejected this server's credential.");
+            if (HqStatusMapper.IsTerminal(exception))
+            {
+                // The SDK has already cleared the token store, so the settings no longer hold
+                // anything usable. Say so plainly rather than implying a retry might help.
+                logger.LogWarning(exception,
+                    "The LANCommander HQ session has ended and the stored credential has been cleared. An administrator must reconnect.");
+            }
+            else
+            {
+                logger.LogWarning(exception, "LANCommander HQ rejected this server's credential.");
+            }
         }
 
         return new HqConnectionSnapshot(
@@ -274,13 +288,18 @@ public sealed class HqConnectionService(
             : new DateTimeOffset(DateTime.SpecifyKind(expiresAt.Value, DateTimeKind.Utc));
     }
 
-    private HqConnectionSnapshot Publish(HqConnectionSnapshot next)
+    /// <param name="forceNotify">
+    /// Raise the event even when nothing about the snapshot changed. For the bootstrap path, where
+    /// a caller is waiting on the event itself rather than on a difference.
+    /// </param>
+    private HqConnectionSnapshot Publish(HqConnectionSnapshot next, bool forceNotify = false)
     {
         var previous = Interlocked.Exchange(ref _snapshot, next);
 
         // Only notify on meaningful change, so a healthy server polling on an interval raises no
         // events and never wakes idle Blazor circuits.
-        var changed = previous.Status != next.Status
+        var changed = forceNotify
+                      || previous.Status != next.Status
                       || previous.Username != next.Username
                       || previous.IsPremium != next.IsPremium
                       || previous.IsEditor != next.IsEditor;

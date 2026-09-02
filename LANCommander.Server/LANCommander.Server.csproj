@@ -103,6 +103,7 @@
     <PackageReference Include="Microsoft.Build.Tasks.Core" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
+    <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" />
     <PackageReference Include="nulastudio.NetBeauty" />
     <PackageReference Include="Razor.Templating.Core" />

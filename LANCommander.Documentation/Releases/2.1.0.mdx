@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.11** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.12** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -650,9 +650,52 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 </details>
 
+### 2.1.12
+<details>
+<summary>View 2.1.12 patch notes</summary>
+
+## Improvements
+- The PCGamingWiki metadata provider has been rewritten to use PCGamingWiki's Cargo API, which returns structured data instead of requiring the rendered page to be scraped. Requests are also rate limited to stay within their limits.
+- Added a **Settings → Integrations → PCGamingWiki** page. Credentials are optional; supplying a bot password unlocks the Cargo API, which has refused anonymous callers since PCGamingWiki's August 2026 server migration.
+- LANCommander HQ now authenticates with a long-lived rotating refresh token, so a server stays connected across restarts and idle periods instead of having to be reconnected by hand.
+- HQ connection status is now live runtime state rather than something inferred from the stored token. A background monitor re-verifies against HQ on an interval, and pages update as the connection changes.
+- HQ sessions are now labeled with a client name, defaulting to the machine name, so a server can be recognized and revoked from the right entry on your HQ account page.
+- The HQ login popup now reports what actually happened, including the reason a connection failed, and stays open on failure so that reason can be read.
+- The automatic repackaging job now logs how many packaging scripts succeeded and failed, and reports the exception type and message for each failure.
+- PowerShell script execution is now logged in more detail, covering module imports, variable assignments, and the type of script being run.
+- Raised the Blazor JS interop timeout to 10 minutes so long-running packaging scripts are no longer cancelled mid-run by the one minute default.
+- The SDK now caches API version compatibility checks and the client's own assembly version, removing repeated parsing and reflection from every request.
+
+## Bug Fixes
+- Fixed redistributable scripts being left out of the game manifest.
+- Fixed a failing packaging script faulting the entire automatic repackaging job, which triggered Hangfire's automatic retries and re-ran the whole job up to ten times with a growing delay.
+- Fixed the HQ login popup announcing success even when the token exchange had failed, while the server logged the opposite.
+- Fixed disconnecting from HQ leaving the cached access token in place, which allowed a revoked credential to be re-presented.
+- Fixed a retry of HQ authentication that failed the same way as the previous attempt leaving the page waiting indefinitely.
+- Fixed a dead `IsAuthenticated: true` line being written into `Settings.yml` that could never be read back.
+
+## Contributions
+This release includes contributions from the following community members:
+
+**@aaronpowell**
+- PR [#443](https://github.com/LANCommander/LANCommander/pull/443): Harden Package Job Execution
+- PR [#444](https://github.com/LANCommander/LANCommander/pull/444): Redistributable Scripts In Manifest
+- PR [#445](https://github.com/LANCommander/LANCommander/pull/445): Cache API Version Compatibility Checks
+
+<ReleaseDownloads release="v2.1.12" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.12" />
+
+<details>
+<summary>View 2.1.11 downloads</summary>
+
 <ReleaseDownloads release="v2.1.11" />
+
+</details>
 
 <details>
 <summary>View 2.1.10 downloads</summary>
@@ -733,4 +776,4 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.11" />
+<ContributorGrid from="v2.0.2" to="v2.1.12" />

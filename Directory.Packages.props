@@ -42,6 +42,7 @@
     <PackageVersion Include="Superpower" Version="3.1.0" />
     <PackageVersion Include="RegParserDotNet" Version="1.1.1" />
     <PackageVersion Include="nulastudio.NetBeauty" Version="2.1.4.6" />
+    <PackageVersion Include="NuGet.CommandLine" Version="6.12.5" />
     <PackageVersion Include="NuGet.Packaging" Version="6.12.5" />
     <PackageVersion Include="NuGet.Protocol" Version="6.12.5" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />

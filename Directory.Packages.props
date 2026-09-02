@@ -178,6 +178,7 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.0" />
     <PackageVersion Include="System.Text.Json" Version="9.0.1" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.95.0" />
   </ItemGroup>
   <ItemGroup Label="Caching">
     <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />

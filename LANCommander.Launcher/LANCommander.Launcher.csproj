@@ -34,6 +34,7 @@
     <PackageReference Include="VideoLAN.LibVLC.Windows" Condition="$(RuntimeIdentifier.StartsWith('win')) OR ($([MSBuild]::IsOSPlatform('Windows')) AND '$(RuntimeIdentifier)' == '')" />
     <PackageReference Include="VideoLAN.LibVLC.Mac" Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ($([MSBuild]::IsOSPlatform('OSX')) AND '$(RuntimeIdentifier)' == '')" />
     <PackageReference Include="ppy.SDL3-CS" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
   </ItemGroup>
 
   <ItemGroup>

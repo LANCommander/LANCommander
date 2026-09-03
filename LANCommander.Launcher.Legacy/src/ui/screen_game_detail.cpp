@@ -197,7 +197,7 @@ namespace launcher
         static bool launch_action(App &app, const lancommander::Action &action,
                                   std::string *error_out)
         {
-#ifdef ALLEGRO_WINDOWS
+#ifdef _WIN32
             std::string install_dir = s_game.install_directory;
             normalize_slashes(install_dir);
             std::string server_addr = app.connection().get_server_address();
@@ -253,7 +253,7 @@ namespace launcher
 
         static void poll_running_state()
         {
-#ifdef ALLEGRO_WINDOWS
+#ifdef _WIN32
             if (!s_process_handle)
             {
                 s_is_running = false;
@@ -281,7 +281,7 @@ namespace launcher
 
         static void stop_running_game()
         {
-#ifdef ALLEGRO_WINDOWS
+#ifdef _WIN32
             if (s_process_handle)
             {
                 TerminateProcess((HANDLE)s_process_handle, 0);
@@ -736,7 +736,7 @@ namespace launcher
                                                                "Uninstall", input);
                         if (uns_btn.clicked)
                         {
-#ifdef ALLEGRO_WINDOWS
+#ifdef _WIN32
                             std::string dir = s_game.install_directory;
                             normalize_slashes(dir);
 

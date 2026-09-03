@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" />
     <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
   </ItemGroup>
 
   <ItemGroup>

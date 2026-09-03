@@ -209,17 +209,6 @@
 
         </StackPanel>
 
-        <!-- ── Loading ─────────────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding IsLoading}"
-                Padding="16,54,16,10"
-                HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
-            </StackPanel>
-        </Border>
-
         <!-- ── Error ──────────────────────────────────────────────────────── -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding HasError}"
@@ -253,6 +242,19 @@
                 <TextBlock Text="Try adjusting your filters or search terms."
                            FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
             </StackPanel>
+
+            <!-- ── Loading overlay ─────────────────────────────────────────
+                 Floats over the content so it never shoves the grid down. -->
+            <Border IsVisible="{Binding IsLoading}"
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Center"
+                    Padding="16,54,16,10"
+                    ZIndex="10">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                    <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
+                </StackPanel>
+            </Border>
         </Grid>
 
     </DockPanel>

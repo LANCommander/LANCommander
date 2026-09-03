@@ -189,6 +189,28 @@ public class GameClientMetadataTests : IDisposable
         Assert.Equal("ASYNC-KEY-ABCD", key);
     }
 
+    [Fact]
+    public void UpdateCurrentKey_WhenMetadataDirectoryMissing_CreatesDirectoryAndWritesKey()
+    {
+        var gameId = Guid.NewGuid();
+        Assert.False(Directory.Exists(GameClient.GetMetadataDirectoryPath(_tempDir, gameId)));
+
+        GameClient.UpdateCurrentKey(_tempDir, gameId, "FRESH-KEY-0001");
+
+        Assert.Equal("FRESH-KEY-0001", GameClient.GetCurrentKey(_tempDir, gameId));
+    }
+
+    [Fact]
+    public async Task UpdateCurrentKeyAsync_WhenMetadataDirectoryMissing_CreatesDirectoryAndWritesKey()
+    {
+        var gameId = Guid.NewGuid();
+        Assert.False(Directory.Exists(GameClient.GetMetadataDirectoryPath(_tempDir, gameId)));
+
+        await GameClient.UpdateCurrentKeyAsync(_tempDir, gameId, "FRESH-KEY-0002");
+
+        Assert.Equal("FRESH-KEY-0002", await GameClient.GetCurrentKeyAsync(_tempDir, gameId));
+    }
+
     private void EnsureMetadataDirectoryExists(Guid gameId)
     {
         var metaDir = GameClient.GetMetadataDirectoryPath(_tempDir, gameId);

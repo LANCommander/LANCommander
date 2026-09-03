@@ -13,7 +13,9 @@
         {
             <Panel Header="@externalProvider.Name">
                 <ExtraTemplate>
-                    <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(externalProvider)"/>
+                    <Popconfirm Title="Are you sure you want to delete this provider?" OnConfirm="() => Remove(externalProvider)">
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger />
+                    </Popconfirm>
                 </ExtraTemplate>
                 <ChildContent>
                     <Form Model="externalProvider" Layout="FormLayout.Vertical">

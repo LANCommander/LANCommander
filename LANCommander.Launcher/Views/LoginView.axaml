@@ -109,6 +109,13 @@
                     </TextBox>
                 </StackPanel>
 
+                <TextBlock IsVisible="{Binding ShowPasswordRequirements}"
+                           Text="{Binding PasswordRequirements}"
+                           Foreground="White"
+                           Opacity="0.75"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+
                 <Panel IsVisible="{Binding ShowPrimaryButtons}">
                     <Button Command="{Binding LoginCommand}"
                             HorizontalAlignment="Stretch"

@@ -1,0 +1,54 @@
+@implements IDisposable
+@inject IHqConnectionState HqConnection
+
+@ChildContent(HqConnection.Current)
+
+@code {
+    // Supplies verified LANCommander HQ connection state to its content and re-renders whenever
+    // that state changes.
+    //
+    // The subscription lives here rather than in each page on purpose. HqConnectionService is a
+    // true application singleton, so a component that forgets to unsubscribe pins its whole render
+    // tree and its circuit for the lifetime of the process. Owning that in one place means there is
+    // exactly one Dispose to get right.
+
+    [Parameter, EditorRequired]
+    public RenderFragment<HqConnectionSnapshot> ChildContent { get; set; } = default!;
+
+    /// <summary>Raised after the connection changes, for pages that keep their own local state.</summary>
+    [Parameter]
+    public EventCallback<HqConnectionSnapshot> OnConnectionChanged { get; set; }
+
+    bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        HqConnection.ConnectionChanged += OnChanged;
+    }
+
+    void OnChanged(object? sender, HqConnectionSnapshot snapshot)
+    {
+        if (_disposed)
+            return;
+
+        // Raised from the background monitor's thread, which has no renderer synchronization
+        // context, so this must be marshalled onto the circuit.
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed)
+                return;
+
+            if (OnConnectionChanged.HasDelegate)
+                await OnConnectionChanged.InvokeAsync(snapshot);
+
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+
+        HqConnection.ConnectionChanged -= OnChanged;
+    }
+}

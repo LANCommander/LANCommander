@@ -19,7 +19,10 @@
                     <MenuItem RouterLink="/Profile/Library">Library</MenuItem>
                 }
                 <MenuItem RouterLink="/Profile/ConnectedAccounts">Connected Accounts</MenuItem>
-                <MenuItem RouterLink="/Profile/ChangePassword">Change Password</MenuItem>
+                @if (SettingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+                {
+                    <MenuItem RouterLink="/Profile/ChangePassword">Change Password</MenuItem>
+                }
                 <MenuItem RouterLink="/Profile/Saves">Saves</MenuItem>
                 <MenuItem RouterLink="/Logout">Logout</MenuItem>
             </ChildContent>
@@ -107,6 +110,7 @@
                 <SubMenu Title="Integrations">
                     <MenuItem RouterLink="/Settings/Integrations/HQ">HQ</MenuItem>
                     <MenuItem RouterLink="/Settings/Integrations/IGDB">IGDB</MenuItem>
+                    <MenuItem RouterLink="/Settings/Integrations/PCGamingWiki">PCGamingWiki</MenuItem>
                     <MenuItem RouterLink="/Settings/Integrations/Steam">Steam</MenuItem>
                     <MenuItem RouterLink="/Settings/Integrations/SteamGridDB">SteamGridDB</MenuItem>
                 </SubMenu>

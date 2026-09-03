@@ -48,7 +48,7 @@ public partial class ScriptClient
                             script.AddVariable(customField.Name, customField.Value);
                         }
                     }
-                    
+
                     script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
@@ -114,7 +114,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
-                    
+
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
                         foreach (var customField in manifest.CustomFields)
@@ -122,7 +122,7 @@ public partial class ScriptClient
                             script.AddVariable(customField.Name, customField.Value);
                         }
                     }
-                    
+
                     script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
@@ -190,7 +190,7 @@ public partial class ScriptClient
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                     script.AddVariable("PlayerAlias", playerAlias);
-                    
+
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
                         foreach (var customField in manifest.CustomFields)
@@ -198,7 +198,7 @@ public partial class ScriptClient
                             script.AddVariable(customField.Name, customField.Value);
                         }
                     }
-                    
+
                     script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
@@ -266,7 +266,7 @@ public partial class ScriptClient
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                     script.AddVariable("PlayerAlias", GameClient.GetPlayerAlias(installDirectory, gameId));
-                    
+
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
                         foreach (var customField in manifest.CustomFields)
@@ -274,7 +274,7 @@ public partial class ScriptClient
                             script.AddVariable(customField.Name, customField.Value);
                         }
                     }
-                    
+
                     script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
@@ -353,7 +353,7 @@ public partial class ScriptClient
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                     script.AddVariable("OldPlayerAlias", oldName);
                     script.AddVariable("NewPlayerAlias", newName);
-                    
+
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
                         foreach (var customField in manifest.CustomFields)
@@ -434,7 +434,7 @@ public partial class ScriptClient
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
                     script.AddVariable("AllocatedKey", key);
-                    
+
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
                         foreach (var customField in manifest.CustomFields)
@@ -442,7 +442,7 @@ public partial class ScriptClient
                             script.AddVariable(customField.Name, customField.Value);
                         }
                     }
-                    
+
                     script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
@@ -486,43 +486,38 @@ public partial class ScriptClient
         return result;
     }
 
-    public async Task<Package> Game_RunPackageScriptAsync(Script packageScript, Game game, string latestArchivePath = null)
+    public async Task<Package?> RunPackageScriptAsync(Script packageScript, Game game, string? latestArchivePath = null)
     {
         try
         {
-            using (var op = logger.BeginOperation("Executing game package script"))
+            using var op = logger.BeginOperation("Executing game package script");
+            var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
+
+            script.AddVariable("Game", game);
+
+            if (!string.IsNullOrEmpty(latestArchivePath))
+                script.AddVariable("LatestArchivePath", latestArchivePath);
+
+            script.UseInline(packageScript.Contents);
+
+            op
+                .Enrich("GameId", game.Id)
+                .Enrich("GameTitle", game.Title)
+                .Enrich("ScriptId", packageScript.Id)
+                .Enrich("ScriptName", packageScript.Name);
+
+            if (Debug)
             {
-                var script = powerShellScriptFactory.Create(Enums.ScriptType.Package);
-
-                script.AddVariable("Game", game);
-
-                if (!string.IsNullOrEmpty(latestArchivePath))
-                    script.AddVariable("LatestArchivePath", latestArchivePath);
-
-                script.UseInline(packageScript.Contents);
-                
-                try
-                {
-                    op
-                        .Enrich("GameId", game.Id)
-                        .Enrich("GameTitle", game.Title)
-                        .Enrich("ScriptId", packageScript.Id)
-                        .Enrich("ScriptName", packageScript.Name);
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex, "Could not enrich logs");
-                }
-                
-                if (Debug)
-                    script.EnableDebug();
-
-                return await script.ExecuteAsync<Package>();
+                logger.LogInformation("Debugging is enabled for the package script ({ScriptName}) for game {GameTitle}", packageScript.Name, game.Title);
+                script.EnableDebug();
             }
+
+            logger.LogInformation("Running package script ({ScriptName}) for game {GameTitle}", packageScript.Name, game.Title);
+            return await script.ExecuteAsync<Package>();
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Could not execute game package script");
+            logger.LogError(ex, "Failed to run package script ({ScriptName}) for game {GameTitle}", packageScript.Name, game.Title);
         }
 
         return null;

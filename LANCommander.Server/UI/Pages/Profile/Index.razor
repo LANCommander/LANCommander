@@ -1,10 +1,14 @@
 ﻿@page "/Profile"
 @page "/Profile/General"
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Options
 @inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IOptions<Settings> Settings
 @inject ILogger<Index> Logger
 @attribute [Authorize]
 
@@ -17,19 +21,22 @@
 <div style="padding: 0 24px;">
     <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" ValidateOnChange="true">
         <FormItem Label="Avatar">
-            <AvatarUploader UserId="User.Id" />
+            <AvatarUploader UserId="User.Id" Disabled="!AuthSettings.AllowAvatarUpload" />
         </FormItem>
 
         <FormItem Label="Username" Help="Username changes require a relog">
-            <Input @bind-Value="context.UserName" />
+            <Input @bind-Value="context.UserName" Disabled="!AuthSettings.AllowUsernameChange" />
         </FormItem>
 
-        <FormItem Label="Alias">
-            <Input @bind-Value="context.Alias" />
-        </FormItem>
+        @if (AuthSettings.AllowAliasChange)
+        {
+            <FormItem Label="Alias">
+                <Input @bind-Value="context.Alias" />
+            </FormItem>
+        }
 
         <FormItem Label="Email Address" Help="Email changes require a relog">
-            <Input @bind-Value="context.Email" />
+            <Input @bind-Value="context.Email" Disabled="!AuthSettings.AllowEmailChange" />
         </FormItem>
     </Form>
 </div>
@@ -38,12 +45,22 @@
     User User = new();
     Form<User> Form;
 
+    private AuthenticationSettings AuthSettings => Settings.Value.Server.Authentication;
+
+    private string _originalUserName;
+    private string _originalEmail;
+    private string _originalAlias;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        
+
         if (authState.User.Identity.IsAuthenticated)
             User = await UserService.GetAsync(authState.User.Identity.Name);
+
+        _originalUserName = User.UserName;
+        _originalEmail = User.Email;
+        _originalAlias = User.Alias;
     }
 
     private async Task Save()
@@ -52,6 +69,14 @@
         {
             if (Form.IsModified)
             {
+                // Enforce administrator restrictions server-side regardless of UI state.
+                if (!AuthSettings.AllowUsernameChange)
+                    User.UserName = _originalUserName;
+                if (!AuthSettings.AllowEmailChange)
+                    User.Email = _originalEmail;
+                if (!AuthSettings.AllowAliasChange)
+                    User.Alias = _originalAlias;
+
                 await UserService.UpdateAsync(User);
 
                 MessageService.Success("Profile updated!");

@@ -1,9 +1,20 @@
+using Microsoft.AspNetCore.Components.Server;
+
 namespace LANCommander.Server.Startup;
 
 public static class Razor
 {
     public static WebApplicationBuilder AddRazor(this WebApplicationBuilder builder)
     {
+        // Long-running scripts (e.g. game/tool/redistributable packaging) drive JS interop calls
+        // through the PowerShell debug console (Terminal.ReadLineAsync/WriteLine) that can take far
+        // longer than Blazor Server's 1 minute default JSInteropDefaultCallTimeout. Raise it so those
+        // calls aren't cancelled mid-script.
+        builder.Services.Configure<CircuitOptions>(options =>
+        {
+            options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(10);
+        });
+
         builder.Services
             .AddMvc(static options => options.EnableEndpointRouting = false)
             .AddRazorOptions(static options =>

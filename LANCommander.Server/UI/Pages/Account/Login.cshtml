@@ -28,59 +28,65 @@
                 </div>
             }
 
-            <form id="account" method="post" autocomplete="off">
-                <div class="ant-form ant-form-vertical">
-                    <div class="ant-form-item">
-                        <div class="ant-form-item-row ant-row">
-                            <div class="ant-form-item-label ant-col">
-                                <label asp-for="Model.Username" class="form-label"></label>
-                            </div>
+            @if (Model.AllowPassword)
+            {
+                <form id="account" method="post" autocomplete="off">
+                    <div class="ant-form ant-form-vertical">
+                        <div class="ant-form-item">
+                            <div class="ant-form-item-row ant-row">
+                                <div class="ant-form-item-label ant-col">
+                                    <label asp-for="Model.Username" class="form-label"></label>
+                                </div>
 
-                            <div class="ant-form-item-control ant-col">
-                                <div class="ant-form-item-control-input">
-                                    <div class="ant-form-item-control-input-content">
-                                        <input asp-for="Model.Username" class="ant-input" autocomplete="username" aria-required="true"/>
+                                <div class="ant-form-item-control ant-col">
+                                    <div class="ant-form-item-control-input">
+                                        <div class="ant-form-item-control-input-content">
+                                            <input asp-for="Model.Username" class="ant-input" autocomplete="username" aria-required="true"/>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="ant-form-item">
-                        <div class="ant-form-item-row ant-row">
-                            <div class="ant-form-item-label ant-col">
-                                <label asp-for="Model.Password" class="form-label"></label>
-                            </div>
+                        <div class="ant-form-item">
+                            <div class="ant-form-item-row ant-row">
+                                <div class="ant-form-item-label ant-col">
+                                    <label asp-for="Model.Password" class="form-label"></label>
+                                </div>
 
-                            <div class="ant-form-item-control ant-col">
-                                <div class="ant-form-item-control-input">
-                                    <div class="ant-form-item-control-input-content">
-                                        <input asp-for="Model.Password" class="ant-input" autocomplete="current-password" aria-required="true"/>
+                                <div class="ant-form-item-control ant-col">
+                                    <div class="ant-form-item-control-input">
+                                        <div class="ant-form-item-control-input-content">
+                                            <input asp-for="Model.Password" class="ant-input" autocomplete="current-password" aria-required="true"/>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="ant-form-item" style="margin-bottom: 0;">
-                        <div class="ant-flex ant-flex-gap-small ant-flex-wrap-nowrap">
-                            <button id="login-submit" type="submit" class="ant-btn ant-btn-primary">Login</button>
-                            @if (SettingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
-                            {
-                                <a href="~/Register" class="ant-btn ant-btn-default">Register</a>
-                            }
+                        <div class="ant-form-item" style="margin-bottom: 0;">
+                            <div class="ant-flex ant-flex-gap-small ant-flex-wrap-nowrap">
+                                <button id="login-submit" type="submit" class="ant-btn ant-btn-primary">Login</button>
+                                @if (SettingsProvider.CurrentValue.Server.Authentication.AllowRegistration)
+                                {
+                                    <a href="~/Register" class="ant-btn ant-btn-default">Register</a>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            }
 
             @if (providers != null && providers.Count() > 0)
             {
-                <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
-                    <span class="ant-divider-inner-text">
-                        Or
+                @if (Model.AllowPassword)
+                {
+                    <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
+                        <span class="ant-divider-inner-text">
+                            Or
+                        </span>
                     </span>
-                </span>
+                }
 
                 <partial name="_ProviderButtons" model="@(new LANCommander.Server.Models.ProviderButtonsModel { Providers = providers, ReturnUrl = Model.ReturnUrl })"/>
             }

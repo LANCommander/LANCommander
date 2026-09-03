@@ -7,6 +7,10 @@ on:
                 description: 'Build .NET Version'
                 required: true
                 type: string
+            pr_number:
+                description: 'Pull request number, if this run is associated with one'
+                required: false
+                type: string
         outputs:
             visual_diff_count:
                 description: 'Number of visual baselines that regressed in this run'
@@ -139,6 +143,10 @@ jobs:
 
                   cat visual/regressions.json
 
+            - name: Save PR number
+              if: always() && inputs.pr_number != ''
+              run: echo "${{ inputs.pr_number }}" > visual/pr-number.txt
+
             - name: Upload visual artifacts
               if: always()
               uses: actions/upload-artifact@v4
@@ -149,6 +157,7 @@ jobs:
                       visual/diffs/**
                       visual/baselines/**
                       visual/regressions.json
+                      visual/pr-number.txt
                   if-no-files-found: warn
                   retention-days: 14
 

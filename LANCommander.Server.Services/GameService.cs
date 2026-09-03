@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
@@ -70,7 +70,7 @@ namespace LANCommander.Server.Services
             if (entity.Media != null)
                 foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                     entity.Media.Remove(media);
-            
+
             var update = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(g => g.Actions);
@@ -123,60 +123,63 @@ namespace LANCommander.Server.Services
             return await GetAsync(g => g.AddonTypes.Contains(g.Type));
         }
 
-        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
+        public async Task<SDK.Models.Manifest.Game?> GetManifestAsync(Guid id)
         {
-            var game = await Query(q =>
+            var game = await Query(static q =>
             {
                 return q
                     .AsNoTracking()
                     .AsSplitQuery()
-                    .Include(g => g.Actions)
-                    .Include(g => g.Archives)
-                    .Include(g => g.BaseGame)
-                    .Include(g => g.Categories)
-                    .Include(g => g.Collections)
-                    .Include(g => g.CustomFields)
-                    .Include(g => g.DependentGames)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Engine)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
-                    .Include(g => g.Tools)
-                    .Include(g => g.SavePaths)
-                    .Include(g => g.Scripts)
-                    .Include(g => g.Tags)
-                    .Include(g => g.ExternalIds);
+                    .Include(static g => g.Actions)
+                    .Include(static g => g.Archives)
+                    .Include(static g => g.BaseGame)
+                    .Include(static g => g.Categories)
+                    .Include(static g => g.Collections)
+                    .Include(static g => g.CustomFields)
+                    .Include(static g => g.DependentGames)
+                    .Include(static g => g.Developers)
+                    .Include(static g => g.Engine)
+                    .Include(static g => g.Genres)
+                    .Include(static g => g.Media)
+                    .Include(static g => g.MultiplayerModes)
+                    .Include(static g => g.Platforms)
+                    .Include(static g => g.Publishers)
+                    .Include(static g => g.Redistributables)
+                        .ThenInclude(static r => r.Scripts)
+                    .Include(static g => g.Tools)
+                    .Include(static g => g.SavePaths)
+                    .Include(static g => g.Scripts)
+                    .Include(static g => g.Tags)
+                    .Include(static g => g.ExternalIds);
             }).GetAsync(id);
 
             return await GetManifestAsync(game);
         }
-        
-        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Game game)
+
+        public async Task<SDK.Models.Manifest.Game?> GetManifestAsync(Game game)
         {
             if (game == null)
                 return null;
 
             var manifest = mapper.Map<SDK.Models.Manifest.Game>(game);
 
-            if (game.Redistributables != null && game.Redistributables.Any())
+            if (game.Redistributables is not { Count: > 0 })
             {
-                using var context = await contextFactory.CreateDbContextAsync();
+                return manifest;
+            }
 
-                foreach (var redistributable in manifest.Redistributables)
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            foreach (var redistributable in manifest.Redistributables)
+            {
+                var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                    .FirstOrDefaultAsync(e =>
+                        EF.Property<Guid>(e, "GameId") == game.Id &&
+                        EF.Property<Guid>(e, "RedistributableId") == redistributable.Id);
+
+                if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson && !string.IsNullOrWhiteSpace(optionsJson))
                 {
-                    var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
-                        .FirstOrDefaultAsync(e =>
-                            EF.Property<Guid>(e, "GameId") == game.Id &&
-                            EF.Property<Guid>(e, "RedistributableId") == redistributable.Id);
-
-                    if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson && !string.IsNullOrWhiteSpace(optionsJson))
-                    {
-                        redistributable.Options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson);
-                    }
+                    redistributable.Options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson) ?? [];
                 }
             }
 
@@ -220,7 +223,7 @@ namespace LANCommander.Server.Services
                 .AsSplitQuery()
                 .Include(g => g.CustomFields)
                 .GetAsync(id);
-            
+
             return game.CustomFields.FirstOrDefault(c => c.Name == name);
         }
 
@@ -230,7 +233,7 @@ namespace LANCommander.Server.Services
                 .AsSplitQuery()
                 .Include(g => g.CustomFields)
                 .GetAsync(id);
-            
+
             if (game.CustomFields.Any(c => c.Name == name))
                 foreach (var customField in game.CustomFields.Where(c => c.Name == name))
                     customField.Value = value;
@@ -248,9 +251,9 @@ namespace LANCommander.Server.Services
                 .AsSplitQuery()
                 .Include(g => g.Archives)
                 .GetAsync(id);
-            
+
             var latestArchive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-            
+
             return latestArchive;
         }
 
@@ -296,13 +299,13 @@ namespace LANCommander.Server.Services
                 .Include(g => g.CustomFields)
                 .Include(g => g.Scripts)
                 .GetAsync(id);
-            
-            logger?.LogInformation("Packaging game {GameTitle}", game.Title);
+
+            logger.LogInformation("Packaging game {GameTitle}", game.Title);
 
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
             var storageLocation = await storageLocationService.GetOrDefaultAsync(latestArchive?.StorageLocationId, StorageLocationType.Archive);
 
-            string latestArchivePath = null;
+            string? latestArchivePath = null;
             if (latestArchive != null)
                 latestArchivePath = await archiveService.GetArchiveFileLocationAsync(latestArchive);
 
@@ -310,22 +313,23 @@ namespace LANCommander.Server.Services
             {
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
-                    var package = await scriptClient.Game_RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
+                    logger.LogInformation("Running script {Name} for game {GameTitle}", script.Name, game.Title);
+                    var package = await scriptClient.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game), latestArchivePath);
 
-                    if (package == null)
+                    if (package is null)
                     {
-                        var message = $"Could not package game {game.Title}, the package script did not return a result";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger.LogError("Could not package game '{Title} ({Id})', the package script did not return a result", game.Title, game.Id);
+                        return;
                     }
 
-                    if (String.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
+                    if (string.IsNullOrWhiteSpace(package.Path) || !Directory.Exists(package.Path))
                     {
-                        var message = $"Could not package game {game.Title}, the path {package.Path} could not be found";
-                        logger?.LogError(message);
-                        throw new Exception(message);
+                        logger.LogError("Could not package game '{Title} ({Id})', the path {Path} could not be found", game.Title, game.Id, package.Path);
+                        return;
                     }
-                    
+
+                    logger.LogInformation("New archive for game {GameTitle} will be created with version number {GameVersion}", game.Title, package.Version);
+
                     var archive = new Archive
                     {
                         Version = package.Version,
@@ -336,21 +340,20 @@ namespace LANCommander.Server.Services
                     };
 
                     archive = await archiveService.AddAsync(archive);
-                    
+
                     var destination = await archiveService.GetArchiveFileLocationAsync(archive);
-                    
+
                     ZipFile.CreateFromDirectory(package.Path, destination);
 
                     await archiveService.RecalculateFileSizeArchiveAsync(archive);
 
-                    logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
+                    logger.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }
             }
             else
             {
-                var message = $"Could not package game {game.Title}, no packaging scripts are defined";
-                logger?.LogWarning(message);
-                throw new Exception(message);
+                logger.LogWarning("Could not package game '{GameTitle}', no packaging scripts are defined", game.Title);
+                return;
             }
         }
     }

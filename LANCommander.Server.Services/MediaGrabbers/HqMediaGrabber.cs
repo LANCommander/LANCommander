@@ -2,6 +2,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
 using LANCommander.HQ.SDK;
+using LANCommander.Server.Services.HQ;
 using HqModels = LANCommander.HQ.SDK.Models;
 using Microsoft.Extensions.Logging;
 
@@ -9,9 +10,11 @@ namespace LANCommander.Server.Services.MediaGrabbers;
 
 public class HqMediaGrabber(
     HQClient hqClient,
-    SettingsProvider<Settings.Settings> settingsProvider,
+    HqConnectionService hqConnection,
     ILogger<HqMediaGrabber> logger) : IMediaGrabberService
 {
+    private IReadOnlyList<HqModels.ProviderInfo>? _cachedProviders;
+
     public string Name => "LANCommander HQ";
 
     public MediaType[] SupportedMediaTypes =>
@@ -36,14 +39,35 @@ public class HqMediaGrabber(
         { MediaType.Manual, HqModels.MediaType.Manual },
     };
 
-    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
+    public Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
+        => SearchAsync(type, keywords, null, page);
+
+    public async Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync()
+    {
+        if (!hqConnection.IsUsable)
+            return null;
+
+        try
+        {
+            _cachedProviders ??= await hqConnection.TrackAsync(() => hqClient.Providers.ListAsync());
+
+            return _cachedProviders.Select(p => (p.Slug, p.Name));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fetch HQ sub-providers");
+            return null;
+        }
+    }
+
+    public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, string? subProvider, int page = 0)
     {
         // HQ returns all matching media for a game in a single request,
         // so there are no further pages to load.
         if (page > 0)
             return [];
 
-        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+        if (!hqConnection.IsUsable)
             return [];
 
         if (!SdkToHqMediaType.TryGetValue(type, out var hqMediaType))
@@ -51,19 +75,24 @@ public class HqMediaGrabber(
 
         try
         {
-            var providers = await hqClient.Providers.ListAsync();
-            var providerSlug = providers.FirstOrDefault()?.Slug;
+            var providerSlug = subProvider;
+
+            if (string.IsNullOrWhiteSpace(providerSlug))
+            {
+                _cachedProviders ??= await hqConnection.TrackAsync(() => hqClient.Providers.ListAsync());
+                providerSlug = _cachedProviders.FirstOrDefault()?.Slug;
+            }
 
             if (providerSlug is null)
                 return [];
 
-            var searchResponse = await hqClient.Games.SearchAsync(providerSlug, keywords);
+            var searchResponse = await hqConnection.TrackAsync(() => hqClient.Games.SearchAsync(providerSlug, keywords));
             var searchResults = searchResponse?.Data ?? [];
             var results = new List<MediaGrabberResult>();
 
             foreach (var result in searchResults)
             {
-                var gameResponse = await hqClient.Games.GetAsync(providerSlug, result.Id);
+                var gameResponse = await hqConnection.TrackAsync(() => hqClient.Games.GetAsync(providerSlug, result.Id));
                 var gameDto = gameResponse?.Data;
 
                 if (gameDto?.Media is null)
@@ -111,7 +140,7 @@ public class HqMediaGrabber(
 
         try
         {
-            using var response = await hqClient.Games.GetMediaAsync(gameId, hqMediaType);
+            using var response = await hqConnection.TrackAsync(() => hqClient.Games.GetMediaAsync(gameId, hqMediaType));
             response.EnsureSuccessStatusCode();
 
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";

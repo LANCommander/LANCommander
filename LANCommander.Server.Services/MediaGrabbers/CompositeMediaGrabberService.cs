@@ -36,16 +36,23 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public IEnumerable<string> GetPagingGrabberNames() => _grabbers.Where(g => g.SupportsPaging).Select(g => g.Name);
 
+        public async Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync(string grabberName)
+        {
+            var grabber = _grabbers.FirstOrDefault(g => g.Name == grabberName);
+
+            return grabber is null ? null : await grabber.GetSubProvidersAsync();
+        }
+
         public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
             MediaType type, string keywords, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            await foreach (var batch in SearchStreamAsync(type, keywords, null, page, cancellationToken))
+            await foreach (var batch in SearchStreamAsync(type, keywords, null, null, page, cancellationToken))
                 yield return batch;
         }
 
         public async IAsyncEnumerable<IEnumerable<MediaGrabberResult>> SearchStreamAsync(
-            MediaType type, string keywords, string? grabberName, int page,
+            MediaType type, string keywords, string? grabberName, string? subProvider, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var applicable = _grabbers.Where(g => g.SupportedMediaTypes.Contains(type)).ToList();
@@ -62,7 +69,7 @@ namespace LANCommander.Server.Services.MediaGrabbers
             {
                 try
                 {
-                    var results = (await grabber.SearchAsync(type, keywords, page)).ToList();
+                    var results = (await grabber.SearchAsync(type, keywords, subProvider, page)).ToList();
 
                     foreach (var result in results)
                         result.GrabberName = grabber.Name;

@@ -6,29 +6,40 @@
 @inject IOptions<Settings.Settings> Settings
 @inject IMessageService MessageService
 
-<InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png,.webp" />
-
-<label for="AvatarUpload" style="cursor: pointer;">
-    @if (String.IsNullOrWhiteSpace(AvatarUrl))
-    {
-        <div class="ant-upload ant-upload-select-picture-card ant-upload-select">
-            <span class="ant-upload" tabindex="0" style="display: grid;">
-                <div>
-                    <Icon Type="@IconType.Outline.Plus" />
-                    <div class="ant-upload-text">Upload</div>
-                </div>
-            </span>
-        </div>
-    }
-    else
+@if (Disabled)
+{
+    @if (!String.IsNullOrWhiteSpace(AvatarUrl))
     {
         <Image Width="@Width" Src="@AvatarUrl" Preview="false" />
     }
-</label>
+}
+else
+{
+    <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png,.webp" />
+
+    <label for="AvatarUpload" style="cursor: pointer;">
+        @if (String.IsNullOrWhiteSpace(AvatarUrl))
+        {
+            <div class="ant-upload ant-upload-select-picture-card ant-upload-select">
+                <span class="ant-upload" tabindex="0" style="display: grid;">
+                    <div>
+                        <Icon Type="@IconType.Outline.Plus" />
+                        <div class="ant-upload-text">Upload</div>
+                    </div>
+                </span>
+            </div>
+        }
+        else
+        {
+            <Image Width="@Width" Src="@AvatarUrl" Preview="false" />
+        }
+    </label>
+}
 
 @code {
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public string Width { get; set; } = "104px";
+    [Parameter] public bool Disabled { get; set; }
 
     string AvatarUrl;
 
@@ -66,6 +77,12 @@
 
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
+        if (Disabled)
+        {
+            MessageService.Error("Avatar uploads are disabled by the administrator");
+            return;
+        }
+
         var media = User.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
         var config = Settings.Value.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
 

@@ -16,6 +16,19 @@
                     TItem="string"
                     TItemValue="string"
                     Style="min-width: 180px;" />
+            @if (_availableSubProviders?.Any() == true)
+            {
+                <Select Value="_selectedSubProvider"
+                        ValueChanged="OnSubProviderChanged"
+                        TItem="string"
+                        TItemValue="string"
+                        Style="min-width: 180px;">
+                    @foreach (var sp in _availableSubProviders)
+                    {
+                        <SelectOption Value="@sp.Slug" Label="@sp.Name" TItemValue="string" TItem="string" />
+                    }
+                </Select>
+            }
         </Flex>
     </GridCol>
     <GridCol Span="6"></GridCol>
@@ -165,6 +178,9 @@
     string _selectedProvider = string.Empty;
     string[] _availableProviders = [];
 
+    string? _selectedSubProvider;
+    IEnumerable<(string Slug, string Name)>? _availableSubProviders;
+
     protected override async Task OnFirstAfterRenderAsync()
     {
         Type = Options.Type;
@@ -175,15 +191,31 @@
         _selectedProvider = _availableProviders.First();
         _pagingProviders = MediaGrabberService.GetPagingGrabberNames().ToHashSet();
 
+        await UpdateSubProvidersAsync();
         await GetResults(Type, Search);
     }
 
     private async Task OnProviderChanged(string provider)
     {
         _selectedProvider = provider;
+        await UpdateSubProvidersAsync();
 
         if (!string.IsNullOrWhiteSpace(Search))
             await GetResults(Type, Search);
+    }
+
+    private async Task OnSubProviderChanged(string subProvider)
+    {
+        _selectedSubProvider = subProvider;
+
+        if (!string.IsNullOrWhiteSpace(Search))
+            await GetResults(Type, Search);
+    }
+
+    private async Task UpdateSubProvidersAsync()
+    {
+        _availableSubProviders = await MediaGrabberService.GetSubProvidersAsync(_selectedProvider);
+        _selectedSubProvider = _availableSubProviders?.FirstOrDefault().Slug;
     }
 
     private async Task GetResults(MediaType type, string search)
@@ -272,7 +304,7 @@
     {
         var added = 0;
 
-        await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, grabberName, page, token))
+        await foreach (var batch in MediaGrabberService.SearchStreamAsync(type, search, grabberName, _selectedSubProvider, page, token))
         {
             if (token.IsCancellationRequested)
                 break;

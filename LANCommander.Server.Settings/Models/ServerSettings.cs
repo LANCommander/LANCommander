@@ -15,6 +15,7 @@ public class ServerSettings
     public LibrarySettings Library { get; set; } = new();
     public LogSettings Logs { get; set; } = new();
     public MediaSettings Media { get; set; } = new();
+    public PcGamingWikiSettings PcGamingWiki { get; set; } = new();
     public RoleSettings Roles { get; set; } = new();
     public ScriptSettings Scripts { get; set; } = new();
     public GameServerSettings GameServers { get; set; } = new();

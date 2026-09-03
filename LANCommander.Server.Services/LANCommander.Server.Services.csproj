@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="NuGet.CommandLine" />
     <PackageReference Include="rix0rrr.BeaconLib" />
     <PackageReference Include="Semver" />
     <PackageReference Include="SixLabors.ImageSharp" />

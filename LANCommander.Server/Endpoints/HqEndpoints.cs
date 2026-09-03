@@ -1,6 +1,8 @@
 using LANCommander.Server.Services;
-using LANCommander.HQ.SDK;
+using LANCommander.Server.Services.HQ;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using System.Security.Claims;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -8,82 +10,102 @@ public static class HqEndpoints
 {
     public static void MapHqEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/hq");
+        var group = routes.MapGroup("/api/HQ")
+            .RequireAuthorization(policy => policy.RequireRole(RoleService.AdministratorRoleName));
 
-        group.MapGet("/callback", CallbackAsync);
-        group.MapGet("/status", StatusAsync).RequireAuthorization();
-        group.MapPost("/disconnect", DisconnectAsync).RequireAuthorization();
+        // The callback writes the server's HQ credential, so it is guarded exactly like the settings
+        // page that starts the flow. It runs as a top-level navigation in a popup, so the session
+        // cookie is sent under SameSite=Lax.
+        group.MapGet("/Callback", CallbackAsync);
+        group.MapGet("/Status", StatusAsync);
+        group.MapPost("/Disconnect", DisconnectAsync);
     }
 
     private static async Task<IResult> CallbackAsync(
-        [FromQuery] string? token,
-        [FromServices] SettingsProvider<Settings.Settings> settingsProvider)
+        [FromQuery] string? code,
+        ClaimsPrincipal user,
+        [FromServices] HqConnectionService hqConnection,
+        [FromServices] HqAuthorizationStateStore stateStore,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(token))
-            return TypedResults.BadRequest("No token provided.");
+        if (string.IsNullOrWhiteSpace(code))
+            return TypedResults.BadRequest("No authorization code provided.");
 
-        settingsProvider.Update(s =>
-        {
-            s.Server.HQ.AccessToken = token;
-            s.Server.HQ.TokenExpiresAt = null;
-        });
+        // Single-use, and only for an administrator who clicked Connect on this server in the last
+        // few minutes. Without it, an admin could be walked through a login of someone else's
+        // choosing and the server would silently adopt that account's credential.
+        if (!stateStore.TryConsume(user.Identity?.Name))
+            return TypedResults.BadRequest("The LANCommander HQ authorization request has expired or is invalid. Start again from the HQ settings page.");
 
-        var html = """
+        // Exchanges the code, persists the resulting token pair, and verifies against HQ before we
+        // reply — so the page that opened this popup can react to a real result rather than poll
+        // for a changed token string.
+        var snapshot = await hqConnection.AcceptAuthorizationCodeAsync(code, cancellationToken);
+
+        return TypedResults.Content(ResultPage(snapshot), "text/html");
+    }
+
+    /// <summary>
+    /// The page the popup lands on, reporting what actually happened.
+    /// </summary>
+    /// <remarks>
+    /// This used to announce success unconditionally, discarding the snapshot it was handed. A
+    /// failed exchange therefore left the administrator reading "Successfully connected" while the
+    /// server logged the opposite — the single most confusing way to fail.
+    /// </remarks>
+    private static string ResultPage(HqConnectionSnapshot snapshot)
+    {
+        var connected = snapshot.Status == HqConnectionStatus.Connected;
+
+        var title = connected
+            ? "Connected to LANCommander HQ"
+            : "Could not connect to LANCommander HQ";
+
+        var message = connected
+            ? "Successfully connected to LANCommander HQ. You may close this window."
+            : "Could not connect to LANCommander HQ. Check the server logs for details.";
+
+        // LastError is built from an HQ response, so it is not ours to trust into markup.
+        var detail = connected || string.IsNullOrWhiteSpace(snapshot.LastError)
+            ? string.Empty
+            : $"<p>{WebUtility.HtmlEncode(snapshot.LastError)}</p>";
+
+        // Only a success closes itself. A failure stays open so the reason can be read.
+        var script = connected
+            ? "if (window.opener) { window.opener.postMessage('hq-connected', '*'); window.close(); }"
+            : "if (window.opener) { window.opener.postMessage('hq-failed', '*'); }";
+
+        return $"""
             <!DOCTYPE html>
             <html>
-            <head><title>Connected to LANCommander HQ</title></head>
+            <head><title>{title}</title></head>
             <body>
-                <p>Successfully connected to LANCommander HQ. You may close this window.</p>
+                <p>{message}</p>
+                {detail}
                 <script>
-                    if (window.opener) {
-                        window.opener.postMessage('hq-connected', '*');
-                        window.close();
-                    }
+                    {script}
                 </script>
             </body>
             </html>
             """;
-
-        return TypedResults.Content(html, "text/html");
     }
 
     private static async Task<IResult> StatusAsync(
-        [FromServices] HQClient hqClient,
-        [FromServices] SettingsProvider<Settings.Settings> settingsProvider)
+        [FromQuery] bool refresh,
+        [FromServices] HqConnectionService hqConnection,
+        CancellationToken cancellationToken)
     {
-        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
-            return TypedResults.Ok(new { Connected = false });
+        if (refresh)
+            await hqConnection.VerifyAsync(cancellationToken);
 
-        try
-        {
-            var profile = await hqClient.Auth.GetCurrentUserAsync();
-
-            if (profile is null)
-                return TypedResults.Ok(new { Connected = false });
-
-            return TypedResults.Ok(new
-            {
-                Connected = true,
-                profile.Username,
-                profile.IsPremium,
-                profile.IsEditor,
-                profile.PreferredLocale
-            });
-        }
-        catch
-        {
-            return TypedResults.Ok(new { Connected = false });
-        }
+        return TypedResults.Ok(hqConnection.Current);
     }
 
     private static async Task<IResult> DisconnectAsync(
-        [FromServices] SettingsProvider<Settings.Settings> settingsProvider)
+        [FromServices] HqConnectionService hqConnection,
+        CancellationToken cancellationToken)
     {
-        settingsProvider.Update(s =>
-        {
-            s.Server.HQ.AccessToken = string.Empty;
-            s.Server.HQ.TokenExpiresAt = null;
-        });
+        await hqConnection.DisconnectAsync(cancellationToken);
 
         return TypedResults.Ok();
     }

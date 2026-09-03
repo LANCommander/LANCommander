@@ -13,6 +13,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageTags>lancommander</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>

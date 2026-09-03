@@ -47,10 +47,12 @@ namespace LANCommander.SDK.Services
             => GetLocalPath(media.FileId, media.Crc32);
 
         public string GetLocalPath(Guid fileId, string crc32)
-            => Path.Combine(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
+            => AppPaths.ResolveStorageLocationPath(settingsProvider.CurrentValue.Media.StoragePath, $"{fileId}-{crc32}");
 
         public IEnumerable<string> GetStaleLocalPaths(Media media)
-            => Directory.EnumerateFiles(settingsProvider.CurrentValue.Media.StoragePath, $"{media.FileId}-*");
+            => Directory.EnumerateFiles(
+                AppPaths.ResolveStorageLocationPath(settingsProvider.CurrentValue.Media.StoragePath),
+                $"{media.FileId}-*");
 
         public string GetDownloadPath(Media media)
             => $"/api/Media/{media.Id}/Download?fileId={media.FileId}";

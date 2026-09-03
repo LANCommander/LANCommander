@@ -33,9 +33,16 @@ public class SettingsProvider<TSettings> : ISettingsProvider, IHostedService
 
     Settings ISettingsProvider.CurrentValue => _optionsMonitor.CurrentValue; // upcast
 
-    public SettingsProvider(IOptionsMonitor<TSettings> optionsMonitor)
+    /// <param name="optionsMonitor">Backing options, which own the in-memory settings instance.</param>
+    /// <param name="filePath">
+    /// Where to persist. Defaults to the application config directory; supply a path to isolate an
+    /// instance, which tests need because the default resolves to one process-wide location.
+    /// </param>
+    public SettingsProvider(IOptionsMonitor<TSettings> optionsMonitor, string? filePath = null)
     {
-        _filePath = AppPaths.GetConfigPath(Settings.SETTINGS_FILE_NAME);
+        _filePath = string.IsNullOrWhiteSpace(filePath)
+            ? AppPaths.GetConfigPath(Settings.SETTINGS_FILE_NAME)
+            : filePath;
 
         _optionsMonitor = optionsMonitor;
     }
@@ -104,9 +111,17 @@ public class SettingsProvider<TSettings> : ISettingsProvider, IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Writes pending changes to disk immediately instead of waiting out the debounce.
+    /// </summary>
+    /// <remarks>
+    /// Most settings tolerate the debounce fine — losing a second of a half-typed form is nothing.
+    /// Some do not: a rotating credential that is written here and then lost to a crash before the
+    /// debounce elapses cannot be recovered. Callers holding that kind of value should flush.
+    /// </remarks>
+    public async Task FlushAsync(CancellationToken cancellationToken = default)
     {
-        // Cancel any pending debounce timer and flush immediately
+        // Cancel any pending debounce timer so it can't write again behind this flush.
         lock (_debounceLock)
         {
             _saveCts?.Cancel();
@@ -114,19 +129,21 @@ public class SettingsProvider<TSettings> : ISettingsProvider, IHostedService
             _saveCts = null;
         }
 
-        if (_hasPendingSave)
-        {
-            await _ioGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!_hasPendingSave)
+            return;
 
-            try
-            {
-                await SaveAsync(CurrentValue, cancellationToken).ConfigureAwait(false);
-                _hasPendingSave = false;
-            }
-            finally
-            {
-                _ioGate.Release();
-            }
+        await _ioGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await SaveAsync(CurrentValue, cancellationToken).ConfigureAwait(false);
+            _hasPendingSave = false;
+        }
+        finally
+        {
+            _ioGate.Release();
         }
     }
+
+    public Task StopAsync(CancellationToken cancellationToken) => FlushAsync(cancellationToken);
 }

@@ -1,3 +1,4 @@
+using System.Reflection;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Interceptors;
@@ -10,7 +11,9 @@ using LANCommander.Server.Services.Interceptors;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.PowerShell;
 using LANCommander.HQ.SDK;
+using LANCommander.HQ.SDK.Authentication;
 using LANCommander.Server.Services.Providers;
+using LANCommander.Server.Services.HQ;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,16 +54,59 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RedistributableService>();
         services.AddScoped<ConfigToOptionSchemaService>();
         services.AddScoped<ToolService>();
-        services.AddScoped(sp =>
+        services.AddSingleton<IHQTokenStore, SettingsHqTokenStore>();
+
+        // Constructed here rather than left to HQClient, which would build one internally and never
+        // hand it back. We need the reference: seeding the credential after a code exchange, and
+        // dropping it on unlink, both have to go through the provider so its cache agrees with the
+        // store. Writing round the back of it leaves a revoked token being served from memory.
+        //
+        // Singleton, and exactly one: refresh tokens are single-use, so two providers over the same
+        // store would rotate against each other and trip HQ's reuse detection.
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var baseUrl = settings.CurrentValue.Server.HQ.BaseUrl;
+
+            // The provider resolves "Auth/Token/Refresh" relative to this, so the trailing slash is
+            // load-bearing — HQClient's own normalisation happens too late to help here.
+            var baseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+
+            return new RefreshingTokenProvider(baseAddress, sp.GetRequiredService<IHQTokenStore>());
+        });
+
+        services.AddSingleton(sp =>
         {
             var settings = sp.GetRequiredService<SettingsProvider<Settings.Settings>>();
             var hqSettings = settings.CurrentValue.Server.HQ;
-            return new HQClient(new HQClientOptions
+
+            // TokenStore is deliberately not set: the supplied provider wins, and setting it would
+            // only imply a second provider that never gets built.
+            var options = new HQClientOptions
             {
                 BaseAddress = new Uri(hqSettings.BaseUrl),
-                Token = hqSettings.IsAuthenticated ? hqSettings.AccessToken : null,
+                Timeout = TimeSpan.FromSeconds(30),
+
+                ClientName = string.IsNullOrWhiteSpace(hqSettings.ClientName)
+                    ? $"LANCommander Server ({Environment.MachineName})"
+                    : hqSettings.ClientName,
+            };
+
+            // Lives for the process, so it needs an explicit connection lifetime — a long-lived
+            // HttpClient otherwise pins the first resolved address and never notices DNS changes.
+            var http = new HttpClient(new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             });
+
+            // BaseAddress left unset on the HttpClient so HQClient normalises it from the options.
+            return new HQClient(http, options, sp.GetRequiredService<RefreshingTokenProvider>());
         });
+        services.AddSingleton<IHqAuthApi, HqAuthApi>();
+        services.AddSingleton<HqConnectionService>();
+        services.AddSingleton<IHqConnectionState>(sp => sp.GetRequiredService<HqConnectionService>());
+        services.AddSingleton<HqAuthorizationStateStore>();
+        services.AddHostedService<HqConnectionMonitor>();
         services.AddScoped<HqMediaGrabber>();
         services.AddScoped<SteamMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();
@@ -87,6 +133,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IMetadataProvider, HqMetadataProvider>();
         services.AddScoped<IMetadataProvider, IgdbMetadataProvider>();
         services.AddScoped<IMetadataProvider, PcGamingWikiMetadataProvider>();
+        services.AddPcGamingWikiClient();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
@@ -111,6 +158,47 @@ public static class IServiceCollectionExtensions
 
         services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
         services.AddFusionCache();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the HTTP client used to talk to PCGamingWiki.
+    /// <para>
+    /// Their API requires a descriptive User-Agent with contact information (a generic one gets
+    /// blocked with a 403) and caps us at 60 requests per minute, where an overrun blocks the
+    /// server's IP for a full minute. The throttling handler and the session are singletons so the
+    /// request window and the login cookies are shared across the scoped provider instances.
+    /// </para>
+    /// </summary>
+    private static IServiceCollection AddPcGamingWikiClient(this IServiceCollection services)
+    {
+        services.AddSingleton<PcGamingWikiSession>();
+        services.AddSingleton<PcGamingWikiRateLimiter>();
+
+        // The factory owns and disposes the handlers it builds, so this has to be transient. The
+        // state that needs to survive a rebuild lives in the singletons above.
+        services.AddTransient<PcGamingWikiThrottlingHandler>();
+
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+
+        services
+            .AddHttpClient(PcGamingWikiMetadataProvider.HttpClientName, client =>
+            {
+                // The apex domain redirects to www on every request, which would double what we
+                // spend against the rate limit.
+                client.BaseAddress = new Uri("https://www.pcgamingwiki.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                    $"LANCommander/{version} (https://lancommander.app; https://github.com/LANCommander/LANCommander) .NET/{Environment.Version}");
+            })
+            .ConfigurePrimaryHttpMessageHandler(provider => new HttpClientHandler
+            {
+                // Handlers get recycled on a timer, so the container has to outlive them or we
+                // silently lose the login session.
+                CookieContainer = provider.GetRequiredService<PcGamingWikiSession>().Cookies,
+                UseCookies = true,
+            })
+            .AddHttpMessageHandler<PcGamingWikiThrottlingHandler>();
 
         return services;
     }

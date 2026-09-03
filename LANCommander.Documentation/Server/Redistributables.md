@@ -39,6 +39,8 @@ The option schema is defined in the **Option Schema** field on the redistributab
 
 ```yaml
 CommandTemplate: umu-run {exe} {args}
+GuestPlatforms: Windows
+DisplayName: Proton
 Options:
   Game:
     Description: Game identification
@@ -60,6 +62,18 @@ Options:
 
 ### CommandTemplate
 Defines how the game executable is wrapped. Use `{exe}` and `{args}` as placeholders for the original executable path and arguments. When a command template is defined, the launcher rewrites the process start info before launching.
+
+### GuestPlatforms
+The platform(s) whose executables this shim can run on the host it is installed on — for example, `Windows` for a umu/Proton runtime that runs Windows games on Linux. Accepts a `RuntimePlatform` value (`Windows`, `Linux`, `macOS`).
+
+This drives **OS-aware action selection**. When the launcher runs on a host where a game's action is not natively runnable, it will still offer that action if an attached shim declares a matching `GuestPlatforms`. For example, a game action tagged for `Windows` becomes launchable on Linux when a shim with `GuestPlatforms: Windows` and a `CommandTemplate` is assigned.
+
+If omitted (`None`), the shim is treated as able to bridge any foreign platform, which preserves the behavior of schemas authored before this field existed. A native action (one whose platform includes the current runtime) is always preferred over a bridged one.
+
+> Tag each game action with the platform its executable actually targets (via the action's **Platforms** field). Doing so lets the launcher hide actions that can't run on the current host and route the rest through the appropriate compatibility runtime.
+
+### DisplayName
+An optional friendly name for the compatibility runtime (e.g. `Proton`). It is used only to disambiguate the launcher's action list: when two actions share the exact same name, the bridged one is suffixed with `(via <DisplayName>)`. When omitted, the redistributable's own name is used instead.
 
 ### Options
 A dictionary of option definitions. Options can be nested to create logical groupings. Group nodes (those with only child `Options` and no `Type`) serve as organizational containers. Leaf nodes (those with a `Type`) are the actual configurable values.

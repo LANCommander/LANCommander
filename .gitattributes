@@ -1,0 +1,190 @@
+###############################################################################
+# LANCommander line-ending policy
+#
+# The repository stores every text file as LF. Working trees get CRLF by
+# default, because the bulk of this codebase is Windows-targeted (.NET,
+# Avalonia, PowerShell, MSBuild). Files below that are executed by a Linux or
+# macOS shell, a container, or a CI runner are forced to LF.
+#
+# `text=auto` is used on directory-wide rules so git's binary detection still
+# applies and never mangles an asset that lands in a matched directory.
+###############################################################################
+
+# Default: normalize to LF in the repo, check out CRLF.
+* text=auto eol=crlf
+
+###############################################################################
+# LF required | consumed by Linux/macOS shells, containers and CI
+###############################################################################
+
+# Shell scripts
+*.sh              text eol=lf
+*.bash            text eol=lf
+
+# Containers
+Dockerfile        text eol=lf
+Dockerfile.*      text eol=lf
+*.dockerfile      text eol=lf
+.dockerignore     text eol=lf
+docker-compose*.yml   text eol=lf
+docker-compose*.yaml  text eol=lf
+compose*.yml          text eol=lf
+compose*.yaml         text eol=lf
+
+# Make / CMake driven builds
+Makefile          text eol=lf
+makefile          text eol=lf
+GNUmakefile       text eol=lf
+*.mk              text eol=lf
+CMakeLists.txt    text eol=lf
+*.cmake           text eol=lf
+
+# GitHub Actions
+.github/**        text=auto eol=lf
+
+# Cross-platform scripting
+*.py              text eol=lf
+*.pl              text eol=lf
+*.rb              text eol=lf
+
+# Linux desktop integration & packaging
+*.desktop         text eol=lf
+*.service         text eol=lf
+*.socket          text eol=lf
+*.timer           text eol=lf
+*.appdata.xml     text eol=lf
+*.metainfo.xml    text eol=lf
+*.rules           text eol=lf
+*.spec            text eol=lf
+PKGBUILD          text eol=lf
+
+# Git / editor dotfiles read by POSIX tooling
+.gitattributes    text eol=lf
+.gitignore        text eol=lf
+.gitmodules       text eol=lf
+.editorconfig     text eol=lf
+.mailmap          text eol=lf
+
+###############################################################################
+# CRLF required | Windows
+###############################################################################
+*.bat             text eol=crlf
+*.cmd             text eol=crlf
+*.reg             text eol=crlf
+
+# Windows-native tooling (redundant with the default, stated for intent)
+*.ps1             text eol=crlf
+*.psm1            text eol=crlf
+*.psd1            text eol=crlf
+*.sln             text eol=crlf
+*.slnx            text eol=crlf
+*.csproj          text eol=crlf
+*.props           text eol=crlf
+*.targets         text eol=crlf
+*.manifest        text eol=crlf
+*.rc              text eol=crlf
+
+###############################################################################
+# Binary
+###############################################################################
+
+# LANCommander package format
+*.lcx     binary
+
+# Images
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.bmp     binary
+*.webp    binary
+*.ico     binary
+*.icns    binary
+*.psd     binary
+
+# Fonts
+*.ttf     binary
+*.otf     binary
+*.woff    binary
+*.woff2   binary
+*.eot     binary
+
+# Audio / video
+*.mp3     binary
+*.wav     binary
+*.ogg     binary
+*.flac    binary
+*.mp4     binary
+*.webm    binary
+*.mkv     binary
+
+# Archives & packages
+*.zip     binary
+*.7z      binary
+*.gz      binary
+*.tgz     binary
+*.bz2     binary
+*.xz      binary
+*.rar     binary
+*.tar     binary
+*.nupkg   binary
+*.snupkg  binary
+*.msi     binary
+*.appimage binary
+*.dmg     binary
+*.deb     binary
+*.rpm     binary
+
+# Compiled output & debug symbols
+*.dll     binary
+*.exe     binary
+*.pdb     binary
+*.so      binary
+*.dylib   binary
+*.a       binary
+*.lib     binary
+*.obj     binary
+*.o       binary
+*.bin     binary
+
+# Signing material & databases
+*.snk     binary
+*.pfx     binary
+*.p12     binary
+*.db      binary
+*.sqlite  binary
+*.sqlite3 binary
+*.pdf     binary
+
+###############################################################################
+# Vendored & generated | keep out of language stats and diffs
+###############################################################################
+LANCommander.Server/wwwroot/lib/**        linguist-vendored
+LANCommander.Launcher.Legacy/vendor/**    linguist-vendored
+LANCommander.SDK.Cpp/vendor/**            linguist-vendored
+
+*.min.js   -diff linguist-generated
+*.min.css  -diff linguist-generated
+*.map      -diff linguist-generated
+LANCommander.Server/wwwroot/lib/dropzone/dist/dropzone-min.js -diff linguist-generated
+
+# EF Core model snapshots are machine-written and enormous
+**/Migrations/DatabaseContextModelSnapshot.cs -diff linguist-generated
+
+###############################################################################
+# Diff drivers | richer hunk headers
+###############################################################################
+*.cs      diff=csharp
+*.cshtml  diff=html
+*.razor   diff=html
+*.html    diff=html
+*.css     diff=css
+*.scss    diff=css
+*.md      diff=markdown
+*.mdx     diff=markdown
+*.c       diff=cpp
+*.h       diff=cpp
+*.cpp     diff=cpp
+*.py      diff=python
+*.ts      diff=typescript
+*.js      diff=javascript

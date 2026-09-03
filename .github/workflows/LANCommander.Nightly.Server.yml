@@ -1,0 +1,321 @@
+name: LANCommander Nightly (Server)
+
+# Server half of the nightly. Runs only when server code has changed since the last
+# server nightly or the last release, whichever is further along - see
+# LANCommander.Nightly.Prep.yml for the gate.
+#
+# Assets land on the shared `nightly` release. This workflow only ever touches
+# LANCommander.Server-* assets, so it cannot clobber the launcher nightly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Build even if nothing changed'
+        type: boolean
+        default: false
+  schedule:
+    # Runs every day at 3AM CST
+    # CST is UTC-6, so 3AM CST = 09:00 UTC
+    - cron: '0 9 * * *'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lancommander/lancommander
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  prep:
+    uses: ./.github/workflows/LANCommander.Nightly.Prep.yml
+    with:
+      component: server
+      force: ${{ inputs.force == true }}
+      # Dependency closure of LANCommander.Server and LANCommander.AutoUpdater, plus
+      # the files that change how they are built.
+      paths: |
+        LANCommander.AutoUpdater/
+        LANCommander.CompletionGenerator/
+        LANCommander.SDK/
+        LANCommander.SDK.SourceGenerators/
+        LANCommander.Server/
+        LANCommander.Server.Data/
+        LANCommander.Server.Data.MySQL/
+        LANCommander.Server.Data.PostgreSQL/
+        LANCommander.Server.Data.SQLite/
+        LANCommander.Server.ImportExport/
+        LANCommander.Server.Services/
+        LANCommander.Server.Settings/
+        LANCommander.ServiceDefaults/
+        LANCommander.Steam/
+        LANCommander.UI/
+        Directory.Packages.props
+        Microsoft.Common.props
+        LANCommander.slnx
+        .github/workflows/LANCommander.Server.yml
+        .github/workflows/LANCommander.Nightly.Server.yml
+        .github/workflows/LANCommander.Nightly.Prep.yml
+
+  build_server_linux_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  build_server_linux_x64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  build_server_osx_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  build_server_osx_x64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  build_server_win_arm64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  build_server_win_x64:
+    needs: [prep]
+    if: needs.prep.outputs.should_build == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
+      # The nightly release assets are the durable copy of these.
+      retention_days: 2
+
+  publish_docker_image:
+    needs:
+      - prep
+      - build_server_linux_arm64
+      - build_server_linux_x64
+      - build_server_osx_arm64
+      - build_server_osx_x64
+      - build_server_win_arm64
+      - build_server_win_x64
+    if: needs.prep.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo for Docker build
+        uses: actions/checkout@v4
+
+      - name: Log in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=nightly
+            type=raw,value=${{ needs.prep.outputs.version_tag }}
+
+      - name: Download Server x64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./
+
+      - name: Download Server arm64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./
+
+      - name: Extract Server Artifacts x64
+        run: |
+          mkdir -p ./LANCommander.Server/published-amd64
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-amd64
+
+      - name: Extract Server Artifacts arm64
+        run: |
+          mkdir -p ./LANCommander.Server/published-arm64
+          unzip ./LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-arm64
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./LANCommander.Server
+          file: ./LANCommander.Server/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version_tag }}
+            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          provenance: true
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Save version to artifact
+        run: echo "${{ needs.prep.outputs.version_tag }}" > version.txt
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: version.${{ needs.prep.outputs.version_tag }}
+          path: version.txt
+          retention-days: 2
+
+  publish_nightly_release:
+    runs-on: ubuntu-latest
+    needs:
+      - prep
+      - publish_docker_image
+      - build_server_linux_arm64
+      - build_server_linux_x64
+      - build_server_osx_arm64
+      - build_server_osx_x64
+      - build_server_win_arm64
+      - build_server_win_x64
+    if: needs.prep.outputs.should_build == 'true'
+    # Serialised against the launcher nightly, which mutates the same release.
+    concurrency:
+      group: nightly-release
+      cancel-in-progress: false
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Create Temp Directory
+        run: mkdir -p artifacts
+
+      - name: Download Server Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: LANCommander.Server-*-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create or update nightly release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          NOTES="This is the latest nightly build. These builds are generated automatically and should be considered unstable.
+
+          Server and Launcher nightlies are built independently, so their versions may differ."
+
+          if gh release view nightly > /dev/null 2>&1; then
+            gh release edit nightly --prerelease --title "Nightly Build" --notes "$NOTES"
+          else
+            gh release create nightly --prerelease --title "Nightly Build" --notes "$NOTES"
+          fi
+
+          # Drop only this component's assets, so the launcher nightly's files survive.
+          # Names carry the version, so yesterday's assets would otherwise linger.
+          gh release view nightly --json assets -q '.assets[].name' \
+            | { grep -E '^LANCommander\.Server-' || true; } \
+            | while read -r asset; do
+                echo "Removing stale asset: $asset"
+                gh release delete-asset nightly "$asset" -y
+              done
+
+          gh release upload nightly artifacts/* --clobber
+
+  update_marker:
+    runs-on: ubuntu-latest
+    needs: [prep, publish_nightly_release]
+    if: needs.prep.outputs.should_build == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Moving the marker is what makes tomorrow's gate compare against tonight's
+      # build. It runs last so a failed build is retried rather than skipped.
+      - name: Advance nightly-server marker
+        run: |
+          set -euo pipefail
+          git tag -f nightly-server "$GITHUB_SHA"
+          git push -f origin refs/tags/nightly-server
+          echo "nightly-server now points at $GITHUB_SHA"

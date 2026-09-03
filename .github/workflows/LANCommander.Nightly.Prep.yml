@@ -1,0 +1,175 @@
+name: LANCommander Nightly Prep
+
+# Shared gate for the per-component nightly workflows. Decides whether a nightly is
+# worth building, and what version to stamp it with.
+#
+# A nightly builds only when commits have touched the component's paths since its
+# baseline. The baseline is whichever is further along:
+#
+#   * the component's `nightly-<component>` marker tag, moved by the caller after a
+#     successful publish, or
+#   * the latest vX.Y.Z release tag
+#
+# Folding the release into the baseline is what implements "skip if there was a
+# release since the last nightly" without the rule deadlocking: a release resets the
+# baseline, so released commits are never rebuilt, and commits landing after the
+# release still produce a nightly.
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: 'Component name. Also the suffix of the nightly-<component> marker tag.'
+        required: true
+        type: string
+      paths:
+        description: 'Newline separated git pathspecs that make this component stale.'
+        required: true
+        type: string
+      force:
+        description: 'Build even if the gate says nothing changed.'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      should_build:
+        description: 'Whether the caller should run its build jobs.'
+        value: ${{ jobs.prep.outputs.should_build }}
+      version_semver:
+        description: 'Numeric version, e.g. 2.1.10'
+        value: ${{ jobs.prep.outputs.version_semver }}
+      version_tag:
+        description: 'Nightly version tag, e.g. 2.1.10-nightly.20260812'
+        value: ${{ jobs.prep.outputs.version_tag }}
+      build_dotnet_version:
+        description: '.NET SDK version the build workflows should use.'
+        value: ${{ jobs.prep.outputs.build_dotnet_version }}
+
+permissions:
+  contents: read
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.gate.outputs.should_build }}
+      version_semver: ${{ steps.gate.outputs.version_semver }}
+      version_tag: ${{ steps.gate.outputs.version_tag }}
+      build_dotnet_version: 10.0.100
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # Tags and full history are both required to resolve the baseline.
+          fetch-depth: 0
+
+      - name: Evaluate nightly gate
+        id: gate
+        shell: bash
+        env:
+          COMPONENT: ${{ inputs.component }}
+          PATHS: ${{ inputs.paths }}
+          FORCE: ${{ inputs.force }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force --quiet
+
+          MARKER="nightly-${COMPONENT}"
+
+          # --- Version -------------------------------------------------------
+          # Newest release-shaped tag, prereleases included, since the release
+          # workflow publishes both v*.*.* and v*.*.*-*.
+          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)"
+
+          if [ -z "$LAST_SEMVER_TAG" ]; then
+            CLEAN_TAG="0.0.0"
+          else
+            CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
+          fi
+
+          VERSION_TAG="${CLEAN_TAG}-nightly.$(date +'%Y%m%d')"
+
+          # --- Baseline ------------------------------------------------------
+          MARKER_COMMIT=""
+          if git rev-parse -q --verify "refs/tags/${MARKER}" > /dev/null; then
+            MARKER_COMMIT="$(git rev-list -n1 "refs/tags/${MARKER}")"
+          fi
+
+          RELEASE_COMMIT=""
+          if [ -n "$LAST_SEMVER_TAG" ]; then
+            RELEASE_COMMIT="$(git rev-list -n1 "refs/tags/${LAST_SEMVER_TAG}")"
+          fi
+
+          BASELINE="$MARKER_COMMIT"
+          BASELINE_SOURCE="$MARKER"
+
+          if [ -z "$BASELINE" ]; then
+            BASELINE="$RELEASE_COMMIT"
+            BASELINE_SOURCE="$LAST_SEMVER_TAG (no $MARKER tag yet)"
+          elif [ -n "$RELEASE_COMMIT" ] && git merge-base --is-ancestor "$BASELINE" "$RELEASE_COMMIT"; then
+            # A release landed at or after the last nightly, so it supersedes it.
+            BASELINE="$RELEASE_COMMIT"
+            BASELINE_SOURCE="$LAST_SEMVER_TAG (release superseded $MARKER)"
+          fi
+
+          # --- Changed paths -------------------------------------------------
+          mapfile -t PATHSPECS < <(printf '%s\n' "$PATHS" | sed '/^[[:space:]]*$/d')
+
+          if [ -z "$BASELINE" ]; then
+            REASON="no marker tag and no release tag to compare against"
+            SHOULD_BUILD=true
+            CHANGED=""
+          else
+            CHANGED="$(git log --oneline "${BASELINE}..HEAD" -- "${PATHSPECS[@]}" || true)"
+            if [ -z "$CHANGED" ]; then
+              REASON="no commits touching ${COMPONENT} paths since ${BASELINE_SOURCE}"
+              SHOULD_BUILD=false
+            else
+              REASON="$(echo "$CHANGED" | wc -l) commit(s) touching ${COMPONENT} paths since ${BASELINE_SOURCE}"
+              SHOULD_BUILD=true
+            fi
+          fi
+
+          if [ "$FORCE" = "true" ] && [ "$SHOULD_BUILD" != "true" ]; then
+            REASON="forced via workflow_dispatch (gate said: ${REASON})"
+            SHOULD_BUILD=true
+          fi
+
+          # Forks have no reason to burn minutes on nightlies.
+          if [ "$OWNER" != "LANCommander" ]; then
+            REASON="repository owner is ${OWNER}, not LANCommander"
+            SHOULD_BUILD=false
+          fi
+
+          {
+            echo "should_build=$SHOULD_BUILD"
+            echo "version_semver=$CLEAN_TAG"
+            echo "version_tag=$VERSION_TAG"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Nightly gate: ${COMPONENT}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Build | \`${SHOULD_BUILD}\` |"
+            echo "| Reason | ${REASON} |"
+            echo "| Baseline | \`${BASELINE:-none}\` (${BASELINE_SOURCE:-none}) |"
+            echo "| Version | \`${VERSION_TAG}\` |"
+            if [ -n "$CHANGED" ]; then
+              echo
+              echo "<details><summary>Commits since baseline</summary>"
+              echo
+              echo '```'
+              echo "$CHANGED"
+              echo '```'
+              echo
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "should_build=$SHOULD_BUILD ($REASON)"

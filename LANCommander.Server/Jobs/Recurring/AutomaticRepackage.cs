@@ -1,5 +1,5 @@
-using Hangfire;
 using LANCommander.SDK.Enums;
+using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 
 namespace LANCommander.Server.Jobs.Recurring;
@@ -14,43 +14,83 @@ public sealed class AutomaticRepackage(
     {
         get
         {
-            var minutes = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery % 60;
-            var hours = settingsProvider.CurrentValue.Server.Scripts.RepackageEvery / 60;
-            var days = hours % 24;
+            var hours = Math.Max(1, settingsProvider.CurrentValue.Server.Scripts.RepackageEvery);
 
-            var minuteExpression = minutes > 0 ? $"*/{minutes}" : "*";
-            var hourExpression = hours > 0 ? $"*/{hours}" : "*";
-            var dayExpression = days > 0 ? $"*/{days}" : "*";
+            if (hours < 24)
+                return $"0 */{hours} * * *";
 
-            return $"{minuteExpression} {hourExpression} {dayExpression} * *";
+            return $"0 0 */{Math.Clamp(hours / 24, 1, 31)} * *";
         }
     }
 
     public override async Task ExecuteAsync()
     {
-        if (!settingsProvider.CurrentValue.Server.Scripts.EnableAutomaticRepackaging)
+        // This job is not allowed to throw: an unhandled exception here is picked up by Hangfire's
+        // AutomaticRetryAttribute, which retries the *entire* job up to 10 times with an exponentially
+        // growing delay (over an hour by the later attempts). A single bad game/script should never be
+        // able to take down the whole recurring job, so every failure path below is caught and logged
+        // instead of being allowed to bubble out.
+        try
         {
-            logger.LogWarning("The automatic repackaging job attempted to execute, but automatic repackaging is disabled");
-            return;
-        }
-        
-        logger.LogInformation("Starting automatic repackaging job");
-        
-        var repackageScripts = await scriptService.GetAsync(s => s.Type == ScriptType.Package);
-        
-        logger.LogInformation("Found {ScriptCount} packaging scripts}", repackageScripts.Count);
+            if (!settingsProvider.CurrentValue.Server.Scripts.EnableAutomaticRepackaging)
+            {
+                logger.LogDebug("The automatic repackaging job attempted to execute, but automatic repackaging is disabled");
+                return;
+            }
 
-        foreach (var script in repackageScripts)
-        {
+            logger.LogInformation("Starting automatic repackaging job");
+
+            ICollection<Script>? repackageScripts;
+
             try
             {
-                if (script.GameId.HasValue)
-                    await gameService.PackageAsync(script.GameId.Value);
+                repackageScripts = await scriptService.GetAsync(s => s.Type == ScriptType.Package);
+
+                logger.LogInformation("Found {ScriptCount} packaging scripts", repackageScripts.Count);
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Could not automatically run packaging script with ID {ScriptId}", script.Id);
+                logger.LogError(ex, "Could not retrieve packaging scripts for automatic repackaging");
+                return;
             }
+
+            var succeeded = 0;
+            var failed = 0;
+
+            foreach (var script in repackageScripts)
+            {
+                try
+                {
+                    if (script.GameId.HasValue)
+                    {
+                        await gameService.PackageAsync(script.GameId.Value);
+                        succeeded++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+
+                    logger.LogError(
+                        ex,
+                        "Could not automatically run packaging script with ID {ScriptId} for game {GameId}: {ExceptionType} - {ExceptionMessage}",
+                        script.Id,
+                        script.GameId,
+                        ex.GetType().Name,
+                        ex.Message);
+                }
+            }
+
+            logger.LogInformation(
+                "Finished automatic repackaging job: {SucceededCount} succeeded, {FailedCount} failed",
+                succeeded,
+                failed);
+        }
+        catch (Exception ex)
+        {
+            // Catch-all so an unexpected failure (e.g. a settings/service issue outside the per-script
+            // loop) is logged clearly instead of triggering Hangfire's long automatic-retry backoff.
+            logger.LogError(ex, "Automatic repackaging job failed unexpectedly: {ExceptionType} - {ExceptionMessage}", ex.GetType().Name, ex.Message);
         }
     }
 }

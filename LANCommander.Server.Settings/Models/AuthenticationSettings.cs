@@ -6,7 +6,12 @@ public class AuthenticationSettings
 {
     public bool RequireApproval { get; set; } = false;
     public bool AllowRegistration { get; set; } = true;
+    public bool AllowPassword { get; set; } = true;
     public bool AutoRedirectToProvider { get; set; } = false;
+    public bool AllowUsernameChange { get; set; } = true;
+    public bool AllowAliasChange { get; set; } = true;
+    public bool AllowAvatarUpload { get; set; } = true;
+    public bool AllowEmailChange { get; set; } = true;
     public string TokenSecret { get; set; } = Guid.NewGuid().ToString();
     public int TokenLifetime { get; set; } = 30;
     public bool PasswordRequireNonAlphanumeric { get; set; } = false;

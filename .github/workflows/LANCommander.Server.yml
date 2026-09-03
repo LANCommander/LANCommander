@@ -36,6 +36,11 @@ on:
         required: false
         type: string
         default: 'Release'
+      retention_days:
+        description: 'Artifact retention. These are a hand-off between jobs; the release assets are the durable copy.'
+        required: false
+        type: number
+        default: 7
 
 permissions:
   contents: write
@@ -239,3 +244,4 @@ jobs:
       with:
         path: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
         name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        retention-days: ${{ inputs.retention_days }}

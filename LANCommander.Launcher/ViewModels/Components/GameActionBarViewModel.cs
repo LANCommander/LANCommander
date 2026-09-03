@@ -344,14 +344,40 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             using var scope = _serviceProvider.CreateScope();
             var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
 
-            var actions = await gameClient.GetActionsAsync(InstallDirectory, GameId);
+            var actions = (await gameClient.GetActionsAsync(InstallDirectory, GameId))?.ToList();
             if (actions != null && actions.Any())
             {
-                foreach (var action in actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
-                    Actions.Add(new GameActionViewModel(action, RunActionAsync));
+                var shims = await gameClient.GetShimsAsync(InstallDirectory, GameId);
 
-                foreach (var action in actions.Where(a => !a.IsPrimaryAction).OrderBy(a => a.SortOrder))
-                    SecondaryActions.Add(new GameActionViewModel(action, RunActionAsync));
+                // Only disambiguate when two actions share the exact same name; the bridged one is suffixed
+                // with the compatibility runtime it launches through (e.g. "Play (via Proton)").
+                var duplicateNames = actions
+                    .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                string DisplayNameFor(SDK.Models.Manifest.Action action)
+                {
+                    if (!duplicateNames.Contains(action.Name))
+                        return null;
+
+                    var bridge = CompatibilityResolver.GetBridge(action.Platforms, shims);
+
+                    return bridge == null ? null : $"{action.Name} (via {bridge.Label})";
+                }
+
+                IEnumerable<SDK.Models.Manifest.Action> Ordered(bool primary) =>
+                    actions
+                        .Where(a => a.IsPrimaryAction == primary)
+                        .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
+                        .ThenBy(a => a.SortOrder);
+
+                foreach (var action in Ordered(primary: true))
+                    Actions.Add(new GameActionViewModel(action, RunActionAsync, DisplayNameFor(action)));
+
+                foreach (var action in Ordered(primary: false))
+                    SecondaryActions.Add(new GameActionViewModel(action, RunActionAsync, DisplayNameFor(action)));
 
                 HasMultipleActions = Actions.Count > 1;
                 HasSecondaryActions = SecondaryActions.Count > 0;
@@ -773,7 +799,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, GameId);
                 if (actions == null || !actions.Any())
                 {
-                    throw new InvalidOperationException("No actions available for this game");
+                    throw new InvalidOperationException(
+                        $"No actions compatible with {EnvironmentHelper.GetCurrentRuntime()} are available for this game. " +
+                        "Attach a compatibility runtime (e.g. umu/Proton) to run it.");
                 }
 
                 // Find primary action or first action
@@ -1615,14 +1643,17 @@ public partial class GameActionViewModel : ViewModelBase
 {
     public SDK.Models.Manifest.Action Action { get; }
 
-    public string Name => Action.Name;
+    private readonly string _displayName;
+
+    public string Name => _displayName ?? Action.Name;
 
     private readonly Func<SDK.Models.Manifest.Action, Task> _runAction;
 
-    public GameActionViewModel(SDK.Models.Manifest.Action action, Func<SDK.Models.Manifest.Action, Task> runAction)
+    public GameActionViewModel(SDK.Models.Manifest.Action action, Func<SDK.Models.Manifest.Action, Task> runAction, string displayName = null)
     {
         Action = action;
         _runAction = runAction;
+        _displayName = displayName;
     }
 
     [RelayCommand]

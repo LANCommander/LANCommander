@@ -210,6 +210,44 @@ jobs:
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_configuration: Release
 
+  # Authenticode signing. The Windows builds are cross-compiled on Linux, so signing
+  # runs afterwards on a Windows runner. Each job replaces its build artifact in
+  # place, which is why build_release depends on these instead of the builds.
+  sign_server_win_arm64:
+    needs: [prep, build_server_win_arm64]
+    uses: ./.github/workflows/LANCommander.Sign.yml
+    secrets: inherit
+    with:
+      artifact_name: LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+
+  sign_server_win_x64:
+    needs: [prep, build_server_win_x64]
+    uses: ./.github/workflows/LANCommander.Sign.yml
+    secrets: inherit
+    with:
+      artifact_name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+
+  sign_launcher_win_arm64:
+    needs: [prep, build_launcher_win_arm64]
+    uses: ./.github/workflows/LANCommander.Sign.yml
+    secrets: inherit
+    with:
+      artifact_name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+
+  sign_launcher_win_x64:
+    needs: [prep, build_launcher_win_x64]
+    uses: ./.github/workflows/LANCommander.Sign.yml
+    secrets: inherit
+    with:
+      artifact_name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+
+  sign_packager:
+    needs: [prep, build_packager]
+    uses: ./.github/workflows/LANCommander.Sign.yml
+    secrets: inherit
+    with:
+      artifact_name: LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
+
   build_release:
     runs-on: ubuntu-latest
     needs:
@@ -218,15 +256,15 @@ jobs:
       - build_server_linux_x64
       - build_server_osx_arm64
       - build_server_osx_x64
-      - build_server_win_arm64
-      - build_server_win_x64
       - build_launcher_linux_arm64
       - build_launcher_linux_x64
       - build_launcher_osx_arm64
       - build_launcher_osx_x64
-      - build_launcher_win_arm64
-      - build_launcher_win_x64
-      - build_packager
+      - sign_server_win_arm64
+      - sign_server_win_x64
+      - sign_launcher_win_arm64
+      - sign_launcher_win_x64
+      - sign_packager
 
     steps:
       - name: Create Temp Directory

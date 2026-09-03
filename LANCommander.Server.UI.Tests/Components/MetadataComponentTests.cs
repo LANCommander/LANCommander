@@ -31,7 +31,7 @@ public class MetadataComponentTests : BUnitTestContext
     {
         await ClearTagsAsync();
 
-        var cut = RenderComponent<TagsIndex>();
+        var cut = Render<TagsIndex>();
 
         Assert.Contains(
             cut.FindAll("button"),
@@ -49,7 +49,7 @@ public class MetadataComponentTests : BUnitTestContext
     {
         await ClearTagsAsync();
 
-        var cut = RenderComponent<TagsIndex>();
+        var cut = Render<TagsIndex>();
 
         // Open the "New Tag" modal.
         var addButton = cut.FindAll("button")

@@ -162,9 +162,9 @@ namespace LANCommander.SDK.PowerShell
 
         private bool RequiresAdmin()
         {
-            var pattern = @"^#(\s?Requires\s?Admin|Requires -RunAsAdministrator)\s*";
+            var pattern = @"^[ \t]*#(\s?Requires\s?Admin|Requires -RunAsAdministrator)";
 
-            return Regex.IsMatch(Contents, pattern);
+            return Regex.IsMatch(Contents, pattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
         }
 
         /// <summary>

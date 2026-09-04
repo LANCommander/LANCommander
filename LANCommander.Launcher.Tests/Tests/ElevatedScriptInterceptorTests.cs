@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using LANCommander.Launcher.Services;
@@ -7,6 +7,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 using SdkSettings = LANCommander.SDK.Models.Settings;
@@ -41,7 +42,7 @@ public class ElevatedScriptInterceptorTests
     {
         var processInfo = new FakeCurrentProcessInfo { IsElevated = false };
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.Install);
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -59,7 +60,7 @@ public class ElevatedScriptInterceptorTests
     {
         var processInfo = new FakeCurrentProcessInfo { IsElevated = true };
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.Install).AsAdmin();
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -81,7 +82,7 @@ public class ElevatedScriptInterceptorTests
             ExecutablePath = @"C:\LANCommander\LANCommander.Launcher.exe",
         };
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.Install).AsAdmin().UseWorkingDirectory("WorkDir");
         script.AddVariable("GameManifest", new ManifestGame { Id = gameId });
@@ -96,8 +97,6 @@ public class ElevatedScriptInterceptorTests
 
         // Re-launches this same launcher executable as the elevated process.
         Assert.Equal(processInfo.ExecutablePath, request.FileName);
-        // Preserves the working directory so the elevated script runs in the right place.
-        Assert.Equal("WorkDir", request.WorkingDirectory);
 
         // Passes the RunScript verb plus every parameter the elevated process needs to run the script.
         Assert.Contains("RunScript", request.Arguments);
@@ -109,12 +108,92 @@ public class ElevatedScriptInterceptorTests
         Assert.True(launcher.CompletedBeforeReturn);
     }
 
+    /// <summary>
+    /// The elevated child must NOT inherit the script's working directory. Config directory resolution
+    /// keys off the current directory, so handing the child the game's install folder made it resolve a
+    /// data root inside the game folder and boot an empty profile — no server address, no token, no
+    /// database — which killed it during startup before it ever ran the script.
+    /// </summary>
+    [Fact]
+    public async Task AdminScript_RunsElevatedChildInLauncherWorkingDirectory_NotTheGameInstallDirectory()
+    {
+        var processInfo = new FakeCurrentProcessInfo
+        {
+            IsElevated = false,
+            WorkingDirectory = @"C:\LANCommander",
+        };
+        var launcher = new RecordingElevatedProcessLauncher();
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
+
+        var script = CreateScript(ScriptType.Install).AsAdmin().UseWorkingDirectory(@"C:\Games\SomeGame");
+        script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
+        script.AddVariable("InstallDirectory", @"C:\Games\SomeGame");
+
+        await interceptor.ExecuteAsync(script);
+
+        var request = Assert.Single(launcher.Requests);
+
+        Assert.Equal(@"C:\LANCommander", request.WorkingDirectory);
+        Assert.NotEqual(@"C:\Games\SomeGame", request.WorkingDirectory);
+    }
+
+    /// <summary>
+    /// Belt and braces for the above: the child is also told the data root explicitly, because it
+    /// cannot inherit our environment (the runas verb requires UseShellExecute, which forbids setting
+    /// environment variables) and an elevated child may resolve a writable directory the parent could not.
+    /// </summary>
+    [Fact]
+    public async Task AdminScript_ForwardsParentDataDirectoryToElevatedProcess()
+    {
+        var processInfo = new FakeCurrentProcessInfo
+        {
+            IsElevated = false,
+            ConfigDirectory = @"C:\LANCommander\Data",
+        };
+        var launcher = new RecordingElevatedProcessLauncher();
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
+
+        var script = CreateScript(ScriptType.Install).AsAdmin();
+        script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
+        script.AddVariable("InstallDirectory", @"C:\Games\SomeGame");
+
+        await interceptor.ExecuteAsync(script);
+
+        var request = Assert.Single(launcher.Requests);
+
+        Assert.Contains("DataDirectory", request.Arguments);
+        Assert.Contains(@"C:\LANCommander\Data", request.Arguments);
+    }
+
+    /// <summary>
+    /// A child that crashes during startup exits just as promptly as one that did the work, so the
+    /// launcher must read its exit code rather than treating a completed wait as success.
+    /// </summary>
+    [Fact]
+    public async Task AdminScript_WhenElevatedChildExitsNonZero_ExitCodeIsObserved()
+    {
+        var processInfo = new FakeCurrentProcessInfo { IsElevated = false };
+        var launcher = new RecordingElevatedProcessLauncher { ExitCode = 1 };
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
+
+        var script = CreateScript(ScriptType.Install).AsAdmin();
+        script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
+        script.AddVariable("InstallDirectory", "InstallDir");
+
+        var handled = await interceptor.ExecuteAsync(script);
+
+        // Still reported as handled — elevation was attempted, and re-running in-process unelevated
+        // would only fail again, possibly after partially re-applying the script.
+        Assert.True(handled);
+        Assert.Equal(1, launcher.LaunchCount);
+    }
+
     [Fact]
     public async Task KeyChangeScript_ForwardsAllocatedKeyToElevatedProcess()
     {
         var processInfo = new FakeCurrentProcessInfo { IsElevated = false };
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.KeyChange).AsAdmin();
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -134,7 +213,7 @@ public class ElevatedScriptInterceptorTests
     {
         var processInfo = new FakeCurrentProcessInfo { IsElevated = false };
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.NameChange).AsAdmin();
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -156,7 +235,7 @@ public class ElevatedScriptInterceptorTests
     {
         var processInfo = new ThrowingCurrentProcessInfo();
         var launcher = new RecordingElevatedProcessLauncher();
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.Install).AsAdmin();
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -173,7 +252,7 @@ public class ElevatedScriptInterceptorTests
     {
         var processInfo = new FakeCurrentProcessInfo { IsElevated = false };
         var launcher = new RecordingElevatedProcessLauncher { ThrowOnLaunch = true };
-        var interceptor = new ElevatedScriptInterceptor(processInfo, launcher);
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, processInfo, launcher);
 
         var script = CreateScript(ScriptType.Install).AsAdmin();
         script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
@@ -188,12 +267,16 @@ public class ElevatedScriptInterceptorTests
     {
         public string ExecutablePath { get; init; } = @"C:\LANCommander\LANCommander.Launcher.exe";
         public bool IsElevated { get; init; }
+        public string WorkingDirectory { get; init; } = @"C:\LANCommander";
+        public string ConfigDirectory { get; init; } = @"C:\LANCommander\Data";
     }
 
     private sealed class ThrowingCurrentProcessInfo : ICurrentProcessInfo
     {
         public string ExecutablePath => throw new InvalidOperationException("path unavailable");
         public bool IsElevated => throw new InvalidOperationException("cannot determine elevation");
+        public string WorkingDirectory => throw new InvalidOperationException("working directory unavailable");
+        public string ConfigDirectory => throw new InvalidOperationException("config directory unavailable");
     }
 
     private sealed class RecordingElevatedProcessLauncher : IElevatedProcessLauncher
@@ -201,11 +284,12 @@ public class ElevatedScriptInterceptorTests
         public List<ElevatedProcessRequest> Requests { get; } = new();
         public int LaunchCount => Requests.Count;
         public bool ThrowOnLaunch { get; init; }
+        public int ExitCode { get; init; }
 
         /// <summary>Set once the (awaited) launch has fully completed. Proves the caller waited.</summary>
         public bool CompletedBeforeReturn { get; private set; }
 
-        public async Task LaunchAndWaitAsync(ElevatedProcessRequest request)
+        public async Task<int> LaunchAndWaitAsync(ElevatedProcessRequest request)
         {
             Requests.Add(request);
 
@@ -217,6 +301,8 @@ public class ElevatedScriptInterceptorTests
             await Task.Delay(20);
 
             CompletedBeforeReturn = true;
+
+            return ExitCode;
         }
     }
 

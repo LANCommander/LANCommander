@@ -85,20 +85,36 @@ class Program
 
     static async Task RunHeadlessAsync(string[] args)
     {
-        IConfiguration configuration = new ConfigurationBuilder().ReadFromFile<Settings.Settings>();
+        ApplyDataDirectoryOverride(args);
+
+        var configurationBuilder = new ConfigurationBuilder();
+        var fileConfiguration = configurationBuilder.ReadFromFile<Settings.Settings>();
+        var refresher = configurationBuilder.ReadFromServer<Settings.Settings>(fileConfiguration);
+
+        IConfiguration configuration = configurationBuilder.Build();
 
         var settings = new Settings.Settings();
         configuration.Bind(settings);
 
         var services = new ServiceCollection();
 
+        var logDirectory = Path.Combine(AppPaths.GetConfigDirectory(), "Logs");
+
+        Directory.CreateDirectory(logDirectory);
+
+        var logFilePath = Path.Combine(logDirectory, $"avalonia-launcher-{DateTime.Now:yyyy-MM-dd}.log");
+
         services.AddLogging(builder =>
         {
             builder.AddConsole();
+            builder.AddProvider(new FileLoggerProvider(logFilePath));
             builder.SetMinimumLevel(LogLevel.Information);
         });
 
         services.Configure<Settings.Settings>(configuration);
+        services.AddSingleton(refresher);
+
+        services.AddHttpClient();
 
         services.AddLANCommanderClient<Settings.Settings>();
         services.AddLANCommanderLauncher();
@@ -122,31 +138,66 @@ class Program
         else
         {
             using var scope = serviceProvider.CreateScope();
-            var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
-            var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
-            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-            await connectionClient.ConnectAsync().ConfigureAwait(false);
-
-            if (!await connectionClient.PingAsync().ConfigureAwait(false))
-                await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
-
-            if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+            try
             {
-                settingsProvider.Update(static s => s.Games.InstallDirectories = GetOSPlatform() switch
+                var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+                var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
+                var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
+                var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+                logger.LogInformation("Running headless with data directory {DataDirectory}", AppPaths.GetConfigDirectory());
+
+                await connectionClient.ConnectAsync().ConfigureAwait(false);
+
+                if (!await connectionClient.PingAsync().ConfigureAwait(false))
+                    await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
+
+                if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
                 {
-                    var platform when platform == OSPlatform.Windows => [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")],
-                    var platform when platform == OSPlatform.Linux => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
-                    var platform when platform == OSPlatform.OSX => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
-                    _ => throw new NotSupportedException("Unsupported OS platform")
-                });
+                    settingsProvider.Update(static s => s.Games.InstallDirectories = GetOSPlatform() switch
+                    {
+                        var platform when platform == OSPlatform.Windows => [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")],
+                        var platform when platform == OSPlatform.Linux => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+                        var platform when platform == OSPlatform.OSX => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+                        _ => throw new NotSupportedException("Unsupported OS platform")
+                    });
+                }
+
+                await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
+                await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
+
+                await commandLineService.ParseCommandLineAsync(args);
             }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "Headless run failed before completing");
 
-            await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
-            await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
+                Environment.ExitCode = 1;
+            }
+        }
+    }
 
-            await commandLineService.ParseCommandLineAsync(args);
+    private static void ApplyDataDirectoryOverride(string[] args)
+    {
+        var index = Array.FindIndex(args, a => a.Equals("--DataDirectory", StringComparison.OrdinalIgnoreCase));
+
+        if (index < 0 || index + 1 >= args.Length)
+            return;
+
+        var dataDirectory = args[index + 1];
+
+        if (string.IsNullOrWhiteSpace(dataDirectory))
+            return;
+
+        try
+        {
+            AppPaths.UseConfigDirectory(dataDirectory);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Could not use data directory '{dataDirectory}': {ex.Message}");
         }
     }
 

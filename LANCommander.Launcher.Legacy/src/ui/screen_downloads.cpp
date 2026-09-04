@@ -13,7 +13,7 @@ namespace launcher
     namespace ui
     {
 
-        static int s_scroll_y = 0;
+        static ScrollState s_scroll;
 
         static void format_bytes(unsigned long bytes, char *buf, int buf_sz)
         {
@@ -107,11 +107,11 @@ namespace launcher
             if (input.mouse.y >= content_y && input.mouse.y < bottom &&
                 input.mouse.wheel_delta != 0)
             {
-                s_scroll_y -= input.mouse.wheel_delta * 28;
-                if (s_scroll_y < 0) s_scroll_y = 0;
+                s_scroll.offset -= input.mouse.wheel_delta * 28;
+                if (s_scroll.offset < 0) s_scroll.offset = 0;
                 int max_scroll = total_h - content_h;
                 if (max_scroll < 0) max_scroll = 0;
-                if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
+                if (s_scroll.offset > max_scroll) s_scroll.offset = max_scroll;
             }
 
             gfx::push_clip(buf, gfx::rect(0, content_y, sw, bottom - content_y));
@@ -123,7 +123,7 @@ namespace launcher
             }
             else
             {
-                int iy = content_y - s_scroll_y;
+                int iy = content_y - s_scroll.offset;
 
                 for (size_t i = 0; i < items.size(); ++i)
                 {
@@ -220,7 +220,7 @@ namespace launcher
 
             // Scrollbar
             scrollbar(buf, sw - 14, content_y, content_h,
-                      total_h, content_h, s_scroll_y, input);
+                      total_h, content_h, s_scroll, input);
 
             // --- Back navigation ---
             if (back_btn.clicked)

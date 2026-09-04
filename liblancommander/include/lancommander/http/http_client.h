@@ -1,6 +1,7 @@
 #ifndef LANCOMMANDER_HTTP_CLIENT_H
 #define LANCOMMANDER_HTTP_CLIENT_H
 
+#include <map>
 #include <string>
 
 #include "http_response.h"
@@ -16,6 +17,23 @@ public:
 
     virtual void set_base_url(const std::string& url) = 0;
     virtual void set_bearer_token(const std::string& token) = 0;
+
+    virtual void set_timeout_ms(int connect_ms, int recv_ms)
+    {
+        (void)connect_ms;
+        (void)recv_ms;
+    }
+
+    // HEAD with caller-supplied request headers, and response headers filled
+    // in. Needed for the X-Ping / X-Pong handshake that distinguishes a
+    // LANCommander server from any other host that answers 2xx on "/".
+    virtual HttpResponse head(const std::string& path,
+                              const std::map<std::string, std::string>& extra_headers)
+    {
+        (void)path;
+        (void)extra_headers;
+        return HttpResponse();
+    }
 
     virtual HttpResponse get(const std::string& path) = 0;
     virtual HttpResponse post(const std::string& path,

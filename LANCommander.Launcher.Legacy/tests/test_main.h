@@ -45,6 +45,13 @@ void report_failure_eq(const char *file, int line, const char *expression,
 
 // Each test translation unit exposes one of these.
 void test_chrome_geometry();
+void test_layout();
+void test_text_edit();
+void test_time_util();
+void test_play_sessions();
+void test_library_sections();
+void test_depot_sections();
+void test_game_menu();
 void test_text_wrap();
 void test_gfx_types();
 

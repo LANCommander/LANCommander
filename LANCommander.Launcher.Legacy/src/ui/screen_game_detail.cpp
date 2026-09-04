@@ -2,6 +2,12 @@
 #include "ui/theme.h"
 #include "ui/widgets.h"
 #include "ui/window_chrome.h"
+#include "ui/widgets_overlay.h"
+#include "ui/widgets_menu.h"
+#include "ui/widgets_collection.h"
+#include "app/game_menu.h"
+#include "app/time_util.h"
+#include "ui/icons.h"
 #include "ui/image_cache.h"
 #include "app/app.h"
 #include "app/game_database.h"
@@ -34,7 +40,7 @@ namespace launcher
         static gfx::Color s_status_color = gfx::rgb(0, 0, 0);
 
         // Scroll state
-        static int s_scroll_y = 0;
+        static ScrollState s_scroll;
 
         // Running game tracking
         static std::string s_running_game_id;
@@ -42,11 +48,35 @@ namespace launcher
         static bool s_is_running = false;
         static bool s_is_starting = false;
 
+        // Local play session for the run in progress, "" when nothing is
+        // being tracked.
+        static std::string s_session_id;
+
         // -----------------------------------------------------------------
         // Modal dialog state
         // -----------------------------------------------------------------
         enum class ModalType { None, ActionSelect, InstallOptions };
         static ModalType s_modal = ModalType::None;
+
+        // The action-bar dropdown.
+        static MenuState s_menu;
+
+        // Result of the per-game update check, refreshed on load.
+        static bool s_update_available = false;
+
+        // Width of the primary action split button. Named because the stats
+        // beside it are positioned from its right edge.
+        static const int SPLIT_BTN_W = 150;
+
+        // Screenshot strip geometry. Named because the page height has to
+        // account for the strip before it is drawn.
+        static const int MEDIA_ITEM_W = 384;
+        static const int MEDIA_ITEM_H = 216;
+
+        // Screenshot media ids for the current game, and the viewer.
+        static std::vector<std::string> s_screenshots;
+        static CarouselState s_media_carousel;
+        static LightboxState s_lightbox;
 
         // Action selection dialog
         static std::vector<const lancommander::Action *> s_modal_actions;
@@ -58,7 +88,7 @@ namespace launcher
         static std::vector<char> s_addon_selected;
         static int s_install_dir_index = 0;
         static bool s_addons_loaded = false;
-        static int s_install_scroll_y = 0;
+        static ScrollState s_install_scroll;
 
         // -----------------------------------------------------------------
         // Helpers
@@ -93,7 +123,145 @@ namespace launcher
             else
                 s_actions.clear();
 
+            // Is there a newer build than the one on disk?
+            //
+            // One request for one game, which is affordable HERE and is why
+            // the library sidebar does not show this: there it would be one
+            // request per row.
+            s_update_available = false;
+            if (!s_game.install_directory.empty())
+            {
+                InstalledGame local;
+                if (app.game_db().find(s_game.id, &local) && !local.version.empty())
+                {
+                    auto upd = app.games().check_for_update(s_game.id, local.version);
+                    if (upd)
+                        s_update_available = upd.value;
+                }
+            }
+
+            // Screenshots only.
+            //
+            // MediaRef.type is a string, but parse_media_ref normalises the
+            // numeric wire form to the enum NAME, so comparing against
+            // "Screenshot" is reliable. Videos are deliberately excluded:
+            // there is no decoder in this stack, and a play button that does
+            // nothing is worse than an absent one.
+            s_screenshots.clear();
+            for (size_t i = 0; i < s_game.media.size(); ++i)
+                if (s_game.media[i].type == "Screenshot")
+                    s_screenshots.push_back(s_game.media[i].id);
+
+            s_media_carousel = CarouselState();
+            s_lightbox = LightboxState();
+
             s_last_game_id = app.selected_game();
+        }
+
+        // Human-readable size of the newest archive, or "" when the game has
+        // none. Only /api/Games/{id} returns archives, which is what this
+        // screen loads — the list endpoint the library uses does not, which is
+        // why this stat cannot be shown anywhere else.
+        static std::string format_download_size(const lancommander::Game &game)
+        {
+            // Newest by created_on rather than archives[0]: the order the
+            // server returns them in is not part of the contract, and the
+            // timestamps are ISO-8601, so a string compare is a date compare.
+            const lancommander::Archive *latest = NULL;
+            for (size_t i = 0; i < game.archives.size(); ++i)
+            {
+                if (!latest || game.archives[i].created_on > latest->created_on)
+                    latest = &game.archives[i];
+            }
+
+            if (!latest || latest->compressed_size <= 0)
+                return std::string();
+
+            const long long bytes = latest->compressed_size;
+
+            const double kb = 1024.0;
+            const double mb = kb * 1024.0;
+            const double gb = mb * 1024.0;
+
+            char out[32];
+            if (bytes >= (long long)gb)
+                sprintf(out, "%.2f GB", bytes / gb);
+            else if (bytes >= (long long)mb)
+                sprintf(out, "%.2f MB", bytes / mb);
+            else if (bytes >= (long long)kb)
+                sprintf(out, "%.0f KB", bytes / kb);
+            else
+                sprintf(out, "%d B", (int)bytes);
+
+            return std::string(out);
+        }
+
+        // A titled group of wrapped badges. Returns the height consumed, so
+        // the sidebar can stack groups without each one re-deriving the wrap.
+        //
+        // Split into a measure and a draw because the page height has to be
+        // known before anything is drawn — the same reason draw_text_wrap
+        // takes a NULL surface.
+        static const int BADGE_GAP = 6;
+        static const int GROUP_GAP = 10;
+
+        static int badge_group_height(int avail_w, const std::vector<std::string> &items)
+        {
+            if (items.empty())
+                return 0;
+
+            const int row_h = badge_height();
+            int x = 0;
+            int rows = 1;
+
+            for (size_t i = 0; i < items.size(); ++i)
+            {
+                const int w = badge_width(items[i].c_str());
+                if (x > 0 && x + w > avail_w)
+                {
+                    ++rows;
+                    x = 0;
+                }
+                x += w + BADGE_GAP;
+            }
+
+            return text_height() + 6 + rows * (row_h + BADGE_GAP) + GROUP_GAP;
+        }
+
+        static int draw_badge_group(gfx::Surface *buf, int x0, int y0, int avail_w,
+                                    const char *title,
+                                    const std::vector<std::string> &items,
+                                    const InputState &input)
+        {
+            if (items.empty())
+                return 0;
+
+            const int row_h = badge_height();
+
+            draw_text(buf, x0, y0, theme().text_dim, title);
+
+            int x = x0;
+            int y = y0 + text_height() + 6;
+
+            for (size_t i = 0; i < items.size(); ++i)
+            {
+                const int w = badge_width(items[i].c_str());
+
+                if (x > x0 && x + w > x0 + avail_w)
+                {
+                    x = x0;
+                    y += row_h + BADGE_GAP;
+                }
+
+                // Not interactive: there is no search-by-genre destination in
+                // this launcher yet, and a capsule that highlights but does
+                // nothing is worse than one that plainly does not.
+                badge(buf, x, y, items[i].c_str(), false, input);
+
+                x += w + BADGE_GAP;
+            }
+
+            return (y + row_h + BADGE_GAP + GROUP_GAP) - y0;
         }
 
         static std::string find_media_id(const lancommander::Game &game,
@@ -251,7 +419,34 @@ namespace launcher
 #endif
         }
 
-        static void poll_running_state()
+        // A run started: record it locally AND tell the server. Both, because
+        // the local row is what makes play time work offline, and the server
+        // row is what the rest of the ecosystem reads.
+        static void session_started(App &app)
+        {
+            app.games().notify_started(s_game.id);
+            s_session_id = app.game_db().begin_play_session(s_game.id, app.user_id());
+        }
+
+        // A run ended, however it ended.
+        //
+        // notify_stopped used to be called only from the Stop button, so a
+        // game the user simply quit left the server believing it was still
+        // running forever. Routing both the manual and the natural path
+        // through here is what fixes that.
+        static void session_stopped(App &app)
+        {
+            if (!s_session_id.empty())
+            {
+                app.game_db().end_play_session(s_session_id);
+                s_session_id.clear();
+            }
+
+            if (!s_game.id.empty())
+                app.games().notify_stopped(s_game.id);
+        }
+
+        static void poll_running_state(App &app)
         {
 #ifdef _WIN32
             if (!s_process_handle)
@@ -264,12 +459,15 @@ namespace launcher
             DWORD result = WaitForSingleObject((HANDLE)s_process_handle, 0);
             if (result == WAIT_OBJECT_0)
             {
-                // Process exited.
+                // Process exited on its own — the user quit the game rather
+                // than pressing Stop.
                 CloseHandle((HANDLE)s_process_handle);
                 s_process_handle = NULL;
                 s_is_running = false;
                 s_is_starting = false;
                 s_running_game_id.clear();
+
+                session_stopped(app);
             }
             else
             {
@@ -294,6 +492,214 @@ namespace launcher
 #endif
         }
 
+
+        // -----------------------------------------------------------------
+        // Actions
+        // -----------------------------------------------------------------
+        //
+        // Extracted out of the button handlers they used to live inside, so
+        // the menu, the split button and any future right-click menu invoke
+        // the same code rather than each growing their own copy.
+
+        static void act_install(App &app)
+        {
+            const bool multiple_dirs = app.settings().games.install_directories.size() > 1;
+
+            if (!s_addons_loaded)
+            {
+                s_addons.clear();
+                auto addons_result = app.games().get_addons(s_game.id);
+                if (addons_result)
+                    s_addons = addons_result.value;
+                s_addon_selected.assign(s_addons.size(), false);
+                s_addons_loaded = true;
+            }
+
+            if (multiple_dirs || !s_addons.empty())
+            {
+                s_install_dir_index = 0;
+                s_install_scroll.offset = 0;
+                s_modal = ModalType::InstallOptions;
+                return;
+            }
+
+            std::string install_root;
+            if (!app.settings().games.install_directories.empty())
+                install_root = app.settings().games.install_directories[0];
+            if (install_root.empty())
+                install_root = "C:\\Games";
+
+            log_info("Install clicked: %s -> %s", s_game.title.c_str(), install_root.c_str());
+
+            CreateDirectoryA(install_root.c_str(), NULL);
+            const std::string game_dir = install_root + "\\" + s_game.title;
+            CreateDirectoryA(game_dir.c_str(), NULL);
+
+            app.downloads().enqueue(s_game.id, s_game.title, game_dir, !s_game.in_library);
+            s_status_message = "Added to download queue";
+            s_status_color = theme().success;
+        }
+
+        static void act_launch(App &app, const lancommander::Action &action)
+        {
+            s_running_game_id = s_game.id;
+
+            std::string err;
+            if (launch_action(app, action, &err))
+            {
+                session_started(app);
+                s_status_message = "Running: " + action.name;
+                s_status_color = theme().success;
+                s_is_running = true;
+                s_is_starting = false;
+            }
+            else
+            {
+                s_status_message = err;
+                s_status_color = theme().error;
+                s_is_starting = false;
+                s_running_game_id.clear();
+            }
+        }
+
+        static void act_play(App &app)
+        {
+            s_modal_actions.clear();
+            for (size_t i = 0; i < s_actions.size(); ++i)
+                if (s_actions[i].is_primary)
+                    s_modal_actions.push_back(&s_actions[i]);
+
+            if (s_modal_actions.size() > 1)
+            {
+                s_modal = ModalType::ActionSelect;
+                return;
+            }
+
+            const lancommander::Action *primary = pick_primary_action();
+            if (!primary)
+            {
+                s_status_message = "No actions available";
+                s_status_color = theme().error;
+                return;
+            }
+
+            s_is_starting = true;
+            act_launch(app, *primary);
+        }
+
+        static void act_stop(App &app)
+        {
+            stop_running_game();
+            session_stopped(app);
+            s_status_message = "Game stopped";
+            s_status_color = theme().text_dim;
+        }
+
+        // `which` indexes the NON-PRIMARY subset of s_actions, which is how
+        // the menu numbers its dynamic entries.
+        static void act_run_secondary(App &app, int which)
+        {
+            int seen = 0;
+            for (size_t i = 0; i < s_actions.size(); ++i)
+            {
+                if (s_actions[i].is_primary)
+                    continue;
+                if (seen == which)
+                {
+                    act_launch(app, s_actions[i]);
+                    return;
+                }
+                ++seen;
+            }
+        }
+
+        static void act_browse_files(App &app)
+        {
+            (void)app;
+#ifdef _WIN32
+            if (s_game.install_directory.empty())
+                return;
+            std::string dir = s_game.install_directory;
+            normalize_slashes(dir);
+            ShellExecuteA(NULL, "explore", dir.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#endif
+        }
+
+        static void act_uninstall(App &app)
+        {
+#ifdef _WIN32
+            std::string dir = s_game.install_directory;
+            normalize_slashes(dir);
+
+            // The manifest written during extraction is the only record of
+            // what belongs to this game, so without it nothing is deleted
+            // rather than guessing at the directory contents.
+            const std::string list_path = dir + "\\.lancommander\\" + s_game.id + "\\FileList.txt";
+
+            FILE *fl = fopen(list_path.c_str(), "r");
+            if (!fl)
+            {
+                s_status_message = "No file manifest found";
+                s_status_color = theme().error;
+                return;
+            }
+
+            char line[1024];
+            int deleted = 0;
+            while (fgets(line, sizeof(line), fl))
+            {
+                // Format: "path | CRC32HEX"
+                char *sep = strstr(line, " | ");
+                size_t len = sep ? (size_t)(sep - line) : strlen(line);
+                while (len > 0 && (line[len - 1] == '\n' ||
+                       line[len - 1] == '\r' || line[len - 1] == ' '))
+                    len--;
+                if (len == 0) continue;
+
+                std::string rel(line, len);
+                if (rel[rel.size() - 1] == '/' || rel[rel.size() - 1] == '\\')
+                    continue;
+
+                for (size_t c = 0; c < rel.size(); ++c)
+                    if (rel[c] == '/') rel[c] = '\\';
+
+                if (DeleteFileA((dir + "\\" + rel).c_str()))
+                    deleted++;
+            }
+            fclose(fl);
+
+            DeleteFileA(list_path.c_str());
+            RemoveDirectoryA((dir + "\\.lancommander\\" + s_game.id).c_str());
+            RemoveDirectoryA((dir + "\\.lancommander").c_str());
+            RemoveDirectoryA(dir.c_str());
+
+            s_game.install_directory.clear();
+            s_actions.clear();
+            app.game_db().set_uninstalled(s_game.id);
+
+            // The library list carries install state, so it is now stale.
+            app.invalidate_library();
+
+            char msg_buf[64];
+            sprintf(msg_buf, "Uninstalled (%d files removed)", deleted);
+            s_status_message = msg_buf;
+            s_status_color = theme().success;
+#else
+            (void)app;
+            s_status_message = "Uninstall not supported on this platform";
+            s_status_color = theme().error;
+#endif
+        }
+
+        static void act_add_to_library(App &app)
+        {
+            app.library().add(s_game.id);
+            app.invalidate_library();
+            s_status_message = "Added to library";
+            s_status_color = theme().success;
+            load_game(app);
+        }
+
         // -----------------------------------------------------------------
         // Gradient helper
         // -----------------------------------------------------------------
@@ -307,53 +713,20 @@ namespace launcher
                                       gfx::with_alpha(bg_color, 255));
         }
 
-        // -----------------------------------------------------------------
-        // Large primary button (different styling from the standard button)
-        // -----------------------------------------------------------------
-        static ButtonState button_large(gfx::Surface *bmp, int x, int y, int w, int h,
-                                        const char *label_text, const InputState &input,
-                                        gfx::Color bg_color, gfx::Color bg_hover_color)
-        {
-            ButtonState state;
-            state.hovered = (input.mouse.x >= x && input.mouse.x < x + w &&
-                             input.mouse.y >= y && input.mouse.y < y + h);
-            state.clicked = state.hovered && input.mouse.clicked;
-
-            gfx::Color bg = state.hovered ? bg_hover_color : bg_color;
-            gfx::fill_rect(bmp, gfx::rect(x, y, w, h), bg);
-
-            int tx = x + (w - text_width(label_text)) / 2;
-            int ty = y + (h - text_height()) / 2;
-            draw_text(bmp, tx, ty, theme().text_bright, label_text);
-
-            return state;
-        }
-
-        // Secondary (outline-style) button
-        static ButtonState button_secondary(gfx::Surface *bmp, int x, int y, int w, int h,
-                                            const char *label_text, const InputState &input)
-        {
-            ButtonState state;
-            state.hovered = (input.mouse.x >= x && input.mouse.x < x + w &&
-                             input.mouse.y >= y && input.mouse.y < y + h);
-            state.clicked = state.hovered && input.mouse.clicked;
-
-            gfx::Color bg = state.hovered ? theme().panel_hover : theme().panel;
-            gfx::fill_rect(bmp, gfx::rect(x, y, w, h), bg);
-            gfx::draw_rect(bmp, gfx::rect(x, y, w, h), theme().divider);
-
-            int tx = x + (w - text_width(label_text)) / 2;
-            int ty = y + (h - text_height()) / 2;
-            draw_text(bmp, tx, ty, theme().text, label_text);
-
-            return state;
-        }
-
         // =================================================================
         // Main draw function
         // =================================================================
-        void screen_game_detail_draw(App &app, const InputState &input)
+        void screen_game_detail_draw(App &app, const InputState &raw_input)
         {
+            // While the dropdown is open the page beneath it is inert.
+            //
+            // Without this a click that misses the menu would close it AND
+            // activate whatever sat underneath, which is the same defect
+            // the global Escape handler used to have with modals.
+            const InputState input = (s_menu.open || s_lightbox.open)
+                                         ? input_blocked(raw_input)
+                                         : raw_input;
+
             gfx::Surface *buf = app.backbuffer();
             int sw = app.screen_width();
             int sh = app.screen_height();
@@ -362,7 +735,7 @@ namespace launcher
             if (app.selected_game() != s_last_game_id)
             {
                 load_game(app);
-                s_scroll_y = 0;
+                s_scroll.offset = 0;
                 s_modal = ModalType::None;
                 s_addons_loaded = false;
             }
@@ -379,8 +752,23 @@ namespace launcher
                     {
                         s_game.install_directory = items[i].install_dir;
 
-                        // Persist to local database.
-                        app.game_db().set_installed(s_game.id, items[i].install_dir);
+                        // Record WHICH version was installed, not just that
+                        // something was. Without it check_for_update has
+                        // nothing to compare against and update detection can
+                        // never fire. The manifest is the server's statement
+                        // of the build we just downloaded.
+                        std::string installed_version;
+                        {
+                            auto manifest = app.games().get_manifest(s_game.id);
+                            if (manifest)
+                                installed_version = manifest.value.version;
+                        }
+
+                        app.game_db().set_installed(s_game.id, items[i].install_dir,
+                                                    installed_version);
+
+                        // The library list carries install state.
+                        app.invalidate_library();
 
                         // Reload actions now that the game is installed.
                         auto actions = app.games().get_actions(s_game.id);
@@ -393,7 +781,7 @@ namespace launcher
 
             // Poll running game process.
             if (s_running_game_id == s_game.id)
-                poll_running_state();
+                poll_running_state(app);
             else
             {
             }
@@ -428,12 +816,12 @@ namespace launcher
             if (cover) right_h = gfx::surface_height(cover) - cover_overlap + 8;
             right_h += th + 4; // type
             if (s_game.released_year > 0) right_h += th + 4;
-            if (!s_game.genres.empty())
-                right_h += th + 2 + (int)s_game.genres.size() * (th + 1) + 4;
-            if (!s_game.developers.empty())
-                right_h += th + 2 + (int)s_game.developers.size() * (th + 1) + 4;
-            if (!s_game.publishers.empty())
-                right_h += th + 2 + (int)s_game.publishers.size() * (th + 1) + 4;
+            {
+                const int meta_w = sw - (right_x + 12) - 12;
+                right_h += badge_group_height(meta_w, s_game.genres);
+                right_h += badge_group_height(meta_w, s_game.developers);
+                right_h += badge_group_height(meta_w, s_game.publishers);
+            }
 
             // Left column height: description
             int left_h = 12;
@@ -441,21 +829,29 @@ namespace launcher
                 left_h += draw_text_wrap(NULL, 0, 0, left_max, theme().text,
                                          s_game.description.c_str());
 
+            // The media strip sits under the description and scrolls with it,
+            // so the page has to be tall enough to reach it.
+            int media_h = 0;
+            if (!s_screenshots.empty())
+                media_h = 20 + carousel_height(MEDIA_ITEM_H);
+
+            left_h += media_h;
+
             int body_h = (right_h > left_h ? right_h : left_h) + 20;
             int total_page_h = hero_h + bar_h + body_h;
 
             // --- Scroll with mouse wheel (entire page) ---
             if (input.mouse.wheel_delta != 0)
             {
-                s_scroll_y -= input.mouse.wheel_delta * 28;
-                if (s_scroll_y < 0) s_scroll_y = 0;
+                s_scroll.offset -= input.mouse.wheel_delta * 28;
+                if (s_scroll.offset < 0) s_scroll.offset = 0;
                 int visible_h = sh - top;
                 int max_scroll = total_page_h - visible_h;
                 if (max_scroll < 0) max_scroll = 0;
-                if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
+                if (s_scroll.offset > max_scroll) s_scroll.offset = max_scroll;
             }
 
-            int sy = -s_scroll_y; // global scroll offset
+            int sy = -s_scroll.offset; // global scroll offset
 
             // Clip everything below the chrome bar.
             gfx::push_clip(buf, gfx::rect(0, top, sw, sh - top));
@@ -465,22 +861,15 @@ namespace launcher
             // =============================================================
             int hero_y = top + sy;
 
-            std::string bg_id = find_media_id(s_game, "Background");
-            gfx::Surface *bg_img = NULL;
-            if (!bg_id.empty())
-                bg_img = app.image_cache().get(bg_id, sw, sw);
+            // Background art, filling the hero band edge to edge and cropped
+            // from the centre. This used to fit the image into an sw x sw box
+            // and then blit its top-left corner, which cropped a wide hero to
+            // its left edge and letterboxed a short one.
+            const std::string bg_id = find_media_id(s_game, "Background");
+            const gfx::Rect hero_r = gfx::rect(0, hero_y, sw, hero_h);
 
-            if (bg_img)
+            if (draw_image_cover(buf, app.image_cache(), hero_r, bg_id))
             {
-                int img_w = gfx::surface_width(bg_img);
-                int img_h = gfx::surface_height(bg_img);
-                int blit_w = img_w < sw ? img_w : sw;
-                int blit_h = img_h < hero_h ? img_h : hero_h;
-                int dst_x = (sw - blit_w) / 2;
-                int dst_y = hero_y;
-                if (img_h < hero_h)
-                    dst_y = hero_y + (hero_h - img_h) / 2;
-                gfx::blit_region(buf, bg_img, gfx::rect(0, 0, blit_w, blit_h), dst_x, dst_y);
                 draw_gradient_bottom(buf, 0, hero_y + hero_h - 60, sw, 60, theme().bg);
             }
             else
@@ -489,20 +878,36 @@ namespace launcher
                 draw_gradient_bottom(buf, 0, hero_y + hero_h - 40, sw, 40, theme().bg);
             }
 
-            // Logo overlay
-            std::string logo_id = find_media_id(s_game, "Logo");
-            gfx::Surface *logo_img = NULL;
-            if (!logo_id.empty())
-                logo_img = app.image_cache().get(logo_id, 200, 64);
+            // Logo overlay, bottom-left.
+            //
+            // Sized as a fraction of the hero rather than to a fixed 200x64
+            // box, matching the Avalonia Viewbox: MaxWidth is a third of the
+            // band and MaxHeight is half of it. It also uses the CONTAIN fit,
+            // which enlarges — the old path fitted WITHIN 200x64 and never
+            // upscaled, so a logo authored at 120x30 stayed 120x30 and looked
+            // lost in a 210px band, which is why they all read as too small.
+            const std::string logo_id = find_media_id(s_game, "Logo");
+
+            const int logo_margin = 24;
+            const gfx::Rect logo_box = gfx::rect(logo_margin, hero_y,
+                                                 sw / 3, hero_h / 2);
+
+            gfx::Surface *logo_img = logo_id.empty()
+                                         ? NULL
+                                         : app.image_cache().get(logo_id, logo_box.w,
+                                                                 logo_box.h,
+                                                                 ImageFit::Contain);
 
             if (logo_img)
             {
-                gfx::blit_alpha(buf, logo_img, 24,
-                                hero_y + hero_h - gfx::surface_height(logo_img) - 16);
+                // Pinned to the bottom-left of the band rather than centred in
+                // the box, which is where the Avalonia Viewbox sits it.
+                gfx::blit_alpha(buf, logo_img, logo_margin,
+                                hero_y + hero_h - 20 - gfx::surface_height(logo_img));
             }
             else
             {
-                draw_text(buf, 24, hero_y + hero_h - th - 20,
+                draw_text(buf, logo_margin, hero_y + hero_h - th - 20,
                           theme().text_bright, s_game.title.c_str());
             }
 
@@ -517,302 +922,144 @@ namespace launcher
             // --- Back button overlaid on the hero ---
             const char *back_label = (app.library_tab() == LibraryTab::Depot)
                                          ? "Back to Depot" : "Back to Library";
-            int back_w = text_width(back_label) + 20;
-            int back_h = 22;
-            int back_x = 8;
-            int back_y = hero_y + 8;
+            const int back_gap = 7;
+            const int back_w = 12 + ICON_MD + back_gap + text_width(back_label) + 12;
+            const int back_h = button_height();
+            const int back_x = 8;
+            const int back_y = hero_y + 8;
 
             ButtonState back_btn;
             {
-                back_btn.hovered = (input.mouse.x >= back_x && input.mouse.x < back_x + back_w &&
-                                    input.mouse.y >= back_y && input.mouse.y < back_y + back_h);
+                const gfx::Rect r = gfx::rect(back_x, back_y, back_w, back_h);
+
+                back_btn.hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
                 back_btn.clicked = back_btn.hovered && input.mouse.clicked;
 
-                gfx::fill_rect_alpha(buf, gfx::rect(back_x, back_y, back_w, back_h),
-                                     gfx::rgba(0, 0, 0, back_btn.hovered ? 180 : 140));
+                fill_rounded_rect_alpha(buf, r, BUTTON_RADIUS,
+                                        gfx::rgba(0, 0, 0, back_btn.hovered ? 190 : 140));
 
-                int tx = back_x + (back_w - text_width(back_label)) / 2;
-                int ty = back_y + (back_h - th) / 2;
-                draw_text(buf, tx, ty, theme().text_bright, back_label);
+                draw_icon(buf, back_x + 12, back_y + (back_h - ICON_MD) / 2, ICON_MD,
+                          theme().text_bright, Icon::ArrowLeft);
+                draw_text(buf, back_x + 12 + ICON_MD + back_gap,
+                          back_y + (back_h - th) / 2,
+                          theme().text_bright, back_label);
             }
 
             // =============================================================
             // Action bar — directly below hero
             // =============================================================
-            int bar_y = hero_y + hero_h;
-            int bar_pad = 16;
-            int btn_x = bar_pad;
-            int btn_y = bar_y + (bar_h - 30) / 2;
+            //
+            // One split button plus one dropdown, replacing the row of ad-hoc
+            // buttons that used to grow an entry per feature. The menu
+            // contents come from build_game_menu(), a pure function of the
+            // game state that is unit-tested.
+            const int bar_y = hero_y + hero_h;
+            const int bar_pad = 16;
+            const int btn_y = bar_y + (bar_h - 30) / 2;
 
-            bool is_installed = !s_game.install_directory.empty();
+            const bool is_installed = !s_game.install_directory.empty();
 
-            if (!is_installed)
+            GameMenuFlags flags;
+            flags.installed = is_installed;
+            flags.in_library = s_game.in_library;
+            flags.update_available = s_update_available;
+            flags.running = this_game_running;
+            flags.has_manuals = false;      // manuals arrive with the media work
+            flags.offline = false;
+            flags.secondary_count = 0;
+            for (size_t i = 0; i < s_actions.size(); ++i)
+                if (!s_actions[i].is_primary)
+                    ++flags.secondary_count;
+
+            const char *primary_label =
+                game_primary_label(flags, this_game_starting, false, false);
+
+            gfx::Color primary_bg = theme().primary;
+            gfx::Color primary_bg_hover = theme().primary_hover;
+            if (this_game_running)
             {
-                int btn_w = 140;
-                ButtonState install_btn = button_large(buf, btn_x, btn_y, btn_w, 30,
-                                                       "Install", input,
-                                                       theme().primary, theme().primary_hover);
-                if (install_btn.clicked)
-                {
-                    bool multiple_dirs = app.settings().games.install_directories.size() > 1;
-
-                    // Fetch addons if not loaded yet
-                    if (!s_addons_loaded)
-                    {
-                        s_addons.clear();
-                        auto addons_result = app.games().get_addons(s_game.id);
-                        if (addons_result)
-                            s_addons = addons_result.value;
-                        s_addon_selected.assign(s_addons.size(), false);
-                        s_addons_loaded = true;
-                    }
-
-                    if (multiple_dirs || !s_addons.empty())
-                    {
-                        // Show install options dialog
-                        s_install_dir_index = 0;
-                        s_install_scroll_y = 0;
-                        s_modal = ModalType::InstallOptions;
-                    }
-                    else
-                    {
-                        // Direct install — single directory, no addons
-                        std::string install_root;
-                        if (!app.settings().games.install_directories.empty())
-                            install_root = app.settings().games.install_directories[0];
-                        if (install_root.empty())
-                            install_root = "C:\\Games";
-
-                        log_info("Install clicked: %s -> %s", s_game.title.c_str(), install_root.c_str());
-
-                        CreateDirectoryA(install_root.c_str(), NULL);
-                        std::string game_dir = install_root + "\\" + s_game.title;
-                        CreateDirectoryA(game_dir.c_str(), NULL);
-
-                        bool needs_lib_add = !s_game.in_library;
-                        app.downloads().enqueue(s_game.id, s_game.title, game_dir, needs_lib_add);
-                        s_status_message = "Added to download queue";
-                        s_status_color = theme().success;
-                    }
-                }
-                btn_x += btn_w + 8;
-
-                if (!s_game.in_library)
-                {
-                    int lib_w = 120;
-                    ButtonState lib_btn = button_secondary(buf, btn_x, btn_y, lib_w, 30,
-                                                           "Add to Library", input);
-                    if (lib_btn.clicked)
-                    {
-                        app.library().add(s_game.id);
-                        s_status_message = "Added to library";
-                        s_status_color = theme().success;
-                        load_game(app);
-                    }
-                    btn_x += lib_w + 8;
-                }
+                primary_bg = theme().error;
+                primary_bg_hover = theme().error_hover;
             }
-            else
+
+            const SplitButtonResult sb =
+                split_button(buf, bar_pad, btn_y, SPLIT_BTN_W, 30, primary_label,
+                             !this_game_starting, primary_bg, primary_bg_hover, input);
+
+            if (sb.caret_clicked)
             {
-                int play_w = 140;
-                const char *play_label;
-                gfx::Color play_bg, play_bg_hover;
-
-                if (this_game_starting)
-                {
-                    play_label = "Starting...";
-                    play_bg = theme().primary;
-                    play_bg_hover = theme().primary;
-                }
-                else if (this_game_running)
-                {
-                    play_label = "Stop";
-                    play_bg = theme().error;
-                    play_bg_hover = gfx::rgb(200, 60, 60);
-                }
+                // menu_open() rather than flipping `open` by hand: it also
+                // tells context_menu() to ignore this frame's click, which is
+                // otherwise still live when the menu draws and slams it shut
+                // in the same frame.
+                if (s_menu.open)
+                    s_menu.open = false;
                 else
+                    menu_open(s_menu, bar_pad, btn_y + 30);
+            }
+
+            int pending_cmd = 0;
+            if (sb.primary_clicked)
+                pending_cmd = game_primary_command(flags);
+
+            // --- Stats ---------------------------------------------------
+            //
+            // Immediately to the right of the action button, as in the
+            // Avalonia GameActionBarView, where they sit in the same row and
+            // read as belonging to it. Right-aligning them to the content
+            // column instead put them the width of the window away from the
+            // control they describe.
+            {
+                // Through App rather than straight to the local database, so
+                // these agree with the Recently Played carousel: a game played
+                // on another machine has history on the server and none here,
+                // and reading only the local table showed "None" / "Never" for
+                // it while the library said it was played yesterday.
+                const long long secs = app.total_play_seconds(s_game.id);
+                const long long played_at = app.last_played_at(s_game.id);
+
+                const std::string play_time = format_play_time((long)secs);
+                const std::string last_played =
+                    format_last_played((std::time_t)played_at, time(NULL));
+
+                // CompressedSize of the newest archive, matching the
+                // Avalonia binding. Blank when the game has no archive —
+                // nothing to download — and the column is then skipped
+                // rather than drawn with an empty value, as the Avalonia
+                // IsVisible converter does.
+                const std::string download_size = format_download_size(s_game);
+
+                const char *labels[3] = { "Download Size", "Play Time", "Last Played" };
+                const std::string values[3] = { download_size, play_time, last_played };
+
+                int sx = bar_pad + SPLIT_BTN_W + 48;
+
+                for (int i = 0; i < 3; ++i)
                 {
-                    play_label = "Play";
-                    play_bg = theme().primary;
-                    play_bg_hover = theme().primary_hover;
-                }
+                    if (values[i].empty())
+                        continue;
 
-                ButtonState play_btn = button_large(buf, btn_x, btn_y, play_w, 30,
-                                                    play_label, input, play_bg, play_bg_hover);
+                    const int lw = text_width(labels[i]);
+                    const int vw = text_width(values[i].c_str());
+                    const int w = lw > vw ? lw : vw;
 
-                if (play_btn.clicked && !this_game_starting)
-                {
-                    if (this_game_running)
-                    {
-                        stop_running_game();
-                        app.games().notify_stopped(s_game.id);
-                        s_status_message = "Game stopped";
-                        s_status_color = theme().text_dim;
-                    }
-                    else
-                    {
-                        // Count primary actions
-                        s_modal_actions.clear();
-                        for (size_t i = 0; i < s_actions.size(); ++i)
-                            if (s_actions[i].is_primary)
-                                s_modal_actions.push_back(&s_actions[i]);
+                    // Stop before the cover art, which overhangs the hero and
+                    // reaches down into this bar.
+                    if (sx + w > right_x - 16)
+                        break;
 
-                        if (s_modal_actions.size() > 1)
-                        {
-                            // Multiple primary actions — show selection dialog
-                            s_modal = ModalType::ActionSelect;
-                        }
-                        else
-                        {
-                            // Single or zero primary actions — launch directly
-                            const lancommander::Action *primary = pick_primary_action();
-                            if (primary)
-                            {
-                                s_is_starting = true;
-                                s_running_game_id = s_game.id;
-                                std::string launch_err;
-                                if (launch_action(app, *primary, &launch_err))
-                                {
-                                    app.games().notify_started(s_game.id);
-                                    s_status_message = "Running: " + primary->name;
-                                    s_status_color = theme().success;
-                                    s_is_running = true;
-                                    s_is_starting = false;
-                                }
-                                else
-                                {
-                                    s_status_message = launch_err;
-                                    s_status_color = theme().error;
-                                    s_is_starting = false;
-                                    s_running_game_id.clear();
-                                }
-                            }
-                            else
-                            {
-                                s_status_message = "No actions available";
-                                s_status_color = theme().error;
-                            }
-                        }
-                    }
-                }
-                btn_x += play_w + 8;
+                    draw_text(buf, sx, bar_y + 6, theme().text_dim, labels[i]);
+                    draw_text(buf, sx, bar_y + 6 + th + 2, theme().text,
+                              values[i].c_str());
 
-                for (size_t i = 0; i < s_actions.size() && i < 4; ++i)
-                {
-                    if (s_actions[i].is_primary) continue;
-                    const char *name = s_actions[i].name.c_str();
-                    int sec_w = text_width(name) + 24;
-                    if (sec_w < 80) sec_w = 80;
-                    if (btn_x + sec_w > sw - bar_pad) break;
-                    ButtonState sec_btn = button_secondary(buf, btn_x, btn_y, sec_w, 30, name, input);
-                    if (sec_btn.clicked && !this_game_running)
-                    {
-                        std::string err;
-                        s_running_game_id = s_game.id;
-                        if (launch_action(app, s_actions[i], &err))
-                        {
-                            app.games().notify_started(s_game.id);
-                            s_status_message = "Running: " + s_actions[i].name;
-                            s_status_color = theme().success;
-                            s_is_running = true;
-                        }
-                        else
-                        {
-                            s_status_message = err;
-                            s_status_color = theme().error;
-                            s_running_game_id.clear();
-                        }
-                    }
-                    btn_x += sec_w + 8;
-                }
-
-                if (!this_game_running && !this_game_starting)
-                {
-                    int unsw = text_width("Uninstall") + 24;
-                    int uns_x = sw - bar_pad - unsw;
-                    if (uns_x > btn_x + 8)
-                    {
-                        ButtonState uns_btn = button_secondary(buf, uns_x, btn_y, unsw, 30,
-                                                               "Uninstall", input);
-                        if (uns_btn.clicked)
-                        {
-#ifdef _WIN32
-                            std::string dir = s_game.install_directory;
-                            normalize_slashes(dir);
-
-                            // Read the file manifest written during extraction.
-                            std::string list_path = dir + "\\.lancommander\\" +
-                                                    s_game.id + "\\FileList.txt";
-
-                            FILE *fl = fopen(list_path.c_str(), "r");
-                            if (fl)
-                            {
-                                char line[1024];
-                                int deleted = 0;
-                                while (fgets(line, sizeof(line), fl))
-                                {
-                                    // Format: "path | CRC32HEX"
-                                    char *sep = strstr(line, " | ");
-                                    size_t len = sep ? (size_t)(sep - line) : strlen(line);
-                                    // Trim trailing whitespace/newline.
-                                    while (len > 0 && (line[len - 1] == '\n' ||
-                                           line[len - 1] == '\r' || line[len - 1] == ' '))
-                                        len--;
-                                    if (len == 0) continue;
-
-                                    std::string rel(line, len);
-                                    // Skip directory entries (trailing slash).
-                                    if (rel[rel.size() - 1] == '/' ||
-                                        rel[rel.size() - 1] == '\\')
-                                        continue;
-
-                                    for (size_t c = 0; c < rel.size(); ++c)
-                                        if (rel[c] == '/') rel[c] = '\\';
-
-                                    std::string full = dir + "\\" + rel;
-                                    if (DeleteFileA(full.c_str()))
-                                        deleted++;
-                                }
-                                fclose(fl);
-
-                                // Remove empty directories bottom-up.
-                                // Walk dir tree and remove empties (best-effort).
-                                // Start by removing the metadata directory.
-                                DeleteFileA(list_path.c_str());
-                                std::string meta_game = dir + "\\.lancommander\\" + s_game.id;
-                                RemoveDirectoryA(meta_game.c_str());
-                                // Try removing .lancommander if empty.
-                                std::string meta_root = dir + "\\.lancommander";
-                                RemoveDirectoryA(meta_root.c_str());
-                                // Try removing the install dir itself if empty.
-                                RemoveDirectoryA(dir.c_str());
-
-                                s_game.install_directory.clear();
-                                s_actions.clear();
-
-                                // Remove from local database.
-                                app.game_db().set_uninstalled(s_game.id);
-
-                                char msg_buf[64];
-                                sprintf(msg_buf, "Uninstalled (%d files removed)", deleted);
-                                s_status_message = msg_buf;
-                                s_status_color = theme().success;
-                            }
-                            else
-                            {
-                                s_status_message = "No file manifest found";
-                                s_status_color = theme().error;
-                            }
-#endif
-                        }
-                    }
+                    sx += w + 32;
                 }
             }
 
             if (!s_status_message.empty())
             {
                 int msg_y = bar_y + (bar_h - th) / 2;
-                draw_text_right(buf, sw - bar_pad, msg_y, s_status_color,
+                draw_text_right(buf, right_x - 16, msg_y, s_status_color,
                                 s_status_message.c_str());
             }
 
@@ -850,48 +1097,83 @@ namespace launcher
                 my += th + 4;
             }
 
-            if (!s_game.genres.empty())
+            // Genres, developers and publishers as wrapped capsules, the way
+            // the Avalonia sidebar draws them with Button.Badge in a WrapPanel.
+            // They used to be one plain line each, which made a five-genre
+            // game look like a paragraph.
             {
-                label(buf, meta_x, my, theme().text_dim, "Genres");
-                my += th + 2;
-                for (size_t i = 0; i < s_game.genres.size(); ++i)
-                {
-                    label(buf, meta_x, my, theme().text, s_game.genres[i].c_str());
-                    my += th + 1;
-                }
-                my += 4;
-            }
+                const int meta_w = sw - meta_x - 12;
 
-            if (!s_game.developers.empty())
-            {
-                label(buf, meta_x, my, theme().text_dim, "Developer");
-                my += th + 2;
-                for (size_t i = 0; i < s_game.developers.size(); ++i)
-                {
-                    label(buf, meta_x, my, theme().text, s_game.developers[i].c_str());
-                    my += th + 1;
-                }
-                my += 4;
-            }
-
-            if (!s_game.publishers.empty())
-            {
-                label(buf, meta_x, my, theme().text_dim, "Publisher");
-                my += th + 2;
-                for (size_t i = 0; i < s_game.publishers.size(); ++i)
-                {
-                    label(buf, meta_x, my, theme().text, s_game.publishers[i].c_str());
-                    my += th + 1;
-                }
-                my += 4;
+                my += draw_badge_group(buf, meta_x, my, meta_w, "Genres",
+                                       s_game.genres, input);
+                my += draw_badge_group(buf, meta_x, my, meta_w, "Developers",
+                                       s_game.developers, input);
+                my += draw_badge_group(buf, meta_x, my, meta_w, "Publishers",
+                                       s_game.publishers, input);
             }
 
             // --- Left column: description ---
             int y = below_bar + 12;
+            int desc_bottom = y;
 
             if (!s_game.description.empty())
-                draw_text_wrap(buf, left_margin, y, left_max, theme().text,
-                               s_game.description.c_str());
+                desc_bottom = y + draw_text_wrap(buf, left_margin, y, left_max,
+                                                 theme().text,
+                                                 s_game.description.c_str());
+
+            // =============================================================
+            // Media
+            // =============================================================
+            if (!s_screenshots.empty())
+            {
+                // Offset so the strip's items line up with the description
+                // above them, with the arrows out in the margin.
+                const int media_x = left_margin - carousel_gutter();
+                const int media_w = (left_max - left_margin) + carousel_gutter() * 2;
+                const int item_w = MEDIA_ITEM_W;
+                const int item_h = MEDIA_ITEM_H;
+
+                const int my2 = desc_bottom + 20;
+
+                const CarouselResult mr =
+                    carousel_begin(buf, media_x, my2, media_w, "Media",
+                                   (int)s_screenshots.size(), item_w, item_h, 12,
+                                   s_media_carousel, input, false);
+
+                for (int i = mr.first_visible; i <= mr.last_visible; ++i)
+                {
+                    const gfx::Rect ir = carousel_item_rect(mr, i, item_w, item_h, 12,
+                                                            s_media_carousel);
+
+                    gfx::Surface *shot =
+                        app.image_cache().get(s_screenshots[i], item_w, item_h);
+
+                    if (shot)
+                    {
+                        gfx::blit(buf, shot,
+                                  ir.x + (item_w - gfx::surface_width(shot)) / 2,
+                                  ir.y + (item_h - gfx::surface_height(shot)) / 2);
+                    }
+                    else
+                    {
+                        gfx::fill_rect(buf, ir, theme().panel);
+                        draw_text_center(buf, ir.x + ir.w / 2, ir.y + ir.h / 2,
+                                         theme().text_disabled, "Loading...");
+                    }
+
+                    if (mr.hovered_index == i)
+                        gfx::draw_rect(buf, ir, theme().primary);
+                }
+
+                carousel_end(buf);
+
+                if (mr.clicked_index >= 0)
+                {
+                    s_lightbox.open = true;
+                    s_lightbox.index = mr.clicked_index;
+                }
+
+            }
 
             // Restore clip rect.
             gfx::pop_clip(buf);
@@ -900,7 +1182,7 @@ namespace launcher
             {
                 int visible_h = sh - top;
                 scrollbar(buf, sw - 14, top, visible_h,
-                          total_page_h, visible_h, s_scroll_y, input);
+                          total_page_h, visible_h, s_scroll, input);
             }
 
             // --- Back navigation ---
@@ -908,23 +1190,151 @@ namespace launcher
                 app.switch_screen(Screen::Library);
 
             // =============================================================
+            // Action dropdown
+            // =============================================================
+            //
+            // Drawn after the page so it overlays, but fed the RAW input so it
+            // can still be interacted with while everything below is inert.
+            {
+                GameMenuEntry entries[32];
+                const int n = build_game_menu(flags, entries, 32);
+
+                // Dynamic entries carry no label from the builder, which knows
+                // counts but not names.
+                MenuItemDef defs[32];
+                int sec_seen = 0;
+                for (int i = 0; i < n; ++i)
+                {
+                    defs[i].label = entries[i].label;
+                    defs[i].command = entries[i].command;
+                    defs[i].enabled = entries[i].enabled;
+
+                    if (entries[i].command >= GM_SecondaryBase)
+                    {
+                        for (size_t a = 0; a < s_actions.size(); ++a)
+                        {
+                            if (s_actions[a].is_primary)
+                                continue;
+                            if (sec_seen == entries[i].command - GM_SecondaryBase)
+                            {
+                                defs[i].label = s_actions[a].name.c_str();
+                                break;
+                            }
+                            ++sec_seen;
+                        }
+                        sec_seen = 0;
+                    }
+                }
+
+                const int chosen = context_menu(buf, sw, sh, defs, n, s_menu, raw_input);
+                if (chosen != 0)
+                    pending_cmd = chosen;
+            }
+
+            // =============================================================
+            // Lightbox
+            // =============================================================
+            //
+            // Drawn after everything else so it covers the page, and given the
+            // RAW input so it stays interactive while the page beneath it is
+            // inert.
+            if (s_lightbox.open)
+            {
+                const int count = (int)s_screenshots.size();
+                if (s_lightbox.index < 0) s_lightbox.index = 0;
+                if (s_lightbox.index >= count) s_lightbox.index = count - 1;
+
+                // Requested at the display size, not the source size: a 4K
+                // screenshot decoded at full resolution is a large allocation
+                // on the platforms this launcher targets.
+                // Between the title bar and the footer, both of which are
+                // drawn after this screen and would otherwise cover the
+                // controls at the edges.
+                const gfx::Rect area = gfx::rect(0, top, sw,
+                                                 sh - top - footer_height());
+
+                // Inset so the picture clears the prev/next buttons at the
+                // sides and the counter along the bottom rather than sitting
+                // underneath them.
+                gfx::Surface *full = count > 0
+                    ? app.image_cache().get(s_screenshots[s_lightbox.index],
+                                            area.w - 110, area.h - 48)
+                    : NULL;
+
+                const LightboxAction la =
+                    lightbox(buf, area, full, s_lightbox.index, count, raw_input);
+
+                if (la == LightboxAction::Close)
+                    s_lightbox.open = false;
+                else if (la == LightboxAction::Prev && s_lightbox.index > 0)
+                    --s_lightbox.index;
+                else if (la == LightboxAction::Next && s_lightbox.index < count - 1)
+                    ++s_lightbox.index;
+            }
+
+            // An open overlay owns Escape, so App does not navigate away.
+            app.set_overlay_active(s_menu.open || s_lightbox.open ||
+                                   s_modal != ModalType::None);
+
+            // --- Dispatch -------------------------------------------------
+            if (pending_cmd >= GM_SecondaryBase)
+            {
+                act_run_secondary(app, pending_cmd - GM_SecondaryBase);
+            }
+            else
+            {
+                switch (pending_cmd)
+                {
+                case GM_Install:
+                    act_install(app);
+                    break;
+                case GM_Play:
+                case GM_PlayNoUpdate:
+                    // Play reads as Stop while the game is running.
+                    if (this_game_running)
+                        act_stop(app);
+                    else if (!this_game_starting)
+                        act_play(app);
+                    break;
+                case GM_Update:
+                    // No update path yet; installing over the top is what the
+                    // download queue already does.
+                    act_install(app);
+                    break;
+                case GM_BrowseFiles:
+                    act_browse_files(app);
+                    break;
+                case GM_Uninstall:
+                    act_uninstall(app);
+                    break;
+                case GM_AddToLibrary:
+                    act_add_to_library(app);
+                    break;
+                case GM_Modify:
+                    s_addons_loaded = false;
+                    act_install(app);
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            // =============================================================
             // Modal dialogs (drawn on top of everything)
             // =============================================================
 
             if (s_modal == ModalType::ActionSelect)
             {
-                modal_backdrop(buf, sw, sh);
 
                 int dlg_w = 340;
                 int row_h = 30;
                 int pad = 16;
                 int count = (int)s_modal_actions.size();
                 int dlg_h = pad + th + 12 + count * (row_h + 4) + 12 + row_h + pad;
-                int dx = (sw - dlg_w) / 2;
-                int dy = (sh - dlg_h) / 2;
 
-                panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
-                gfx::draw_rect(buf, gfx::rect(dx, dy, dlg_w, dlg_h), theme().divider);
+                const gfx::Rect dlg = dialog_begin(buf, sw, sh, dlg_w, dlg_h);
+                const int dx = dlg.x;
+                const int dy = dlg.y;
 
                 int cy = dy + pad;
                 draw_text_center(buf, dx + dlg_w / 2, cy, theme().text_bright, "Choose an action");
@@ -949,7 +1359,7 @@ namespace launcher
                         std::string launch_err;
                         if (launch_action(app, *action, &launch_err))
                         {
-                            app.games().notify_started(s_game.id);
+                            session_started(app);
                             s_status_message = "Running: " + action->name;
                             s_status_color = theme().success;
                             s_is_running = true;
@@ -972,12 +1382,12 @@ namespace launcher
                                             cancel_w, row_h, "Cancel", input);
                 if (cancel.clicked || input.key_pressed(Key::Escape))
                     s_modal = ModalType::None;
+
+                dialog_end(buf);
             }
 
             if (s_modal == ModalType::InstallOptions)
             {
-                modal_backdrop(buf, sw, sh);
-
                 const std::vector<std::string> &dirs = app.settings().games.install_directories;
                 bool show_dirs = dirs.size() > 1;
                 int addon_count = (int)s_addons.size();
@@ -996,11 +1406,9 @@ namespace launcher
                 }
                 dlg_h += 12 + 28 + pad; // gap + buttons + bottom pad
 
-                int dx = (sw - dlg_w) / 2;
-                int dy = (sh - dlg_h) / 2;
-
-                panel(buf, dx, dy, dlg_w, dlg_h, theme().panel);
-                gfx::draw_rect(buf, gfx::rect(dx, dy, dlg_w, dlg_h), theme().divider);
+                const gfx::Rect dlg = dialog_begin(buf, sw, sh, dlg_w, dlg_h);
+                const int dx = dlg.x;
+                const int dy = dlg.y;
 
                 int cx = dx + pad;
                 int content_w = dlg_w - pad * 2;
@@ -1023,7 +1431,8 @@ namespace launcher
                     int arrow_w = 26;
 
                     // Left arrow
-                    ButtonState left_btn = button(buf, cx, cy, arrow_w, row_h, "<", input);
+                    ButtonState left_btn = icon_button(buf, cx, cy, arrow_w, row_h,
+                                                       Icon::CaretLeft, NULL, input);
                     if (left_btn.clicked && s_install_dir_index > 0)
                         s_install_dir_index--;
 
@@ -1044,8 +1453,9 @@ namespace launcher
                     }
 
                     // Right arrow
-                    ButtonState right_btn = button(buf, cx + arrow_w + 2 + sel_w + 2, cy,
-                                                    arrow_w, row_h, ">", input);
+                    ButtonState right_btn = icon_button(buf, cx + arrow_w + 2 + sel_w + 2, cy,
+                                                        arrow_w, row_h,
+                                                        Icon::CaretRight, NULL, input);
                     if (right_btn.clicked && s_install_dir_index < (int)dirs.size() - 1)
                         s_install_dir_index++;
 
@@ -1080,7 +1490,7 @@ namespace launcher
 
                     gfx::push_clip(buf, gfx::rect(cx, cy, content_w, list_h));
 
-                    int ay = cy - s_install_scroll_y;
+                    int ay = cy - s_install_scroll.offset;
                     for (int i = 0; i < addon_count; ++i)
                     {
                         if (ay + row_h >= cy && ay < cy + list_h)
@@ -1114,7 +1524,7 @@ namespace launcher
                     {
                         int total_addon_h = addon_count * (row_h + 2);
                         scrollbar(buf, cx + content_w + 2, cy, list_h,
-                                  total_addon_h, list_h, s_install_scroll_y, input);
+                                  total_addon_h, list_h, s_install_scroll, input);
                     }
 
                     cy += list_h + 8;
@@ -1172,7 +1582,10 @@ namespace launcher
 
                 if (cancel.clicked || input.key_pressed(Key::Escape))
                     s_modal = ModalType::None;
+
+                dialog_end(buf);
             }
+
         }
 
     } // namespace ui

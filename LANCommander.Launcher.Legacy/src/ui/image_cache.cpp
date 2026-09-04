@@ -1,5 +1,6 @@
 #include "ui/image_cache.h"
 #include "ui/image_decoder.h"
+#include "app/media_prefetch.h"
 
 #include <lancommander/clients/media_client.h>
 
@@ -12,8 +13,8 @@ namespace launcher
     {
 
         ImageCache::ImageCache(lancommander::MediaClient &media, const std::string &media_dir)
-            : m_media(media), m_access_counter(0), m_decodes_this_frame(0),
-              m_max_entries(DEFAULT_MAX_ENTRIES)
+            : m_media(media), m_prefetch(NULL), m_access_counter(0),
+              m_decodes_this_frame(0), m_max_entries(DEFAULT_MAX_ENTRIES)
         {
             m_cache_dir = media_dir;
             CreateDirectoryA(m_cache_dir.c_str(), NULL);
@@ -34,15 +35,59 @@ namespace launcher
             m_cache.clear();
         }
 
+        namespace
+        {
+            // True when the path names a file with at least one byte in it.
+            // An empty file is treated as absent: see ImageCache::get.
+            bool file_has_content(const std::string &path)
+            {
+                // FindFirstFile rather than GetFileAttributesEx, which is not
+                // on Windows 95.
+                WIN32_FIND_DATAA find;
+                HANDLE h = FindFirstFileA(path.c_str(), &find);
+                if (h == INVALID_HANDLE_VALUE)
+                    return false;
+                FindClose(h);
+
+                if (find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                    return false;
+
+                if (find.nFileSizeHigh == 0 && find.nFileSizeLow == 0)
+                {
+                    DeleteFileA(path.c_str());
+                    return false;
+                }
+                return true;
+            }
+        } // namespace
+
         std::string ImageCache::file_path(const std::string &media_id) const
         {
             return m_cache_dir + "\\" + media_id;
+        }
+
+        void ImageCache::set_prefetch(MediaPrefetch *prefetch)
+        {
+            m_prefetch = prefetch;
+        }
+
+        std::string ImageCache::cache_key(const std::string &media_id, int w, int h,
+                                          ImageFit fit)
+        {
+            char dims[40];
+            std::sprintf(dims, ":%dx%d:%d", w, h, (int)fit);
+            return media_id + dims;
         }
 
         void ImageCache::set_capacity(int max_entries)
         {
             if (max_entries < 1) max_entries = 1;
             m_max_entries = max_entries;
+        }
+
+        int ImageCache::capacity() const
+        {
+            return m_max_entries;
         }
 
         void ImageCache::begin_frame()
@@ -88,75 +133,104 @@ namespace launcher
             }
         }
 
-        gfx::Surface *ImageCache::get(const std::string &media_id, int max_w, int max_h)
+        gfx::Surface *ImageCache::get(const std::string &media_id, int max_w, int max_h,
+                                      ImageFit fit)
         {
             if (media_id.empty())
                 return NULL;
 
             ++m_access_counter;
 
-            // Check in-memory cache first.  If the requested size differs
-            // from the cached size, return the old bitmap immediately (the
-            // caller centers it, so a few pixels off is fine) and queue a
-            // re-decode for a future frame.
-            std::map<std::string, Entry>::iterator it = m_cache.find(media_id);
+            // Size and fit are part of the key, so a hit is always the right
+            // shape and there is no re-decode path to fall into.
+            const std::string key = cache_key(media_id, max_w, max_h, fit);
+
+            std::map<std::string, Entry>::iterator it = m_cache.find(key);
             if (it != m_cache.end())
             {
                 it->second.last_access = m_access_counter;
-
-                if (it->second.max_w == max_w && it->second.max_h == max_h)
-                    return it->second.surf;
-
-                // Size changed — return the stale surface while we wait for
-                // a decode slot.  Only re-decode when budget allows.
-                if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
-                    return it->second.surf;
-
-                // Budget available — discard old surface and fall through
-                // to re-decode at the new size.
-                gfx::destroy_surface(it->second.surf);
-                m_cache.erase(it);
+                return it->second.surf;
             }
 
-            // Per-frame decode budget — show placeholder until next frame.
-            if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
-                return NULL;
+            // Not on disk yet.
+            //
+            // "On disk" means a file with bytes in it. The prefetch worker
+            // downloads to a .part name and moves the result into place, so a
+            // non-empty file here is a complete one; a zero-length file is a
+            // leftover from before that was true and is cleared out rather
+            // than decoded, failed on, and cached as a permanent miss.
+            const std::string path = file_path(media_id);
+            const bool on_disk = file_has_content(path);
 
-            // Ensure the file exists on disk (download if needed).
-            std::string path = file_path(media_id);
-            DWORD attr = GetFileAttributesA(path.c_str());
-            if (attr == INVALID_FILE_ATTRIBUTES)
+            if (!on_disk)
             {
+                if (m_prefetch)
+                {
+                    // Hand it to the worker and give up on this frame.
+                    //
+                    // Deliberately NOT cached as a miss: the file is expected
+                    // to appear shortly, and caching NULL here would poison
+                    // the entry so the image never rendered no matter how
+                    // many times it was requested.
+                    m_prefetch->request(media_id);
+                    return NULL;
+                }
+
+                // No prefetch configured: fall back to the old inline
+                // download, which blocks the caller.
+                if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
+                    return NULL;
+
                 auto result = m_media.download(media_id, path);
                 if (!result || !result.value)
                 {
-                    // Cache a NULL so we don't retry every frame.
+                    // A genuine failure IS cached, so a missing media id is
+                    // not retried on every frame.
                     Entry e;
                     e.surf = NULL;
-                    e.max_w = max_w;
-                    e.max_h = max_h;
                     e.last_access = m_access_counter;
-                    m_cache[media_id] = e;
+                    m_cache[key] = e;
                     return NULL;
                 }
             }
 
-            // Decode the image file into raw pixels.
+            // The file exists; decoding is what costs, so it stays budgeted.
+            if (m_decodes_this_frame >= MAX_DECODES_PER_FRAME)
+                return NULL;
+
             DecodedImage img;
-            if (!decode_image_file(path.c_str(), max_w, max_h, &img))
+            bool decoded = false;
+            switch (fit)
             {
+            case ImageFit::Fill:
+                decoded = decode_image_file_fill(path.c_str(), max_w, max_h, &img);
+                break;
+            case ImageFit::Contain:
+                decoded = decode_image_file_contain(path.c_str(), max_w, max_h, &img);
+                break;
+            default:
+                decoded = decode_image_file(path.c_str(), max_w, max_h, &img);
+                break;
+            }
+
+            if (!decoded)
+            {
+                // A file that is still being written is not a failure. The
+                // worker may have replaced it between the size check above and
+                // this decode; try again next frame rather than caching a miss
+                // that would never be revisited.
+                if (m_prefetch && m_prefetch->is_pending(media_id))
+                    return NULL;
+
                 Entry e;
                 e.surf = NULL;
-                e.max_w = max_w;
-                e.max_h = max_h;
                 e.last_access = m_access_counter;
-                m_cache[media_id] = e;
+                m_cache[key] = e;
                 return NULL;
             }
 
             ++m_decodes_this_frame;
 
-            // Evict oldest entries if at capacity.
             while ((int)m_cache.size() >= m_max_entries)
                 evict_oldest();
 
@@ -167,11 +241,36 @@ namespace launcher
 
             Entry e;
             e.surf = surf;
-            e.max_w = max_w;
-            e.max_h = max_h;
             e.last_access = m_access_counter;
-            m_cache[media_id] = e;
+            m_cache[key] = e;
             return surf;
+        }
+
+        bool draw_image_cover(gfx::Surface *s, ImageCache &cache,
+                              const gfx::Rect &r, const std::string &media_id)
+        {
+            if (media_id.empty() || r.w <= 0 || r.h <= 0)
+                return false;
+
+            gfx::Surface *img = cache.get(media_id, r.w, r.h, ImageFit::Fill);
+            if (!img)
+                return false;
+
+            const int iw = gfx::surface_width(img);
+            const int ih = gfx::surface_height(img);
+
+            // The decode covers the box, so the crop is the centre r.w x r.h
+            // of it. Clamped anyway: an upscale limit inside the decoder would
+            // otherwise turn into an out-of-bounds source rect here.
+            int cw = r.w < iw ? r.w : iw;
+            int ch = r.h < ih ? r.h : ih;
+
+            const gfx::Rect src = gfx::rect((iw - cw) / 2, (ih - ch) / 2, cw, ch);
+
+            gfx::blit_region(s, img, src,
+                             r.x + (r.w - cw) / 2,
+                             r.y + (r.h - ch) / 2);
+            return true;
         }
 
     } // namespace ui

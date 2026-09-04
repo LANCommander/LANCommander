@@ -31,6 +31,30 @@ Result<std::vector<EntityReference>> LibraryClient::get()
     return Result<std::vector<EntityReference>>::ok(std::move(refs));
 }
 
+Result<std::vector<Game>> LibraryClient::get_games()
+{
+    HttpResponse resp = m_http.get("/api/Library/Games");
+    if (!resp.ok()) {
+        std::ostringstream e;
+        e << "GetLibraryGames failed (HTTP " << resp.status_code << ")";
+        return Result<std::vector<Game>>::fail(e.str());
+    }
+
+    json::JsonDoc doc(resp.body);
+    if (!doc || doc.root->type != cJSON_Array)
+        return Result<std::vector<Game>>::fail("Expected JSON array");
+
+    std::vector<Game> games;
+    int n = cJSON_GetArraySize(doc.root);
+    for (int i = 0; i < n; ++i) {
+        cJSON* item = cJSON_GetArrayItem(doc.root, i);
+        if (!item) continue;
+        Game g = json::parse_game(item);
+        if (!g.id.empty()) games.push_back(std::move(g));
+    }
+    return Result<std::vector<Game>>::ok(std::move(games));
+}
+
 Result<bool> LibraryClient::add(const std::string& game_id)
 {
     HttpResponse resp = m_http.post("/api/Library/AddToLibrary/" + game_id, "");

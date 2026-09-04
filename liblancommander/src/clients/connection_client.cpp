@@ -1,6 +1,10 @@
 #include "lancommander/clients/connection_client.h"
 
 #include <sstream>
+#include <map>
+#include <vector>
+
+#include "lancommander/util/uri.h"
 #include <algorithm>
 
 namespace lancommander {
@@ -56,25 +60,26 @@ Result<bool> ConnectionClient::update_server_address(const std::string& address)
     if (address.empty())
         return Result<bool>::fail("Server address cannot be blank");
 
-    // Try the address as-is first. The C# version tries multiple URI
-    // permutations (http/https, with/without port). Here we keep it simple —
-    // the caller should provide the full URL. If needed, a helper that
-    // generates candidate URIs can be added later.
-    std::string old_base = m_server_address;
-    set_server_address(address);
+    const std::vector<std::string> candidates = suggest_probe_uris(address);
+    if (candidates.empty())
+        return Result<bool>::fail("Server address cannot be blank");
 
-    Result<bool> p = ping(address);
-    if (p && p.value) {
+    const std::string old_base = m_server_address;
+
+    for (size_t i = 0; i < candidates.size(); ++i) {
+        Result<bool> p = ping(candidates[i]);
+        if (!p || !p.value)
+            continue;
+
+        set_server_address(candidates[i]);
         fire(m_on_server_address_changed, m_on_server_address_changed_data);
 
-        // Auto-connect if we have a token.
         if (is_configured())
             connect();
 
         return Result<bool>::ok(true);
     }
 
-    // Restore previous address on failure.
     if (!old_base.empty())
         set_server_address(old_base);
 
@@ -113,37 +118,26 @@ void ConnectionClient::disable_offline_mode()
 
 Result<bool> ConnectionClient::ping(const std::string& server_address)
 {
-    // The C# server validates ping/pong: it receives X-Ping with a value,
-    // and must respond with X-Pong containing the reversed value.
-    // We use a simple counter-based ping ID since we don't need a GUID.
+    const std::string target = server_address.empty() ? m_server_address : server_address;
+    if (target.empty())
+        return Result<bool>::fail("No server address to ping");
 
     static int ping_counter = 0;
     std::ostringstream id_stream;
     id_stream << "ping-" << (++ping_counter);
-    std::string ping_id = id_stream.str();
+    const std::string ping_id = id_stream.str();
 
-    // Build the reversed value we expect back.
     std::string expected_pong = ping_id;
     std::reverse(expected_pong.begin(), expected_pong.end());
 
-    // If a specific address was provided, temporarily set it as base URL.
-    std::string target = server_address.empty() ? m_server_address : server_address;
-    if (target.empty())
-        return Result<bool>::fail("No server address to ping");
-
-    // Use a HEAD-like GET to the root with the ping header.
-    // The IHttpClient doesn't have a HEAD method, so we use GET to "/".
-    // The server checks for X-Ping on any request.
-    //
-    // We need the response headers, which HttpResponse provides.
-    std::string old_base = m_server_address;
+    const std::string old_base = m_server_address;
     if (!server_address.empty())
         m_http.set_base_url(server_address);
 
-    // We send the ping as a query parameter since IHttpClient doesn't expose
-    // custom request headers. The server's middleware checks X-Ping in headers,
-    // so for now we do a simple connectivity check via GET.
-    HttpResponse resp = m_http.get("/");
+    std::map<std::string, std::string> headers;
+    headers["X-Ping"] = ping_id;
+
+    HttpResponse resp = m_http.head("/", headers);
 
     if (!server_address.empty() && !old_base.empty())
         m_http.set_base_url(old_base);
@@ -151,21 +145,27 @@ Result<bool> ConnectionClient::ping(const std::string& server_address)
     if (!resp.ok())
         return Result<bool>::fail("Ping failed: server unreachable");
 
-    // Check for X-Pong header in response. The server echoes back the
-    // reversed ping ID. Since IHttpClient returns headers, we can verify.
-    std::map<std::string, std::string>::const_iterator it;
-
-    it = resp.headers.find("X-Pong");
+    // read_headers lowercases keys, but a backend that does not is still
+    // allowed to exist, so check both spellings before giving up.
+    std::map<std::string, std::string>::const_iterator it = resp.headers.find("x-pong");
     if (it == resp.headers.end())
-        it = resp.headers.find("x-pong");
+        it = resp.headers.find("X-Pong");
 
-    if (it != resp.headers.end() && it->second == expected_pong)
-        return Result<bool>::ok(true);
+    if (it == resp.headers.end())
+        return Result<bool>::fail("Not a LANCommander server (no X-Pong header)");
 
-    // If headers aren't populated by the backend (some backends don't parse
-    // response headers), fall back to accepting any 2xx as a successful ping.
-    // This is less strict but still confirms the server is reachable.
+    if (it->second != expected_pong)
+        return Result<bool>::fail("Not a LANCommander server (X-Pong mismatch)");
+
     return Result<bool>::ok(true);
+}
+
+Result<bool> ConnectionClient::probe_candidate(const std::string& uri)
+{
+    if (uri.empty())
+        return Result<bool>::fail("Empty candidate");
+
+    return ping(uri);
 }
 
 // ---------------------------------------------------------------------------

@@ -248,6 +248,16 @@ Game parse_game(cJSON* obj)
         }
     }
 
+    cJSON* archives = get_child(obj, "archives", "Archives");
+    if (archives && archives->type == cJSON_Array) {
+        int ac = cJSON_GetArraySize(archives);
+        for (int i = 0; i < ac; ++i) {
+            cJSON* a = cJSON_GetArrayItem(archives, i);
+            if (!a) continue;
+            g.archives.push_back(parse_archive(a));
+        }
+    }
+
     return g;
 }
 

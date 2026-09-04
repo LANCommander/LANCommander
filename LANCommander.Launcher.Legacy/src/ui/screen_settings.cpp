@@ -1,5 +1,6 @@
 #include "ui/screen_settings.h"
 #include "ui/theme.h"
+#include "ui/icons.h"
 #include "ui/widgets.h"
 #include "ui/window_chrome.h"
 #include "app/app.h"
@@ -25,7 +26,12 @@ namespace launcher
         static gfx::Color s_status_color = gfx::rgb(0, 0, 0);
         // Focus: 0 = server address, 1..N = install dir fields
         static int  s_focus = 0;
-        static int  s_scroll_y = 0;
+        static ScrollState s_scroll;
+
+        // One per field. The install-directory list is variable length, so it
+        // gets a vector grown to match rather than a fixed set.
+        static TextEditState s_addr_edit;
+        static std::vector<TextEditState> s_dir_edits;
 
         void screen_settings_draw(App &app, const InputState &input)
         {
@@ -65,7 +71,7 @@ namespace launcher
                 s_offline_mode = app.settings().authentication.offline_mode;
                 s_status_message.clear();
                 s_focus = 0;
-                s_scroll_y = 0;
+                s_scroll.offset = 0;
                 s_initialized = true;
             }
 
@@ -105,16 +111,16 @@ namespace launcher
             if (input.mouse.y >= content_y && input.mouse.y < bottom &&
                 input.mouse.wheel_delta != 0)
             {
-                s_scroll_y -= input.mouse.wheel_delta * 28;
-                if (s_scroll_y < 0) s_scroll_y = 0;
+                s_scroll.offset -= input.mouse.wheel_delta * 28;
+                if (s_scroll.offset < 0) s_scroll.offset = 0;
                 int max_scroll = total_h - content_h;
                 if (max_scroll < 0) max_scroll = 0;
-                if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
+                if (s_scroll.offset > max_scroll) s_scroll.offset = max_scroll;
             }
 
             gfx::push_clip(buf, gfx::rect(0, content_y, sw, bottom - content_y));
 
-            int y = content_y + pad - s_scroll_y;
+            int y = content_y + pad - s_scroll.offset;
 
             // =============================================================
             // Connection section
@@ -128,7 +134,7 @@ namespace launcher
 
             TextInputState addr_state = text_input(buf, form_x, y, form_w, field_h,
                                                     s_server_address, 256,
-                                                    s_focus == 0, input);
+                                                    s_focus == 0, input, s_addr_edit);
 
             if (input.mouse.clicked && input.mouse.x >= form_x &&
                 input.mouse.x < form_x + form_w &&
@@ -184,9 +190,12 @@ namespace launcher
                 if (dir_count > 1)
                     input_w = form_w - remove_btn_w - 4;
 
+                if (s_dir_edits.size() < s_install_dirs.size())
+                    s_dir_edits.resize(s_install_dirs.size());
+
                 text_input(buf, form_x, y, input_w, field_h,
                            s_install_dirs[i], 256,
-                           s_focus == focus_idx, input);
+                           s_focus == focus_idx, input, s_dir_edits[i]);
 
                 if (input.mouse.clicked && input.mouse.x >= form_x &&
                     input.mouse.x < form_x + input_w &&
@@ -197,7 +206,8 @@ namespace launcher
                 if (dir_count > 1)
                 {
                     int rx = form_x + input_w + 4;
-                    ButtonState rm = button(buf, rx, y, remove_btn_w, field_h, "X", input);
+                    ButtonState rm = icon_button(buf, rx, y, remove_btn_w, field_h,
+                                                 Icon::Close, NULL, input);
                     if (rm.clicked)
                         remove_idx = i;
                 }
@@ -279,7 +289,7 @@ namespace launcher
 
             // Scrollbar
             scrollbar(buf, sw - 14, content_y, content_h,
-                      total_h, content_h, s_scroll_y, input);
+                      total_h, content_h, s_scroll, input);
 
             // --- Tab between fields ---
             if (input.key_pressed(Key::Tab))

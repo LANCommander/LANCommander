@@ -31,6 +31,21 @@ void report_failure_eq(const char* file, int line, const char* expression,
             report_failure_eq(__FILE__, __LINE__, #actual, a_, e_);      \
     } while (0)
 
+// Same as CHECK, but prints both numbers on failure. A bare CHECK(a == b)
+// only tells you that a count was wrong, not what it actually was.
+#define CHECK_INT(actual, expected)                                     \
+    do {                                                                \
+        ++g_checks;                                                     \
+        const long a_ = (long)(actual);                                 \
+        const long e_ = (long)(expected);                               \
+        if (a_ != e_) {                                                 \
+            ++g_failures;                                               \
+            std::printf("FAIL %s:%d: %s\n  actual:   %ld\n"             \
+                        "  expected: %ld\n",                            \
+                        __FILE__, __LINE__, #actual, a_, e_);           \
+        }                                                               \
+    } while (0)
+
 // Each test translation unit exposes one of these.
 void test_ps_quote();
 void test_script_runner();
@@ -43,5 +58,6 @@ void test_archive();
 void test_serialize();
 void test_options();
 void test_gamespy();
+void test_uri_candidates();
 
 #endif // LANCOMMANDER_TESTS_TEST_MAIN_H

@@ -1,4 +1,5 @@
 #include "ui/widgets.h"
+#include "ui/icons.h"
 #include "ui/theme.h"
 
 namespace launcher
@@ -6,110 +7,292 @@ namespace launcher
     namespace ui
     {
 
+        // ---------------------------------------------------------------------------
+        // Overlay input gating
+        // ---------------------------------------------------------------------------
+
+        InputState input_blocked(const InputState &in)
+        {
+            InputState out;
+
+            // Deliberately keep the window-level facts: a resize or a close
+            // request is the OS talking, and an open dialog does not get to
+            // veto either of those.
+            out.quit_requested = in.quit_requested;
+            out.resized = in.resized;
+            out.resize_w = in.resize_w;
+            out.resize_h = in.resize_h;
+
+            // Everything a widget can react to goes away. The pointer is moved
+            // far off-screen rather than left at 0,0, because 0,0 is inside
+            // any widget anchored at the origin.
+            out.mouse.x = -100000;
+            out.mouse.y = -100000;
+
+            return out;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Rounded rectangles
+        // ---------------------------------------------------------------------------
+
+        const int BUTTON_RADIUS = 4;
+        const int BUTTON_PAD_X = 14;
+        const int BUTTON_PAD_Y = 7;
+
         namespace
         {
-            // Remove one whole UTF-8 sequence from the end of `s`.
-            // Plain erase(size()-1) would leave a truncated multi-byte
-            // sequence behind once text arrives from SDL_EVENT_TEXT_INPUT.
-            void utf8_pop_back(std::string &s)
+            // Horizontal inset of the rounded corner at row `dy` (0 = the
+            // outermost row of the corner), for a quarter-circle of radius r
+            // whose centre sits r pixels in from both edges.
+            //
+            // The smallest dx whose PIXEL CENTRE falls inside the circle:
+            //
+            //     (r - dx - 0.5)^2 + (r - dy - 0.5)^2 <= r^2
+            //
+            // doubled through so it stays integer arithmetic.
+            int corner_inset(int r, int dy)
             {
-                if (s.empty())
-                    return;
+                const int diameter_sq = 4 * r * r;
+                const int ky = 2 * r - 2 * dy - 1;
 
-                size_t i = s.size();
-                while (i > 0)
+                int dx = 0;
+                while (dx < r)
                 {
-                    --i;
-                    // Continuation bytes are 10xxxxxx; stop at the lead byte.
-                    if (((unsigned char)s[i] & 0xC0) != 0x80)
+                    const int kx = 2 * r - 2 * dx - 1;
+                    if (kx * kx + ky * ky <= diameter_sq)
                         break;
+                    ++dx;
                 }
-                s.erase(i);
+                return dx;
+            }
+
+            int clamp_radius(const gfx::Rect &r, int radius)
+            {
+                if (radius < 0) radius = 0;
+                const int half = (r.w < r.h ? r.w : r.h) / 2;
+                return radius > half ? half : radius;
+            }
+
+            // Shared by the opaque and alpha fills, which differ only in the
+            // span primitive they call.
+            template <typename FillSpan>
+            void rounded_spans(const gfx::Rect &r, int radius, FillSpan fill)
+            {
+                radius = clamp_radius(r, radius);
+
+                if (radius <= 0)
+                {
+                    fill(r.x, r.y, r.w, r.h);
+                    return;
+                }
+
+                for (int dy = 0; dy < radius; ++dy)
+                {
+                    const int inset = corner_inset(radius, dy);
+                    const int w = r.w - inset * 2;
+                    if (w <= 0)
+                        continue;
+
+                    fill(r.x + inset, r.y + dy, w, 1);
+                    fill(r.x + inset, r.y + r.h - 1 - dy, w, 1);
+                }
+
+                const int mid_h = r.h - radius * 2;
+                if (mid_h > 0)
+                    fill(r.x, r.y + radius, r.w, mid_h);
             }
         } // namespace
+
+        void fill_rounded_rect(gfx::Surface *s, const gfx::Rect &r, int radius,
+                               gfx::Color c)
+        {
+            rounded_spans(r, radius, [s, c](int x, int y, int w, int h)
+                          { gfx::fill_rect(s, gfx::rect(x, y, w, h), c); });
+        }
+
+        void fill_rounded_rect_alpha(gfx::Surface *s, const gfx::Rect &r, int radius,
+                                     gfx::Color c)
+        {
+            rounded_spans(r, radius, [s, c](int x, int y, int w, int h)
+                          { gfx::fill_rect_alpha(s, gfx::rect(x, y, w, h), c); });
+        }
+
+        void draw_rounded_rect(gfx::Surface *s, const gfx::Rect &r, int radius,
+                               gfx::Color c)
+        {
+            radius = clamp_radius(r, radius);
+
+            if (radius <= 0)
+            {
+                gfx::draw_rect(s, r, c);
+                return;
+            }
+
+            // Straight runs first, then one pixel per corner row.
+            gfx::hline(s, r.x + radius, r.y, r.w - radius * 2, c);
+            gfx::hline(s, r.x + radius, r.y + r.h - 1, r.w - radius * 2, c);
+            gfx::vline(s, r.x, r.y + radius, r.h - radius * 2, c);
+            gfx::vline(s, r.x + r.w - 1, r.y + radius, r.h - radius * 2, c);
+
+            for (int dy = 0; dy < radius; ++dy)
+            {
+                const int inset = corner_inset(radius, dy);
+                gfx::fill_rect(s, gfx::rect(r.x + inset, r.y + dy, 1, 1), c);
+                gfx::fill_rect(s, gfx::rect(r.x + r.w - 1 - inset, r.y + dy, 1, 1), c);
+                gfx::fill_rect(s, gfx::rect(r.x + inset, r.y + r.h - 1 - dy, 1, 1), c);
+                gfx::fill_rect(s, gfx::rect(r.x + r.w - 1 - inset,
+                                            r.y + r.h - 1 - dy, 1, 1), c);
+            }
+        }
+
+        InputState input_without_pointer(const InputState &in)
+        {
+            InputState out = in;
+
+            // Off-screen rather than 0,0: the origin is inside any widget
+            // anchored there, which is the trap input_blocked() documents.
+            out.mouse.x = -100000;
+            out.mouse.y = -100000;
+            out.mouse.buttons = 0;
+            out.mouse.wheel_delta = 0;
+            out.mouse.clicked = false;
+            out.mouse.pressed = false;
+
+            return out;
+        }
+
+        void round_rect_corners(gfx::Surface *s, const gfx::Rect &r, int radius,
+                                gfx::Color bg)
+        {
+            radius = clamp_radius(r, radius);
+            if (radius <= 0)
+                return;
+
+            for (int dy = 0; dy < radius; ++dy)
+            {
+                const int inset = corner_inset(radius, dy);
+                if (inset <= 0)
+                    continue;
+
+                gfx::fill_rect(s, gfx::rect(r.x, r.y + dy, inset, 1), bg);
+                gfx::fill_rect(s, gfx::rect(r.x + r.w - inset, r.y + dy, inset, 1), bg);
+                gfx::fill_rect(s, gfx::rect(r.x, r.y + r.h - 1 - dy, inset, 1), bg);
+                gfx::fill_rect(s, gfx::rect(r.x + r.w - inset, r.y + r.h - 1 - dy,
+                                            inset, 1), bg);
+            }
+        }
 
         // ---------------------------------------------------------------------------
         // Button
         // ---------------------------------------------------------------------------
 
-        ButtonState button(gfx::Surface *s, int x, int y, int w, int h, const char *label,
-                           const InputState &input)
+        namespace
+        {
+            const int ICON_LABEL_GAP = 7;
+        }
+
+        int button_height()
+        {
+            return text_height() + BUTTON_PAD_Y * 2;
+        }
+
+        int button_width(const char *label, Icon icon)
+        {
+            int w = BUTTON_PAD_X * 2;
+            if (label && *label)
+                w += text_width(label);
+            if (icon != Icon::None)
+            {
+                w += ICON_MD;
+                if (label && *label)
+                    w += ICON_LABEL_GAP;
+            }
+            return w;
+        }
+
+        ButtonState icon_button(gfx::Surface *s, int x, int y, int w, int h,
+                                Icon icon, const char *label,
+                                const InputState &input)
         {
             ButtonState state;
             state.hovered = (input.mouse.x >= x && input.mouse.x < x + w &&
                              input.mouse.y >= y && input.mouse.y < y + h);
             state.clicked = state.hovered && input.mouse.clicked;
 
-            gfx::Color bg = state.hovered ? theme().primary_hover : theme().primary;
-            gfx::fill_rect(s, gfx::rect(x, y, w, h), bg);
+            const gfx::Color bg = state.hovered ? theme().primary_hover : theme().primary;
+            fill_rounded_rect(s, gfx::rect(x, y, w, h), BUTTON_RADIUS, bg);
 
-            int tx = x + (w - text_width(label)) / 2;
-            int ty = y + (h - text_height()) / 2;
-            draw_text(s, tx, ty, theme().text_bright, label);
+            const bool has_label = (label && *label);
+            const int lw = has_label ? text_width(label) : 0;
+            const int iw = (icon != Icon::None) ? ICON_MD : 0;
+            const int gap = (iw && has_label) ? ICON_LABEL_GAP : 0;
+
+            int cx = x + (w - (iw + gap + lw)) / 2;
+
+            if (iw)
+            {
+                draw_icon(s, cx, y + (h - ICON_MD) / 2, ICON_MD,
+                          theme().text_bright, icon);
+                cx += iw + gap;
+            }
+
+            if (has_label)
+                draw_text(s, cx, y + (h - text_height()) / 2, theme().text_bright, label);
 
             return state;
         }
 
-        // ---------------------------------------------------------------------------
-        // Text Input
-        // ---------------------------------------------------------------------------
-
-        TextInputState text_input(gfx::Surface *s, int x, int y, int w, int h,
-                                  std::string &buffer, int max_len,
-                                  bool focused, const InputState &input,
-                                  bool password)
+        ButtonState button(gfx::Surface *s, int x, int y, int w, int h, const char *label,
+                           const InputState &input)
         {
-            TextInputState state;
-            state.focused = focused;
-            state.submitted = false;
+            return icon_button(s, x, y, w, h, Icon::None, label, input);
+        }
 
-            gfx::Color border = focused ? theme().input_focus : theme().input_border;
+        // ---------------------------------------------------------------------------
+        // Badge
+        // ---------------------------------------------------------------------------
+        //
+        // Mirrors the Avalonia Button.Badge style: 10x5 padding, a small
+        // corner radius, and a muted panel fill that lifts on hover.
 
-            gfx::fill_rect(s, gfx::rect(x, y, w, h), theme().input_bg);
-            gfx::draw_rect(s, gfx::rect(x, y, w, h), border);
+        namespace
+        {
+            const int BADGE_PAD_X = 10;
+            const int BADGE_PAD_Y = 5;
+            const int BADGE_RADIUS = 3;
+        }
 
-            // Draw text (or asterisks for password fields)
-            std::string display = buffer;
+        int badge_width(const char *label)
+        {
+            return text_width(label) + BADGE_PAD_X * 2;
+        }
 
-            if (password)
-                display = std::string(buffer.size(), '*');
+        int badge_height()
+        {
+            return text_height() + BADGE_PAD_Y * 2;
+        }
 
-            int tx = x + 4;
-            int ty = y + (h - text_height()) / 2;
+        ButtonState badge(gfx::Surface *s, int x, int y, const char *label,
+                          bool interactive, const InputState &input)
+        {
+            ButtonState state;
+            state.hovered = false;
+            state.clicked = false;
 
-            draw_text(s, tx, ty, theme().text, display.c_str());
+            const gfx::Rect r = gfx::rect(x, y, badge_width(label), badge_height());
 
-            // Blinking cursor
-            if (focused)
+            if (interactive)
             {
-                int cursor_x = tx + text_width(display.c_str());
-                if ((gfx::ticks_ms() / 500) % 2 == 0)
-                    gfx::vline(s, cursor_x + 1, ty, text_height(), theme().text);
+                state.hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
+                state.clicked = state.hovered && input.mouse.clicked;
             }
 
-            // Handle keyboard input when focused — process ALL keys from this frame
-            if (focused)
-            {
-                for (size_t i = 0; i < input.keys.size(); ++i)
-                {
-                    Key k = input.keys[i].key;
+            fill_rounded_rect(s, r, BADGE_RADIUS,
+                              state.hovered ? theme().panel_hover : theme().panel);
 
-                    if (k == Key::Enter || k == Key::KeypadEnter)
-                        state.submitted = true;
-                    else if (k == Key::Backspace)
-                        utf8_pop_back(buffer);
-                    // Tab is not consumed — the screen handles focus movement.
-                }
-
-                // Committed characters arrive separately from key events, so
-                // layout and IME are the platform layer's problem, not ours.
-                for (size_t i = 0; i < input.text.size(); ++i)
-                {
-                    if (static_cast<int>(buffer.size()) < max_len)
-                        buffer += input.text[i];
-                }
-            }
-
+            draw_text(s, x + BADGE_PAD_X, y + BADGE_PAD_Y,
+                      state.hovered ? theme().text_bright : theme().text, label);
 
             return state;
         }
@@ -145,14 +328,12 @@ namespace launcher
         // Scrollbar
         // ---------------------------------------------------------------------------
 
-        // Drag state persists across frames.
-        static bool s_sb_dragging = false;
-        static int  s_sb_drag_offset = 0; // mouse offset from thumb top
-
         void scrollbar(gfx::Surface *s, int x, int y, int h,
-                       int content_h, int viewport_h, int &scroll_y,
+                       int content_h, int viewport_h, ScrollState &state,
                        const InputState &input)
         {
+            int &scroll_y = state.offset;
+
             if (content_h <= viewport_h)
                 return; // no scrollbar needed
 
@@ -178,8 +359,8 @@ namespace launcher
             // Start drag on thumb press
             if (in_thumb && input.mouse.pressed)
             {
-                s_sb_dragging = true;
-                s_sb_drag_offset = input.mouse.y - thumb_y;
+                state.dragging = true;
+                state.drag_offset = input.mouse.y - thumb_y;
             }
 
             // Click on track (outside thumb) — jump to that position
@@ -192,16 +373,16 @@ namespace launcher
                 scroll_y = (track_range > 0)
                     ? (target_thumb_y - y) * max_scroll / track_range
                     : 0;
-                s_sb_dragging = true;
-                s_sb_drag_offset = thumb_h / 2;
+                state.dragging = true;
+                state.drag_offset = thumb_h / 2;
             }
 
             // Continue drag while mouse button is held
-            if (s_sb_dragging)
+            if (state.dragging)
             {
                 if (input.mouse.buttons & 1)
                 {
-                    int target_thumb_y = input.mouse.y - s_sb_drag_offset;
+                    int target_thumb_y = input.mouse.y - state.drag_offset;
                     if (target_thumb_y < y) target_thumb_y = y;
                     if (target_thumb_y > y + h - thumb_h) target_thumb_y = y + h - thumb_h;
                     int track_range = h - thumb_h;
@@ -211,7 +392,7 @@ namespace launcher
                 }
                 else
                 {
-                    s_sb_dragging = false;
+                    state.dragging = false;
                 }
             }
 
@@ -223,13 +404,13 @@ namespace launcher
             thumb_y = y + (h - thumb_h) * scroll_y / max_scroll;
 
             // --- Draw ---
-            bool hovered = in_track || s_sb_dragging;
+            bool hovered = in_track || state.dragging;
 
             // Track
             gfx::fill_rect(s, gfx::rect(x, y, track_w, h), theme().panel);
 
             // Thumb
-            gfx::Color thumb_color = s_sb_dragging ? theme().text
+            gfx::Color thumb_color = state.dragging ? theme().text
                                    : hovered       ? theme().text_dim
                                    :                 theme().text_disabled;
             gfx::fill_rect(s, gfx::rect(x, thumb_y, track_w, thumb_h), thumb_color);

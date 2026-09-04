@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../http/http_client.h"
+#include "../models/game.h"
 #include "../models/library.h"
 #include "../types.h"
 
@@ -15,6 +16,7 @@ public:
     explicit LibraryClient(IHttpClient& http);
 
     Result<std::vector<EntityReference>> get();
+    Result<std::vector<Game>> get_games();
     Result<bool> add(const std::string& game_id);
     Result<bool> remove(const std::string& game_id);
 

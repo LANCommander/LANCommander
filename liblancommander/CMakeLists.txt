@@ -105,6 +105,7 @@ add_library(lancommander STATIC
     src/manifest_helper.cpp
     src/util/path_util.cpp
     src/util/base64.cpp
+    src/util/uri_util.cpp
     src/script/script_helper.cpp
     src/script/picoposh_script_runner.cpp
     src/clients/script_execution_client.cpp
@@ -195,6 +196,7 @@ if(LANCOMMANDER_BUILD_TESTS)
         tests/test_serialize.cpp
         tests/test_options.cpp
         tests/test_gamespy.cpp
+        tests/test_uri_candidates.cpp
     )
     target_link_libraries(lancommander_tests PRIVATE lancommander)
     # src/ for the internal json/ headers, vendor/cjson for cJSON.h.

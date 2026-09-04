@@ -1,10 +1,23 @@
+// screen_library.cpp — the library and depot pages.
+//
+// Layout mirrors the Avalonia LibraryRowView: a fixed-width sidebar listing
+// every game compactly on the left, and on the right a stack of carousels
+// above the cover grid.
+//
+// The depot is its own screen now (screen_depot.cpp); this page shows the
+// user's library only.
+
 #include "ui/screen_library.h"
 #include "ui/theme.h"
 #include "ui/widgets.h"
+#include "ui/widgets_collection.h"
 #include "ui/window_chrome.h"
 #include "ui/image_cache.h"
+#include "ui/layout.h"
+#include "ui/font.h"
 #include "app/app.h"
 #include "app/game_database.h"
+#include "app/library_sections.h"
 
 #include "gfx/gfx.h"
 
@@ -16,331 +29,519 @@ namespace launcher
     namespace ui
     {
 
-        static bool s_depot_loaded = false;
-        static bool s_library_loaded = false;
-        static std::string s_error;
-        static int s_scroll_y = 0;
+        // --- Persistent state ------------------------------------------------
 
-        // Grid constants — minimums; actual sizes expand to fill the row.
+        static ScrollState s_scroll;          // right-hand page
+        static ListState s_sidebar;           // left-hand compact list
+        static CarouselState s_recent_carousel;
+        static CarouselState s_collections_carousel;
+
+        // Derived views are rebuilt only when the underlying data changes.
+        // This is the immediate-mode equivalent of a computed property: it
+        // cannot go stale, and it does not rebuild on every frame.
+        static unsigned s_seen_revision = 0;
+        static bool s_sections_valid = false;
+
+        static std::vector<int> s_recent;
+        static std::vector<std::string> s_collection_names;
+        static std::vector<int> s_collection_reps;
+
+        // --- Metrics ----------------------------------------------------------
+
+        static const int SIDEBAR_W = 250;
+        static const int SIDEBAR_ROW_H = 34;
+        static const int ICON_SIZE = 24;
+
         static const int MIN_COVER_W = 130;
         static const int MIN_COL_SPACING = 12;
         static const int MIN_ROW_SPACING = 12;
         static const int GRID_PAD = 20;
 
-        static bool iless(const std::string &a, const std::string &b)
+        static const int RECENT_ITEM_W = 160;
+        static const int RECENT_ITEM_H = 240;
+        static const int TILE_W = 200;
+        static const int TILE_H = 150;
+        static const int CAROUSEL_GAP = 16;
+        static const int SECTION_GAP = 20;
+
+        static const int RECENT_MAX = 15;
+
+        // --- Accessors over whichever list is active ---------------------------
+
+        static int active_count(App &app)
         {
-            size_t len = a.size() < b.size() ? a.size() : b.size();
-            for (size_t i = 0; i < len; ++i)
-            {
-                int ca = std::tolower((unsigned char)a[i]);
-                int cb = std::tolower((unsigned char)b[i]);
-                if (ca != cb)
-                    return ca < cb;
-            }
-            return a.size() < b.size();
+            return (int)app.library_data().games.size();
         }
 
-        static const std::string &sort_key(const lancommander::DepotGame &g)
-        {
-            return g.sort_title.empty() ? g.title : g.sort_title;
-        }
-
-        static const std::string &sort_key(const lancommander::Game &g)
-        {
-            return g.sort_title.empty() ? g.title : g.sort_title;
-        }
-
-        static bool is_top_level(lancommander::GameType t)
-        {
-            return t == lancommander::GameType::MainGame
-                || t == lancommander::GameType::StandaloneExpansion
-                || t == lancommander::GameType::StandaloneMod;
-        }
-
-        static void load_depot(App &app)
-        {
-            auto result = app.depot().get();
-            if (result)
-            {
-                std::vector<lancommander::DepotGame> filtered;
-                for (size_t i = 0; i < result.value.games.size(); ++i)
-                {
-                    if (is_top_level(result.value.games[i].type))
-                        filtered.push_back(result.value.games[i]);
-                }
-                app.depot_cache() = filtered;
-                std::sort(app.depot_cache().begin(), app.depot_cache().end(),
-                          [](const lancommander::DepotGame &a, const lancommander::DepotGame &b)
-                          { return iless(sort_key(a), sort_key(b)); });
-                s_error.clear();
-            }
-            else
-                s_error = result.error;
-            s_depot_loaded = true;
-        }
-
-        static void load_library(App &app)
-        {
-            // Also load depot data so we can look up covers for library games.
-            if (!s_depot_loaded)
-                load_depot(app);
-
-            auto result = app.games().get_all();
-            if (result)
-            {
-                std::vector<lancommander::Game> lib;
-                for (size_t i = 0; i < result.value.size(); ++i)
-                {
-                    if (result.value[i].in_library && is_top_level(result.value[i].type))
-                    {
-                        lancommander::Game g = result.value[i];
-
-                        // If get_all didn't populate cover_media_id, look it up
-                        // from the depot cache.
-                        if (g.cover_media_id.empty())
-                        {
-                            for (size_t d = 0; d < app.depot_cache().size(); ++d)
-                            {
-                                if (app.depot_cache()[d].id == g.id)
-                                {
-                                    g.cover_media_id = app.depot_cache()[d].cover.id;
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Apply local install state from database.
-                        InstalledGame local;
-                        if (app.game_db().find(g.id, &local))
-                            g.install_directory = local.install_directory;
-
-                        lib.push_back(g);
-                    }
-                }
-                app.game_cache() = lib;
-                std::sort(app.game_cache().begin(), app.game_cache().end(),
-                          [](const lancommander::Game &a, const lancommander::Game &b)
-                          { return iless(sort_key(a), sort_key(b)); });
-                s_error.clear();
-            }
-            else
-                s_error = result.error;
-            s_library_loaded = true;
-        }
-
-        // Get the cover media ID for a game at the given index in the active list.
         static std::string get_cover_id(App &app, int index)
         {
-            if (app.library_tab() == LibraryTab::Depot)
-            {
-                if (index < 0 || index >= (int)app.depot_cache().size())
-                    return std::string();
-                return app.depot_cache()[index].cover.id;
-            }
-            else
-            {
-                if (index < 0 || index >= (int)app.game_cache().size())
-                    return std::string();
-                const lancommander::Game &g = app.game_cache()[index];
-                if (!g.cover_media_id.empty())
-                    return g.cover_media_id;
-                for (size_t i = 0; i < g.media.size(); ++i)
-                    if (g.media[i].type == "Cover")
-                        return g.media[i].id;
+            if (index < 0 || index >= (int)app.library_data().games.size())
                 return std::string();
-            }
+
+            const lancommander::Game &g = app.library_data().games[index];
+            if (!g.cover_media_id.empty())
+                return g.cover_media_id;
+
+            return app.game_art(g.id).cover;
+        }
+
+        static std::string get_icon_id(App &app, int index)
+        {
+            if (index < 0 || index >= (int)app.library_data().games.size())
+                return std::string();
+
+            // From the shared art index rather than the game's own media
+            // array. Both are filled from the same /api/Library/Games
+            // response, but the index survives the filtering that builds
+            // library_data and is what the depot reads too.
+            return app.game_art(app.library_data().games[index].id).icon;
         }
 
         static void get_item(App &app, int index, std::string &id, const char *&title)
         {
-            if (app.library_tab() == LibraryTab::Depot)
-            {
-                id = app.depot_cache()[index].id;
-                title = app.depot_cache()[index].title.c_str();
-            }
-            else
-            {
-                id = app.game_cache()[index].id;
-                title = app.game_cache()[index].title.c_str();
-            }
+            id = app.library_data().games[index].id;
+            title = app.library_data().games[index].title.c_str();
         }
+
+        static bool is_installed(App &app, int index)
+        {
+            if (index < 0 || index >= (int)app.library_data().games.size())
+                return false;
+            return !app.library_data().games[index].install_directory.empty();
+        }
+
+        // --- Section rebuild ---------------------------------------------------
+
+        static void rebuild_sections(App &app)
+        {
+            s_recent.clear();
+            s_collection_names.clear();
+            s_collection_reps.clear();
+            s_sections_valid = true;
+
+            const std::vector<lancommander::Game> &games = app.library_data().games;
+            if (games.empty())
+                return;
+
+            std::vector<std::string> ids;
+            std::vector<std::string> sort_titles;
+            ids.reserve(games.size());
+            sort_titles.reserve(games.size());
+
+            for (size_t i = 0; i < games.size(); ++i)
+            {
+                ids.push_back(games[i].id);
+                sort_titles.push_back(games[i].sort_title.empty() ? games[i].title
+                                                                  : games[i].sort_title);
+            }
+
+            GamesView view;
+            view.ids = ids.empty() ? NULL : &ids[0];
+            view.sort_titles = sort_titles.empty() ? NULL : &sort_titles[0];
+            view.count = (int)ids.size();
+
+            // Recently played is merged from the server's play sessions and
+            // this install's local ones -- see App::recent_game_ids.
+            //
+            // It used to read the local SQLite table alone. That table starts
+            // empty on a fresh install, so the carousel was missing for anyone
+            // whose history lived on the server, which is everyone who had
+            // ever used a different machine or the Avalonia launcher.
+            // Every played game, not the first RECENT_MAX of them: the list
+            // is then narrowed to games in this library, and plenty of played
+            // games are not (a depot game tried and removed, a game shared
+            // from another account). Capping before that filter is what would
+            // leave a five-item "Recently Played" on a busy account.
+            std::vector<std::string> recent_ids;
+            app.recent_game_ids(0, &recent_ids);
+            library_recent_indices(view, recent_ids, RECENT_MAX, &s_recent);
+
+            // Collections are not on the C++ Game model, so they are read
+            // across from the depot entry for the same game. Every library
+            // game is in the catalogue, so in practice this is the same set
+            // the Avalonia launcher reads from its local database.
+            const std::vector<lancommander::DepotGame> &depot = app.depot_data().games;
+            std::vector<std::vector<std::string> > per_game;
+            per_game.resize(games.size());
+
+            for (size_t i = 0; i < games.size(); ++i)
+            {
+                for (size_t d = 0; d < depot.size(); ++d)
+                {
+                    if (depot[d].id != games[i].id)
+                        continue;
+                    for (size_t c = 0; c < depot[d].collections.size(); ++c)
+                        per_game[i].push_back(depot[d].collections[c].name);
+                    break;
+                }
+            }
+
+            name_tiles(view, per_game, &s_collection_names, &s_collection_reps);
+        }
+
+        // --- Drawing helpers ---------------------------------------------------
+
+        static void draw_cover(App &app, gfx::Surface *buf, const gfx::Rect &r,
+                               const std::string &cover_id, const char *title)
+        {
+            // object-fit: cover, as the Avalonia Cover component does with
+            // Stretch="UniformToFill". Covers are nominally 2:3 and the cells
+            // here are too, but real artwork is not always exactly that, and
+            // fitting left a letterbox down two edges of the odd one out.
+            if (draw_image_cover(buf, app.image_cache(), r, cover_id))
+                return;
+
+            gfx::fill_rect(buf, r, theme().panel);
+            if (title)
+                draw_text_wrap_center(buf, r.x + r.w / 2, r.y + r.h / 2 - text_height(),
+                                      r.w - 12, theme().text_dim, title);
+        }
+
+        static void select_game(App &app, int index)
+        {
+            std::string id;
+            const char *title = NULL;
+            get_item(app, index, id, title);
+            app.set_selected_game(id);
+            app.switch_screen(Screen::GameDetail);
+        }
+
+        // ----------------------------------------------------------------------
 
         void screen_library_draw(App &app, const InputState &input)
         {
             gfx::Surface *buf = app.backbuffer();
-            int sw = app.screen_width();
-            int sh = app.screen_height();
-            int top = chrome_height();
+            const int sw = app.screen_width();
+            const int sh = app.screen_height();
+            const int top = chrome_height();
+            const int th = text_height();
 
-            // Load data on first entry.
-            if (app.library_tab() == LibraryTab::Depot && !s_depot_loaded)
+            app.ensure_library_loaded();
+
+            // The depot is loaded too: it is where collection names for
+            // library games come from, since the C++ Game model has none.
+            app.ensure_depot_loaded();
+
+            const LoadState state = app.library_data().state;
+            const std::string &error = app.library_data().error;
+            const unsigned revision = app.library_data().revision;
+
+            if (revision != s_seen_revision)
             {
-                load_depot(app);
-                s_scroll_y = 0;
-            }
-            if (app.library_tab() == LibraryTab::Library && !s_library_loaded)
-            {
-                load_library(app);
-                s_scroll_y = 0;
-            }
-
-            // Grid starts below chrome, ends above footer.
-            int grid_y = top;
-            int grid_area_h = sh - top - footer_height();
-
-            int count = 0;
-            if (app.library_tab() == LibraryTab::Depot)
-                count = (int)app.depot_cache().size();
-            else
-                count = (int)app.game_cache().size();
-
-            // ---------------------------------------------------------------
-            // UniformGridLayout: compute how many columns fit at the minimum
-            // item width, then expand items to fill the row evenly.
-            // ---------------------------------------------------------------
-            int usable_w = sw - GRID_PAD * 2;
-
-            // How many columns fit? Each column needs at least MIN_COVER_W
-            // and there's MIN_COL_SPACING between columns.
-            int cols = (usable_w + MIN_COL_SPACING) / (MIN_COVER_W + MIN_COL_SPACING);
-            if (cols < 1) cols = 1;
-            if (cols > count && count > 0) cols = count;
-
-            // Distribute the remaining space: expand item width and spacing.
-            // Total space used by gaps: (cols - 1) * gap.
-            // Remaining for items: usable_w - gaps.
-            int total_gap = (cols > 1) ? (cols - 1) * MIN_COL_SPACING : 0;
-            int item_w = (usable_w - total_gap) / cols;
-
-            // Recompute spacing to fill any leftover pixels evenly.
-            int col_spacing = MIN_COL_SPACING;
-            if (cols > 1)
-            {
-                int leftover = usable_w - (cols * item_w);
-                col_spacing = leftover / (cols - 1);
+                s_seen_revision = revision;
+                s_scroll.offset = 0;
+                s_sidebar.scroll.offset = 0;
+                s_sidebar.selected = -1;
+                s_recent_carousel = CarouselState();
+                s_collections_carousel = CarouselState();
+                s_sections_valid = false;
             }
 
-            // Item height: maintain 2:3 aspect ratio.
-            int item_h = item_w * 3 / 2;
-            int row_spacing = MIN_ROW_SPACING;
+            if (!s_sections_valid)
+                rebuild_sections(app);
 
-            int grid_x0 = GRID_PAD;
-            int rows = (count + cols - 1) / cols;
-            int content_h = GRID_PAD + rows * (item_h + row_spacing);
+            const int count = active_count(app);
+            const int body_y = top;
+            const int body_h = sh - top - footer_height();
 
-            // Set the image cache capacity to the number of covers that can
-            // fit on screen plus two extra rows as a scroll buffer.
+            // =================================================================
+            // Sidebar
+            // =================================================================
+            const int side_x = 0;
+            const int side_w = SIDEBAR_W;
+
+            gfx::fill_rect(buf, gfx::rect(side_x, body_y, side_w, body_h), theme().surface);
+            gfx::vline(buf, side_x + side_w - 1, body_y, body_h, theme().divider);
+
+            // The Library/Depot switch used to sit here as a pair of tabs. It
+            // is a single button in the bottom-left of the footer now, where
+            // the Avalonia shell puts it, so the sidebar is all list.
+            const int list_y = body_y;
+            int list_h = body_h;
+
             {
-                int visible_rows = (grid_area_h + item_h + row_spacing - 1)
-                                   / (item_h + row_spacing);
-                int capacity = cols * (visible_rows + 2);
-                if (capacity < 16) capacity = 16;
-                app.image_cache().set_capacity(capacity);
+                const ListResult lr = list_begin(buf, side_x, list_y, side_w, list_h,
+                                                 count, SIDEBAR_ROW_H, s_sidebar, input);
+
+                for (int i = lr.first_visible; i <= lr.last_visible; ++i)
+                {
+                    const gfx::Rect row = list_row_rect(lr, side_x, list_y, side_w,
+                                                        i, SIDEBAR_ROW_H, s_sidebar);
+
+                    std::string id;
+                    const char *title = NULL;
+                    get_item(app, i, id, title);
+
+                    const bool installed = is_installed(app, i);
+
+                    // Icon, requested only for rows that are actually visible.
+                    const std::string icon_id = get_icon_id(app, i);
+                    gfx::Surface *icon = icon_id.empty()
+                                             ? NULL
+                                             : app.image_cache().get(icon_id, ICON_SIZE, ICON_SIZE);
+
+                    const int iy = row.y + (SIDEBAR_ROW_H - ICON_SIZE) / 2;
+                    if (icon)
+                    {
+                        gfx::blit_alpha(buf, icon,
+                                        row.x + 8 + (ICON_SIZE - gfx::surface_width(icon)) / 2,
+                                        iy + (ICON_SIZE - gfx::surface_height(icon)) / 2);
+                    }
+                    else
+                    {
+                        gfx::fill_rect(buf, gfx::rect(row.x + 8, iy, ICON_SIZE, ICON_SIZE),
+                                       theme().panel);
+                    }
+
+                    // Not-installed titles are dimmed, matching the Avalonia
+                    // row where opacity carries the same meaning.
+                    const gfx::Color title_color = installed ? theme().text
+                                                             : theme().text_disabled;
+
+                    const int tx = row.x + 8 + ICON_SIZE + 8;
+                    const int avail = side_w - (tx - row.x) - 16;
+
+                    int fitted_w = 0;
+                    const int fitted = font_fit(title, avail, &fitted_w);
+                    if (fitted < (int)std::string(title).size())
+                    {
+                        std::string clipped(title, (size_t)fitted);
+                        if (clipped.size() > 1)
+                            clipped.erase(clipped.size() - 1);
+                        clipped += "...";
+                        draw_text(buf, tx, row.y + (SIDEBAR_ROW_H - th) / 2,
+                                  title_color, clipped.c_str());
+                    }
+                    else
+                    {
+                        draw_text(buf, tx, row.y + (SIDEBAR_ROW_H - th) / 2,
+                                  title_color, title);
+                    }
+
+                    if (lr.clicked_index == i)
+                        select_game(app, i);
+                }
+
+                list_end(buf, side_x, list_y, side_w, list_h, count, SIDEBAR_ROW_H,
+                         s_sidebar, input);
             }
 
-            // Scroll
-            if (input.mouse.wheel_delta != 0 && input.mouse.y >= grid_y)
-            {
-                s_scroll_y -= input.mouse.wheel_delta * 40;
-                if (s_scroll_y < 0) s_scroll_y = 0;
-                int max_scroll = content_h - grid_area_h;
-                if (max_scroll < 0) max_scroll = 0;
-                if (s_scroll_y > max_scroll) s_scroll_y = max_scroll;
-            }
+            // Refresh lives in the title bar, left of the profile button, as
+            // it does in the Avalonia shell — it acts on the whole view, not
+            // on the sidebar it used to be pinned under.
 
-            // Clip to grid area.
-            gfx::push_clip(buf, gfx::rect(0, grid_y, sw, sh - footer_height() - grid_y));
+            // =================================================================
+            // Right-hand page
+            // =================================================================
+            const int page_x = side_w;
+            const int page_w = sw - side_w;
+
+            gfx::push_clip(buf, gfx::rect(page_x, body_y, page_w, body_h));
 
             if (count == 0)
             {
-                if (!s_error.empty())
-                    draw_text_center(buf, sw / 2, sh / 2, theme().error, s_error.c_str());
+                if (state == LoadState::Failed && !error.empty())
+                    draw_text_center(buf, page_x + page_w / 2, body_y + body_h / 2,
+                                     theme().error, error.c_str());
                 else
-                {
-                    const char *msg = (app.library_tab() == LibraryTab::Depot)
-                                          ? "No games available"
-                                          : "Your library is empty";
-                    draw_text_center(buf, sw / 2, sh / 2, theme().text_dim, msg);
-                }
+                    draw_text_center(buf, page_x + page_w / 2, body_y + body_h / 2,
+                                     theme().text_dim,
+                                     "Your library is empty");
+
+                gfx::pop_clip(buf);
+                return;
             }
 
-            // Draw grid items.
-            for (int i = 0; i < count; ++i)
+            const int content_x = page_x + GRID_PAD;
+            const int content_w = page_w - GRID_PAD * 2 - 14; // room for the scrollbar
+
+            // Carousels are handed the band INCLUDING the page padding, so
+            // their arrows sit in that padding and their item strips line up
+            // with the grid below. See carousel_gutter().
+            const int strip_x = page_x + GRID_PAD - carousel_gutter();
+            const int strip_w = content_w + carousel_gutter() * 2;
+
+            int y = body_y + GRID_PAD - s_scroll.offset;
+            int content_h = GRID_PAD;
+
+            const bool show_sections = true;
+
+            // --- Recently Played ------------------------------------------------
+            if (show_sections && !s_recent.empty())
             {
-                int col_idx = i % cols;
-                int row_idx = i / cols;
+                const int sec_h = carousel_height(RECENT_ITEM_H);
 
-                int cx = grid_x0 + col_idx * (item_w + col_spacing);
-                int cy = grid_y + GRID_PAD + row_idx * (item_h + row_spacing) - s_scroll_y;
-
-                // Skip items that are fully off-screen.
-                if (cy + item_h < grid_y || cy > sh)
-                    continue;
-
-                std::string item_id;
-                const char *item_title;
-                get_item(app, i, item_id, item_title);
-
-                // --- Cover image ---
-                std::string cid = get_cover_id(app, i);
-                gfx::Surface *cover = NULL;
-                if (!cid.empty())
-                    cover = app.image_cache().get(cid, item_w, item_h);
-
-                if (cover)
+                // Whole sections that are off-screen are skipped before the
+                // carousel runs, so they cost nothing.
+                if (y + sec_h > body_y && y < body_y + body_h)
                 {
-                    // Center the cover in the cell if decoded size differs.
-                    int ix = cx + (item_w - gfx::surface_width(cover)) / 2;
-                    int iy = cy + (item_h - gfx::surface_height(cover)) / 2;
-                    gfx::blit(buf, cover, ix, iy);
-                }
-                else
-                {
-                    // Placeholder: dark panel with word-wrapped title.
-                    gfx::fill_rect(buf, gfx::rect(cx, cy, item_w, item_h), theme().panel);
-                    gfx::push_clip(buf, gfx::rect(cx, cy, item_w, item_h));
-                    int pad = 8;
-                    int wrap_w = item_w - pad * 2;
-                    int text_h = draw_text_wrap_center(NULL, 0, 0, wrap_w,
-                                                       theme().text_dim, item_title);
-                    int ty = cy + (item_h - text_h) / 2;
-                    draw_text_wrap_center(buf, cx + item_w / 2, ty, wrap_w,
-                                          theme().text_dim, item_title);
-                    gfx::pop_clip(buf);
+                    const CarouselResult cr =
+                        carousel_begin(buf, strip_x, y, strip_w, "Recently Played",
+                                       (int)s_recent.size(),
+                                       RECENT_ITEM_W, RECENT_ITEM_H, CAROUSEL_GAP,
+                                       s_recent_carousel, input, false);
+
+                    for (int i = cr.first_visible; i <= cr.last_visible; ++i)
+                    {
+                        const int gi = s_recent[i];
+                        const gfx::Rect r = carousel_item_rect(cr, i, RECENT_ITEM_W,
+                                                               RECENT_ITEM_H, CAROUSEL_GAP,
+                                                               s_recent_carousel);
+                        std::string id;
+                        const char *title = NULL;
+                        get_item(app, gi, id, title);
+                        draw_cover(app, buf, r, get_cover_id(app, gi), title);
+
+                        if (cr.hovered_index == i)
+                            gfx::draw_rect(buf, r, theme().primary);
+                    }
+
+                    carousel_end(buf);
+
+                    if (cr.clicked_index >= 0)
+                    {
+                        select_game(app, s_recent[cr.clicked_index]);
+                        gfx::pop_clip(buf);
+                        return;
+                    }
                 }
 
-                // --- Hover highlight ---
-                bool hovered = (input.mouse.x >= cx && input.mouse.x < cx + item_w &&
-                                input.mouse.y >= cy && input.mouse.y < cy + item_h &&
-                                input.mouse.y >= grid_y &&
-                                input.mouse.y < sh - footer_height());
+                y += sec_h + SECTION_GAP;
+                content_h += sec_h + SECTION_GAP;
+            }
 
-                if (hovered)
+            // --- Collections -----------------------------------------------------
+            if (show_sections && !s_collection_names.empty())
+            {
+                const int sec_h = carousel_height(TILE_H);
+
+                if (y + sec_h > body_y && y < body_y + body_h)
                 {
-                    // Light overlay on hover.
-                    gfx::fill_rect_alpha(buf, gfx::rect(cx, cy, item_w, item_h),
-                                         gfx::rgba(255, 255, 255, 40));
+                    const CarouselResult cr =
+                        carousel_begin(buf, strip_x, y, strip_w, "Collections",
+                                       (int)s_collection_names.size(),
+                                       TILE_W, TILE_H, CAROUSEL_GAP,
+                                       s_collections_carousel, input, false);
 
-                    // Border
-                    gfx::draw_rect(buf, gfx::rect(cx - 1, cy - 1, item_w + 2, item_h + 2),
-                                   theme().primary);
+                    for (int i = cr.first_visible; i <= cr.last_visible; ++i)
+                    {
+                        const gfx::Rect r = carousel_item_rect(cr, i, TILE_W, TILE_H,
+                                                               CAROUSEL_GAP,
+                                                               s_collections_carousel);
+
+                        // Background is the cover of the first game in the
+                        // collection, scrimmed so the name stays readable.
+                        //
+                        // Drawn as `object-fit: cover`: a 2:3 portrait cover
+                        // fitted into a 4:3 tile leaves most of the tile blank,
+                        // which is what these looked like before.
+                        const std::string cid = get_cover_id(app, s_collection_reps[i]);
+                        if (!draw_image_cover(buf, app.image_cache(), r, cid))
+                            gfx::fill_rect(buf, r, theme().panel);
+
+                        gfx::fill_rect_alpha(buf, r, gfx::rgba(26, 10, 59,
+                                                               cr.hovered_index == i ? 200 : 160));
+
+                        draw_text_wrap_center(buf, r.x + r.w / 2, r.y + r.h / 2 - text_height(),
+                                              r.w - 16, theme().text_bright,
+                                              s_collection_names[i].c_str());
+                    }
+
+                    carousel_end(buf);
                 }
 
-                // --- Click to open game detail ---
-                if (hovered && input.mouse.clicked)
+                y += sec_h + SECTION_GAP;
+                content_h += sec_h + SECTION_GAP;
+            }
+
+            // --- Cover grid ------------------------------------------------------
+            {
+                draw_text(buf, content_x, y, theme().text, "All Games");
+                y += th + 8;
+                content_h += th + 8;
+
+                // 4..7 columns, matching the Avalonia responsive clamp.
+                const GridLayout g = grid_layout(content_w + GRID_PAD * 2, count,
+                                                 MIN_COVER_W, MIN_COL_SPACING,
+                                                 MIN_ROW_SPACING, 3, 2, GRID_PAD, 4, 7);
+
+                int first = 0, last = -1;
+                grid_visible_range(g, count, s_scroll.offset - (y - body_y - GRID_PAD),
+                                   body_h, &first, &last);
+
+                for (int i = 0; i < count; ++i)
                 {
-                    app.set_selected_game(item_id);
-                    app.switch_screen(Screen::GameDetail);
+                    const gfx::Rect cell = grid_cell_rect(g, i, page_x, y, 0);
+
+                    // Off-screen cells cost nothing: no image request, no draw.
+                    if (cell.y + cell.h < body_y || cell.y > body_y + body_h)
+                        continue;
+
+                    std::string id;
+                    const char *title = NULL;
+                    get_item(app, i, id, title);
+
+                    draw_cover(app, buf, cell, get_cover_id(app, i), title);
+
+                    // Hit-tested against the VISIBLE part of the cell, not
+                    // the whole thing. A cell scrolled halfway out of the page
+                    // is still drawn (clipped), and testing its full rect made
+                    // the hidden half clickable -- which is how a click on the
+                    // title bar over a scrolled grid also opened a game.
+                    const bool hovered =
+                        gfx::rect_contains(cell, input.mouse.x, input.mouse.y) &&
+                        input.mouse.y >= body_y &&
+                        input.mouse.y < body_y + body_h;
+
+                    if (hovered)
+                    {
+                        gfx::fill_rect_alpha(buf, cell, gfx::rgba(255, 255, 255, 40));
+                        gfx::draw_rect(buf, cell, theme().primary);
+
+                        if (input.mouse.clicked)
+                        {
+                            select_game(app, i);
+                            gfx::pop_clip(buf);
+                            return;
+                        }
+                    }
+                }
+
+                content_h += g.content_h;
+
+                // Cache budget: sidebar rows + carousel items + grid cells on
+                // screen, rather than grid cells alone.
+                {
+                    const int rows_visible = (body_h / (g.item_h + g.row_spacing)) + 2;
+                    int capacity = g.cols * rows_visible;
+                    capacity += (side_w > 0) ? (list_h / SIDEBAR_ROW_H + 2) : 0;
+                    capacity += 16; // carousels
+                    if (capacity < 32) capacity = 32;
+                    app.image_cache().set_capacity(capacity);
                 }
             }
 
-            // Restore clip rect.
             gfx::pop_clip(buf);
 
-            // Scrollbar
-            scrollbar(buf, sw - 14, grid_y, grid_area_h,
-                      content_h, grid_area_h, s_scroll_y, input);
+            // --- Page scroll ------------------------------------------------------
+            const bool over_page = (input.mouse.x >= page_x && input.mouse.y >= body_y &&
+                                    input.mouse.y < body_y + body_h);
 
+            if (over_page && input.mouse.wheel_delta != 0)
+            {
+                // Unconditional over the page, carousels included: they no
+                // longer take the wheel for their own horizontal scroll, which
+                // is what made the page refuse to move whenever the pointer
+                // happened to be resting on a strip.
+                s_scroll.offset -= input.mouse.wheel_delta * 40;
+            }
+
+            int max_scroll = content_h - body_h;
+            if (max_scroll < 0) max_scroll = 0;
+            if (s_scroll.offset < 0) s_scroll.offset = 0;
+            if (s_scroll.offset > max_scroll) s_scroll.offset = max_scroll;
+
+            scrollbar(buf, sw - 14, body_y, body_h, content_h, body_h, s_scroll, input);
         }
 
     } // namespace ui

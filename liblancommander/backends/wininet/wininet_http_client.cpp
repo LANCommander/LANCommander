@@ -35,9 +35,63 @@ unsigned long read_content_length(HINTERNET req) {
     return 0;
 }
 
+// Pull the whole response header block and split it into the map on
+// HttpResponse. This was never populated before, which is why the X-Pong
+// check in ConnectionClient::ping() could never fire and always fell through
+// to accepting any 2xx.
+//
+// Keys are lowercased; HTTP header names are case-insensitive and no caller
+// should have to guess which casing a server used.
+void read_headers(HINTERNET req, std::map<std::string, std::string>* out) {
+    DWORD size = 0;
+    HttpQueryInfoA(req, HTTP_QUERY_RAW_HEADERS_CRLF, NULL, &size, NULL);
+    if (size == 0)
+        return;
+
+    std::string raw;
+    raw.resize(size + 1);
+
+    DWORD have = size + 1;
+    if (!HttpQueryInfoA(req, HTTP_QUERY_RAW_HEADERS_CRLF, &raw[0], &have, NULL))
+        return;
+
+    raw.resize(have);
+
+    size_t pos = 0;
+    while (pos < raw.size()) {
+        size_t end = raw.find("\r\n", pos);
+        if (end == std::string::npos)
+            end = raw.size();
+
+        const std::string line = raw.substr(pos, end - pos);
+        pos = end + 2;
+
+        // The first line is the status line, which has no colon before the
+        // HTTP version and would otherwise be stored as a bogus header.
+        const size_t colon = line.find(':');
+        if (colon == std::string::npos)
+            continue;
+
+        std::string key = line.substr(0, colon);
+        std::string value = line.substr(colon + 1);
+
+        for (size_t i = 0; i < key.size(); ++i)
+            key[i] = static_cast<char>(tolower(static_cast<unsigned char>(key[i])));
+
+        size_t vb = value.find_first_not_of(" \t");
+        if (vb == std::string::npos)
+            value.clear();
+        else
+            value = value.substr(vb);
+
+        (*out)[key] = value;
+    }
+}
+
 } // anonymous namespace
 
-WinInetHttpClient::WinInetHttpClient() : m_session(NULL)
+WinInetHttpClient::WinInetHttpClient()
+    : m_session(NULL), m_connect_timeout_ms(0), m_recv_timeout_ms(0)
 {
     m_session = InternetOpenA("LANCommander-SDK-Cpp/1.0",
                               INTERNET_OPEN_TYPE_PRECONFIG,
@@ -63,7 +117,7 @@ void WinInetHttpClient::set_bearer_token(const std::string& token)
 }
 
 HINTERNET WinInetHttpClient::open_request(const char* verb, const std::string& path,
-                                           HINTERNET* conn_out)
+                                           HINTERNET* conn_out, bool follow_redirects)
 {
     *conn_out = NULL;
     if (!m_session) return NULL;
@@ -94,11 +148,29 @@ HINTERNET WinInetHttpClient::open_request(const char* verb, const std::string& p
                                        NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
     if (!conn) return NULL;
 
+    // Redirects are followed only where a redirect is a legitimate part of
+    // the protocol, which for LANCommander means file downloads: storage
+    // backends hand out a 302 to a signed URL.
+    //
+    // For API calls it is actively harmful. When a token is missing or
+    // expired the server answers 302 to /Login, WinINet follows it, converts
+    // the POST to a GET, and returns 200 with an HTML login page. Every
+    // status-code check in the SDK then reads that as success — which is how
+    // an invalid token used to pass AuthenticationClient::validate() and drop
+    // the launcher into a library it could not actually talk to.
+    //
+    // Refusing to follow also makes the discovery fan-out behave better: a
+    // server that redirects http to https now fails its http candidate and
+    // succeeds on the https one, so the address that gets stored is the one
+    // that actually works.
+    DWORD redirect_flag = follow_redirects ? 0 : INTERNET_FLAG_NO_AUTO_REDIRECT;
+
     const char* accept_types[] = { "*/*", NULL };
     HINTERNET req = HttpOpenRequestA(conn, verb, object, NULL, NULL,
                                       accept_types,
                                       req_flags | INTERNET_FLAG_RELOAD |
-                                      INTERNET_FLAG_NO_CACHE_WRITE, 0);
+                                      INTERNET_FLAG_NO_CACHE_WRITE |
+                                      redirect_flag, 0);
     if (!req) {
         InternetCloseHandle(conn);
         return NULL;
@@ -115,7 +187,7 @@ HttpResponse WinInetHttpClient::request(const char* verb, const std::string& pat
     HttpResponse resp;
 
     HINTERNET conn = NULL;
-    HINTERNET req = open_request(verb, path, &conn);
+    HINTERNET req = open_request(verb, path, &conn, false);
     if (!req) return resp;
 
     std::string headers;
@@ -134,7 +206,72 @@ HttpResponse WinInetHttpClient::request(const char* verb, const std::string& pat
                          headers.empty() ? 0 : static_cast<DWORD>(headers.size()),
                          body_ptr, body_len)) {
         resp.status_code = static_cast<int>(read_status(req));
+        read_headers(req, &resp.headers);
         resp.body = read_all(req);
+    }
+
+    InternetCloseHandle(req);
+    InternetCloseHandle(conn);
+    return resp;
+}
+
+void WinInetHttpClient::set_timeout_ms(int connect_ms, int recv_ms)
+{
+    m_connect_timeout_ms = connect_ms;
+    m_recv_timeout_ms = recv_ms;
+
+    if (!m_session)
+        return;
+
+    // Session-level options are inherited by requests opened afterwards.
+    DWORD connect_to = static_cast<DWORD>(connect_ms);
+    DWORD recv_to = static_cast<DWORD>(recv_ms);
+
+    InternetSetOptionA(m_session, INTERNET_OPTION_CONNECT_TIMEOUT,
+                       &connect_to, sizeof(connect_to));
+    InternetSetOptionA(m_session, INTERNET_OPTION_RECEIVE_TIMEOUT,
+                       &recv_to, sizeof(recv_to));
+    InternetSetOptionA(m_session, INTERNET_OPTION_SEND_TIMEOUT,
+                       &recv_to, sizeof(recv_to));
+}
+
+HttpResponse WinInetHttpClient::head(const std::string& path,
+                                     const std::map<std::string, std::string>& extra_headers)
+{
+    HttpResponse resp;
+
+    HINTERNET conn = NULL;
+    HINTERNET req = open_request("HEAD", path, &conn, false);
+    if (!req) return resp;
+
+    // Per-request timeouts as well as the session ones: a handle opened
+    // before set_timeout_ms was called would otherwise keep the defaults.
+    if (m_connect_timeout_ms > 0) {
+        DWORD to = static_cast<DWORD>(m_connect_timeout_ms);
+        InternetSetOptionA(req, INTERNET_OPTION_CONNECT_TIMEOUT, &to, sizeof(to));
+    }
+    if (m_recv_timeout_ms > 0) {
+        DWORD to = static_cast<DWORD>(m_recv_timeout_ms);
+        InternetSetOptionA(req, INTERNET_OPTION_RECEIVE_TIMEOUT, &to, sizeof(to));
+        InternetSetOptionA(req, INTERNET_OPTION_SEND_TIMEOUT, &to, sizeof(to));
+    }
+
+    std::string headers;
+    for (std::map<std::string, std::string>::const_iterator it = extra_headers.begin();
+         it != extra_headers.end(); ++it) {
+        headers += it->first + ": " + it->second + "\r\n";
+    }
+    if (!m_bearer.empty()) {
+        headers += "Authorization: Bearer " + m_bearer + "\r\n";
+    }
+
+    if (HttpSendRequestA(req,
+                         headers.empty() ? NULL : headers.c_str(),
+                         headers.empty() ? 0 : static_cast<DWORD>(headers.size()),
+                         NULL, 0)) {
+        resp.status_code = static_cast<int>(read_status(req));
+        read_headers(req, &resp.headers);
+        // No body is read: this is a HEAD.
     }
 
     InternetCloseHandle(req);
@@ -174,7 +311,7 @@ bool WinInetHttpClient::download(const std::string& path,
     if (!f) return false;
 
     HINTERNET conn = NULL;
-    HINTERNET req = open_request("GET", path, &conn);
+    HINTERNET req = open_request("GET", path, &conn, true);
     if (!req) {
         fclose(f);
         return false;

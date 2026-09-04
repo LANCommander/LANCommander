@@ -15,7 +15,8 @@ class PlaySessionClient {
 public:
     explicit PlaySessionClient(IHttpClient& http);
 
-    Result<std::vector<EntityReference>> get();
+    Result<std::vector<PlaySession>> get();
+
     Result<std::vector<PlaySession>> get_for_game(const std::string& game_id);
 
 private:

@@ -16,6 +16,10 @@ public:
     void set_base_url(const std::string& url) override;
     void set_bearer_token(const std::string& token) override;
 
+    void set_timeout_ms(int connect_ms, int recv_ms) override;
+    HttpResponse head(const std::string& path,
+                      const std::map<std::string, std::string>& extra_headers) override;
+
     HttpResponse get(const std::string& path) override;
     HttpResponse post(const std::string& path,
                       const std::string& body,
@@ -36,11 +40,16 @@ public:
 private:
     HttpResponse request(const char* verb, const std::string& path,
                          const std::string& body, const std::string& content_type);
-    HINTERNET open_request(const char* verb, const std::string& path, HINTERNET* conn_out);
+    // `follow_redirects` is true only for downloads; see the comment at the
+    // definition for why API calls must not follow a 302.
+    HINTERNET open_request(const char* verb, const std::string& path,
+                           HINTERNET* conn_out, bool follow_redirects);
 
     std::string m_base_url;
     std::string m_bearer;
     HINTERNET m_session;
+    int m_connect_timeout_ms;
+    int m_recv_timeout_ms;
 };
 
 } // namespace lancommander

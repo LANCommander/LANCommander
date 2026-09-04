@@ -74,6 +74,7 @@ if(LAUNCHER_GFX_BACKEND STREQUAL "allegro")
         src/gfx/gfx_allegro.cpp
         src/ui/input_win32.cpp
         src/ui/chrome_platform_win32.cpp
+        src/ui/clipboard_win32.cpp
         src/ui/font_gdi.cpp)
     set(LAUNCHER_BACKEND_DEFINE LAUNCHER_BACKEND_ALLEGRO)
 endif()
@@ -201,6 +202,7 @@ if(LAUNCHER_GFX_BACKEND STREQUAL "sdl3")
         src/gfx/gfx_sdl.cpp
         src/ui/input_sdl.cpp
         src/ui/chrome_platform_sdl.cpp
+        src/ui/clipboard_sdl.cpp
         src/ui/font_ttf.cpp)
     set(LAUNCHER_BACKEND_DEFINE LAUNCHER_BACKEND_SDL)
 endif()
@@ -221,7 +223,14 @@ add_executable(launcher WIN32
     src/app/settings.cpp
     src/app/download_queue.cpp
     src/app/game_database.cpp
+    src/app/time_util.cpp
+    src/app/media_prefetch.cpp
+    src/app/game_art_fetcher.cpp
+    src/app/library_sections.cpp
+    src/app/depot_sections.cpp
+    src/app/game_menu.cpp
     src/app/logger.cpp
+    src/app/paths.cpp
     ${LAUNCHER_GFX_SOURCES}
     vendor/miniz/miniz.c
     vendor/miniz/miniz_tdef.c
@@ -231,14 +240,25 @@ add_executable(launcher WIN32
     vendor/stb/stb_impl.c
     src/ui/theme.cpp
     src/ui/widgets.cpp
+    src/ui/widgets_text.cpp
+    src/ui/text_edit.cpp
     src/ui/screen_login.cpp
+    src/ui/screen_server_select.cpp
+    src/ui/auth_background.cpp
     src/ui/screen_library.cpp
+    src/ui/screen_depot.cpp
+    src/ui/screen_depot_browse.cpp
     src/ui/screen_game_detail.cpp
     src/ui/screen_downloads.cpp
     src/ui/screen_settings.cpp
     src/ui/window_chrome.cpp
     src/ui/chrome_geometry.cpp
+    src/ui/layout.cpp
+    src/ui/widgets_overlay.cpp
+    src/ui/widgets_collection.cpp
+    src/ui/widgets_menu.cpp
     src/ui/image_decoder.cpp
+    src/ui/icons.cpp
     src/ui/image_cache.cpp
 )
 
@@ -295,6 +315,25 @@ if(WIN32)
         target_link_libraries(launcher dinput8 ddraw dxguid dsound)
     endif()
 
+    # Static runtime, so launcher.exe is the only file that has to be copied.
+    #
+    # A default MinGW link leaves libgcc_s_dw2-1.dll and libstdc++-6.dll as
+    # external imports; neither ships with Windows, so the launcher would fail
+    # to start anywhere the MSYS2 bin directory was not on PATH. These flags
+    # used to be set only for TARGET_WIN9X, which meant the normal build was
+    # the one that needed DLLs alongside it.
+    #
+    # Everything else the binary imports is a Windows system DLL, msvcrt.dll
+    # included -- that is the CRT MinGW targets and it is present on every
+    # Windows the launcher supports.
+    if(MINGW)
+        target_link_options(launcher PRIVATE
+            "-static"
+            "-static-libgcc"
+            "-static-libstdc++"
+        )
+    endif()
+
     if(TARGET_WIN9X)
         target_compile_definitions(launcher PRIVATE
             WINVER=0x0400
@@ -311,11 +350,10 @@ if(WIN32)
                 "/SUBSYSTEM:WINDOWS,4.0"
             )
         elseif(MINGW)
+            # The static flags are set for every MinGW build above; this adds
+            # only the PE subsystem version the Win9x loader requires.
             target_link_options(launcher PRIVATE
                 "-Wl,--subsystem,windows:4.0"
-                "-static"
-                "-static-libgcc"
-                "-static-libstdc++"
             )
         endif()
     endif()

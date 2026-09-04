@@ -57,7 +57,12 @@ public:
 
     // Ping the server with X-Ping / X-Pong header validation.
     // If server_address is empty, uses the stored address.
+    //
+    // Fails when the server does not echo the reversed ping id, which is what
+    // separates a LANCommander server from any other host that answers 2xx.
     Result<bool> ping(const std::string& server_address = "");
+
+    Result<bool> probe_candidate(const std::string& uri);
 
     // --- Event callbacks ---
     // Set to non-null to receive notifications. user_data is passed through.

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "archive.h"
 #include "custom_field.h"
 #include "script.h"
 
@@ -53,6 +54,7 @@ struct Game {
     std::vector<std::string> publishers;
     std::string cover_media_id;
     std::string cover_crc32;
+    std::vector<Archive> archives;
 };
 
 struct ManifestAction {

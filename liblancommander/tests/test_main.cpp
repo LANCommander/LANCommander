@@ -30,6 +30,7 @@ int main()
     test_serialize();
     test_options();
     test_gamespy();
+    test_uri_candidates();
 
     std::printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

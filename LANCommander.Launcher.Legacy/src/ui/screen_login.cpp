@@ -2,6 +2,8 @@
 #include "ui/theme.h"
 #include "ui/widgets.h"
 #include "ui/window_chrome.h"
+#include "ui/auth_background.h"
+#include "ui/screen_server_select.h"
 #include "ui/image_decoder.h"
 #include "app/app.h"
 #include "app/logger.h"
@@ -21,39 +23,14 @@ namespace launcher
         static std::string s_username;
         static std::string s_password;
         static std::string s_error_message;
-        static int s_focus = 0; // 0=server, 1=username, 2=password
+        static int s_focus = 1; // 1=username, 2=password
+
+        // One caret/selection per field. Sharing one would move every caret
+        // together the moment focus changed.
+        static TextEditState s_user_edit;
+        static TextEditState s_pass_edit;
         static bool s_initialized = false;
         static bool s_connecting = false;
-
-        // Background image state.
-        static gfx::Surface *s_bg_bitmap = NULL;
-        static bool s_bg_loaded = false;
-
-        static const char *BG_ASSET_NAMES[] = {
-            "backgrounds/aoe2.jpg",
-            "backgrounds/bfme2.jpg",
-            "backgrounds/css.jpg",
-            "backgrounds/ns2.jpg",
-            "backgrounds/soldat2.jpg",
-            "backgrounds/ut2004.jpg",
-        };
-        static const int BG_COUNT = sizeof(BG_ASSET_NAMES) / sizeof(BG_ASSET_NAMES[0]);
-
-        static gfx::Surface *load_login_background(int max_w, int max_h)
-        {
-            static bool seeded = false;
-            if (!seeded) { srand((unsigned)time(NULL)); seeded = true; }
-
-            int idx = rand() % BG_COUNT;
-
-            DecodedImage img = {};
-            if (!decode_image_asset(BG_ASSET_NAMES[idx], max_w, max_h, &img))
-                return NULL;
-
-            gfx::Surface *s = gfx::surface_from_rgba(img.pixels, img.width, img.height);
-            free_decoded_image(&img);
-            return s;
-        }
 
         void screen_login_draw(App &app, const InputState &input)
         {
@@ -71,42 +48,7 @@ namespace launcher
                 s_initialized = true;
             }
 
-            // --- Background image ---
-            if (!s_bg_loaded)
-            {
-                s_bg_bitmap = load_login_background(sw, sh);
-                s_bg_loaded = true;
-            }
-
-            if (s_bg_bitmap)
-            {
-                // Center-crop blit (UniformToFill)
-                int src_x = 0, src_y = 0;
-                int src_w = gfx::surface_width(s_bg_bitmap);
-                int src_h = gfx::surface_height(s_bg_bitmap);
-
-                if (src_w * sh > src_h * sw)
-                {
-                    // Image is wider than screen aspect — crop sides
-                    int scaled_w = src_h * sw / sh;
-                    src_x = (src_w - scaled_w) / 2;
-                    src_w = scaled_w;
-                }
-                else
-                {
-                    // Image is taller than screen aspect — crop top/bottom
-                    int scaled_h = src_w * sh / sw;
-                    src_y = (src_h - scaled_h) / 2;
-                    src_h = scaled_h;
-                }
-
-                gfx::blit_scaled(buf, s_bg_bitmap,
-                                 gfx::rect(src_x, src_y, src_w, src_h),
-                                 gfx::rect(0, 0, sw, sh));
-
-                // Darken overlay so the login panel is readable
-                gfx::fill_rect_alpha(buf, gfx::rect(0, 0, sw, sh), gfx::rgba(0, 0, 0, 140));
-            }
+            auth_background_draw(buf, sw, sh);
 
             // --- Layout (center below chrome) ---
             int top = chrome_height();
@@ -130,17 +72,29 @@ namespace launcher
             int field_w = panel_w - 48;
             int field_h = 22;
 
-            label(buf, field_x, y, theme().text_dim, "Server Address");
+            // The server is chosen on the previous screen; here it is just
+            // stated, with a way back. Avalonia hides this behind a hover
+            // cross-fade, which is invisible to anyone not using a mouse, so
+            // it is a plain button instead.
+            label(buf, field_x, y, theme().text_dim, "Server");
             y += text_height() + 4;
 
-            TextInputState addr_state = text_input(buf, field_x, y, field_w, field_h, s_server_address, 256, s_focus == 0, input);
+            {
+                const int change_w = 64;
+                const int change_h = 20;
+                const int change_x = field_x + field_w - change_w;
 
-            if (input.mouse.clicked && input.mouse.x >= field_x && input.mouse.x < field_x + field_w &&
-                input.mouse.y >= y && input.mouse.y < y + field_h)
-                s_focus = 0;
+                draw_text(buf, field_x, y + 2, theme().text,
+                          s_server_address.empty() ? "(none)" : s_server_address.c_str());
 
-            if (addr_state.submitted)
-                s_focus = 1;
+                if (button(buf, change_x, y, change_w, change_h, "Change", input).clicked)
+                {
+                    s_initialized = false;
+                    screen_server_select_reset();
+                    app.switch_screen(Screen::ServerSelect);
+                    return;
+                }
+            }
 
             y += field_h + 10;
 
@@ -148,7 +102,7 @@ namespace launcher
             label(buf, field_x, y, theme().text_dim, "Username");
             y += text_height() + 4;
 
-            TextInputState user_state = text_input(buf, field_x, y, field_w, field_h, s_username, 64, s_focus == 1, input);
+            TextInputState user_state = text_input(buf, field_x, y, field_w, field_h, s_username, 64, s_focus == 1, input, s_user_edit);
 
             if (input.mouse.clicked && input.mouse.x >= field_x && input.mouse.x < field_x + field_w && input.mouse.y >= y && input.mouse.y < y + field_h)
                 s_focus = 1;
@@ -162,7 +116,7 @@ namespace launcher
             label(buf, field_x, y, theme().text_dim, "Password");
             y += text_height() + 4;
 
-            TextInputState pass_state = text_input(buf, field_x, y, field_w, field_h, s_password, 128, s_focus == 2, input, true);
+            TextInputState pass_state = text_input(buf, field_x, y, field_w, field_h, s_password, 128, s_focus == 2, input, s_pass_edit, true);
 
             if (input.mouse.clicked && input.mouse.x >= field_x && input.mouse.x < field_x + field_w && input.mouse.y >= y && input.mouse.y < y + field_h)
                 s_focus = 2;
@@ -232,7 +186,7 @@ namespace launcher
 
             // Tab between fields
             if (input.key_pressed(Key::Tab))
-                s_focus = (s_focus + 1) % 3;
+                s_focus = (s_focus == 1) ? 2 : 1;
 
         }
     } // namespace ui

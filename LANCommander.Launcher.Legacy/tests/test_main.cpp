@@ -20,6 +20,13 @@ void report_failure_eq(const char *file, int line, const char *expression,
 int main()
 {
     test_chrome_geometry();
+    test_layout();
+    test_text_edit();
+    test_time_util();
+    test_play_sessions();
+    test_library_sections();
+    test_depot_sections();
+    test_game_menu();
     test_text_wrap();
     test_gfx_types();
 

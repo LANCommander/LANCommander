@@ -6,6 +6,9 @@
 
 #include "ui/window_chrome.h"
 #include "ui/chrome_platform.h"
+#include "ui/icons.h"
+#include "ui/image_decoder.h"
+#include "app/paths.h"
 #include "ui/theme.h"
 #include "ui/widgets.h"
 #include "app/app.h"
@@ -42,7 +45,73 @@ namespace launcher
         const ChromeMetrics &chrome_metrics() { return g_metrics; }
 
         int chrome_height() { return CHROME_H; }
+
+        namespace
+        {
+            // True on the pages that show a collection of games, which are the
+            // only ones where Refresh and the Library/Depot switch mean
+            // anything.
+            bool on_games_screen(App &app)
+            {
+                const Screen s = app.current_screen();
+                return s == Screen::Library || s == Screen::Depot ||
+                       s == Screen::DepotBrowse;
+            }
+
+            bool on_depot(App &app)
+            {
+                const Screen s = app.current_screen();
+                return s == Screen::Depot || s == Screen::DepotBrowse;
+            }
+        } // namespace
+
         int footer_height() { return FOOTER_H; }
+
+        bool footer_visible(App &app)
+        {
+            switch (app.current_screen())
+            {
+            case Screen::Library:
+            case Screen::Depot:
+            case Screen::DepotBrowse:
+            case Screen::GameDetail:
+            case Screen::Downloads:
+            case Screen::Settings:
+                return true;
+            default:
+                // Login and server select own the whole window; blocking a
+                // strip at the bottom would make their buttons unclickable.
+                return false;
+            }
+        }
+
+        // Screen rectangle of the open profile dropdown, or a zero rect.
+        //
+        // Recorded during the draw and read by chrome_gate() on the NEXT
+        // frame, which is exactly right: on the frame the menu opens, the
+        // click was on the button in the title bar, and that is already
+        // covered by the title-bar band.
+        static gfx::Rect s_menu_rect = { 0, 0, 0, 0 };
+
+        InputState chrome_gate(App &app, const InputState &input)
+        {
+            const int sh = app.screen_height();
+
+            const bool over_title = (input.mouse.y >= 0 && input.mouse.y < CHROME_H);
+
+            const bool over_footer = footer_visible(app) &&
+                                     input.mouse.y >= sh - FOOTER_H &&
+                                     input.mouse.y < sh;
+
+            const bool over_menu =
+                s_menu_rect.w > 0 && s_menu_rect.h > 0 &&
+                gfx::rect_contains(s_menu_rect, input.mouse.x, input.mouse.y);
+
+            if (over_title || over_footer || over_menu)
+                return input_without_pointer(input);
+
+            return input;
+        }
 
 
         // ---------------------------------------------------------------
@@ -117,6 +186,56 @@ namespace launcher
 #endif
         }
 
+        // ---------------------------------------------------------------
+        // Profile avatar -- decoded once from the file App downloaded.
+        // ---------------------------------------------------------------
+        static const int AVATAR_SIZE = 20;   // 32px title bar, 6px either side
+        static const int AVATAR_RADIUS = 2;  // matches the Avalonia CornerRadius
+
+        static gfx::Surface *s_avatar = NULL;
+        static std::string s_avatar_source;  // path the cached surface came from
+
+        // NULL when the user has no avatar or it could not be decoded.
+        //
+        // Keyed on the path so a re-login as a different user reloads rather
+        // than showing the previous person's picture.
+        static gfx::Surface *avatar_surface(App &app)
+        {
+            if (!app.has_avatar())
+            {
+                if (s_avatar)
+                {
+                    gfx::destroy_surface(s_avatar);
+                    s_avatar = NULL;
+                }
+                s_avatar_source.clear();
+                return NULL;
+            }
+
+            if (s_avatar && s_avatar_source == app.avatar_path())
+                return s_avatar;
+
+            if (s_avatar)
+            {
+                gfx::destroy_surface(s_avatar);
+                s_avatar = NULL;
+            }
+
+            s_avatar_source = app.avatar_path();
+
+            // Aspect-FILL so a non-square picture is cropped rather than
+            // letterboxed, matching the Avalonia Stretch="UniformToFill".
+            DecodedImage img;
+            if (decode_image_file_fill(s_avatar_source.c_str(),
+                                       AVATAR_SIZE, AVATAR_SIZE, &img))
+            {
+                s_avatar = gfx::surface_from_rgba(img.pixels, img.width, img.height);
+                free_decoded_image(&img);
+            }
+
+            return s_avatar;
+        }
+
         // Dropdown menu state.
         static bool s_user_dropdown_open = false;
 
@@ -162,9 +281,9 @@ namespace launcher
                     panel(buf, close_x, 0, BTN_W, CHROME_H,
                           gfx::rgb(0xC4, 0x2B, 0x1C)); // Windows red close
 
-                int cx = close_x + BTN_W / 2;
-                gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
-                draw_text_center(buf, cx, (CHROME_H - text_height()) / 2, color, "X");
+                const gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
+                draw_icon_centered(buf, gfx::rect(close_x, 0, BTN_W, CHROME_H),
+                                   ICON_SM, color, Icon::Close);
 
                 if (hovered && input.mouse.pressed)
                     close_clicked = true;
@@ -179,9 +298,9 @@ namespace launcher
                     gfx::fill_rect_alpha(buf, gfx::rect(min_x, 0, BTN_W, CHROME_H),
                                          gfx::rgba(255, 255, 255, 25));
 
-                int cx = min_x + BTN_W / 2;
-                gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
-                draw_text_center(buf, cx, (CHROME_H - text_height()) / 2, color, "_");
+                const gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
+                draw_icon_centered(buf, gfx::rect(min_x, 0, BTN_W, CHROME_H),
+                                   ICON_SM, color, Icon::Minimize);
 
                 if (hovered && input.mouse.pressed)
                 {
@@ -197,10 +316,23 @@ namespace launcher
             std::string alias_str = app.user_alias();
             if (!alias_str.empty())
             {
-                int pad = 16;
-                int th = text_height();
-                int alias_w = text_width(alias_str.c_str());
-                user_btn_w = pad + alias_w + pad;
+                // Avatar then alias, and nothing else.
+                //
+                // There was a person glyph on the left and a caret on the
+                // right; both are gone. The Avalonia button is the user's
+                // picture beside their name with no disclosure arrow, and it
+                // keeps a User icon only as a placeholder for an account with
+                // no picture at all.
+                const int pad = 12;
+                const int gap = 8;
+                const int th = text_height();
+                const int alias_w = text_width(alias_str.c_str());
+
+                gfx::Surface *avatar = avatar_surface(app);
+                const int avatar_w = avatar ? AVATAR_SIZE : 0;
+                const int avatar_gap = avatar ? gap : 0;
+
+                user_btn_w = pad + avatar_w + avatar_gap + alias_w + pad;
                 user_btn_x = user_btn_right - user_btn_w;
 
                 bool hovered = (input.mouse.x >= user_btn_x && input.mouse.x < user_btn_right &&
@@ -210,12 +342,71 @@ namespace launcher
                 gfx::Color bg = (s_user_dropdown_open || hovered) ? theme().primary_active : theme().primary;
                 panel(buf, user_btn_x, 0, user_btn_w, CHROME_H, bg);
 
-                int text_y = (CHROME_H - th) / 2;
-                draw_text(buf, user_btn_x + pad, text_y, theme().text_bright, alias_str.c_str());
+                int cx = user_btn_x + pad;
+
+                if (avatar)
+                {
+                    const gfx::Rect box = gfx::rect(cx, (CHROME_H - AVATAR_SIZE) / 2,
+                                                    AVATAR_SIZE, AVATAR_SIZE);
+
+                    // The decode covers the box, so this is the centre crop.
+                    const int aw = gfx::surface_width(avatar);
+                    const int ah = gfx::surface_height(avatar);
+                    const int cw = box.w < aw ? box.w : aw;
+                    const int ch = box.h < ah ? box.h : ah;
+
+                    gfx::blit_region(buf, avatar,
+                                     gfx::rect((aw - cw) / 2, (ah - ch) / 2, cw, ch),
+                                     box.x + (box.w - cw) / 2,
+                                     box.y + (box.h - ch) / 2);
+
+                    // Corners painted back to the button fill, which is what
+                    // stands in for a rounded clip here.
+                    round_rect_corners(buf, box, AVATAR_RADIUS, bg);
+
+                    cx += avatar_w + avatar_gap;
+                }
+
+                draw_text(buf, cx, (CHROME_H - th) / 2, theme().text_bright,
+                          alias_str.c_str());
 
                 // Toggle on click.
                 if (hovered && input.mouse.clicked)
                     s_user_dropdown_open = !s_user_dropdown_open;
+            }
+
+            // --- Refresh button (left of the profile button) ---
+            //
+            // Same place the Avalonia shell puts it, and for the same reason:
+            // it refetches the whole view, so it belongs with the window's
+            // controls rather than pinned under the sidebar list it used to
+            // sit beneath, where it read as "refresh this list".
+            int refresh_x = (user_btn_w > 0) ? user_btn_x : min_x;
+
+            if (on_games_screen(app))
+            {
+                refresh_x -= BTN_W;
+
+                const gfx::Rect r = gfx::rect(refresh_x, 0, BTN_W, CHROME_H);
+                const bool hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
+
+                if (hovered)
+                    gfx::fill_rect_alpha(buf, r, gfx::rgba(255, 255, 255, 25));
+
+                draw_icon_centered(buf, r, ICON_MD,
+                                   hovered ? theme().text_bright : theme().text_dim,
+                                   Icon::Refresh);
+
+                if (hovered && input.mouse.clicked)
+                {
+                    // Both collections, not just the visible one: the library
+                    // page reads collection names out of the depot payload,
+                    // and the depot's hero art comes from the games call the
+                    // library makes. Refreshing one and not the other leaves
+                    // the page half stale.
+                    app.invalidate_depot();
+                    app.invalidate_library();
+                }
             }
 
             // --- User dropdown menu ---
@@ -287,6 +478,10 @@ namespace launcher
                         menu_action = ids[i];
                 }
 
+                // Published so chrome_gate() can keep the screen underneath
+                // from seeing clicks aimed at this menu.
+                s_menu_rect = gfx::rect(menu_x, menu_y, menu_w, menu_h);
+
                 // Close menu when clicking outside.
                 bool in_menu = (input.mouse.x >= menu_x && input.mouse.x < menu_x + menu_w &&
                                 input.mouse.y >= menu_y && input.mouse.y < menu_y + menu_h);
@@ -296,6 +491,9 @@ namespace launcher
                 if (input.mouse.clicked && !in_menu && !in_button)
                     s_user_dropdown_open = false;
             }
+
+            if (!s_user_dropdown_open)
+                s_menu_rect = gfx::rect(0, 0, 0, 0);
 
             // Handle menu actions.
             if (menu_action != UserMenuItem::None)
@@ -330,7 +528,7 @@ namespace launcher
             // Publish the draggable span so the platform hit test agrees with
             // what we just drew. Dragging is suppressed while the dropdown is
             // open so the click that should dismiss it isn't swallowed.
-            const int drag_right = (user_btn_w > 0) ? user_btn_x : min_x;
+            const int drag_right = refresh_x;
             chrome_platform_frame(drag_right, !s_user_dropdown_open);
 
             const bool in_drag_area = (input.mouse.x >= 0 && input.mouse.x < drag_right &&
@@ -375,29 +573,37 @@ namespace launcher
             int btn_h = 24;
             int btn_y = fy + (FOOTER_H - btn_h) / 2;
 
-            // --- Left: Depot / Library toggle (only show the inactive button) ---
+            // --- Left: Library / Depot switch ---
+            //
+            // One button, labelled with where it GOES, matching the Avalonia
+            // shell footer. It briefly lived as a pair of tabs at the top of
+            // the library sidebar; that showed both destinations at once and
+            // pushed the compact list down, which is neither what the Avalonia
+            // launcher does nor where anyone looks for it.
+            if (on_games_screen(app))
             {
-                bool depot_active = (app.library_tab() == LibraryTab::Depot);
-
+                const bool depot_active = on_depot(app);
                 const char *label = depot_active ? "Library" : "Depot";
-                int bw = text_width(label) + 20;
-                int bx = pad;
+                const Icon icon = depot_active ? Icon::Library : Icon::Depot;
 
-                bool hovered = (input.mouse.x >= bx && input.mouse.x < bx + bw &&
-                                input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
+                const int gap = 7;
+                const gfx::Rect r = gfx::rect(pad, btn_y,
+                                              12 + ICON_MD + gap + text_width(label) + 12,
+                                              btn_h);
+
+                const bool hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
 
                 if (hovered)
-                    gfx::fill_rect(buf, gfx::rect(bx, btn_y, bw, btn_h), theme().panel_hover);
+                    fill_rounded_rect(buf, r, BUTTON_RADIUS, theme().panel_hover);
 
-                draw_text_center(buf, bx + bw / 2, btn_y + (btn_h - th) / 2,
-                                 theme().text_dim, label);
+                const gfx::Color fg = hovered ? theme().text_bright : theme().text;
+
+                draw_icon(buf, r.x + 12, btn_y + (btn_h - ICON_MD) / 2, ICON_MD, fg, icon);
+                draw_text(buf, r.x + 12 + ICON_MD + gap, btn_y + (btn_h - th) / 2,
+                          fg, label);
 
                 if (hovered && input.mouse.clicked)
-                {
-                    app.set_library_tab(depot_active ? LibraryTab::Library : LibraryTab::Depot);
-                    if (app.current_screen() != Screen::Library)
-                        app.switch_screen(Screen::Library);
-                }
+                    app.switch_screen(depot_active ? Screen::Library : Screen::Depot);
             }
 
             // --- Center: Download progress or Downloads button ---
@@ -450,21 +656,26 @@ namespace launcher
                     else
                         sprintf(dl_label, "Downloads");
 
-                    int dl_w = text_width(dl_label) + 20;
+                    const int gap = 7;
+                    int dl_w = 12 + ICON_MD + gap + text_width(dl_label) + 12;
                     int dl_x = sw / 2 - dl_w / 2;
 
-                    bool dl_hovered = (input.mouse.x >= dl_x && input.mouse.x < dl_x + dl_w &&
-                                       input.mouse.y >= btn_y && input.mouse.y < btn_y + btn_h);
+                    const gfx::Rect dl_r = gfx::rect(dl_x, btn_y, dl_w, btn_h);
+                    bool dl_hovered = gfx::rect_contains(dl_r, input.mouse.x, input.mouse.y);
 
                     if (on_downloads_screen)
-                        gfx::fill_rect(buf, gfx::rect(dl_x, btn_y, dl_w, btn_h), theme().primary);
+                        fill_rounded_rect(buf, dl_r, BUTTON_RADIUS, theme().primary);
                     else if (dl_hovered)
-                        gfx::fill_rect(buf, gfx::rect(dl_x, btn_y, dl_w, btn_h), theme().panel_hover);
+                        fill_rounded_rect(buf, dl_r, BUTTON_RADIUS, theme().panel_hover);
 
-                    draw_text_center(buf, dl_x + dl_w / 2, btn_y + (btn_h - th) / 2,
-                                     (on_downloads_screen || dl_hovered)
-                                         ? theme().text_bright : theme().text_disabled,
-                                     dl_label);
+                    const gfx::Color dl_fg = (on_downloads_screen || dl_hovered)
+                                                 ? theme().text_bright
+                                                 : theme().text_disabled;
+
+                    draw_icon(buf, dl_x + 12, btn_y + (btn_h - ICON_MD) / 2, ICON_MD,
+                              dl_fg, Icon::Download);
+                    draw_text(buf, dl_x + 12 + ICON_MD + gap, btn_y + (btn_h - th) / 2,
+                              dl_fg, dl_label);
 
                     if (dl_hovered && input.mouse.clicked && !on_downloads_screen)
                         app.switch_screen(Screen::Downloads);

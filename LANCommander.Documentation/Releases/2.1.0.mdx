@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.12** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.13** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -654,7 +654,7 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 <details>
 <summary>View 2.1.12 patch notes</summary>
 
-## Improvements
+#### Improvements
 - The PCGamingWiki metadata provider has been rewritten to use PCGamingWiki's Cargo API, which returns structured data instead of requiring the rendered page to be scraped. Requests are also rate limited to stay within their limits.
 - Added a **Settings → Integrations → PCGamingWiki** page. Credentials are optional; supplying a bot password unlocks the Cargo API, which has refused anonymous callers since PCGamingWiki's August 2026 server migration.
 - LANCommander HQ now authenticates with a long-lived rotating refresh token, so a server stays connected across restarts and idle periods instead of having to be reconnected by hand.
@@ -666,7 +666,7 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 - Raised the Blazor JS interop timeout to 10 minutes so long-running packaging scripts are no longer cancelled mid-run by the one minute default.
 - The SDK now caches API version compatibility checks and the client's own assembly version, removing repeated parsing and reflection from every request.
 
-## Bug Fixes
+#### Bug Fixes
 - Fixed redistributable scripts being left out of the game manifest.
 - Fixed a failing packaging script faulting the entire automatic repackaging job, which triggered Hangfire's automatic retries and re-ran the whole job up to ten times with a growing delay.
 - Fixed the HQ login popup announcing success even when the token exchange had failed, while the server logged the opposite.
@@ -674,7 +674,7 @@ Actions, scripts, and save paths can now be scoped to a specific runtime platfor
 - Fixed a retry of HQ authentication that failed the same way as the previous attempt leaving the page waiting indefinitely.
 - Fixed a dead `IsAuthenticated: true` line being written into `Settings.yml` that could never be read back.
 
-## Contributions
+#### Contributions
 This release includes contributions from the following community members:
 
 **@aaronpowell**
@@ -686,9 +686,45 @@ This release includes contributions from the following community members:
 
 </details>
 
+### 2.1.13
+<details>
+<summary>View 2.1.13 patch notes</summary>
+
+#### Improvements
+- Switching tabs on a game edit page is now much faster.
+- Errors in the server UI are now scoped to the part of the page that failed. A tab that fails to load leaves the page header and tab menu usable instead of replacing the entire screen with a crash page.
+- The crash page now offers a **Back** button alongside **Copy Error**.
+- Data tables in the server UI now report load failures instead of spinning forever.
+- Dependency updates across the project to clear outstanding CVEs.
+
+#### Bug Fixes
+- Fixed the launcher's local media cache going stale.
+- Fixed the server not marking a game as modified when its media changed, which left launchers with no way to notice the change during an import.
+- Fixed `#Requires -RunAsAdministrator` and `# Requires Admin` only being recognized at the very start of a script. The directive is now matched on any line, in any casing, and with leading whitespace.
+- Fixed elevated script execution resolving the wrong LANCommander data directory.
+
+#### Contributions
+This release includes contributions from the following community members:
+
+**@aaronpowell**
+- PR [#448](https://github.com/LANCommander/LANCommander/pull/448): Move Launcher Visual-Diff PR Comment To `workflow_run` Trigger
+- PR [#450](https://github.com/LANCommander/LANCommander/pull/450): Refresh LoginView Visual Baseline
+- PR [#453](https://github.com/LANCommander/LANCommander/pull/453): CVE Fixes
+
+<ReleaseDownloads release="v2.1.13" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.13" />
+
+<details>
+<summary>View 2.1.12 downloads</summary>
+
 <ReleaseDownloads release="v2.1.12" />
+
+</details>
 
 <details>
 <summary>View 2.1.11 downloads</summary>
@@ -776,4 +812,4 @@ This release includes contributions from the following community members:
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.12" />
+<ContributorGrid from="v2.0.2" to="v2.1.13" />

@@ -116,6 +116,24 @@ void WinInetHttpClient::set_bearer_token(const std::string& token)
     m_bearer = token;
 }
 
+void WinInetHttpClient::set_client_version(const std::string& version)
+{
+    m_client_version = version;
+}
+
+// Headers common to every request. Both are conditional: an unauthenticated
+// call has no bearer, and a consumer that never set a version sends none
+// rather than an empty header.
+void WinInetHttpClient::append_default_headers(std::string& headers) const
+{
+    if (!m_bearer.empty()) {
+        headers += "Authorization: Bearer " + m_bearer + "\r\n";
+    }
+    if (!m_client_version.empty()) {
+        headers += "X-API-Version: " + m_client_version + "\r\n";
+    }
+}
+
 HINTERNET WinInetHttpClient::open_request(const char* verb, const std::string& path,
                                            HINTERNET* conn_out, bool follow_redirects)
 {
@@ -194,9 +212,7 @@ HttpResponse WinInetHttpClient::request(const char* verb, const std::string& pat
     if (!content_type.empty()) {
         headers += "Content-Type: " + content_type + "\r\n";
     }
-    if (!m_bearer.empty()) {
-        headers += "Authorization: Bearer " + m_bearer + "\r\n";
-    }
+    append_default_headers(headers);
 
     void* body_ptr = body.empty() ? NULL : const_cast<char*>(body.data());
     DWORD body_len = static_cast<DWORD>(body.size());
@@ -261,9 +277,7 @@ HttpResponse WinInetHttpClient::head(const std::string& path,
          it != extra_headers.end(); ++it) {
         headers += it->first + ": " + it->second + "\r\n";
     }
-    if (!m_bearer.empty()) {
-        headers += "Authorization: Bearer " + m_bearer + "\r\n";
-    }
+    append_default_headers(headers);
 
     if (HttpSendRequestA(req,
                          headers.empty() ? NULL : headers.c_str(),
@@ -318,9 +332,7 @@ bool WinInetHttpClient::download(const std::string& path,
     }
 
     std::string headers;
-    if (!m_bearer.empty()) {
-        headers += "Authorization: Bearer " + m_bearer + "\r\n";
-    }
+    append_default_headers(headers);
 
     bool ok = false;
     if (HttpSendRequestA(req,

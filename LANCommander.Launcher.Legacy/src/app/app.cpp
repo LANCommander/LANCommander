@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include "app/app.h"
+#include "version.h"
 #include "gfx/gfx.h"
 #include "app/logger.h"
 #include "app/paths.h"
@@ -93,6 +94,7 @@ namespace launcher
 
         // --- SDK clients ---
         m_http = new lancommander::WinInetHttpClient();
+        m_http->set_client_version(LC_LAUNCHER_VERSION);
         m_auth = new lancommander::AuthenticationClient(*m_http);
         m_connection = new lancommander::ConnectionClient(*m_http);
         m_games = new lancommander::GameClient(*m_http);
@@ -108,11 +110,13 @@ namespace launcher
         m_image_cache = new ui::ImageCache(*m_media, media_dir());
 
         m_prefetch_http = new lancommander::WinInetHttpClient();
+        m_prefetch_http->set_client_version(LC_LAUNCHER_VERSION);
         m_prefetch_media = new lancommander::MediaClient(*m_prefetch_http);
         m_prefetch = new MediaPrefetch(*m_prefetch_http, *m_prefetch_media, media_dir());
         m_image_cache->set_prefetch(m_prefetch);
 
         m_art_http = new lancommander::WinInetHttpClient();
+        m_art_http->set_client_version(LC_LAUNCHER_VERSION);
         m_art_games = new lancommander::GameClient(*m_art_http);
         m_art_fetcher = new GameArtFetcher(*m_art_http, *m_art_games);
 

@@ -1,4 +1,5 @@
 #include "ui/screen_settings.h"
+#include "version.h"
 #include "ui/theme.h"
 #include "ui/icons.h"
 #include "ui/widgets.h"
@@ -60,6 +61,12 @@ namespace launcher
             // Title
             draw_text(buf, back_x + back_w + 12, header_y + (header_h - th) / 2,
                       theme().text_bright, "Settings");
+
+            // Build version, right-aligned in the header bar so it never
+            // collides with the title. Dimmed — it is reference information for
+            // bug reports, not something to draw the eye.
+            draw_text_right(buf, sw - pad, header_y + (header_h - th) / 2,
+                            theme().text_dim, "v" LC_LAUNCHER_VERSION);
 
             // --- Initialize form from settings on first visit ---
             if (!s_initialized)

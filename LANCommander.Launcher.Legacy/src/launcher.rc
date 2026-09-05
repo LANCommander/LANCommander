@@ -1,7 +1,0 @@
-// Application icon — shown in taskbar, Alt+Tab, and title bar.
-IDI_ICON1 ICON "launcher.ico"
-
-// The login backgrounds used to be embedded here as RCDATA and read with
-// FindResourceA. They now ship as files under assets/backgrounds/ and load
-// through decode_image_asset(), because RT_RCDATA is Win32-only and would
-// block a DOS build. The EXE icon has to stay a Win32 resource.

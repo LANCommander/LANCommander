@@ -18,6 +18,18 @@ public:
     virtual void set_base_url(const std::string& url) = 0;
     virtual void set_bearer_token(const std::string& token) = 0;
 
+    // Client version reported to the server on every request, as the
+    // "X-API-Version" header the .NET SDK already sends. The library has no
+    // version of its own to report here — the consuming launcher owns the
+    // product version and passes it in.
+    //
+    // Non-pure with a no-op default so existing backends keep compiling; a
+    // backend that does not implement it simply sends no version header.
+    virtual void set_client_version(const std::string& version)
+    {
+        (void)version;
+    }
+
     virtual void set_timeout_ms(int connect_ms, int recv_ms)
     {
         (void)connect_ms;

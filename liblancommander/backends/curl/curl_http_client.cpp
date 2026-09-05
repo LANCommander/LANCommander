@@ -59,6 +59,27 @@ void CurlHttpClient::set_bearer_token(const std::string& token)
     m_bearer = token;
 }
 
+void CurlHttpClient::set_client_version(const std::string& version)
+{
+    m_client_version = version;
+}
+
+// Headers common to every request. Both are conditional: an unauthenticated
+// call has no bearer, and a consumer that never set a version sends none
+// rather than an empty header.
+struct curl_slist* CurlHttpClient::append_default_headers(struct curl_slist* headers) const
+{
+    if (!m_bearer.empty()) {
+        std::string auth = "Authorization: Bearer " + m_bearer;
+        headers = curl_slist_append(headers, auth.c_str());
+    }
+    if (!m_client_version.empty()) {
+        std::string version = "X-API-Version: " + m_client_version;
+        headers = curl_slist_append(headers, version.c_str());
+    }
+    return headers;
+}
+
 void CurlHttpClient::apply_common(CURL* curl, const std::string& url)
 {
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -89,10 +110,8 @@ HttpResponse CurlHttpClient::request(const char* method, const std::string& path
         std::string ct = "Content-Type: " + content_type;
         headers = curl_slist_append(headers, ct.c_str());
     }
-    if (!m_bearer.empty()) {
-        std::string auth = "Authorization: Bearer " + m_bearer;
-        headers = curl_slist_append(headers, auth.c_str());
-    }
+    headers = append_default_headers(headers);
+
     if (headers)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
@@ -155,12 +174,9 @@ bool CurlHttpClient::download(const std::string& path,
     std::string url = m_base_url + path;
     apply_common(curl, url);
 
-    struct curl_slist* headers = nullptr;
-    if (!m_bearer.empty()) {
-        std::string auth = "Authorization: Bearer " + m_bearer;
-        headers = curl_slist_append(headers, auth.c_str());
+    struct curl_slist* headers = append_default_headers(nullptr);
+    if (headers)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    }
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_file_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
@@ -200,12 +216,9 @@ HttpResponse CurlHttpClient::post_multipart_file(const std::string& path,
     std::string url = m_base_url + path;
     apply_common(curl, url);
 
-    struct curl_slist* headers = nullptr;
-    if (!m_bearer.empty()) {
-        std::string auth = "Authorization: Bearer " + m_bearer;
-        headers = curl_slist_append(headers, auth.c_str());
+    struct curl_slist* headers = append_default_headers(nullptr);
+    if (headers)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    }
 
     curl_mime* mime = curl_mime_init(curl);
     curl_mimepart* part = curl_mime_addpart(mime);

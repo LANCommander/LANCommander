@@ -15,6 +15,7 @@ public:
 
     void set_base_url(const std::string& url) override;
     void set_bearer_token(const std::string& token) override;
+    void set_client_version(const std::string& version) override;
 
     void set_timeout_ms(int connect_ms, int recv_ms) override;
     HttpResponse head(const std::string& path,
@@ -44,9 +45,12 @@ private:
     // definition for why API calls must not follow a 302.
     HINTERNET open_request(const char* verb, const std::string& path,
                            HINTERNET* conn_out, bool follow_redirects);
+    // Appends the Authorization and X-API-Version headers shared by every verb.
+    void append_default_headers(std::string& headers) const;
 
     std::string m_base_url;
     std::string m_bearer;
+    std::string m_client_version;
     HINTERNET m_session;
     int m_connect_timeout_ms;
     int m_recv_timeout_ms;

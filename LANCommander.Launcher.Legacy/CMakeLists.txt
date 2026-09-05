@@ -1,5 +1,37 @@
 cmake_minimum_required(VERSION 3.16)
-project(LANCommander.Launcher.Legacy VERSION 1.0.0 LANGUAGES C CXX)
+
+# ---------------------------------------------------------------------------
+# Version
+# ---------------------------------------------------------------------------
+# Resolved from the repository's latest release tag rather than hardcoded here,
+# so the launcher reports the same version as the rest of the product without
+# anyone having to remember to bump this file.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(LauncherVersion)
+
+launcher_resolve_version()
+launcher_watch_git_head()
+
+message(STATUS "Launcher version: ${LAUNCHER_VERSION}")
+
+project(LANCommander.Launcher.Legacy
+        VERSION ${LAUNCHER_VERSION_MAJOR}.${LAUNCHER_VERSION_MINOR}.${LAUNCHER_VERSION_PATCH}
+        LANGUAGES C CXX)
+
+# version.h is included by app code; launcher.rc supplies the Win32
+# VERSIONINFO. Both are generated because neither format can call out to git.
+set(LAUNCHER_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(LAUNCHER_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/launcher.ico")
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in"
+    "${LAUNCHER_GENERATED_DIR}/version.h"
+    @ONLY)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/launcher.rc.in"
+    "${LAUNCHER_GENERATED_DIR}/launcher.rc"
+    @ONLY)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -217,7 +249,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../liblancommander
 # Launcher executable
 # ---------------------------------------------------------------------------
 add_executable(launcher WIN32
-    src/launcher.rc
+    "${LAUNCHER_GENERATED_DIR}/launcher.rc"
     src/main.cpp
     src/app/app.cpp
     src/app/settings.cpp
@@ -264,6 +296,7 @@ add_executable(launcher WIN32
 
 target_include_directories(launcher PRIVATE
     src/
+    "${LAUNCHER_GENERATED_DIR}"
     vendor/miniz/
     vendor/sqlite3/
     vendor/stb/

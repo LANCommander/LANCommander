@@ -73,6 +73,8 @@
     [Parameter] public RenderFragment<Game>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
 
+    [Parameter] public bool LoadRelationships { get; set; }
+
     Game Game { get; set; } = new Game();
     Guid _id;
 
@@ -81,19 +83,28 @@
         if (_id != Id)
         {
             _id = Id;
-            
-            if (_id != Guid.Empty)
-                Game = await GameService
+
+            if (_id == Guid.Empty)
+            {
+                Game = new Game();
+                return;
+            }
+
+            var query = GameService
+                .AsSplitQuery()
+                .Include(g => g.DependentGames);
+
+            if (LoadRelationships)
+                query = query
                     .Include(g => g.Actions)
                     .Include(g => g.BaseGame)
                     .Include(g => g.Categories)
                     .Include(g => g.Collections)
                     .Include(g => g.CreatedBy)
-                    .Include(g => g.DependentGames)
                     .Include(g => g.Developers)
                     .Include(g => g.Engine)
                     .Include(g => g.ExternalIds)
-                    .Include(g => g.Genres) 
+                    .Include(g => g.Genres)
                     .Include(g => g.Media)
                     .Include(g => g.MultiplayerModes)
                     .Include(g => g.Platforms)
@@ -101,10 +112,9 @@
                     .Include(g => g.Redistributables)
                     .Include(g => g.SavePaths)
                     .Include(g => g.Tags)
-                    .Include(g => g.UpdatedBy)
-                    .GetAsync(_id);
-            else
-                Game = new Game();
+                    .Include(g => g.UpdatedBy);
+
+            Game = await query.GetAsync(_id);
 
             if (Game == null)
                 NavigationManager.NavigateTo("/Games");

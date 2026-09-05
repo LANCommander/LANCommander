@@ -16,7 +16,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<General> Logger
 
-<GameEditView Id="Id">
+<GameEditView Id="Id" LoadRelationships>
     <TitleTemplate>
         @if (context.Id == Guid.Empty)
         {

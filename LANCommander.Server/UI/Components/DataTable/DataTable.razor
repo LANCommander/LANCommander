@@ -4,6 +4,7 @@
 @using LANCommander.Server.Models
 @using System.IO.Compression
 @using System.Linq.Expressions
+@using System.Runtime.ExceptionServices
 @using System.Text
 @using System.Text.Json
 @using Microsoft.EntityFrameworkCore
@@ -17,6 +18,13 @@
 @inject NavigationManager NavigationManager
 @inject DrawerService DrawerService
 @inject IJSRuntime JSRuntime
+
+@{
+    // AntDesign's ReloadAndInvokeChange() invokes OnChange without awaiting it, so a failed
+    // data load never reaches the renderer on its own. Rethrowing here routes it to the
+    // nearest ErrorBoundary instead of leaving the table spinning forever.
+    _loadException?.Throw();
+}
 
 <CascadingValue Name="DataTable" Value="@this">
     @if (Searchable || ColumnPicker || LeftToolbar != null || RightToolbar != null)
@@ -77,6 +85,7 @@
 
     string Search { get; set; } = "";
     string Url;
+    ExceptionDispatchInfo _loadException;
     bool DrawerOpen = false;
     bool _restored = false;
 
@@ -103,8 +112,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        NavigationManager.LocationChanged += LocationChanged;
-
         Url = NavigationManager.Uri;
 
         OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(this,
@@ -117,74 +124,83 @@
                 await InvokeAsync(StateHasChanged);
                 await Task.Yield();
 
-                using (var context = DatabaseContextFactory.CreateDbContext())
+                try
                 {
-                    var queryable = BuildQueryable(context, queryModel);
-
-                    Total = await queryable.CountAsync();
-
-                    if (TotalChanged.HasDelegate)
-                        await TotalChanged.InvokeAsync(Total);
-
-                    if (HidePagination)
-                        DataSource = await queryable.ToListAsync();
-                    else if (queryModel != null)
-                        DataSource = await queryable.CurrentPagedRecords(queryModel).ToListAsync();
-                    else
-                        DataSource = await queryable.Take(PageSize).ToListAsync();
-
-                    if (Children != null)
+                    using (var context = DatabaseContextFactory.CreateDbContext())
                     {
-                        _children = new Dictionary<Guid, IEnumerable<TItem>>();
+                        var queryable = BuildQueryable(context, queryModel);
 
-                        var childrenQueryable = context
-                            .Set<TItem>()
-                            .AsQueryable()
-                            .AsNoTracking()
-                            .AsSplitQuery();
+                        Total = await queryable.CountAsync();
 
-                        foreach (var include in Includes)
+                        if (TotalChanged.HasDelegate)
+                            await TotalChanged.InvokeAsync(Total);
+
+                        if (HidePagination)
+                            DataSource = await queryable.ToListAsync();
+                        else if (queryModel != null)
+                            DataSource = await queryable.CurrentPagedRecords(queryModel).ToListAsync();
+                        else
+                            DataSource = await queryable.Take(PageSize).ToListAsync();
+
+                        if (Children != null)
                         {
-                            childrenQueryable = childrenQueryable.Include(include);
+                            _children = new Dictionary<Guid, IEnumerable<TItem>>();
+
+                            var childrenQueryable = context
+                                .Set<TItem>()
+                                .AsQueryable()
+                                .AsNoTracking()
+                                .AsSplitQuery();
+
+                            foreach (var include in Includes)
+                            {
+                                childrenQueryable = childrenQueryable.Include(include);
+                            }
+
+                            foreach (var item in DataSource)
+                            {
+                                var childPredicate = InjectParent(Children, item);
+                                var children = await childrenQueryable.Where(childPredicate).ToListAsync();
+
+                                if (children.Any())
+                                    _children[item.Id] = children;
+                            }
+
+                            TreeChildren = item =>
+                            {
+                                return _children.ContainsKey(item.Id) ? _children[item.Id] : [];
+                            };
                         }
 
-                        foreach (var item in DataSource)
-                        {
-                            var childPredicate = InjectParent(Children, item);
-                            var children = await childrenQueryable.Where(childPredicate).ToListAsync();
-
-                            if (children.Any())
-                                _children[item.Id] = children;
-                        }
-
-                        TreeChildren = item =>
-                        {
-                            return _children.ContainsKey(item.Id) ? _children[item.Id] : [];
-                        };
+                        await base.OnParametersSetAsync();
+                        base.OnParametersSet();
                     }
 
-                    await base.OnParametersSetAsync();
-                    base.OnParametersSet();
-                }
-
-                if (_restored)
-                {
-                    try
+                    if (_restored)
                     {
-                        var activeSorts = queryModel.SortModel
-                            .Where(s => s.SortDirection != AntDesign.SortDirection.None)
-                            .ToList<ITableSortModel>();
+                        try
+                        {
+                            var activeSorts = queryModel.SortModel
+                                .Where(s => s.SortDirection != AntDesign.SortDirection.None)
+                                .ToList<ITableSortModel>();
 
-                        var sortState = new QueryModel<TItem>(1, PageSize, 0, activeSorts, new List<ITableFilterModel>());
+                            var sortState = new QueryModel<TItem>(1, PageSize, 0, activeSorts, new List<ITableFilterModel>());
 
-                        await JSRuntime.InvokeVoidAsync("localStorage.setItem", SortStorageKey, JsonSerializer.Serialize<QueryModel<TItem>>(sortState));
+                            await JSRuntime.InvokeVoidAsync("localStorage.setItem", SortStorageKey, JsonSerializer.Serialize<QueryModel<TItem>>(sortState));
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
-
-                Loading = false;
-                await InvokeAsync(StateHasChanged);
-                await Task.Yield();
+                catch (Exception ex)
+                {
+                    _loadException = ExceptionDispatchInfo.Capture(ex);
+                }
+                finally
+                {
+                    Loading = false;
+                    await InvokeAsync(StateHasChanged);
+                    await Task.Yield();
+                }
             });
 
         OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(this, async (args) =>
@@ -279,6 +295,18 @@
         }
 
         await base.OnParametersSetAsync();
+
+        // This used to hang off NavigationManager.LocationChanged, but AntDesign's Table
+        // implements IAsyncDisposable, so the framework never calls the plain Dispose() this
+        // component declared: the subscription leaked and kept firing for tables that were long
+        // gone. Comparing the URL on each parameter set gives the same signal with nothing to
+        // clean up.
+        if (Url != NavigationManager.Uri)
+        {
+            Url = NavigationManager.Uri;
+
+            await LoadTableParameter();
+        }
     }
 
     Expression<Func<TItem, bool>> InjectParent<TItem>(
@@ -377,12 +405,6 @@
         NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
     }
 
-    async void LocationChanged(object sender, LocationChangedEventArgs e)
-    {
-        Url = e.Location;
-        await LoadTableParameter();
-    }
-
     async Task LoadTableParameter()
     {
         await InvokeStateHasChangedAsync();
@@ -479,10 +501,5 @@
         await Task.Yield();
         
         ReloadData(PageIndex, PageSize);
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

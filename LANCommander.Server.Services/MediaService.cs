@@ -35,25 +35,33 @@ namespace LANCommander.Server.Services
         public override async Task<Media> AddAsync(Media entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
-            
-            return await base.AddAsync(entity, async context =>
+
+            var media = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(m => m.Game);
                 await context.UpdateRelationshipAsync(m => m.Parent);
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
+
+            await TouchGamesAsync(media.GameId ?? entity.GameId);
+
+            return media;
         }
 
         public override async Task<Media> UpdateAsync(Media entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
-            
-            return await base.UpdateAsync(entity, async context =>
+
+            var media = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(m => m.Game);
                 await context.UpdateRelationshipAsync(m => m.Parent);
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
+
+            await TouchGamesAsync(media.GameId ?? entity.GameId);
+
+            return media;
         }
 
         public override async Task DeleteAsync(Media entity)
@@ -63,17 +71,61 @@ namespace LANCommander.Server.Services
             await cache.ExpireGameCacheAsync(entity.GameId);
 
             await base.DeleteAsync(entity);
+
+            await TouchGamesAsync(entity.GameId);
         }
 
         public override async Task DeleteRangeAsync(IEnumerable<Media> entities)
         {
-            DeleteLocalMediaFiles(entities);
+            var materialized = entities as IReadOnlyCollection<Media> ?? entities.ToList();
 
-            var gameIds = entities.Select(x => x.GameId).Distinct();
+            DeleteLocalMediaFiles(materialized);
+
+            var gameIds = materialized.Select(x => x.GameId).Distinct().ToArray();
             var expirationTasks = gameIds.Select(gameId => cache.ExpireGameCacheAsync(gameId));
             await Task.WhenAll(expirationTasks);
 
-            await base.DeleteRangeAsync(entities);
+            await base.DeleteRangeAsync(materialized);
+
+            await TouchGamesAsync(gameIds);
+        }
+
+        private async Task TouchGamesAsync(params Guid?[] gameIds)
+        {
+            var ids = gameIds
+                .Where(id => id.HasValue && id.Value != Guid.Empty)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            if (ids.Count == 0)
+                return;
+
+            try
+            {
+                using var context = await contextFactory.CreateDbContextAsync();
+
+                var games = await context.Set<Data.Models.Game>()
+                    .Where(g => ids.Contains(g.Id))
+                    .ToListAsync();
+
+                if (games.Count == 0)
+                    return;
+
+                var timestamp = DateTime.UtcNow;
+
+                foreach (var game in games)
+                    game.UpdatedOn = timestamp;
+
+                await context.SaveChangesAsync();
+
+                foreach (var id in ids)
+                    await cache.ExpireGameCacheAsync(id);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Could not update the modified timestamp for game(s) {GameIds} after a media change", string.Join(", ", ids));
+            }
         }
 
         public static bool FileExists(Media entity)

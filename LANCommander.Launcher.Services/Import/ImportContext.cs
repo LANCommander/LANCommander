@@ -21,6 +21,8 @@ public class ImportContext
     private Queue<IImportItemInfo> Queue { get; } = new();
     public List<IImportItemInfo> FailedItems { get; } = new();
     internal List<PendingMediaDownload> PendingMediaDownloads { get; } = new();
+
+    private readonly Dictionary<Guid, HashSet<Guid>> _manifestMediaIds = new();
     
     private readonly CollectionImporter _collections;
     private readonly DeveloperImporter _developers;
@@ -59,6 +61,8 @@ public class ImportContext
     public async Task AddAsync(Game game)
     {
         var gameId = game.Id;
+
+        _manifestMediaIds[gameId] = game.Media?.Select(m => m.Id).ToHashSet() ?? [];
 
         await AddAsync(game, game.Collections, _collections, gameId);
         await AddAsync(game, game.Developers, _developers, gameId);
@@ -220,6 +224,14 @@ public class ImportContext
         await Task.WhenAll(tasks);
 
         _logger.LogInformation("Media download complete");
+    }
+
+    public async Task ReconcileMediaAsync()
+    {
+        var removed = await _mediaService.RemoveMissingAsync(_manifestMediaIds);
+
+        if (removed > 0)
+            _logger.LogInformation("Removed {Count} media file(s) that are no longer present on the server", removed);
     }
 
     private void SetupContextOnImporters()

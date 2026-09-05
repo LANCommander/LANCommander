@@ -48,15 +48,19 @@
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
 
-	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
-		<Message Text="Compiling global SCSS files" Importance="high" />
-		<Exec Command="npm run package" />
-	</Target>
-
     <ItemGroup>
         <ComponentScssFiles Remove="node_modules\**" />
         <TypeScriptCompile Remove="node_modules\**" />
+        <FrontendSourceFiles Include="Styles\**\*.scss" />
+        <FrontendSourceFiles Include="package.json;package-lock.json;webpack.config.js" />
     </ItemGroup>
+
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile"
+	        Inputs="@(FrontendSourceFiles)"
+	        Outputs="wwwroot\css\app.css">
+		<Message Text="Compiling global SCSS files" Importance="high" />
+		<Exec Command="npm run package" />
+	</Target>
 
     <ItemGroup>
         <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />

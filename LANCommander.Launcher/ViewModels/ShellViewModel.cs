@@ -512,6 +512,7 @@ public partial class ShellViewModel : ViewModelBase
                     Id          = localGame.Id,
                     Title       = localGame.Title ?? "Unknown",
                     SortTitle   = localGame.SortTitle,
+                    Notes       = localGame.Notes,
                     Description = localGame.Description,
                     ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue,
                 };

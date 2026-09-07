@@ -56,7 +56,11 @@
                 <Input @bind-Value="@context.SortTitle" />
             </FormItem>
             <FormItem Label="Notes">
-                <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                <MarkdownEditor
+                    @bind-Value="context.Notes"
+                    SpellChecker="false"
+                    CSSClass="ant-typography"
+                    MinHeight="200px" />
             </FormItem>
             <FormItem Label="Description">
                 <MarkdownEditor

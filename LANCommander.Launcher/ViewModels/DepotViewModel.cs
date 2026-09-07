@@ -360,6 +360,7 @@ public partial class DepotViewModel : ViewModelBase
                         Id          = local.Id,
                         Title       = local.Title ?? "Unknown",
                         SortTitle   = local.SortTitle,
+                        Notes       = local.Notes,
                         Description = local.Description,
                         ReleasedOn  = local.ReleasedOn ?? DateTime.MinValue
                     });

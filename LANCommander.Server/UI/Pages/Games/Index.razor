@@ -40,14 +40,14 @@
 
         <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
 
-        <BoundDataColumn Property="g => g.MultiplayerModes" Include="MultiplayerModes" Sortable Title="Multiplayer">
+        <BoundDataColumn Property="g => g.MultiplayerModes.Any()" Include="MultiplayerModes" Sortable Title="Multiplayer">
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
         </BoundDataColumn>
 
-        <BoundDataColumn Property="g => g.Keys" Title="Total Keys" Include="Keys" Sortable>
+        <BoundDataColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable>
             @context.Keys?.Count
         </BoundDataColumn>
-        <BoundDataColumn Property="g => g.Keys" Title="Keys Allocated" Include="Keys" Sortable>
+        <BoundDataColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable>
             @context.Keys?.Count(k => k.ClaimedOn.HasValue)
         </BoundDataColumn>
 
@@ -107,11 +107,11 @@
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
 
-        <BoundDataColumn Property="g => g.CreatedBy" Sortable Title="Created By" Include="CreatedBy">
+        <BoundDataColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Sortable Title="Created By" Include="CreatedBy">
             @context.CreatedBy?.UserName
         </BoundDataColumn>
 
-        <BoundDataColumn Property="g => g.UpdatedBy" Title="Updated By" Sortable Include="UpdatedBy">
+        <BoundDataColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy">
             @context.UpdatedBy?.UserName
         </BoundDataColumn>
 

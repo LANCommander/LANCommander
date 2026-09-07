@@ -37,7 +37,10 @@ namespace LANCommander.Server.Services
         
         public async Task<Key> AllocateAsync(Key key, User user)
         {
+            ArgumentNullException.ThrowIfNull(user);
+
             key.ClaimedByUser = user;
+            key.ClaimedByUserId = user.Id;
             key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.UserAccount;
 
@@ -48,6 +51,9 @@ namespace LANCommander.Server.Services
 
         public async Task<Key> AllocateAsync(Key key, string macAddress)
         {
+            if (String.IsNullOrWhiteSpace(macAddress))
+                throw new ArgumentException("A MAC address is required to allocate a key by MAC address.", nameof(macAddress));
+
             key.ClaimedByMacAddress = macAddress;
             key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.MacAddress;
@@ -70,6 +76,7 @@ namespace LANCommander.Server.Services
         public async Task<Key> ReleaseAsync(Key key)
         {
             key.ClaimedByUser = null;
+            key.ClaimedByUserId = null;
             key.ClaimedByMacAddress = null;
             key.ClaimedOn = null;
             key.AllocationMethod = null;

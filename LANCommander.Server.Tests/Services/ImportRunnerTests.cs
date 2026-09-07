@@ -1,6 +1,7 @@
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
-using LANCommander.Server.ImportExport.Services;
+using LANCommander.Server.ImportExport;
+using LANCommander.Server.ImportExport.Factories;
 using LANCommander.Server.Services;
 using Shouldly;
 
@@ -20,41 +21,53 @@ public class ImportRunnerTests(ApplicationFixture fixture) : BaseTest(fixture)
     private const string FixtureFileName = "lotrbfme2.lcx";
 
     [Fact]
-    public async Task RunAsyncImportsGameFromUploadedPackage()
+    public async Task ImportingAnUploadedPackageCreatesTheGame()
     {
-        var archiveService = GetService<ArchiveService>();
         var gameService = GetService<GameService>();
-        var importRunner = GetService<ImportRunner>();
+        var storageLocationService = GetService<StorageLocationService>();
+        var importContext = GetService<ImportContextFactory>().Create();
 
-        var objectKey = await StageUploadedPackageAsync();
+        var (objectKey, storageLocation) = await StageUploadedPackageAsync();
 
-        var result = await importRunner.RunAsync(objectKey);
+        var path = Path.Combine(storageLocation.Path, objectKey.ToString());
 
-        result.ManifestType.ShouldBe(ManifestType.Game);
-        result.RecordId.ShouldNotBe(Guid.Empty);
-        result.ImportedCount.ShouldBeGreaterThan(0);
+        var items = (await importContext.InitializeImportAsync(path)).ToList();
 
-        // The importers key entities off the manifest id, so the created game is addressable
-        // by the id the runner reported.
-        var game = await gameService.GetAsync(result.RecordId);
+        items.ShouldNotBeEmpty();
+
+        await importContext.PrepareImportQueueAsync([], storageLocation.Id);
+        await importContext.ImportQueueAsync();
+
+        importContext.Processed.ShouldBeGreaterThan(0);
+
+        // The importers key entities off the manifest id, so the created game is addressable by
+        // the id the package declared.
+        var manifest = importContext.Manifest.ShouldBeOfType<SDK.Models.Manifest.Game>();
+
+        var game = await gameService.GetAsync(manifest.Id);
 
         game.ShouldNotBeNull();
         game.Title.ShouldNotBeNullOrWhiteSpace();
+
+        importContext.Dispose();
     }
 
     [Fact]
-    public async Task RunAsyncThrowsForUnknownObjectKey()
+    public async Task ImportingAnUnknownObjectKeyThrows()
     {
-        var importRunner = GetService<ImportRunner>();
+        var importContext = GetService<ImportContextFactory>().Create();
 
-        await Should.ThrowAsync<Exception>(() => importRunner.RunAsync(Guid.NewGuid()));
+        await Should.ThrowAsync<Exception>(() =>
+            importContext.InitializeImportAsync(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.lcx")));
+
+        importContext.Dispose();
     }
 
     /// <summary>
     /// Mimics what the chunked upload endpoints leave behind: the package sitting in the
     /// default archive storage location under an object key, with a matching Archive row.
     /// </summary>
-    private async Task<Guid> StageUploadedPackageAsync()
+    private async Task<(Guid ObjectKey, StorageLocation StorageLocation)> StageUploadedPackageAsync()
     {
         var storageLocationService = GetService<StorageLocationService>();
         var archiveService = GetService<ArchiveService>();
@@ -86,6 +99,6 @@ public class ImportRunnerTests(ApplicationFixture fixture) : BaseTest(fixture)
             StorageLocationId = storageLocation.Id,
         });
 
-        return objectKey;
+        return (objectKey, storageLocation);
     }
 }

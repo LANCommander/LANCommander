@@ -71,7 +71,9 @@ public class GameImporter(
 
     public override async Task<bool> UpdateAsync(Game record)
     {
-        var existing = await gameService.FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
+        var existing = await gameService
+            .Include(g => g.ExternalIds)
+            .FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
 
         try
         {

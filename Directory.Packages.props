@@ -183,7 +183,12 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.0" />
     <PackageVersion Include="System.Text.Json" Version="9.0.1" />
-    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.95.0" />
+    <!-- Pinned to the 0.21.x line: 0.94.0 renamed Connection/ConnectionOptions/Variant
+         to DBusConnection/etc., which Avalonia.FreeDesktop 11.2.3 is compiled against.
+         Anything >= 0.94 makes the launcher die at X11 startup with a TypeLoadException.
+         0.21.3 is the backported fix for GHSA-xrw6-gwf8-vvr9; do not bump past 0.21.x
+         until Avalonia itself moves to the renamed API. -->
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.21.3" />
   </ItemGroup>
   <ItemGroup Label="Caching">
     <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />

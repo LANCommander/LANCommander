@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.13** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.14** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -715,9 +715,37 @@ This release includes contributions from the following community members:
 
 </details>
 
+### 2.1.14
+<details>
+<summary>View 2.1.14 patch notes</summary>
+
+#### Improvements
+- Game icons can now be pulled straight out of a Windows executable. Uploading a `.exe` to a game's **Icon** media slot extracts the executable's primary icon and stores it as an ICO. Icons are also now decoded when generating thumbnails, and thumbnails are served with the type they were actually encoded as rather than the source media's.
+- The **Notes** field is now added back into the new Avalonia-based launcher. It has also been updated to support markdown.
+
+#### Bug Fixes
+- Fixed updating a game wiping out its archives and other related records. Relationships that hadn't been loaded were being read by the change tracker as "remove every reference", so editing something as small as a description could drop a game's archive. Fixes [#456](https://github.com/LANCommander/LANCommander/issues/456).
+- Fixed the launcher failing to start on some Linux distributions. `Tmds.DBus.Protocol` is pinned back to 0.21.3; newer versions cause X11 startup failures.
+- Fixed a game with the **user account** or **MAC address** allocation method handing out a key without a valid user or MAC address to allocate it to.
+- Fixed key availability being decided by whether an allocation method was set rather than whether the key was already allocated.
+- Fixed browsing between games, or opening and closing the key editor, producing duplicate keys or leaving one game's keys visible on another.
+- Fixed blank or missing usernames in a manifest blocking redistributable, server, and tool imports.
+- Fixed the games list not being sortable by **Multiplayer**, **Total Keys**, **Keys Allocated**, **Created By**, and **Updated By**.
+
+<ReleaseDownloads release="v2.1.14" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.14" />
+
+<details>
+<summary>View 2.1.13 downloads</summary>
+
 <ReleaseDownloads release="v2.1.13" />
+
+</details>
 
 <details>
 <summary>View 2.1.12 downloads</summary>
@@ -812,4 +840,4 @@ This release includes contributions from the following community members:
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.13" />
+<ContributorGrid from="v2.0.2" to="v2.1.14" />

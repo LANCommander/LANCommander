@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
@@ -13,6 +13,7 @@ using SixLabors.ImageSharp.Formats.Webp;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.PE;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,8 @@ namespace LANCommander.Server.Services
         StorageLocationService storageLocationService,
         MediaToolService mediaToolService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public const long MaxIconSourceExecutableSize = 50 * 1024 * 1024;
+
         public override async Task<Media> AddAsync(Media entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
@@ -214,6 +217,28 @@ namespace LANCommander.Server.Services
             return media;
         }
 
+        /// <summary>
+        /// Extracts the primary icon out of a Windows executable and stores it as an ICO.
+        /// </summary>
+        /// <exception cref="InvalidDataException">
+        /// The upload exceeds <see cref="MaxIconSourceExecutableSize"/>, is not a PE binary, or carries no
+        /// icon resources.
+        /// </exception>
+        public async Task<Media> WriteIconFromExecutableAsync(Media media, Stream executable, CancellationToken cancellationToken = default)
+        {
+            using var extractor = await PEIconExtractor.FromStreamAsync(executable, MaxIconSourceExecutableSize, cancellationToken);
+
+            var icon = extractor.ExtractPrimaryIcon()
+                ?? throw new InvalidDataException("The executable does not contain any icons.");
+
+            media.SourceUrl = String.Empty;
+            media.MimeType = IconFile.MimeType;
+
+            using var stream = new MemoryStream(icon, writable: false);
+
+            return await WriteToFileAsync(media, stream);
+        }
+
         public async Task<string> GenerateThumbnailAsync(Media media, int quality = 75)
         {
             var source = GetMediaPath(media);
@@ -252,7 +277,10 @@ namespace LANCommander.Server.Services
 
                 if (config != null && config.Thumbnails.Enabled)
                 {
-                    using (var image = await Image.LoadAsync<Rgba32>(stream))
+                    // ImageSharp has no ICO decoder, so icons are unpacked by our own PE/ICO reader.
+                    using (var image = IsIcon(media)
+                               ? IconFile.DecodeLargestFrame(stream)
+                               : await Image.LoadAsync<Rgba32>(stream))
                     {
                         int thumbsizeX = (int)Math.Clamp(image.Width * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Width, config.Thumbnails.MaxSize.Width);
                         int thumbsizeY = (int)Math.Clamp(image.Height * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Height, config.Thumbnails.MaxSize.Height);
@@ -265,7 +293,7 @@ namespace LANCommander.Server.Services
 
                         image.Mutate(context => context.Resize(resizeOptions));
 
-                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && (media.MimeType == MediaTypeNames.Image.Png || media.MimeType == MediaTypeNames.Image.Webp) && HasTransparentPixels(image))
+                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && (media.MimeType == MediaTypeNames.Image.Png || media.MimeType == MediaTypeNames.Image.Webp || IsIcon(media)) && HasTransparentPixels(image))
                         {
                             await image.SaveAsPngAsync(destination);
                         }
@@ -291,6 +319,10 @@ namespace LANCommander.Server.Services
 
             return destination;
         }
+
+        /// <summary>Both the legacy and the IANA-registered MIME type turn up on ICO uploads.</summary>
+        private static bool IsIcon(Media media) =>
+            media.MimeType.ValueIsIn(IconFile.MimeType, "image/vnd.microsoft.icon");
 
         private bool HasTransparentPixels(Image<Rgba32> image)
         {

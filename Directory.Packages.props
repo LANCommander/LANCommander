@@ -32,6 +32,7 @@
     <PackageVersion Include="XtermBlazor" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup Label="Utility">
+    <PackageVersion Include="AsmResolver.PE.Win32Resources" Version="6.0.1" />
     <PackageVersion Include="ByteSize" Version="2.1.2" />
     <PackageVersion Include="CaseConverter" Version="2.0.1" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />

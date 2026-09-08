@@ -5,6 +5,34 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---------------------------------------------------------------------------
+# MS-DOS (DJGPP)
+# ---------------------------------------------------------------------------
+# The cross toolchain leaves CMAKE_SYSTEM_NAME as Generic, so the target is
+# detected from the compiler. cmake/toolchain-djgpp.cmake also sets
+# LANCOMMANDER_TARGET_DOS; this makes a standalone configure work without it.
+include(CheckCSourceCompiles)
+check_c_source_compiles(
+    "#ifndef __DJGPP__
+#error not djgpp
+#endif
+int main(void){return 0;}"
+    LANCOMMANDER_COMPILER_IS_DJGPP)
+
+if(LANCOMMANDER_COMPILER_IS_DJGPP)
+    set(LANCOMMANDER_TARGET_DOS TRUE)
+endif()
+
+# Watt-32 is the only TCP/IP stack available to a DOS program, and it is a
+# separate build (see LANCommander.Launcher.Legacy/tools/setup-watt32.sh).
+# Without it the SDK still builds; it just has no HTTP backend to offer.
+set(WATT32_ROOT "" CACHE PATH
+    "Watt-32 checkout containing inc/ and lib/libwatt.a (MS-DOS builds)")
+
+if(LANCOMMANDER_TARGET_DOS AND WATT32_ROOT)
+    set(PICOPOSH_WATT32_ROOT "${WATT32_ROOT}" CACHE PATH "" FORCE)
+endif()
+
+# ---------------------------------------------------------------------------
 # Vendored dependencies
 # ---------------------------------------------------------------------------
 add_library(cjson STATIC vendor/cjson/cJSON.c)
@@ -142,6 +170,11 @@ endif()
 # Platform socket libraries for BeaconClient
 if(WIN32)
     target_link_libraries(lancommander PRIVATE ws2_32)
+elseif(LANCOMMANDER_TARGET_DOS AND WATT32_ROOT)
+    # PUBLIC: lancommander is static, so the consumer's link line is where
+    # socket() and sock_init() actually have to resolve.
+    target_include_directories(lancommander PUBLIC "${WATT32_ROOT}/inc")
+    target_link_libraries(lancommander PUBLIC "${WATT32_ROOT}/lib/libwatt.a")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -156,6 +189,30 @@ if(WIN32)
         PRIVATE include/
     )
     target_link_libraries(lancommander_wininet PUBLIC lancommander wininet)
+endif()
+
+# ---------------------------------------------------------------------------
+# Watt-32 backend (MS-DOS only)
+# ---------------------------------------------------------------------------
+if(LANCOMMANDER_TARGET_DOS)
+    if(WATT32_ROOT AND EXISTS "${WATT32_ROOT}/inc/tcp.h")
+        add_library(lancommander_watt32 STATIC
+            backends/watt32/watt32_http_client.cpp
+        )
+        target_include_directories(lancommander_watt32
+            PUBLIC  backends/watt32/
+            PRIVATE include/
+        )
+        target_link_libraries(lancommander_watt32 PUBLIC lancommander)
+        message(STATUS "lancommander: HTTP over Watt-32 (MS-DOS)")
+    else()
+        message(FATAL_ERROR
+            "MS-DOS build with no Watt-32. There is no other TCP/IP stack on "
+            "DOS, so the launcher would have no way to reach a server.
+"
+            "Build it with LANCommander.Launcher.Legacy/tools/setup-watt32.sh "
+            "and pass -DWATT32_ROOT=<dir>.")
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------

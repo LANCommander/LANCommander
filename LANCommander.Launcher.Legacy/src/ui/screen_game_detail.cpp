@@ -15,13 +15,16 @@
 
 #include "gfx/gfx.h"
 
-#include <windows.h>
+#include "app/fs.h"
+#include "app/process.h"
+
 #include <cstdio>
 #include <cstring>
 
 #ifdef _WIN32
-// Game launching (CreateProcess / ShellExecute) is application domain, not
-// rendering — it stays Win32 and is not part of the gfx seam.
+// Only for act_browse_files below, which is the one action with no meaning
+// on a platform that has no file manager.
+#include <windows.h>
 #include <shellapi.h>
 #endif
 
@@ -44,7 +47,7 @@ namespace launcher
 
         // Running game tracking
         static std::string s_running_game_id;
-        static void *s_process_handle = NULL; // HANDLE
+        static void *s_process_handle = NULL; // app/process.h handle
         static bool s_is_running = false;
         static bool s_is_starting = false;
 
@@ -365,7 +368,6 @@ namespace launcher
         static bool launch_action(App &app, const lancommander::Action &action,
                                   std::string *error_out)
         {
-#ifdef _WIN32
             std::string install_dir = s_game.install_directory;
             normalize_slashes(install_dir);
             std::string server_addr = app.connection().get_server_address();
@@ -389,34 +391,12 @@ namespace launcher
                     cwd = join_path(install_dir, cwd);
             }
 
-            SHELLEXECUTEINFOA info;
-            memset(&info, 0, sizeof(info));
-            info.cbSize = sizeof(info);
-            info.fMask = SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS;
-            info.lpVerb = "open";
-            info.lpFile = path.c_str();
-            info.lpParameters = args.empty() ? NULL : args.c_str();
-            info.lpDirectory = cwd.empty() ? NULL : cwd.c_str();
-            info.nShow = SW_SHOWNORMAL;
+            // On DOS this does not return until the game has exited: see
+            // app/process.h. Everything below is the same either way, which
+            // is the point of the seam.
+            s_process_handle = process_start(path, args, cwd, error_out);
 
-            if (!ShellExecuteExA(&info))
-            {
-                if (error_out)
-                {
-                    char buf[128];
-                    sprintf(buf, "Launch failed (error %lu)", GetLastError());
-                    *error_out = buf;
-                }
-                return false;
-            }
-
-            s_process_handle = info.hProcess;
-            return true;
-#else
-            if (error_out)
-                *error_out = "Launch not supported on this platform";
-            return false;
-#endif
+            return s_process_handle != NULL;
         }
 
         // A run started: record it locally AND tell the server. Both, because
@@ -448,7 +428,6 @@ namespace launcher
 
         static void poll_running_state(App &app)
         {
-#ifdef _WIN32
             if (!s_process_handle)
             {
                 s_is_running = false;
@@ -456,12 +435,12 @@ namespace launcher
                 return;
             }
 
-            DWORD result = WaitForSingleObject((HANDLE)s_process_handle, 0);
-            if (result == WAIT_OBJECT_0)
+            if (!process_running(s_process_handle))
             {
-                // Process exited on its own — the user quit the game rather
-                // than pressing Stop.
-                CloseHandle((HANDLE)s_process_handle);
+                // The game exited on its own — the user quit it rather than
+                // pressing Stop. On DOS this is the state on the very first
+                // poll, because the launch was synchronous.
+                process_close(s_process_handle);
                 s_process_handle = NULL;
                 s_is_running = false;
                 s_is_starting = false;
@@ -474,22 +453,19 @@ namespace launcher
                 s_is_running = true;
                 s_is_starting = false;
             }
-#endif
         }
 
         static void stop_running_game()
         {
-#ifdef _WIN32
             if (s_process_handle)
             {
-                TerminateProcess((HANDLE)s_process_handle, 0);
-                CloseHandle((HANDLE)s_process_handle);
+                process_terminate(s_process_handle);
+                process_close(s_process_handle);
                 s_process_handle = NULL;
                 s_is_running = false;
                 s_is_starting = false;
                 s_running_game_id.clear();
             }
-#endif
         }
 
 
@@ -531,9 +507,9 @@ namespace launcher
 
             log_info("Install clicked: %s -> %s", s_game.title.c_str(), install_root.c_str());
 
-            CreateDirectoryA(install_root.c_str(), NULL);
+            fs_mkdir(install_root);
             const std::string game_dir = install_root + "\\" + s_game.title;
-            CreateDirectoryA(game_dir.c_str(), NULL);
+            fs_mkdir(game_dir);
 
             app.downloads().enqueue(s_game.id, s_game.title, game_dir, !s_game.in_library);
             s_status_message = "Added to download queue";
@@ -616,18 +592,26 @@ namespace launcher
         static void act_browse_files(App &app)
         {
             (void)app;
-#ifdef _WIN32
+
             if (s_game.install_directory.empty())
                 return;
+
             std::string dir = s_game.install_directory;
             normalize_slashes(dir);
+
+#ifdef _WIN32
             ShellExecuteA(NULL, "explore", dir.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#else
+            // DOS has no file manager to hand the directory to. Showing the
+            // path is the useful half of what the button does, rather than
+            // having it look broken.
+            s_status_message = "Installed at " + dir;
+            s_status_color = theme().text_dim;
 #endif
         }
 
         static void act_uninstall(App &app)
         {
-#ifdef _WIN32
             std::string dir = s_game.install_directory;
             normalize_slashes(dir);
 
@@ -663,15 +647,15 @@ namespace launcher
                 for (size_t c = 0; c < rel.size(); ++c)
                     if (rel[c] == '/') rel[c] = '\\';
 
-                if (DeleteFileA((dir + "\\" + rel).c_str()))
+                if (fs_remove(dir + "\\" + rel))
                     deleted++;
             }
             fclose(fl);
 
-            DeleteFileA(list_path.c_str());
-            RemoveDirectoryA((dir + "\\.lancommander\\" + s_game.id).c_str());
-            RemoveDirectoryA((dir + "\\.lancommander").c_str());
-            RemoveDirectoryA(dir.c_str());
+            fs_remove(list_path);
+            fs_rmdir(dir + "\\.lancommander\\" + s_game.id);
+            fs_rmdir(dir + "\\.lancommander");
+            fs_rmdir(dir);
 
             s_game.install_directory.clear();
             s_actions.clear();
@@ -684,11 +668,6 @@ namespace launcher
             sprintf(msg_buf, "Uninstalled (%d files removed)", deleted);
             s_status_message = msg_buf;
             s_status_color = theme().success;
-#else
-            (void)app;
-            s_status_message = "Uninstall not supported on this platform";
-            s_status_color = theme().error;
-#endif
         }
 
         static void act_add_to_library(App &app)
@@ -1556,9 +1535,9 @@ namespace launcher
 
                     log_info("Install (dialog): %s -> %s", s_game.title.c_str(), install_root.c_str());
 
-                    CreateDirectoryA(install_root.c_str(), NULL);
+                    fs_mkdir(install_root);
                     std::string game_dir = install_root + "\\" + s_game.title;
-                    CreateDirectoryA(game_dir.c_str(), NULL);
+                    fs_mkdir(game_dir);
 
                     bool needs_lib_add = !s_game.in_library;
                     app.downloads().enqueue(s_game.id, s_game.title, game_dir, needs_lib_add);

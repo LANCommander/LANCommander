@@ -1,9 +1,8 @@
-#include <windows.h>
-
 #include "app/app.h"
 #include "version.h"
 #include "gfx/gfx.h"
 #include "app/logger.h"
+#include "app/fs.h"
 #include "app/paths.h"
 #include "app/time_util.h"
 #include "ui/input.h"
@@ -24,8 +23,16 @@
 #include <algorithm>
 #include <cctype>
 
-// Pull in the WinINet backend header (resolved via include paths from CMake).
+// The HTTP backend, resolved through the include path CMake sets for
+// whichever one it linked. One typedef rather than an ifdef at each of the
+// three construction sites below.
+#ifdef __DJGPP__
+#include "watt32_http_client.h"
+typedef lancommander::Watt32HttpClient PlatformHttpClient;
+#else
 #include "wininet_http_client.h"
+typedef lancommander::WinInetHttpClient PlatformHttpClient;
+#endif
 
 namespace launcher
 {
@@ -68,7 +75,7 @@ namespace launcher
     bool App::init(int width, int height)
     {
         // Create the Data directory structure.
-        CreateDirectoryA(data_dir().c_str(), NULL);
+        fs_mkdir(data_dir());
 
         log_init(log_dir().c_str());
 
@@ -84,7 +91,15 @@ namespace launcher
         ui::chrome_platform_init(this);
 
         // --- Theme ---
-        ui::theme_init();
+        if (!ui::theme_init())
+        {
+            // On DOS this is nearly always the long filename question:
+            // "Inter-Regular.ttf" is not an 8.3 name, so without DOSLFN the
+            // file is there and cannot be opened by that name.
+            log_error("Font init failed: could not load %s",
+                      app_path("assets/fonts/Inter-Regular.ttf").c_str());
+            return false;
+        }
 
         // --- Settings ---
         m_settings.load(settings_file().c_str());
@@ -93,7 +108,7 @@ namespace launcher
         m_game_db.open(game_db_file().c_str());
 
         // --- SDK clients ---
-        m_http = new lancommander::WinInetHttpClient();
+        m_http = new PlatformHttpClient();
         m_http->set_client_version(LC_LAUNCHER_VERSION);
         m_auth = new lancommander::AuthenticationClient(*m_http);
         m_connection = new lancommander::ConnectionClient(*m_http);
@@ -109,13 +124,13 @@ namespace launcher
         image_decoder_init();
         m_image_cache = new ui::ImageCache(*m_media, media_dir());
 
-        m_prefetch_http = new lancommander::WinInetHttpClient();
+        m_prefetch_http = new PlatformHttpClient();
         m_prefetch_http->set_client_version(LC_LAUNCHER_VERSION);
         m_prefetch_media = new lancommander::MediaClient(*m_prefetch_http);
         m_prefetch = new MediaPrefetch(*m_prefetch_http, *m_prefetch_media, media_dir());
         m_image_cache->set_prefetch(m_prefetch);
 
-        m_art_http = new lancommander::WinInetHttpClient();
+        m_art_http = new PlatformHttpClient();
         m_art_http->set_client_version(LC_LAUNCHER_VERSION);
         m_art_games = new lancommander::GameClient(*m_art_http);
         m_art_fetcher = new GameArtFetcher(*m_art_http, *m_art_games);

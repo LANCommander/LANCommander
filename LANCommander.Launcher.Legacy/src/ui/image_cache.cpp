@@ -4,7 +4,8 @@
 
 #include <lancommander/clients/media_client.h>
 
-#include <windows.h>
+#include "app/fs.h"
+
 #include <cstdio>
 
 namespace launcher
@@ -17,7 +18,7 @@ namespace launcher
               m_decodes_this_frame(0), m_max_entries(DEFAULT_MAX_ENTRIES)
         {
             m_cache_dir = media_dir;
-            CreateDirectoryA(m_cache_dir.c_str(), NULL);
+            fs_mkdir(m_cache_dir);
         }
 
         ImageCache::~ImageCache()
@@ -41,20 +42,14 @@ namespace launcher
             // An empty file is treated as absent: see ImageCache::get.
             bool file_has_content(const std::string &path)
             {
-                // FindFirstFile rather than GetFileAttributesEx, which is not
-                // on Windows 95.
-                WIN32_FIND_DATAA find;
-                HANDLE h = FindFirstFileA(path.c_str(), &find);
-                if (h == INVALID_HANDLE_VALUE)
-                    return false;
-                FindClose(h);
+                const long long size = fs_file_size(path);
 
-                if (find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                if (size < 0)
                     return false;
 
-                if (find.nFileSizeHigh == 0 && find.nFileSizeLow == 0)
+                if (size == 0)
                 {
-                    DeleteFileA(path.c_str());
+                    fs_remove(path);
                     return false;
                 }
                 return true;

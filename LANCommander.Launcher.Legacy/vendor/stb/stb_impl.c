@@ -25,3 +25,11 @@
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
+
+/* stb_truetype backs font_stb.cpp, which is the DOS build's text renderer.
+ * Gated so the SDL and Allegro builds -- which rasterise through SDL_ttf and
+ * GDI -- do not carry a second, unused rasteriser. */
+#ifdef LAUNCHER_FONT_STB
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+#endif

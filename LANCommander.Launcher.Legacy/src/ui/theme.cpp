@@ -126,9 +126,9 @@ namespace launcher
             }
         } // namespace
 
-        void theme_init()
+        bool theme_init()
         {
-            font_init(13);
+            return font_init(13);
         }
 
         void theme_shutdown()

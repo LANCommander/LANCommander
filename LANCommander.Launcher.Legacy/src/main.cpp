@@ -14,8 +14,12 @@
 // Transitional, along with the rest of the Allegro backend.
 #include <allegro.h>
 #include <winalleg.h>
-#else
+#elif defined(_WIN32)
 #include <windows.h>
+#else
+// DOS: no window manager, so a startup failure is reported on the console
+// the launcher was started from.
+#include <cstdio>
 #endif
 
 #include "app/app.h"
@@ -33,8 +37,19 @@ int main(int argc, char *argv[])
 
     if (!app.init(WINDOW_W, WINDOW_H))
     {
+#ifdef _WIN32
         MessageBoxA(NULL, "Failed to initialize the launcher.",
                     "LANCommander", MB_OK | MB_ICONERROR);
+#else
+        // The two things that actually go wrong on DOS, in the order they
+        // are hit. The log says which one it was.
+        std::fprintf(stderr,
+                     "LANCommander: failed to initialise.\n"
+                     "  * no VESA VBE 2.0 mode with a linear frame buffer, or\n"
+                     "  * assets could not be opened -- load DOSLFN, the asset\n"
+                     "    names are longer than 8.3.\n"
+                     "The log under Data\\LOGS says which.\n");
+#endif
         return 1;
     }
 

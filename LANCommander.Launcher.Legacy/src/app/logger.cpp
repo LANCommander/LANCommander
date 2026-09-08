@@ -4,7 +4,7 @@
 #include <cstdarg>
 #include <ctime>
 
-#include <windows.h>
+#include "app/fs.h"
 
 namespace launcher
 {
@@ -17,17 +17,26 @@ namespace launcher
             return;
 
         // Ensure the log directory exists.
-        CreateDirectoryA(log_dir, NULL);
+        fs_mkdir(log_dir);
 
-        // Build a timestamped filename: launcher-YYYY-MM-DD-HHMMSS.log
         time_t now = time(NULL);
         struct tm *t = localtime(&now);
 
-        char path[MAX_PATH];
+        char path[512];
+#ifdef __DJGPP__
+        // 8.3 unless a long filename driver is loaded, and a log the
+        // launcher could not open is exactly the one you need when
+        // something has gone wrong. LCddHHMM.LOG fits, and collides
+        // only with a run started in the same minute of the same day.
+        sprintf(path, "%s\\LC%02d%02d%02d.LOG",
+                log_dir, t->tm_mday, t->tm_hour, t->tm_min);
+#else
+        // launcher-YYYY-MM-DD-HHMMSS.log
         sprintf(path, "%s\\launcher-%04d-%02d-%02d-%02d%02d%02d.log",
                 log_dir,
                 t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
                 t->tm_hour, t->tm_min, t->tm_sec);
+#endif
 
         s_log_file = fopen(path, "w");
         if (s_log_file)

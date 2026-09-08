@@ -4,9 +4,8 @@
 #include <lancommander/clients/game_client.h>
 #include <lancommander/clients/library_client.h>
 
-#include <windows.h>
-#include <process.h>
-#include <direct.h>
+#include "app/fs.h"
+#include "app/worker.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -35,7 +34,8 @@ namespace launcher
         return true; // continue
     }
 
-    static unsigned __stdcall dl_thread_fn(void *param)
+    // WorkerFn (app/worker.h): a thread on Windows, inline on DOS.
+    static void dl_thread_fn(void *param)
     {
         DlThreadCtx *ctx = (DlThreadCtx *)param;
         ctx->item->status = DownloadStatus::Downloading;
@@ -54,14 +54,20 @@ namespace launcher
         }
 
         // Generate temp file path.
-        char temp_dir[MAX_PATH];
-        char temp_file[MAX_PATH];
-        GetTempPathA(MAX_PATH, temp_dir);
-        GetTempFileNameA(temp_dir, "lcl", 0, temp_file);
+        const std::string temp_file = fs_temp_file("lcl");
+        if (temp_file.empty())
+        {
+            ctx->item->error = "Could not create a temporary file";
+            ctx->item->status = DownloadStatus::Failed;
+            log_error("Download failed: no temp file for %s",
+                      ctx->item->title.c_str());
+            *ctx->done_flag = true;
+            return;
+        }
         ctx->item->dest_path = temp_file;
 
         auto result = ctx->games->download(ctx->item->game_id,
-                                           std::string(temp_file),
+                                           temp_file,
                                            [ctx](uint64_t r, uint64_t t) -> bool
                                            {
                                                return dl_progress_cb(r, t, ctx);
@@ -73,9 +79,9 @@ namespace launcher
             ctx->item->status = DownloadStatus::Failed;
             log_error("Download failed: %s - %s",
                       ctx->item->title.c_str(), ctx->item->error.c_str());
-            DeleteFileA(temp_file);
+            fs_remove(temp_file);
             *ctx->done_flag = true;
-            return 0;
+            return;
         }
 
         // --- Extract the archive with miniz ---
@@ -85,24 +91,24 @@ namespace launcher
         ctx->item->status = DownloadStatus::Extracting;
         ctx->item->progress = 0.0f;
 
-        CreateDirectoryA(ctx->item->install_dir.c_str(), NULL);
+        fs_mkdir(ctx->item->install_dir);
 
-        FILE *zip_file = fopen(temp_file, "rb");
+        FILE *zip_file = fopen(temp_file.c_str(), "rb");
         if (!zip_file)
         {
             ctx->item->error = "Could not open archive";
             ctx->item->status = DownloadStatus::Failed;
-            log_error("Extraction failed: fopen(%s) errno=%d", temp_file, errno);
-            DeleteFileA(temp_file);
+            log_error("Extraction failed: fopen(%s) errno=%d", temp_file.c_str(), errno);
+            fs_remove(temp_file);
             *ctx->done_flag = true;
-            return 0;
+            return;
         }
 
         // Get file size for the log.
         fseek(zip_file, 0, SEEK_END);
         long zip_size = ftell(zip_file);
         fseek(zip_file, 0, SEEK_SET);
-        log_info("Download complete: %s (%ld bytes)", temp_file, zip_size);
+        log_info("Download complete: %s (%ld bytes)", temp_file.c_str(), zip_size);
 
         mz_zip_archive zip;
         memset(&zip, 0, sizeof(zip));
@@ -112,9 +118,9 @@ namespace launcher
             ctx->item->status = DownloadStatus::Failed;
             log_error("Extraction failed: miniz init err=%d", (int)zip.m_last_error);
             fclose(zip_file);
-            DeleteFileA(temp_file);
+            fs_remove(temp_file);
             *ctx->done_flag = true;
-            return 0;
+            return;
         }
 
         unsigned int file_count = mz_zip_reader_get_num_files(&zip);
@@ -145,7 +151,7 @@ namespace launcher
 
             if (mz_zip_reader_is_file_a_directory(&zip, i))
             {
-                CreateDirectoryA(dest.c_str(), NULL);
+                fs_mkdir(dest);
             }
             else
             {
@@ -155,7 +161,7 @@ namespace launcher
                     if (dest[p] == '\\' && p > 2) // skip "C:\"
                     {
                         std::string parent = dest.substr(0, p);
-                        CreateDirectoryA(parent.c_str(), NULL);
+                        fs_mkdir(parent);
                     }
                 }
 
@@ -203,15 +209,15 @@ namespace launcher
 
         mz_zip_reader_end(&zip);
         fclose(zip_file);
-        DeleteFileA(temp_file);
+        fs_remove(temp_file);
 
         if (extract_ok)
         {
             // Write FileList.txt to .lancommander/{GameId}/ inside install dir.
             std::string meta_dir = ctx->item->install_dir + "\\.lancommander";
-            CreateDirectoryA(meta_dir.c_str(), NULL);
+            fs_mkdir(meta_dir);
             meta_dir += "\\" + ctx->item->game_id;
-            CreateDirectoryA(meta_dir.c_str(), NULL);
+            fs_mkdir(meta_dir);
 
             std::string list_path = meta_dir + "\\FileList.txt";
             FILE *fl = fopen(list_path.c_str(), "w");
@@ -233,7 +239,7 @@ namespace launcher
         }
 
         *ctx->done_flag = true;
-        return 0;
+        return;
     }
 
     DownloadQueue::DownloadQueue()
@@ -245,8 +251,7 @@ namespace launcher
     {
         if (m_thread)
         {
-            WaitForSingleObject((HANDLE)m_thread, INFINITE);
-            CloseHandle((HANDLE)m_thread);
+            worker_join(m_thread);
         }
     }
 
@@ -267,8 +272,7 @@ namespace launcher
         // Check if the active download thread finished.
         if (m_thread && m_thread_done)
         {
-            WaitForSingleObject((HANDLE)m_thread, INFINITE);
-            CloseHandle((HANDLE)m_thread);
+            worker_join(m_thread);
             m_thread = NULL;
             m_thread_done = false;
             m_active_idx = -1;
@@ -344,18 +348,13 @@ namespace launcher
                 s_ctx->item = &m_items[i];
                 s_ctx->done_flag = &m_thread_done;
 
-                unsigned thread_id = 0;
-                m_thread = (void *)_beginthreadex(NULL, 0, dl_thread_fn, s_ctx, 0, &thread_id);
+                m_thread = worker_start(dl_thread_fn, s_ctx);
                 if (!m_thread)
                 {
-                    log_error("Failed to create download thread (errno=%d)", errno);
+                    log_error("Failed to start the download worker");
                     m_items[i].status = DownloadStatus::Failed;
-                    m_items[i].error = "Failed to create download thread";
+                    m_items[i].error = "Failed to start the download worker";
                     m_active_idx = -1;
-                }
-                else
-                {
-                    log_info("Download thread created (tid=%u)", thread_id);
                 }
                 return;
             }

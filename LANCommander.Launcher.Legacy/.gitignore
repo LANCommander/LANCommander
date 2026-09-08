@@ -11,6 +11,13 @@ out-*/
 vendor/allegro4/
 allegro4-win9x/
 
+# The DJGPP cross toolchain and CWSDPMI, fetched by tools/setup-djgpp.sh.
+vendor/djgpp/
+
+# A portable DOSBox-X, if one was unpacked here to smoke-test the DOS
+# build. See tools/dosbox-x-test.conf.
+vendor/dosbox-x/
+
 # IDE files
 .vs/
 .vscode/

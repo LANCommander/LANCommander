@@ -11,6 +11,20 @@
     using socket_t = SOCKET;
     #define INVALID_SOCK INVALID_SOCKET
     #define CLOSE_SOCKET closesocket
+#elif defined(__DJGPP__)
+    // MS-DOS: Watt-32 supplies the BSD API, including select() and
+    // gettimeofday(). Its headers have to be reached through <tcp.h> first,
+    // and a socket is closed with closesocket() rather than close() —
+    // sockets and file descriptors are separate namespaces here, so close()
+    // would silently act on an unrelated open file.
+    #include <tcp.h>
+    #include <sys/socket.h>
+    #include <sys/select.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    using socket_t = int;
+    #define INVALID_SOCK (-1)
+    #define CLOSE_SOCKET closesocket
 #else
     #include <sys/socket.h>
     #include <sys/select.h>
@@ -38,6 +52,19 @@ struct WinsockInit {
         if (ok) WSACleanup();
     }
 };
+#elif defined(__DJGPP__)
+struct Watt32Init {
+    bool ok;
+    Watt32Init() {
+        // Watt-32 prints and exits the process when it cannot come up, which
+        // for a launcher sitting in a VESA mode means an unreadable screen.
+        _watt_do_exit = 0;
+        survive_eth = 1;
+        survive_bootp = 1;
+        survive_dhcp = 1;
+        ok = (sock_init() == 0);
+    }
+};
 #endif
 
 } // anonymous namespace
@@ -48,6 +75,14 @@ Result<std::vector<DiscoveredServer>> BeaconClient::discover(unsigned int timeou
     WinsockInit wsa;
     if (!wsa.ok)
         return Result<std::vector<DiscoveredServer>>::fail("Winsock startup failed");
+#elif defined(__DJGPP__)
+    // Static: Watt-32 is brought up once per process and stays up, matching
+    // how the HTTP backend uses it. A per-call sock_exit() would tear the
+    // stack out from under an in-flight download.
+    static Watt32Init watt;
+    if (!watt.ok)
+        return Result<std::vector<DiscoveredServer>>::fail(
+            "No TCP/IP: is a packet driver loaded?");
 #endif
 
     socket_t s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

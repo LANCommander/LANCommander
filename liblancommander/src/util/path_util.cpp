@@ -14,6 +14,9 @@
 #endif
 
 #include <cstdio>
+// std::time, for the temp-name seed below. glibc drags it in through
+// one of the POSIX headers above; DJGPP does not.
+#include <ctime>
 #include <vector>
 
 namespace lancommander {

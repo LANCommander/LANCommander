@@ -45,17 +45,72 @@ set(CMAKE_C_STANDARD 99)
 # ---------------------------------------------------------------------------
 option(TARGET_WIN9X "Target Windows 95/98 (subsystem 4.0, no DWM/GDI+ link)" OFF)
 
+# MSYS2's mingw-w64 i686 GCC is configured --with-arch=pentium4, so SSE2 is
+# its baseline and it emits xmm instructions freely -- even for something as
+# ordinary as storing eight bytes at once in a static initialiser. On a
+# Pentium II or K6 that is an illegal opcode and the process dies with
+# "executed an invalid instruction" before main() ever runs.
+#
+# STBI_NO_SIMD / STBIR_NO_SIMD further down only disable stb's hand-written
+# intrinsics; they say nothing about what the compiler generates. This is the
+# setting that does. It is deliberately at directory scope rather than on the
+# launcher target so SDL3, SDL_ttf, FreeType, SQLite, miniz and
+# liblancommander all inherit it -- add_subdirectory() picks up directory
+# properties, and a target_compile_options() on `launcher` would not.
+#
+# i586 rather than i686 keeps plain Pentium and K6 in range, and still has
+# CMPXCHG8B, which 64-bit std::atomic needs. -mtune=i686 then schedules for
+# the machines this realistically runs on. tools/isa-scan.sh is the gate that
+# proves it stuck.
+if(TARGET_WIN9X AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C,CXX>:-march=i586>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:-mtune=i686>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:-mfpmath=387>")
+    message(STATUS "Win9x: instruction floor -march=i586 -mtune=i686 -mfpmath=387")
+endif()
+
 # Off by default so the normal launcher build stays lean, matching
 # liblancommander's LANCOMMANDER_BUILD_TESTS convention.
 option(LAUNCHER_BUILD_TESTS "Build the launcher's headless unit tests" OFF)
 
 set(LAUNCHER_GFX_BACKEND "sdl3" CACHE STRING
-    "Graphics backend: 'sdl3' (current) or 'allegro' (transitional)")
-set_property(CACHE LAUNCHER_GFX_BACKEND PROPERTY STRINGS allegro sdl3)
+    "Graphics backend: 'sdl3' (current), 'allegro' (transitional) or 'dos'")
+set_property(CACHE LAUNCHER_GFX_BACKEND PROPERTY STRINGS allegro sdl3 dos)
 
-if(NOT LAUNCHER_GFX_BACKEND MATCHES "^(allegro|sdl3)$")
+if(NOT LAUNCHER_GFX_BACKEND MATCHES "^(allegro|sdl3|dos)$")
     message(FATAL_ERROR
-        "LAUNCHER_GFX_BACKEND must be 'allegro' or 'sdl3', got '${LAUNCHER_GFX_BACKEND}'")
+        "LAUNCHER_GFX_BACKEND must be 'allegro', 'sdl3' or 'dos', "
+        "got '${LAUNCHER_GFX_BACKEND}'")
+endif()
+
+# MS-DOS via DJGPP. Detected from the compiler because the cross toolchain
+# leaves CMAKE_SYSTEM_NAME as Generic; cmake/toolchain-djgpp.cmake also sets
+# LANCOMMANDER_TARGET_DOS, and either is enough.
+include(CheckCSourceCompiles)
+check_c_source_compiles(
+    "#ifndef __DJGPP__
+#error not djgpp
+#endif
+int main(void){return 0;}"
+    LAUNCHER_COMPILER_IS_DJGPP)
+
+if(LAUNCHER_COMPILER_IS_DJGPP)
+    set(LANCOMMANDER_TARGET_DOS TRUE)
+endif()
+
+if(LANCOMMANDER_TARGET_DOS AND NOT LAUNCHER_GFX_BACKEND STREQUAL "dos")
+    message(FATAL_ERROR
+        "A DJGPP build needs -DLAUNCHER_GFX_BACKEND=dos. Neither SDL3 nor "
+        "Allegro 4.4 has a DOS target: Allegro dropped DOS after 4.2, and "
+        "SDL3 has no DOS video driver.")
+endif()
+
+if(LAUNCHER_GFX_BACKEND STREQUAL "dos" AND NOT LANCOMMANDER_TARGET_DOS)
+    message(FATAL_ERROR
+        "LAUNCHER_GFX_BACKEND=dos needs the DJGPP cross compiler. Configure "
+        "with -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-djgpp.cmake, or run "
+        "./build-dos.sh.")
 endif()
 
 message(STATUS "Launcher graphics backend: ${LAUNCHER_GFX_BACKEND}")
@@ -109,6 +164,26 @@ if(LAUNCHER_GFX_BACKEND STREQUAL "allegro")
         src/ui/clipboard_win32.cpp
         src/ui/font_gdi.cpp)
     set(LAUNCHER_BACKEND_DEFINE LAUNCHER_BACKEND_ALLEGRO)
+endif()
+
+# ---------------------------------------------------------------------------
+# Backend: MS-DOS (VESA VBE 2.0 + BIOS/INT 33h + stb_truetype)
+# ---------------------------------------------------------------------------
+# No third-party graphics library at all: gfx_dos.cpp is both the software
+# rasteriser and the display driver. Text comes from stb_truetype rather than
+# SDL_ttf, and the clipboard is the process-local one the tests already use --
+# DOS has no system clipboard to talk to.
+if(LAUNCHER_GFX_BACKEND STREQUAL "dos")
+    set(WATT32_ROOT "" CACHE PATH
+        "Watt-32 checkout containing inc/ and lib/libwatt.a")
+
+    set(LAUNCHER_GFX_SOURCES
+        src/gfx/gfx_dos.cpp
+        src/ui/input_dos.cpp
+        src/ui/chrome_platform_dos.cpp
+        src/ui/clipboard_null.cpp
+        src/ui/font_stb.cpp)
+    set(LAUNCHER_BACKEND_DEFINE LAUNCHER_BACKEND_DOS)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -174,6 +249,16 @@ if(LAUNCHER_GFX_BACKEND STREQUAL "sdl3")
     set(SDL_RENDER_D3D12  OFF CACHE BOOL "" FORCE)
     set(SDL_RENDER_VULKAN OFF CACHE BOOL "" FORCE)
     set(SDL_RENDER_GPU    OFF CACHE BOOL "" FORCE)
+
+    if(TARGET_WIN9X)
+        # SDL's hand-written SSE/MMX kernels (YUV conversion, the audio
+        # resampler) are runtime-dispatched behind SDL_HasSSE2(), so they
+        # would not actually execute on a pre-SSE2 CPU. They are still ~10k
+        # instructions of dead weight in a binary that must not contain any,
+        # and they drown out real offenders in tools/isa-scan.sh. One switch
+        # turns off the whole SDL_SSE*/SDL_AVX*/SDL_MMX family.
+        set(SDL_ASSEMBLY OFF CACHE BOOL "" FORCE)
+    endif()
 
     add_subdirectory(vendor/sdl3 ${CMAKE_CURRENT_BINARY_DIR}/sdl3 EXCLUDE_FROM_ALL)
 
@@ -248,8 +333,38 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../liblancommander
 # ---------------------------------------------------------------------------
 # Launcher executable
 # ---------------------------------------------------------------------------
-add_executable(launcher WIN32
-    "${LAUNCHER_GENERATED_DIR}/launcher.rc"
+# The platform half of the two seams that are not graphics: background work
+# (threads on Windows, inline on DOS) and the handful of filesystem calls.
+# SQLite's VFS is a third, but it is a C file next to the amalgamation rather
+# than a seam of ours.
+if(LANCOMMANDER_TARGET_DOS)
+    set(LAUNCHER_SQLITE_OS_SOURCES vendor/sqlite3/sqlite3_os_dos.c)
+    set(LAUNCHER_PLATFORM_SOURCES
+        src/app/worker_dos.cpp
+        src/app/fs_dos.cpp
+        src/app/process_dos.cpp)
+else()
+    set(LAUNCHER_SQLITE_OS_SOURCES "")
+    set(LAUNCHER_PLATFORM_SOURCES
+        src/app/worker_win32.cpp
+        src/app/fs_win32.cpp
+        src/app/process_win32.cpp)
+endif()
+
+# launcher.rc is a Win32 VERSIONINFO/ICON resource and the WIN32 flag asks for
+# -mwindows; neither means anything to a DOS COFF image, and windres is not
+# part of the DJGPP toolchain.
+if(LANCOMMANDER_TARGET_DOS)
+    set(LAUNCHER_EXE_OPTIONS "")
+    set(LAUNCHER_RESOURCES "")
+else()
+    set(LAUNCHER_EXE_OPTIONS WIN32)
+    set(LAUNCHER_RESOURCES "${LAUNCHER_GENERATED_DIR}/launcher.rc")
+endif()
+
+add_executable(launcher ${LAUNCHER_EXE_OPTIONS}
+    ${LAUNCHER_RESOURCES}
+    ${LAUNCHER_PLATFORM_SOURCES}
     src/main.cpp
     src/app/app.cpp
     src/app/settings.cpp
@@ -269,6 +384,7 @@ add_executable(launcher WIN32
     vendor/miniz/miniz_tinfl.c
     vendor/miniz/miniz_zip.c
     vendor/sqlite3/sqlite3.c
+    ${LAUNCHER_SQLITE_OS_SOURCES}
     vendor/stb/stb_impl.c
     src/ui/theme.cpp
     src/ui/widgets.cpp
@@ -312,19 +428,49 @@ add_custom_command(TARGET launcher POST_BUILD
 
 target_compile_definitions(launcher PRIVATE MINIZ_NO_EXPORT ${LAUNCHER_BACKEND_DEFINE})
 
+if(LANCOMMANDER_TARGET_DOS)
+    # SQLite's Unix VFS does not build for DJGPP -- its own __DJGPP__ shim is
+    # stale, and the surrounding code wants ETIMEDOUT, nanosleep, statfs and
+    # fcntl locking. SQLITE_OS_OTHER swaps the whole VFS out for
+    # sqlite3_os_dos.c instead of patching a vendored amalgamation. Set on
+    # these two sources rather than the target so nothing else inherits a
+    # SQLITE_ define.
+    set_source_files_properties(
+        vendor/sqlite3/sqlite3.c
+        vendor/sqlite3/sqlite3_os_dos.c
+        PROPERTIES COMPILE_DEFINITIONS
+            "SQLITE_OS_OTHER=1;SQLITE_THREADSAFE=0;SQLITE_OMIT_WAL;SQLITE_OMIT_LOAD_EXTENSION;SQLITE_MAX_MMAP_SIZE=0;SQLITE_TEMP_STORE=2;SQLITE_DISABLE_DIRSYNC")
+
+    target_compile_definitions(launcher PRIVATE
+        # Instantiates stb_truetype in stb_impl.c; font_stb.cpp is the only
+        # consumer, so the SDL and Allegro builds do not carry it.
+        LAUNCHER_FONT_STB
+        # stb otherwise auto-detects and emits SSE2 (AVX2 in resize2). The
+        # DOS floor is a 386 with a DPMI host, where either is an illegal
+        # opcode. Same reason as TARGET_WIN9X below.
+        STBI_NO_SIMD
+        STBIR_NO_SIMD)
+endif()
+
 # Link the SDK statically — pulls in cjson automatically
 target_link_libraries(launcher
     lancommander
 )
 
-# Link the WinINet HTTP backend on Windows
+# Link an HTTP backend: WinINet on Windows, Watt-32 on DOS. Both are separate
+# targets so the SDK itself stays backend-agnostic.
 if(WIN32)
     target_link_libraries(launcher lancommander_wininet)
+elseif(LANCOMMANDER_TARGET_DOS)
+    target_link_libraries(launcher lancommander_watt32)
 endif()
 
 # Backend libraries
 if(LAUNCHER_GFX_BACKEND STREQUAL "allegro")
     target_link_libraries(launcher ${ALLEGRO_LIBRARIES})
+elseif(LAUNCHER_GFX_BACKEND STREQUAL "dos")
+    # Nothing: the DOS backend talks to the BIOS and the frame buffer through
+    # DJGPP's own DPMI helpers, which are in libc.
 else()
     target_link_libraries(launcher SDL3_ttf::SDL3_ttf-static SDL3::SDL3-static)
 endif()

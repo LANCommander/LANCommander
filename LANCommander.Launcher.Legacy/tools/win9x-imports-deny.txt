@@ -22,8 +22,13 @@ GetNativeSystemInfo           # XP
 IsWow64Process                # XP SP2
 GetLogicalProcessorInformation # XP SP3
 HeapSetInformation            # XP SP2
+AddVectoredExceptionHandler   # XP. SDL3 thread/windows names threads for a debugger.
+RemoveVectoredExceptionHandler # XP
 GetUserDefaultUILanguage      # 2000
 GlobalMemoryStatusEx          # 2000
+VerifyVersionInfoA            # 2000. SDL3 core/windows version checks.
+VerifyVersionInfoW            # 2000
+VerSetConditionMask           # 2000
 
 # --- Windows Vista+ ---
 GetTickCount64                # Vista. SDL3 src/timer/windows uses this.

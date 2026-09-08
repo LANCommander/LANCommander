@@ -43,6 +43,31 @@ if [ "$BACKEND" != "allegro" ] && [ "$BACKEND" != "sdl3" ]; then
     exit 1
 fi
 
+# The CPU floor for the target. MSYS2's i686 GCC defaults to -march=pentium4,
+# so without this every object -- ours and the vendored libraries' -- carries
+# SSE2 and dies with an invalid-instruction fault on a Pentium II or K6.
+# The launcher's own CMakeLists applies this itself for TARGET_WIN9X; Allegro
+# is a separate CMake project, so it has to be passed in below.
+WIN9X_ISA_FLAGS="-march=i586 -mtune=i686 -mfpmath=387"
+
+# The stock MSYS2 compiler cannot produce a binary this target can run: its
+# prebuilt libstdc++, libmingwex and libpthread are compiled for pentium4, and
+# std::locale/std::ctype initialise during static construction, so the process
+# dies on an SSE2 opcode before main(). tools/build-i586-toolchain.sh builds a
+# GCC whose runtime is i586; use it when it is there, and say plainly what the
+# binary is worth when it is not.
+WIN9X_TOOLCHAIN="${WIN9X_TOOLCHAIN:-/opt/i586-win9x}"
+TOOLCHAIN_ARGS=()
+if [ -x "$WIN9X_TOOLCHAIN/bin/gcc.exe" ]; then
+    TOOLCHAIN_ARGS=(
+        -DCMAKE_C_COMPILER="$WIN9X_TOOLCHAIN/bin/gcc.exe"
+        -DCMAKE_CXX_COMPILER="$WIN9X_TOOLCHAIN/bin/g++.exe"
+    )
+    TOOLCHAIN_DESC="$WIN9X_TOOLCHAIN (i586 runtime)"
+else
+    TOOLCHAIN_DESC="stock MSYS2 -- SSE2 runtime, will NOT run on a pre-SSE2 CPU"
+fi
+
 ALLEGRO_BUILD="$LAUNCHER_DIR/build-allegro-win9x"
 ALLEGRO_PREFIX="$LAUNCHER_DIR/allegro4-win9x"
 
@@ -63,6 +88,7 @@ echo "=== LANCommander Legacy Launcher — Win9x build ==="
 echo "  Build type : $BUILD_TYPE"
 echo "  Backend    : $BACKEND"
 echo "  Jobs       : $JOBS"
+echo "  Toolchain  : $TOOLCHAIN_DESC"
 echo ""
 
 if [ "${MSYSTEM:-}" != "MINGW32" ]; then
@@ -126,6 +152,9 @@ cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
     -G "$CMAKE_GENERATOR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_INSTALL_PREFIX="$ALLEGRO_PREFIX" \
+    "${TOOLCHAIN_ARGS[@]}" \
+    -DCMAKE_C_FLAGS="$WIN9X_ISA_FLAGS" \
+    -DCMAKE_CXX_FLAGS="$WIN9X_ISA_FLAGS" \
     -DSHARED=OFF \
     -DWANT_EXAMPLES=OFF \
     -DWANT_TOOLS=OFF \
@@ -134,7 +163,8 @@ cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
     -DWANT_LOADPNG=OFF \
     -DWANT_LOGG=OFF \
     -DWANT_JPGALLEG=OFF \
-    -DWANT_FRAMEWORKS=OFF
+    -DWANT_FRAMEWORKS=OFF \
+    -DWANT_DOCS=OFF
 
 $MAKE_CMD -C "$ALLEGRO_BUILD" -j"$JOBS"
 $MAKE_CMD -C "$ALLEGRO_BUILD" install
@@ -162,9 +192,9 @@ mkdir -p "$LAUNCHER_BUILD"
 # and (for the SDL3 backend) turns on SDL_WIN9X so SDL's Windows backend is
 # built against the ANSI entry points.
 if [ "$BACKEND" = "sdl3" ]; then
-    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=sdl3         -DTARGET_WIN9X=ON
+    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=sdl3         -DTARGET_WIN9X=ON "${TOOLCHAIN_ARGS[@]}"
 else
-    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=allegro         -DALLEGRO_STATIC=ON         -DTARGET_WIN9X=ON         -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
+    cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD"         -G "$CMAKE_GENERATOR"         -DCMAKE_BUILD_TYPE="$BUILD_TYPE"         -DLAUNCHER_GFX_BACKEND=allegro         -DALLEGRO_STATIC=ON         -DTARGET_WIN9X=ON         -DALLEGRO_ROOT="$ALLEGRO_PREFIX" "${TOOLCHAIN_ARGS[@]}"
 fi
 
 $MAKE_CMD -C "$LAUNCHER_BUILD" -j"$JOBS"
@@ -225,14 +255,28 @@ if command -v objdump &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# Step 4: Win9x compatibility gate
+# Step 4: Win9x compatibility gates
 # ---------------------------------------------------------------------------
-# A statically-imported symbol that Win95/98 does not export makes the EXE
-# fail at load time, before main() runs, with no useful diagnostic. Catch it
-# here rather than on the target.
+# Two independent ways to produce a binary that dies before it draws anything,
+# both cheap to check here and expensive to chase on a machine with no
+# debugger:
+#
+#   imports  A statically-imported symbol Win95/98 does not export makes the
+#            EXE fail at load time, before main() runs.
+#   codegen  An instruction above the CPU floor faults the moment it is
+#            reached -- in practice inside a static initialiser, so also
+#            before main().
+#
+# The ISA scan runs against the unstripped binary in the build tree. It is the
+# same code as the packaged one -- strip only drops the symbol table -- and
+# having symbols means offenders are reported per function, not as ".text".
 echo ""
 echo "--- Step 4/4: Win9x import check ---"
 bash "$LAUNCHER_DIR/tools/deny-scan.sh" "$OUTPUT_DIR/LANCommander.exe"
+
+echo ""
+echo "--- Step 4/4: Win9x instruction-set check ---"
+bash "$LAUNCHER_DIR/tools/isa-scan.sh" "$LAUNCHER_EXE"
 
 echo ""
 echo "=== Build complete ==="

@@ -38,7 +38,12 @@ namespace launcher
         };
 
         // Initialize the font. Colors need no initialization.
-        void theme_init();
+        // False when the bundled font could not be loaded, which leaves the
+        // UI drawing every label as nothing at all. Fatal to App::init
+        // rather than silent: a launcher with no text is not usable, and
+        // "blank panels" is a much harder symptom to diagnose than a
+        // startup error naming the file.
+        bool theme_init();
         void theme_shutdown();
 
         // Access the current theme.

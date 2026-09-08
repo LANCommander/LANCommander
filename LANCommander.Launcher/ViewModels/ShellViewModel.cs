@@ -487,38 +487,14 @@ public partial class ShellViewModel : ViewModelBase
         {
             using var scope = _serviceProvider.CreateScope();
 
-            if (!IsOfflineMode)
-            {
-                var client = scope.ServiceProvider.GetRequiredService<GameClient>();
-                
-                var game = await client.GetAsync(gameId);
-                
-                if (game != null)
-                {
-                    OnGameSelected(this, game);
-                    return;
-                }
-            }
-
-            // Fallback: load from local database
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-            
-            var localGame = await gameService.GetAsync(gameId);
-            
-            if (localGame != null)
-            {
-                var sdkGame = new SDK.Models.Game
-                {
-                    Id          = localGame.Id,
-                    Title       = localGame.Title ?? "Unknown",
-                    SortTitle   = localGame.SortTitle,
-                    Notes       = localGame.Notes,
-                    Description = localGame.Description,
-                    ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue,
-                };
-                
-                OnGameSelected(this, sdkGame);
-            }
+
+            var game = await gameService.GetDetailsAsync(gameId, IsOfflineMode);
+
+            if (game != null)
+                OnGameSelected(this, game);
+            else
+                _logger.LogWarning("No details available for game {GameId}", gameId);
         }
         catch (Exception ex)
         {

@@ -6,12 +6,26 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
+  <ItemGroup>
+    <PowerShellCompletionsOutput Include="Components\MonacoCodeEditor\PowerShellCompletions.g.ts" />
+  </ItemGroup>
+
+  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources"
+          Inputs="$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\**\*.cs"
+          Outputs="@(PowerShellCompletionsOutput)">
     <Message Text="Generating PowerShell completion data" Importance="high" />
     <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
   </Target>
 
-  <Target Name="CompileFrontendResources" BeforeTargets="Compile">
+  <ItemGroup>
+    <FrontendSourceFiles Include="**\*.ts;**\*.tsx" Exclude="node_modules\**;@(PowerShellCompletionsOutput)" />
+    <FrontendSourceFiles Include="**\*.scss" Exclude="node_modules\**" />
+    <FrontendSourceFiles Include="package.json;package-lock.json;vite.config.js;tsconfig.json" />
+  </ItemGroup>
+
+  <Target Name="CompileFrontendResources" BeforeTargets="Compile"
+          Inputs="@(FrontendSourceFiles)"
+          Outputs="wwwroot\bundle.js">
     <Message Text="Compiling frontend" Importance="high" />
     <Exec Command="npm run package" />
   </Target>
@@ -32,7 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+    <Content Remove="package.json;package-lock.json;tsconfig.json;vite.config.js" />
   </ItemGroup>
 
   <ItemGroup>

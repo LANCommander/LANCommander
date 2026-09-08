@@ -589,33 +589,23 @@ namespace LANCommander.SDK.Services
         public async Task<string> GetAllocatedKeyAsync(Guid id)
         {
             logger?.LogTrace("Requesting allocated key...");
-            
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = networkInformationProvider.GetMacAddress(),
-                ComputerName = Environment.MachineName,
-                IpAddress = networkInformationProvider.GetIpAddress(),
-            };
 
-            var response = await apiRequestFactory
-                .Create()
-                .UseAuthenticationToken()
-                .UseVersioning()
-                .UseRoute($"/api/Keys/GetAllocated/{id}")
-                .AddBody(request)
-                .PostAsync<Key>();
+            var key = await RequestKeyAsync(id, $"/api/Keys/GetAllocated/{id}");
 
-            if (response == null)
-                return string.Empty;
-
-            return response.Value;
+            return key?.Value ?? string.Empty;
         }
 
         public async Task<string> GetNewKey(Guid id)
         {
             logger?.LogTrace("Requesting new key allocation...");
 
+            var key = await RequestKeyAsync(id, $"/api/Keys/Allocate/{id}");
+
+            return key?.Value ?? string.Empty;
+        }
+
+        private async Task<Key> RequestKeyAsync(Guid id, string route)
+        {
             var request = new KeyRequest()
             {
                 GameId = id,
@@ -624,19 +614,26 @@ namespace LANCommander.SDK.Services
                 IpAddress = networkInformationProvider.GetIpAddress(),
             };
 
-            var response = await apiRequestFactory
-                .Create()
-                .UseAuthenticationToken()
-                .UseVersioning()
-                .UseRoute($"/api/Keys/Allocate/{id}")
-                .AddBody(request)
-                .PostAsync<Key>();
+            try
+            {
+                return await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute(route)
+                    .AddBody(request)
+                    .PostAsync<Key>();
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                logger?.LogDebug("Server had no key to allocate for game {GameId}", id);
 
-            if (response == null)
-                return string.Empty;
-
-            return response.Value;
+                return null;
+            }
         }
+
+        private static bool HasKeyChangeScript(string installDirectory, Guid gameId)
+            => File.Exists(ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange));
 
         /// <summary>
         /// Returns the key currently tracked for this install. The locally tracked key
@@ -1384,8 +1381,13 @@ namespace LANCommander.SDK.Services
                             break;
 
                         case InstallTaskType.RunKeyChangeScript:
-                            var allocatedKey = await GetOrAllocateKeyAsync(planItem.InstallDirectory, game.Id);
-                            await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            if (HasKeyChangeScript(planItem.InstallDirectory, game.Id))
+                            {
+                                var allocatedKey = await GetOrAllocateKeyAsync(planItem.InstallDirectory, game.Id);
+
+                                if (!string.IsNullOrWhiteSpace(allocatedKey))
+                                    await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            }
                             break;
 
                         case InstallTaskType.RunNameChangeScript:
@@ -1894,10 +1896,16 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var allocatedKey = await GetOrAllocateKeyAsync(game.InstallDirectory, game.Id);
-
                     await scriptClient.Game_RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+
+                    if (HasKeyChangeScript(game.InstallDirectory, game.Id))
+                    {
+                        var allocatedKey = await GetOrAllocateKeyAsync(game.InstallDirectory, game.Id);
+
+                        if (!string.IsNullOrWhiteSpace(allocatedKey))
+                            await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+                    }
+
                     await scriptClient.Game_RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await profileClient.GetAliasAsync());
                 }
                 catch (Exception ex)
@@ -2349,7 +2357,7 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Check Key Allocation
-                    if (connectionClient.IsConnected())
+                    if (connectionClient.IsConnected() && HasKeyChangeScript(installDirectory, manifest.Id))
                     {
                         // The locally tracked key is authoritative: only allocate and apply a
                         // key when this install doesn't already have one tracked. This avoids
@@ -2360,6 +2368,8 @@ namespace LANCommander.SDK.Services
 
                             if (!string.IsNullOrWhiteSpace(newKey))
                                 await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                            else
+                                logger?.LogWarning("Game {GameId} has a key change script but the server did not allocate a key", manifest.Id);
                         }
                     }
                     #endregion

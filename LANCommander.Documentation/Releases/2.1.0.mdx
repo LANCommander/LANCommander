@@ -9,7 +9,7 @@ import ContributorGrid from '@site/src/components/ContributorGrid';
 # LANCommander 2.1.0 Release Notes
 
 :::tip Latest Version
-This page covers the full LANCommander 2.1 series. The latest patch is **2.1.14** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
+This page covers the full LANCommander 2.1 series. The latest patch is **2.1.15** — see [Patch Updates](#patch-updates) below for what's changed since the initial release.
 :::
 
 LANCommander 2.1.0 is a landmark release that touches virtually every part of the platform. A brand new launcher built on Avalonia, a standalone packager application, a C++ SDK powering a legacy Win32 launcher, major server improvements, and the launch of LANCommander HQ all come together in what has been the most ambitious update cycle to date.
@@ -736,9 +736,32 @@ This release includes contributions from the following community members:
 
 </details>
 
+### 2.1.15
+<details>
+<summary>View 2.1.15 patch notes</summary>
+
+#### Improvements
+- Game details in the launcher now come from the locally imported copy for installed games and for anything opened while offline, so opening a game's page no longer depends on the server being reachable. Offline details previously carried only the title, notes, description, and release date; media, platforms, genres, collections, developers, publishers, tags, engine, and multiplayer modes now all come through. Games that aren't installed still prefer the server, since it carries data the launcher doesn't import, and fall back to the local copy when that request fails.
+- API version compatibility is no longer enforced on local development builds, and the new `LANCOMMANDER_SKIP_VERSION_CHECK` environment variable turns the check off for release builds. Version mismatches are still logged, and the log line now says when enforcement is disabled.
+
+#### Bug Fixes
+- Fixed key allocation blocking most games from launching. The launcher asked the server to allocate a key every time a game was launched or installed, even for games that have no key change script. On a server with no keys to hand out, that request came back as a 404 and stopped the launch. Keys are now only requested when the install actually has a key change script, and a server with nothing to allocate is treated as "no key available" rather than an error.
+- Fixed the key change script running with an empty key when the server had none to allocate. The script is now skipped, and the mismatch is logged instead.
+
+<ReleaseDownloads release="v2.1.15" />
+
+</details>
+
 ## Downloads
 
+<ReleaseDownloads release="v2.1.15" />
+
+<details>
+<summary>View 2.1.14 downloads</summary>
+
 <ReleaseDownloads release="v2.1.14" />
+
+</details>
 
 <details>
 <summary>View 2.1.13 downloads</summary>
@@ -840,4 +863,4 @@ This release includes contributions from the following community members:
 
 ## Contributors
 
-<ContributorGrid from="v2.0.2" to="v2.1.14" />
+<ContributorGrid from="v2.0.2" to="v2.1.15" />

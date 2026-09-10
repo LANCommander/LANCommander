@@ -5,7 +5,7 @@ namespace LANCommander.Launcher.Services;
 
 public class ElevatedProcessLauncher : IElevatedProcessLauncher
 {
-    public async Task LaunchAndWaitAsync(ElevatedProcessRequest request)
+    public async Task<int> LaunchAndWaitAsync(ElevatedProcessRequest request)
     {
         using var process = new Process();
 
@@ -18,5 +18,7 @@ public class ElevatedProcessLauncher : IElevatedProcessLauncher
         process.Start();
 
         await process.WaitForExitAsync();
+
+        return process.ExitCode;
     }
 }

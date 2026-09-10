@@ -41,6 +41,12 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     private string _description = string.Empty;
 
+    /// <summary>
+    /// Free-form notes authored on the server. Rendered as markdown beneath the media carousel.
+    /// </summary>
+    [ObservableProperty]
+    private string _notes = string.Empty;
+
     [ObservableProperty]
     private string? _coverPath;
 
@@ -211,6 +217,7 @@ public partial class GameDetailViewModel : ViewModelBase
         Id = game.Id;
         Title = game.Title ?? "Unknown";
         Description = game.Description ?? string.Empty;
+        Notes = game.Notes ?? string.Empty;
         ReleasedOn = game.ReleasedOn;
         ReleaseYear = game.ReleasedOn.Year > 1 ? game.ReleasedOn.Year.ToString() : "Unknown";
         Singleplayer = game.Singleplayer;

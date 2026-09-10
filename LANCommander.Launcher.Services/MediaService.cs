@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
@@ -19,6 +20,42 @@ namespace LANCommander.Launcher.Services
             DeleteLocalMediaFile(entity);
 
             return base.DeleteAsync(entity);
+        }
+
+        public async Task<int> RemoveMissingAsync(IReadOnlyDictionary<Guid, HashSet<Guid>> manifestMediaByGame)
+        {
+            if (manifestMediaByGame.Count == 0)
+                return 0;
+
+            var gameIds = manifestMediaByGame.Keys.ToList();
+
+            var localMedia = await Query(m => m.GameId != null && gameIds.Contains(m.GameId.Value))
+                .ToListAsync();
+
+            var removed = 0;
+
+            foreach (var media in localMedia)
+            {
+                if (manifestMediaByGame[media.GameId!.Value].Contains(media.Id))
+                    continue;
+
+                try
+                {
+                    Logger?.LogInformation(
+                        "Removing media {MediaId} ({MediaType}) for game {GameId} because it no longer exists on the server",
+                        media.Id, media.Type, media.GameId);
+
+                    await DeleteAsync(media);
+
+                    removed++;
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Failed to remove stale media {MediaId}", media.Id);
+                }
+            }
+
+            return removed;
         }
 
         public bool FileExists(Media entity)

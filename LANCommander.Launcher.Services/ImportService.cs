@@ -96,6 +96,7 @@ namespace LANCommander.Launcher.Services
 
             await importContext.ImportQueueAsync();
             await importContext.DownloadPendingMediaAsync();
+            await importContext.ReconcileMediaAsync();
 
             // Make the local library membership match the remote library exactly
             await ReconcileLibraryMembershipAsync(remoteLibrary.Select(g => g.Id).ToList());
@@ -178,6 +179,7 @@ namespace LANCommander.Launcher.Services
             await importContext.AddAsync(manifest);
             await importContext.ImportQueueAsync();
             await importContext.DownloadPendingMediaAsync();
+            await importContext.ReconcileMediaAsync();
 
             await SyncPlaySessionsAsync([gameId]);
         }

@@ -178,6 +178,13 @@
                         </CarouselControl>
                     </StackPanel>
 
+                    <!-- Notes -->
+                    <StackPanel x:Name="NotesSection" Spacing="8"
+                                IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <controls:MarkdownTextBlock Text="{Binding Notes}" />
+                    </StackPanel>
+
                 </StackPanel>
 
                 <!-- Right: Cover Image + Metadata -->

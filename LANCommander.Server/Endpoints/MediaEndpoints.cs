@@ -2,6 +2,7 @@ using AutoMapper;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mime;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -51,7 +52,7 @@ public static class MediaEndpoints
 
             var fs = File.OpenRead(mediaService.GetThumbnailPath(media));
 
-            return TypedResults.File(fs, media.MimeType);
+            return TypedResults.File(fs, GetThumbnailContentType(fs, media.MimeType));
         }
         catch (FileNotFoundException)
         {
@@ -68,6 +69,28 @@ public static class MediaEndpoints
             logger.LogError(ex, "Unhandled exception raised reading media thumbnail {Id}.", id);
             return TypedResults.InternalServerError();
         }
+    }
+
+    /// <summary>
+    /// Thumbnails are always re-encoded as PNG or JPEG regardless of what the source media is, so the source's
+    /// MIME type would mislabel them (an ICO icon or a PDF manual, for instance). Sniff the magic bytes instead,
+    /// falling back to the media's own type if the thumbnail is something unexpected.
+    /// </summary>
+    private static string? GetThumbnailContentType(FileStream stream, string? mediaMimeType)
+    {
+        Span<byte> header = stackalloc byte[8];
+
+        var read = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
+
+        stream.Seek(0, SeekOrigin.Begin);
+
+        if (read >= 8 && header is [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+            return MediaTypeNames.Image.Png;
+
+        if (read >= 3 && header is [0xFF, 0xD8, 0xFF, ..])
+            return MediaTypeNames.Image.Jpeg;
+
+        return mediaMimeType;
     }
 
     internal static async Task<Results<FileStreamHttpResult, NotFound, InternalServerError>> DownloadAsync(

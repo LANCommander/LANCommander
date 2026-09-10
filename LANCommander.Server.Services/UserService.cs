@@ -60,12 +60,22 @@ namespace LANCommander.Server.Services
 
         public async Task<User> GetAsync(string userName)
         {
-            return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());
+            if (String.IsNullOrWhiteSpace(userName))
+                return null;
+
+            var normalized = userName.ToUpper();
+
+            return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == normalized);
         }
 
         public async Task<T> GetAsync<T>(string userName)
         {
-            return await FirstOrDefaultAsync<T>(u => u.UserName.ToUpper() == userName.ToUpper());
+            if (String.IsNullOrWhiteSpace(userName))
+                return default;
+
+            var normalized = userName.ToUpper();
+
+            return await FirstOrDefaultAsync<T>(u => u.UserName.ToUpper() == normalized);
         }
 
         public async Task<IEnumerable<Role>> GetRolesAsync(User user)

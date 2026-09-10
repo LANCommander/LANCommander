@@ -27,8 +27,11 @@ public class MediaImporter(
         
         if (existing == null)
             return true;
-        
-        return record.UpdatedOn > existing.ImportedOn;
+
+        if (record.UpdatedOn > existing.ImportedOn)
+            return true;
+
+        return !mediaService.FileExists(existing);
     }
 
     public override async Task<bool> AddAsync(ImportItemInfo<Media> importItemInfo)
@@ -57,6 +60,7 @@ public class MediaImporter(
                 SourceUrl = importItemInfo.Record.SourceUrl,
                 MimeType = importItemInfo.Record.MimeType,
                 Crc32 = importItemInfo.Record.Crc32 ?? string.Empty,
+                ImportedOn = DateTime.UtcNow,
             };
 
             media = await mediaService.AddAsync(media);
@@ -91,6 +95,11 @@ public class MediaImporter(
         var existing = importItemInfo.ExistingEntity as Data.Models.Media
             ?? await mediaService.GetAsync(importItemInfo.Record.Id);
 
+        // Cached files are keyed by file ID and checksum, so a replaced image lands at a new path.
+        // Drop the old one rather than leaving it behind in the media directory forever.
+        if (existing.FileId != importItemInfo.Record.FileId || existing.Crc32 != (importItemInfo.Record.Crc32 ?? string.Empty))
+            mediaService.DeleteLocalMediaFile(existing);
+
         existing.FileId = importItemInfo.Record.FileId;
         existing.Game = await gameService.GetAsync(game.Id);
         existing.CreatedOn = importItemInfo.Record.CreatedOn;
@@ -99,6 +108,7 @@ public class MediaImporter(
         existing.SourceUrl = importItemInfo.Record.SourceUrl;
         existing.MimeType = importItemInfo.Record.MimeType;
         existing.Crc32 = importItemInfo.Record.Crc32 ?? string.Empty;
+        existing.ImportedOn = DateTime.UtcNow;
 
         await mediaService.UpdateAsync(existing);
 

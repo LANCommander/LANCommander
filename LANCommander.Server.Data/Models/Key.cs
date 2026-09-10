@@ -22,6 +22,8 @@ namespace LANCommander.Server.Data.Models
         public string? ClaimedByIpv4Address { get; set; }
         [MaxLength(255)]
         public string? ClaimedByComputerName { get; set; }
+        [ForeignKey(nameof(ClaimedByUser))]
+        public Guid? ClaimedByUserId { get; set; }
         public User? ClaimedByUser { get; set; }
         public DateTime? ClaimedOn { get; set; }
 
@@ -30,7 +32,7 @@ namespace LANCommander.Server.Data.Models
             if (AllocationMethod == KeyAllocationMethod.MacAddress && !String.IsNullOrWhiteSpace(ClaimedByMacAddress))
                 return true;
 
-            if (AllocationMethod == KeyAllocationMethod.UserAccount && ClaimedByUser != null)
+            if (AllocationMethod == KeyAllocationMethod.UserAccount && ClaimedByUserId != null)
                 return true;
 
             return false;
@@ -38,7 +40,7 @@ namespace LANCommander.Server.Data.Models
 
         public bool IsAvailable()
         {
-            return AllocationMethod == null;
+            return !IsAllocated();
         }
     }
 }

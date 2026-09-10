@@ -60,9 +60,14 @@ public class ApiRequestBuilder(
     /// header. When the server's major version differs from ours the payload schemas are
     /// incompatible, which otherwise surfaces as confusing downstream errors (empty results,
     /// null deserialization). Detect that here and throw a clear, actionable exception instead.
+    /// Skipped entirely when <see cref="VersionHelper.EnforceCompatibility"/> is off, which is the
+    /// case for local development builds.
     /// </summary>
     private static void EnsureVersionCompatibility(HttpResponseMessage response)
     {
+        if (!VersionHelper.EnforceCompatibility)
+            return;
+
         if (!response.Headers.TryGetValues("X-API-Version", out var values))
             return;
 

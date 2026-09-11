@@ -385,3 +385,5 @@ visual-test-output/
 LANCommander.Launcher.Legacy
 liblancommander
 /Media
+binBuildCheck 2
+dist

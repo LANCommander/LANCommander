@@ -67,12 +67,27 @@ struct ManifestAction {
     std::map<std::string, std::string> variables;
 };
 
+// One file inside a save archive. `archive_path` is where it sits under
+// Files/<save path id>/; `actual_path` is where it belongs on this machine,
+// still in its {InstallDir}/%VAR% form so an archive packed on one machine
+// restores correctly on another.
+struct SavePathEntry {
+    std::string archive_path;
+    std::string actual_path;
+};
+
 struct ManifestSavePath {
     std::string id;
     std::string path;
     std::string working_directory;
     bool is_file = true;
     bool is_regex = false;
+    // Bitmask of RuntimePlatform. A save path for a platform this is not
+    // running on is skipped, exactly as scripts are.
+    int platforms = RuntimePlatform_None;
+    // Filled in by the packer and written into the archive's own manifest;
+    // the download side reads them back to know where each file goes.
+    std::vector<SavePathEntry> entries;
 };
 
 struct ManifestRedistributable {

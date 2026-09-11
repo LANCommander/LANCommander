@@ -6,6 +6,7 @@
 
 #include "ui/window_chrome.h"
 #include "ui/chrome_platform.h"
+#include "ui/screen_game_detail.h"
 #include "ui/icons.h"
 #include "ui/image_decoder.h"
 #include "app/paths.h"
@@ -31,8 +32,32 @@ namespace launcher
     {
 
         static const int CHROME_H = 32;
-        static const int FOOTER_H = 40;
-        static const int BTN_W = 36;
+
+        // 52 in the Avalonia shell footer, times the 0.8 the two launchers
+        // sit at.
+        static const int FOOTER_H = 42;
+
+        // Caption button cell. Avalonia's are 46 x 40 — the Windows 11 metric
+        // — and this title bar is 32 tall, so the same aspect is 37 x 32.
+        static const int BTN_W = 37;
+
+        // The caption glyphs, which are the one place the two launchers do
+        // not draw the same artwork: Avalonia spells them with text (an em
+        // dash, a white square and a multiplication sign at FontSize 12),
+        // this one with the Phosphor Minus, Square and X.
+        //
+        // Sized from what Avalonia actually puts on screen rather than from
+        // its FontSize, because a glyph fills its em box loosely and an icon
+        // fills its box exactly. The three are genuinely different sizes;
+        // measured against a 40px bar, and scaled to this 32px one:
+        //
+        //             Avalonia      here
+        //   dash       12 x 2        10
+        //   square     10 x 9         8
+        //   cross       8 x 9         7
+        static const int CAPTION_DASH_PX = 10;
+        static const int CAPTION_SQUARE_PX = 8;
+        static const int CAPTION_CROSS_PX = 7;
 
         static const ChromeMetrics g_metrics = {
             CHROME_H,
@@ -43,6 +68,22 @@ namespace launcher
         };
 
         const ChromeMetrics &chrome_metrics() { return g_metrics; }
+
+        // "12.3 MB/s". One decimal at MB and above, none below: the footer
+        // has one line for this and the extra digit is noise at KB rates.
+        static void format_rate(unsigned long bytes_per_sec, char *out, int out_sz)
+        {
+            (void)out_sz;
+
+            const double bps = (double)bytes_per_sec;
+
+            if (bps >= 1024.0 * 1024.0)
+                sprintf(out, "%.1f MB/s", bps / (1024.0 * 1024.0));
+            else if (bps >= 1024.0)
+                sprintf(out, "%.0f KB/s", bps / 1024.0);
+            else
+                sprintf(out, "%.0f B/s", bps);
+        }
 
         int chrome_height() { return CHROME_H; }
 
@@ -62,6 +103,66 @@ namespace launcher
             {
                 const Screen s = app.current_screen();
                 return s == Screen::Depot || s == Screen::DepotBrowse;
+            }
+
+            // True once past sign-in, which is what MainWindowViewModel calls
+            // IsShellActive. Server select and login own the whole window and
+            // carry neither the logo nor a view title.
+            bool shell_active(App &app)
+            {
+                const Screen s = app.current_screen();
+                return s != Screen::ServerSelect && s != Screen::Login;
+            }
+
+            // What the title bar names the screen you are on.
+            //
+            // The mapping is ShellViewModel.ContentViewTitle's, case for case,
+            // including its habit of returning an empty string rather than a
+            // placeholder while a game detail page is still loading.
+            std::string content_view_title(App &app)
+            {
+                switch (app.current_screen())
+                {
+                case Screen::Library:
+                    return "My Library";
+
+                case Screen::Depot:
+                    return "Depot";
+
+                case Screen::DepotBrowse:
+                    // DepotBrowseViewModel.BrowseTitle: the thing filtered on,
+                    // the search terms, or the unfiltered catalogue.
+                    switch (app.depot_filter_kind())
+                    {
+                    case DepotFilterKind::Genre:
+                    case DepotFilterKind::Collection:
+                        return app.depot_filter_value();
+                    case DepotFilterKind::Search:
+                        return "Search: " + app.depot_filter_value();
+                    default:
+                        return "All Games";
+                    }
+
+                case Screen::GameDetail:
+                    return screen_game_detail_title();
+
+                case Screen::Downloads:
+                    return "Downloads";
+
+                case Screen::Settings:
+                    return "Settings";
+
+                case Screen::ScriptConsole:
+                    // The one screen with no entry in that table: Avalonia
+                    // puts the console in a separate window, which carries its
+                    // own title rather than borrowing the shell's. Naming it
+                    // here beats leaving the bar blank on a page that is
+                    // otherwise indistinguishable from a broken one.
+                    return "Script Console";
+
+                default:
+                    return std::string();
+                }
             }
         } // namespace
 
@@ -119,7 +220,10 @@ namespace launcher
         // ---------------------------------------------------------------
         static gfx::Surface *s_icon_bmp = NULL;
         static bool s_icon_loaded = false;
-        static const int ICON_SIZE = 20; // display size in the title bar
+        static const int ICON_SIZE = 19; // Avalonia's 24 in a 40px bar
+
+        // The title bar's own type size, and the profile button's.
+        static const FontSize TITLE_FONT = FontSize::Small;
 
         static void ensure_icon_loaded()
         {
@@ -189,7 +293,9 @@ namespace launcher
         // ---------------------------------------------------------------
         // Profile avatar -- decoded once from the file App downloaded.
         // ---------------------------------------------------------------
-        static const int AVATAR_SIZE = 20;   // 32px title bar, 6px either side
+        // Avalonia's avatar Panel is 22 square inside a 40px title bar; at
+        // this bar's 32 that is 18.
+        static const int AVATAR_SIZE = 18;
         static const int AVATAR_RADIUS = 2;  // matches the Avalonia CornerRadius
 
         static gfx::Surface *s_avatar = NULL;
@@ -261,16 +367,37 @@ namespace launcher
                                  gfx::rgba(0, 0, 0, 128));
 
             // --- Icon + Title ---
-            ensure_icon_loaded();
-            int title_x = 10;
-            if (s_icon_bmp)
+            //
+            // Both are hidden on the two screens that own the whole window,
+            // matching MainWindowViewModel.IsLogoVisible (false on server
+            // select and login) and the title's IsShellActive binding.
+            if (shell_active(app))
             {
-                int icon_y = (CHROME_H - ICON_SIZE) / 2;
-                gfx::blit(buf, s_icon_bmp, title_x, icon_y);
-                title_x += ICON_SIZE + 6;
+                ensure_icon_loaded();
+
+                // Avalonia's logo Border is Padding="8,0" around a 24px image
+                // and the title's is Padding="4,0,12,0"; at 0.8 that is a 6px
+                // inset, a 19px icon and a 3px gap.
+                int title_x = 6;
+                if (s_icon_bmp)
+                {
+                    int icon_y = (CHROME_H - ICON_SIZE) / 2;
+                    gfx::blit(buf, s_icon_bmp, title_x, icon_y);
+                    title_x += ICON_SIZE + 3;
+                }
+
+                // The view's name, not the program's. The Avalonia title bar
+                // binds ShellViewModel.ContentViewTitle here, so it reads
+                // "My Library", "Settings", or the game you are looking at;
+                // this said "LANCommander" on every screen, which is the one
+                // thing the window is already unambiguously called.
+                //
+                // Small rung: that label is FontSize 13 against a base of 16.
+                const std::string title = content_view_title(app);
+                if (!title.empty())
+                    draw_text(buf, title_x, (CHROME_H - text_height(TITLE_FONT)) / 2,
+                              theme().text_bright, title.c_str(), TITLE_FONT);
             }
-            draw_text(buf, title_x, (CHROME_H - text_height()) / 2,
-                      theme().text_bright, "LANCommander");
 
             // --- Close button (right edge) ---
             int close_x = sw - BTN_W;
@@ -281,26 +408,48 @@ namespace launcher
                     panel(buf, close_x, 0, BTN_W, CHROME_H,
                           gfx::rgb(0xC4, 0x2B, 0x1C)); // Windows red close
 
-                const gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
+                // Body text, not dim: Avalonia leaves these on the default
+                // foreground, and against the title bar tint the dim grey
+                // read as disabled.
+                const gfx::Color color = hovered ? theme().text_bright : theme().text;
                 draw_icon_centered(buf, gfx::rect(close_x, 0, BTN_W, CHROME_H),
-                                   ICON_SM, color, Icon::Close);
+                                   CAPTION_CROSS_PX, color, Icon::Close);
 
                 if (hovered && input.mouse.pressed)
                     close_clicked = true;
             }
 
+            // --- Maximize / restore button ---
+            //
+            // Same square in both states, as the Avalonia title bar does —
+            // its MaximizeButton_Click flips WindowState but leaves the
+            // glyph alone, so there is no restore icon to swap in.
+            int max_x = close_x - BTN_W;
+            {
+                bool hovered = (input.mouse.x >= max_x && input.mouse.x < max_x + BTN_W &&
+                                input.mouse.y >= 0 && input.mouse.y < CHROME_H);
+                if (hovered)
+                    panel(buf, max_x, 0, BTN_W, CHROME_H, theme().button_bg_hover);
+
+                const gfx::Color color = hovered ? theme().text_bright : theme().text;
+                draw_icon_centered(buf, gfx::rect(max_x, 0, BTN_W, CHROME_H),
+                                   CAPTION_SQUARE_PX, color, Icon::Maximize);
+
+                if (hovered && input.mouse.pressed)
+                    chrome_platform_maximize_toggle();
+            }
+
             // --- Minimize button ---
-            int min_x = close_x - BTN_W;
+            int min_x = max_x - BTN_W;
             {
                 bool hovered = (input.mouse.x >= min_x && input.mouse.x < min_x + BTN_W &&
                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
                 if (hovered)
-                    gfx::fill_rect_alpha(buf, gfx::rect(min_x, 0, BTN_W, CHROME_H),
-                                         gfx::rgba(255, 255, 255, 25));
+                    panel(buf, min_x, 0, BTN_W, CHROME_H, theme().button_bg_hover);
 
-                const gfx::Color color = hovered ? theme().text_bright : theme().text_dim;
+                const gfx::Color color = hovered ? theme().text_bright : theme().text;
                 draw_icon_centered(buf, gfx::rect(min_x, 0, BTN_W, CHROME_H),
-                                   ICON_SM, color, Icon::Minimize);
+                                   CAPTION_DASH_PX, color, Icon::Minimize);
 
                 if (hovered && input.mouse.pressed)
                 {
@@ -323,30 +472,45 @@ namespace launcher
                 // picture beside their name with no disclosure arrow, and it
                 // keeps a User icon only as a placeholder for an account with
                 // no picture at all.
-                const int pad = 12;
-                const int gap = 8;
-                const int th = text_height();
-                const int alias_w = text_width(alias_str.c_str());
+                // Avalonia's Padding 8,4 with an inner Spacing of 8, at 0.8.
+                // The button is INSET in the bar rather than filling it: it is
+                // a Button.Primary sitting in a 40px title bar with 6px of
+                // clearance above and below, not a block welded to the top
+                // edge, which is what a full-height fill looked like.
+                const int pad = 6;
+                const int gap = 6;
+                const int th = text_height(TITLE_FONT);
+                const int alias_w = text_width(alias_str.c_str(), TITLE_FONT);
 
                 gfx::Surface *avatar = avatar_surface(app);
                 const int avatar_w = avatar ? AVATAR_SIZE : 0;
                 const int avatar_gap = avatar ? gap : 0;
 
+                const int btn_h = AVATAR_SIZE + pad;      // 24 in a 32px bar
+                const int btn_y = (CHROME_H - btn_h) / 2;
+
                 user_btn_w = pad + avatar_w + avatar_gap + alias_w + pad;
                 user_btn_x = user_btn_right - user_btn_w;
 
+                // Hit-tested over the whole bar height, not just the pill:
+                // the clearance above and below it belongs to no one else,
+                // and a 4px dead strip around a button is a miss waiting to
+                // happen.
                 bool hovered = (input.mouse.x >= user_btn_x && input.mouse.x < user_btn_right &&
                                 input.mouse.y >= 0 && input.mouse.y < CHROME_H);
 
                 // Background — always primary blue, darker when active.
-                gfx::Color bg = (s_user_dropdown_open || hovered) ? theme().primary_active : theme().primary;
-                panel(buf, user_btn_x, 0, user_btn_w, CHROME_H, bg);
+                gfx::Color bg = (s_user_dropdown_open || hovered)
+                                    ? theme().button_primary_active
+                                    : theme().button_primary;
+                fill_rounded_rect(buf, gfx::rect(user_btn_x, btn_y, user_btn_w, btn_h),
+                                  BUTTON_RADIUS, bg);
 
                 int cx = user_btn_x + pad;
 
                 if (avatar)
                 {
-                    const gfx::Rect box = gfx::rect(cx, (CHROME_H - AVATAR_SIZE) / 2,
+                    const gfx::Rect box = gfx::rect(cx, btn_y + (btn_h - AVATAR_SIZE) / 2,
                                                     AVATAR_SIZE, AVATAR_SIZE);
 
                     // The decode covers the box, so this is the centre crop.
@@ -367,8 +531,8 @@ namespace launcher
                     cx += avatar_w + avatar_gap;
                 }
 
-                draw_text(buf, cx, (CHROME_H - th) / 2, theme().text_bright,
-                          alias_str.c_str());
+                draw_text(buf, cx, btn_y + (btn_h - th) / 2, theme().text_bright,
+                          alias_str.c_str(), TITLE_FONT);
 
                 // Toggle on click.
                 if (hovered && input.mouse.clicked)
@@ -385,16 +549,19 @@ namespace launcher
 
             if (on_games_screen(app))
             {
-                refresh_x -= BTN_W;
+                // Square, like the Avalonia IconButton's 40x40 — it used to
+                // borrow the caption buttons' wider cell, which put the
+                // refresh glyph off the rhythm of the icons beside it.
+                refresh_x -= CHROME_H;
 
-                const gfx::Rect r = gfx::rect(refresh_x, 0, BTN_W, CHROME_H);
+                const gfx::Rect r = gfx::rect(refresh_x, 0, CHROME_H, CHROME_H);
                 const bool hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
 
                 if (hovered)
-                    gfx::fill_rect_alpha(buf, r, gfx::rgba(255, 255, 255, 25));
+                    gfx::fill_rect_alpha(buf, r, theme().ghost_hover);
 
                 draw_icon_centered(buf, r, ICON_MD,
-                                   hovered ? theme().text_bright : theme().text_dim,
+                                   hovered ? theme().text_bright : theme().text,
                                    Icon::Refresh);
 
                 if (hovered && input.mouse.clicked)
@@ -569,8 +736,10 @@ namespace launcher
             panel(buf, 0, fy, sw, FOOTER_H, theme().footer);
             gfx::hline(buf, 0, fy, sw, theme().divider);
 
-            int pad = 12;
-            int btn_h = 24;
+            // Avalonia's footer buttons are the default Padding 12,6 at 0.8,
+            // in a 52px bar at 0.8.
+            int pad = 10;
+            int btn_h = button_height();
             int btn_y = fy + (FOOTER_H - btn_h) / 2;
 
             // --- Left: Library / Depot switch ---
@@ -586,21 +755,23 @@ namespace launcher
                 const char *label = depot_active ? "Library" : "Depot";
                 const Icon icon = depot_active ? Icon::Library : Icon::Depot;
 
-                const int gap = 7;
+                const int gap = 8;   // Avalonia IconButton: (Size / 2) + 2
                 const gfx::Rect r = gfx::rect(pad, btn_y,
-                                              12 + ICON_MD + gap + text_width(label) + 12,
+                                              BUTTON_PAD_X * 2 + ICON_MD + gap +
+                                                  text_width(label),
                                               btn_h);
 
                 const bool hovered = gfx::rect_contains(r, input.mouse.x, input.mouse.y);
 
                 if (hovered)
-                    fill_rounded_rect(buf, r, BUTTON_RADIUS, theme().panel_hover);
+                    fill_rounded_rect_alpha(buf, r, BUTTON_RADIUS, theme().ghost_hover);
 
                 const gfx::Color fg = hovered ? theme().text_bright : theme().text;
 
-                draw_icon(buf, r.x + 12, btn_y + (btn_h - ICON_MD) / 2, ICON_MD, fg, icon);
-                draw_text(buf, r.x + 12 + ICON_MD + gap, btn_y + (btn_h - th) / 2,
-                          fg, label);
+                draw_icon(buf, r.x + BUTTON_PAD_X, btn_y + (btn_h - ICON_MD) / 2,
+                          ICON_MD, fg, icon);
+                draw_text(buf, r.x + BUTTON_PAD_X + ICON_MD + gap,
+                          btn_y + (btn_h - th) / 2, fg, label);
 
                 if (hovered && input.mouse.clicked)
                     app.switch_screen(depot_active ? Screen::Library : Screen::Depot);
@@ -612,27 +783,50 @@ namespace launcher
                 bool on_downloads_screen = (app.current_screen() == Screen::Downloads);
 
                 if (cur && (cur->status == DownloadStatus::Downloading ||
-                            cur->status == DownloadStatus::Extracting))
+                            cur->status == DownloadStatus::Extracting ||
+                            cur->status == DownloadStatus::RunningScripts))
                 {
                     // Show active download: title + progress bar + percentage.
                     // Clicking navigates to the Downloads screen.
                     int cx = sw / 2;
-                    int info_w = 300;
+                    int info_w = 360;
                     int info_x = cx - info_w / 2;
 
                     bool area_hovered = (input.mouse.x >= info_x && input.mouse.x < info_x + info_w &&
                                          input.mouse.y >= fy && input.mouse.y < fy + FOOTER_H);
 
-                    // Title (left)
-                    gfx::push_clip(buf, gfx::rect(info_x, fy, info_w - 80, FOOTER_H));
-                    draw_text(buf, info_x, btn_y + 1, theme().text, cur->title.c_str());
+                    // Percentage, and the transfer rate beside it while there
+                    // is one. The footer is on every screen, so this is where
+                    // a download is watched from -- the Downloads screen is
+                    // somewhere the user goes deliberately.
+                    char pct[48];
+                    if (cur->status == DownloadStatus::Downloading &&
+                        cur->speed_bps > 0)
+                    {
+                        char rate[32];
+                        format_rate(cur->speed_bps, rate, sizeof(rate));
+                        sprintf(pct, "%s  %d%%", rate, (int)(cur->progress * 100));
+                    }
+                    else
+                    {
+                        sprintf(pct, "%d%%", (int)(cur->progress * 100));
+                    }
+
+                    // Title (left), clipped short of the figure on the right
+                    // rather than at a fixed inset, which the rate would
+                    // otherwise run into on a long game name.
+                    // The title is the Small rung and the figures beside it
+                    // Caption, as in the Avalonia footer where they are 13 and
+                    // 11 against a base of 16.
+                    const int pct_w = text_width(pct, FontSize::Caption);
+                    gfx::push_clip(buf, gfx::rect(info_x, fy,
+                                                  info_w - pct_w - 12, FOOTER_H));
+                    draw_text(buf, info_x, btn_y + 1, theme().text,
+                              cur->title.c_str(), FontSize::Small);
                     gfx::pop_clip(buf);
 
-                    // Percentage (right)
-                    char pct[16];
-                    sprintf(pct, "%d%%", (int)(cur->progress * 100));
                     draw_text_right(buf, info_x + info_w, btn_y + 1,
-                                    theme().text_dim, pct);
+                                    theme().text_dim, pct, FontSize::Caption);
 
                     // Progress bar
                     int bar_x = info_x;
@@ -641,7 +835,10 @@ namespace launcher
                     gfx::fill_rect(buf, gfx::rect(bar_x, bar_y2, bar_w, 3), theme().panel);
                     int fill = (int)(cur->progress * bar_w);
                     if (fill > 0)
-                        gfx::fill_rect(buf, gfx::rect(bar_x, bar_y2, fill, 3), theme().primary);
+                        gfx::fill_rect(buf, gfx::rect(bar_x, bar_y2, fill, 3),
+                                       cur->status == DownloadStatus::Downloading
+                                           ? theme().primary
+                                           : theme().warning);
 
                     if (area_hovered && input.mouse.clicked && !on_downloads_screen)
                         app.switch_screen(Screen::Downloads);
@@ -656,26 +853,29 @@ namespace launcher
                     else
                         sprintf(dl_label, "Downloads");
 
-                    const int gap = 7;
-                    int dl_w = 12 + ICON_MD + gap + text_width(dl_label) + 12;
+                    const int gap = 8;
+                    int dl_w = BUTTON_PAD_X * 2 + ICON_MD + gap + text_width(dl_label);
                     int dl_x = sw / 2 - dl_w / 2;
 
                     const gfx::Rect dl_r = gfx::rect(dl_x, btn_y, dl_w, btn_h);
                     bool dl_hovered = gfx::rect_contains(dl_r, input.mouse.x, input.mouse.y);
 
                     if (on_downloads_screen)
-                        fill_rounded_rect(buf, dl_r, BUTTON_RADIUS, theme().primary);
+                        fill_rounded_rect(buf, dl_r, BUTTON_RADIUS, theme().button_primary);
                     else if (dl_hovered)
-                        fill_rounded_rect(buf, dl_r, BUTTON_RADIUS, theme().panel_hover);
+                        fill_rounded_rect_alpha(buf, dl_r, BUTTON_RADIUS, theme().ghost_hover);
 
+                    // Body text when idle, not disabled grey. Avalonia leaves
+                    // this button on the default foreground — it is always
+                    // clickable, and dimming it said otherwise.
                     const gfx::Color dl_fg = (on_downloads_screen || dl_hovered)
                                                  ? theme().text_bright
-                                                 : theme().text_disabled;
+                                                 : theme().text;
 
-                    draw_icon(buf, dl_x + 12, btn_y + (btn_h - ICON_MD) / 2, ICON_MD,
-                              dl_fg, Icon::Download);
-                    draw_text(buf, dl_x + 12 + ICON_MD + gap, btn_y + (btn_h - th) / 2,
-                              dl_fg, dl_label);
+                    draw_icon(buf, dl_x + BUTTON_PAD_X, btn_y + (btn_h - ICON_MD) / 2,
+                              ICON_MD, dl_fg, Icon::Download);
+                    draw_text(buf, dl_x + BUTTON_PAD_X + ICON_MD + gap,
+                              btn_y + (btn_h - th) / 2, dl_fg, dl_label);
 
                     if (dl_hovered && input.mouse.clicked && !on_downloads_screen)
                         app.switch_screen(Screen::Downloads);

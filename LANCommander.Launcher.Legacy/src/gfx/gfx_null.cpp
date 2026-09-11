@@ -74,6 +74,7 @@ namespace launcher
         int display_width() { return s_width; }
         int display_height() { return s_height; }
         bool display_close_requested() { return false; }
+        bool display_minimized() { return false; }
         void *native_window_handle() { return NULL; }
         void present() {}
 

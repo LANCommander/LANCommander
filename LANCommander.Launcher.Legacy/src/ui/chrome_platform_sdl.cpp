@@ -94,5 +94,20 @@ namespace launcher
                 SDL_MinimizeWindow(win);
         }
 
+        void chrome_platform_maximize_toggle()
+        {
+            SDL_Window *win = gfx::display_window();
+            if (!win)
+                return;
+
+            // The resulting size change arrives as an ordinary SDL window
+            // event, which App already handles — nothing here has to tell the
+            // renderer the backbuffer grew.
+            if (SDL_GetWindowFlags(win) & SDL_WINDOW_MAXIMIZED)
+                SDL_RestoreWindow(win);
+            else
+                SDL_MaximizeWindow(win);
+        }
+
     } // namespace ui
 } // namespace launcher

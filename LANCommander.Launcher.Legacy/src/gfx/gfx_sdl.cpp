@@ -170,6 +170,12 @@ namespace launcher
 
         bool display_close_requested() { return s_close_requested; }
 
+        bool display_minimized()
+        {
+            return s_window &&
+                   (SDL_GetWindowFlags(s_window) & SDL_WINDOW_MINIMIZED) != 0;
+        }
+
         // Set by the event pump (input_sdl.cpp) on SDL_EVENT_QUIT.
         void display_set_close_requested() { s_close_requested = true; }
 

@@ -19,6 +19,7 @@
 #include "ui/screen_game_detail.h"
 #include "ui/screen_downloads.h"
 #include "ui/screen_settings.h"
+#include "ui/screen_script_console.h"
 
 #include <algorithm>
 #include <cctype>
@@ -43,8 +44,16 @@ namespace launcher
     static std::string log_dir()       { return app_path("Data\\Logs"); }
     static std::string media_dir()     { return app_path("Data\\Media"); }
 
+    // ScriptHost is deliberately ignorant of App -- it has to compile without
+    // a UI at all -- so the pump crosses the boundary as a plain function
+    // pointer.
+    static bool debug_pump_trampoline(void *userdata)
+    {
+        return static_cast<App *>(userdata)->pump_debug_frame();
+    }
+
     App::App()
-        : m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_play_sessions_client(NULL), m_image_cache(NULL), m_prefetch_http(NULL), m_prefetch_media(NULL), m_prefetch(NULL), m_art_http(NULL), m_art_games(NULL), m_art_fetcher(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Library), m_depot_filter_kind(DepotFilterKind::None), m_has_avatar(false), m_overlay_active(false), m_quit(false), m_resize_pending(false), m_pending_width(0), m_pending_height(0)
+        : m_http(NULL), m_auth(NULL), m_connection(NULL), m_games(NULL), m_library(NULL), m_media(NULL), m_tools(NULL), m_depot(NULL), m_launcher(NULL), m_play_sessions_client(NULL), m_keys(NULL), m_saves(NULL), m_image_cache(NULL), m_prefetch_http(NULL), m_prefetch_media(NULL), m_prefetch(NULL), m_art_http(NULL), m_art_games(NULL), m_art_fetcher(NULL), m_script_http(NULL), m_script_games(NULL), m_script_client(NULL), m_script_host(NULL), m_current_screen(Screen::Login), m_library_tab(LibraryTab::Library), m_depot_filter_kind(DepotFilterKind::None), m_has_avatar(false), m_overlay_active(false), m_quit(false), m_resize_pending(false), m_pending_width(0), m_pending_height(0)
     {
     }
 
@@ -55,11 +64,20 @@ namespace launcher
         delete m_art_games;
         delete m_art_http;
 
+        // The download worker runs install scripts through this, so it goes
+        // the same way round: the host first, then what it fetches through.
+        delete m_script_host;
+        delete m_script_client;
+        delete m_script_games;
+        delete m_script_http;
+
         delete m_prefetch;
         delete m_prefetch_media;
         delete m_prefetch_http;
 
         delete m_image_cache;
+        delete m_saves;
+        delete m_keys;
         delete m_play_sessions_client;
         delete m_launcher;
         delete m_depot;
@@ -119,6 +137,8 @@ namespace launcher
         m_depot = new lancommander::DepotClient(*m_http);
         m_launcher = new lancommander::LauncherClient(*m_http);
         m_play_sessions_client = new lancommander::PlaySessionClient(*m_http);
+        m_keys = new lancommander::KeyClient(*m_http, m_machine);
+        m_saves = new lancommander::SaveClient(*m_http);
 
         // Image loading (GDI+ for PNG/JPEG decode).
         image_decoder_init();
@@ -134,6 +154,27 @@ namespace launcher
         m_art_http->set_client_version(LC_LAUNCHER_VERSION);
         m_art_games = new lancommander::GameClient(*m_art_http);
         m_art_fetcher = new GameArtFetcher(*m_art_http, *m_art_games);
+
+        m_script_http = new PlatformHttpClient();
+        m_script_http->set_client_version(LC_LAUNCHER_VERSION);
+        m_script_games = new lancommander::GameClient(*m_script_http);
+        m_script_client = new lancommander::ScriptClient(*m_script_http);
+        m_script_host = new ScriptHost(*m_script_http, *m_script_games,
+                                       *m_script_client);
+        m_script_host->set_debug_pump(&debug_pump_trampoline, this);
+
+        // Whatever Settings.yml said, applied before anything can run a script.
+        // Not through set_script_debugging(), which would write the file back
+        // during startup for no reason.
+        {
+            const bool on = m_settings.debug.enable_script_debugging;
+            m_script_host->set_debug_enabled(on);
+            m_script_host->set_verbose_variables(on);
+            m_script_host->set_break_on_entry(on);
+
+            if (on)
+                log_info("Script debugging is enabled; scripts will stop at their first statement");
+        }
 
         // Restore saved connection state.
         if (!m_settings.authentication.server_address.empty())
@@ -216,6 +257,7 @@ namespace launcher
         case Screen::GameDetail:   screen_name = "GameDetail"; break;
         case Screen::Downloads:    screen_name = "Downloads"; break;
         case Screen::Settings:     screen_name = "Settings"; break;
+        case Screen::ScriptConsole: screen_name = "ScriptConsole"; break;
         }
 
         log_info("Init complete, starting on %s screen (alias=%s, surface=%dx%d)",
@@ -250,11 +292,17 @@ namespace launcher
             if (input.key_pressed(ui::Key::F4) && input.mod_down(ui::ModAlt))
                 m_quit = true;
 
-            if (input.key_pressed(ui::Key::Escape) && !m_overlay_active)
+            // Not while a script is paused: there, Escape means "abort the
+            // script", and the debugger reads it. Letting this run too would
+            // both abort the script AND navigate away from -- or quit -- the
+            // launcher on one keypress.
+            if (input.key_pressed(ui::Key::Escape) && !m_overlay_active &&
+                !m_script_host->paused())
             {
                 if (m_current_screen == Screen::GameDetail ||
                     m_current_screen == Screen::Downloads ||
                     m_current_screen == Screen::Settings ||
+                    m_current_screen == Screen::ScriptConsole ||
                     m_current_screen == Screen::DepotBrowse)
                     go_back();
                 else
@@ -262,7 +310,22 @@ namespace launcher
             }
 
             // --- Tick download queue ---
-            m_downloads.tick(*m_games, *m_library);
+            //
+            // The queue hands the script host to its worker, which runs the
+            // game's Install.ps1 once the archive is extracted.
+            ScriptEnvironment script_env;
+            script_env.host = m_script_host;
+            script_env.server_address = m_connection->get_server_address();
+            if (!m_settings.games.install_directories.empty())
+                script_env.default_install_dir = m_settings.games.install_directories[0];
+
+            m_downloads.tick(*m_games, *m_library, script_env);
+
+            // Credentials are applied here rather than at login because the
+            // host refuses them while a script is running, so it needs a
+            // moment every frame to catch up. Cheap: two string assignments.
+            m_script_host->set_credentials(m_connection->get_server_address(),
+                                           m_connection->get_access_token());
 
             m_prefetch->tick(m_connection->get_server_address(),
                              m_connection->get_access_token());
@@ -270,11 +333,57 @@ namespace launcher
             m_art_fetcher->tick(m_connection->get_server_address(),
                                 m_connection->get_access_token());
 
+            // --- Minimised: do the work, skip the picture ---
+            //
+            // Above the drawing and below the ticks, so a download still
+            // advances and a finished one is still reaped -- the launcher is
+            // frequently minimised precisely because an install is running
+            // and the user has gone off to do something else.
+            //
+            // Skipping the whole frame rather than just present(): this is an
+            // immediate-mode UI, so laying out and rasterising the screen IS
+            // the expensive half, and it is all being thrown away. What is
+            // left is a loop that costs nothing and stays responsive to the
+            // taskbar.
+            if (gfx::display_minimized())
+            {
+                // Slower than 30 FPS because nothing here is a frame. It is
+                // only how often the download queue and the prefetchers get a
+                // turn, and four times a second is plenty for that.
+                gfx::delay_ms(250);
+                continue;
+            }
+
             // --- Reset per-frame decode budget ---
             m_image_cache->begin_frame();
 
             // --- Clear ---
             gfx::clear(gfx::backbuffer(), ui::theme().bg);
+
+            // --- A script is stopped at a breakpoint ---
+            //
+            // This is the case where the script is on the DOWNLOAD WORKER: it
+            // is blocked waiting for an answer while this loop keeps running,
+            // so this is the only place its debugger can be drawn from. A
+            // script paused on THIS thread never gets here at all -- it is
+            // inside pump_debug_frame, drawing the same debugger itself.
+            //
+            // Nothing else is drawn either way. The launcher cannot usefully
+            // do anything while a script holds the interpreter, and a live
+            // library grid behind the debugger would invite clicks that
+            // silently queue up behind the pause.
+            if (m_script_host->paused())
+            {
+                ui::script_debugger_draw(*this, input);
+                gfx::present();
+
+                const unsigned int FRAME_MS = 33;
+                const unsigned int spent = gfx::ticks_ms() - frame_start;
+                if (spent < FRAME_MS)
+                    gfx::delay_ms(FRAME_MS - spent);
+
+                continue;
+            }
 
             // --- Draw current screen ---
             //
@@ -310,6 +419,9 @@ namespace launcher
                 case Screen::Settings:
                     ui::screen_settings_draw(*this, screen_input);
                     break;
+                case Screen::ScriptConsole:
+                    ui::screen_script_console_draw(*this, screen_input);
+                    break;
             }
 
             // --- Footer bar (drawn on top of screen content) ---
@@ -319,6 +431,13 @@ namespace launcher
             // --- Window chrome (custom title bar, drawn on top) ---
             if (ui::window_chrome_draw(*this, input))
                 m_quit = true;
+
+            // --- Script output tail (drawn over everything) ---
+            //
+            // Last, because the whole point of it is to stay visible while an
+            // install is running on some other screen. It draws nothing unless
+            // there is something to say or the user has pinned it open.
+            ui::script_tail_draw(*this, input);
 
             // --- Flip ---
             gfx::present();
@@ -788,6 +907,60 @@ namespace launcher
     MediaPrefetch &App::media_prefetch() { return *m_prefetch; }
     DownloadQueue &App::downloads() { return m_downloads; }
     GameDatabase &App::game_db() { return m_game_db; }
+    ScriptHost &App::script_host() { return *m_script_host; }
+    lancommander::KeyClient &App::keys() { return *m_keys; }
+    lancommander::SaveClient &App::saves() { return *m_saves; }
+
+    bool App::script_debugging() const
+    {
+        return m_settings.debug.enable_script_debugging;
+    }
+
+    void App::set_script_debugging(bool enabled)
+    {
+        m_settings.debug.enable_script_debugging = enabled;
+
+        m_script_host->set_debug_enabled(enabled);
+
+        // The .NET SDK's EnableScriptDebugging echoes the script's type and
+        // working directory before it runs; this is the same header.
+        m_script_host->set_verbose_variables(enabled);
+
+        // Stop at the first statement of the next script. Turning debugging
+        // OFF clears it too, so the flag cannot outlive the switch that armed
+        // it and surprise someone later.
+        m_script_host->set_break_on_entry(enabled);
+
+        m_settings.save(settings_file().c_str());
+
+        log_info("Script debugging %s", enabled ? "enabled" : "disabled");
+    }
+
+    bool App::pump_debug_frame()
+    {
+        // One frame, and only the debugger. The script that is paused holds
+        // this thread, so nothing else in the launcher can advance -- drawing
+        // the library behind the overlay would show a frozen picture of it and
+        // invite clicks that go nowhere.
+        static ui::InputState debug_input;
+
+        debug_input.poll();
+
+        if (debug_input.resized)
+            request_resize(debug_input.resize_w, debug_input.resize_h);
+        apply_pending_resize();
+
+        if (debug_input.quit_requested)
+            m_quit = true;
+
+        gfx::clear(gfx::backbuffer(), ui::theme().bg);
+        ui::script_debugger_draw(*this, debug_input);
+        gfx::present();
+
+        gfx::delay_ms(16);
+
+        return !m_quit;
+    }
 
     LibraryTab App::library_tab() const { return m_library_tab; }
 
@@ -806,6 +979,8 @@ namespace launcher
 
     void App::request_resize(int new_w, int new_h)
     {
+        // The dimensions land before the flag so the main loop can never see
+        // "a resize is pending" pointing at the previous size.
         m_pending_width = new_w;
         m_pending_height = new_h;
         m_resize_pending = true;
@@ -815,9 +990,18 @@ namespace launcher
     {
         if (!m_resize_pending)
             return;
+
+        // Snapshot first: a drag in progress keeps overwriting these from the
+        // window thread, and resize_display() must not be handed a width from
+        // one WM_SIZE and a height from the next.
+        const int w = m_pending_width;
+        const int h = m_pending_height;
+
+        // Cleared after the read, so a WM_SIZE that arrives mid-read is
+        // simply picked up on the following frame rather than dropped.
         m_resize_pending = false;
 
-        gfx::resize_display(m_pending_width, m_pending_height);
+        gfx::resize_display(w, h);
     }
 
 } // namespace launcher

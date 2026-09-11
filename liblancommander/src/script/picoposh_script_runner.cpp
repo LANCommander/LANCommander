@@ -120,8 +120,56 @@ ScriptVariable ScriptVariable::of_raw(const std::string& name, const std::string
 // Impl
 // ---------------------------------------------------------------------------
 
+namespace {
+
+// Reads variables out of the interpreter that is currently suspended in a
+// debug hook. picoposh's accessors refuse outside a hook, so this is safe to
+// hand out even if a caller squirrels the reference away.
+class PausedScope : public IScriptDebugScope {
+public:
+    bool get_variable(const std::string& name, std::string* out) const
+    {
+        PicoOwnedStr text;
+        if (pico_debug_get_variable(name.c_str(), &text.p) != 0)
+            return false;
+        if (out)
+            *out = text.str();
+        return true;
+    }
+
+    std::vector<std::string> variable_names() const
+    {
+        std::vector<std::string> names;
+        PicoOwnedStr blob;
+
+        if (pico_debug_variable_names(&blob.p) != 0 || !blob.p)
+            return names;
+
+        const std::string all = blob.str();
+        std::string::size_type start = 0;
+
+        while (start <= all.size()) {
+            const std::string::size_type end = all.find('\n', start);
+            const std::string one = all.substr(
+                start, end == std::string::npos ? std::string::npos : end - start);
+
+            if (!one.empty())
+                names.push_back(one);
+            if (end == std::string::npos)
+                break;
+            start = end + 1;
+        }
+
+        return names;
+    }
+};
+
+} // namespace
+
 struct PicoPoshScriptRunner::Impl {
     ScriptOutputFn callback;
+    ScriptDebugFn debug_hook;
+    std::string debug_script_name;
     bool debug;
     std::size_t output_limit;
     unsigned long step_limit;
@@ -170,6 +218,39 @@ extern "C" void lancommander_picoposh_sink(void* userdata, int stream,
         impl->on_output(stream, bytes, static_cast<std::size_t>(len));
 }
 
+extern "C" int lancommander_picoposh_debug(void* userdata, const char* name,
+                                           int line, int col, int depth)
+{
+    PicoPoshScriptRunner::Impl* impl =
+        static_cast<PicoPoshScriptRunner::Impl*>(userdata);
+
+    if (!impl || !impl->debug_hook)
+        return PICO_DEBUG_CONTINUE;
+
+    ScriptDebugStop stop;
+    // The interpreter's name for the run, except that the runner knows the
+    // caller's script_name and picoposh only ever sees what we passed it --
+    // so they agree, and the fallback is only for a NULL.
+    stop.script_name = name ? std::string(name) : impl->debug_script_name;
+    stop.line = line;
+    stop.col = col;
+    stop.depth = depth;
+
+    const PausedScope scope;
+
+    // A hook that throws would unwind through C frames, which is undefined.
+    // Swallowing means a broken debugger UI cannot corrupt the interpreter or
+    // leave the process working directory moved.
+    try {
+        if (impl->debug_hook(stop, scope) == ScriptDebugAction::Abort)
+            return PICO_DEBUG_ABORT;
+    } catch (...) {
+        return PICO_DEBUG_ABORT;
+    }
+
+    return PICO_DEBUG_CONTINUE;
+}
+
 // ---------------------------------------------------------------------------
 // PicoPoshScriptRunner
 // ---------------------------------------------------------------------------
@@ -193,6 +274,11 @@ void PicoPoshScriptRunner::set_output_limit(std::size_t bytes)
 void PicoPoshScriptRunner::set_step_limit(unsigned long steps)
 {
     m_impl->step_limit = steps;
+}
+
+void PicoPoshScriptRunner::set_debug_hook(ScriptDebugFn fn)
+{
+    m_impl->debug_hook = fn;
 }
 
 ScriptResult PicoPoshScriptRunner::run_inline(
@@ -332,8 +418,27 @@ ScriptResult PicoPoshScriptRunner::run_inline(
             setup_failed = true;
     }
 
-    if (!setup_failed)
+    if (!setup_failed) {
+        // Installed only here. The setup preamble above and the $Return
+        // read-back below are the runner's own bookkeeping, and stopping the
+        // user inside either would show them a line of a script they never
+        // wrote.
+        if (m_impl->debug_hook) {
+            m_impl->debug_script_name = name;
+            pico_session_set_debug_hook(session, &lancommander_picoposh_debug,
+                                        m_impl);
+        }
+
         code = pico_session_run(session, script_contents.c_str(), name.c_str());
+
+        pico_session_set_debug_hook(session, NULL, NULL);
+    }
+
+    // Read HERE, not after the $Return read-back below: that runs in the same
+    // session and a successful run resets the session's status, which would
+    // erase the very failure this is meant to record.
+    const bool interpreter_error =
+        setup_failed || pico_session_last_status(session) != PICO_EXIT_OK;
 
     pico_set_output(previous_sink, previous_userdata);
 
@@ -370,6 +475,7 @@ ScriptResult PicoPoshScriptRunner::run_inline(
         !result.return_json.empty() && result.return_json != "null";
 
     result.exit_code = code;
+    result.interpreter_error = interpreter_error;
     result.output = m_impl->out;
     result.error += m_impl->errors;
     result.success = !setup_failed && code == PICO_EXIT_OK;

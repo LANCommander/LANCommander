@@ -14,6 +14,8 @@
 #include "app/game_art_fetcher.h"
 #include "app/download_queue.h"
 #include "app/game_database.h"
+#include "app/script_host.h"
+#include "app/machine_info.h"
 
 // Which tab is active on the library screen.
 enum class LibraryTab
@@ -37,7 +39,11 @@ namespace launcher
         DepotBrowse,
         GameDetail,
         Downloads,
-        Settings
+        Settings,
+        // The script console: what a game's Install.ps1 printed, and where a
+        // breakpoint is set. Reached from Settings, and from a game's detail
+        // page once it has run something.
+        ScriptConsole
     };
 
     // What the depot browse grid is currently narrowed to.
@@ -76,6 +82,8 @@ namespace launcher
         lancommander::ToolClient &tools();
         lancommander::DepotClient &depot();
         lancommander::LauncherClient &launcher_client();
+        lancommander::KeyClient &keys();
+        lancommander::SaveClient &saves();
 
         Settings &settings();
 
@@ -151,6 +159,30 @@ namespace launcher
         // Local database of installed games.
         GameDatabase &game_db();
 
+        // Lifecycle scripts, their captured output, and the debugger.
+        ScriptHost &script_host();
+
+        // Turns script debugging on or off, applies it to the host and writes
+        // Settings.yml. One entry point rather than several, because the
+        // setting is the single source of truth: the console's Dbg button and
+        // the Settings screen's checkbox are two views of this one value.
+        //
+        // Enabling it also arms break-on-entry, so the next script that runs
+        // stops on its first statement. That is the only way to debug a script
+        // the launcher starts on its own -- an install begins and ends before
+        // there is any moment to press anything -- and it is what makes the
+        // switch do something visible rather than only mattering once a
+        // breakpoint has been set.
+        void set_script_debugging(bool enabled);
+        bool script_debugging() const;
+
+        // Draws one frame while a script is paused on THIS thread, and returns
+        // false when the app is quitting. Installed as the ScriptHost debug
+        // pump: a script stopped at a breakpoint on the UI thread has halted
+        // the only thing that draws, so it has to drive a frame itself or
+        // there would be no Continue button to press. See ScriptHost.
+        bool pump_debug_frame();
+
         // Request the app to quit.
         void quit();
         bool should_quit() const;
@@ -173,6 +205,12 @@ namespace launcher
         lancommander::DepotClient *m_depot;
         lancommander::LauncherClient *m_launcher;
         lancommander::PlaySessionClient *m_play_sessions_client;
+        lancommander::KeyClient *m_keys;
+        lancommander::SaveClient *m_saves;
+
+        // Identity for key allocation. Owned here because KeyClient holds a
+        // reference to it for its whole life.
+        PlatformMachineInfo m_machine;
         ui::ImageCache *m_image_cache;
 
         lancommander::IHttpClient *m_prefetch_http;
@@ -182,6 +220,14 @@ namespace launcher
         lancommander::IHttpClient *m_art_http;
         lancommander::GameClient *m_art_games;
         GameArtFetcher *m_art_fetcher;
+
+        // The script host fetches a game's scripts and manifest from the
+        // install worker, so it gets its own client for the same reason the
+        // prefetcher and the art fetcher do.
+        lancommander::IHttpClient *m_script_http;
+        lancommander::GameClient *m_script_games;
+        lancommander::ScriptClient *m_script_client;
+        ScriptHost *m_script_host;
 
         // App state
         Settings m_settings;
@@ -204,10 +250,14 @@ namespace launcher
         bool m_overlay_active;
         bool m_quit;
 
-        // Pending resize (set from WndProc, consumed in main loop)
-        bool m_resize_pending;
-        int m_pending_width;
-        int m_pending_height;
+        // Pending resize. Written from the WndProc -- which Allegro runs on
+        // its own window thread, not this one -- and consumed in the main
+        // loop, so volatile: without it the compiler is entitled to keep
+        // m_resize_pending in a register across the loop body and never see
+        // the flag go true.
+        volatile bool m_resize_pending;
+        volatile int m_pending_width;
+        volatile int m_pending_height;
     };
 
 } // namespace launcher

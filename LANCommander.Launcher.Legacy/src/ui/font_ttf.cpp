@@ -41,13 +41,10 @@ namespace launcher
 
             // Inter at ptsize 13 reports a line height of 16px, matching what
             // GDI's CreateFontA(-13, ...) reported for the faces this UI was
-            // laid out against — so no vertical layout shift.
-            const float FONT_PTSIZE = 13.0f;
+            // laid out against — so the Body rung causes no vertical layout
+            // shift. The other rungs open at font_px() directly.
 
             const size_t MAX_CACHED_STRINGS = 512;
-
-            TTF_Font *s_font = NULL;
-            int s_height = 0;
 
             struct Entry
             {
@@ -56,17 +53,40 @@ namespace launcher
                 unsigned long long last_used;
             };
 
-            std::map<std::string, Entry> s_cache;
-            std::map<std::string, int> s_widths; // measure-only, much cheaper
+            // One face and one pair of caches per rung.
+            //
+            // The caches could have been keyed on (string, rung) instead, but
+            // a given string is almost always drawn at one rung for the life
+            // of the program, so per-rung maps keep the common lookup on the
+            // short key it already had.
+            struct Face
+            {
+                TTF_Font *font;
+                int height;
+                std::map<std::string, Entry> cache;
+                std::map<std::string, int> widths; // measure-only, much cheaper
+
+                Face() : font(NULL), height(0) {}
+            };
+
+            Face s_faces[(int)FontSize::Count];
             unsigned long long s_tick = 0;
 
-            void evict_oldest()
+            Face &face_of(FontSize size)
             {
-                std::map<std::string, Entry>::iterator victim = s_cache.end();
+                const int i = (int)size;
+                return s_faces[(i >= 0 && i < (int)FontSize::Count)
+                                   ? i
+                                   : (int)FontSize::Body];
+            }
+
+            void evict_oldest(Face &f)
+            {
+                std::map<std::string, Entry>::iterator victim = f.cache.end();
                 unsigned long long oldest = (unsigned long long)-1;
 
-                for (std::map<std::string, Entry>::iterator it = s_cache.begin();
-                     it != s_cache.end(); ++it)
+                for (std::map<std::string, Entry>::iterator it = f.cache.begin();
+                     it != f.cache.end(); ++it)
                 {
                     if (it->second.last_used < oldest)
                     {
@@ -75,22 +95,24 @@ namespace launcher
                     }
                 }
 
-                if (victim != s_cache.end())
+                if (victim != f.cache.end())
                 {
                     gfx::destroy_surface(victim->second.mask);
-                    s_cache.erase(victim);
+                    f.cache.erase(victim);
                 }
             }
 
-            const Entry *acquire(const char *utf8)
+            const Entry *acquire(const char *utf8, FontSize size)
             {
-                if (!s_font || !utf8 || !*utf8)
+                Face &f = face_of(size);
+
+                if (!f.font || !utf8 || !*utf8)
                     return NULL;
 
                 std::string key(utf8);
 
-                std::map<std::string, Entry>::iterator it = s_cache.find(key);
-                if (it != s_cache.end())
+                std::map<std::string, Entry>::iterator it = f.cache.find(key);
+                if (it != f.cache.end())
                 {
                     it->second.last_used = ++s_tick;
                     return &it->second;
@@ -100,7 +122,7 @@ namespace launcher
                 // theme colour without re-rasterising.
                 SDL_Color white = { 255, 255, 255, 255 };
                 SDL_Surface *rendered =
-                    TTF_RenderText_Blended(s_font, utf8, 0, white);
+                    TTF_RenderText_Blended(f.font, utf8, 0, white);
                 if (!rendered)
                     return NULL;
 
@@ -110,93 +132,108 @@ namespace launcher
                 if (!mask)
                     return NULL;
 
-                while (s_cache.size() >= MAX_CACHED_STRINGS)
-                    evict_oldest();
+                while (f.cache.size() >= MAX_CACHED_STRINGS)
+                    evict_oldest(f);
 
                 Entry e;
                 e.mask = mask;
                 e.width = w;
                 e.last_used = ++s_tick;
-                s_cache[key] = e;
+                f.cache[key] = e;
 
-                return &s_cache[key];
+                return &f.cache[key];
             }
         } // namespace
 
-        bool font_init(int px_size)
+        bool font_init()
         {
-            (void)px_size; // FONT_PTSIZE is calibrated, not derived
-
             if (!TTF_Init())
                 return false;
 
-            s_font = TTF_OpenFont(FONT_PATH, FONT_PTSIZE);
-            if (!s_font)
+            for (int i = 0; i < (int)FontSize::Count; ++i)
             {
-                TTF_Quit();
-                return false;
+                TTF_Font *font =
+                    TTF_OpenFont(FONT_PATH, (float)font_px((FontSize)i));
+                if (!font)
+                {
+                    font_shutdown();
+                    return false;
+                }
+
+                // FreeType's default hinting is softer than the
+                // ANTIALIASED_QUALITY GDI output this replaces; NORMAL keeps
+                // small text crisp, which matters most at the Caption rung.
+                TTF_SetFontHinting(font, TTF_HINTING_NORMAL);
+
+                s_faces[i].font = font;
+                s_faces[i].height = TTF_GetFontHeight(font);
             }
 
-            // FreeType's default hinting is softer than the ANTIALIASED_QUALITY
-            // GDI output this replaces; NORMAL keeps small text crisp.
-            TTF_SetFontHinting(s_font, TTF_HINTING_NORMAL);
-
-            s_height = TTF_GetFontHeight(s_font);
             return true;
         }
 
         void font_shutdown()
         {
-            for (std::map<std::string, Entry>::iterator it = s_cache.begin();
-                 it != s_cache.end(); ++it)
+            for (int i = 0; i < (int)FontSize::Count; ++i)
             {
-                gfx::destroy_surface(it->second.mask);
-            }
-            s_cache.clear();
-            s_widths.clear();
+                Face &f = s_faces[i];
 
-            if (s_font)
-            {
-                TTF_CloseFont(s_font);
-                s_font = NULL;
+                for (std::map<std::string, Entry>::iterator it = f.cache.begin();
+                     it != f.cache.end(); ++it)
+                {
+                    gfx::destroy_surface(it->second.mask);
+                }
+                f.cache.clear();
+                f.widths.clear();
+
+                if (f.font)
+                {
+                    TTF_CloseFont(f.font);
+                    f.font = NULL;
+                }
+                f.height = 0;
             }
             TTF_Quit();
         }
 
-        int font_height() { return s_height; }
+        int font_height(FontSize size) { return face_of(size).height; }
 
-        int font_measure(const char *utf8)
+        int font_measure(const char *utf8, FontSize size)
         {
-            if (!s_font || !utf8 || !*utf8)
+            Face &f = face_of(size);
+
+            if (!f.font || !utf8 || !*utf8)
                 return 0;
 
             std::string key(utf8);
-            std::map<std::string, int>::iterator it = s_widths.find(key);
-            if (it != s_widths.end())
+            std::map<std::string, int>::iterator it = f.widths.find(key);
+            if (it != f.widths.end())
                 return it->second;
 
             int w = 0, h = 0;
-            if (!TTF_GetStringSize(s_font, utf8, 0, &w, &h))
+            if (!TTF_GetStringSize(f.font, utf8, 0, &w, &h))
                 return 0;
 
             // Measurement is used heavily by word wrap on text that is never
             // drawn, so this cache is kept separate from the mask cache and
             // is not size-limited — the entries are a few bytes each.
-            s_widths[key] = w;
+            f.widths[key] = w;
             return w;
         }
 
-        int font_fit(const char *utf8, int max_w, int *out_w)
+        int font_fit(const char *utf8, int max_w, int *out_w, FontSize size)
         {
+            Face &f = face_of(size);
+
             if (out_w)
                 *out_w = 0;
-            if (!s_font || !utf8 || !*utf8 || max_w <= 0)
+            if (!f.font || !utf8 || !*utf8 || max_w <= 0)
                 return 0;
 
             int measured_w = 0;
             size_t measured_len = 0;
 
-            if (!TTF_MeasureString(s_font, utf8, 0, max_w,
+            if (!TTF_MeasureString(f.font, utf8, 0, max_w,
                                    &measured_w, &measured_len))
                 return 0;
 
@@ -206,9 +243,9 @@ namespace launcher
         }
 
         void font_draw(gfx::Surface *dst, int x, int y, gfx::Color color,
-                       const char *utf8)
+                       const char *utf8, FontSize size)
         {
-            const Entry *e = acquire(utf8);
+            const Entry *e = acquire(utf8, size);
             if (!e)
                 return;
             gfx::blit_tinted(dst, e->mask, x, y, color);

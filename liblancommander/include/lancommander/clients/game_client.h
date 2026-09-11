@@ -28,6 +28,10 @@ public:
     Result<bool> check_for_update(const std::string& game_id, const std::string& installed_version);
     Result<bool> download(const std::string& game_id, const std::string& dest_path,
                           DownloadProgressFn progress = nullptr);
+
+    // How the last download() spent its time, straight from the transport.
+    // See IHttpClient::last_download_timing.
+    DownloadTiming last_download_timing() const { return m_http.last_download_timing(); }
     void notify_started(const std::string& game_id);
     void notify_stopped(const std::string& game_id);
 

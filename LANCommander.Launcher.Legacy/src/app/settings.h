@@ -22,6 +22,8 @@ namespace launcher
     //     InstallDirectories   -> games.install_directories
     //   Launcher:
     //     Username             -> launcher.username
+    //   Debug:
+    //     EnableScriptDebugging -> debug.enable_script_debugging
 
     struct AuthenticationToken
     {
@@ -53,11 +55,27 @@ namespace launcher
         std::string username;
     };
 
+    struct DebugSettings
+    {
+        // Named to match LANCommander.SDK's DebugSettings.EnableScriptDebugging,
+        // because both launchers read the same Settings.yml -- turning script
+        // debugging on in one is meant to turn it on in the other.
+        //
+        // In the .NET SDK this makes a script echo its type and working
+        // directory before it runs, and break afterwards. Here it does the
+        // same echo AND arms the interpreter's per-statement hook, which is
+        // what lets a script stop at its entry and at breakpoints.
+        bool enable_script_debugging;
+
+        DebugSettings() : enable_script_debugging(false) {}
+    };
+
     struct Settings
     {
         AuthenticationSettings authentication;
         GameSettings games;
         LauncherSettings launcher;
+        DebugSettings debug;
 
         // Load from YAML file. Returns false if file doesn't exist (defaults are kept).
         bool load(const std::string &path);

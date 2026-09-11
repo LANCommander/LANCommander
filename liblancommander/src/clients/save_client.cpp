@@ -1,4 +1,6 @@
 #include "lancommander/clients/save_client.h"
+
+#include "lancommander/script/script_helper.h"
 #include "../json/json_helpers.h"
 
 #include <sstream>
@@ -57,8 +59,21 @@ Result<bool> SaveClient::download_latest(const std::string& game_id,
 
 Result<bool> SaveClient::upload(const std::string& game_id, const std::string& zip_path)
 {
+    // ?platform is not optional. The endpoint binds it as a non-nullable
+    // [FromQuery] RuntimePlatform, so a request without it is rejected before
+    // the file is ever read -- which is what this client used to send. The
+    // server records it on the save so a Windows save is not offered to a
+    // Linux install.
+    const char* platform = "Windows";
+    switch (script::current_runtime_platform()) {
+        case RuntimePlatform_Linux: platform = "Linux"; break;
+        case RuntimePlatform_macOS: platform = "macOS"; break;
+        default: break;
+    }
+
     HttpResponse resp = m_http.post_multipart_file(
-        "/api/Saves/Game/" + game_id + "/Upload", "file", zip_path);
+        "/api/Saves/Game/" + game_id + "/Upload?platform=" + platform,
+        "file", zip_path);
     if (resp.ok()) return Result<bool>::ok(true);
 
     std::ostringstream e;

@@ -53,20 +53,23 @@ namespace launcher
 
             // Back button
             int back_w = 60;
-            int back_h = 22;
+            int back_h = button_height();
             int back_x = pad;
             int back_y = header_y + (header_h - back_h) / 2;
-            ButtonState back_btn = button(buf, back_x, back_y, back_w, back_h, "< Back", input);
+            ButtonState back_btn = icon_button(buf, back_x, back_y, back_w, back_h,
+                                               Icon::ArrowLeft, "Back", input);
 
-            // Title
-            draw_text(buf, back_x + back_w + 12, header_y + (header_h - th) / 2,
-                      theme().text_bright, "Settings");
+            // Title. SettingsView sets this at 24 against a base of 16.
+            draw_text(buf, back_x + back_w + 12,
+                      header_y + (header_h - text_height(FontSize::Title)) / 2,
+                      theme().text_bright, "Settings", FontSize::Title);
 
             // Build version, right-aligned in the header bar so it never
             // collides with the title. Dimmed — it is reference information for
             // bug reports, not something to draw the eye.
             draw_text_right(buf, sw - pad, header_y + (header_h - th) / 2,
-                            theme().text_dim, "v" LC_LAUNCHER_VERSION);
+                            theme().text_dim, "v" LC_LAUNCHER_VERSION,
+                            FontSize::Caption);
 
             // --- Initialize form from settings on first visit ---
             if (!s_initialized)
@@ -111,6 +114,10 @@ namespace launcher
                         + field_gap + 22                   // add button
                         + section_gap
                         + 28                               // save button
+                        + section_gap
+                        + th + 6                           // "Diagnostics" header
+                        + 22 + 4 + th + 8                  // debugging checkbox + hint
+                        + field_h + 8                      // console button
                         + 8 + th                           // status message
                         + pad;
 
@@ -132,7 +139,8 @@ namespace launcher
             // =============================================================
             // Connection section
             // =============================================================
-            draw_text(buf, form_x, y, theme().text_bright, "Connection");
+            draw_text(buf, form_x, y, theme().text_bright, "Connection",
+                      FontSize::Section);
             y += th + 8;
 
             // --- Server Address ---
@@ -183,7 +191,8 @@ namespace launcher
             // =============================================================
             // Install Directories section
             // =============================================================
-            draw_text(buf, form_x, y, theme().text_bright, "Install Directories");
+            draw_text(buf, form_x, y, theme().text_bright, "Install Directories",
+                      FontSize::Section);
             y += th + 8;
 
             int remove_idx = -1;
@@ -237,7 +246,9 @@ namespace launcher
             {
                 y += field_gap;
                 int add_w = text_width("+ Add Directory") + 20;
-                ButtonState add_btn = button(buf, form_x, y, add_w, field_h, "+ Add Directory", input);
+                ButtonState add_btn = button(buf, form_x, y, add_w, field_h,
+                                             "+ Add Directory", input,
+                                             ButtonStyle::Primary);
                 if (add_btn.clicked)
                 {
                     s_install_dirs.push_back("");
@@ -253,10 +264,11 @@ namespace launcher
             // Save button
             // =============================================================
             int btn_w = 100;
-            int save_btn_h = 28;
+            int save_btn_h = button_height();
             int btn_x = form_x + (form_w - btn_w) / 2;
 
-            ButtonState save_btn = button(buf, btn_x, y, btn_w, save_btn_h, "Save", input);
+            ButtonState save_btn = button(buf, btn_x, y, btn_w, save_btn_h, "Save",
+                                          input, ButtonStyle::Primary);
 
             if (save_btn.clicked)
             {
@@ -286,6 +298,61 @@ namespace launcher
             }
 
             y += save_btn_h + 8;
+
+            // =============================================================
+            // Diagnostics
+            // =============================================================
+            //
+            // Lives here rather than behind a game because it is where you go
+            // when you do not yet know which game is misbehaving -- and
+            // because the console is also how you turn the debugger on.
+            {
+                y += section_gap;
+                draw_text(buf, form_x, y, theme().text_dim, "Diagnostics",
+                          FontSize::Section);
+                y += th + 6;
+
+                // Persisted as Debug.EnableScriptDebugging, the same key the
+                // Avalonia launcher reads -- both share Settings.yml, so a
+                // script debugged in one is debugged in the other.
+                //
+                // Applied immediately rather than on Save: this is a switch
+                // someone flips while chasing a misbehaving script, and having
+                // to remember a second button to make it take effect is how
+                // you end up convinced the debugger is broken.
+                bool debugging = app.script_debugging();
+                if (checkbox(buf, form_x, y, "Enable script debugging", debugging,
+                             input))
+                {
+                    app.set_script_debugging(debugging);
+                }
+
+                y += 22 + 4;
+                draw_text(buf, form_x + 20, y, theme().text_disabled,
+                          "Scripts stop at their first statement so you can step "
+                          "through them.");
+                y += th + 8;
+
+                const char *label = "Script Console";
+                const int console_w = text_width(label) + 20;
+                if (button(buf, form_x, y, console_w, field_h, label, input).clicked)
+                    app.switch_screen(Screen::ScriptConsole);
+
+                {
+                    // The count is the useful part: "0 runs" is the answer to
+                    // "did my script run at all", which is otherwise invisible.
+                    app.script_host().lock_log();
+                    const int runs = (int)app.script_host().runs().size();
+                    app.script_host().unlock_log();
+
+                    char note[96];
+                    sprintf(note, "%d run%s recorded", runs, runs == 1 ? "" : "s");
+                    draw_text(buf, form_x + console_w + 12, y + (field_h - th) / 2,
+                              theme().text_disabled, note);
+                }
+
+                y += field_h + 8;
+            }
 
             // --- Status message ---
             if (!s_status_message.empty())

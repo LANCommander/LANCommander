@@ -15,16 +15,36 @@ namespace launcher
 
         static ScrollState s_scroll;
 
-        static void format_bytes(unsigned long bytes, char *buf, int buf_sz)
+        // Takes a double rather than an integer so one function serves both
+        // the 64-bit byte counters and the rate, which is a per-second figure
+        // with no business being widened to 64 bits to be printed.
+        static void format_bytes(double bytes, char *buf, int buf_sz)
         {
-            if (bytes >= 1024UL * 1024UL * 1024UL)
+            (void)buf_sz;
+
+            if (bytes >= 1024.0 * 1024.0 * 1024.0)
                 sprintf(buf, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
-            else if (bytes >= 1024UL * 1024UL)
+            else if (bytes >= 1024.0 * 1024.0)
                 sprintf(buf, "%.1f MB", bytes / (1024.0 * 1024.0));
-            else if (bytes >= 1024UL)
+            else if (bytes >= 1024.0)
                 sprintf(buf, "%.0f KB", bytes / 1024.0);
             else
-                sprintf(buf, "%lu B", bytes);
+                sprintf(buf, "%.0f B", bytes);
+        }
+
+        // "1h 04m", "4m 12s", "38s". Coarse on purpose: the estimate is not
+        // accurate to the second, and printing it as though it were invites
+        // the user to watch it jitter.
+        static void format_eta(unsigned long seconds, char *buf, int buf_sz)
+        {
+            (void)buf_sz;
+
+            if (seconds >= 3600)
+                sprintf(buf, "%luh %02lum", seconds / 3600, (seconds % 3600) / 60);
+            else if (seconds >= 60)
+                sprintf(buf, "%lum %02lus", seconds / 60, seconds % 60);
+            else
+                sprintf(buf, "%lus", seconds);
         }
 
         void screen_downloads_draw(App &app, const InputState &input)
@@ -45,11 +65,16 @@ namespace launcher
             gfx::hline(buf, 0, header_y + header_h - 1, sw, theme().divider);
 
             // Back button
-            int back_w = 60;
-            int back_h = 22;
+            //
+            // Icon::ArrowLeft, not a "<" glyph: the arrow is what the rest of
+            // the UI uses (screen_depot_browse, the game detail header), and a
+            // literal less-than sign reads as scaffolding.
+            int back_w = button_width("Back", Icon::ArrowLeft);
+            int back_h = button_height();
             int back_x = pad;
             int back_y = header_y + (header_h - back_h) / 2;
-            ButtonState back_btn = button(buf, back_x, back_y, back_w, back_h, "< Back", input);
+            ButtonState back_btn = icon_button(buf, back_x, back_y, back_w, back_h,
+                                               Icon::ArrowLeft, "Back", input);
 
             // Title
             draw_text(buf, back_x + back_w + 12, header_y + (header_h - th) / 2,
@@ -158,6 +183,13 @@ namespace launcher
                         status_str = "Extracting";
                         status_color = theme().warning;
                         break;
+                    case DownloadStatus::RunningScripts:
+                        // Was falling through to "Queued", which is the one
+                        // thing this state is not -- and it is the state an
+                        // install sits in longest with the bar already full.
+                        status_str = "Installing";
+                        status_color = theme().warning;
+                        break;
                     case DownloadStatus::Complete:
                         status_str = "Complete";
                         status_color = theme().success;
@@ -171,16 +203,39 @@ namespace launcher
                     }
 
                     // Status line with byte counts
-                    char info[128];
+                    char info[192];
                     if (it.status == DownloadStatus::Downloading && it.total > 0)
                     {
                         char recv_s[32], total_s[32];
-                        format_bytes(it.received, recv_s, sizeof(recv_s));
-                        format_bytes(it.total, total_s, sizeof(total_s));
-                        sprintf(info, "%s  -  %s / %s  (%d%%)",
+                        format_bytes((double)it.received, recv_s, sizeof(recv_s));
+                        format_bytes((double)it.total, total_s, sizeof(total_s));
+
+                        // Rate and ETA are appended rather than always
+                        // present: both read 0 for the first half second of a
+                        // transfer, and "0 B/s" is worse than nothing.
+                        char rate_s[48] = "";
+                        if (it.speed_bps > 0)
+                        {
+                            char sp[32];
+                            format_bytes((double)it.speed_bps, sp, sizeof(sp));
+                            sprintf(rate_s, "  -  %s/s", sp);
+                        }
+
+                        char eta_s[48] = "";
+                        if (it.eta_seconds > 0)
+                        {
+                            char e[32];
+                            format_eta(it.eta_seconds, e, sizeof(e));
+                            sprintf(eta_s, "  -  %s left", e);
+                        }
+
+                        sprintf(info, "%s  -  %s / %s  (%d%%)%s%s",
                                 status_str, recv_s, total_s,
-                                (int)(it.progress * 100));
+                                (int)(it.progress * 100), rate_s, eta_s);
                     }
+                    else if (it.status == DownloadStatus::Extracting)
+                        sprintf(info, "%s  -  %d%%", status_str,
+                                (int)(it.progress * 100));
                     else if (it.status == DownloadStatus::Failed && !it.error.empty())
                         sprintf(info, "%s: %s", status_str, it.error.c_str());
                     else
@@ -190,7 +245,8 @@ namespace launcher
 
                     // Progress bar for active downloads
                     if (it.status == DownloadStatus::Downloading ||
-                        it.status == DownloadStatus::Extracting)
+                        it.status == DownloadStatus::Extracting ||
+                        it.status == DownloadStatus::RunningScripts)
                     {
                         int bar_x = pad;
                         int bar_w = sw - pad * 2;
@@ -200,9 +256,10 @@ namespace launcher
                         int fill = (int)(it.progress * bar_w);
                         if (fill > 0)
                         {
-                            gfx::Color bar_color = (it.status == DownloadStatus::Extracting)
-                                                       ? theme().warning
-                                                       : theme().primary;
+                            gfx::Color bar_color =
+                                (it.status == DownloadStatus::Downloading)
+                                    ? theme().primary
+                                    : theme().warning;
                             gfx::fill_rect(buf, gfx::rect(bar_x, bar_y, fill, bar_h),
                                            bar_color);
                         }

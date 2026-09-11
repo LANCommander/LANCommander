@@ -4,6 +4,10 @@
 #include "lancommander/script/script_helper.h"
 #include "lancommander/util/path.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace lancommander;
 
 namespace {
@@ -226,5 +230,218 @@ void test_script_runner()
                                                ScriptVariableList());
         CHECK(!r.success);
         CHECK(r.error.find("could not open script") != std::string::npos);
+    }
+    // --- debug hook --------------------------------------------------------
+    {
+        PicoPoshScriptRunner debugged;
+        std::vector<int> lines;
+        std::string name_seen;
+        std::string x_at_line_3;
+
+        debugged.set_debug_hook(
+            [&](const ScriptDebugStop& stop, const IScriptDebugScope& scope) {
+                lines.push_back(stop.line);
+                if (name_seen.empty())
+                    name_seen = stop.script_name;
+                if (stop.line == 3)
+                    scope.get_variable("x", &x_at_line_3);
+                return ScriptDebugAction::Continue;
+            });
+
+        const ScriptResult r = debugged.run_inline(
+            "$x = 1\n$x = $x + 1\nWrite-Host \"x=$x\"\n", "hooked.ps1", "",
+            ScriptVariableList());
+
+        CHECK(r.success);
+        CHECK_EQ(r.output, "x=2\n");
+        // One stop per statement, and the third is a pipeline -- the shape
+        // that had no line number of its own until picoposh started stamping
+        // one on, and the shape most Write-Host lines have.
+        CHECK(lines.size() == 3);
+        if (lines.size() == 3) {
+            CHECK(lines[0] == 1 && lines[1] == 2 && lines[2] == 3);
+        }
+        CHECK_EQ(name_seen, "hooked.ps1");
+        // Read before the statement runs, so $x is already 2 by line 3.
+        CHECK_EQ(x_at_line_3, "2");
+    }
+
+    // The variable-injection preamble and the $Return read-back run in the
+    // same session, and a breakpoint must not land in either: they are the
+    // runner's bookkeeping, not anything the script author wrote.
+    {
+        PicoPoshScriptRunner debugged;
+        std::vector<std::string> names_seen;
+
+        debugged.set_debug_hook(
+            [&](const ScriptDebugStop& stop, const IScriptDebugScope&) {
+                names_seen.push_back(stop.script_name);
+                return ScriptDebugAction::Continue;
+            });
+
+        ScriptVariableList variables;
+        variables.push_back(ScriptVariable::of_int("Count", 3));
+
+        const ScriptResult r = debugged.run_inline(
+            "$Return = $Count\n", "only-mine.ps1", "", variables);
+
+        CHECK(r.success);
+        CHECK_EQ(r.return_value, "3");
+        CHECK(names_seen.size() == 1);
+        for (std::size_t i = 0; i < names_seen.size(); ++i)
+            CHECK_EQ(names_seen[i], "only-mine.ps1");
+    }
+
+    // Aborting ends the run where it stood.
+    {
+        PicoPoshScriptRunner debugged;
+
+        debugged.set_debug_hook(
+            [](const ScriptDebugStop& stop, const IScriptDebugScope&) {
+                return stop.line >= 2 ? ScriptDebugAction::Abort
+                                      : ScriptDebugAction::Continue;
+            });
+
+        const ScriptResult r = debugged.run_inline(
+            "Write-Host 'first'\nWrite-Host 'second'\n", "aborted.ps1", "",
+            ScriptVariableList());
+
+        CHECK(!r.success);
+        CHECK_EQ(r.output, "first\n");
+        CHECK(r.error.find("stopped by the debugger") != std::string::npos);
+    }
+
+    // Variable names come from the live interpreter, innermost scope first.
+    {
+        PicoPoshScriptRunner debugged;
+        bool saw_local = false;
+        bool saw_global = false;
+
+        // Line 4 -- inside f, AFTER $inner has been assigned. The hook fires
+        // BEFORE each statement, so stopping on line 3 would be too early to
+        // see a variable that line 3 is what creates.
+        debugged.set_debug_hook(
+            [&](const ScriptDebugStop& stop, const IScriptDebugScope& scope) {
+                if (stop.line != 4)
+                    return ScriptDebugAction::Continue;
+
+                const std::vector<std::string> names = scope.variable_names();
+                for (std::size_t i = 0; i < names.size(); ++i) {
+                    if (names[i] == "inner") saw_local = true;
+                    if (names[i] == "outer") saw_global = true;
+                }
+                return ScriptDebugAction::Continue;
+            });
+
+        const ScriptResult r = debugged.run_inline(
+            "$outer = 1\n"          // 1
+            "function f {\n"        // 2
+            "    $inner = 2\n"      // 3
+            "    Write-Host $inner\n" // 4
+            "}\n"                   // 5
+            "f\n",                  // 6
+            "scopes.ps1", "", ScriptVariableList());
+
+        CHECK(r.success);
+        CHECK(saw_local);
+        CHECK(saw_global);
+    }
+
+    // Detaching restores an undebugged run.
+    {
+        PicoPoshScriptRunner debugged;
+        int calls = 0;
+
+        debugged.set_debug_hook(
+            [&](const ScriptDebugStop&, const IScriptDebugScope&) {
+                calls++;
+                return ScriptDebugAction::Continue;
+            });
+        debugged.run_inline("$a = 1\n", "t", "", ScriptVariableList());
+        CHECK(calls == 1);
+
+        debugged.set_debug_hook(nullptr);
+        debugged.run_inline("$a = 1\n$b = 2\n", "t", "", ScriptVariableList());
+        CHECK(calls == 1);
+    }
+    // --- `exit <n>` is not an interpreter error ----------------------------
+    //
+    // The codes collide: PICO_EXIT_PARSE is 2 and PICO_EXIT_UNSUPPORTED is 3,
+    // so the exit code alone cannot tell a script that deliberately exited 2
+    // from one that did not parse. interpreter_error is what separates them.
+    {
+        const ScriptResult r = run(runner, "Write-Host 'bye'\nexit 2\n");
+        CHECK(!r.success);
+        CHECK(r.exit_code == 2);
+        CHECK(!r.interpreter_error);
+        CHECK_EQ(r.output, "bye\n");
+    }
+
+    {
+        const ScriptResult r = run(runner, "exit 3\n");
+        CHECK(r.exit_code == 3);
+        CHECK(!r.interpreter_error);
+    }
+
+    {
+        const ScriptResult r = run(runner, "$a = 1\n");
+        CHECK(r.success);
+        CHECK(!r.interpreter_error);
+    }
+
+    {
+        // Genuinely does not parse.
+        const ScriptResult r = run(runner, "if ( {\n");
+        CHECK(!r.success);
+        CHECK(r.interpreter_error);
+    }
+
+    {
+        // Genuinely fails at runtime.
+        const ScriptResult r = run(runner, "$x = 1 / 0\n");
+        CHECK(!r.success);
+        CHECK(r.interpreter_error);
+    }
+    // Depth tells a "step over" apart from a "step into": statements inside a
+    // function the script called are one deeper than the call.
+    {
+        PicoPoshScriptRunner debugged;
+        std::vector<std::pair<int, int> > stops; // line, depth
+
+        debugged.set_debug_hook(
+            [&](const ScriptDebugStop& stop, const IScriptDebugScope&) {
+                stops.push_back(std::make_pair(stop.line, stop.depth));
+                return ScriptDebugAction::Continue;
+            });
+
+        const ScriptResult r = debugged.run_inline(
+            "function helper {\n"        // 1
+            "    Write-Host 'inside'\n"  // 2
+            "}\n"                        // 3
+            "Write-Host 'before'\n"      // 4
+            "helper\n"                   // 5
+            "Write-Host 'after'\n",      // 6
+            "depth.ps1", "", ScriptVariableList());
+
+        CHECK(r.success);
+        CHECK_EQ(r.output, "before\ninside\nafter\n");
+
+        int top = 0;
+        int nested = 0;
+        for (std::size_t i = 0; i < stops.size(); ++i) {
+            if (stops[i].second == 0) top++;
+            if (stops[i].second == 1) nested++;
+        }
+
+        // Line 2 runs once, inside the call from line 5.
+        CHECK(nested == 1);
+        CHECK(top >= 3);
+
+        for (std::size_t i = 0; i < stops.size(); ++i) {
+            if (stops[i].first == 2)
+                CHECK(stops[i].second == 1);
+            if (stops[i].first == 5)
+                CHECK(stops[i].second == 0);
+        }
     }
 }

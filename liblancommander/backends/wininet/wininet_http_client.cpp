@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 #pragma comment(lib, "wininet.lib")
 
@@ -321,8 +322,34 @@ bool WinInetHttpClient::download(const std::string& path,
                                   const std::string& dest_path,
                                   DownloadProgressFn progress)
 {
+    // Read and write sizes for a game archive, which is measured in
+    // gigabytes rather than in the kilobytes an API response is.
+    //
+    // This loop used to read 8 KB at a time into a stack buffer and fwrite
+    // each chunk straight through -- the CRT bypasses its own buffer for a
+    // write at or above the buffer size, so the default 4 KB one did nothing.
+    // A 1.3 GB archive was therefore ~159,000 InternetReadFile calls and
+    // ~159,000 WriteFiles. Both numbers matter more than they look on the
+    // hardware this client exists for: on Win9x a file write is a thunk into
+    // 16-bit VFAT that takes the Win16Mutex on the way, and that is the same
+    // lock GDI needs, so the write RATE is what decides whether the UI keeps
+    // redrawing underneath the download.
+    //
+    // At 64 KB reads into a 1 MB stdio buffer the same archive is ~20,000
+    // reads and ~1,300 writes.
+    const size_t READ_CHUNK  = 64 * 1024;
+    const size_t FILE_BUFFER = 1024 * 1024;
+
     FILE* f = fopen(dest_path.c_str(), "wb");
     if (!f) return false;
+
+    // Left to the CRT to allocate and release with the stream, so no exit
+    // path from here has to remember to free it.
+    setvbuf(f, NULL, _IOFBF, FILE_BUFFER);
+
+    // Heap, not stack: 64 KB is more than a worker thread's default stack
+    // can be assumed to spare on the older targets.
+    std::vector<char> buf(READ_CHUNK);
 
     HINTERNET conn = NULL;
     HINTERNET req = open_request("GET", path, &conn, true);
@@ -334,6 +361,10 @@ bool WinInetHttpClient::download(const std::string& path,
     std::string headers;
     append_default_headers(headers);
 
+    // Reset here rather than on the way out, so a download that fails partway
+    // still leaves behind the timings for however far it got.
+    m_last_timing = DownloadTiming();
+
     bool ok = false;
     if (HttpSendRequestA(req,
                          headers.empty() ? NULL : headers.c_str(),
@@ -343,18 +374,65 @@ bool WinInetHttpClient::download(const std::string& path,
         if (status >= 200 && status < 300) {
             uint64_t total = read_content_length(req);
             uint64_t received = 0;
-            char buf[8192];
             DWORD read_bytes = 0;
             ok = true;
-            while (InternetReadFile(req, buf, sizeof(buf), &read_bytes) && read_bytes > 0) {
-                if (fwrite(buf, 1, read_bytes, f) != read_bytes) { ok = false; break; }
+
+            const DWORD loop_start = GetTickCount();
+            DWORD mark = loop_start;
+
+            for (;;) {
+                if (!InternetReadFile(req, &buf[0],
+                                      static_cast<DWORD>(buf.size()),
+                                      &read_bytes))
+                    break;
+
+                const DWORD after_read = GetTickCount();
+                m_last_timing.socket_ms += after_read - mark;
+                m_last_timing.reads++;
+                mark = after_read;
+
+                if (read_bytes == 0)
+                    break;
+
+                const bool wrote = fwrite(&buf[0], 1, read_bytes, f) == read_bytes;
+
+                const DWORD after_write = GetTickCount();
+                const DWORD this_write = after_write - mark;
+                m_last_timing.write_ms += this_write;
+                if (this_write > m_last_timing.longest_write_ms)
+                    m_last_timing.longest_write_ms = this_write;
+                mark = after_write;
+
+                if (!wrote) { ok = false; break; }
+
                 received += read_bytes;
+
+                // Outside both accumulators on purpose: whatever the caller
+                // does in here is its own cost, not the network's or the
+                // disk's, and folding it into either would misattribute it.
+                // It still lands in total_ms, so an expensive callback shows
+                // up as an unexplained remainder rather than as disk time.
                 if (progress && !progress(received, total)) { ok = false; break; }
+                mark = GetTickCount();
             }
+
+            m_last_timing.bytes = received;
+            m_last_timing.total_ms = GetTickCount() - loop_start;
         }
     }
 
-    fclose(f);
+    // Checked, not just called: with a megabyte of buffering behind it, a
+    // full disk now surfaces here rather than on the last fwrite, and a
+    // truncated archive that reports success would fail later as a corrupt
+    // zip with nothing pointing at the real cause.
+    //
+    // Timed apart from write_ms because it is the one write guaranteed to
+    // reach the disk rather than the cache.
+    const DWORD before_close = GetTickCount();
+    if (fclose(f) != 0)
+        ok = false;
+    m_last_timing.flush_ms = GetTickCount() - before_close;
+
     InternetCloseHandle(req);
     InternetCloseHandle(conn);
 

@@ -297,6 +297,23 @@ ManifestSavePath parse_manifest_save_path(cJSON* obj)
     else
         sp.is_file = true;
 
+    sp.platforms = parse_runtime_platform(get_child(obj, "platforms", "Platforms"));
+
+    cJSON* entries = get_child(obj, "entries", "Entries");
+    if (entries && entries->type == cJSON_Array) {
+        const int n = cJSON_GetArraySize(entries);
+        for (int i = 0; i < n; ++i) {
+            cJSON* e = cJSON_GetArrayItem(entries, i);
+            if (!e)
+                continue;
+
+            SavePathEntry entry;
+            entry.archive_path = get_string(e, "archivePath", "ArchivePath");
+            entry.actual_path = get_string(e, "actualPath", "ActualPath");
+            sp.entries.push_back(entry);
+        }
+    }
+
     return sp;
 }
 

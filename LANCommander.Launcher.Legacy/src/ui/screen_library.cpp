@@ -52,7 +52,11 @@ namespace launcher
         static const int SIDEBAR_ROW_H = 34;
         static const int ICON_SIZE = 24;
 
-        static const int MIN_COVER_W = 130;
+        // Avalonia's UniformGridLayout MinItemWidth is 140 against a 16px
+        // base; at this launcher's 13 that is 112. 130 made the grid drop to
+        // its 4-column floor on any window narrower than the sidebar plus
+        // four wide cells.
+        static const int MIN_COVER_W = 112;
         static const int MIN_COL_SPACING = 12;
         static const int MIN_ROW_SPACING = 12;
         static const int GRID_PAD = 20;
@@ -182,19 +186,13 @@ namespace launcher
         // --- Drawing helpers ---------------------------------------------------
 
         static void draw_cover(App &app, gfx::Surface *buf, const gfx::Rect &r,
-                               const std::string &cover_id, const char *title)
+                               const std::string &cover_id, const char *title,
+                               bool hovered = false)
         {
-            // object-fit: cover, as the Avalonia Cover component does with
-            // Stretch="UniformToFill". Covers are nominally 2:3 and the cells
-            // here are too, but real artwork is not always exactly that, and
-            // fitting left a letterbox down two edges of the odd one out.
-            if (draw_image_cover(buf, app.image_cache(), r, cover_id))
-                return;
+            CoverStyle style;
+            style.hovered = hovered;
 
-            gfx::fill_rect(buf, r, theme().panel);
-            if (title)
-                draw_text_wrap_center(buf, r.x + r.w / 2, r.y + r.h / 2 - text_height(),
-                                      r.w - 12, theme().text_dim, title);
+            cover_tile(buf, r, app.image_cache(), cover_id, title, style);
         }
 
         static void select_game(App &app, int index)
@@ -302,7 +300,7 @@ namespace launcher
                     const int avail = side_w - (tx - row.x) - 16;
 
                     int fitted_w = 0;
-                    const int fitted = font_fit(title, avail, &fitted_w);
+                    const int fitted = font_fit(title, avail, &fitted_w, FontSize::Body);
                     if (fitted < (int)std::string(title).size())
                     {
                         std::string clipped(title, (size_t)fitted);
@@ -390,10 +388,8 @@ namespace launcher
                         std::string id;
                         const char *title = NULL;
                         get_item(app, gi, id, title);
-                        draw_cover(app, buf, r, get_cover_id(app, gi), title);
-
-                        if (cr.hovered_index == i)
-                            gfx::draw_rect(buf, r, theme().primary);
+                        draw_cover(app, buf, r, get_cover_id(app, gi), title,
+                                   cr.hovered_index == i);
                     }
 
                     carousel_end(buf);
@@ -442,9 +438,13 @@ namespace launcher
                         gfx::fill_rect_alpha(buf, r, gfx::rgba(26, 10, 59,
                                                                cr.hovered_index == i ? 200 : 160));
 
-                        draw_text_wrap_center(buf, r.x + r.w / 2, r.y + r.h / 2 - text_height(),
-                                              r.w - 16, theme().text_bright,
-                                              s_collection_names[i].c_str());
+                        // GenreCarouselButton sets its caption at 20 against
+                        // a base of 16.
+                        draw_text_wrap_center(
+                            buf, r.x + r.w / 2,
+                            r.y + r.h / 2 - text_height(FontSize::Section),
+                            r.w - 16, theme().text_bright,
+                            s_collection_names[i].c_str(), FontSize::Section);
                     }
 
                     carousel_end(buf);
@@ -456,14 +456,23 @@ namespace launcher
 
             // --- Cover grid ------------------------------------------------------
             {
-                draw_text(buf, content_x, y, theme().text, "All Games");
-                y += th + 8;
-                content_h += th + 8;
+                // A section header, like the carousel titles above it, not a
+                // line of body text. LibraryRowView draws its "All Games" at
+                // 18 SemiBold against a base of 16.
+                const int head_h = text_height(FontSize::Section);
 
-                // 4..7 columns, matching the Avalonia responsive clamp.
+                draw_text(buf, content_x, y, theme().text_bright, "All Games",
+                          FontSize::Section);
+                y += head_h + 8;
+                content_h += head_h + 8;
+
+                // 4..6 columns, matching the Avalonia responsive clamp
+                // (GamesGridView.axaml.cs: minCols 4, maxCols 6). The 7 here
+                // let the grid run one column past anything that launcher
+                // would draw.
                 const GridLayout g = grid_layout(content_w + GRID_PAD * 2, count,
                                                  MIN_COVER_W, MIN_COL_SPACING,
-                                                 MIN_ROW_SPACING, 3, 2, GRID_PAD, 4, 7);
+                                                 MIN_ROW_SPACING, 3, 2, GRID_PAD, 4, 6);
 
                 int first = 0, last = -1;
                 grid_visible_range(g, count, s_scroll.offset - (y - body_y - GRID_PAD),
@@ -481,8 +490,6 @@ namespace launcher
                     const char *title = NULL;
                     get_item(app, i, id, title);
 
-                    draw_cover(app, buf, cell, get_cover_id(app, i), title);
-
                     // Hit-tested against the VISIBLE part of the cell, not
                     // the whole thing. A cell scrolled halfway out of the page
                     // is still drawn (clipped), and testing its full rect made
@@ -493,10 +500,10 @@ namespace launcher
                         input.mouse.y >= body_y &&
                         input.mouse.y < body_y + body_h;
 
+                    draw_cover(app, buf, cell, get_cover_id(app, i), title, hovered);
+
                     if (hovered)
                     {
-                        gfx::fill_rect_alpha(buf, cell, gfx::rgba(255, 255, 255, 40));
-                        gfx::draw_rect(buf, cell, theme().primary);
 
                         if (input.mouse.clicked)
                         {

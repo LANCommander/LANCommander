@@ -10,6 +10,11 @@
 #include "ui/icons.h"
 #include "ui/image_cache.h"
 #include "app/app.h"
+#include "app/game_metadata.h"
+#include "app/save_sync.h"
+
+#include <lancommander/script/script_helper.h>
+#include <lancommander/util/path.h>
 #include "app/game_database.h"
 #include "app/logger.h"
 
@@ -42,6 +47,36 @@ namespace launcher
         static std::string s_status_message;
         static gfx::Color s_status_color = gfx::rgb(0, 0, 0);
 
+        // When the message was posted. It is a transient acknowledgement --
+        // "Added to download queue", "Added to library" -- not a field of the
+        // game, so it expires rather than sitting in the action bar for the
+        // rest of the session.
+        static unsigned int s_status_at_ms = 0;
+
+        // How long one stays up. Long enough to read at a glance, short
+        // enough that it is gone before the user goes looking for the stats
+        // it shares a row with.
+        static const unsigned int STATUS_LIFETIME_MS = 6000;
+
+        // Post a status message. Through here rather than by assigning the
+        // pair directly, so nothing can set a message without also stamping
+        // it -- an unstamped one inherits the previous timestamp and expires
+        // early, or immediately.
+        static void set_status(const std::string &message, gfx::Color color)
+        {
+            s_status_message = message;
+            s_status_color = color;
+            s_status_at_ms = gfx::ticks_ms();
+        }
+
+        // True while the current message should be drawn.
+        static bool status_visible()
+        {
+            if (s_status_message.empty())
+                return false;
+            return (gfx::ticks_ms() - s_status_at_ms) < STATUS_LIFETIME_MS;
+        }
+
         // Scroll state
         static ScrollState s_scroll;
 
@@ -70,6 +105,12 @@ namespace launcher
         // Width of the primary action split button. Named because the stats
         // beside it are positioned from its right edge.
         static const int SPLIT_BTN_W = 150;
+
+        // The action bar's button wears the Avalonia `Large` class
+        // (Padding 24,14). It used to be a flat 30px, which is the height of
+        // an ordinary button and left the one control the page exists for
+        // looking like the Cancel next to it.
+        static int split_btn_h() { return button_height_large(); }
 
         // Screenshot strip geometry. Named because the page height has to
         // account for the strip before it is drawn.
@@ -115,8 +156,7 @@ namespace launcher
             {
                 s_game = lancommander::Game();
                 s_game.title = "Error loading game";
-                s_status_message = result.error;
-                s_status_color = theme().error;
+                set_status(result.error, theme().error);
             }
 
             auto actions = app.games().get_actions(app.selected_game());
@@ -365,11 +405,215 @@ namespace launcher
             return s;
         }
 
+        // The context a lifecycle script runs in. Everything here is either
+        // the game's own or a setting the user typed -- nothing is guessed,
+        // and a field the chosen script type does not use is simply left
+        // empty, which ScriptExecutionClient reads as "do not inject".
+        static ScriptTarget script_target(App &app)
+        {
+            ScriptTarget target;
+            target.game_id = s_game.id;
+            target.title = s_game.title;
+            target.install_dir = s_game.install_directory;
+            normalize_slashes(target.install_dir);
+            target.server_address = app.connection().get_server_address();
+
+            if (!app.settings().games.install_directories.empty())
+                target.default_install_dir = app.settings().games.install_directories[0];
+
+            // The alias the GAME was configured for, not whoever is signed in
+            // now -- which is what the .NET SDK injects, and what makes
+            // AfterStop able to undo what BeforeStart did after a rename.
+            target.player_alias = game_player_alias(target.install_dir, target.game_id);
+
+            // Everything on this screen runs on the thread that draws, so a
+            // breakpoint here has to pump its own frames.
+            target.on_ui_thread = true;
+
+            return target;
+        }
+
+        // Runs NameChange when the signed-in alias has drifted from the one
+        // this game was set up with, and records the new one.
+        //
+        // The .NET SDK writes the alias file from INSIDE its name-change
+        // method, so a game with no NameChange.ps1 never gets one recorded and
+        // its $PlayerAlias stays empty forever. That is a bug rather than a
+        // contract: BeforeStart is a different script, and a game may well have
+        // it without a NameChange. So the file is written whenever the alias
+        // moves; only the script is conditional on existing.
+        static void sync_player_alias(App &app)
+        {
+            const std::string current = app.user_alias();
+            if (current.empty() || s_game.id.empty())
+                return;
+
+            std::string install_dir = s_game.install_directory;
+            if (install_dir.empty())
+                return;
+            normalize_slashes(install_dir);
+
+            const std::string stored = game_player_alias(install_dir, s_game.id);
+            if (stored == current)
+                return;
+
+            ScriptTarget target = script_target(app);
+            target.old_player_alias = stored;
+            target.new_player_alias = current;
+
+            app.script_host().run(lancommander::ScriptType::NameChange, target, NULL);
+
+            set_game_player_alias(install_dir, s_game.id, current);
+        }
+
+        // Allocates a key for this install if it needs one, and runs
+        // KeyChange so the game picks it up.
+        //
+        // The order of the three guards matters and is upstream's:
+        //
+        //   * offline -> do nothing. A key cannot be allocated without the
+        //     server, and running KeyChange with an empty key would rewrite a
+        //     working config with a blank serial.
+        //   * no KeyChange script -> do nothing. Allocating a key for a game
+        //     that has no way to apply it just burns one out of the pool.
+        //   * a key already tracked -> do nothing. THE LOCAL FILE WINS. The
+        //     server allocates partly on MAC address, which is not stable
+        //     between launches on every adapter, so asking again on every run
+        //     hands the game a different key each time.
+        static void sync_allocated_key(App &app)
+        {
+            if (s_game.id.empty() || s_game.install_directory.empty())
+                return;
+
+            if (!app.connection().is_connected() ||
+                app.connection().is_offline_mode())
+                return;
+
+            std::string install_dir = s_game.install_directory;
+            normalize_slashes(install_dir);
+
+            const std::string script_path = lancommander::script::script_file_path(
+                install_dir, s_game.id, lancommander::ScriptType::KeyChange);
+
+            if (script_path.empty() || !lancommander::path::exists(script_path))
+                return;
+
+            if (!game_key(install_dir, s_game.id).empty())
+                return;
+
+            lancommander::Result<std::string> allocated =
+                app.keys().get_allocated(s_game.id);
+
+            if (!allocated || allocated.value.empty())
+            {
+                // A game with a KeyChange script and no key to give it is
+                // worth saying out loud: it will start, and it will start
+                // unregistered.
+                log_warn("%s has a key change script but the server allocated "
+                         "no key", s_game.title.c_str());
+                return;
+            }
+
+            // Recorded BEFORE the script runs, matching the SDK: if the script
+            // fails halfway the key is still spent, and forgetting it here
+            // would allocate a second one on the next launch.
+            set_game_key(install_dir, s_game.id, allocated.value);
+
+            ScriptTarget target = script_target(app);
+            target.allocated_key = allocated.value;
+
+            app.script_host().run(lancommander::ScriptType::KeyChange, target, NULL);
+        }
+
+        static SaveSyncContext save_context(App &app)
+        {
+            SaveSyncContext ctx;
+            ctx.saves = &app.saves();
+            ctx.scripts = &app.script_host();
+            ctx.game_id = s_game.id;
+            ctx.title = s_game.title;
+            ctx.install_dir = s_game.install_directory;
+            normalize_slashes(ctx.install_dir);
+            ctx.server_address = app.connection().get_server_address();
+
+            if (!app.settings().games.install_directories.empty())
+                ctx.default_install_dir = app.settings().games.install_directories[0];
+
+            ctx.on_ui_thread = true;
+
+            return ctx;
+        }
+
+        // Pulls the newest cloud save down before the game starts.
+        //
+        // Best effort by design: a save that cannot be fetched must not stop
+        // someone playing. The alternative -- refusing to launch because the
+        // server is busy -- is worse than starting from a local save.
+        static void download_saves(App &app)
+        {
+            if (s_game.id.empty() || s_game.install_directory.empty())
+                return;
+            if (!app.connection().is_connected() ||
+                app.connection().is_offline_mode())
+                return;
+
+            const SaveSyncResult result = save_download(save_context(app));
+
+            if (!result.ok && !result.error.empty())
+                log_warn("Could not restore saves for %s: %s",
+                         s_game.title.c_str(), result.error.c_str());
+        }
+
+        static void upload_saves(App &app)
+        {
+            if (s_game.id.empty() || s_game.install_directory.empty())
+                return;
+            if (!app.connection().is_connected() ||
+                app.connection().is_offline_mode())
+                return;
+
+            const SaveSyncResult result = save_upload(save_context(app));
+
+            if (!result.ok && !result.error.empty())
+                log_warn("Could not upload saves for %s: %s",
+                         s_game.title.c_str(), result.error.c_str());
+        }
+
+        // Defined below; a RunWrapper owns the whole play session inside
+        // launch_action, so it needs them before they appear.
+        static void session_started(App &app);
+        static void session_stopped(App &app);
+
         static bool launch_action(App &app, const lancommander::Action &action,
                                   std::string *error_out)
         {
             std::string install_dir = s_game.install_directory;
             normalize_slashes(install_dir);
+
+            // Reconcile the game's recorded alias with the signed-in one
+            // BEFORE BeforeStart, exactly as the .NET launcher does on every
+            // launch: NameChange is what rewrites the config a game keeps its
+            // player name in, and BeforeStart then reads the updated value.
+            sync_player_alias(app);
+
+            // Then the key, then the cloud save -- upstream's order, and the
+            // only one that works: KeyChange rewrites the game's config, and a
+            // downloaded save may replace that very file, so the save has to
+            // land after the key and before the game reads either.
+            sync_allocated_key(app);
+            download_saves(app);
+
+            // BeforeStart is where a game writes the config that carries the
+            // player's name, so it has to finish before the process starts
+            // rather than race it. A failure stops the launch: starting the
+            // game anyway would run it against a half-written config.
+            if (!app.script_host().run(lancommander::ScriptType::BeforeStart,
+                                       script_target(app), NULL))
+            {
+                if (error_out)
+                    *error_out = "BeforeStart script failed - see the script console";
+                return false;
+            }
             std::string server_addr = app.connection().get_server_address();
 
             std::string path = expand_action_string(action.path, install_dir,
@@ -389,6 +633,49 @@ namespace launcher
                 normalize_slashes(cwd);
                 if (!is_absolute(cwd))
                     cwd = join_path(install_dir, cwd);
+            }
+
+            // --- RunWrapper ---
+            //
+            // A redistributable can own the launch: umu, a compatibility
+            // shim, a no-CD loader. Its script is handed the executable, the
+            // arguments and the working directory, and starts the game itself.
+            //
+            // It does not return until the game has exited -- which is exactly
+            // the shape DOS already has, so the session bookkeeping happens
+            // here rather than being polled for by a handle that will never
+            // exist.
+            {
+                const std::vector<std::string> wrappers =
+                    ScriptHost::run_wrapper_redistributables(install_dir, s_game.id);
+
+                for (std::size_t i = 0; i < wrappers.size(); ++i)
+                {
+                    ScriptTarget target = script_target(app);
+                    lancommander::ScriptRun run;
+
+                    session_started(app);
+
+                    const bool ok = app.script_host().run_run_wrapper(
+                        target, wrappers[i], path, args, cwd, &run);
+
+                    if (!run.ran)
+                    {
+                        // Gated out on this platform, or gone. Not a wrapper
+                        // after all -- undo the session and try the next one.
+                        session_stopped(app);
+                        continue;
+                    }
+
+                    session_stopped(app);
+
+                    if (!ok && error_out)
+                        *error_out = "RunWrapper script failed - see the script console";
+
+                    // The wrapper is the launch. s_process_handle stays NULL,
+                    // which poll_running_state already reads as "not running".
+                    return ok;
+                }
             }
 
             // On DOS this does not return until the game has exited: see
@@ -424,6 +711,20 @@ namespace launcher
 
             if (!s_game.id.empty())
                 app.games().notify_stopped(s_game.id);
+
+            // AfterStop is the counterpart to BeforeStart -- copying a save
+            // back out, restoring a config the game rewrote. Its failure is
+            // reported in the console but changes nothing here: the game has
+            // already exited, and there is nothing left to abort.
+            if (!s_game.id.empty() && !s_game.install_directory.empty())
+            {
+                app.script_host().run(lancommander::ScriptType::AfterStop,
+                                      script_target(app), NULL);
+            }
+
+            // Last, so AfterStop has had its chance to move saves into the
+            // paths the manifest describes before they are packed.
+            upload_saves(app);
         }
 
         static void poll_running_state(App &app)
@@ -512,8 +813,7 @@ namespace launcher
             fs_mkdir(game_dir);
 
             app.downloads().enqueue(s_game.id, s_game.title, game_dir, !s_game.in_library);
-            s_status_message = "Added to download queue";
-            s_status_color = theme().success;
+            set_status("Added to download queue", theme().success);
         }
 
         static void act_launch(App &app, const lancommander::Action &action)
@@ -524,15 +824,13 @@ namespace launcher
             if (launch_action(app, action, &err))
             {
                 session_started(app);
-                s_status_message = "Running: " + action.name;
-                s_status_color = theme().success;
+                set_status("Running: " + action.name, theme().success);
                 s_is_running = true;
                 s_is_starting = false;
             }
             else
             {
-                s_status_message = err;
-                s_status_color = theme().error;
+                set_status(err, theme().error);
                 s_is_starting = false;
                 s_running_game_id.clear();
             }
@@ -554,8 +852,7 @@ namespace launcher
             const lancommander::Action *primary = pick_primary_action();
             if (!primary)
             {
-                s_status_message = "No actions available";
-                s_status_color = theme().error;
+                set_status("No actions available", theme().error);
                 return;
             }
 
@@ -567,8 +864,7 @@ namespace launcher
         {
             stop_running_game();
             session_stopped(app);
-            s_status_message = "Game stopped";
-            s_status_color = theme().text_dim;
+            set_status("Game stopped", theme().text_dim);
         }
 
         // `which` indexes the NON-PRIMARY subset of s_actions, which is how
@@ -605,8 +901,7 @@ namespace launcher
             // DOS has no file manager to hand the directory to. Showing the
             // path is the useful half of what the button does, rather than
             // having it look broken.
-            s_status_message = "Installed at " + dir;
-            s_status_color = theme().text_dim;
+            set_status("Installed at " + dir, theme().text_dim);
 #endif
         }
 
@@ -614,6 +909,13 @@ namespace launcher
         {
             std::string dir = s_game.install_directory;
             normalize_slashes(dir);
+
+            // Before anything is deleted, while the script and everything it
+            // refers to are still on disk. Its failure does not stop the
+            // uninstall -- a game whose Uninstall.ps1 is broken must still be
+            // removable -- but the console says what went wrong.
+            app.script_host().run(lancommander::ScriptType::Uninstall,
+                                  script_target(app), NULL);
 
             // The manifest written during extraction is the only record of
             // what belongs to this game, so without it nothing is deleted
@@ -623,8 +925,7 @@ namespace launcher
             FILE *fl = fopen(list_path.c_str(), "r");
             if (!fl)
             {
-                s_status_message = "No file manifest found";
-                s_status_color = theme().error;
+                set_status("No file manifest found", theme().error);
                 return;
             }
 
@@ -666,16 +967,14 @@ namespace launcher
 
             char msg_buf[64];
             sprintf(msg_buf, "Uninstalled (%d files removed)", deleted);
-            s_status_message = msg_buf;
-            s_status_color = theme().success;
+            set_status(msg_buf, theme().success);
         }
 
         static void act_add_to_library(App &app)
         {
             app.library().add(s_game.id);
             app.invalidate_library();
-            s_status_message = "Added to library";
-            s_status_color = theme().success;
+            set_status("Added to library", theme().success);
             load_game(app);
         }
 
@@ -695,6 +994,11 @@ namespace launcher
         // =================================================================
         // Main draw function
         // =================================================================
+        const std::string &screen_game_detail_title()
+        {
+            return s_game.title;
+        }
+
         void screen_game_detail_draw(App &app, const InputState &raw_input)
         {
             // While the dropdown is open the page beneath it is inert.
@@ -886,8 +1190,13 @@ namespace launcher
             }
             else
             {
-                draw_text(buf, logo_margin, hero_y + hero_h - th - 20,
-                          theme().text_bright, s_game.title.c_str());
+                // GameDetailView draws this at 32 against a base of 16 —
+                // the largest thing in either launcher, and the reason the
+                // page has a shape at all.
+                draw_text(buf, logo_margin,
+                          hero_y + hero_h - text_height(FontSize::Display) - 20,
+                          theme().text_bright, s_game.title.c_str(),
+                          FontSize::Display);
             }
 
             // --- Cover art (overlaps hero bottom) ---
@@ -934,7 +1243,7 @@ namespace launcher
             // game state that is unit-tested.
             const int bar_y = hero_y + hero_h;
             const int bar_pad = 16;
-            const int btn_y = bar_y + (bar_h - 30) / 2;
+            const int btn_y = bar_y + (bar_h - split_btn_h()) / 2;
 
             const bool is_installed = !s_game.install_directory.empty();
 
@@ -953,8 +1262,8 @@ namespace launcher
             const char *primary_label =
                 game_primary_label(flags, this_game_starting, false, false);
 
-            gfx::Color primary_bg = theme().primary;
-            gfx::Color primary_bg_hover = theme().primary_hover;
+            gfx::Color primary_bg = theme().button_primary;
+            gfx::Color primary_bg_hover = theme().button_primary_hover;
             if (this_game_running)
             {
                 primary_bg = theme().error;
@@ -962,7 +1271,8 @@ namespace launcher
             }
 
             const SplitButtonResult sb =
-                split_button(buf, bar_pad, btn_y, SPLIT_BTN_W, 30, primary_label,
+                split_button(buf, bar_pad, btn_y, SPLIT_BTN_W, split_btn_h(),
+                             primary_label,
                              !this_game_starting, primary_bg, primary_bg_hover, input);
 
             if (sb.caret_clicked)
@@ -974,7 +1284,7 @@ namespace launcher
                 if (s_menu.open)
                     s_menu.open = false;
                 else
-                    menu_open(s_menu, bar_pad, btn_y + 30);
+                    menu_open(s_menu, bar_pad, btn_y + split_btn_h());
             }
 
             int pending_cmd = 0;
@@ -1013,6 +1323,16 @@ namespace launcher
 
                 int sx = bar_pad + SPLIT_BTN_W + 48;
 
+                // Right edge the stats may reach. Normally the cover art,
+                // which overhangs the hero and reaches down into this bar --
+                // but the status message is right-aligned into the same row,
+                // so while one is up the stats have to stop short of it.
+                // Without this, "Added to download queue" printed straight
+                // over the Download Size and Play Time columns.
+                int stats_right = right_x - 16;
+                if (status_visible())
+                    stats_right -= text_width(s_status_message.c_str()) + 24;
+
                 for (int i = 0; i < 3; ++i)
                 {
                     if (values[i].empty())
@@ -1022,12 +1342,11 @@ namespace launcher
                     const int vw = text_width(values[i].c_str());
                     const int w = lw > vw ? lw : vw;
 
-                    // Stop before the cover art, which overhangs the hero and
-                    // reaches down into this bar.
-                    if (sx + w > right_x - 16)
+                    if (sx + w > stats_right)
                         break;
 
-                    draw_text(buf, sx, bar_y + 6, theme().text_dim, labels[i]);
+                    draw_text(buf, sx, bar_y + 6, theme().text_dim, labels[i],
+                              FontSize::Caption);
                     draw_text(buf, sx, bar_y + 6 + th + 2, theme().text,
                               values[i].c_str());
 
@@ -1035,7 +1354,7 @@ namespace launcher
                 }
             }
 
-            if (!s_status_message.empty())
+            if (status_visible())
             {
                 int msg_y = bar_y + (bar_h - th) / 2;
                 draw_text_right(buf, right_x - 16, msg_y, s_status_color,
@@ -1339,15 +1658,13 @@ namespace launcher
                         if (launch_action(app, *action, &launch_err))
                         {
                             session_started(app);
-                            s_status_message = "Running: " + action->name;
-                            s_status_color = theme().success;
+                            set_status("Running: " + action->name, theme().success);
                             s_is_running = true;
                             s_is_starting = false;
                         }
                         else
                         {
-                            s_status_message = launch_err;
-                            s_status_color = theme().error;
+                            set_status(launch_err, theme().error);
                             s_is_starting = false;
                             s_running_game_id.clear();
                         }
@@ -1512,14 +1829,15 @@ namespace launcher
                 // Buttons
                 cy += 4;
                 int btn_w = 90;
-                int btn_h2 = 28;
+                int btn_h2 = button_height();
                 int btn_gap = 8;
 
                 ButtonState cancel = button(buf, dx + dlg_w - pad - btn_w, cy,
                                             btn_w, btn_h2, "Cancel", input);
 
                 ButtonState install = button(buf, dx + dlg_w - pad - btn_w - btn_gap - btn_w, cy,
-                                              btn_w, btn_h2, "Install", input);
+                                              btn_w, btn_h2, "Install", input,
+                                              ButtonStyle::Primary);
 
                 if (install.clicked)
                 {
@@ -1554,8 +1872,7 @@ namespace launcher
                         }
                     }
 
-                    s_status_message = "Added to download queue";
-                    s_status_color = theme().success;
+                    set_status("Added to download queue", theme().success);
                     s_modal = ModalType::None;
                 }
 

@@ -67,11 +67,34 @@ namespace launcher
 
         // The corner radius and padding the UI is built around. Buttons are
         // sized from these rather than from literals scattered per screen.
+        //
+        // These are the Avalonia Button style scaled by the 0.8 the two
+        // launchers sit at: CornerRadius 2 and Padding 12,6 become radius 2
+        // and 10,5. The radius in particular used to be 4 — twice Avalonia's,
+        // which at this size reads as a pill next to a rectangle.
         extern const int BUTTON_RADIUS;
         extern const int BUTTON_PAD_X;
         extern const int BUTTON_PAD_Y;
 
+        // The Avalonia `Large` class (Padding 24,14), scaled the same way.
+        // Worn by the one primary action on a page — Install / Play.
+        extern const int BUTTON_LARGE_PAD_X;
+        extern const int BUTTON_LARGE_PAD_Y;
+
         // --- Button ---
+
+        // Which of the Avalonia button classes to paint.
+        //
+        // Everything here used to be painted primary blue, because that was
+        // the only fill button() knew how to draw. In the Avalonia launcher
+        // blue means "this is the action of the page"; a Cancel beside it is
+        // the unclassed neutral button, and a destructive action is red.
+        enum class ButtonStyle
+        {
+            Default,  // Avalonia Button — neutral elevated surface
+            Primary,  // Button.Primary
+            Error     // Button.Error
+        };
 
         struct ButtonState
         {
@@ -81,13 +104,15 @@ namespace launcher
 
         // Draw a button and return its interaction state.
         ButtonState button(gfx::Surface *s, int x, int y, int w, int h, const char *label,
-                           const InputState &input);
+                           const InputState &input,
+                           ButtonStyle style = ButtonStyle::Default);
 
         // Button with a leading icon. `icon` may be Icon::None, in which case
         // this is exactly button().
         ButtonState icon_button(gfx::Surface *s, int x, int y, int w, int h,
                                 Icon icon, const char *label,
-                                const InputState &input);
+                                const InputState &input,
+                                ButtonStyle style = ButtonStyle::Default);
 
         // Width a button needs for `label` (and optionally an icon) at the
         // standard padding. Lets callers lay a row of buttons out without
@@ -97,11 +122,20 @@ namespace launcher
         // Standard button height: text plus vertical padding.
         int button_height();
 
+        // Height of a `Large` button, for the primary action on a page.
+        int button_height_large();
+
+        // Width of a `Large` button at its own padding.
+        int button_width_large(const char *label, Icon icon = Icon::None);
+
         // --- Badge ---
 
-        // A rounded capsule with a label, as the Avalonia Button.Badge style
-        // draws genres, tags, platforms and the like. Returns hover/click so a
-        // badge can navigate.
+        // A small rounded chip with a label, as the Avalonia Button.Badge
+        // style draws genres, tags, platforms and the like. Returns
+        // hover/click so a badge can navigate.
+        //
+        // Drawn at the Small rung, matching Badge.axaml's FontSize 12 against
+        // a base of 16.
         //
         // `w` is derived from the label; use badge_width() to lay out a wrap.
         ButtonState badge(gfx::Surface *s, int x, int y, const char *label,

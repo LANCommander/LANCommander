@@ -20,10 +20,22 @@
 
 namespace
 {
-    HFONT g_hfont = NULL;
-    HDC g_measure_dc = NULL;   // off-screen DC kept for measuring only
-    int g_font_height = 0;
+    // One font, one measuring DC and one line height per rung of the type
+    // scale. The face is picked once and shared: GDI substitutes silently
+    // when a face is missing, so resolving it per size could in principle
+    // land different rungs on different families.
+    const int RUNG_COUNT = (int)launcher::ui::FontSize::Count;
+
+    HFONT g_hfont[RUNG_COUNT] = {};
+    HDC g_measure_dc[RUNG_COUNT] = {};  // off-screen DCs kept for measuring only
+    int g_font_height[RUNG_COUNT] = {};
     bool g_wide_ok = false;    // true on NT-based systems (W APIs work)
+
+    int rung_index(launcher::ui::FontSize size)
+    {
+        const int i = (int)size;
+        return (i >= 0 && i < RUNG_COUNT) ? i : (int)launcher::ui::FontSize::Body;
+    }
 
     // Detect whether the OS supports W (wide/Unicode) Win32 APIs.
     void detect_unicode_support()
@@ -155,72 +167,94 @@ namespace
     }
 }
 
-void gdi_font_init(int point_size)
+// Resolve the face once, at the body size, and report which one won so every
+// rung can be created from it.
+static const char *gdi_pick_face(int probe_px)
+{
+    static const char *faces[] = {"Inter", "Segoe UI", "Arial"};
+
+    for (int i = 0; i < 3; ++i)
+    {
+        HFONT probe = try_create(faces[i], probe_px);
+        if (!probe)
+            continue;
+
+        const bool ok = font_matches(probe, faces[i]);
+        DeleteObject(probe);
+
+        if (ok)
+            return faces[i];
+    }
+
+    // Last resort — let GDI substitute whatever it likes for Arial.
+    return "Arial";
+}
+
+void gdi_font_init()
 {
     detect_unicode_support();
 
-    // Try Inter first, then Segoe UI, then Arial.
-    static const char *faces[] = {"Inter", "Segoe UI", "Arial"};
-    for (int i = 0; i < 3; ++i)
+    const char *face =
+        gdi_pick_face(launcher::ui::font_px(launcher::ui::FontSize::Body));
+
+    for (int i = 0; i < RUNG_COUNT; ++i)
     {
-        g_hfont = try_create(faces[i], point_size);
-        if (g_hfont && font_matches(g_hfont, faces[i]))
-            break;
-        if (g_hfont)
+        const int px = launcher::ui::font_px((launcher::ui::FontSize)i);
+
+        g_hfont[i] = try_create(face, px);
+
+        // Each rung needs its own measuring DC: a DC holds one selected font,
+        // and sharing one would mean re-selecting on every measurement.
+        g_measure_dc[i] = CreateCompatibleDC(NULL);
+        SelectObject(g_measure_dc[i], g_hfont[i]);
+
+        if (g_wide_ok)
         {
-            DeleteObject(g_hfont);
-            g_hfont = NULL;
+            TEXTMETRICW tm;
+            GetTextMetricsW(g_measure_dc[i], &tm);
+            g_font_height[i] = tm.tmHeight;
         }
-    }
-
-    // Last resort — let GDI pick anything.
-    if (!g_hfont)
-        g_hfont = try_create("Arial", point_size);
-
-    // Create a persistent DC for text measurement.
-    g_measure_dc = CreateCompatibleDC(NULL);
-    SelectObject(g_measure_dc, g_hfont);
-
-    if (g_wide_ok)
-    {
-        TEXTMETRICW tm;
-        GetTextMetricsW(g_measure_dc, &tm);
-        g_font_height = tm.tmHeight;
-    }
-    else
-    {
-        TEXTMETRICA tm;
-        GetTextMetricsA(g_measure_dc, &tm);
-        g_font_height = tm.tmHeight;
+        else
+        {
+            TEXTMETRICA tm;
+            GetTextMetricsA(g_measure_dc[i], &tm);
+            g_font_height[i] = tm.tmHeight;
+        }
     }
 }
 
 void gdi_font_shutdown()
 {
-    if (g_measure_dc)
+    for (int i = 0; i < RUNG_COUNT; ++i)
     {
-        DeleteDC(g_measure_dc);
-        g_measure_dc = NULL;
-    }
-    if (g_hfont)
-    {
-        DeleteObject(g_hfont);
-        g_hfont = NULL;
+        if (g_measure_dc[i])
+        {
+            DeleteDC(g_measure_dc[i]);
+            g_measure_dc[i] = NULL;
+        }
+        if (g_hfont[i])
+        {
+            DeleteObject(g_hfont[i]);
+            g_hfont[i] = NULL;
+        }
+        g_font_height[i] = 0;
     }
 }
 
-int gdi_font_height()
+int gdi_font_height(launcher::ui::FontSize size)
 {
-    return g_font_height;
+    return g_font_height[rung_index(size)];
 }
 
-int gdi_font_text_width(const char *text)
+int gdi_font_text_width(const char *text, launcher::ui::FontSize size)
 {
-    if (!g_measure_dc || !text || !*text)
+    HDC dc = g_measure_dc[rung_index(size)];
+
+    if (!dc || !text || !*text)
         return 0;
     std::wstring w = utf8_to_wide(text);
     SIZE sz;
-    measure_text(g_measure_dc, w, &sz);
+    measure_text(dc, w, &sz);
     return sz.cx;
 }
 
@@ -240,15 +274,19 @@ int gdi_font_text_width(const char *text)
 // -----------------------------------------------------------------------
 
 static void render(launcher::gfx::Surface *dst, int x, int y,
-                   launcher::gfx::Color color, const char *text)
+                   launcher::gfx::Color color, const char *text,
+                   launcher::ui::FontSize size)
 {
-    if (!g_hfont || !text || !*text || !dst)
+    const int rung = rung_index(size);
+    HFONT hfont = g_hfont[rung];
+
+    if (!hfont || !text || !*text || !dst)
         return;
 
     std::wstring wtext = utf8_to_wide(text);
 
     SIZE sz;
-    measure_text(g_measure_dc, wtext, &sz);
+    measure_text(g_measure_dc[rung], wtext, &sz);
     int tw = sz.cx;
     int th = sz.cy;
     if (tw <= 0 || th <= 0)
@@ -274,7 +312,7 @@ static void render(launcher::gfx::Surface *dst, int x, int y,
     }
 
     HBITMAP old_bmp = (HBITMAP)SelectObject(dc, dib);
-    HFONT old_font = (HFONT)SelectObject(dc, g_hfont);
+    HFONT old_font = (HFONT)SelectObject(dc, hfont);
 
     // Clear to black.
     memset(bits, 0, tw * th * 4);
@@ -317,10 +355,10 @@ namespace launcher
     namespace ui
     {
 
-        bool font_init(int px_size)
+        bool font_init()
         {
-            gdi_font_init(px_size);
-            return gdi_font_height() > 0;
+            gdi_font_init();
+            return gdi_font_height(FontSize::Body) > 0;
         }
 
         void font_shutdown()
@@ -328,28 +366,31 @@ namespace launcher
             gdi_font_shutdown();
         }
 
-        int font_height()
+        int font_height(FontSize size)
         {
-            return gdi_font_height();
+            return gdi_font_height(size);
         }
 
-        int font_measure(const char *utf8)
+        int font_measure(const char *utf8, FontSize size)
         {
-            return gdi_font_text_width(utf8);
+            return gdi_font_text_width(utf8, size);
         }
 
-        int font_fit(const char *utf8, int max_w, int *out_w)
+        int font_fit(const char *utf8, int max_w, int *out_w, FontSize size)
         {
+            const int rung = rung_index(size);
+            HDC dc = g_measure_dc[rung];
+
             if (out_w)
                 *out_w = 0;
-            if (!g_measure_dc || !utf8 || !*utf8 || max_w <= 0)
+            if (!dc || !utf8 || !*utf8 || max_w <= 0)
                 return 0;
 
             std::wstring w = utf8_to_wide(utf8);
             if (w.empty())
                 return 0;
 
-            HFONT old = (HFONT)SelectObject(g_measure_dc, g_hfont);
+            HFONT old = (HFONT)SelectObject(dc, g_hfont[rung]);
 
             INT fit = 0;
             SIZE sz = { 0, 0 };
@@ -357,17 +398,17 @@ namespace launcher
 
             if (g_wide_ok)
             {
-                ok = GetTextExtentExPointW(g_measure_dc, w.c_str(), (int)w.size(),
+                ok = GetTextExtentExPointW(dc, w.c_str(), (int)w.size(),
                                            max_w, &fit, NULL, &sz);
             }
             else
             {
                 std::string a = wide_to_ansi(w);
-                ok = GetTextExtentExPointA(g_measure_dc, a.c_str(), (int)a.size(),
+                ok = GetTextExtentExPointA(dc, a.c_str(), (int)a.size(),
                                            max_w, &fit, NULL, &sz);
             }
 
-            SelectObject(g_measure_dc, old);
+            SelectObject(dc, old);
 
             if (!ok || fit <= 0)
                 return 0;
@@ -393,9 +434,9 @@ namespace launcher
         }
 
         void font_draw(gfx::Surface *dst, int x, int y, gfx::Color color,
-                       const char *utf8)
+                       const char *utf8, FontSize size)
         {
-            render(dst, x, y, color, utf8);
+            render(dst, x, y, color, utf8, size);
         }
 
     } // namespace ui

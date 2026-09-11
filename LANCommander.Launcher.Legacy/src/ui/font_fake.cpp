@@ -28,37 +28,53 @@ namespace launcher
         extern const int FAKE_ADVANCE = 10;
         extern const int FAKE_HEIGHT = 16;
 
-        bool font_init(int px_size)
+        namespace
         {
-            (void)px_size;
+            // The fake metrics are the Body rung's, and the other rungs are
+            // scaled off it by the same ratio font_px() gives. Body divides
+            // out exactly, so every existing expectation written in terms of
+            // FAKE_ADVANCE / FAKE_HEIGHT still holds — only a test that opts
+            // into another rung sees anything different.
+            const int FAKE_BASE_PX = 13;
+
+            int scaled(int metric, FontSize size)
+            {
+                return metric * font_px(size) / FAKE_BASE_PX;
+            }
+        } // namespace
+
+        bool font_init()
+        {
             return true;
         }
 
         void font_shutdown() {}
 
-        int font_height() { return FAKE_HEIGHT; }
+        int font_height(FontSize size) { return scaled(FAKE_HEIGHT, size); }
 
-        int font_measure(const char *utf8)
+        int font_measure(const char *utf8, FontSize size)
         {
             if (!utf8)
                 return 0;
-            return (int)std::strlen(utf8) * FAKE_ADVANCE;
+            return (int)std::strlen(utf8) * scaled(FAKE_ADVANCE, size);
         }
 
-        int font_fit(const char *utf8, int max_w, int *out_w)
+        int font_fit(const char *utf8, int max_w, int *out_w, FontSize size)
         {
             if (out_w)
                 *out_w = 0;
-            if (!utf8 || !*utf8 || max_w <= 0)
+
+            const int advance = scaled(FAKE_ADVANCE, size);
+            if (!utf8 || !*utf8 || max_w <= 0 || advance <= 0)
                 return 0;
 
             const int len = (int)std::strlen(utf8);
-            int fit = max_w / FAKE_ADVANCE;
+            int fit = max_w / advance;
             if (fit > len)
                 fit = len;
 
             if (out_w)
-                *out_w = fit * FAKE_ADVANCE;
+                *out_w = fit * advance;
             return fit;
         }
 
@@ -71,9 +87,9 @@ namespace launcher
         }
 
         void font_draw(gfx::Surface *dst, int x, int y, gfx::Color color,
-                       const char *utf8)
+                       const char *utf8, FontSize size)
         {
-            (void)dst; (void)x; (void)y; (void)color;
+            (void)dst; (void)x; (void)y; (void)color; (void)size;
             if (utf8)
                 font_fake_drawn().push_back(utf8);
         }

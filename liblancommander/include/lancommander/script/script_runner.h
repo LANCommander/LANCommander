@@ -45,7 +45,20 @@ struct ScriptResult {
     std::string return_value;  // text form of $Return
     std::string return_json;   // ConvertTo-Json of $Return, for non-scalars
 
-    ScriptResult() : success(false), exit_code(-1), has_return_value(false) {}
+    // The interpreter stopped the script — it did not parse, it used something
+    // unimplemented, or it hit a runtime error — as opposed to the script
+    // ending on its own terms with `exit <n>`.
+    //
+    // exit_code cannot answer this. A script that says `exit 2` and a script
+    // that does not parse both produce 2, so a host reading only the code
+    // reports "your script is broken" for a script that deliberately exited 2.
+    // That is the difference between "it ran and told you it failed" and "it
+    // never ran", which is the one distinction a script author most needs.
+    bool interpreter_error;
+
+    ScriptResult()
+        : success(false), exit_code(-1), has_return_value(false),
+          interpreter_error(false) {}
 };
 
 // stream: 0 = stdout, 1 = stderr. Called synchronously as the script runs,

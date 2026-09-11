@@ -102,6 +102,13 @@ namespace launcher
         // title-bar X). Latches — it stays true once set.
         bool display_close_requested();
 
+        // True while the window is minimised, i.e. while drawing a frame
+        // would be work nobody can see. The main loop skips the whole frame
+        // rather than only the blit -- an immediate-mode UI does all of its
+        // work in the draw, so stopping at present() would save the cheap
+        // half. Always false where there is no window manager.
+        bool display_minimized();
+
         // Native window handle (HWND on Windows), or NULL where the concept
         // does not exist. The one deliberate hole in the abstraction: the
         // custom chrome needs it for frameless-window styling and dragging.

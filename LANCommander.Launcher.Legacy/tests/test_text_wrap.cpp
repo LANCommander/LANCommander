@@ -46,7 +46,7 @@ namespace
 
 void test_text_wrap()
 {
-    ui::font_init(13);
+    ui::font_init();
     g_surface = gfx::create_surface(400, 400);
 
     // Every glyph is 10px wide, so a 100px line fits exactly 10 characters.

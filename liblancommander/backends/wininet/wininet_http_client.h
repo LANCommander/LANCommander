@@ -34,6 +34,8 @@ public:
                   const std::string& dest_path,
                   DownloadProgressFn progress) override;
 
+    DownloadTiming last_download_timing() const override { return m_last_timing; }
+
     HttpResponse post_multipart_file(const std::string& path,
                                      const std::string& field_name,
                                      const std::string& file_path) override;
@@ -52,6 +54,10 @@ private:
     std::string m_bearer;
     std::string m_client_version;
     HINTERNET m_session;
+
+    // How the last download() spent its time. See IHttpClient.
+    DownloadTiming m_last_timing;
+
     int m_connect_timeout_ms;
     int m_recv_timeout_ms;
 };

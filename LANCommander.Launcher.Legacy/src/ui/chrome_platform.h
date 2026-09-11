@@ -56,6 +56,14 @@ namespace launcher
 
         void chrome_platform_minimize();
 
+        // Maximize the window, or restore it if it is already maximized.
+        //
+        // One entry point rather than a maximize/restore pair plus a query,
+        // because the caller has no other use for the answer: the Avalonia
+        // title bar draws the same square in both states, so the chrome never
+        // needs to ask which one it is in.
+        void chrome_platform_maximize_toggle();
+
     } // namespace ui
 } // namespace launcher
 

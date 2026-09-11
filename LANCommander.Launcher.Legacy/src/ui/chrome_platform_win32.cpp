@@ -236,5 +236,14 @@ namespace launcher
                 ShowWindow(hwnd, SW_MINIMIZE);
         }
 
+        void chrome_platform_maximize_toggle()
+        {
+            HWND hwnd = (HWND)gfx::native_window_handle();
+            if (!hwnd)
+                return;
+
+            ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+        }
+
     } // namespace ui
 } // namespace launcher

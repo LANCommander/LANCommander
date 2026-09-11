@@ -17,6 +17,12 @@ on:
       - '.github/workflows/LANCommander.Launcher.Legacy.yml'
   workflow_dispatch:
 
+# The Win9x and DOS jobs run on Windows runners, and the Win9x one can spend an
+# hour building a compiler. Superseded pushes should not keep paying for that.
+concurrency:
+  group: legacy-launcher-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # The Win9x job cross-builds and cannot execute what it produces, so the SDK's
   # own tests run natively here. This is also the only compile coverage for
@@ -33,7 +39,8 @@ jobs:
         run: |
           git submodule update --init --depth 1 -- liblancommander/vendor/picoposh
           # zlib + libzip back Expand-Archive. Never --recursive: picoposh also
-          # pins Watt-32, a large DOS-only TCP/IP stack we never compile.
+          # pins Watt-32, a large DOS-only TCP/IP stack that only the DOS job
+          # builds, and only deliberately.
           git -C liblancommander/vendor/picoposh submodule update --init --depth 1 \
               -- third_party/zlib third_party/libzip
 
@@ -66,9 +73,22 @@ jobs:
       - name: Test
         run: ctest --test-dir build-launcher-tests --output-on-failure
 
+  # ---------------------------------------------------------------------
+  # Windows 95/98 (Allegro 4, MinGW-w64 i686)
+  #
+  # This job drives build-win9x.sh rather than repeating its cmake lines.
+  # That script owns the CPU floor (-march=i586 -mtune=i686 -mfpmath=387,
+  # which Allegro needs passed in because it is a separate CMake project),
+  # the packaging layout, and both release gates: deny-scan for imports
+  # Win9x does not export, isa-scan for instructions its CPUs cannot
+  # execute. An inlined copy drifts from the script silently, and the
+  # failure mode is a binary that dies before main() on hardware CI has no
+  # way to test.
+  # ---------------------------------------------------------------------
   build-win9x:
     name: Build (Win9x / MinGW-w64 i686)
     runs-on: windows-latest
+    timeout-minutes: 240
 
     defaults:
       run:
@@ -80,115 +100,204 @@ jobs:
 
       # Fetch picoposh explicitly rather than via `submodules: true`, which
       # would also pull the two External/GameOverlay.* submodules this job does
-      # not need. Never use `submodules: recursive` — picoposh pins Watt-32, a
-      # large DOS-only TCP/IP stack we never compile.
+      # not need. Never use `submodules: recursive` -- picoposh pins Watt-32, a
+      # large DOS-only TCP/IP stack this job never compiles.
       - name: Fetch picoposh submodule
         shell: bash
         run: |
           git submodule update --init --depth 1 -- liblancommander/vendor/picoposh
-          # zlib + libzip back Expand-Archive. Never --recursive: picoposh also
-          # pins Watt-32, a large DOS-only TCP/IP stack we never compile.
           git -C liblancommander/vendor/picoposh submodule update --init --depth 1 \
               -- third_party/zlib third_party/libzip
 
       # ---------------------------------------------------------------
       # MSYS2 with MinGW32 (i686) toolchain
+      #
+      # base-devel, git, wget, tar and xz are for build-i586-toolchain.sh.
+      # The gmp/mpfr/mpc/isl/zlib/libiconv packages are what its GCC
+      # configure line pulls out of /mingw32.
       # ---------------------------------------------------------------
       - name: Setup MSYS2
+        id: msys2
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW32
           update: false
           install: >-
+            base-devel
+            git
+            wget
+            tar
+            xz
+            make
             mingw-w64-i686-gcc
             mingw-w64-i686-cmake
             mingw-w64-i686-make
-            make
+            mingw-w64-i686-gmp
+            mingw-w64-i686-mpfr
+            mingw-w64-i686-mpc
+            mingw-w64-i686-isl
+            mingw-w64-i686-zlib
+            mingw-w64-i686-libiconv
 
       # ---------------------------------------------------------------
-      # Vendor dependencies (cJSON, miniz, Allegro 4 source)
+      # The pre-SSE2 toolchain
+      #
+      # MSYS2's i686 GCC is configured --with-arch=pentium4. -march=i586
+      # fixes everything compiled from source, but the prebuilt libstdc++.a
+      # it links carries 507 SSE2 functions, among them the locale/ctype
+      # static initialisers -- so a binary built with the stock compiler
+      # faults with "executed an invalid instruction" before main() on every
+      # machine this target exists for. See WIN9X-TESTING.md.
+      #
+      # build-i586-toolchain.sh rebuilds GCC, the mingw-w64 CRT and
+      # winpthreads at i586. It takes about an hour, so it is cached. The key
+      # carries the stock /mingw32 GCC version as well as the script hash:
+      # the built prefix is seeded from /mingw32's headers and CRT, so it has
+      # to be rebuilt when those move.
+      # ---------------------------------------------------------------
+      - name: Record stock toolchain version
+        id: stock
+        run: echo "gcc=$(gcc -dumpversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore i586 toolchain
+        id: toolchain-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.msys2.outputs.msys2-location }}\opt\i586-win9x
+          key: i586-win9x-${{ runner.os }}-stockgcc${{ steps.stock.outputs.gcc }}-${{ hashFiles('LANCommander.Launcher.Legacy/tools/build-i586-toolchain.sh') }}
+
+      - name: Build i586 toolchain
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 180
+        run: bash LANCommander.Launcher.Legacy/tools/build-i586-toolchain.sh $(nproc)
+
+      # ---------------------------------------------------------------
+      # Vendor dependencies
+      #
+      # Only Allegro 4 is really fetched here: cJSON, libyaml, miniz, SQLite
+      # and stb are all committed.
       # ---------------------------------------------------------------
       - name: Download vendor dependencies
         shell: pwsh
         run: ./setup-vendor.ps1
 
       # ---------------------------------------------------------------
-      # Build Allegro 4 from source (static, no addons)
-      # ---------------------------------------------------------------
-      - name: Build Allegro 4
-        run: |
-          ALLEGRO_SRC="LANCommander.Launcher.Legacy/vendor/allegro4/allegro5-4.4.3.1"
-          ALLEGRO_BUILD="LANCommander.Launcher.Legacy/build-allegro-win9x"
-          ALLEGRO_PREFIX="$(pwd)/LANCommander.Launcher.Legacy/allegro4-win9x"
-
-          cmake -S "$ALLEGRO_SRC" -B "$ALLEGRO_BUILD" \
-              -G "MinGW Makefiles" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX="$ALLEGRO_PREFIX" \
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-              -DSHARED=OFF \
-              -DWANT_EXAMPLES=OFF \
-              -DWANT_TOOLS=OFF \
-              -DWANT_TESTS=OFF \
-              -DWANT_ALLEGROGL=OFF \
-              -DWANT_LOADPNG=OFF \
-              -DWANT_LOGG=OFF \
-              -DWANT_JPGALLEG=OFF \
-              -DWANT_FRAMEWORKS=OFF
-
-          mingw32-make -C "$ALLEGRO_BUILD" -j$(nproc)
-          mingw32-make -C "$ALLEGRO_BUILD" install
-
-      # ---------------------------------------------------------------
-      # Build the launcher
+      # Build, package and gate
+      #
+      # build-win9x.sh builds Allegro 4 static, builds the launcher, stages
+      # out-win9x/ (LANCommander.exe + assets/), then runs deny-scan.sh and
+      # isa-scan.sh. Both gates are fatal, which is the point: an EXE that
+      # fails either one will not start on the target.
       # ---------------------------------------------------------------
       - name: Build launcher
-        run: |
-          LAUNCHER_DIR="LANCommander.Launcher.Legacy"
-          LAUNCHER_BUILD="$LAUNCHER_DIR/build-win9x"
-          ALLEGRO_PREFIX="$(pwd)/$LAUNCHER_DIR/allegro4-win9x"
-
-          cmake -S "$LAUNCHER_DIR" -B "$LAUNCHER_BUILD" \
-              -G "MinGW Makefiles" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DLAUNCHER_GFX_BACKEND=allegro \
-              -DALLEGRO_STATIC=ON \
-              -DTARGET_WIN9X=ON \
-              -DALLEGRO_ROOT="$ALLEGRO_PREFIX"
-
-          mingw32-make -C "$LAUNCHER_BUILD" -j$(nproc)
-
-      # ---------------------------------------------------------------
-      # Package
-      # ---------------------------------------------------------------
-      - name: Package artifacts
-        run: |
-          mkdir -p out-win9x
-
-          LAUNCHER_EXE=$(find LANCommander.Launcher.Legacy/build-win9x -name "launcher.exe" | head -1)
-          cp "$LAUNCHER_EXE" out-win9x/LANCommander.exe
-          strip out-win9x/LANCommander.exe
-
-          # Assets load by path at runtime (they used to be RCDATA in the EXE).
-          cp -r LANCommander.Launcher.Legacy/assets out-win9x/assets
-
-          # No gdiplus.dll: image decoding is stb now, so there is no
-          # redistributable to ship. MinGW CRT is statically linked.
-
-          # Show PE info for verification
-          objdump -p out-win9x/LANCommander.exe | grep -i "Version\|Subsystem" || true
-
-          echo ""
-          ls -lh out-win9x/
-
-      - name: Win9x import check
-        run: bash LANCommander.Launcher.Legacy/tools/deny-scan.sh out-win9x/LANCommander.exe
+        run: bash LANCommander.Launcher.Legacy/build-win9x.sh Release $(nproc) allegro
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: LANCommander-Legacy-Win9x
-          path: out-win9x/
+          path: LANCommander.Launcher.Legacy/out-win9x/
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------
+  # MS-DOS (DJGPP + Watt-32, VESA VBE 2.0)
+  #
+  # Runs on Windows for the same reason build-dos.ps1 exists: the DJGPP
+  # cross compiler is itself a native Windows build, and Watt-32 ships
+  # prebuilt Win32 helpers (mkmake, bin2c, dj_err) that its makefiles call
+  # by bare name. This is the path the DOS build is developed on.
+  # ---------------------------------------------------------------------
+  build-dos:
+    name: Build (MS-DOS / DJGPP)
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Watt-32 is initialised here rather than left to setup-watt32.sh so the
+      # cache below restores on top of a checkout that already exists -- the
+      # script early-exits on lib/libwatt.a, but only after it has satisfied
+      # itself that src/configur.sh is there.
+      - name: Fetch submodules
+        id: subs
+        shell: bash
+        run: |
+          git submodule update --init --depth 1 -- liblancommander/vendor/picoposh
+          git -C liblancommander/vendor/picoposh submodule update --init --depth 1 \
+              -- third_party/zlib third_party/libzip third_party/Watt-32
+          echo "watt32=$(git -C liblancommander/vendor/picoposh rev-parse HEAD:third_party/Watt-32)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: false
+          # cmake comes from the MinGW 32-bit package rather than an MSYS one,
+          # which is why MSYSTEM is MINGW32 even though nothing here is built
+          # with MinGW: DJGPP is a separate toolchain that CMake only drives.
+          install: >-
+            git
+            curl
+            unzip
+            make
+            mingw-w64-i686-cmake
+
+      # The DJGPP toolchain and CWSDPMI are ~100 MB of pinned downloads that do
+      # not change between runs, so they are cached against the fetch script.
+      - name: Restore DJGPP toolchain
+        uses: actions/cache@v4
+        with:
+          path: LANCommander.Launcher.Legacy/vendor/djgpp
+          key: djgpp-${{ runner.os }}-${{ hashFiles('LANCommander.Launcher.Legacy/tools/setup-djgpp.sh') }}
+
+      # Only Watt-32's generated output, not its source: the source comes from
+      # the submodule checkout above. lib/libwatt.a is what setup-watt32.sh
+      # early-exits on; djgpp.err and src/build/djgpp are what it would
+      # otherwise have to regenerate to get there.
+      - name: Restore Watt-32 build
+        uses: actions/cache@v4
+        with:
+          path: |
+            liblancommander/vendor/picoposh/third_party/Watt-32/lib
+            liblancommander/vendor/picoposh/third_party/Watt-32/inc/sys/djgpp.err
+            liblancommander/vendor/picoposh/third_party/Watt-32/src/build/djgpp
+          key: watt32-djgpp-${{ runner.os }}-${{ steps.subs.outputs.watt32 }}-${{ hashFiles('LANCommander.Launcher.Legacy/tools/setup-watt32.sh') }}
+
+      # build-dos.sh fetches whatever is missing, configures through
+      # cmake/toolchain-djgpp.cmake, builds, and stages out-dos/ as the whole
+      # distribution: LANCMDR.EXE (8.3, because that is all a DOS filesystem
+      # without an LFN driver shows), assets/ and CWSDPMI.EXE.
+      - name: Build launcher
+        run: bash LANCommander.Launcher.Legacy/build-dos.sh Release $(nproc)
+
+      # setup-djgpp.sh treats a failed CWSDPMI download as non-fatal, because a
+      # machine already running a DPMI host does not need it. For a published
+      # artifact it is not optional: plain DOS provides no DPMI, so without it
+      # LANCMDR.EXE prints "no DPMI" on the target and does nothing else.
+      - name: Verify the distribution is complete
+        run: |
+          cd LANCommander.Launcher.Legacy/out-dos
+          missing=0
+          for f in LANCMDR.EXE CWSDPMI.EXE assets/fonts; do
+              if [ ! -e "$f" ]; then
+                  echo "MISSING: $f"
+                  missing=1
+              fi
+          done
+          [ "$missing" = "0" ] || exit 1
+          ls -lhR .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-Legacy-DOS
+          path: LANCommander.Launcher.Legacy/out-dos/
           if-no-files-found: error
 
   build-sdl3:

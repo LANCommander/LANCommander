@@ -172,6 +172,11 @@ namespace launcher
                 if (key == "Username")
                     launcher.username = value;
             }
+            else if (section == "Debug")
+            {
+                if (key == "EnableScriptDebugging")
+                    debug.enable_script_debugging = (value == "true");
+            }
         }
 
         // Handle block-sequence InstallDirectories:
@@ -207,6 +212,12 @@ namespace launcher
 
         fprintf(f, "Launcher:\n");
         fprintf(f, "  Username: %s\n", launcher.username.c_str());
+
+        // Written even when false so the key is discoverable in the file --
+        // this is the switch someone goes looking for when a script misbehaves.
+        fprintf(f, "Debug:\n");
+        fprintf(f, "  EnableScriptDebugging: %s\n",
+                debug.enable_script_debugging ? "true" : "false");
 
         fclose(f);
         return true;

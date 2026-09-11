@@ -36,9 +36,12 @@ namespace launcher
         // Rounded rectangles
         // ---------------------------------------------------------------------------
 
-        const int BUTTON_RADIUS = 4;
-        const int BUTTON_PAD_X = 14;
-        const int BUTTON_PAD_Y = 7;
+        const int BUTTON_RADIUS = 2;
+        const int BUTTON_PAD_X = 10;
+        const int BUTTON_PAD_Y = 5;
+
+        const int BUTTON_LARGE_PAD_X = 19;
+        const int BUTTON_LARGE_PAD_Y = 11;
 
         namespace
         {
@@ -189,7 +192,40 @@ namespace launcher
 
         namespace
         {
-            const int ICON_LABEL_GAP = 7;
+            // Avalonia's IconButton spaces its icon from its label by
+            // (Size / 2) + 2, which is 10 at the 16px icon the UI uses.
+            const int ICON_LABEL_GAP = 8;
+
+            struct Fill
+            {
+                gfx::Color base;
+                gfx::Color hover;
+                gfx::Color active;
+            };
+
+            Fill fill_for(ButtonStyle style)
+            {
+                Fill f;
+                switch (style)
+                {
+                case ButtonStyle::Primary:
+                    f.base = theme().button_primary;
+                    f.hover = theme().button_primary_hover;
+                    f.active = theme().button_primary_active;
+                    break;
+                case ButtonStyle::Error:
+                    f.base = theme().error;
+                    f.hover = theme().error_hover;
+                    f.active = theme().error_hover;
+                    break;
+                default:
+                    f.base = theme().button_bg;
+                    f.hover = theme().button_bg_hover;
+                    f.active = theme().button_bg_active;
+                    break;
+                }
+                return f;
+            }
         }
 
         int button_height()
@@ -197,30 +233,55 @@ namespace launcher
             return text_height() + BUTTON_PAD_Y * 2;
         }
 
+        int button_height_large()
+        {
+            return text_height() + BUTTON_LARGE_PAD_Y * 2;
+        }
+
+        namespace
+        {
+            int width_at(const char *label, Icon icon, int pad_x)
+            {
+                int w = pad_x * 2;
+                if (label && *label)
+                    w += text_width(label);
+                if (icon != Icon::None)
+                {
+                    w += ICON_MD;
+                    if (label && *label)
+                        w += ICON_LABEL_GAP;
+                }
+                return w;
+            }
+        }
+
         int button_width(const char *label, Icon icon)
         {
-            int w = BUTTON_PAD_X * 2;
-            if (label && *label)
-                w += text_width(label);
-            if (icon != Icon::None)
-            {
-                w += ICON_MD;
-                if (label && *label)
-                    w += ICON_LABEL_GAP;
-            }
-            return w;
+            return width_at(label, icon, BUTTON_PAD_X);
+        }
+
+        int button_width_large(const char *label, Icon icon)
+        {
+            return width_at(label, icon, BUTTON_LARGE_PAD_X);
         }
 
         ButtonState icon_button(gfx::Surface *s, int x, int y, int w, int h,
                                 Icon icon, const char *label,
-                                const InputState &input)
+                                const InputState &input, ButtonStyle style)
         {
             ButtonState state;
             state.hovered = (input.mouse.x >= x && input.mouse.x < x + w &&
                              input.mouse.y >= y && input.mouse.y < y + h);
             state.clicked = state.hovered && input.mouse.clicked;
 
-            const gfx::Color bg = state.hovered ? theme().primary_hover : theme().primary;
+            const Fill f = fill_for(style);
+
+            // Pressed beats hover: the pointer is over the button in both
+            // states, and Avalonia's :pressed selector wins the same way.
+            const gfx::Color bg = !state.hovered  ? f.base
+                                  : input.mouse.buttons ? f.active
+                                                        : f.hover;
+
             fill_rounded_rect(s, gfx::rect(x, y, w, h), BUTTON_RADIUS, bg);
 
             const bool has_label = (label && *label);
@@ -230,47 +291,54 @@ namespace launcher
 
             int cx = x + (w - (iw + gap + lw)) / 2;
 
+            // Default buttons carry body text; the coloured ones use white,
+            // as ButtonPrimaryText / ButtonErrorText do.
+            const gfx::Color fg = (style == ButtonStyle::Default)
+                                      ? theme().text
+                                      : theme().text_bright;
+
             if (iw)
             {
-                draw_icon(s, cx, y + (h - ICON_MD) / 2, ICON_MD,
-                          theme().text_bright, icon);
+                draw_icon(s, cx, y + (h - ICON_MD) / 2, ICON_MD, fg, icon);
                 cx += iw + gap;
             }
 
             if (has_label)
-                draw_text(s, cx, y + (h - text_height()) / 2, theme().text_bright, label);
+                draw_text(s, cx, y + (h - text_height()) / 2, fg, label);
 
             return state;
         }
 
         ButtonState button(gfx::Surface *s, int x, int y, int w, int h, const char *label,
-                           const InputState &input)
+                           const InputState &input, ButtonStyle style)
         {
-            return icon_button(s, x, y, w, h, Icon::None, label, input);
+            return icon_button(s, x, y, w, h, Icon::None, label, input, style);
         }
 
         // ---------------------------------------------------------------------------
         // Badge
         // ---------------------------------------------------------------------------
         //
-        // Mirrors the Avalonia Button.Badge style: 10x5 padding, a small
-        // corner radius, and a muted panel fill that lifts on hover.
+        // Mirrors the Avalonia Button.Badge style scaled by 0.8: Padding
+        // 10,5 and CornerRadius 2 become 8,4 and radius 2, and its FontSize
+        // 12 against a 16 base becomes the Small rung.
 
         namespace
         {
-            const int BADGE_PAD_X = 10;
-            const int BADGE_PAD_Y = 5;
-            const int BADGE_RADIUS = 3;
+            const int BADGE_PAD_X = 8;
+            const int BADGE_PAD_Y = 4;
+            const int BADGE_RADIUS = 2;
+            const FontSize BADGE_FONT = FontSize::Small;
         }
 
         int badge_width(const char *label)
         {
-            return text_width(label) + BADGE_PAD_X * 2;
+            return text_width(label, BADGE_FONT) + BADGE_PAD_X * 2;
         }
 
         int badge_height()
         {
-            return text_height() + BADGE_PAD_Y * 2;
+            return text_height(BADGE_FONT) + BADGE_PAD_Y * 2;
         }
 
         ButtonState badge(gfx::Surface *s, int x, int y, const char *label,
@@ -292,7 +360,8 @@ namespace launcher
                               state.hovered ? theme().panel_hover : theme().panel);
 
             draw_text(s, x + BADGE_PAD_X, y + BADGE_PAD_Y,
-                      state.hovered ? theme().text_bright : theme().text, label);
+                      state.hovered ? theme().text_bright : theme().text, label,
+                      BADGE_FONT);
 
             return state;
         }

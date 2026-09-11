@@ -17,6 +17,9 @@
 
 #include "gfx/gfx.h"
 
+#include "app/worker.h"
+#include "app/logger.h"
+
 #include <vector>
 
 namespace launcher
@@ -42,6 +45,160 @@ namespace launcher
             volatile int s_close_requested = 0;
             void close_button_handler() { s_close_requested = 1; }
             END_OF_STATIC_FUNCTION(close_button_handler)
+
+            // Guards the backbuffer pointer against that same thread.
+            //
+            // Allegro owns the window, and it owns it from a thread of its
+            // own -- the one the close-button callback above arrives on. The
+            // chrome's WndProc subclass is therefore also called from there,
+            // and its WM_PAINT case calls present(). Meanwhile the main loop
+            // calls resize_display(), which frees the very bitmap present()
+            // is reading out of. Dragging a window edge fires WM_PAINT
+            // continuously, so the two collide in the ordinary case rather
+            // than a rare one, and the process dies on a freed BITMAP.
+            //
+            // Only the main thread ever swaps the pointer; the lock is what
+            // stops the window thread from reading it mid-swap.
+            void *s_backbuffer_lock = NULL;
+
+            struct BackbufferLock
+            {
+                BackbufferLock() { worker_mutex_lock(s_backbuffer_lock); }
+                ~BackbufferLock() { worker_mutex_unlock(s_backbuffer_lock); }
+            };
+
+#ifdef ALLEGRO_WINDOWS
+            // The frame's GDI description, built once per size/depth change.
+            //
+            // present() used to be a straight call to Allegro's
+            // blit_to_hdc(). That function is written for occasional use, and
+            // on every single call it:
+            //
+            //   * mallocs a BITMAPINFO plus a 256-entry palette and fills the
+            //     palette -- even at 32bpp, where it is never read;
+            //   * mallocs a whole second copy of the frame;
+            //   * copies the frame into it, row by row;
+            //   * blits;
+            //   * frees both.
+            //
+            // At 30 FPS and 800x600x32 that is ~57 MB/s of allocate, copy and
+            // free, and a two-megabyte block goes to VirtualAlloc, so the
+            // kernel zero-fills every page of it thirty times a second. On a
+            // Pentium 4 that is a large fraction of a core spent on nothing,
+            // and it is charged to the whole machine, not just the launcher.
+            //
+            // It is worse at 16bpp, the depth the Win9x path falls back to:
+            // Allegro's DIB is 5-5-5, the bitmap is 5-6-5, so the copy above
+            // becomes a per-pixel conversion loop over every pixel of every
+            // frame -- and it quietly drops a bit of green on the way.
+            //
+            // GDI can read the bitmap where it already lies. All that is
+            // needed is a BITMAPINFO that describes it, which does not change
+            // between frames, and BI_BITFIELDS to state 5-6-5 rather than let
+            // GDI assume 5-5-5.
+            struct DibDesc
+            {
+                BITMAPINFOHEADER header;
+                DWORD masks[3]; // Only read when biCompression is BI_BITFIELDS.
+            };
+
+            DibDesc s_dib;
+            bool s_dib_valid = false;
+            int s_dib_w = 0;
+            int s_dib_h = 0;
+            int s_dib_depth = 0;
+
+            // Bytes a pixel of `depth` occupies. Allegro spells this
+            // BYTES_PER_PIXEL, but that macro lives in its internal headers;
+            // the arithmetic is the same and 15bpp correctly gives 2.
+            inline int bytes_per_pixel(int depth) { return (depth + 7) / 8; }
+
+            // True when the bitmap's rows sit back to back in one allocation
+            // at `stride` bytes apart, which is what lets GDI read them in
+            // place. Allegro's memory bitmaps are laid out that way, but it
+            // is a property of the allocator rather than a documented
+            // guarantee, so it is checked rather than assumed -- present()
+            // falls back to blit_to_hdc() if it ever stops holding.
+            bool rows_are_contiguous(BITMAP *bmp, int stride)
+            {
+                if (bmp->h <= 0)
+                    return false;
+                if (bmp->h == 1)
+                    return true;
+
+                const unsigned char *first = (const unsigned char *)bmp->line[0];
+                const unsigned char *last = (const unsigned char *)bmp->line[bmp->h - 1];
+
+                // Two checks rather than a loop over every row: a uniform
+                // stride between the first two rows plus the right total span
+                // to the last one cannot hold for a scattered allocation.
+                if ((const unsigned char *)bmp->line[1] - first != stride)
+                    return false;
+
+                return last - first == (long)stride * (bmp->h - 1);
+            }
+
+            // Describes `bmp` for GDI, reusing the last description when the
+            // frame's shape has not changed. Returns false for a depth this
+            // path does not handle, which sends present() to Allegro.
+            bool describe_for_gdi(BITMAP *bmp, int depth)
+            {
+                if (s_dib_valid && s_dib_w == bmp->w && s_dib_h == bmp->h &&
+                    s_dib_depth == depth)
+                    return true;
+
+                ZeroMemory(&s_dib, sizeof(s_dib));
+                s_dib.header.biSize = sizeof(BITMAPINFOHEADER);
+                s_dib.header.biPlanes = 1;
+                s_dib.header.biWidth = bmp->w;
+
+                // Negative: a top-down DIB, matching the order Allegro's rows
+                // are actually in. Allegro's own path does the same.
+                s_dib.header.biHeight = -bmp->h;
+
+                switch (depth)
+                {
+                case 32:
+                    s_dib.header.biBitCount = 32;
+                    s_dib.header.biCompression = BI_RGB;
+                    break;
+
+                case 16:
+                case 15:
+                    // The masks come from Allegro's own shifts rather than
+                    // hardcoded 5-6-5, because they are what the drawing code
+                    // packed the pixels with.
+                    s_dib.header.biBitCount = 16;
+                    s_dib.header.biCompression = BI_BITFIELDS;
+                    if (depth == 16)
+                    {
+                        s_dib.masks[0] = (DWORD)0x1F << _rgb_r_shift_16;
+                        s_dib.masks[1] = (DWORD)0x3F << _rgb_g_shift_16;
+                        s_dib.masks[2] = (DWORD)0x1F << _rgb_b_shift_16;
+                    }
+                    else
+                    {
+                        s_dib.masks[0] = (DWORD)0x1F << _rgb_r_shift_15;
+                        s_dib.masks[1] = (DWORD)0x1F << _rgb_g_shift_15;
+                        s_dib.masks[2] = (DWORD)0x1F << _rgb_b_shift_15;
+                    }
+                    break;
+
+                default:
+                    // 8bpp needs the palette shipped alongside and 24bpp is
+                    // never what the backbuffer is. Neither is worth carrying
+                    // a second code path for.
+                    s_dib_valid = false;
+                    return false;
+                }
+
+                s_dib_valid = true;
+                s_dib_w = bmp->w;
+                s_dib_h = bmp->h;
+                s_dib_depth = depth;
+                return true;
+            }
+#endif // ALLEGRO_WINDOWS
 
             // Pack a gfx::Color for a specific surface's colour depth. The
             // backbuffer may be 16-bit on Win9x while image surfaces are
@@ -90,6 +247,11 @@ namespace launcher
 
         bool init_display(const char *title, int w, int h)
         {
+            // Before set_gfx_mode: that is what creates the window, and the
+            // window thread can call present() from the moment it exists.
+            if (!s_backbuffer_lock)
+                s_backbuffer_lock = worker_mutex_create();
+
             if (allegro_init() != 0)
                 return false;
 
@@ -130,12 +292,29 @@ namespace launcher
 
         void shutdown_display()
         {
-            if (s_backbuffer)
+            Surface *dead = NULL;
             {
-                destroy_surface(s_backbuffer);
+                BackbufferLock guard;
+                dead = s_backbuffer;
                 s_backbuffer = NULL;
+                s_width = 0;
+                s_height = 0;
             }
+
+            // Outside the lock, and before allegro_exit(): a present() that
+            // was already inside the blit has released the lock by now, and
+            // one that starts later sees a null backbuffer and returns.
+            destroy_surface(dead);
+
             allegro_exit();
+
+            // Last, because allegro_exit() tears down the window thread and
+            // that thread can take the lock on its way out.
+            if (s_backbuffer_lock)
+            {
+                worker_mutex_destroy(s_backbuffer_lock);
+                s_backbuffer_lock = NULL;
+            }
         }
 
         Surface *backbuffer() { return s_backbuffer; }
@@ -143,6 +322,16 @@ namespace launcher
         int display_height() { return s_height; }
 
         bool display_close_requested() { return s_close_requested != 0; }
+
+        bool display_minimized()
+        {
+#ifdef ALLEGRO_WINDOWS
+            HWND hwnd = win_get_window();
+            return hwnd && IsIconic(hwnd);
+#else
+            return false;
+#endif
+        }
 
         void *native_window_handle()
         {
@@ -155,18 +344,87 @@ namespace launcher
 
         void present()
         {
-            if (!s_backbuffer)
+            // Held across the whole blit, not just the null check: the window
+            // thread gets here through WM_PAINT while the main thread may be
+            // in resize_display().
+            BackbufferLock guard;
+
+            if (!s_backbuffer || !s_backbuffer->bmp)
                 return;
+
+            // Size taken from the bitmap rather than from s_width/s_height.
+            // Those are assigned in a separate statement from the pointer
+            // swap, so a reader can catch the pair disagreeing -- and neither
+            // blit_to_hdc nor ::blit clips its SOURCE rectangle, so a stale
+            // larger size reads off the end of a freshly shrunk bitmap.
+            const int w = s_backbuffer->bmp->w;
+            const int h = s_backbuffer->bmp->h;
 
             // Blit directly to the window DC rather than to Allegro's `screen`
             // bitmap, which stays stuck at the initial size after a resize.
 #ifdef ALLEGRO_WINDOWS
             HWND hwnd = win_get_window();
+            if (!hwnd)
+                return;
+
+            // Nothing to show, and the work below is not free. GDI would
+            // clip a minimised window's blit away, but only after the frame
+            // had been described and handed to it.
+            if (IsIconic(hwnd))
+                return;
+
             HDC hdc = GetDC(hwnd);
-            blit_to_hdc(s_backbuffer->bmp, hdc, 0, 0, 0, 0, s_width, s_height);
+            if (!hdc)
+                return;
+
+            BITMAP *bmp = s_backbuffer->bmp;
+            const int depth = bitmap_color_depth(bmp);
+            const int bytes = bytes_per_pixel(depth);
+            int stride = bmp->w * bytes;
+            stride = (stride + 3) & ~3; // GDI wants rows dword-aligned.
+
+            const bool direct = stride == bmp->w * bytes &&
+                                rows_are_contiguous(bmp, stride) &&
+                                describe_for_gdi(bmp, depth);
+
+            // Once per size/depth change, not per frame. Which path present()
+            // takes is the difference between a blit and a full-frame malloc,
+            // copy and free, and it is decided by properties of the bitmap
+            // that cannot be read off the target machine any other way.
+            static int logged_w = 0, logged_h = 0, logged_depth = 0;
+            static bool logged_direct = false;
+            if (logged_w != w || logged_h != h || logged_depth != depth ||
+                logged_direct != direct)
+            {
+                logged_w = w;
+                logged_h = h;
+                logged_depth = depth;
+                logged_direct = direct;
+                log_info("present: %dx%d %dbpp, %s", w, h, depth,
+                         direct ? "blitting in place"
+                                : "falling back to blit_to_hdc (copies every frame)");
+            }
+
+            if (direct)
+            {
+                // Same call Allegro would have made, with the same arguments
+                // -- but reading the frame where it already is, and with a
+                // BITMAPINFO that outlives the frame.
+                StretchDIBits(hdc, 0, 0, w, h,
+                              0, 0, w, h,
+                              bmp->line[0], (const BITMAPINFO *)&s_dib,
+                              DIB_RGB_COLORS, SRCCOPY);
+            }
+            else
+            {
+                // A depth or layout the fast path does not cover. Correct,
+                // just as expensive as it always was.
+                blit_to_hdc(bmp, hdc, 0, 0, 0, 0, w, h);
+            }
+
             ReleaseDC(hwnd, hdc);
 #else
-            ::blit(s_backbuffer->bmp, screen, 0, 0, 0, 0, s_width, s_height);
+            ::blit(s_backbuffer->bmp, screen, 0, 0, 0, 0, w, h);
 #endif
         }
 
@@ -177,14 +435,38 @@ namespace launcher
             if (w == s_width && h == s_height)
                 return;
 
+            // Allocated before the lock is taken so the window thread, which
+            // is inside a modal resize loop and repainting as fast as it can,
+            // never waits on a bitmap allocation.
             BITMAP *bmp = create_bitmap(w, h);
             if (!bmp)
                 return;
 
-            destroy_surface(s_backbuffer);
-            s_backbuffer = wrap(bmp, true);
-            s_width = w;
-            s_height = h;
+            Surface *fresh = wrap(bmp, true);
+            if (!fresh)
+            {
+                destroy_bitmap(bmp);
+                return;
+            }
+
+            Surface *old = NULL;
+            {
+                BackbufferLock guard;
+                old = s_backbuffer;
+                s_backbuffer = fresh;
+                s_width = w;
+                s_height = h;
+#ifdef ALLEGRO_WINDOWS
+                // Under the lock with the swap: describe_for_gdi() keys off
+                // the frame's dimensions, and the window thread must not be
+                // able to see the new bitmap through the old description.
+                s_dib_valid = false;
+#endif
+            }
+
+            // Safe outside the lock: any present() still holding `old` had
+            // the lock, so it has finished; any that starts now sees `fresh`.
+            destroy_surface(old);
         }
 
         // --- Surface lifecycle ---

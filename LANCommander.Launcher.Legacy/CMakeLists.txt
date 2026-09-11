@@ -327,6 +327,21 @@ endif()
 # ---------------------------------------------------------------------------
 # LANCommander C++ SDK (sibling directory)
 # ---------------------------------------------------------------------------
+# libzip is picoposh's Expand-Archive backend, and its stdio and Win32 file
+# sources import SetFilePointerEx and GetFileSizeEx. Those arrived in XP, and
+# an import Win9x cannot resolve is refused by the LOADER -- the launcher would
+# not start at all, rather than failing only if a script happened to unpack
+# something.
+#
+# So the Win9x build links picoposh's zip stub instead, and Expand-Archive
+# reports cleanly that it is unsupported there. Set before the SDK is added, so
+# picoposh's own option() sees it already in the cache. The launcher's own
+# archive extraction is miniz and is unaffected.
+if(TARGET_WIN9X)
+    set(PICOPOSH_ENABLE_ZIP OFF CACHE BOOL
+        "libzip imports XP-only APIs; Win9x links the stub" FORCE)
+endif()
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../liblancommander
                  ${CMAKE_CURRENT_BINARY_DIR}/sdk)
 
@@ -360,6 +375,15 @@ if(LANCOMMANDER_TARGET_DOS)
 else()
     set(LAUNCHER_EXE_OPTIONS WIN32)
     set(LAUNCHER_RESOURCES "${LAUNCHER_GENERATED_DIR}/launcher.rc")
+
+    # windres reads the .ico through the ICON statement in the .rc, and
+    # neither CMake's dependency scanner nor windres itself reports that as a
+    # dependency -- the scanner only follows #include. Without this, editing
+    # src/launcher.ico leaves the stale icon in every incremental build and
+    # only a clean build picks the new one up, which is a long way to chase a
+    # change that looks like it did not take.
+    set_source_files_properties("${LAUNCHER_GENERATED_DIR}/launcher.rc"
+        PROPERTIES OBJECT_DEPENDS "${LAUNCHER_ICON_PATH}")
 endif()
 
 add_executable(launcher ${LAUNCHER_EXE_OPTIONS}
@@ -377,6 +401,11 @@ add_executable(launcher ${LAUNCHER_EXE_OPTIONS}
     src/app/depot_sections.cpp
     src/app/game_menu.cpp
     src/app/logger.cpp
+    src/app/script_host.cpp
+    src/app/game_metadata.cpp
+    src/app/machine_info.cpp
+    src/app/save_sync.cpp
+    src/app/zip_io.cpp
     src/app/paths.cpp
     ${LAUNCHER_GFX_SOURCES}
     vendor/miniz/miniz.c
@@ -399,6 +428,7 @@ add_executable(launcher ${LAUNCHER_EXE_OPTIONS}
     src/ui/screen_game_detail.cpp
     src/ui/screen_downloads.cpp
     src/ui/screen_settings.cpp
+    src/ui/screen_script_console.cpp
     src/ui/window_chrome.cpp
     src/ui/chrome_geometry.cpp
     src/ui/layout.cpp
@@ -416,6 +446,10 @@ target_include_directories(launcher PRIVATE
     vendor/miniz/
     vendor/sqlite3/
     vendor/stb/
+    # pico_regex, for regex save paths. picoposh is already linked in through
+    # liblancommander; this only exposes the one header. Its engine is C89 and
+    # builds on every target the launcher does, which <regex> does not.
+    "${CMAKE_CURRENT_SOURCE_DIR}/../liblancommander/vendor/picoposh/include"
     ${ALLEGRO_INCLUDE_DIRS}
 )
 
@@ -426,7 +460,17 @@ add_custom_command(TARGET launcher POST_BUILD
             "$<TARGET_FILE_DIR:launcher>/assets"
     COMMENT "Copying assets next to launcher.exe")
 
-target_compile_definitions(launcher PRIVATE MINIZ_NO_EXPORT ${LAUNCHER_BACKEND_DEFINE})
+# MINIZ_NO_STDIO removes miniz's FILE*-based entry points. They reach the disk
+# through _ftelli64/_fseeki64, which MinGW implements over SetFilePointerEx and
+# GetFileSizeEx -- XP-only imports that make the Win9x loader reject the
+# executable before main() runs. Nothing here links with --gc-sections, so
+# merely not CALLING them is not enough: an unreferenced function in
+# miniz_zip.c still contributes its imports. src/app/zip_io.cpp supplies the
+# 32-bit stdio callbacks miniz uses instead.
+target_compile_definitions(launcher PRIVATE
+    MINIZ_NO_EXPORT
+    MINIZ_NO_STDIO
+    ${LAUNCHER_BACKEND_DEFINE})
 
 if(LANCOMMANDER_TARGET_DOS)
     # SQLite's Unix VFS does not build for DJGPP -- its own __DJGPP__ shim is

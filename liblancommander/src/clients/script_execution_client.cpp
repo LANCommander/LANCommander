@@ -123,8 +123,15 @@ Result<ScriptRun> ScriptExecutionClient::run_lifecycle(
     // A script that cannot be parsed, or that uses something the interpreter
     // does not implement, is a deployment error rather than a return value.
     // (.NET logs and returns default here; surfacing it is more useful.)
-    if (run.result.exit_code == PICO_EXIT_PARSE ||
-        run.result.exit_code == PICO_EXIT_UNSUPPORTED) {
+    //
+    // Gated on interpreter_error, not on the exit code. The codes collide:
+    // PICO_EXIT_PARSE is 2 and PICO_EXIT_UNSUPPORTED is 3, so a script that
+    // ends with a perfectly deliberate `exit 2` used to be reported as one
+    // that never ran -- which is the single most misleading thing this layer
+    // can tell a script author.
+    if (run.result.interpreter_error &&
+        (run.result.exit_code == PICO_EXIT_PARSE ||
+         run.result.exit_code == PICO_EXIT_UNSUPPORTED)) {
         return Result<ScriptRun>::fail(script_path + ": " + run.result.error);
     }
 

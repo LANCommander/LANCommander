@@ -1,6 +1,8 @@
 #ifndef LANCOMMANDER_HTTP_CLIENT_H
 #define LANCOMMANDER_HTTP_CLIENT_H
 
+#include <stdint.h>
+
 #include <map>
 #include <string>
 
@@ -8,6 +10,35 @@
 #include "../types.h"
 
 namespace lancommander {
+
+// Where a download's wall clock went.
+//
+// A download is a loop of "read from the socket, write to disk", and the two
+// happen one after the other on one thread, so the total is the sum of them.
+// That makes the split the only thing worth knowing when a transfer is slower
+// than the link should allow: a slow network and a slow disk look identical
+// from the outside, and the fix for one does nothing for the other.
+//
+// Times are milliseconds and come from a coarse system tick, so any single
+// read or write is quantised badly. The split across thousands of them is
+// still sound -- the two accumulators partition the same interval with
+// nothing in between, so the quantisation error is a sampling artefact that
+// averages out rather than a bias.
+struct DownloadTiming {
+    uint64_t bytes;
+
+    unsigned long total_ms;      // First read to last write.
+    unsigned long socket_ms;     // Inside the transport's read call.
+    unsigned long write_ms;      // Inside the write call.
+    unsigned long flush_ms;      // The final flush and close.
+
+    unsigned long reads;         // Read calls made.
+    unsigned long longest_write_ms; // Worst single write, i.e. the worst stall.
+
+    DownloadTiming()
+        : bytes(0), total_ms(0), socket_ms(0), write_ms(0), flush_ms(0),
+          reads(0), longest_write_ms(0) {}
+};
 
 // Abstract HTTP client interface. Consumers must provide a concrete backend
 // (e.g. WinInetHttpClient, CurlHttpClient) that implements these methods.
@@ -60,6 +91,14 @@ public:
     virtual bool download(const std::string& path,
                           const std::string& dest_path,
                           DownloadProgressFn progress = nullptr) = 0;
+
+    // How the last download() spent its time. Non-pure with a zeroed default,
+    // like set_client_version above, so a backend that does not measure keeps
+    // compiling; a caller reads total_ms == 0 as "not measured".
+    virtual DownloadTiming last_download_timing() const
+    {
+        return DownloadTiming();
+    }
 
     // Upload a file as multipart/form-data.
     virtual HttpResponse post_multipart_file(const std::string& path,

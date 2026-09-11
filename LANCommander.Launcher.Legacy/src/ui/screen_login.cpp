@@ -53,7 +53,14 @@ namespace launcher
             // --- Layout (center below chrome) ---
             int top = chrome_height();
             int panel_w = 320;
-            int panel_h = 280;
+
+            // 16 top padding + the wordmark + three labelled rows + the
+            // button + 16 bottom. Hand-totalled, as it was before: the card
+            // is drawn before its contents, so nothing here knows the height
+            // until it has been laid out. The wordmark is 9px taller than the
+            // heading it replaced, and at 280 the Login button hung 2px past
+            // the bottom edge.
+            int panel_h = 298;
             int px = (sw - panel_w) / 2;
             int py = top + (sh - top - panel_h) / 2;
 
@@ -62,10 +69,15 @@ namespace launcher
             int cx = px + panel_w / 2;
             int y = py + 16;
 
-            draw_text_center(buf, cx, y, theme().text_bright, "LANCommander");
-            y += text_height() + 4;
-            draw_text_center(buf, cx, y, theme().text_dim, "Connect to a server");
-            y += text_height() + 16;
+            // The wordmark, as LoginView does. It replaces a "LANCommander"
+            // heading and a "Connect to a server" strapline, neither of which
+            // that view has — the first was the same wordmark spelled out in
+            // body type, and the second described the screen before this one.
+            //
+            // Avalonia sizes it at 350 in a 400-wide column, so 7/8 of the
+            // card's content width.
+            const int logo_w = (panel_w - 48) * 7 / 8;
+            y += auth_logo_draw(buf, cx, y, logo_w) + 16;
 
             // --- Server address ---
             int field_x = px + 24;
@@ -124,11 +136,16 @@ namespace launcher
             y += field_h + 14;
 
             // --- Login button ---
+            //
+            // LoginView marks this "Primary Large", so it gets the taller
+            // metric as well as the blue.
             int btn_w = 100;
-            int btn_h = 28;
+            int btn_h = button_height_large();
             int btn_x = px + (panel_w - btn_w) / 2;
 
-            ButtonState btn = button(buf, btn_x, y, btn_w, btn_h, s_connecting ? "Connecting..." : "Login", input);
+            ButtonState btn = button(buf, btn_x, y, btn_w, btn_h,
+                                     s_connecting ? "Connecting..." : "Login", input,
+                                     ButtonStyle::Primary);
 
             bool do_login = btn.clicked || pass_state.submitted;
 

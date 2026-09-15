@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
@@ -172,6 +172,7 @@ public class ExportContext(
                 .Include(g => g.Developers)
                 .Include(g => g.Engine)
                 .Include(g => g.Genres)
+                .Include(g => g.Keys)
                 .Include(g => g.Media)
                 .Include(g => g.MultiplayerModes)
                 .Include(g => g.Platforms)

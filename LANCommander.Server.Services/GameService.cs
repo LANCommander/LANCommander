@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
@@ -24,6 +24,7 @@ namespace LANCommander.Server.Services
         ArchiveService archiveService,
         MediaService mediaService,
         StorageLocationService storageLocationService,
+        GameCustomFieldService gameCustomFieldService,
         SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
@@ -234,13 +235,23 @@ namespace LANCommander.Server.Services
                 .Include(g => g.CustomFields)
                 .GetAsync(id);
 
-            if (game.CustomFields.Any(c => c.Name == name))
-                foreach (var customField in game.CustomFields.Where(c => c.Name == name))
+            var existing = game.CustomFields.Where(c => c.Name == name).ToList();
+
+            if (existing.Any())
+                foreach (var customField in existing)
+                {
                     customField.Value = value;
+
+                    await gameCustomFieldService.UpdateAsync(customField);
+                }
             else
-            {
-                game.CustomFields.Add(new GameCustomField());
-            }
+                await gameCustomFieldService.AddAsync(new GameCustomField(name, value)
+                {
+                    GameId = id,
+                    Game = game,
+                });
+
+            await cache.ExpireGameCacheAsync(id);
 
             return await GetCustomFieldAsync(id, name);
         }

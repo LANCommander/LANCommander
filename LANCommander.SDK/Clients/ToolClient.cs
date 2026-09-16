@@ -36,7 +36,7 @@ namespace LANCommander.SDK.Services
         
         private IAsyncReader _reader;
         
-        private InstallProgress _installProgress;
+        private readonly InstallProgress _installProgress = new();
         
         public async Task<Tool> GetAsync(Guid id)
         {
@@ -152,6 +152,12 @@ namespace LANCommander.SDK.Services
         {
             var tool = await GetAsync(planItem.EntityId);
             var installResult = new InstallResult();
+
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Title = tool?.Name ?? planItem.Title;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.BytesTransferred = 0;
 
             foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
             {
@@ -284,15 +290,11 @@ namespace LANCommander.SDK.Services
 
             var installResult = new InstallResult();
             
-            _installProgress = new InstallProgress
-            {
-                Status = InstallStatus.Downloading,
-                Title = tool.Name,
-                Progress = 0,
-                TransferSpeed = 0,
-                TotalBytes = 0,
-                BytesTransferred = 0
-            };
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Title = tool.Name;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.BytesTransferred = 0;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
@@ -307,32 +309,6 @@ namespace LANCommander.SDK.Services
                 logger?.LogTrace("Saving scripts");
                 
                 await WriteScriptsAsync(tool, installDirectory);
-                
-                if (tool.Archives?.Any() ?? false)
-                {
-                    logger?.LogTrace("Archives for tool {ToolName} exist. Attempting to download...", tool.Name);
-
-                    var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts,
-                        TimeSpan.FromMilliseconds(500), new ExtractionResult(),
-                        async () =>
-                        {
-                            logger?.LogTrace("Attempting to download and extract tool");
-
-                            return await Task.Run(async () => await DownloadAndExtractAsync(tool, installDirectory));
-                        });
-                        
-                    if (!result.Success && !result.Canceled)
-                        throw new InstallException("Could not extract the tool. Retry the install or check your connection");
-                    else if (result.Canceled)
-                        throw new InstallCanceledException("Tool install canceled");
-
-                    extractTempPath = result.Directory;
-                        
-                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", extractTempPath);
-                    logger?.LogTrace("Running install script for tool {ToolName}", tool.Name);
-
-                    await RunPostInstallScripts(installDirectory, tool);
-                }
                 
                 if (tool.Archives?.Any() ?? false)
                 {

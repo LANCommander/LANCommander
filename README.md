@@ -94,9 +94,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      # Uncomment the line below to install SteamCMD
+      # Use lancommander/lancommander:latest-full for SteamCMD and WINE
       # - STEAMCMD=1
-      # Uncomment the line below to install WINE
       # - WINE=1
     volumes:
       - /path/to/app/data:/app/Data
@@ -113,13 +112,15 @@ All config and uploaded game archives are stored in `/app/Data`.
 
 Download the latest release for your platform from the [Releases](https://github.com/LANCommander/LANCommander/releases) page. The server is a self-contained binary with no external dependencies beyond a supported OS.
 
-### SteamCMD Support
+### SteamCMD and WINE Support
 
-The Docker image supports optional SteamCMD installation. Set `STEAMCMD=1` to enable it. SteamCMD will be installed in `/app/Data/Steam` with cached credentials persisted across container restarts.
+The default image includes yt-dlp and ffmpeg. SteamCMD and WINE are available in the `latest-full` image:
 
-### WINE Support
+```yaml
+image: lancommander/lancommander:latest-full
+```
 
-Set `WINE=1` to install WINE with wine32, wine64, and winetricks support in the Docker container.
+The default image can also install SteamCMD or WINE on first startup by setting `STEAMCMD=1` or `WINE=1`. SteamCMD is installed in `/app/Data/Steam` with cached credentials persisted across container restarts. The full image is currently published for amd64.
 
 > _Note: The Docker image runs the Linux build. Features such as server management may be limited._
 

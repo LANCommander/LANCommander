@@ -390,35 +390,31 @@ jobs:
             artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
             artifacts/LANCommander.Packager-Windows-x86-v${{ needs.prep.outputs.version_tag }}.zip
 
+  publish_docker_image:
+    needs:
+      - prep
+      - build_server_linux_arm64
+      - build_server_linux_x64
+    if: needs.prep.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [base, full]
+    steps:
       - name: Checkout Repo for Docker build
         uses: actions/checkout@v4
-
-      - name: Download Server x64 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./
-    
-      - name: Extract Server Artifacts
-        run: |
-          mkdir -p ./LANCommander.Server/published
-          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-  
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Download Server x64 Artifacts
         uses: actions/download-artifact@v4
@@ -427,6 +423,7 @@ jobs:
           path: ./
 
       - name: Download Server arm64 Artifacts
+        if: matrix.variant == 'base'
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
@@ -438,11 +435,13 @@ jobs:
           unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-amd64
 
       - name: Extract Server Artifacts arm64
+        if: matrix.variant == 'base'
         run: |
           mkdir -p ./LANCommander.Server/published-arm64
           unzip ./LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published-arm64
 
       - name: Set up QEMU
+        if: matrix.variant == 'base'
         uses: docker/setup-qemu-action@v2
 
       - name: Setup buildx
@@ -450,17 +449,17 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
 
-      - name: Build and push Docker image
+      - name: Publish ${{ matrix.variant }} Docker image
         id: push
         uses: docker/build-push-action@v6
         with:
           context: ./LANCommander.Server
-          file: ./LANCommander.Server/Dockerfile
+          file: ./LANCommander.Server/${{ matrix.variant == 'full' && 'Dockerfile.full' || 'Dockerfile' }}
           push: true
-          platforms: linux/amd64
+          platforms: ${{ matrix.variant == 'full' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
-            ${{ needs.prep.outputs.is_prerelease == 'true' && format('{0}/{1}:prerelease', env.REGISTRY, env.IMAGE_NAME) || format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}${{ matrix.variant == 'full' && '-full' || '' }}
+            ${{ needs.prep.outputs.is_prerelease == 'true' && format('{0}/{1}:{2}', env.REGISTRY, env.IMAGE_NAME, matrix.variant == 'full' && 'prerelease-full' || 'prerelease') || format('{0}/{1}:{2}', env.REGISTRY, env.IMAGE_NAME, matrix.variant == 'full' && 'latest-full' || 'latest') }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -469,7 +468,7 @@ jobs:
             BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           provenance: true
 
-      - name: Generate artifact attestation
+      - name: Generate image attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}

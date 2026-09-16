@@ -11,7 +11,10 @@ public class ActionExporter(
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Action record) =>
         await Task.Run(() => new ExportItemInfo { Id = record.Id, Name = record.Name, Type = ImportExportRecordType.Action });
     
-    public override bool CanExport(Action record) => ExportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Action record) =>
+        ExportContext.DataRecord is Data.Models.Game
+        || ExportContext.DataRecord is Data.Models.Server
+        || ExportContext.DataRecord is Data.Models.Tool;
     
     public override async Task<Action> ExportAsync(Guid id)
     {

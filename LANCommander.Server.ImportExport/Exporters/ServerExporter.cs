@@ -2,11 +2,14 @@ using AutoMapper;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server>
+public class ServerExporter(
+    ILogger<ServerExporter> logger,
+    ServerService serverService) : BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Server record)
     {
@@ -44,21 +47,13 @@ public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Mode
                 var fileInfo = new FileInfo(file);
 
                 if (fileInfo.Exists)
-                {
-                    var fileEntry =
-                        ExportContext.Archive.CreateEntry(
-                            $"Files/{fileInfo.Name.Replace(Path.DirectorySeparatorChar, '/')}");
-
-                    using (var fileEntryStream = fileEntry.Open())
-                    using (var fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
-                    {
-                        await fileStream.CopyToAsync(fileEntryStream);
-                    }
-                }
+                    await WriteEntryFromFileAsync(
+                        $"Files/{fileInfo.Name.Replace(Path.DirectorySeparatorChar, '/')}",
+                        fileInfo.FullName);
             }
             catch (Exception ex)
             {
-                // File could not be added to archive
+                logger.LogError(ex, "Could not add {File} to the server export file, it will be missing from the export", file);
             }
         }
 

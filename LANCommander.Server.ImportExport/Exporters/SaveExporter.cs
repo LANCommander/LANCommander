@@ -43,16 +43,8 @@ public class SaveExporter(
         {
             var savePath = await gameSaveService.GetSavePathAsync(id);
 
-            if (Path.Exists(savePath))
-            {
-                var saveEntry = ExportContext.Archive.CreateEntry($"Saves/{id}");
-
-                using (var saveEntryStream = saveEntry.Open())
-                using (var saveFileStream = new FileStream(savePath, FileMode.Open))
-                {
-                    await saveFileStream.CopyToAsync(saveEntryStream);
-                }
-            }
+            if (File.Exists(savePath))
+                await WriteEntryFromFileAsync($"Saves/{id}", savePath);
             
             return mapper.Map<Save>(entity);
         }

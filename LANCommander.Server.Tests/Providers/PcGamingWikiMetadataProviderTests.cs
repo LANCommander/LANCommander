@@ -217,13 +217,44 @@ public class PcGamingWikiMetadataProviderTests
         }).ShouldNotBeNull();
 
         // The id is the page title, which is what action=parse takes.
-        results.Results.Select(r => r.Id).ShouldBe(["Half-Life", "Half-Life_2"]);
+        results.Results.Select(r => r.Id).ShouldBe(["Half-Life", "Half-Life 2"]);
         results.Results.Select(r => r.Data.Title).ShouldBe(["Half-Life", "Half-Life 2"]);
 
         // Blank descriptions become null rather than empty strings so the merge panel can tell
         // there's nothing to import.
         results.Results.First().Data.Description.ShouldBeNull();
         results.Results.Last().Data.Description.ShouldBe("A sequel");
+    }
+
+    [Fact]
+    public void SearchConverterDecodesTitlesWithSpecialCharacters()
+    {
+        // opensearch percent-encodes the URLs it returns. Handing those straight back meant the
+        // follow-up lookup encoded them a second time, and action=parse rejected the title, so
+        // every game with an "&" or an apostrophe in its name failed to import.
+        const string response = """
+            ["Command & Conquer",
+             ["Command & Conquer","Assassin's Creed","N++"],
+             ["","",""],
+             ["https://www.pcgamingwiki.com/wiki/Command_%26_Conquer",
+              "https://www.pcgamingwiki.com/wiki/Assassin%27s_Creed",
+              "https://www.pcgamingwiki.com/wiki/N%2B%2B"]]
+            """;
+
+        var results = JsonSerializer.Deserialize<MetadataSearchResultsCollection<Game>>(response, new JsonSerializerOptions
+        {
+            Converters = { new PcGamingWikiMetadataProvider.PcgwGameSearchResultConverter() }
+        }).ShouldNotBeNull();
+
+        results.Results.Select(r => r.Id).ShouldBe(["Command & Conquer", "Assassin's Creed", "N++"]);
+    }
+
+    [Fact]
+    public void ToPageTitleLeavesPlusSignsAlone()
+    {
+        // A form decode would read these as spaces, which is why this unescapes as a URI instead.
+        PcGamingWikiMetadataProvider.ToPageTitle("https://www.pcgamingwiki.com/wiki/N%2B%2B").ShouldBe("N++");
+        PcGamingWikiMetadataProvider.ToPageTitle("https://www.pcgamingwiki.com/wiki/Half-Life_2").ShouldBe("Half-Life 2");
     }
 
     #endregion

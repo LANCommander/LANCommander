@@ -40,6 +40,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
@@ -114,6 +115,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
                     {
@@ -189,6 +191,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("PlayerAlias", playerAlias);
 
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -265,6 +268,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("PlayerAlias", GameClient.GetPlayerAlias(installDirectory, gameId));
 
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())
@@ -351,6 +355,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("OldPlayerAlias", oldName);
                     script.AddVariable("NewPlayerAlias", newName);
 
@@ -433,6 +438,7 @@ public partial class ScriptClient
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("AllocatedKey", key);
 
                     if (manifest.CustomFields != null && manifest.CustomFields.Any())

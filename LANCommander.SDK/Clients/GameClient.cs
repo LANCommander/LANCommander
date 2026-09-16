@@ -2298,10 +2298,18 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    if (connectionClient.IsConnected() && !String.IsNullOrWhiteSpace(settingsProvider.CurrentValue.IPXRelay.Host))
+                    if (connectionClient.IsConnected() && settingsProvider.CurrentValue.IPXRelay.Enabled)
                     {
-                        context.AddVariable("IPXRelayHost", settingsProvider.CurrentValue.IPXRelay.Host);
-                        context.AddVariable("IPXRelayPort", settingsProvider.CurrentValue.IPXRelay.Port.ToString());
+                        var relayHost = await IPXRelayHelper.ResolveHostAsync(
+                            settingsProvider.CurrentValue.IPXRelay.Host,
+                            connectionClient.GetServerAddress(),
+                            logger);
+
+                        if (!String.IsNullOrWhiteSpace(relayHost))
+                        {
+                            context.AddVariable("IPXRelayHost", relayHost);
+                            context.AddVariable("IPXRelayPort", settingsProvider.CurrentValue.IPXRelay.Port.ToString());
+                        }
                     }
                 }
                 catch (Exception ex)

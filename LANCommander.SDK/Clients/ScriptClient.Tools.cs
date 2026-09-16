@@ -43,6 +43,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -134,6 +135,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -200,6 +202,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -266,6 +269,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -336,6 +340,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {

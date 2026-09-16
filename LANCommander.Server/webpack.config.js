@@ -40,5 +40,11 @@ module.exports = {
         })
     ],
     mode: 'production', // Use 'production' for minified output
-    devtool: 'source-map'
+    devtool: 'source-map',
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename],
+        },
+    },
 };

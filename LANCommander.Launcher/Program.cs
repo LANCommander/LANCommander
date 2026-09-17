@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
@@ -81,7 +82,8 @@ class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .WithRenderingOverrides();
 
     static async Task RunHeadlessAsync(string[] args)
     {
@@ -133,6 +135,7 @@ class Program
                 .UsePlatformDetect()
                 .WithInterFont()
                 .LogToTrace()
+                .WithRenderingOverrides()
                 .StartWithClassicDesktopLifetime(args);
         }
         else

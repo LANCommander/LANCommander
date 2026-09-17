@@ -1,4 +1,4 @@
-﻿using LANCommander.Launcher.Data.Models;
+using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
 using System.Net.Mime;
@@ -66,6 +66,7 @@ namespace LANCommander.Launcher.Services
             if (remoteProfile == null)
             {
                 Logger.LogDebug("Could not find profile");
+                op.Complete();
                 return;
             }
 
@@ -151,6 +152,8 @@ namespace LANCommander.Launcher.Services
             }
                 
             OnProfileDownloaded?.Invoke(this, EventArgs.Empty);
+
+            op.Complete();
         }
     }
 }

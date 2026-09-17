@@ -1,4 +1,4 @@
-﻿using LANCommander.Launcher.Data;
+using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.EntityFrameworkCore;
@@ -109,6 +109,8 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogError(ex, "An unknown error occurred while trying to delete a local file");
                 }
+
+                op.Complete();
             }
         }
 

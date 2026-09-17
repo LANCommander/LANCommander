@@ -138,7 +138,11 @@ namespace LANCommander.Launcher.Services
                         var localPath = mediaService.GetImagePath(localUser.Avatar);
 
                         if (File.Exists(tempAvatarPath))
-                            File.Move(tempAvatarPath, localPath);
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
+
+                            File.Move(tempAvatarPath, localPath, overwrite: true);
+                        }
                     }
                     else if (File.Exists(tempAvatarPath))
                     {

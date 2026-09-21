@@ -69,7 +69,7 @@ public partial class ScriptClient
                         }
                     }
 
-                    script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId)));
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
                     
                     if (Debug)
@@ -151,9 +151,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -218,9 +216,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
 
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -285,9 +281,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -356,9 +350,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)

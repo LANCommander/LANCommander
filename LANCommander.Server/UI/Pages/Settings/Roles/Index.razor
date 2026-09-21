@@ -23,7 +23,7 @@
         <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         
         <DataActions TData="string">
-            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
 
             @if (context.Name != RoleService.AdministratorRoleName)
             {

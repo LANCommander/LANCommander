@@ -51,7 +51,7 @@
         }
         
         <DataActions TData="string">
-            <DropdownButton Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
+            <DropdownButton Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
                 <Overlay>
                     <Menu>
                         @if (Settings.Value.Server.Authentication.RequireApproval && !context.Approved)
@@ -73,7 +73,7 @@
                     </Menu>
                 </Overlay>
                 <ChildContent>
-                    Edit
+                    <Icon Type="@IconType.Outline.Edit" />
                 </ChildContent>
             </DropdownButton>
             

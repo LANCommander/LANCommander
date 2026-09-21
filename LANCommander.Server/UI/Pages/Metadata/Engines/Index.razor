@@ -28,7 +28,7 @@
         <BoundDataColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions TData="string">
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
                 @* TODO: Add seperate Edit page and navigate to it *@
                 @* <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
 

@@ -2,6 +2,7 @@
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
 @inject RoleService RoleService
+@inject NavigationManager NavigationManager
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IMessageService MessageService
@@ -18,12 +19,13 @@
     Responsive
     ColumnPicker
     Searchable
+    OnRowDoubleClick="@(role => NavigationManager.NavigateTo($"/Settings/Roles/{role.Id}"))"
     SearchProperty="r => r.Name">
     <Columns>
         <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         
         <DataActions TData="string">
-            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
 
             @if (context.Name != RoleService.AdministratorRoleName)
             {

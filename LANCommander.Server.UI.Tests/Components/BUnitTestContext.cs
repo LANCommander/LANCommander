@@ -13,7 +13,7 @@ namespace LANCommander.Server.UI.Tests.Components;
 /// created by <see cref="BUnitServerFixture"/> via a fallback service provider. A fresh scope is
 /// created per test so scoped services (and their DbContexts) behave like a single request.
 /// </summary>
-public abstract class BUnitTestContext : Bunit.TestContext
+public abstract class BUnitTestContext : BunitContext
 {
     private readonly IServiceScope _scope;
 
@@ -56,7 +56,7 @@ public abstract class BUnitTestContext : Bunit.TestContext
 
         // Admin pages are gated with [Authorize(Roles = Administrator)]. Provide an authenticated
         // admin so AuthorizeView/cascading auth state behave as in a logged-in session.
-        var authContext = this.AddTestAuthorization();
+        var authContext = this.AddAuthorization();
         authContext.SetAuthorized(TestConstants.AdminUserName);
         authContext.SetRoles(RoleService.AdministratorRoleName);
 

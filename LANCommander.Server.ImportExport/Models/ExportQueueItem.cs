@@ -17,6 +17,7 @@ public class ExportQueueItem
 
     public ExportQueueItem(Guid id, ImportExportRecordType type, object record)
     {
+        Id = id;
         Type = type;
         Record = record;
     }

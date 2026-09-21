@@ -291,33 +291,13 @@ public partial class LibraryViewModel : GamesCollectionViewModel
         {
             using var scope = _serviceProvider.CreateScope();
 
-            if (IsOfflineMode)
-            {
-                var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
-                var localGame   = await gameService.GetAsync(gameItem.Id);
+            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var game = await gameService.GetDetailsAsync(gameItem.Id, IsOfflineMode);
 
-                if (localGame != null)
-                {
-                    var sdkGame = new SDK.Models.Game
-                    {
-                        Id          = localGame.Id,
-                        Title       = localGame.Title ?? "Unknown",
-                        SortTitle   = localGame.SortTitle,
-                        Description = localGame.Description,
-                        ReleasedOn  = localGame.ReleasedOn ?? DateTime.MinValue
-                    };
-                    
-                    RaiseGameSelected(sdkGame);
-                }
-            }
+            if (game != null)
+                RaiseGameSelected(game);
             else
-            {
-                var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-                var game = await gameClient.GetAsync(gameItem.Id);
-
-                if (game != null)
-                    RaiseGameSelected(game);
-            }
+                _logger.LogWarning("No details available for game {GameId}", gameItem.Id);
         }
         catch (Exception ex)
         {

@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Rendering;
 using LANCommander.Launcher.Input;
 using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.Plugins;
@@ -49,6 +50,8 @@ public partial class App : Application
             
             _logger = Services.GetRequiredService<ILogger<App>>();
             _logger.LogInformation("LANCommander Avalonia Launcher starting...");
+            _logger.LogInformation("Render backend override: {Override}",
+                RenderingOptions.AppliedOverride ?? "none, using Avalonia defaults");
 
             // Remove Avalonia's built-in data validation plugin to avoid duplicate validations
             var dataValidationPlugins = BindingPlugins.DataValidators;
@@ -99,6 +102,8 @@ public partial class App : Application
 
                 mainWindow.Show();
 
+                ApplyRendererOverlays(mainWindow);
+
                 // If Opened already fired synchronously during Show(), the handler above missed
                 // it; bind now since the handle is available once the window is shown.
                 BindTaskbarProgress();
@@ -148,6 +153,34 @@ public partial class App : Application
         }
     }
     
+    private static void ApplyRendererOverlays(TopLevel topLevel)
+    {
+        var requested = Environment.GetEnvironmentVariable("LANCOMMANDER_RENDER_OVERLAY");
+
+        if (string.IsNullOrWhiteSpace(requested))
+            return;
+
+        var overlays = RendererDebugOverlays.None;
+
+        foreach (var entry in requested.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            overlays |= entry.ToLowerInvariant() switch
+            {
+                "fps" => RendererDebugOverlays.Fps,
+                "dirtyrects" => RendererDebugOverlays.DirtyRects,
+                "layout" => RendererDebugOverlays.LayoutTimeGraph,
+                "render" => RendererDebugOverlays.RenderTimeGraph,
+                "all" => RendererDebugOverlays.Fps | RendererDebugOverlays.DirtyRects
+                         | RendererDebugOverlays.LayoutTimeGraph | RendererDebugOverlays.RenderTimeGraph,
+                _ => RendererDebugOverlays.None,
+            };
+        }
+
+        topLevel.RendererDiagnostics.DebugOverlays = overlays;
+
+        _logger?.LogInformation("Renderer debug overlays enabled: {Overlays}", overlays);
+    }
+
     private async Task InitializeApplicationAsync()
     {
         try

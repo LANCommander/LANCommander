@@ -45,6 +45,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -138,6 +139,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -217,6 +219,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -297,6 +300,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("PlayerAlias", playerAlias);
 
                     try
@@ -382,6 +386,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("PlayerAlias", await GameClient.GetPlayerAliasAsync(installDirectory, gameId));
 
                     try
@@ -478,6 +483,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("OldPlayerAlias", oldName);
                     script.AddVariable("NewPlayerAlias", newName);
 
@@ -564,6 +570,7 @@ public partial class ScriptClient
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
                     script.AddVariable("ExecutablePath", executablePath);
                     script.AddVariable("Arguments", arguments);
                     script.AddVariable("WorkingDirectory", workingDirectory);

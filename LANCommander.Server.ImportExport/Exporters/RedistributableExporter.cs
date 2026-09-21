@@ -21,11 +21,10 @@ public class RedistributableExporter(RedistributableService redistributableServi
     {
         var redistributable = await redistributableService.GetManifestAsync(id);
 
-        if (redistributable.Archives is null)
-            redistributable.Archives = new List<Archive>();
-
-        if (redistributable.Scripts is null)
-            redistributable.Scripts = new List<Script>();
+        // The queue fills these from the records the user actually selected, so anything the
+        // manifest already carries has to be cleared first or every child is written out twice.
+        redistributable.Archives = new List<Archive>();
+        redistributable.Scripts = new List<Script>();
 
         return redistributable;
     }

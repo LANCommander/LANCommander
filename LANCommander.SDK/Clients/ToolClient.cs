@@ -36,7 +36,7 @@ namespace LANCommander.SDK.Services
         
         private IAsyncReader _reader;
         
-        private InstallProgress _installProgress;
+        private readonly InstallProgress _installProgress = new();
         
         public async Task<Tool> GetAsync(Guid id)
         {
@@ -64,21 +64,38 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}/Scripts")
+                .UseRoute($"/api/Tools/{id}/Scripts")
                 .GetAsync<IEnumerable<Script>>();
         }
 
         public async Task WriteScriptsAsync(Tool tool, string installDirectory)
         {
-            var scripts = await GetScriptsAsync(tool.Id);
+            var scripts = tool.Scripts?
+                .Where(s => s.Type != ScriptType.Package)
+                .ToList();
 
-            if (scripts != null && scripts.Any())
+            if (scripts == null || !scripts.Any())
             {
-                logger?.LogTrace($"Saving scripts for tool {tool.Name} ({tool.Id}) into {installDirectory}");
-                
-                foreach (var script in scripts)
-                    await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
+                try
+                {
+                    scripts = (await GetScriptsAsync(tool.Id))?
+                        .Where(s => s.Type != ScriptType.Package)
+                        .ToList();
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogTrace(ex, "Could not fetch scripts for tool {ToolId}", tool.Id);
+                }
             }
+
+            if (scripts == null || !scripts.Any())
+                return;
+
+            logger?.LogTrace("Saving {ScriptCount} scripts for tool {ToolName} ({ToolId}) into {InstallDirectory}",
+                scripts.Count, tool.Name, tool.Id, installDirectory);
+
+            foreach (var script in scripts)
+                await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
         }
         
         public async Task<Stream> Stream(Guid id)
@@ -87,7 +104,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}/Download")
+                .UseRoute($"/api/Tools/{id}/Download")
                 .StreamAsync();
         }
 
@@ -130,7 +147,17 @@ namespace LANCommander.SDK.Services
                 IsCritical = true,
             });
 
-            if (tool.Scripts != null && tool.Scripts.Any())
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteScripts,
+                Title = "Save scripts",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = false,
+            });
+
+            if (tool.Scripts != null && tool.Scripts.Any(s => s.Type == ScriptType.Install))
             {
                 toolItem.Tasks.Add(new InstallTaskDefinition
                 {
@@ -152,6 +179,12 @@ namespace LANCommander.SDK.Services
         {
             var tool = await GetAsync(planItem.EntityId);
             var installResult = new InstallResult();
+
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Title = tool?.Name ?? planItem.Title;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.BytesTransferred = 0;
 
             foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
             {
@@ -188,6 +221,10 @@ namespace LANCommander.SDK.Services
                         case InstallTaskType.WriteManifest:
                             var manifest = await GetManifestAsync(tool.Id);
                             await ManifestHelper.WriteAsync(manifest, planItem.InstallDirectory);
+                            break;
+
+                        case InstallTaskType.WriteScripts:
+                            await WriteScriptsAsync(tool, planItem.InstallDirectory);
                             break;
 
                         case InstallTaskType.RunInstallScript:
@@ -280,19 +317,13 @@ namespace LANCommander.SDK.Services
 
         public async Task<InstallResult> InstallAsync(Tool tool, string installDirectory, int maxAttempts = 10)
         {
-            string extractTempPath = null;
-
             var installResult = new InstallResult();
             
-            _installProgress = new InstallProgress
-            {
-                Status = InstallStatus.Downloading,
-                Title = tool.Name,
-                Progress = 0,
-                TransferSpeed = 0,
-                TotalBytes = 0,
-                BytesTransferred = 0
-            };
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Title = tool.Name;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.BytesTransferred = 0;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
@@ -320,39 +351,11 @@ namespace LANCommander.SDK.Services
 
                             return await Task.Run(async () => await DownloadAndExtractAsync(tool, installDirectory));
                         });
-                        
-                    if (!result.Success && !result.Canceled)
-                        throw new InstallException("Could not extract the tool. Retry the install or check your connection");
-                    else if (result.Canceled)
-                        throw new InstallCanceledException("Tool install canceled");
-
-                    extractTempPath = result.Directory;
-                        
-                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", extractTempPath);
-                    logger?.LogTrace("Running install script for tool {ToolName}", tool.Name);
-
-                    await RunPostInstallScripts(installDirectory, tool);
-                }
-                
-                if (tool.Archives?.Any() ?? false)
-                {
-                    logger?.LogTrace("Archives for tool {ToolName} exist. Attempting to download...", tool.Name);
-
-                    var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts,
-                        TimeSpan.FromMilliseconds(500), new ExtractionResult(),
-                        async () =>
-                        {
-                            logger?.LogTrace("Attempting to download and extract tool");
-
-                            return await Task.Run(async () => await DownloadAndExtractAsync(tool, installDirectory));
-                        });
                     
                     if (!result.Success && !result.Canceled)
                         throw new InstallException("Could not extract the tool. Retry the install or check your connection");
                     else if (result.Canceled)
                         throw new InstallCanceledException("Tool install canceled");
-
-                    extractTempPath = result.Directory;
 
                     installResult.InstallDirectory = result.Directory;
 
@@ -364,7 +367,7 @@ namespace LANCommander.SDK.Services
                             LocalPath = x.LocalPath,
                         });
                     
-                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", extractTempPath);
+                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", result.Directory);
                     logger?.LogTrace("Running install script for tool {ToolName}", tool.Name);
 
                     await RunPostInstallScripts(installDirectory, tool);
@@ -379,11 +382,6 @@ namespace LANCommander.SDK.Services
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Tool {Tool} failed to install", tool.Name);
-            }
-            finally
-            {
-                if (Directory.Exists(extractTempPath))
-                    Directory.Delete(extractTempPath, true);
             }
 
             return installResult;
@@ -434,6 +432,8 @@ namespace LANCommander.SDK.Services
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
 
+            var createdFiles = new List<string>();
+
             try
             {
                 Directory.CreateDirectory(destination);
@@ -483,10 +483,12 @@ namespace LANCommander.SDK.Services
                     try
                     {
                         var localFile = Path.Combine(destination, _reader.Entry.Key);
+                        var isDirectoryEntry = _reader.Entry.Key.EndsWith("/");
 
                         uint crc = 0;
+                        var existedBeforeExtraction = File.Exists(localFile);
 
-                        if (File.Exists(localFile))
+                        if (existedBeforeExtraction)
                         {
                             await using FileStream fs = File.Open(localFile, FileMode.Open);
                             var buffer = new byte[65536];
@@ -510,12 +512,17 @@ namespace LANCommander.SDK.Services
                         });
 
                         if (crc == 0 || crc != _reader.Entry.Crc)
+                        {
+                            if (!existedBeforeExtraction && !isDirectoryEntry)
+                                createdFiles.Add(localFile);
+
                             await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
                             }, cancellationToken);
+                        }
                         else // Skip to next entry
                             try
                             {
@@ -549,25 +556,15 @@ namespace LANCommander.SDK.Services
 
                 extractionResult.Canceled = true;
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpPartialExtraction(tool, destination, createdFiles, "cancelled");
             }
             catch (Exception ex)
             {                
-                logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                logger?.LogError(ex, "Could not extract tool {ToolName} ({ToolId}) to path {Destination}", tool.Name, tool.Id, destination);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                CleanUpPartialExtraction(tool, destination, createdFiles, "failed");
 
-                    Directory.Delete(destination, true);
-                }
-
-                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+                throw new Exception($"The archive for {tool.Name} could not be extracted, is it corrupted? Please try again");
             }
 
             if (!extractionResult.Canceled)
@@ -587,6 +584,23 @@ namespace LANCommander.SDK.Services
             }
 
             return extractionResult;
+        }
+
+        /// <summary>
+        /// Cleans up after an extraction that did not complete, removing only the files it added.
+        /// </summary>
+        private void CleanUpPartialExtraction(Tool tool, string destination, ICollection<string> createdFiles, string reason)
+        {
+            if (createdFiles == null || createdFiles.Count == 0)
+                return;
+
+            logger?.LogTrace("Cleaning up {FileCount} files written by the {Reason} install of tool {ToolName} ({ToolId})",
+                createdFiles.Count, reason, tool?.Name, tool?.Id);
+
+            var deleted = DirectoryHelper.DeletePartialExtraction(destination, createdFiles);
+
+            logger?.LogTrace("Removed {DeletedCount} of {FileCount} files written by the {Reason} install of tool {ToolName} ({ToolId})",
+                deleted, createdFiles.Count, reason, tool?.Name, tool?.Id);
         }
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AsmResolver.PE.Win32Resources" />
     <PackageReference Include="Riok.Mapperly">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -19,6 +20,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="NuGet.CommandLine" />
     <PackageReference Include="rix0rrr.BeaconLib" />
     <PackageReference Include="Semver" />
     <PackageReference Include="SixLabors.ImageSharp" />

@@ -1,9 +1,12 @@
 @using LANCommander.UI.Providers
+@using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.JSInterop
+@implements IDisposable
 @inject IJSRuntime JS
+@inject NavigationManager NavigationManager
 @namespace LANCommander.UI.Components
 
-<ErrorBoundary>
+<ErrorBoundary @ref="_errorBoundary">
     <ChildContent>
         @Body
     </ChildContent>
@@ -13,11 +16,7 @@
                 SubTitle="@_randomQuip"
                 Class="crash-error">
             <Extra>
-                @if (Extra is not null)
-                {
-                    @Extra
-                }
-                
+                <Button Type="@ButtonType.Primary" OnClick="GoBack">Back</Button>
                 <Button OnClick="() => CopyError(context)">Copy Error</Button>
             </Extra>
             <ChildContent>
@@ -33,17 +32,42 @@
 @code {
     [Parameter] public string? Title { get; set; }
     [Parameter] public RenderFragment? Body { get; set; }
-    [Parameter] public RenderFragment? Extra { get; set; }
-    
+
+    ErrorBoundary? _errorBoundary;
+
     string _randomQuip = "";
-    
+
     protected override void OnInitialized()
     {
         _randomQuip = QuipProvider.GetCrashQuip();
+
+        NavigationManager.LocationChanged += OnLocationChanged;
     }
-    
+
+    async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+
+    void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(Recover);
+
+    void Recover()
+    {
+        if (_errorBoundary is null)
+            return;
+
+        _randomQuip = QuipProvider.GetCrashQuip();
+
+        _errorBoundary.Recover();
+    }
+
     async Task CopyError(Exception ex)
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

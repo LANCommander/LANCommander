@@ -23,14 +23,11 @@ public class ToolExporter(ManifestMapper manifestMapper, ToolService toolService
     {
         var tool = await toolService.GetAsync(id, manifestMapper.ProjectToManifestTool);
 
-        if (tool.Archives is null)
-            tool.Archives = new List<Archive>();
-
-        if (tool.Scripts is null)
-            tool.Scripts = new List<Script>();
-
-        if (tool.Actions is null)
-            tool.Actions = new List<Action>();
+        // The queue fills these from the records the user actually selected, so anything the
+        // projection loaded has to be cleared first or every child is written out twice.
+        tool.Archives = new List<Archive>();
+        tool.Scripts = new List<Script>();
+        tool.Actions = new List<Action>();
 
         return tool;
     }

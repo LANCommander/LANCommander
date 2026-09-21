@@ -2,7 +2,6 @@
 @using LANCommander.UI.Services
 @inherits LayoutComponentBase
 @inject IVersionProvider VersionProvider
-@inject NavigationManager NavigationManager
 @inject UploadTracker UploadTracker
 
 <Layout Class="layout">
@@ -17,9 +16,6 @@
                 </ServerProcessMonitor>
             </Content>
             </Body>
-            <Extra>
-                <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.Refresh())">Refresh</Button>
-            </Extra>
         </ErrorHandler>
 
         <Footer>

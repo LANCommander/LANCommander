@@ -101,9 +101,36 @@ jobs:
       if: inputs.build_platform == 'Linux'
       shell: bash
       run: |
+        set -euo pipefail
+
         PUBLISH_DIR="LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish"
         VLC_DIR="$PUBLISH_DIR/libvlc/${{ inputs.build_runtime }}"
         mkdir -p "$VLC_DIR"
+
+        retry_apt() {
+          local description="$1"
+          shift
+
+          local max_attempts=3
+          local delay_seconds=10
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "$description (attempt $attempt/$max_attempts)"
+
+            if "$@"; then
+              return 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "::error::$description failed after $max_attempts attempts."
+              return 1
+            fi
+
+            echo "::warning::$description failed. Refreshing apt metadata before retrying in ${delay_seconds}s."
+            sleep "$delay_seconds"
+            sudo apt-get update -qq || echo "::warning::Apt metadata refresh failed; retrying anyway."
+          done
+        }
 
         if [ "${{ inputs.build_arch }}" = "arm64" ]; then
           # Enable arm64 multiarch and add Ubuntu Ports repository so apt can
@@ -114,9 +141,9 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-updates main restricted universe" \
             | sudo tee -a /etc/apt/sources.list.d/ubuntu-ports-arm64.list > /dev/null
-          sudo apt-get update -qq
+          retry_apt "Update apt package metadata" sudo apt-get update -qq
 
-          sudo apt-get download libvlc5:arm64 libvlccore9:arm64 vlc-plugin-base:arm64
+          retry_apt "Download arm64 VLC runtime packages" sudo apt-get download libvlc5:arm64 libvlccore9:arm64 vlc-plugin-base:arm64
 
           mkdir -p vlc-extracted
           for deb in libvlc5_*arm64.deb libvlccore9_*arm64.deb vlc-plugin-base_*arm64.deb; do
@@ -126,7 +153,8 @@ jobs:
           LIB_DIR="vlc-extracted/usr/lib/aarch64-linux-gnu"
           PLUGINS_SRC="$LIB_DIR/vlc/plugins"
         else
-          sudo apt-get install -y --no-install-recommends libvlc5 libvlccore9 vlc-plugin-base
+          retry_apt "Update apt package metadata" sudo apt-get update -qq
+          retry_apt "Install x64 VLC runtime packages" sudo apt-get install -y --no-install-recommends libvlc5 libvlccore9 vlc-plugin-base
           LIB_DIR="/usr/lib/x86_64-linux-gnu"
           PLUGINS_SRC="$LIB_DIR/vlc/plugins"
         fi

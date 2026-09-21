@@ -12,6 +12,7 @@
     Size="TableSize.Small"
     Responsive
     Searchable
+    OnRowDoubleClick="OpenEdit"
     SearchProperty="c => c.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>
@@ -30,7 +31,7 @@
         <BoundDataColumn Property="c => c.PublishedGames.Count" Sortable Title="Published Games" Include="PublishedGames" />
         <DataActions TData="string">
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
                 @* TODO: Add seperate Edit page and navigate to it *@
                 @* <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
 

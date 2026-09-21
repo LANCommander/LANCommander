@@ -64,7 +64,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}/Scripts")
+                .UseRoute($"/api/Tools/{id}/Scripts")
                 .GetAsync<IEnumerable<Script>>();
         }
 
@@ -87,7 +87,7 @@ namespace LANCommander.SDK.Services
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Tool/{id}/Download")
+                .UseRoute($"/api/Tools/{id}/Download")
                 .StreamAsync();
         }
 

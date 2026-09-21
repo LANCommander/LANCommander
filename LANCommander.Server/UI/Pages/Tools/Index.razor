@@ -18,6 +18,7 @@
     Responsive
     ColumnPicker
     Searchable
+    OnRowDoubleClick="@(tool => NavigationManager.NavigateTo($"/Tools/{tool.Id}"))"
     SearchProperty="r => r.Name">
     <RightToolbar>
         <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>

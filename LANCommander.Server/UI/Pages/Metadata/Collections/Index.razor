@@ -1,6 +1,7 @@
 ﻿@page "/Metadata/Collections"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CollectionService CollectionService
+@inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -11,6 +12,7 @@
     @ref="Table"
     Size="@TableSize.Small"
     Searchable
+    OnRowDoubleClick="@(collection => NavigationManager.NavigateTo($"/Metadata/Collections/{collection.Id}"))"
     SearchProperty="c => c.Name">
     <RightToolbar>
         <Button OnClick="OpenAdd" Type="@ButtonType.Primary">Add Collection</Button>

@@ -1,4 +1,5 @@
 @page "/Scripting/Snippets"
+@using AntDesign.TableModels
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ScriptService ScriptService
 @inject NavigationManager NavigationManager
@@ -12,7 +13,7 @@
 </PageHeader>
 
 <PageContent>
-    <Table TItem="Snippet" DataSource="@Snippets" Size="@TableSize.Small" Context="snippet" Responsive>
+    <Table TItem="Snippet" DataSource="@Snippets" Size="@TableSize.Small" Context="snippet" Responsive OnRow="RowAttributes">
         <PropertyColumn Property="s => s.Group" Title="Group" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <PropertyColumn Property="s => s.Name" Title="Name" Sortable />
         <ActionColumn Title="" Style="text-align: right">
@@ -28,6 +29,13 @@
 
 @code {
     IEnumerable<Snippet> Snippets { get; set; } = new List<Snippet>();
+
+    // AntDesign has no row double click event, but OnRow's dictionary is splatted onto the
+    // <tr>, so "ondblclick" binds like it would on any element we controlled ourselves.
+    Dictionary<string, object> RowAttributes(RowData<Snippet> row) => new()
+    {
+        ["ondblclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, () => NavigationManager.NavigateTo($"/Scripting/Snippets/{row.Data.Group}/{row.Data.Name}")),
+    };
 
     protected override void OnInitialized()
     {

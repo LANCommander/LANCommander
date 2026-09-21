@@ -13,6 +13,7 @@
     Size="@TableSize.Small"
     Responsive
     Searchable
+    OnRowDoubleClick="@(issue => NavigationManager.NavigateTo($"/Issues/{issue.Id}"))"
     SearchProperty="i => i.Game.Title">
     <RightToolbar>
         <Button OnClick="() => Add()" Type="ButtonType.Primary">Add Issue</Button>

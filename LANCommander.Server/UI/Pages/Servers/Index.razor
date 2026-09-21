@@ -19,6 +19,7 @@
     Responsive
     ColumnPicker
     Searchable
+    OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))"
     SearchProperty="s => s.Name">
     <RightToolbar>
         @if (SelectedServers != null && SelectedServers.Count() > 0)

@@ -12,6 +12,7 @@
     Size="TableSize.Small"
     Responsive
     Searchable
+    OnRowDoubleClick="OpenEdit"
     SearchProperty="c => c.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>

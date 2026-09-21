@@ -20,6 +20,7 @@
     Responsive
     ColumnPicker
     Searchable
+    OnRowDoubleClick="@(user => NavigationManager.NavigateTo($"/Settings/Users/{user.UserName}"))"
     SearchProperty="u => u.UserName">
     <Columns>
         <BoundDataColumn Title="Username" Property="u => u.UserName" Sortable DefaultSortOrder="SortDirection.Ascending" />

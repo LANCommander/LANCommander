@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using LANCommander.SDK.Enums;
+using YamlDotNet.Serialization;
 
 namespace LANCommander.SDK.Models.Manifest
 {
@@ -14,5 +16,8 @@ namespace LANCommander.SDK.Models.Manifest
         public string OptionOverrides { get; set; }
         public RuntimePlatform Platforms { get; set; }
         public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
+
+        [YamlMember(DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+        public Guid? ToolId { get; set; }
     }
 }

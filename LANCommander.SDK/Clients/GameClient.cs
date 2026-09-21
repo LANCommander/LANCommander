@@ -232,7 +232,14 @@ namespace LANCommander.SDK.Services
                         var toolManifest = await ManifestHelper.ReadAsync<Models.Manifest.Tool>(installDirectory, tool.Id);
 
                         if (toolManifest?.Actions != null)
-                            actions.AddRange(toolManifest.Actions);
+                        {
+                            foreach (var toolAction in toolManifest.Actions)
+                            {
+                                toolAction.ToolId = tool.Id;
+
+                                actions.Add(toolAction);
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -272,7 +279,8 @@ namespace LANCommander.SDK.Services
                                 SortOrder = actions.Count,
                                 Path = primaryAction.Path,
                                 WorkingDirectory = primaryAction.WorkingDirectory,
-                                Platforms = primaryAction.Platforms
+                                Platforms = primaryAction.Platforms,
+                                ToolId = primaryAction.ToolId
                             };
 
                             actions.Add(lobbyAction);
@@ -2276,8 +2284,21 @@ namespace LANCommander.SDK.Services
             return gameArchives;
         }
 
+        /// <summary>
+        /// Whether <paramref name="action"/> belongs to a Tool rather than to the game or one of its
+        /// addons. Tool actions run only the tool's own Before Start / After Stop scripts.
+        /// </summary>
+        public static bool TryGetActionOwnerTool(Models.Manifest.Action action, out Guid toolId)
+        {
+            toolId = action?.ToolId ?? Guid.Empty;
+
+            return toolId != Guid.Empty;
+        }
+
         public async Task RunAsync(string installDirectory, Guid gameId, Models.Manifest.Action action, DateTime? lastRun, string args = "")
         {
+            var isToolAction = TryGetActionOwnerTool(action, out var toolId);
+
             var screen = DisplayHelper.GetScreen();
 
             using (var context = processExecutionContextFactory.Create())
@@ -2317,7 +2338,7 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
-                if (action.Variables != null)
+                if (action?.Variables != null)
                 {
                     foreach (var variable in action.Variables)
                         context.AddVariable(variable.Key, variable.Value);
@@ -2325,7 +2346,7 @@ namespace LANCommander.SDK.Services
 
                 // When an action references {ServerHost} but the game server didn't specify a host,
                 // fall back to the host of the LANCommander server the launcher is connected to.
-                if (action.Variables == null
+                if (action?.Variables == null
                     || !action.Variables.TryGetValue("ServerHost", out var serverHost)
                     || String.IsNullOrWhiteSpace(serverHost))
                 {
@@ -2340,47 +2361,46 @@ namespace LANCommander.SDK.Services
 
                 foreach (var manifest in manifests)
                 {
-                    //manifest.Actions
-                    var currentGamePlayerAlias = await GetPlayerAliasAsync(installDirectory, manifest.Id);
-                    var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
-
-                    #region Check Game's Player Name
-                    if (connectionClient.IsConnected())
+                    if (!isToolAction)
                     {
-                        var alias = await profileClient.GetAliasAsync();
+                        var currentGamePlayerAlias = await GetPlayerAliasAsync(installDirectory, manifest.Id);
+                        var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
-                        if (currentGamePlayerAlias != alias)
+                        #region Check Game's Player Name
+                        if (connectionClient.IsConnected())
                         {
-                            await scriptClient.Game_RunNameChangeScriptAsync(installDirectory, gameId, alias);
+                            var alias = await profileClient.GetAliasAsync();
 
-                            if (manifest.Redistributables != null)
+                            if (currentGamePlayerAlias != alias)
                             {
-                                foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                await scriptClient.Game_RunNameChangeScriptAsync(installDirectory, manifest.Id, alias);
+
+                                if (manifest.Redistributables != null)
                                 {
-                                    await scriptClient.Redistributable_RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                    {
+                                        await scriptClient.Redistributable_RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    }
                                 }
                             }
                         }
-                    }
-                    #endregion
+                        #endregion
 
-                    #region Check Key Allocation
-                    if (connectionClient.IsConnected() && HasKeyChangeScript(installDirectory, manifest.Id))
-                    {
-                        // The locally tracked key is authoritative: only allocate and apply a
-                        // key when this install doesn't already have one tracked. This avoids
-                        // requesting a fresh allocation on every launch.
-                        if (string.IsNullOrWhiteSpace(currentGameKey))
+                        #region Check Key Allocation
+                        if (connectionClient.IsConnected() && HasKeyChangeScript(installDirectory, manifest.Id))
                         {
-                            var newKey = await GetOrAllocateKeyAsync(installDirectory, manifest.Id);
+                            if (string.IsNullOrWhiteSpace(currentGameKey))
+                            {
+                                var newKey = await GetOrAllocateKeyAsync(installDirectory, manifest.Id);
 
-                            if (!string.IsNullOrWhiteSpace(newKey))
-                                await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
-                            else
-                                logger?.LogWarning("Game {GameId} has a key change script but the server did not allocate a key", manifest.Id);
+                                if (!string.IsNullOrWhiteSpace(newKey))
+                                    await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                                else
+                                    logger?.LogWarning("Game {GameId} has a key change script but the server did not allocate a key", manifest.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
 
                     #region Download Latest Saves
                     if (connectionClient.IsConnected())
@@ -2432,18 +2452,24 @@ namespace LANCommander.SDK.Services
                     }
                     #endregion
 
-                    #region Run Before Start Script
-                    await scriptClient.Game_RunBeforeStartScriptAsync(installDirectory, manifest.Id);
-                    
-                    if (manifest.Redistributables != null)
+                    if (!isToolAction)
                     {
-                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        #region Run Before Start Script
+                        await scriptClient.Game_RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+
+                        if (manifest.Redistributables != null)
                         {
-                            await scriptClient.Redistributable_RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                            {
+                                await scriptClient.Redistributable_RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
                 }
+
+                if (isToolAction)
+                    await scriptClient.Tool_RunBeforeStartScriptAsync(installDirectory, toolId);
                 #endregion
 
                 Task heartbeatTask = null;
@@ -2459,7 +2485,7 @@ namespace LANCommander.SDK.Services
                     bool runWrapperHandled = false;
 
                     var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-                    var resolvedAction = action ?? gameManifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+                    var resolvedAction = action ?? gameManifest?.Actions?.FirstOrDefault(a => a.IsPrimaryAction);
 
                     if (resolvedAction != null && gameManifest.Redistributables != null)
                     {
@@ -2521,19 +2547,26 @@ namespace LANCommander.SDK.Services
                     throw;
                 }
 
-                foreach (var manifest in manifests)
+                if (isToolAction)
                 {
-                    #region Run After Stop Script
-                    await scriptClient.Game_RunAfterStopScriptAsync(installDirectory, gameId);
-                    
-                    if (manifest.Redistributables != null)
+                    await scriptClient.Tool_RunAfterStopScriptAsync(installDirectory, toolId);
+                }
+                else
+                {
+                    foreach (var manifest in manifests)
                     {
-                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        #region Run After Stop Script
+                        await scriptClient.Game_RunAfterStopScriptAsync(installDirectory, manifest.Id);
+
+                        if (manifest.Redistributables != null)
                         {
-                            await scriptClient.Redistributable_RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                            {
+                                await scriptClient.Redistributable_RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
                 }
             }
         }

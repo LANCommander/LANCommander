@@ -23,6 +23,29 @@ public static class VersionHelper
     public static SemVersion GetCurrentVersion() => _currentVersion;
 
     /// <summary>
+    /// Resolves the version to advertise to the server, preferring an explicit override, then the
+    /// entry assembly's informational version, then this SDK assembly's version.
+    /// </summary>
+    /// <param name="overrideValue">An explicit version, e.g. from an environment variable. Ignored when null, blank or unparseable.</param>
+    /// <param name="entryAssembly">The assembly to read <see cref="AssemblyInformationalVersionAttribute"/> from. May be null.</param>
+    public static SemVersion Resolve(string? overrideValue, Assembly? entryAssembly)
+    {
+        if (!string.IsNullOrWhiteSpace(overrideValue)
+            && SemVersion.TryParse(overrideValue.Trim(), SemVersionStyles.Any, out var overridden))
+            return overridden.WithoutMetadata();
+
+        var informationalVersion = entryAssembly
+            ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informationalVersion)
+            && SemVersion.TryParse(informationalVersion.Trim(), SemVersionStyles.Any, out var entryVersion))
+            return entryVersion.WithoutMetadata();
+
+        return _currentVersion;
+    }
+
+    /// <summary>
     /// Whether an API version mismatch between this client and the server should be treated as a
     /// hard failure. False for local development builds and when
     /// <see cref="SkipCompatibilityCheckEnvironmentVariable"/> is set.

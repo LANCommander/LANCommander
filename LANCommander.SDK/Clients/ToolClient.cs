@@ -70,15 +70,32 @@ namespace LANCommander.SDK.Services
 
         public async Task WriteScriptsAsync(Tool tool, string installDirectory)
         {
-            var scripts = await GetScriptsAsync(tool.Id);
+            var scripts = tool.Scripts?
+                .Where(s => s.Type != ScriptType.Package)
+                .ToList();
 
-            if (scripts != null && scripts.Any())
+            if (scripts == null || !scripts.Any())
             {
-                logger?.LogTrace($"Saving scripts for tool {tool.Name} ({tool.Id}) into {installDirectory}");
-                
-                foreach (var script in scripts)
-                    await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
+                try
+                {
+                    scripts = (await GetScriptsAsync(tool.Id))?
+                        .Where(s => s.Type != ScriptType.Package)
+                        .ToList();
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogTrace(ex, "Could not fetch scripts for tool {ToolId}", tool.Id);
+                }
             }
+
+            if (scripts == null || !scripts.Any())
+                return;
+
+            logger?.LogTrace("Saving {ScriptCount} scripts for tool {ToolName} ({ToolId}) into {InstallDirectory}",
+                scripts.Count, tool.Name, tool.Id, installDirectory);
+
+            foreach (var script in scripts)
+                await ScriptHelper.SaveScriptAsync(tool, script, installDirectory);
         }
         
         public async Task<Stream> Stream(Guid id)
@@ -130,7 +147,17 @@ namespace LANCommander.SDK.Services
                 IsCritical = true,
             });
 
-            if (tool.Scripts != null && tool.Scripts.Any())
+            toolItem.Tasks.Add(new InstallTaskDefinition
+            {
+                Type = InstallTaskType.WriteScripts,
+                Title = "Save scripts",
+                Order = taskOrder++,
+                TargetId = tool.Id,
+                TargetName = tool.Name,
+                IsCritical = false,
+            });
+
+            if (tool.Scripts != null && tool.Scripts.Any(s => s.Type == ScriptType.Install))
             {
                 toolItem.Tasks.Add(new InstallTaskDefinition
                 {
@@ -194,6 +221,10 @@ namespace LANCommander.SDK.Services
                         case InstallTaskType.WriteManifest:
                             var manifest = await GetManifestAsync(tool.Id);
                             await ManifestHelper.WriteAsync(manifest, planItem.InstallDirectory);
+                            break;
+
+                        case InstallTaskType.WriteScripts:
+                            await WriteScriptsAsync(tool, planItem.InstallDirectory);
                             break;
 
                         case InstallTaskType.RunInstallScript:

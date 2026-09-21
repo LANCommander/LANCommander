@@ -317,8 +317,6 @@ namespace LANCommander.SDK.Services
 
         public async Task<InstallResult> InstallAsync(Tool tool, string installDirectory, int maxAttempts = 10)
         {
-            string extractTempPath = null;
-
             var installResult = new InstallResult();
             
             _installProgress.Status = InstallStatus.Downloading;
@@ -359,8 +357,6 @@ namespace LANCommander.SDK.Services
                     else if (result.Canceled)
                         throw new InstallCanceledException("Tool install canceled");
 
-                    extractTempPath = result.Directory;
-
                     installResult.InstallDirectory = result.Directory;
 
                     // TODO: Verification for tool files?
@@ -371,7 +367,7 @@ namespace LANCommander.SDK.Services
                             LocalPath = x.LocalPath,
                         });
                     
-                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", extractTempPath);
+                    logger?.LogTrace("Extraction of tool successful. Extracted path is {Path}", result.Directory);
                     logger?.LogTrace("Running install script for tool {ToolName}", tool.Name);
 
                     await RunPostInstallScripts(installDirectory, tool);
@@ -386,11 +382,6 @@ namespace LANCommander.SDK.Services
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Tool {Tool} failed to install", tool.Name);
-            }
-            finally
-            {
-                if (Directory.Exists(extractTempPath))
-                    Directory.Delete(extractTempPath, true);
             }
 
             return installResult;
@@ -441,6 +432,8 @@ namespace LANCommander.SDK.Services
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
 
+            var createdFiles = new List<string>();
+
             try
             {
                 Directory.CreateDirectory(destination);
@@ -490,10 +483,12 @@ namespace LANCommander.SDK.Services
                     try
                     {
                         var localFile = Path.Combine(destination, _reader.Entry.Key);
+                        var isDirectoryEntry = _reader.Entry.Key.EndsWith("/");
 
                         uint crc = 0;
+                        var existedBeforeExtraction = File.Exists(localFile);
 
-                        if (File.Exists(localFile))
+                        if (existedBeforeExtraction)
                         {
                             await using FileStream fs = File.Open(localFile, FileMode.Open);
                             var buffer = new byte[65536];
@@ -517,12 +512,17 @@ namespace LANCommander.SDK.Services
                         });
 
                         if (crc == 0 || crc != _reader.Entry.Crc)
+                        {
+                            if (!existedBeforeExtraction && !isDirectoryEntry)
+                                createdFiles.Add(localFile);
+
                             await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
                             }, cancellationToken);
+                        }
                         else // Skip to next entry
                             try
                             {
@@ -556,25 +556,15 @@ namespace LANCommander.SDK.Services
 
                 extractionResult.Canceled = true;
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpPartialExtraction(tool, destination, createdFiles, "cancelled");
             }
             catch (Exception ex)
             {                
-                logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                logger?.LogError(ex, "Could not extract tool {ToolName} ({ToolId}) to path {Destination}", tool.Name, tool.Id, destination);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                CleanUpPartialExtraction(tool, destination, createdFiles, "failed");
 
-                    Directory.Delete(destination, true);
-                }
-
-                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+                throw new Exception($"The archive for {tool.Name} could not be extracted, is it corrupted? Please try again");
             }
 
             if (!extractionResult.Canceled)
@@ -594,6 +584,23 @@ namespace LANCommander.SDK.Services
             }
 
             return extractionResult;
+        }
+
+        /// <summary>
+        /// Cleans up after an extraction that did not complete, removing only the files it added.
+        /// </summary>
+        private void CleanUpPartialExtraction(Tool tool, string destination, ICollection<string> createdFiles, string reason)
+        {
+            if (createdFiles == null || createdFiles.Count == 0)
+                return;
+
+            logger?.LogTrace("Cleaning up {FileCount} files written by the {Reason} install of tool {ToolName} ({ToolId})",
+                createdFiles.Count, reason, tool?.Name, tool?.Id);
+
+            var deleted = DirectoryHelper.DeletePartialExtraction(destination, createdFiles);
+
+            logger?.LogTrace("Removed {DeletedCount} of {FileCount} files written by the {Reason} install of tool {ToolName} ({ToolId})",
+                deleted, createdFiles.Count, reason, tool?.Name, tool?.Id);
         }
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)

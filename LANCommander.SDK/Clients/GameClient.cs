@@ -1641,6 +1641,11 @@ namespace LANCommander.SDK.Services
                 else
                     logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
             }
+            else if (IsInstallDirectoryShared(installDirectory, gameId))
+            {
+                logger?.LogWarning("No file list for {GameTitle} ({GameId}) and {InstallDirectory} is shared with other installed content; leaving its files in place",
+                    manifest.Title, gameId, installDirectory);
+            }
             else
             {
                 Directory.Delete(installDirectory, true);
@@ -1881,6 +1886,31 @@ namespace LANCommander.SDK.Services
             return manifest;
         }
 
+        /// <summary>
+        /// Cleans up after an extraction that did not complete, removing only the files it added.
+        /// </summary>
+        private void CleanUpPartialExtraction(
+            Game game,
+            string destination,
+            ICollection<string> createdFiles,
+            bool destinationExistedBefore,
+            string reason)
+        {
+            if (createdFiles == null || createdFiles.Count == 0)
+                return;
+
+            logger?.LogTrace("Cleaning up {FileCount} files written by the {Reason} install of {GameTitle} ({GameId})",
+                createdFiles.Count, reason, game?.Title, game?.Id);
+
+            var deleted = DirectoryHelper.DeletePartialExtraction(
+                destination,
+                createdFiles,
+                removeDestinationIfEmpty: !destinationExistedBefore);
+
+            logger?.LogTrace("Removed {DeletedCount} of {FileCount} files written by the {Reason} install of {GameTitle} ({GameId})",
+                deleted, createdFiles.Count, reason, game?.Title, game?.Id);
+        }
+
         private async Task WriteScriptsAsync(string installDirectory, Game game)
         {
             var scripts = await GetScriptsAsync(game.Id);
@@ -1993,6 +2023,10 @@ namespace LANCommander.SDK.Services
             string currentEntryKey = null;
             var entriesProcessed = 0;
 
+            var createdFiles = new List<string>();
+
+            var destinationExistedBefore = Directory.Exists(destination);
+
             try
             {
                 Directory.CreateDirectory(destination);
@@ -2059,12 +2093,17 @@ namespace LANCommander.SDK.Services
                         bool shouldSkip = skipFiles != null && skipFiles.Contains(entryKey);
 
                         if (!shouldSkip)
+                        {
+                            if (!entryKey.EndsWith("/") && !File.Exists(localFile))
+                                createdFiles.Add(localFile);
+
                             await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
                             }, cancellationToken);
+                        }
                         else // Skip to next entry
                             try
                             {
@@ -2106,26 +2145,16 @@ namespace LANCommander.SDK.Services
 
                 extractionResult.Canceled = true;
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpPartialExtraction(game, destination, createdFiles, destinationExistedBefore, "cancelled");
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Could not extract game {GameTitle} ({GameId}) to {Destination}. Failed on entry {EntryKey} (entry #{EntriesProcessed}) at {Position}/{Length} bytes with {ExceptionType} (HResult 0x{HResult:X8})",
                     game.Title, game.Id, destination, currentEntryKey, entriesProcessed, stream?.Position, stream?.Length, ex.GetType().Name, ex.HResult);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                CleanUpPartialExtraction(game, destination, createdFiles, destinationExistedBefore, "failed");
 
-                    Directory.Delete(destination, true);
-                }
-
-                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+                throw new Exception($"The archive for {game.Title} could not be extracted, is it corrupted? Please try again");
             }
 
             if (!extractionResult.Canceled)
@@ -2939,6 +2968,42 @@ namespace LANCommander.SDK.Services
                 .Select(x => (x.GameId ?? gameId, x.FullName)).ToArray();
 
             await DownloadFilesAsync(installDirectory, downloadEntries);
+        }
+
+        /// <summary>
+        /// Whether anything other than <paramref name="gameId"/> is installed into this directory --
+        /// a base game, another addon, or a tool. Each keeps its metadata in its own folder under
+        /// <c>.lancommander</c>, so their presence there is what makes the directory shared.
+        /// </summary>
+        internal static bool IsInstallDirectoryShared(string installDirectory, Guid gameId)
+        {
+            if (string.IsNullOrWhiteSpace(installDirectory))
+                return false;
+
+            var metadataRoot = Path.Combine(installDirectory, ".lancommander");
+
+            if (!Directory.Exists(metadataRoot))
+                return false;
+
+            try
+            {
+                foreach (var directory in Directory.EnumerateDirectories(metadataRoot))
+                {
+                    if (!Guid.TryParse(Path.GetFileName(directory), out var id) || id == gameId)
+                        continue;
+
+                    if (ManifestHelper.Exists(installDirectory, id))
+                        return true;
+                }
+            }
+            catch
+            {
+                // If the directory cannot be inspected, assume it is shared: leaving files behind is
+                // recoverable, deleting someone else's game is not.
+                return true;
+            }
+
+            return false;
         }
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)

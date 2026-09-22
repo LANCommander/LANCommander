@@ -134,6 +134,8 @@
                                       Content="Game Install Failed" />
                             <CheckBox IsChecked="{Binding NotifyOnChatMessage}"
                                       Content="Chat Message Received" />
+                            <CheckBox IsChecked="{Binding NotifyOnElevationRequired}"
+                                      Content="Packaging Needs Administrator Rights" />
                         </StackPanel>
 
                         <StackPanel Spacing="4">

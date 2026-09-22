@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Packaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,11 +27,15 @@ public abstract partial class CaptureStepViewModel : PackagingStepViewModel
     /// <summary>The run this step started, or -1 before it has started one.</summary>
     private int _ownedRunId = -1;
 
+    private readonly NotificationService? _notifications;
+
     protected CaptureStepViewModel(PackagingWizardViewModel wizard, IServiceProvider serviceProvider)
         : base(wizard)
     {
         Session = serviceProvider.GetRequiredService<IPackagingSessionService>();
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+
+        _notifications = serviceProvider.GetService<NotificationService>();
 
         Session.CountersChanged += OnCountersChanged;
         Session.Logged += OnLogged;
@@ -207,6 +212,9 @@ public abstract partial class CaptureStepViewModel : PackagingStepViewModel
     [RelayCommand]
     protected async Task ElevateAsync()
     {
+        if (!NeedsElevation)
+            return;
+
         try
         {
             Append("Restarting capture with administrator rights...");
@@ -410,7 +418,28 @@ public abstract partial class CaptureStepViewModel : PackagingStepViewModel
             ElevationMessage = message;
 
             Append(message);
+
+            NotifyElevationRequired();
         }, DispatcherPriority.Background);
+    }
+
+    private void NotifyElevationRequired()
+    {
+        if (_notifications == null)
+            return;
+
+        var name = string.IsNullOrWhiteSpace(InstallerPath)
+            ? "The installer"
+            : Path.GetFileName(InstallerPath);
+
+        try
+        {
+            _notifications.NotifyElevationRequired(name, () => ElevateCommand.Execute(null));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not raise the elevation notification");
+        }
     }
 
     protected void Append(string message)

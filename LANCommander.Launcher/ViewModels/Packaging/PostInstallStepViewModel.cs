@@ -40,7 +40,6 @@ public partial class PostInstallStepViewModel : CaptureStepViewModel
     public PostInstallStepViewModel(PackagingWizardViewModel wizard, IServiceProvider serviceProvider)
         : base(wizard, serviceProvider)
     {
-        Status = "Apply your patches, then rescan.";
     }
 
     public override string Title => "Customize";
@@ -114,7 +113,10 @@ public partial class PostInstallStepViewModel : CaptureStepViewModel
 
         BaselineFileCount = 0;
         ScanSummary = string.Empty;
-        Status = "Apply your patches, then rescan.";
+
+        // Left empty: the status line is only shown once a capture has something to say, so a
+        // step nobody has run an installer through stays quiet.
+        Status = string.Empty;
 
         AdditionalInstallers.Clear();
 

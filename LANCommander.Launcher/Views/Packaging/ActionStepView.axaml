@@ -4,50 +4,190 @@
              x:Class="LANCommander.Launcher.Views.Packaging.ActionStepView"
              x:DataType="vm:ActionStepViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <UserControl.Styles>
+        <!-- Avalonia has no SharedSizeGroup, so the header and the rows repeat the same column
+             widths. Change one and change the other. -->
+        <Style Selector="TextBlock.columnHeader">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
 
-        <TextBlock Grid.Row="0"
-                   Text="How should the game be launched?"
-                   FontSize="15"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,10" />
+        <Style Selector="Button.rowAction">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </UserControl.Styles>
 
-        <StackPanel Grid.Row="1" Spacing="10" Margin="0,0,0,10">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <StackPanel Spacing="4" Width="200">
-                    <TextBlock Text="Action name" FontSize="12" Opacity="0.7" />
-                    <TextBox Text="{Binding ActionName}" />
-                </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 
-                <StackPanel Spacing="4" Width="260">
-                    <TextBlock Text="Arguments" FontSize="12" Opacity="0.7" />
-                    <TextBox Text="{Binding Arguments}" Watermark="Optional" />
-                </StackPanel>
-            </StackPanel>
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="How should the game be started?"
+                       FontSize="15"
+                       FontWeight="SemiBold" />
 
-            <CheckBox Content="Show every executable"
-                      IsChecked="{Binding ShowAllExecutables}"
-                      ToolTip.Tip="Installers, uninstallers and redistributables are hidden by default" />
+            <TextBlock FontSize="12"
+                       Opacity="0.7"
+                       TextWrapping="Wrap"
+                       Text="Each action is an entry point the launcher offers. Most games need one; add more for a separate multiplayer executable, a dedicated server, or a configuration tool. The primary action is what the Play button runs." />
         </StackPanel>
+
+        <CheckBox Grid.Row="1"
+                  Margin="0,0,0,8"
+                  Content="Show every executable"
+                  IsChecked="{Binding ShowAllExecutables}"
+                  ToolTip.Tip="Installers, uninstallers and redistributables are hidden from the path lists by default" />
 
         <Border Grid.Row="2"
                 CornerRadius="4"
+                Padding="8"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-            <ListBox ItemsSource="{Binding Executables}"
-                     SelectedItem="{Binding SelectedExecutable}"
-                     SelectionMode="Single">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+            <!-- Vertical scrolling only: the row spans the step's full width, so the path — the
+                 longest thing in it — gets whatever the fixed columns leave over. -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid RowDefinitions="Auto,*">
+
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="140,*,150,150,56,126"
+                          Margin="0,0,0,6">
+                        <TextBlock Grid.Column="0" Classes="columnHeader" Text="Name" />
+                        <TextBlock Grid.Column="1" Classes="columnHeader" Text="Path" />
+                        <TextBlock Grid.Column="2" Classes="columnHeader" Text="Arguments" />
+                        <TextBlock Grid.Column="3" Classes="columnHeader" Text="Working directory" />
+                        <TextBlock Grid.Column="4"
+                                   Classes="columnHeader"
+                                   Text="Primary"
+                                   Margin="0"
+                                   HorizontalAlignment="Center" />
+                    </Grid>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Actions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ActionEntryViewModel">
+                                <Grid ColumnDefinitions="140,*,150,150,56,126"
+                                      Margin="0,0,0,6">
+
+                                    <TextBox Grid.Column="0"
+                                             Margin="0,0,8,0"
+                                             Text="{Binding Name}"
+                                             Watermark="Play" />
+
+                                    <!-- Editable rather than a plain list: an action can point at
+                                         something the file step never offered, such as a shortcut
+                                         a script creates at install time. -->
+                                    <Grid Grid.Column="1" Margin="0,0,8,0" ColumnDefinitions="*,Auto,Auto">
+                                        <AutoCompleteBox Grid.Column="0"
+                                                         HorizontalAlignment="Stretch"
+                                                         ItemsSource="{Binding AvailablePaths}"
+                                                         Text="{Binding Path, Mode=TwoWay}"
+                                                         FilterMode="Contains"
+                                                         MinimumPrefixLength="0"
+                                                         GotFocus="OnExecutablePickerGotFocus"
+                                                         Watermark="Choose or type an executable" />
+
+                                        <!-- Left to itself the picker only drops down on a
+                                             keystroke, so there is no way to simply browse what
+                                             the package contains. -->
+                                        <Button Grid.Column="1"
+                                                Classes="rowAction"
+                                                Click="OnBrowseExecutablesClick"
+                                                ToolTip.Tip="Show the executables in this package">
+                                            <Icon Type="Regular" Value="CaretDown" Width="10" Height="10" />
+                                        </Button>
+
+                                        <Icon Grid.Column="2"
+                                              Type="Regular"
+                                              Value="Warning"
+                                              Width="14"
+                                              Height="14"
+                                              Margin="4,0,0,0"
+                                              Foreground="#FFA500"
+                                              IsVisible="{Binding IsPathMissing}"
+                                              ToolTip.Tip="This path is not among the files going into the package." />
+                                    </Grid>
+
+                                    <TextBox Grid.Column="2"
+                                             Margin="0,0,8,0"
+                                             Text="{Binding Arguments}"
+                                             Watermark="Optional" />
+
+                                    <TextBox Grid.Column="3"
+                                             Margin="0,0,8,0"
+                                             Text="{Binding WorkingDirectory}"
+                                             Watermark="{}{InstallDir}"
+                                             ToolTip.Tip="{}{InstallDir} expands to wherever the launcher installed the game." />
+
+                                    <CheckBox Grid.Column="4"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              MinWidth="0"
+                                              IsChecked="{Binding IsPrimary}"
+                                              ToolTip.Tip="The action the Play button runs" />
+
+                                    <StackPanel Grid.Column="5"
+                                                Orientation="Horizontal"
+                                                Spacing="2"
+                                                HorizontalAlignment="Left">
+                                        <Button Classes="rowAction"
+                                                Command="{Binding TestCommand}"
+                                                ToolTip.Tip="Run this action now, to check the path and arguments">
+                                            <Icon Type="Regular" Value="Play" Width="12" Height="12" Foreground="#7FBF7F" />
+                                        </Button>
+
+                                        <Button Classes="rowAction"
+                                                Command="{Binding MoveUpCommand}"
+                                                ToolTip.Tip="Move up">
+                                            <Icon Type="Regular" Value="ArrowUp" Width="12" Height="12" />
+                                        </Button>
+
+                                        <Button Classes="rowAction"
+                                                Command="{Binding MoveDownCommand}"
+                                                ToolTip.Tip="Move down">
+                                            <Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" />
+                                        </Button>
+
+                                        <Button Classes="rowAction"
+                                                Command="{Binding RemoveCommand}"
+                                                ToolTip.Tip="Remove this action">
+                                            <Icon Type="Regular" Value="Trash" Width="12" Height="12" Foreground="#BF7F7F" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
         </Border>
 
-        <TextBlock Grid.Row="3"
+        <Button Grid.Row="3"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Right"
+                Classes="Primary"
+                Command="{Binding AddActionCommand}"
+                Padding="14,6"
+                Content="Add action" />
+
+        <TextBlock Grid.Row="4"
                    Margin="0,8,0,0"
                    Text="{Binding Summary}"
                    FontSize="12"
-                   Opacity="0.7" />
+                   Opacity="0.7"
+                   TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="5"
+                   Margin="0,4,0,0"
+                   Text="{Binding TestStatus}"
+                   FontSize="12"
+                   Opacity="0.85"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasTestStatus}" />
     </Grid>
 </UserControl>

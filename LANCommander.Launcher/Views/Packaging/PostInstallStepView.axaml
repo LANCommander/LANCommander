@@ -17,17 +17,17 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
-            <TextBlock Text="Patch, tweak, and mod the install"
+            <TextBlock Text="Additional Changes"
                        FontSize="15"
                        FontWeight="SemiBold" />
 
             <TextBlock FontSize="12"
                        Opacity="0.7"
                        TextWrapping="Wrap"
-                       Text="Apply no-CD patches, widescreen fixes and config changes now. Edits you make by hand are found by rescanning the folder; patches that come as their own installer should be run below, so their registry changes are captured too." />
+                       Text="Apply any additional changes to the game files now. When you're ready to continue packaging, click the rescan button." />
 
             <TextBlock Text="{Binding InstallDirectory}"
                        FontSize="11"
@@ -35,7 +35,6 @@
                        TextWrapping="Wrap" />
         </StackPanel>
 
-        <!-- Making changes by hand -->
         <Border Grid.Row="1"
                 Margin="0,0,0,10"
                 Padding="12"
@@ -44,17 +43,32 @@
             <Grid RowDefinitions="Auto,Auto">
                 <DockPanel Grid.Row="0">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Open install folder"
-                                Command="{Binding BrowseInstallFolderCommand}"
+                        <!-- First in the row because it is the other way of making a change, not
+                             a variation on rescanning. -->
+                        <Button Content="Run &amp; Monitor"
+                                Click="OnRunInstallerClick"
+                                IsVisible="{Binding !IsMonitoring}"
+                                ToolTip.Tip="Select another executable to run and monitor for additional file and registry changes"
                                 Padding="12,5" />
 
-                        <Button Content="Reset baseline"
+                        <Button Content="Stop monitoring"
+                                Classes="Primary"
+                                Command="{Binding StopCommand}"
+                                IsVisible="{Binding IsMonitoring}"
+                                Padding="14,5" />
+
+                        <Button Content="Browse"
+                                Command="{Binding BrowseInstallFolderCommand}"
+                                ToolTip.Tip="Open the install folder"
+                                Padding="12,5" />
+
+                        <Button Content="Reset"
                                 Command="{Binding ResetBaselineCommand}"
                                 IsEnabled="{Binding !IsScanning}"
                                 ToolTip.Tip="Treat the folder as it is now as the starting point, and forget the changes listed below."
                                 Padding="12,5" />
 
-                        <Button Content="Rescan for changes"
+                        <Button Content="Rescan"
                                 Classes="Primary"
                                 Command="{Binding RescanCommand}"
                                 IsEnabled="{Binding !IsScanning}"
@@ -92,57 +106,36 @@
             </Grid>
         </Border>
 
-        <!-- Running another installer -->
-        <Border Grid.Row="2"
-                Margin="0,0,0,10"
-                Padding="12"
-                CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-            <Grid RowDefinitions="Auto,Auto,Auto">
-                <DockPanel Grid.Row="0">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Run an installer..."
-                                Click="OnRunInstallerClick"
-                                IsVisible="{Binding !IsMonitoring}"
-                                Padding="12,5" />
+        <!-- Monitoring state, and what has been run so far. Both stay out of the way until an
+             installer has actually been run through the step. -->
+        <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="{Binding Status}"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                        <Button Content="Stop monitoring"
-                                Classes="Primary"
-                                Command="{Binding StopCommand}"
-                                IsVisible="{Binding IsMonitoring}"
-                                Padding="14,5" />
-                    </StackPanel>
+            <ItemsControl ItemsSource="{Binding AdditionalInstallers}"
+                          IsVisible="{Binding HasAdditionalInstallers}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}"
+                                   FontSize="11"
+                                   Opacity="0.7"
+                                   TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
 
-                    <TextBlock Text="{Binding Status}"
-                               VerticalAlignment="Center"
-                               TextWrapping="Wrap" />
-                </DockPanel>
-
-                <ItemsControl Grid.Row="1"
-                              Margin="0,8,0,0"
-                              ItemsSource="{Binding AdditionalInstallers}"
-                              IsVisible="{Binding HasAdditionalInstallers}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <TextBlock Text="{Binding}"
-                                       FontSize="11"
-                                       Opacity="0.7"
-                                       TextTrimming="CharacterEllipsis" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- Only once something has been run: an empty log panel on a step most people
-                     will walk straight past is just noise. -->
-                <packaging:CapturePanelView Grid.Row="2"
-                                            Height="220"
-                                            Margin="0,10,0,0"
-                                            IsVisible="{Binding HasLog}" />
-            </Grid>
-        </Border>
+        <!-- Only once something has been run: an empty log panel on a step most people will walk
+             straight past is just noise. -->
+        <packaging:CapturePanelView Grid.Row="3"
+                                    Height="200"
+                                    Margin="0,0,0,10"
+                                    IsVisible="{Binding HasLog}" />
 
         <!-- What changed -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="4"
                 CornerRadius="4"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
             <Grid RowDefinitions="*,Auto">

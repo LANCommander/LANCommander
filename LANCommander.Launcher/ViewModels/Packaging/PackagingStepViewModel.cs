@@ -20,7 +20,11 @@ public abstract partial class PackagingStepViewModel : ViewModelBase
 
     protected PackagingWizardViewModel Wizard { get; }
 
-    protected PackageDefinition Package => Wizard.Package;
+    /// <summary>
+    /// The package every step shares. Virtual so a step can be exercised on a package of its
+    /// own, without standing up the wizard and the service graph behind it.
+    /// </summary>
+    protected virtual PackageDefinition Package => Wizard.Package;
 
     /// <summary>Shown in the step indicator.</summary>
     public abstract string Title { get; }

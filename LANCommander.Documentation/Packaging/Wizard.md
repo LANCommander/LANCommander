@@ -15,27 +15,29 @@ Complete the install as you normally would. When the installer exits, monitoring
 
 Warnings appear here when a capture is incomplete: processes that could not be monitored, or events dropped because the installer produced them faster than they could be recorded.
 
+Installers that ask for administrator rights escalate out of reach of the monitoring, so the capture has to be restarted elevated. The step shows a prompt, and a desktop notification is raised at the same time with the same **Restart as Administrator** action — the launcher is rarely the window in front at that moment, and the installer's own consent dialog is usually covering it. Turn the notification off under **Settings → Notifications → Packaging Needs Administrator Rights**.
+
 ## 2. Install Folder
 
 Where the game ended up. This is detected from the common ancestor of every file the installer wrote — not the folder with the most files in it, which for most installers is a subfolder like `Sounds\`.
 
 Every path in the package is stored relative to this folder, so it must be the game's root.
 
-## 3. Customize
+## 3. Additional Changes
 
 Where the work that happens *after* the installer finishes gets recorded: no-CD patches, widescreen fixes, edited configs, mods.
 
 Entering the step takes a baseline of the install folder. Everything from that point on is measured against it.
 
-**Changes you make by hand.** Use **Open install folder**, apply your patches, then press **Rescan for changes**. The scan lists what was added, changed and removed, with the size difference for anything modified — which is usually how you confirm a patch actually landed. Rescan as often as you like; it reads no file contents, only one walk of the directory tree.
+**Changes you make by hand.** Press **Browse** to open the install folder, apply your patches, then press **Rescan**. The scan lists what was added, changed and removed, with the size difference for anything modified — which is usually how you confirm a patch actually landed. Rescan as often as you like; it reads no file contents, only one walk of the directory tree.
 
-**Patches that come as their own installer.** Use **Run an installer...** instead. It runs under the same monitoring the base install used, so registry writes and anything it puts outside the install folder are captured too, and merged into one change set. The folder is rescanned automatically when it finishes. Run as many as you need — each one is listed as you go.
+**Patches that come as their own installer.** Use **Run & Monitor** instead. It runs the executable you pick under the same monitoring the base install used, so registry writes and anything it puts outside the install folder are captured too, and merged into one change set. The folder is rescanned automatically when it finishes. Run as many as you need — each one is listed as you go.
 
-**Reset baseline** treats the folder as it stands now as the new starting point, for when you have already reviewed one round of patching and want the next round on its own.
+**Reset** treats the folder as it stands now as the new starting point, for when you have already reviewed one round of patching and want the next round on its own.
 
-Files this step finds are marked `added` or `changed` in the next step, so your patches are findable among the thousands of files the installer produced.
+Files this step finds are marked `added` or `changed` in the file step, so your patches are findable among the thousands of files the installer produced.
 
-Changes are detected from each file's size and last-write time. A patcher that rewrites a file to exactly the same length *and* restores its original timestamp will not show up in a rescan — run that patcher through **Run an installer...** instead, which sees the writes regardless.
+Changes are detected from each file's size and last-write time. A patcher that rewrites a file to exactly the same length *and* restores its original timestamp will not show up in a rescan — run that patcher through **Run & Monitor** instead, which sees the writes regardless.
 
 Games that need no patching can pass straight through.
 
@@ -61,9 +63,25 @@ Title, version, release date, description and notes.
 
 **Look up...** searches the server's configured metadata providers and fills in the description, release date and the richer collections — genres, tags, developers, publishers, platforms, multiplayer modes — that would be tedious to enter by hand.
 
-## 7. Launch Action
+## 7. Actions
 
-Which executable the launcher runs to start the game. Installers, uninstallers and redistributables are filtered out of the list by default; tick **Show every executable** if the one you want is hidden.
+The entry points the launcher offers for the game, edited as a table with the same columns as the server's action editor.
+
+One action is created for you, pointing at the likeliest executable — for most games that is the whole step. Press **Add action** for anything else the game ships: a separate multiplayer executable, a dedicated server, a configuration tool.
+
+| Column | |
+|---|---|
+| **Name** | What the launcher shows in its menu. |
+| **Path** | The executable, relative to the install folder. Pick from the list or type a path the file step never offered — something a script creates at install time, say. A warning marks a path that is not among the files going into the package. |
+| **Arguments** | Passed to the executable. Optional. |
+| **Working directory** | Defaults to `{InstallDir}`, which the launcher expands to wherever it installed the game. |
+| **Primary** | The action the Play button runs. Exactly one is primary; ticking another moves it. |
+
+The play button on a row runs that action right now, against the game as it sits on disk, so a wrong path or a bad argument turns up here rather than after someone installs the package. Nothing is reported when it works — the game appearing is the confirmation; a message only shows up when it does not. Only `{InstallDir}` is expanded — the display and server variables come from a live session that does not exist yet. Note that launching the game writes its own config and save files into the install folder; if you go back to **Files** afterwards they will be swept in, so uncheck anything you did not mean to ship.
+
+Use the arrows to reorder. The order here is the order the launcher lists them in.
+
+Installers, uninstallers and redistributables are filtered out of the path lists by default; tick **Show every executable** if the one you want is hidden.
 
 ## 8. Finish
 

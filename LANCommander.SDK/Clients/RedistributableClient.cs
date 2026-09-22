@@ -28,6 +28,12 @@ namespace LANCommander.SDK.Services
 
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
+
+        // The download stream is non-seekable, so SharpCompress uses a ring buffer to rewind while
+        // scanning entry headers. Archives with many small entries can require rewinding further than
+        // the library's default (160KB) buffer, throwing an ArchiveOperationException
+        // ("Ring buffer underflow"). Use a larger buffer to accommodate these cases.
+        private const int ArchiveRewindableBufferSize = 4 * 1024 * 1024;
         
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
@@ -238,7 +244,7 @@ namespace LANCommander.SDK.Services
                         });
                     });
 
-                    await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+                    await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
                     await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,
@@ -351,7 +357,7 @@ namespace LANCommander.SDK.Services
                         });
                     });
 
-                    await using var reader = await ReaderFactory.OpenAsyncReader(redistributableStream, new ReaderOptions { Progress = progress }, cancellationToken);
+                    await using var reader = await ReaderFactory.OpenAsyncReader(redistributableStream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
                     await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,

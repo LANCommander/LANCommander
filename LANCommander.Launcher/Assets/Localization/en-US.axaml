@@ -95,6 +95,9 @@
     <sys:String x:Key="InstallFailed">Installation Failed!</sys:String>
     <sys:String x:Key="ViewInLibrary">View in Library</sys:String>
     <sys:String x:Key="Play">Play</sys:String>
+    <sys:String x:Key="ElevationRequired">Administrator Rights Required</sys:String>
+    <sys:String x:Key="ElevationRequiredBody">{0} needs to run as administrator. Packaging has to restart the capture to keep monitoring it.</sys:String>
+    <sys:String x:Key="RestartAsAdministrator">Restart as Administrator</sys:String>
 
     <!-- ── Download Queue ────────────────────────────────────────────────── -->
     <sys:String x:Key="Queued">Queued</sys:String>

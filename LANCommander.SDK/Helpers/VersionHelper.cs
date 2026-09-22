@@ -13,7 +13,21 @@ public static class VersionHelper
     /// </summary>
     public const string VersionEnvironmentVariable = "LANCOMMANDER_VERSION";
 
-    private static SemVersion _currentVersion;
+    /// <summary>
+    /// Set to <c>1</c> or <c>true</c> to stop the SDK from rejecting responses from a server
+    /// whose major version differs from this client's.
+    /// </summary>
+    public const string SkipCompatibilityCheckEnvironmentVariable = "LANCOMMANDER_SKIP_VERSION_CHECK";
+
+    // The executing assembly's version never changes during the process lifetime, but computing
+    // it involves reflection (Assembly.GetExecutingAssembly().GetName()) which is surprisingly
+    // costly when called repeatedly (e.g. once or twice per API request). Cache it once.
+    private static readonly SemVersion _sdkVersion =
+        SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0));
+
+    private static readonly bool _enforceCompatibility = ResolveEnforceCompatibility();
+
+    private static SemVersion? _currentVersion;
 
     /// <summary>
     /// Gets the version this client identifies as. It is sent to the server on every request via the
@@ -31,26 +45,50 @@ public static class VersionHelper
             Assembly.GetEntryAssembly());
     }
 
-    internal static SemVersion Resolve(string overrideValue, Assembly entryAssembly)
+    /// <summary>
+    /// Resolves the version to advertise to the server, preferring an explicit override, then the
+    /// entry assembly's informational version, then this SDK assembly's version.
+    /// </summary>
+    /// <param name="overrideValue">An explicit version, e.g. from an environment variable. Ignored when null, blank or unparseable.</param>
+    /// <param name="entryAssembly">The assembly to read <see cref="AssemblyInformationalVersionAttribute"/> from. May be null.</param>
+    public static SemVersion Resolve(string? overrideValue, Assembly? entryAssembly)
     {
-        if (SemVersion.TryParse(overrideValue, SemVersionStyles.Any, out var overrideVersion))
-            return overrideVersion;
-
-        var informationalVersion = entryAssembly
-            ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(overrideValue)
+            && SemVersion.TryParse(overrideValue.Trim(), SemVersionStyles.Any, out var overridden))
+            return overridden.WithoutMetadata();
 
         // The SDK appends the commit hash as source revision metadata (e.g. "2.1.11+abc1234") when no
         // explicit informational version is stamped. Semver treats that as build metadata, but strip it
         // anyway so the reported version stays readable in logs and headers.
-        var separatorIndex = informationalVersion?.IndexOf('+') ?? -1;
+        var informationalVersion = entryAssembly
+            ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
 
-        if (separatorIndex > 0)
-            informationalVersion = informationalVersion.Substring(0, separatorIndex);
+        if (!string.IsNullOrWhiteSpace(informationalVersion)
+            && SemVersion.TryParse(informationalVersion.Trim(), SemVersionStyles.Any, out var entryVersion))
+            return entryVersion.WithoutMetadata();
 
-        if (SemVersion.TryParse(informationalVersion, SemVersionStyles.Any, out var assemblyVersion))
-            return assemblyVersion;
+        return _sdkVersion;
+    }
 
-        return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+    /// <summary>
+    /// Whether an API version mismatch between this client and the server should be treated as a
+    /// hard failure. False for local development builds and when
+    /// <see cref="SkipCompatibilityCheckEnvironmentVariable"/> is set.
+    /// </summary>
+    public static bool EnforceCompatibility => _enforceCompatibility;
+
+    private static bool ResolveEnforceCompatibility()
+    {
+        var value = Environment.GetEnvironmentVariable(SkipCompatibilityCheckEnvironmentVariable)?.Trim();
+
+        if (!string.IsNullOrEmpty(value))
+            return !(value == "1" || (bool.TryParse(value, out var skip) && skip));
+
+#if DEBUG
+        return false;
+#else
+        return true;
+#endif
     }
 }

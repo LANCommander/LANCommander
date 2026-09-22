@@ -1,11 +1,14 @@
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using Microsoft.Extensions.Logging;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server>
+public class ServerExporter(
+    ILogger<ServerExporter> logger,
+    ServerService serverService) : BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Server record)
     {
@@ -43,35 +46,22 @@ public class ServerExporter(ServerService serverService) : BaseExporter<SDK.Mode
                 var fileInfo = new FileInfo(file);
 
                 if (fileInfo.Exists)
-                {
-                    var fileEntry =
-                        ExportContext.Archive.CreateEntry(
-                            $"Files/{fileInfo.Name.Replace(Path.DirectorySeparatorChar, '/')}");
-
-                    using (var fileEntryStream = fileEntry.Open())
-                    using (var fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
-                    {
-                        await fileStream.CopyToAsync(fileEntryStream);
-                    }
-                }
+                    await WriteEntryFromFileAsync(
+                        $"Files/{fileInfo.Name.Replace(Path.DirectorySeparatorChar, '/')}",
+                        fileInfo.FullName);
             }
             catch (Exception ex)
             {
-                // File could not be added to archive
+                logger.LogError(ex, "Could not add {File} to the server export file, it will be missing from the export", file);
             }
         }
 
-        if (entity.Scripts is null)
-            entity.Scripts = new List<Script>();
-
-        if (entity.Actions is null)
-            entity.Actions = new List<Action>();
-
-        if (entity.HttpPaths is null)
-            entity.HttpPaths = new List<ServerHttpPath>();
-        
-        if (entity.ServerConsoles is null)
-            entity.ServerConsoles = new List<ServerConsole>();
+        // The queue fills these from the records the user actually selected, so anything the
+        // manifest already carries has to be cleared first or every child is written out twice.
+        entity.Scripts = new List<Script>();
+        entity.Actions = new List<Action>();
+        entity.HttpPaths = new List<ServerHttpPath>();
+        entity.ServerConsoles = new List<ServerConsole>();
         
         return entity;
     }

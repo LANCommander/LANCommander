@@ -21,7 +21,7 @@ public class RoleManagementComponentTests : BUnitTestContext
     [Fact]
     public void Roles_ShowsAddRoleButtonAndAdministratorRole()
     {
-        var cut = RenderComponent<RolesIndex>();
+        var cut = Render<RolesIndex>();
 
         Assert.Contains(
             cut.FindAll("button"),

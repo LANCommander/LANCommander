@@ -11,7 +11,7 @@ An `.LCX` file is a standard ZIP archive containing everything needed to install
 
 ```
 package.lcx (ZIP)
-├── Manifest.yml           # Game metadata (YAML)
+├── Manifest.yml            # Game metadata (YAML)
 ├── Archives/
 │   └── {guid}              # Inner ZIP containing game files
 └── Scripts/
@@ -20,6 +20,8 @@ package.lcx (ZIP)
 ```
 
 ### Manifest.yml
+
+The name is matched case sensitively, so it must be spelled exactly `Manifest.yml`.
 
 The manifest is a YAML file describing the game's metadata, actions, archive references, and script references. It follows the LANCommander SDK's `Game` manifest schema and includes:
 

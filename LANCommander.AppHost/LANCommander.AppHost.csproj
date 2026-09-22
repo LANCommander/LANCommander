@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aspire.Hosting.AppHost" />
+        <PackageReference Include="StreamJsonRpc" />
     </ItemGroup>
 
     <ItemGroup>

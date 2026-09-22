@@ -22,23 +22,25 @@ public class GameExporter(
     {
         var manifest = await gameService.GetManifestAsync(id);
 
-        manifest.Actions ??= new List<SDK.Models.Manifest.Action>();
-        manifest.Archives ??= new List<SDK.Models.Manifest.Archive>();
-        manifest.Collections ??= new List<SDK.Models.Manifest.Collection>();
-        manifest.CustomFields ??= new List<SDK.Models.Manifest.GameCustomField>();
-        manifest.Developers ??= new List<SDK.Models.Manifest.Company>();
-        manifest.Genres ??= new List<SDK.Models.Manifest.Genre>();
-        manifest.Keys ??= new List<SDK.Models.Manifest.Key>();
-        manifest.Media ??= new List<SDK.Models.Manifest.Media>();
-        manifest.MultiplayerModes ??= new List<SDK.Models.Manifest.MultiplayerMode>();
-        manifest.Platforms ??= new List<SDK.Models.Manifest.Platform>();
-        manifest.PlaySessions ??= new List<SDK.Models.Manifest.PlaySession>();
-        manifest.Publishers ??= new List<SDK.Models.Manifest.Company>();
+        manifest.Actions = new List<SDK.Models.Manifest.Action>();
+        manifest.Archives = new List<SDK.Models.Manifest.Archive>();
+        manifest.Collections = new List<SDK.Models.Manifest.Collection>();
+        manifest.CustomFields = new List<SDK.Models.Manifest.GameCustomField>();
+        manifest.Developers = new List<SDK.Models.Manifest.Company>();
+        manifest.Engine = null;
+        manifest.Genres = new List<SDK.Models.Manifest.Genre>();
+        manifest.Keys = new List<SDK.Models.Manifest.Key>();
+        manifest.Media = new List<SDK.Models.Manifest.Media>();
+        manifest.MultiplayerModes = new List<SDK.Models.Manifest.MultiplayerMode>();
+        manifest.Platforms = new List<SDK.Models.Manifest.Platform>();
+        manifest.PlaySessions = new List<SDK.Models.Manifest.PlaySession>();
+        manifest.Publishers = new List<SDK.Models.Manifest.Company>();
+        manifest.Saves = new List<SDK.Models.Manifest.Save>();
+        manifest.SavePaths = new List<SDK.Models.Manifest.SavePath>();
+        manifest.Scripts = new List<SDK.Models.Manifest.Script>();
+        manifest.Tags = new List<SDK.Models.Manifest.Tag>();
+
         manifest.Redistributables ??= new List<SDK.Models.Manifest.Redistributable>();
-        manifest.Saves ??= new List<SDK.Models.Manifest.Save>();
-        manifest.SavePaths ??= new List<SDK.Models.Manifest.SavePath>();
-        manifest.Scripts ??= new List<SDK.Models.Manifest.Script>();
-        manifest.Tags ??= new List<SDK.Models.Manifest.Tag>();
 
         return manifest;
     }

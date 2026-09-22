@@ -382,3 +382,6 @@ Data/
 LANCommander.Launcher.Avalonia.Tests/Screenshots/
 LANCommander.Launcher.Avalonia.Tests/Diffs/
 visual-test-output/
+LANCommander.Launcher.Legacy
+liblancommander
+/Media

@@ -43,6 +43,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -68,7 +69,7 @@ public partial class ScriptClient
                         }
                     }
 
-                    script.UseWorkingDirectory(Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId)));
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
                     
                     if (Debug)
@@ -134,6 +135,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -149,9 +151,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -200,6 +200,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -215,9 +216,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
 
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -266,6 +265,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -281,9 +281,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)
@@ -336,6 +334,7 @@ public partial class ScriptClient
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
+                    await AddIPXRelayVariablesAsync(script);
 
                     try
                     {
@@ -351,9 +350,7 @@ public partial class ScriptClient
                         logger?.LogError(ex, "Could not enrich logs");
                     }
                     
-                    var extractionPath = Path.Combine(GameClient.GetMetadataDirectoryPath(installDirectory, toolId), "Files");
-
-                    script.UseWorkingDirectory(extractionPath);
+                    script.UseWorkingDirectory(installDirectory);
                     script.UseFile(path);
 
                     if (Debug)

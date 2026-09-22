@@ -8,22 +8,22 @@ namespace LANCommander.Server.Services.Providers.Metadata;
 
 public class HqMetadataProvider(
     HQClient hqClient,
-    SettingsProvider<Settings.Settings> settingsProvider,
+    HqConnectionService hqConnection,
     ILogger<HqMetadataProvider> logger) : IMetadataProvider
 {
     private IReadOnlyList<ProviderInfo>? _cachedProviders;
 
     public string ProviderName => "LANCommander HQ";
-    public bool IsAvailable => settingsProvider.CurrentValue.Server.HQ.IsAuthenticated;
+    public bool IsAvailable => hqConnection.IsUsable;
 
     public async Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync()
     {
-        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+        if (!hqConnection.IsUsable)
             return null;
 
         try
         {
-            _cachedProviders ??= await hqClient.Providers.ListAsync();
+            _cachedProviders ??= await hqConnection.TrackAsync(() => hqClient.Providers.ListAsync());
 
             return _cachedProviders.Select(p => (p.Slug, p.Name));
         }
@@ -41,14 +41,14 @@ public class HqMetadataProvider(
 
     public async Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, string? subProvider, int limit = 10, int offset = 0)
     {
-        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+        if (!hqConnection.IsUsable)
             return new MetadataSearchResultsCollection<Game>([], false);
 
         var providerSlug = subProvider;
 
         if (string.IsNullOrWhiteSpace(providerSlug))
         {
-            _cachedProviders ??= await hqClient.Providers.ListAsync();
+            _cachedProviders ??= await hqConnection.TrackAsync(() => hqClient.Providers.ListAsync());
             providerSlug = _cachedProviders.FirstOrDefault()?.Slug;
 
             if (providerSlug is null)
@@ -57,7 +57,7 @@ public class HqMetadataProvider(
 
         try
         {
-            var response = await hqClient.Games.SearchAsync(providerSlug, input);
+            var response = await hqConnection.TrackAsync(() => hqClient.Games.SearchAsync(providerSlug, input));
             var results = response?.Data ?? [];
 
             var searchResults = results
@@ -92,7 +92,7 @@ public class HqMetadataProvider(
 
     public async Task<Game?> GetGameAsync(string gameId)
     {
-        if (!settingsProvider.CurrentValue.Server.HQ.IsAuthenticated)
+        if (!hqConnection.IsUsable)
             return null;
 
         var separatorIndex = gameId.IndexOf(':');
@@ -108,7 +108,7 @@ public class HqMetadataProvider(
 
         try
         {
-            var response = await hqClient.Games.GetAsync(providerSlug, providerId);
+            var response = await hqConnection.TrackAsync(() => hqClient.Games.GetAsync(providerSlug, providerId));
             var dto = response?.Data;
 
             if (dto is null)

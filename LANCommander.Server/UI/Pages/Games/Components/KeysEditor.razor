@@ -1,4 +1,4 @@
-﻿@using LANCommander.SDK.Enums
+@using LANCommander.SDK.Enums
 @inject KeyService KeyService
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -96,10 +96,12 @@
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
     ICollection<Key> _keys = new List<Key>();
-    
+
+    Guid _loadedGameId;
+
     int _allocatedKeys;
     bool _editModalVisible = false;
-    
+
     DataTable<Key>? _dataTable;
     StandaloneCodeEditor? _editor;
 
@@ -109,23 +111,38 @@
         {
             AutomaticLayout = true,
             Language = "text",
-            Value = String.Join('\n', _keys.Select(k => k.Value)),
+            Value = EditorContents(),
             Theme = "vs-dark",
         };
     }
 
-    protected override async Task OnInitializedAsync()
+    string EditorContents() => String.Join('\n', _keys.Select(k => k.Value));
+
+    protected override async Task OnParametersSetAsync()
     {
-        if (_keys == null)
-            _keys = new List<Key>();
-        
+        if (_loadedGameId == GameId)
+            return;
+
+        _loadedGameId = GameId;
+
+        await LoadKeysAsync();
+
+        if (_dataTable != null)
+            await _dataTable.ReloadAsync();
+    }
+
+    async Task LoadKeysAsync()
+    {
         _keys = await KeyService.GetAsync(k => k.GameId == GameId);
 
         _allocatedKeys = _keys.Count(k => k.IsAllocated());
     }
 
-    void Edit()
+    async Task Edit()
     {
+        if (_editor != null)
+            await _editor.SetValue(EditorContents());
+
         _editModalVisible = true;
     }
 
@@ -145,8 +162,7 @@
 
         modalRef.OnOk = async (result) =>
         {
-            _keys = await KeyService.GetAsync(k => k.GameId == GameId);
-            _allocatedKeys = _keys.Count(k => k.IsAllocated());
+            await LoadKeysAsync();
 
             if (_dataTable != null)
                 await _dataTable.ReloadAsync();
@@ -159,8 +175,7 @@
     {
         await KeyService.DeleteAsync(key);
 
-        _keys = await KeyService.GetAsync(k => k.GameId == GameId);
-        _allocatedKeys = _keys.Count(k => k.IsAllocated());
+        await LoadKeysAsync();
 
         if (_dataTable != null)
             await _dataTable.ReloadAsync();
@@ -172,8 +187,7 @@
     {
         await KeyService.ReleaseAsync(key);
 
-        _keys = await KeyService.GetAsync(k => k.GameId == GameId);
-        _allocatedKeys = _keys.Count(k => k.IsAllocated());
+        await LoadKeysAsync();
 
         if (_dataTable != null)
             await _dataTable.ReloadAsync();
@@ -185,8 +199,19 @@
     {
         try
         {
+            if (_editor == null)
+            {
+                _editModalVisible = false;
+                return;
+            }
+
             var value = await _editor.GetValue();
-            var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k)).ToList();
+            var keys = value
+                .Split("\n")
+                .Select(k => k.Trim())
+                .Where(k => !String.IsNullOrWhiteSpace(k))
+                .Distinct()
+                .ToList();
 
             var keysDeleted = _keys.Where(k => !keys.Contains(k.Value)).ToList();
             var keysAdded = keys.Where(k => !_keys.Any(gk => gk.Value == k)).ToList();
@@ -203,8 +228,7 @@
 
             _editModalVisible = false;
 
-            _keys = await KeyService.GetAsync(k => k.GameId == GameId);
-            _allocatedKeys = _keys.Count(k => k.IsAllocated());
+            await LoadKeysAsync();
 
             if (_dataTable != null)
                 await _dataTable.ReloadAsync();

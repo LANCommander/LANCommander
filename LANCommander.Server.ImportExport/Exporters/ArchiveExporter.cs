@@ -38,7 +38,10 @@ public class ArchiveExporter(
         return info;
     }
     
-    public override bool CanExport(Archive record) => ExportContext.DataRecord is Data.Models.Game || ExportContext.DataRecord is Data.Models.Redistributable;
+    public override bool CanExport(Archive record) =>
+        ExportContext.DataRecord is Data.Models.Game
+        || ExportContext.DataRecord is Data.Models.Redistributable
+        || ExportContext.DataRecord is Data.Models.Tool;
 
     public override async Task<Archive> ExportAsync(Guid id)
     {
@@ -50,15 +53,7 @@ public class ArchiveExporter(
             var fileInfo = new FileInfo(path);
 
             if (fileInfo.Exists)
-            {
-                var archiveEntry = ExportContext.Archive.CreateEntry($"Archives/{entity.Id}");
-            
-                using (var archiveEntryStream = archiveEntry.Open())
-                using (var archiveFileStream = new FileStream(path, FileMode.Open))
-                {
-                    await archiveFileStream.CopyToAsync(archiveEntryStream);
-                }
-            }
+                await WriteEntryFromFileAsync($"Archives/{entity.Id}", path);
         
             return manifestMapper.ToManifest(entity);
         }

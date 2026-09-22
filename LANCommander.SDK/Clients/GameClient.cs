@@ -255,7 +255,14 @@ namespace LANCommander.SDK.Services
                         var toolManifest = await ManifestHelper.ReadAsync<Models.Manifest.Tool>(installDirectory, tool.Id);
 
                         if (toolManifest?.Actions != null)
-                            actions.AddRange(toolManifest.Actions);
+                        {
+                            foreach (var toolAction in toolManifest.Actions)
+                            {
+                                toolAction.ToolId = tool.Id;
+
+                                actions.Add(toolAction);
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -295,7 +302,8 @@ namespace LANCommander.SDK.Services
                                 SortOrder = actions.Count,
                                 Path = primaryAction.Path,
                                 WorkingDirectory = primaryAction.WorkingDirectory,
-                                Platforms = primaryAction.Platforms
+                                Platforms = primaryAction.Platforms,
+                                ToolId = primaryAction.ToolId
                             };
 
                             actions.Add(lobbyAction);
@@ -622,33 +630,23 @@ namespace LANCommander.SDK.Services
         public async Task<string> GetAllocatedKeyAsync(Guid id)
         {
             logger?.LogTrace("Requesting allocated key...");
-            
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = networkInformationProvider.GetMacAddress(),
-                ComputerName = Environment.MachineName,
-                IpAddress = networkInformationProvider.GetIpAddress(),
-            };
 
-            var response = await apiRequestFactory
-                .Create()
-                .UseAuthenticationToken()
-                .UseVersioning()
-                .UseRoute($"/api/Keys/GetAllocated/{id}")
-                .AddBody(request)
-                .PostAsync<Key>();
+            var key = await RequestKeyAsync(id, $"/api/Keys/GetAllocated/{id}");
 
-            if (response == null)
-                return string.Empty;
-
-            return response.Value;
+            return key?.Value ?? string.Empty;
         }
 
         public async Task<string> GetNewKey(Guid id)
         {
             logger?.LogTrace("Requesting new key allocation...");
 
+            var key = await RequestKeyAsync(id, $"/api/Keys/Allocate/{id}");
+
+            return key?.Value ?? string.Empty;
+        }
+
+        private async Task<Key> RequestKeyAsync(Guid id, string route)
+        {
             var request = new KeyRequest()
             {
                 GameId = id,
@@ -657,19 +655,26 @@ namespace LANCommander.SDK.Services
                 IpAddress = networkInformationProvider.GetIpAddress(),
             };
 
-            var response = await apiRequestFactory
-                .Create()
-                .UseAuthenticationToken()
-                .UseVersioning()
-                .UseRoute($"/api/Keys/Allocate/{id}")
-                .AddBody(request)
-                .PostAsync<Key>();
+            try
+            {
+                return await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute(route)
+                    .AddBody(request)
+                    .PostAsync<Key>();
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                logger?.LogDebug("Server had no key to allocate for game {GameId}", id);
 
-            if (response == null)
-                return string.Empty;
-
-            return response.Value;
+                return null;
+            }
         }
+
+        private static bool HasKeyChangeScript(string installDirectory, Guid gameId)
+            => File.Exists(ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange));
 
         /// <summary>
         /// Returns the key currently tracked for this install. The locally tracked key
@@ -1417,8 +1422,13 @@ namespace LANCommander.SDK.Services
                             break;
 
                         case InstallTaskType.RunKeyChangeScript:
-                            var allocatedKey = await GetOrAllocateKeyAsync(planItem.InstallDirectory, game.Id);
-                            await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            if (HasKeyChangeScript(planItem.InstallDirectory, game.Id))
+                            {
+                                var allocatedKey = await GetOrAllocateKeyAsync(planItem.InstallDirectory, game.Id);
+
+                                if (!string.IsNullOrWhiteSpace(allocatedKey))
+                                    await scriptClient.Game_RunKeyChangeScriptAsync(planItem.InstallDirectory, game.Id, allocatedKey);
+                            }
                             break;
 
                         case InstallTaskType.RunNameChangeScript:
@@ -1663,6 +1673,11 @@ namespace LANCommander.SDK.Services
                     logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
                 else
                     logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
+            }
+            else if (IsInstallDirectoryShared(installDirectory, gameId))
+            {
+                logger?.LogWarning("No file list for {GameTitle} ({GameId}) and {InstallDirectory} is shared with other installed content; leaving its files in place",
+                    manifest.Title, gameId, installDirectory);
             }
             else
             {
@@ -1927,6 +1942,31 @@ namespace LANCommander.SDK.Services
             return manifest;
         }
 
+        /// <summary>
+        /// Cleans up after an extraction that did not complete, removing only the files it added.
+        /// </summary>
+        private void CleanUpPartialExtraction(
+            Game game,
+            string destination,
+            ICollection<string> createdFiles,
+            bool destinationExistedBefore,
+            string reason)
+        {
+            if (createdFiles == null || createdFiles.Count == 0)
+                return;
+
+            logger?.LogTrace("Cleaning up {FileCount} files written by the {Reason} install of {GameTitle} ({GameId})",
+                createdFiles.Count, reason, game?.Title, game?.Id);
+
+            var deleted = DirectoryHelper.DeletePartialExtraction(
+                destination,
+                createdFiles,
+                removeDestinationIfEmpty: !destinationExistedBefore);
+
+            logger?.LogTrace("Removed {DeletedCount} of {FileCount} files written by the {Reason} install of {GameTitle} ({GameId})",
+                deleted, createdFiles.Count, reason, game?.Title, game?.Id);
+        }
+
         private async Task WriteScriptsAsync(string installDirectory, Game game)
         {
             var scripts = await GetScriptsAsync(game.Id);
@@ -1950,10 +1990,16 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var allocatedKey = await GetOrAllocateKeyAsync(game.InstallDirectory, game.Id);
-
                     await scriptClient.Game_RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+
+                    if (HasKeyChangeScript(game.InstallDirectory, game.Id))
+                    {
+                        var allocatedKey = await GetOrAllocateKeyAsync(game.InstallDirectory, game.Id);
+
+                        if (!string.IsNullOrWhiteSpace(allocatedKey))
+                            await scriptClient.Game_RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+                    }
+
                     await scriptClient.Game_RunNameChangeScriptAsync(game.InstallDirectory, game.Id, await profileClient.GetAliasAsync());
                 }
                 catch (Exception ex)
@@ -2033,6 +2079,10 @@ namespace LANCommander.SDK.Services
             string currentEntryKey = null;
             var entriesProcessed = 0;
 
+            var createdFiles = new List<string>();
+
+            var destinationExistedBefore = Directory.Exists(destination);
+
             try
             {
                 Directory.CreateDirectory(destination);
@@ -2099,12 +2149,17 @@ namespace LANCommander.SDK.Services
                         bool shouldSkip = skipFiles != null && skipFiles.Contains(entryKey);
 
                         if (!shouldSkip)
+                        {
+                            if (!entryKey.EndsWith("/") && !File.Exists(localFile))
+                                createdFiles.Add(localFile);
+
                             await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
                                 PreserveFileTime = true
                             }, cancellationToken);
+                        }
                         else // Skip to next entry
                             try
                             {
@@ -2146,26 +2201,16 @@ namespace LANCommander.SDK.Services
 
                 extractionResult.Canceled = true;
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                    Directory.Delete(destination, true);
-                }
+                CleanUpPartialExtraction(game, destination, createdFiles, destinationExistedBefore, "cancelled");
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Could not extract game {GameTitle} ({GameId}) to {Destination}. Failed on entry {EntryKey} (entry #{EntriesProcessed}) at {Position}/{Length} bytes with {ExceptionType} (HResult 0x{HResult:X8})",
                     game.Title, game.Id, destination, currentEntryKey, entriesProcessed, stream?.Position, stream?.Length, ex.GetType().Name, ex.HResult);
 
-                if (Directory.Exists(destination))
-                {
-                    logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                CleanUpPartialExtraction(game, destination, createdFiles, destinationExistedBefore, "failed");
 
-                    Directory.Delete(destination, true);
-                }
-
-                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+                throw new Exception($"The archive for {game.Title} could not be extracted, is it corrupted? Please try again");
             }
 
             if (!extractionResult.Canceled)
@@ -2324,8 +2369,21 @@ namespace LANCommander.SDK.Services
             return gameArchives;
         }
 
+        /// <summary>
+        /// Whether <paramref name="action"/> belongs to a Tool rather than to the game or one of its
+        /// addons. Tool actions run only the tool's own Before Start / After Stop scripts.
+        /// </summary>
+        public static bool TryGetActionOwnerTool(Models.Manifest.Action action, out Guid toolId)
+        {
+            toolId = action?.ToolId ?? Guid.Empty;
+
+            return toolId != Guid.Empty;
+        }
+
         public async Task RunAsync(string installDirectory, Guid gameId, Models.Manifest.Action action, DateTime? lastRun, string args = "")
         {
+            var isToolAction = TryGetActionOwnerTool(action, out var toolId);
+
             var screen = DisplayHelper.GetScreen();
 
             using (var context = processExecutionContextFactory.Create())
@@ -2346,10 +2404,18 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    if (connectionClient.IsConnected() && !String.IsNullOrWhiteSpace(settingsProvider.CurrentValue.IPXRelay.Host))
+                    if (connectionClient.IsConnected() && settingsProvider.CurrentValue.IPXRelay.Enabled)
                     {
-                        context.AddVariable("IPXRelayHost", settingsProvider.CurrentValue.IPXRelay.Host);
-                        context.AddVariable("IPXRelayPort", settingsProvider.CurrentValue.IPXRelay.Port.ToString());
+                        var relayHost = await IPXRelayHelper.ResolveHostAsync(
+                            settingsProvider.CurrentValue.IPXRelay.Host,
+                            connectionClient.GetServerAddress(),
+                            logger);
+
+                        if (!String.IsNullOrWhiteSpace(relayHost))
+                        {
+                            context.AddVariable("IPXRelayHost", relayHost);
+                            context.AddVariable("IPXRelayPort", settingsProvider.CurrentValue.IPXRelay.Port.ToString());
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -2357,7 +2423,7 @@ namespace LANCommander.SDK.Services
                     logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
-                if (action.Variables != null)
+                if (action?.Variables != null)
                 {
                     foreach (var variable in action.Variables)
                         context.AddVariable(variable.Key, variable.Value);
@@ -2365,7 +2431,7 @@ namespace LANCommander.SDK.Services
 
                 // When an action references {ServerHost} but the game server didn't specify a host,
                 // fall back to the host of the LANCommander server the launcher is connected to.
-                if (action.Variables == null
+                if (action?.Variables == null
                     || !action.Variables.TryGetValue("ServerHost", out var serverHost)
                     || String.IsNullOrWhiteSpace(serverHost))
                 {
@@ -2380,45 +2446,46 @@ namespace LANCommander.SDK.Services
 
                 foreach (var manifest in manifests)
                 {
-                    //manifest.Actions
-                    var currentGamePlayerAlias = await GetPlayerAliasAsync(installDirectory, manifest.Id);
-                    var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
-
-                    #region Check Game's Player Name
-                    if (connectionClient.IsConnected())
+                    if (!isToolAction)
                     {
-                        var alias = await profileClient.GetAliasAsync();
+                        var currentGamePlayerAlias = await GetPlayerAliasAsync(installDirectory, manifest.Id);
+                        var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
-                        if (currentGamePlayerAlias != alias)
+                        #region Check Game's Player Name
+                        if (connectionClient.IsConnected())
                         {
-                            await scriptClient.Game_RunNameChangeScriptAsync(installDirectory, gameId, alias);
+                            var alias = await profileClient.GetAliasAsync();
 
-                            if (manifest.Redistributables != null)
+                            if (currentGamePlayerAlias != alias)
                             {
-                                foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                await scriptClient.Game_RunNameChangeScriptAsync(installDirectory, manifest.Id, alias);
+
+                                if (manifest.Redistributables != null)
                                 {
-                                    await scriptClient.Redistributable_RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                    {
+                                        await scriptClient.Redistributable_RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                    }
                                 }
                             }
                         }
-                    }
-                    #endregion
+                        #endregion
 
-                    #region Check Key Allocation
-                    if (connectionClient.IsConnected())
-                    {
-                        // The locally tracked key is authoritative: only allocate and apply a
-                        // key when this install doesn't already have one tracked. This avoids
-                        // requesting a fresh allocation on every launch.
-                        if (string.IsNullOrWhiteSpace(currentGameKey))
+                        #region Check Key Allocation
+                        if (connectionClient.IsConnected() && HasKeyChangeScript(installDirectory, manifest.Id))
                         {
-                            var newKey = await GetOrAllocateKeyAsync(installDirectory, manifest.Id);
+                            if (string.IsNullOrWhiteSpace(currentGameKey))
+                            {
+                                var newKey = await GetOrAllocateKeyAsync(installDirectory, manifest.Id);
 
-                            if (!string.IsNullOrWhiteSpace(newKey))
-                                await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                                if (!string.IsNullOrWhiteSpace(newKey))
+                                    await scriptClient.Game_RunKeyChangeScriptAsync(installDirectory, manifest.Id, newKey);
+                                else
+                                    logger?.LogWarning("Game {GameId} has a key change script but the server did not allocate a key", manifest.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
 
                     #region Download Latest Saves
                     if (connectionClient.IsConnected())
@@ -2470,18 +2537,24 @@ namespace LANCommander.SDK.Services
                     }
                     #endregion
 
-                    #region Run Before Start Script
-                    await scriptClient.Game_RunBeforeStartScriptAsync(installDirectory, manifest.Id);
-                    
-                    if (manifest.Redistributables != null)
+                    if (!isToolAction)
                     {
-                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        #region Run Before Start Script
+                        await scriptClient.Game_RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+
+                        if (manifest.Redistributables != null)
                         {
-                            await scriptClient.Redistributable_RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                            {
+                                await scriptClient.Redistributable_RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
                 }
+
+                if (isToolAction)
+                    await scriptClient.Tool_RunBeforeStartScriptAsync(installDirectory, toolId);
                 #endregion
 
                 await pluginEventBus.PublishAsync(new GameBeforeLaunchEvent(gameId, installDirectory, action?.Name));
@@ -2499,7 +2572,7 @@ namespace LANCommander.SDK.Services
                     bool runWrapperHandled = false;
 
                     var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-                    var resolvedAction = action ?? gameManifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+                    var resolvedAction = action ?? gameManifest?.Actions?.FirstOrDefault(a => a.IsPrimaryAction);
 
                     if (resolvedAction != null && gameManifest.Redistributables != null)
                     {
@@ -2561,19 +2634,26 @@ namespace LANCommander.SDK.Services
                     throw;
                 }
 
-                foreach (var manifest in manifests)
+                if (isToolAction)
                 {
-                    #region Run After Stop Script
-                    await scriptClient.Game_RunAfterStopScriptAsync(installDirectory, gameId);
-                    
-                    if (manifest.Redistributables != null)
+                    await scriptClient.Tool_RunAfterStopScriptAsync(installDirectory, toolId);
+                }
+                else
+                {
+                    foreach (var manifest in manifests)
                     {
-                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        #region Run After Stop Script
+                        await scriptClient.Game_RunAfterStopScriptAsync(installDirectory, manifest.Id);
+
+                        if (manifest.Redistributables != null)
                         {
-                            await scriptClient.Redistributable_RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                            {
+                                await scriptClient.Redistributable_RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
+                            }
                         }
+                        #endregion
                     }
-                    #endregion
                 }
 
                 await pluginEventBus.PublishAsync(new GameAfterExitEvent(gameId, installDirectory));
@@ -2964,6 +3044,42 @@ namespace LANCommander.SDK.Services
                 .Select(x => (x.GameId ?? gameId, x.FullName)).ToArray();
 
             await DownloadFilesAsync(installDirectory, downloadEntries);
+        }
+
+        /// <summary>
+        /// Whether anything other than <paramref name="gameId"/> is installed into this directory --
+        /// a base game, another addon, or a tool. Each keeps its metadata in its own folder under
+        /// <c>.lancommander</c>, so their presence there is what makes the directory shared.
+        /// </summary>
+        internal static bool IsInstallDirectoryShared(string installDirectory, Guid gameId)
+        {
+            if (string.IsNullOrWhiteSpace(installDirectory))
+                return false;
+
+            var metadataRoot = Path.Combine(installDirectory, ".lancommander");
+
+            if (!Directory.Exists(metadataRoot))
+                return false;
+
+            try
+            {
+                foreach (var directory in Directory.EnumerateDirectories(metadataRoot))
+                {
+                    if (!Guid.TryParse(Path.GetFileName(directory), out var id) || id == gameId)
+                        continue;
+
+                    if (ManifestHelper.Exists(installDirectory, id))
+                        return true;
+                }
+            }
+            catch
+            {
+                // If the directory cannot be inspected, assume it is shared: leaving files behind is
+                // recoverable, deleting someone else's game is not.
+                return true;
+            }
+
+            return false;
         }
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)

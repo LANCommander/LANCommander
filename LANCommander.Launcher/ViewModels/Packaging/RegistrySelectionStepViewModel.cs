@@ -31,6 +31,15 @@ public partial class RegistrySelectionStepViewModel : PackagingStepViewModel
 
     private CheckableTreeNode? _root;
 
+    public override void Reset()
+    {
+        _root = null;
+
+        Roots.Clear();
+
+        Summary = string.Empty;
+    }
+
     public override Task OnEnterAsync()
     {
         _root = CheckableTreeNode.BuildRegistryTree(Package.RegistryChanges);

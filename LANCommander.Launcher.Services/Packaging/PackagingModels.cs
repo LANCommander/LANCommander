@@ -40,6 +40,9 @@ public class PackagingCounters
     /// </summary>
     public int UninstrumentedProcessCount { get; init; }
 
+    /// <summary>The run the process counts describe.</summary>
+    public int RunId { get; init; }
+
     /// <summary>Events dropped because a worker's queue overflowed.</summary>
     public int DroppedEventCount { get; init; }
 
@@ -64,6 +67,12 @@ public enum PackagingSessionState
 public class ProcessLedgerEntry
 {
     public int ProcessId { get; init; }
+
+    /// <summary>
+    /// Which installer run this process belonged to. See
+    /// <see cref="IPackagingSessionService.CurrentRunId"/>.
+    /// </summary>
+    public int RunId { get; init; }
 
     public int ParentProcessId { get; init; }
 

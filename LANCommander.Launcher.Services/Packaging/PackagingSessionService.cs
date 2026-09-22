@@ -32,6 +32,7 @@ public class PackagingSessionService : IPackagingSessionService
     private Guid _sessionId;
     private int _droppedEvents;
     private int _elevationRequested;
+    private int _runId;
     private volatile bool _elevated;
 
     public PackagingSessionService(
@@ -45,6 +46,8 @@ public class PackagingSessionService : IPackagingSessionService
     public bool IsSupported => _workerFactory.IsSupported;
 
     public PackagingSessionState State { get; private set; } = PackagingSessionState.Idle;
+
+    public int CurrentRunId => Volatile.Read(ref _runId);
 
     public event EventHandler<PackagingCounters>? CountersChanged;
     public event EventHandler<string>? Logged;
@@ -71,6 +74,9 @@ public class PackagingSessionService : IPackagingSessionService
             _sessionId = Guid.NewGuid();
             _elevated = false;
 
+            // A new run, not a new session: the change stores keep what earlier installers
+            // produced so a patch installer's output merges with the base install's.
+            Interlocked.Increment(ref _runId);
             Interlocked.Exchange(ref _elevationRequested, 0);
 
             await StartInternalAsync(elevated: false, cancellationToken);
@@ -96,8 +102,10 @@ public class PackagingSessionService : IPackagingSessionService
             // Everything still alive from the un-elevated attempt. This has to be collected
             // before the workers go away, and it deliberately includes processes injection
             // failed on — an installer that self-elevated is exactly the one still running.
+            // Scoped to this run: an earlier installer in the same session is not what is being
+            // restarted and must not be killed.
             var leftovers = _processes.Values
-                .Where(p => !p.HasExited)
+                .Where(p => p.RunId == CurrentRunId && !p.HasExited)
                 .Select(p => p.ProcessId)
                 .ToArray();
 
@@ -323,6 +331,7 @@ public class PackagingSessionService : IPackagingSessionService
             ParentProcessId = discovered.ParentProcessId,
             ImagePath = discovered.ImagePath,
             Architecture = discovered.Architecture,
+            RunId = CurrentRunId,
         });
 
         var name = DescribeProcess(discovered.ProcessId, discovered.ImagePath);
@@ -529,7 +538,8 @@ public class PackagingSessionService : IPackagingSessionService
 
     private PackagingCounters BuildCounters()
     {
-        var processes = _processes.Values.ToList();
+        var runId = CurrentRunId;
+        var processes = _processes.Values.Where(p => p.RunId == runId).ToList();
 
         return new PackagingCounters
         {
@@ -650,6 +660,7 @@ public class PackagingSessionService : IPackagingSessionService
 
         Interlocked.Exchange(ref _droppedEvents, 0);
         Interlocked.Exchange(ref _elevationRequested, 0);
+
 
         _options = null;
         _elevated = false;

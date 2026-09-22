@@ -20,15 +20,21 @@
                        VerticalAlignment="Center" />
         </DockPanel>
 
-        <!-- The disk sweep recovers files written by processes that could not be instrumented
-             in time, which is the main practical mitigation for the injection race. -->
-        <TextBlock Grid.Row="1"
-                   Margin="0,0,0,8"
-                   FontSize="12"
-                   Foreground="#7FBF7F"
-                   TextWrapping="Wrap"
-                   IsVisible="{Binding HasSweptFiles}"
-                   Text="{Binding SweptFileCount, StringFormat='{}Found {0} additional file(s) in the install folder that were not captured while monitoring. They are included by default.'}" />
+        <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,8">
+            <!-- The disk sweep recovers files written by processes that could not be instrumented
+                 in time, which is the main practical mitigation for the injection race. -->
+            <TextBlock FontSize="12"
+                       Foreground="#7FBF7F"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasSweptFiles}"
+                       Text="{Binding SweptFileCount, StringFormat='{}Found {0} additional file(s) in the install folder that were not captured while monitoring. They are included by default.'}" />
+
+            <TextBlock FontSize="12"
+                       Foreground="#7FA8BF"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasPostInstallFiles}"
+                       Text="{Binding PostInstallFileCount, StringFormat='{}{0} file(s) were added or changed after the install finished; they are marked in the tree below.'}" />
+        </StackPanel>
 
         <Border Grid.Row="2"
                 CornerRadius="4"
@@ -42,6 +48,19 @@
                                       IsThreeState="False"
                                       MinWidth="0" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+
+                            <!-- Marks what the Customize step saw appear or change, so a no-CD
+                                 patch is findable among the installer's thousands of files. -->
+                            <Border CornerRadius="3"
+                                    Padding="5,1"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                                    IsVisible="{Binding HasAnnotation}">
+                                <TextBlock Text="{Binding Annotation}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="#7FA8BF" />
+                            </Border>
                         </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>

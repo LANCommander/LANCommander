@@ -36,19 +36,52 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
 
     partial void OnSweptFileCountChanged(int value) => OnPropertyChanged(nameof(HasSweptFiles));
 
+    /// <summary>
+    /// Files the post-install step found to have been added or changed after the base install.
+    /// </summary>
+    [ObservableProperty]
+    private int _postInstallFileCount;
+
+    public bool HasPostInstallFiles => PostInstallFileCount > 0;
+
+    partial void OnPostInstallFileCountChanged(int value) =>
+        OnPropertyChanged(nameof(HasPostInstallFiles));
+
+    /// <summary>Post-install paths the tree was built from, so entering twice is not a rebuild.</summary>
+    private int _builtWithPostInstallCount = -1;
+
     private CheckableTreeNode? _root;
 
     /// <summary>Install directory the current tree was built from.</summary>
     private string? _builtFor;
 
+    public override void Reset()
+    {
+        _root = null;
+        _builtFor = null;
+        _builtWithPostInstallCount = -1;
+
+        Roots.Clear();
+
+        SweptFileCount = 0;
+        PostInstallFileCount = 0;
+        Summary = string.Empty;
+    }
+
     public override Task OnEnterAsync()
     {
         // Rebuilding on every entry would silently discard the user's selections whenever they
         // stepped back and forward again.
-        if (_root == null || !string.Equals(_builtFor, Package.InstallDirectory, StringComparison.OrdinalIgnoreCase))
+        if (_root == null ||
+            !string.Equals(_builtFor, Package.InstallDirectory, StringComparison.OrdinalIgnoreCase) ||
+            _builtWithPostInstallCount != Package.PostInstallFiles.Count)
+        {
             Rebuild();
+        }
         else
+        {
             UpdateSummary();
+        }
 
         return Task.CompletedTask;
     }
@@ -66,9 +99,12 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
     {
         var installDirectory = Package.InstallDirectory;
 
+        // Only what is still there. A capture records what an installer wrote, but a patch or
+        // the user may have deleted some of it since, and an entry for a file that no longer
+        // exists is checked by default and then silently contributes nothing to the archive.
         var captured = Package.FileChanges
             .Select(f => f.Path)
-            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Where(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var swept = SweepInstallDirectory(installDirectory, captured);
@@ -82,8 +118,15 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        // Marked rather than filtered: the user wants to see their no-CD patch sitting in the
+        // tree alongside everything the installer put there, not in a list of its own.
+        var annotations = BuildPostInstallAnnotations();
+
+        PostInstallFileCount = annotations.Count;
+
         _root = CheckableTreeNode.BuildFileTree(
-            allPaths.Select(p => (p, Path.GetRelativePath(installDirectory, p))));
+            allPaths.Select(p => (p, Path.GetRelativePath(installDirectory, p))),
+            annotations);
 
         _root.OnTreeSelectionChanged = UpdateSummary;
 
@@ -93,8 +136,33 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
             Roots.Add(child);
 
         _builtFor = installDirectory;
+        _builtWithPostInstallCount = Package.PostInstallFiles.Count;
 
         UpdateSummary();
+    }
+
+    /// <summary>
+    /// Badges for the files the post-install step saw appear or change.
+    /// </summary>
+    private Dictionary<string, string> BuildPostInstallAnnotations()
+    {
+        var annotations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (Package.PostInstallFiles.Count == 0)
+            return annotations;
+
+        var installed = Package.FileChanges
+            .Select(f => f.Path)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in Package.PostInstallFiles)
+        {
+            if (!string.IsNullOrWhiteSpace(path))
+                annotations[path] = installed.Contains(path) ? "changed" : "added";
+        }
+
+        return annotations;
     }
 
     private static List<string> SweepInstallDirectory(string installDirectory, HashSet<string> captured)

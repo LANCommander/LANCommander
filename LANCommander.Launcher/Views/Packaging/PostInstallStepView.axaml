@@ -1,0 +1,189 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:packaging="using:LANCommander.Launcher.Views.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.PostInstallStepView"
+             x:DataType="vm:PostInstallStepViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.badge">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.badge > TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="Patch, tweak, and mod the install"
+                       FontSize="15"
+                       FontWeight="SemiBold" />
+
+            <TextBlock FontSize="12"
+                       Opacity="0.7"
+                       TextWrapping="Wrap"
+                       Text="Apply no-CD patches, widescreen fixes and config changes now. Edits you make by hand are found by rescanning the folder; patches that come as their own installer should be run below, so their registry changes are captured too." />
+
+            <TextBlock Text="{Binding InstallDirectory}"
+                       FontSize="11"
+                       Opacity="0.55"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Making changes by hand -->
+        <Border Grid.Row="1"
+                Margin="0,0,0,10"
+                Padding="12"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <Grid RowDefinitions="Auto,Auto">
+                <DockPanel Grid.Row="0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Open install folder"
+                                Command="{Binding BrowseInstallFolderCommand}"
+                                Padding="12,5" />
+
+                        <Button Content="Reset baseline"
+                                Command="{Binding ResetBaselineCommand}"
+                                IsEnabled="{Binding !IsScanning}"
+                                ToolTip.Tip="Treat the folder as it is now as the starting point, and forget the changes listed below."
+                                Padding="12,5" />
+
+                        <Button Content="Rescan for changes"
+                                Classes="Primary"
+                                Command="{Binding RescanCommand}"
+                                IsEnabled="{Binding !IsScanning}"
+                                Padding="14,5" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ScanSummary}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </DockPanel>
+
+                <UniformGrid Grid.Row="1"
+                             Columns="4"
+                             MinWidth="320"
+                             Margin="0,10,0,0"
+                             HorizontalAlignment="Left"
+                             IsVisible="{Binding HasScanned}">
+                    <StackPanel>
+                        <TextBlock Text="Baseline" FontSize="11" Opacity="0.7" />
+                        <TextBlock Text="{Binding BaselineFileCount}" FontSize="18" FontWeight="Bold" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Added" FontSize="11" Opacity="0.7" />
+                        <TextBlock Text="{Binding AddedCount}" FontSize="18" FontWeight="Bold" Foreground="#7FBF7F" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Changed" FontSize="11" Opacity="0.7" />
+                        <TextBlock Text="{Binding ModifiedCount}" FontSize="18" FontWeight="Bold" Foreground="#7FA8BF" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Removed" FontSize="11" Opacity="0.7" />
+                        <TextBlock Text="{Binding RemovedCount}" FontSize="18" FontWeight="Bold" Foreground="#BF7F7F" />
+                    </StackPanel>
+                </UniformGrid>
+            </Grid>
+        </Border>
+
+        <!-- Running another installer -->
+        <Border Grid.Row="2"
+                Margin="0,0,0,10"
+                Padding="12"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <Grid RowDefinitions="Auto,Auto,Auto">
+                <DockPanel Grid.Row="0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Run an installer..."
+                                Click="OnRunInstallerClick"
+                                IsVisible="{Binding !IsMonitoring}"
+                                Padding="12,5" />
+
+                        <Button Content="Stop monitoring"
+                                Classes="Primary"
+                                Command="{Binding StopCommand}"
+                                IsVisible="{Binding IsMonitoring}"
+                                Padding="14,5" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Status}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </DockPanel>
+
+                <ItemsControl Grid.Row="1"
+                              Margin="0,8,0,0"
+                              ItemsSource="{Binding AdditionalInstallers}"
+                              IsVisible="{Binding HasAdditionalInstallers}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}"
+                                       FontSize="11"
+                                       Opacity="0.7"
+                                       TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Only once something has been run: an empty log panel on a step most people
+                     will walk straight past is just noise. -->
+                <packaging:CapturePanelView Grid.Row="2"
+                                            Height="220"
+                                            Margin="0,10,0,0"
+                                            IsVisible="{Binding HasLog}" />
+            </Grid>
+        </Border>
+
+        <!-- What changed -->
+        <Border Grid.Row="3"
+                CornerRadius="4"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <Grid RowDefinitions="*,Auto">
+                <ListBox Grid.Row="0"
+                         ItemsSource="{Binding Changes}"
+                         Padding="6">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DirectoryChangeItem">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Classes="badge" Background="#1F3A1F" IsVisible="{Binding IsAdded}">
+                                    <TextBlock Text="added" Foreground="#7FBF7F" />
+                                </Border>
+                                <Border Classes="badge" Background="#1F2E3A" IsVisible="{Binding IsModified}">
+                                    <TextBlock Text="changed" Foreground="#7FA8BF" />
+                                </Border>
+                                <Border Classes="badge" Background="#3A1F1F" IsVisible="{Binding IsRemoved}">
+                                    <TextBlock Text="removed" Foreground="#BF7F7F" />
+                                </Border>
+
+                                <TextBlock Text="{Binding RelativePath}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding Path}" />
+
+                                <TextBlock Text="{Binding Size}"
+                                           FontSize="11"
+                                           Opacity="0.6"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Grid.Row="1"
+                           Margin="8,6"
+                           FontSize="11"
+                           Foreground="#FFA500"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsChangeListTruncated}"
+                           Text="Only the first 2,000 changes are listed. The counts above are complete, and every changed file is still included in the package." />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

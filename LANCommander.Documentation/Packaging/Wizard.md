@@ -21,13 +21,33 @@ Where the game ended up. This is detected from the common ancestor of every file
 
 Every path in the package is stored relative to this folder, so it must be the game's root.
 
-## 3. Files
+## 3. Customize
+
+Where the work that happens *after* the installer finishes gets recorded: no-CD patches, widescreen fixes, edited configs, mods.
+
+Entering the step takes a baseline of the install folder. Everything from that point on is measured against it.
+
+**Changes you make by hand.** Use **Open install folder**, apply your patches, then press **Rescan for changes**. The scan lists what was added, changed and removed, with the size difference for anything modified — which is usually how you confirm a patch actually landed. Rescan as often as you like; it reads no file contents, only one walk of the directory tree.
+
+**Patches that come as their own installer.** Use **Run an installer...** instead. It runs under the same monitoring the base install used, so registry writes and anything it puts outside the install folder are captured too, and merged into one change set. The folder is rescanned automatically when it finishes. Run as many as you need — each one is listed as you go.
+
+**Reset baseline** treats the folder as it stands now as the new starting point, for when you have already reviewed one round of patching and want the next round on its own.
+
+Files this step finds are marked `added` or `changed` in the next step, so your patches are findable among the thousands of files the installer produced.
+
+Changes are detected from each file's size and last-write time. A patcher that rewrites a file to exactly the same length *and* restores its original timestamp will not show up in a rescan — run that patcher through **Run an installer...** instead, which sees the writes regardless.
+
+Games that need no patching can pass straight through.
+
+## 4. Files
 
 A tri-state tree of everything that will go into the archive. Checking a folder checks everything under it.
 
 This step also scans the install folder and adds anything that monitoring did not see, pre-checked, with a note saying how many were found. That is the main safety net for installers whose child processes could not be instrumented in time.
 
-## 4. Registry
+Files that changed after the base install finished carry a badge: `added` for something new to the folder, `changed` for a file the installer wrote that has since been rewritten. Captured files that no longer exist — deleted by a patch, or by you — are left out entirely rather than sitting checked and contributing nothing.
+
+## 5. Registry
 
 The captured registry keys and values, as a tree. `+` marks a key that was created, `~` a value that was written.
 
@@ -35,17 +55,17 @@ Values written by 32-bit processes are labelled `(32-bit)`. These are physically
 
 Games that touch no registry can pass straight through.
 
-## 5. Details
+## 6. Details
 
 Title, version, release date, description and notes.
 
 **Look up...** searches the server's configured metadata providers and fills in the description, release date and the richer collections — genres, tags, developers, publishers, platforms, multiplayer modes — that would be tedious to enter by hand.
 
-## 6. Launch Action
+## 7. Launch Action
 
 Which executable the launcher runs to start the game. Installers, uninstallers and redistributables are filtered out of the list by default; tick **Show every executable** if the one you want is hidden.
 
-## 7. Finish
+## 8. Finish
 
 Two independent choices:
 

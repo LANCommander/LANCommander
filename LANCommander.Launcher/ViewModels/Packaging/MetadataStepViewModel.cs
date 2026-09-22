@@ -83,6 +83,25 @@ public partial class MetadataStepViewModel : PackagingStepViewModel
     partial void OnGameTitleChanged(string value) =>
         CanGoNext = !string.IsNullOrWhiteSpace(value);
 
+    public override void Reset()
+    {
+        GameTitle = string.Empty;
+        SortTitle = string.Empty;
+        Version = "1.0";
+        ReleasedOn = null;
+        Singleplayer = false;
+        Description = string.Empty;
+        Notes = string.Empty;
+
+        IsSearchOpen = false;
+        IsSearching = false;
+        SearchQuery = string.Empty;
+        SearchError = null;
+        SelectedResult = null;
+
+        SearchResults.Clear();
+    }
+
     public override Task OnEnterAsync()
     {
         if (string.IsNullOrWhiteSpace(GameTitle))

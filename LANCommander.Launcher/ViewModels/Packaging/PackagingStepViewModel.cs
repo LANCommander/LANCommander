@@ -55,6 +55,13 @@ public abstract partial class PackagingStepViewModel : ViewModelBase
     /// <summary>Label for the forward button, so the last step can say "Finish".</summary>
     public virtual string NextLabel => "Next";
 
+    /// <summary>
+    /// Clears everything the step holds about the package that was just abandoned.
+    /// </summary>
+    public virtual void Reset()
+    {
+    }
+
     /// <summary>Called when the step becomes visible.</summary>
     public virtual Task OnEnterAsync() => Task.CompletedTask;
 

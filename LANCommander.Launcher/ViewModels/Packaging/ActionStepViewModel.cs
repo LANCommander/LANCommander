@@ -60,6 +60,19 @@ public partial class ActionStepViewModel : PackagingStepViewModel
 
     partial void OnShowAllExecutablesChanged(bool value) => PopulateExecutables();
 
+    public override void Reset()
+    {
+        _allExecutables = [];
+
+        Executables.Clear();
+
+        SelectedExecutable = null;
+        ActionName = "Play";
+        Arguments = string.Empty;
+        ShowAllExecutables = false;
+        Summary = string.Empty;
+    }
+
     public override Task OnEnterAsync()
     {
         _allExecutables = Package.SelectedFiles

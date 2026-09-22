@@ -16,6 +16,12 @@ public interface IPackagingSessionService : IAsyncDisposable
     PackagingSessionState State { get; }
 
     /// <summary>
+    /// Identifies the capture currently in progress, incremented each time an installer is
+    /// launched.
+    /// </summary>
+    int CurrentRunId { get; }
+
+    /// <summary>
     /// Raised at most a few times a second with counters only. Subscribers must marshal to the
     /// UI thread themselves; this service has no UI dependency.
     /// </summary>

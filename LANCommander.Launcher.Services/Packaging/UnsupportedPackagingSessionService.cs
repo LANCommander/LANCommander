@@ -19,6 +19,8 @@ public class UnsupportedPackagingSessionService : IPackagingSessionService
 
     public PackagingSessionState State => PackagingSessionState.Idle;
 
+    public int CurrentRunId => 0;
+
 #pragma warning disable CS0067 // Never raised; packaging cannot run on this host.
     public event EventHandler<PackagingCounters>? CountersChanged;
     public event EventHandler<string>? Logged;

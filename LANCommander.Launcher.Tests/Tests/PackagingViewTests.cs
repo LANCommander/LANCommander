@@ -30,6 +30,8 @@ public class PackagingViewTests
             data.Add(typeof(PackagingWizardView));
             data.Add(typeof(MonitorStepView));
             data.Add(typeof(InstallDirectoryStepView));
+            data.Add(typeof(CapturePanelView));
+            data.Add(typeof(PostInstallStepView));
             data.Add(typeof(FileSelectionStepView));
             data.Add(typeof(RegistrySelectionStepView));
             data.Add(typeof(MetadataStepView));

@@ -49,8 +49,25 @@ public class LcxBuilderTests : IDisposable
         var names = innerArchive.Entries.Select(e => e.FullName).ToList();
 
         names.ShouldContain("game.exe");
-        names.ShouldContain(n => n.EndsWith("config.ini"));
+        names.ShouldContain("Data/config.ini");
         names.ShouldNotContain(n => n.Contains(':'));
+    }
+
+    [Fact]
+    public async Task ArchiveEntriesUseForwardSlashes()
+    {
+        var package = BuildPackage(
+            ("game.exe", "binary"),
+            (@"Data\config.ini", "settings"),
+            (@"Data\Sounds\music.ogg", "audio"));
+
+        await LCXBuilder.BuildAsync(package);
+
+        var names = await ReadArchiveEntryNamesAsync(package.OutputPath);
+
+        names.ShouldNotContain(n => n.Contains('\\'));
+        names.ShouldContain("Data/config.ini");
+        names.ShouldContain("Data/Sounds/music.ogg");
     }
 
     [Fact]
@@ -145,6 +162,23 @@ public class LcxBuilderTests : IDisposable
         using var reader = new StreamReader(stream);
 
         return ManifestHelper.Deserialize<SDK.Models.Manifest.Game>(await reader.ReadToEndAsync());
+    }
+
+    private static async Task<List<string>> ReadArchiveEntryNamesAsync(string packagePath)
+    {
+        using var archive = ZipFile.OpenRead(packagePath);
+
+        var innerEntry = archive.Entries.First(e => e.FullName.StartsWith("Archives/"));
+
+        await using var innerStream = innerEntry.Open();
+        await using var buffer = new MemoryStream();
+
+        await innerStream.CopyToAsync(buffer);
+        buffer.Position = 0;
+
+        using var innerArchive = new ZipArchive(buffer, ZipArchiveMode.Read);
+
+        return [.. innerArchive.Entries.Select(e => e.FullName)];
     }
 
     private PackageDefinition BuildPackage(params (string RelativePath, string Contents)[] files)

@@ -61,7 +61,15 @@ public static class LCXBuilder
                     if (!File.Exists(filePath))
                         continue;
 
-                    var relativePath = Path.GetRelativePath(package.InstallDirectory, filePath);
+                    // Entry names are forward slashed per the ZIP spec (APPNOTE 4.4.17.1);
+                    // GetRelativePath hands back backslashes on Windows. Windows extractors
+                    // tolerate those, but on Linux and macOS the whole tree arrives as single
+                    // files with backslashes in their names instead of as directories.
+                    var relativePath = Path
+                        .GetRelativePath(package.InstallDirectory, filePath)
+                        .Replace(Path.DirectorySeparatorChar, '/')
+                        .Replace(Path.AltDirectorySeparatorChar, '/');
+
                     var entry = innerArchive.CreateEntry(relativePath, package.CompressionLevel);
 
                     await using var entryStream = entry.Open();

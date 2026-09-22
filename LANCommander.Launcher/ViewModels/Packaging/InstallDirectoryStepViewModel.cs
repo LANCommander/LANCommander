@@ -26,6 +26,12 @@ public partial class InstallDirectoryStepViewModel : PackagingStepViewModel
     partial void OnInstallDirectoryChanged(string value) =>
         CanGoNext = !string.IsNullOrWhiteSpace(value);
 
+    public override void Reset()
+    {
+        InstallDirectory = string.Empty;
+        DetectionSummary = string.Empty;
+    }
+
     public override Task OnEnterAsync()
     {
         if (string.IsNullOrWhiteSpace(InstallDirectory))

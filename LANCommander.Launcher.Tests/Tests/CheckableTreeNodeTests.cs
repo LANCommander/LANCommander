@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using LANCommander.Launcher.ViewModels.Components;
 using Xunit;
@@ -16,6 +18,35 @@ public class CheckableTreeNodeTests
             (@"C:\Games\Example\Data\a.dat", @"Data\a.dat"),
             (@"C:\Games\Example\Data\b.dat", @"Data\b.dat"),
         ]);
+
+    [Fact]
+    public void AnnotatesOnlyTheLeavesItWasGiven()
+    {
+        // How the Customize step's findings reach the file tree: a no-CD patch has to be
+        // findable among the thousands of files the installer produced.
+        var root = CheckableTreeNode.BuildFileTree(
+            [
+                (@"C:\Games\Example\game.exe", @"game.exe"),
+                (@"C:\Games\Example\ddraw.dll", @"ddraw.dll"),
+                (@"C:\Games\Example\Data\a.dat", @"Data\a.dat"),
+            ],
+            // Keyed case-insensitively: the capture and the folder scan do not always agree on
+            // the casing of a path the OS considers the same file.
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [@"c:\games\example\game.exe"] = "changed",
+                [@"C:\Games\Example\ddraw.dll"] = "added",
+            });
+
+        var byName = root.Children.ToDictionary(c => c.Name);
+
+        Assert.Equal("changed", byName["game.exe"].Annotation);
+        Assert.Equal("added", byName["ddraw.dll"].Annotation);
+
+        // Directories are not leaves, so they carry no badge even when their contents changed.
+        Assert.False(byName["Data"].HasAnnotation);
+        Assert.False(byName["Data"].Children[0].HasAnnotation);
+    }
 
     [Fact]
     public void UncheckingALeafDeselectsIt()

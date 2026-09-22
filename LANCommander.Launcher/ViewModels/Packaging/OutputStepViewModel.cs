@@ -91,6 +91,23 @@ public partial class OutputStepViewModel : PackagingStepViewModel
 
     partial void OnIsBuildingChanged(bool value) => OnPropertyChanged(nameof(CanBuild));
 
+    public override void Reset()
+    {
+        SaveToDisk = true;
+        OutputPath = string.Empty;
+        PublishToServer = false;
+        PatchGameSpy = false;
+        CompressionLevel = CompressionLevel.Optimal;
+
+        IsComplete = false;
+        IsBuilding = false;
+        Status = string.Empty;
+        Progress = 0;
+        IsProgressIndeterminate = false;
+        ErrorMessage = null;
+        PublishedGameId = Guid.Empty;
+    }
+
     public override Task OnEnterAsync()
     {
         if (string.IsNullOrWhiteSpace(OutputPath))

@@ -10,7 +10,7 @@ Packaging turns a game's own installer into an `.LCX` package your LANCommander 
 Instead of manually creating archives, writing install scripts and filling out metadata by hand, the whole thing is one guided workflow — and because it runs inside the launcher, it uses the session you are already signed in with.
 
 - [Getting Started](/Packaging/Getting%20Started) - requirements and how monitoring works
-- [Wizard Walkthrough](/Packaging/Wizard) - step-by-step guide through the seven stages
+- [Wizard Walkthrough](/Packaging/Wizard) - step-by-step guide through the eight stages
 - [LCX Package Format](/Packaging/LCX%20Format) - internal structure of `.LCX` files
 
 ## Requirements

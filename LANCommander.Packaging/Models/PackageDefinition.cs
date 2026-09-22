@@ -25,6 +25,15 @@ public class PackageDefinition
     /// <summary>Absolute paths of the files the user chose to include.</summary>
     public List<string> SelectedFiles { get; set; } = [];
 
+    /// <summary>
+    /// Absolute paths of files that appeared or changed after the base install finished —
+    /// patches, mods, edited configs.
+    /// </summary>
+    public List<string> PostInstallFiles { get; set; } = [];
+
+    /// <summary>Installers run after the base install, in the order they were run.</summary>
+    public List<string> AdditionalInstallers { get; set; } = [];
+
     public List<RegistryChange> SelectedRegistryEntries { get; set; } = [];
 
     /// <summary>Manifest metadata, populated by the metadata step.</summary>

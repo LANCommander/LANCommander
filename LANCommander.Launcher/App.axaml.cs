@@ -395,6 +395,7 @@ public partial class App : Application
             registry.Register<PackagingWizardViewModel>(() => new PackagingWizardView());
             registry.Register<MonitorStepViewModel>(() => new MonitorStepView());
             registry.Register<InstallDirectoryStepViewModel>(() => new InstallDirectoryStepView());
+            registry.Register<PostInstallStepViewModel>(() => new PostInstallStepView());
             registry.Register<FileSelectionStepViewModel>(() => new FileSelectionStepView());
             registry.Register<RegistrySelectionStepViewModel>(() => new RegistrySelectionStepView());
             registry.Register<MetadataStepViewModel>(() => new MetadataStepView());

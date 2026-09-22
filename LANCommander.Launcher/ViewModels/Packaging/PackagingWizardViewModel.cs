@@ -38,6 +38,7 @@ public partial class PackagingWizardViewModel : ViewModelBase
         [
             new MonitorStepViewModel(this, serviceProvider),
             new InstallDirectoryStepViewModel(this),
+            new PostInstallStepViewModel(this, serviceProvider),
             new FileSelectionStepViewModel(this),
             new RegistrySelectionStepViewModel(this),
             new MetadataStepViewModel(this, serviceProvider),
@@ -120,7 +121,11 @@ public partial class PackagingWizardViewModel : ViewModelBase
         ErrorMessage = null;
 
         foreach (var step in Steps)
+        {
+            step.Reset();
+
             step.CanGoNext = true;
+        }
 
         CurrentStep = Steps[0];
 

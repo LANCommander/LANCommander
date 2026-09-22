@@ -34,6 +34,10 @@ public class CheckableTreeNode : INotifyPropertyChanged
     /// <summary>"+" for a created key, "~" for an updated value.</summary>
     public string? Indicator { get; set; }
 
+    public string? Annotation { get; set; }
+
+    public bool HasAnnotation => !string.IsNullOrEmpty(Annotation);
+
     public bool IsCreate => Indicator == "+";
 
     public bool IsUpdate => Indicator == "~";
@@ -168,7 +172,13 @@ public class CheckableTreeNode : INotifyPropertyChanged
     /// <summary>
     /// Builds a directory tree from absolute paths and their paths relative to the install root.
     /// </summary>
-    public static CheckableTreeNode BuildFileTree(IEnumerable<(string FullPath, string RelativePath)> files)
+    /// <param name="annotations">
+    /// Optional badge per absolute path, used to mark the files a post-install patch touched so
+    /// the user can see their patching in among the thousands of files the installer produced.
+    /// </param>
+    public static CheckableTreeNode BuildFileTree(
+        IEnumerable<(string FullPath, string RelativePath)> files,
+        IReadOnlyDictionary<string, string>? annotations = null)
     {
         var root = new CheckableTreeNode { Name = "Root", IsExpanded = true };
 
@@ -194,11 +204,17 @@ public class CheckableTreeNode : INotifyPropertyChanged
                     continue;
                 }
 
+                var isLeaf = i == parts.Length - 1;
+
                 var node = new CheckableTreeNode
                 {
                     Name = part,
                     Parent = current,
-                    FullPath = i == parts.Length - 1 ? fullPath : string.Empty,
+                    FullPath = isLeaf ? fullPath : string.Empty,
+                    Annotation = isLeaf && annotations != null &&
+                                 annotations.TryGetValue(fullPath, out var annotation)
+                        ? annotation
+                        : null,
                     // Deep trees are unreadable fully expanded; the first couple of levels are
                     // enough to orient the user.
                     IsExpanded = i < 2,

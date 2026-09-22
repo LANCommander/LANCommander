@@ -8,7 +8,10 @@ module.exports = {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: 'ts-loader',
+                use: {
+                    loader: 'ts-loader',
+                    options: { transpileOnly: true },
+                },
                 exclude: /node_modules/,
             },
             {
@@ -66,5 +69,11 @@ module.exports = {
         }),
     ],
     mode: 'production', // Use 'production' for minified output
-    devtool: 'source-map'
+    devtool: 'source-map',
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename],
+        },
+    },
 };

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using YamlDotNet.Serialization;
 
 namespace LANCommander.SchemaGenerator;
 
@@ -71,7 +72,7 @@ public sealed class ManifestSchemaBuilder
         var properties = new JsonObject();
 
         foreach (var property in GetSerializableProperties(type))
-            properties[property.Name] = BuildPropertySchema(property);
+            properties[GetYamlName(property)] = BuildPropertySchema(property);
 
         var def = new JsonObject
         {
@@ -90,7 +91,18 @@ public sealed class ManifestSchemaBuilder
         type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite)
             .Where(p => p.GetCustomAttributes().All(a => a.GetType().Name != "YamlIgnoreAttribute"))
-            .OrderBy(p => p.Name, StringComparer.Ordinal);
+            .OrderBy(p => GetYamlName(p), StringComparer.Ordinal);
+
+    /// <summary>
+    /// The YAML key YamlDotNet actually emits for this property: its <c>[YamlMember(Alias = ...)]</c>
+    /// override (e.g. <c>BaseManifest.Schema</c> -&gt; <c>$schema</c>) when present, otherwise the
+    /// property name as-is (the manifest models are already PascalCase, matching the serializer's
+    /// PascalCaseNamingConvention).
+    /// </summary>
+    private static string GetYamlName(PropertyInfo property) =>
+        property.GetCustomAttribute<YamlMemberAttribute>()?.Alias is { Length: > 0 } alias
+            ? alias
+            : property.Name;
 
     private JsonNode BuildPropertySchema(PropertyInfo property)
     {

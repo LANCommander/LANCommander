@@ -47,3 +47,14 @@ The `Scripts/` directory contains PowerShell scripts identified by GUID. The Pac
 ## Importing into LANCommander
 
 `.LCX` packages can be imported directly through the LANCommander server's web interface. The server reads the manifest, extracts the archive and scripts, and creates the corresponding game entry with all metadata, actions, and scripts pre-configured.
+
+## Manifest.yml Schema
+
+`Manifest.yml` doesn't have an explicit field indicating which of the four package kinds it is — the server infers it from the manifest's shape (e.g. a `Title` identifies a Game, a `Name` + `OptionSchema` identifies a Redistributable). Each kind has its own JSON Schema, generated directly from the LANCommander SDK's manifest models and published alongside every release:
+
+- `https://docs.lancommander.app/schemas/<version>/Game.schema.json`
+- `https://docs.lancommander.app/schemas/<version>/Redistributable.schema.json`
+- `https://docs.lancommander.app/schemas/<version>/Server.schema.json`
+- `https://docs.lancommander.app/schemas/<version>/Tool.schema.json`
+
+`<version>` matches a release tag (e.g. `2.1.16`), or use `latest` for the newest stable release. Each schema is fully self-contained (embedded `$defs` for all referenced types, including cross-referenced package kinds), so it can be dropped into an editor or handed to an AI tool to validate or generate a `Manifest.yml` without resolving any external files.

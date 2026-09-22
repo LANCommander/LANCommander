@@ -180,6 +180,64 @@ public class PackagingRestartElevatedTests
         });
     }
 
+    [Fact]
+    public async Task StopsPromptlyAfterAnElevatedRestart()
+    {
+        // The regression: each start replaced the session's token source, but the counter
+        // publisher was only ever created once, so after a restart it was still watching a
+        // token nothing would cancel. StopAsync awaited it and never returned — the wizard sat
+        // for thirty seconds and then reported that the workers had not shut down, when in fact
+        // they had.
+        var (session, _) = Build();
+
+        await session.StartAsync(Options());
+        await session.RestartElevatedAsync();
+
+        await session.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+        session.State.ShouldBe(PackagingSessionState.Stopped);
+    }
+
+    [Fact]
+    public async Task CanRunAnotherInstallerAfterAnElevatedCapture()
+    {
+        // The second half of the same regression. A stop that never finished kept the lifecycle
+        // lock forever, so running a patch installer through the same session afterwards would
+        // block on the lock with nothing to release it.
+        var (session, _) = Build();
+
+        await session.StartAsync(Options());
+        await session.RestartElevatedAsync();
+
+        await session.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+        await session
+            .StartAsync(new PackagingSessionOptions { InstallerPath = @"G:\patch.exe" })
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        session.State.ShouldBe(PackagingSessionState.Monitoring);
+    }
+
+    [Fact]
+    public async Task StopsPublishingCountersOnceStopped()
+    {
+        // The leaked publisher kept ticking after the session had stopped, so a step that had
+        // already handed its capture to the package went on being told about counters.
+        var (session, _) = Build();
+
+        await session.StartAsync(Options());
+        await session.RestartElevatedAsync();
+        await session.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+        var ticks = 0;
+
+        session.CountersChanged += (_, _) => Interlocked.Increment(ref ticks);
+
+        await Task.Delay(TimeSpan.FromSeconds(1));
+
+        Volatile.Read(ref ticks).ShouldBe(0);
+    }
+
     private static FakePackagingWorker ElevatedWorker(FakePackagingWorkerFactory factory) =>
         factory.Created.Last(w => w.Architecture == ProcessArchitecture.X64 && w.IsElevated);
 

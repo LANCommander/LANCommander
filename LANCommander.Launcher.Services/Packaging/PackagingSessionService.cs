@@ -135,6 +135,8 @@ public class PackagingSessionService : IPackagingSessionService
     {
         State = PackagingSessionState.Starting;
 
+        await StopCounterPublisherAsync();
+
         _sessionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _elevated = elevated;
 
@@ -164,7 +166,7 @@ public class PackagingSessionService : IPackagingSessionService
             await TrySendAsync(worker, BuildFilterCommand(), cancellationToken);
         }
 
-        _counterTask ??= Task.Run(() => PublishCountersAsync(_sessionCts.Token));
+        _counterTask = Task.Run(() => PublishCountersAsync(_sessionCts.Token));
 
         var launchTarget = ResolveLaunchWorker(workers);
 
@@ -566,26 +568,7 @@ public class PackagingSessionService : IPackagingSessionService
 
             await TearDownWorkersAsync();
 
-            if (_sessionCts != null)
-            {
-                await _sessionCts.CancelAsync();
-
-                _sessionCts.Dispose();
-                _sessionCts = null;
-            }
-
-            if (_counterTask != null)
-            {
-                try
-                {
-                    await _counterTask;
-                }
-                catch (OperationCanceledException)
-                {
-                }
-
-                _counterTask = null;
-            }
+            await StopCounterPublisherAsync();
 
             State = PackagingSessionState.Stopped;
 
@@ -639,6 +622,39 @@ public class PackagingSessionService : IPackagingSessionService
             {
                 _logger.LogDebug(ex, "Error disposing a packaging worker");
             }
+        }
+    }
+
+    /// <summary>
+    /// Cancels the counter publisher and waits for it to unwind.
+    /// </summary>
+    private async Task StopCounterPublisherAsync()
+    {
+        if (_sessionCts != null)
+        {
+            await _sessionCts.CancelAsync();
+
+            _sessionCts.Dispose();
+            _sessionCts = null;
+        }
+
+        if (_counterTask == null)
+            return;
+
+        try
+        {
+            await _counterTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning("The packaging counter publisher did not stop within 5s; abandoning it");
+        }
+        finally
+        {
+            _counterTask = null;
         }
     }
 

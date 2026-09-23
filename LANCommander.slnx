@@ -43,6 +43,7 @@
   <Project Path="LANCommander.Packager\LANCommander.Packager.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
   <Project Path="LANCommander.SDK\LANCommander.SDK.csproj" />
+  <Project Path="LANCommander.SchemaGenerator\LANCommander.SchemaGenerator.csproj" />
   <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
   <Project Path="LANCommander.Steam\LANCommander.Steam.csproj" />
   <Project Path="LANCommander.UI\LANCommander.UI.csproj" />

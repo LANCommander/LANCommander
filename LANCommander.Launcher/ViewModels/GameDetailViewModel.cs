@@ -63,7 +63,11 @@ public partial class GameDetailViewModel : ViewModelBase
     private string? _iconPath;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ReleasedText))]
     private DateTime _releasedOn;
+
+    /// <summary>ISO date for the Details card; empty when the server has no release date.</summary>
+    public string ReleasedText => ReleasedOn.Year > 1 ? ReleasedOn.ToString("yyyy-MM-dd") : string.Empty;
 
     [ObservableProperty]
     private string _releaseYear = string.Empty;
@@ -93,29 +97,31 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TagList))]
     [NotifyPropertyChangedFor(nameof(VisibleTagList))]
+    [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasMoreTags))]
-    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
     [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
     private string _tags = string.Empty;
 
-    // ── Tags expand/collapse ─────────────���────────────────────────────────────
+    // ── Tag chips (under the description), expand/collapse ───────────────────
+    // Genres are listed in the Details card instead, alongside developer and publisher.
 
-    private const int TagsVisibleLimit = 5;
+    private const int TagsVisibleLimit = 8;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VisibleTagList))]
     [NotifyPropertyChangedFor(nameof(HasMoreTags))]
-    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
     [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
     private bool _tagsExpanded;
 
     public IEnumerable<string> VisibleTagList =>
-        TagsExpanded ? TagList : TagList.Take(TagsVisibleLimit);
+        TagsExpanded || !HasMoreTags ? TagList : TagList.Take(TagsVisibleLimit);
 
-    public bool HasMoreTags    => TagList.Count() > TagsVisibleLimit;
-    public int  ExtraTagCount  => Math.Max(0, TagList.Count() - TagsVisibleLimit);
+    public bool HasTags      => TagList.Any();
+
+    /// <summary>Only collapse when it hides a few tags; "+1 more" costs as much room as the tag.</summary>
+    public bool HasMoreTags  => TagList.Count() > TagsVisibleLimit + 2;
     public string ShowMoreTagsLabel =>
-        TagsExpanded ? "Show less" : $"+{ExtraTagCount} more";
+        TagsExpanded ? "Show less" : $"+{TagList.Count() - TagsVisibleLimit} more";
 
     [RelayCommand]
     private void ToggleTagsExpanded() => TagsExpanded = !TagsExpanded;
@@ -142,7 +148,17 @@ public partial class GameDetailViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(BackLabel))]
     private bool _fromLibrary;
 
-    public string BackLabel => FromLibrary ? "Back to Library" : "Back to Depot";
+    public string BackLabel => FromLibrary ? "Library" : "Depot";
+
+    /// <summary>Players row of the Details card: one line per mode, e.g. "Single-player" and "2–24 LAN".</summary>
+    [ObservableProperty]
+    private string _playersText = string.Empty;
+
+    /// <summary>Total size of the install folder; filled in the background once the game is known to be installed.</summary>
+    [ObservableProperty]
+    private string _sizeOnDiskText = string.Empty;
+
+    private string? _measuredDirectory;
 
     // Split list properties for chip rendering
     public IEnumerable<string> GenreList     => SplitCsv(Genres);
@@ -192,6 +208,46 @@ public partial class GameDetailViewModel : ViewModelBase
         ActionBar = new GameActionBarViewModel(serviceProvider);
         ActionBar.LibraryChanged += (_, _) => LibraryChanged?.Invoke(this, EventArgs.Empty);
         ActionBar.InstallRequested += (_, _) => InstallRequested?.Invoke(this, EventArgs.Empty);
+
+        // Install, uninstall and move all change the folder; re-measure whenever it does.
+        ActionBar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(GameActionBarViewModel.InstallDirectory) or nameof(GameActionBarViewModel.IsInstalled))
+                _ = MeasureInstallSizeAsync();
+        };
+    }
+
+    /// <summary>
+    /// Sums the install folder off the UI thread. Large installs can take a moment, so the row
+    /// stays empty until the figure is ready rather than blocking the page.
+    /// </summary>
+    private async Task MeasureInstallSizeAsync()
+    {
+        var directory = ActionBar.IsInstalled ? ActionBar.InstallDirectory : null;
+
+        if (directory == _measuredDirectory)
+            return;
+
+        _measuredDirectory = directory;
+        SizeOnDiskText = string.Empty;
+
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return;
+
+        try
+        {
+            var bytes = await Task.Run(() => new DirectoryInfo(directory)
+                .EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true })
+                .Sum(f => f.Length));
+
+            // A newer measurement started while this one ran; let it win.
+            if (directory == _measuredDirectory)
+                SizeOnDiskText = ByteSizeLib.ByteSize.FromBytes(bytes).ToString("0.##");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not measure install size for {GameId} at {Directory}", Id, directory);
+        }
     }
 
     /// <summary>
@@ -267,12 +323,22 @@ public partial class GameDetailViewModel : ViewModelBase
         else
             MultiplayerModes = string.Empty;
 
+        var playerLines = new List<string>();
+
+        if (game.Singleplayer)
+            playerLines.Add("Single-player");
+
+        foreach (var mode in game.MultiplayerModes ?? [])
+            playerLines.Add(FormatPlayerCount(mode.Type, mode.MinPlayers, mode.MaxPlayers));
+
+        PlayersText = string.Join("\n", playerLines.Distinct());
+
         // Tools
         Tools.Clear();
         await LoadToolsAsync(game);
         OnPropertyChanged(nameof(HasTools));
 
-        // Reset media items and tags state while we re-load
+        // Reset media items and tag state while we re-load
         MediaItems.Clear();
         TagsExpanded = false;
 
@@ -305,6 +371,7 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
+        _ = MeasureInstallSizeAsync();
 
         if (game.Media != null && game.Media.Any())
         {
@@ -451,6 +518,25 @@ public partial class GameDetailViewModel : ViewModelBase
             MediaItems.Add(item);
 
         OnPropertyChanged(nameof(HasMedia));
+    }
+
+    /// <summary>Compact form for the Details card: "2–24 LAN", "up to 8 Online", or just "LAN".</summary>
+    private static string FormatPlayerCount(SDK.Enums.MultiplayerType type, int minPlayers, int maxPlayers)
+    {
+        var typeLabel = type switch
+        {
+            SDK.Enums.MultiplayerType.Local => "Local",
+            SDK.Enums.MultiplayerType.LAN => "LAN",
+            SDK.Enums.MultiplayerType.Online => "Online",
+            _ => type.ToString()
+        };
+
+        if (maxPlayers <= 0)
+            return typeLabel;
+
+        return minPlayers > 1 && minPlayers < maxPlayers
+            ? $"{minPlayers}–{maxPlayers} {typeLabel}"
+            : $"up to {maxPlayers} {typeLabel}";
     }
 
     private static string FormatMultiplayerMode(Data.Models.MultiplayerMode mode) =>

@@ -143,6 +143,14 @@
     <sys:String x:Key="Platforms">Platforms</sys:String>
     <sys:String x:Key="Tags">Tags</sys:String>
     <sys:String x:Key="Description">Description</sys:String>
+    <sys:String x:Key="GameStateInstalled">Installed</sys:String>
+    <sys:String x:Key="GameStateNotInstalled">Not installed</sys:String>
+    <sys:String x:Key="GameStateInstalling">Installing</sys:String>
+    <sys:String x:Key="GameStateRunning">Running</sys:String>
+    <sys:String x:Key="GameStateUpToDate">Up to date</sys:String>
+    <sys:String x:Key="GameStateUpdateAvailable">Update available</sys:String>
+    <sys:String x:Key="GameStateInLibrary">In your library</sys:String>
+    <sys:String x:Key="GameStateNotInLibrary">Not in your library</sys:String>
 
     <!-- ── Install Options ───────────────────────────────────────────────── -->
     <sys:String x:Key="InstallLocation">Install Location</sys:String>

@@ -44,6 +44,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     // Library state
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InstallStateDetail))]
     private bool _isInLibrary;
 
     [ObservableProperty]
@@ -58,10 +59,13 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(CanManage))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
+    [NotifyPropertyChangedFor(nameof(InstallStateDetail))]
     private bool _isInstalled;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
     private bool _isInstalling;
 
     [ObservableProperty]
@@ -72,6 +76,10 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private string? _installDirectory;
+
+    /// <summary>Version recorded when the game was installed; empty when not installed.</summary>
+    [ObservableProperty]
+    private string? _installedVersion;
 
     // Game options schema (YAML authored on the server). Drives visibility of the "Game Options" menu item.
     [ObservableProperty]
@@ -88,6 +96,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
     [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
     private bool _isRunning;
 
     [ObservableProperty]
@@ -152,6 +161,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
     [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    [NotifyPropertyChangedFor(nameof(InstallStateDetail))]
     private bool _isUpdateAvailable;
 
     // Offline mode - disables install
@@ -181,6 +191,19 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     public bool PlayButtonIsEnabled => !IsStopping && !IsStarting;
 
+    /// <summary>First half of the status line under the title: what state the install is in.</summary>
+    public string InstallStateText =>
+        IsRunning ? Localize("GameStateRunning")
+        : IsInstalling ? Localize("GameStateInstalling")
+        : IsInstalled ? Localize("GameStateInstalled")
+        : Localize("GameStateNotInstalled");
+
+    /// <summary>Second half of the status line: update state when installed, library state otherwise.</summary>
+    public string InstallStateDetail =>
+        IsInstalled
+            ? Localize(IsUpdateAvailable ? "GameStateUpdateAvailable" : "GameStateUpToDate")
+            : Localize(IsInLibrary ? "GameStateInLibrary" : "GameStateNotInLibrary");
+
     // Timer for checking running state
     private System.Threading.Timer? _runningCheckTimer;
 
@@ -209,6 +232,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         Title = game.Title ?? "Unknown";
         IsInstalled = game.Installed;
         InstallDirectory = game.InstallDirectory;
+        InstalledVersion = game.Installed ? game.InstalledVersion : null;
         OptionSchema = game.OptionSchema;
         IsUpdateAvailable = game.Installed
             && !string.IsNullOrWhiteSpace(game.LatestVersion)
@@ -260,6 +284,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
+            InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
             IsUpdateAvailable = localGame.Installed
                 && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
                 && localGame.InstalledVersion != localGame.LatestVersion;
@@ -292,6 +317,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
+            InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
             OptionSchema = localGame.OptionSchema;
             IsUpdateAvailable = localGame.Installed
                 && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
@@ -303,6 +329,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         {
             IsInstalled = false;
             InstallDirectory = null;
+            InstalledVersion = null;
             OptionSchema = game.OptionSchema;
             IsUpdateAvailable = false;
             PlayTime = Localize("PlayStatNone");
@@ -423,6 +450,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             {
                 IsInstalled = localGame.Installed;
                 InstallDirectory = localGame.InstallDirectory;
+                InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
                 OptionSchema = localGame.OptionSchema;
                 IsUpdateAvailable = localGame.Installed
                     && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
@@ -1487,6 +1515,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
             IsInstalled = false;
             InstallDirectory = null;
+            InstalledVersion = null;
             StatusMessage = "Uninstalled";
             _logger.LogInformation("Game {GameId} ({Title}) uninstalled", GameId, Title);
 

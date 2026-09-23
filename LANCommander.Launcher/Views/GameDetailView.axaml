@@ -9,186 +9,259 @@
              x:DataType="vm:GameDetailViewModel"
 >
 
+    <UserControl.Resources>
+        <!-- One media tile, sized by whoever hosts it (overview strip or Media tab grid) -->
+        <DataTemplate x:Key="MediaTileTemplate" x:DataType="vmComponents:GameMediaItemViewModel">
+            <Panel Focusable="True"
+                   Tapped="MediaItem_Tapped"
+                   KeyDown="MediaItem_KeyDown"
+                   Cursor="Hand">
+                <!-- Skeleton placeholder -->
+                <Border CornerRadius="{DynamicResource RadiusMedium}"
+                        Background="{DynamicResource SurfaceBrush}"
+                        IsVisible="{Binding IsSkeleton}" />
+                <!-- Screenshot image -->
+                <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+                        IsVisible="{Binding !IsVideo}">
+                    <Image Source="{Binding ImageSource}"
+                           Stretch="UniformToFill" />
+                </Border>
+                <!-- Video: muted autoplay, click to open lightbox.
+                     A ContentControl whose Content is the video path (null
+                     for screenshots) only realizes its template when non-null,
+                     so screenshots never instantiate an InlineVideoPlayer/libvlc. -->
+                <ContentControl Content="{Binding VideoPath}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate x:DataType="sys:String">
+                            <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+                                    Background="Black">
+                                <InlineVideoPlayer VideoPath="{Binding}" />
+                            </Border>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+                <!-- Video marker: opens in the lightbox with sound -->
+                <Border Width="34" Height="34"
+                        CornerRadius="{DynamicResource RadiusFull}"
+                        Background="#8C000000"
+                        BorderBrush="#38FFFFFF" BorderThickness="1"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        IsHitTestVisible="False"
+                        IsVisible="{Binding IsVideo}">
+                    <Icon Type="Regular" Value="Play" Width="14" Height="14" Margin="2,0,0,0"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <!-- Hairline edge, then the focus indicator on top -->
+                <Border CornerRadius="{DynamicResource RadiusMedium}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource HairlineBorderBrush}"
+                        IsHitTestVisible="False" />
+                <Border Name="FocusBorder"
+                        CornerRadius="{DynamicResource RadiusMedium}"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource FocusRingBrush}"
+                        IsHitTestVisible="False"
+                        IsVisible="False" />
+            </Panel>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <Style Selector="Panel:focus-visible > Border#FocusBorder">
             <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <!-- Tabs: text only, with an accent underline on the active one sitting on the strip's hairline -->
+        <Style Selector="Button.DetailTab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0,0,0,10" />
+            <Setter Property="Margin" Value="0,0,0,-1" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="Button.DetailTab:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.DetailTab:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.DetailTab.active">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="Button.DetailTab.active:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.DetailTab.active:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+
+        <!-- Tag chips: gaps between and below, like the Badges container gives -->
+        <Style Selector="WrapPanel.Chips Button.Badge">
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+
+        <!-- Details card rows: fixed label column, value wraps -->
+        <Style Selector="Grid.DetailRow">
+            <Setter Property="Margin" Value="0,7" />
+        </Style>
+        <Style Selector="Grid.DetailRow > TextBlock.DetailLabel">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.DetailValue">
+            <Setter Property="Grid.Column" Value="2" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <!-- Developer/publisher names: plain text that searches the library on click -->
+        <Style Selector="Button.DetailLink">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.DetailLink:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.DetailLink:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+
+        <!-- Status dot beside "Installed" / "Not installed" -->
+        <Style Selector="Ellipse.StateDot">
+            <Setter Property="Fill" Value="{DynamicResource TextDisabledBrush}" />
+        </Style>
+        <Style Selector="Ellipse.StateDot.Installed">
+            <Setter Property="Fill">
+                <SolidColorBrush Color="{DynamicResource Success6}" />
+            </Setter>
+        </Style>
+        <Style Selector="Ellipse.StateDot.Running">
+            <Setter Property="Fill" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.StateDetail.Warning">
+            <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer Classes="TitlebarOffset"
                   HorizontalScrollBarVisibility="Disabled"
                   GotFocus="OnScrollViewerGotFocus">
-        <Grid RowDefinitions="Auto,*">
+        <StackPanel>
 
-            <!-- ══ Hero Section (extends into title bar) ═══════════════════════ -->
-            <Border Grid.Row="0"
-                    Height="340"
-                    Background="Black">
-                <Panel>
-                    <!-- Blurred backdrop strip behind titlebar -->
-                    <Border VerticalAlignment="Top"
-                            Height="60"
-                            ClipToBounds="True"
-                            IsHitTestVisible="False"
-                            IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <Panel>
-                            <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
-                                   controls:AsyncImage.DecodeWidth="1600"
-                                   Stretch="UniformToFill">
-                                <Image.Effect>
-                                    <BlurEffect Radius="24" />
-                                </Image.Effect>
-                            </Image>
-                            <Border Background="#33000000" />
-                        </Panel>
-                    </Border>
+            <!-- ══ Hero: art behind the logo and status line, ending just above the action row;
+                 the cover overlaps it on the right and bottom-aligns with the action row ══ -->
+            <Panel>
+                <!-- 64 = the 46px action row plus the 18px gap above it -->
+                <Border x:Name="HeroBackdrop"
+                        Margin="0,0,0,64"
+                        Background="{DynamicResource SurfaceCanvasBrush}"
+                        ClipToBounds="True">
+                    <Panel>
+                        <!-- Blurred backdrop strip behind titlebar -->
+                        <Border VerticalAlignment="Top"
+                                Height="60"
+                                ClipToBounds="True"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <Panel>
+                                <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
+                                       controls:AsyncImage.DecodeWidth="1600"
+                                       Stretch="UniformToFill"
+                                       VerticalAlignment="Top">
+                                    <Image.Effect>
+                                        <BlurEffect Radius="24" />
+                                    </Image.Effect>
+                                </Image>
+                                <Border Background="#33000000" />
+                            </Panel>
+                        </Border>
 
-                    <!-- Background image -->
-                    <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
-                           controls:AsyncImage.DecodeWidth="1600"
-                           Stretch="UniformToFill"
-                           IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <!-- Background image -->
+                        <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
+                               controls:AsyncImage.DecodeWidth="1600"
+                               Stretch="UniformToFill"
+                               IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                    <!-- Hero fade: dark under the title bar, clear through the art, into black at the base -->
-                    <Border IsHitTestVisible="False">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                <GradientStop Color="#B3000000" Offset="0" />
-                                <GradientStop Color="#14000000" Offset="0.28" />
-                                <GradientStop Color="#94000000" Offset="0.70" />
-                                <GradientStop Color="#FF000000" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
+                        <!-- Fade: dark under the title bar, clear through the art, then into black at the
+                             base so the art hands off to the action row -->
+                        <Border IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#99000000" Offset="0" />
+                                    <GradientStop Color="#0A000000" Offset="0.22" />
+                                    <GradientStop Color="#33000000" Offset="0.55" />
+                                    <GradientStop Color="#B3000000" Offset="0.84" />
+                                    <GradientStop Color="#FF000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Panel>
+                </Border>
 
-                    <!-- Back button (overlaid at top-left, below title bar) -->
-                    <IconButton Command="{Binding GoBackCommand}"
-                                Text="{Binding BackLabel}"
-                                Classes="Glass Dark"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Top"
-                                Margin="16, 48, 0, 0"
-                                IconType="Regular"
-                                IconValue="CaretLeft"
-                                Size="16"
-                                ZIndex="2"
-                                IsHitTestVisible="True" />
+                <Grid Margin="32,0" ColumnDefinitions="*,24,296">
 
-                    <!-- Logo (bottom-left) -->
-                    <Border HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Margin="48,0,0,64"
-                            ClipToBounds="True">
-                        <Viewbox Stretch="Uniform"
-                                 HorizontalAlignment="Left"
-                                 VerticalAlignment="Bottom"
-                                 MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.33}"
-                                 MaxHeight="{Binding Bounds.Height, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.5}">
-                            <Image controls:AsyncImage.Source="{Binding LogoPath}"
-                                   Stretch="Uniform"
-                                   HorizontalAlignment="Left"
-                                   VerticalAlignment="Bottom" />
-                        </Viewbox>
-                    </Border>
+                    <!-- Logo, status line, action row; top margin keeps the logo clear of the back button -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,108,0,0">
 
-                    <!-- Title fallback when no logo (bottom-left) -->
-                    <TextBlock HorizontalAlignment="Left"
+                        <!-- Sized by aspect ratio in code-behind (equal area, capped), so wide and
+                             square logos carry similar weight; the title stands in when there's no logo -->
+                        <Image x:Name="LogoImage"
+                               controls:AsyncImage.Source="{Binding LogoPath}"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Left"
                                VerticalAlignment="Bottom"
-                               Margin="24,0,0,28"
-                               Text="{Binding Title}"
-                               FontSize="{DynamicResource FontSizeDisplay}"
-                               FontWeight="Bold"
-                               Foreground="White"
-                               IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-                </Panel>
-            </Border>
+                               Margin="0,0,0,18"
+                               IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Text="{Binding Title}"
+                                   Classes="Display"
+                                   Foreground="White"
+                                   MaxWidth="640"
+                                   HorizontalAlignment="Left"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,14"
+                                   IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
 
-            <!-- ══ Game Details Content ══════════════════════════════════════════ -->
-            <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,18">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                         Classes="StateDot"
+                                         Classes.Installed="{Binding ActionBar.IsInstalled}"
+                                         Classes.Running="{Binding ActionBar.IsRunning}" />
+                                <TextBlock Text="{Binding ActionBar.InstallStateText}"
+                                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="Medium"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Border Width="1" Height="12" VerticalAlignment="Center"
+                                    Background="{DynamicResource HairlineBorderStrongBrush}" />
+                            <TextBlock Text="{Binding ActionBar.InstallStateDetail}"
+                                       Classes="StateDetail"
+                                       Classes.Warning="{Binding ActionBar.IsUpdateAvailable}"
+                                       FontSize="{DynamicResource FontSizeLabel}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
 
-                <!-- Left: Action Bar, Metadata -->
-                <StackPanel x:Name="LeftContent" Grid.Column="0" Margin="24,24,0,24" Spacing="16">
-
-                    <!-- Game Action Bar Component -->
-                    <components:GameActionBarView DataContext="{Binding ActionBar}" />
-
-                    <!-- Description -->
-                    <controls:MarkdownTextBlock Text="{Binding Description}"
-                                                 IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-                    <!-- Screenshots / Videos carousel -->
-                    <StackPanel x:Name="MediaSection" Spacing="8" IsVisible="{Binding HasMedia}">
-                        <TextBlock Text="MEDIA" Classes="Kicker" />
-                        <CarouselControl ItemsSource="{Binding MediaItems}"
-                                                  ItemWidth="384"
-                                                  VisibleItems="2"
-                                                  Gap="12">
-                            <CarouselControl.ItemTemplate>
-                                <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
-                                    <Panel Width="384" Height="216"
-                                           Focusable="True"
-                                           Tapped="MediaItem_Tapped"
-                                           KeyDown="MediaItem_KeyDown"
-                                           Cursor="Hand">
-                                        <!-- Skeleton placeholder -->
-                                        <Border CornerRadius="4"
-                                                Background="#15FFFFFF"
-                                                IsVisible="{Binding IsSkeleton}" />
-                                        <!-- Screenshot image -->
-                                        <Border CornerRadius="4" ClipToBounds="True"
-                                                IsVisible="{Binding !IsVideo}">
-                                            <Image Source="{Binding ImageSource}"
-                                                   Stretch="UniformToFill" />
-                                        </Border>
-                                        <!-- Video: muted autoplay, click to open lightbox.
-                                             A ContentControl whose Content is the video path (null
-                                             for screenshots) only realizes its template when non-null,
-                                             so screenshots never instantiate an InlineVideoPlayer/libvlc. -->
-                                        <ContentControl Content="{Binding VideoPath}">
-                                            <ContentControl.ContentTemplate>
-                                                <DataTemplate x:DataType="sys:String">
-                                                    <Border CornerRadius="4" ClipToBounds="True"
-                                                            Background="Black">
-                                                        <InlineVideoPlayer VideoPath="{Binding}" />
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ContentControl.ContentTemplate>
-                                        </ContentControl>
-                                        <!-- Focus indicator -->
-                                        <Border Name="FocusBorder"
-                                                CornerRadius="4"
-                                                BorderThickness="2"
-                                                BorderBrush="{DynamicResource FocusRingBrush}"
-                                                IsVisible="False" />
-                                    </Panel>
-                                </DataTemplate>
-                            </CarouselControl.ItemTemplate>
-                        </CarouselControl>
+                        <components:GameActionBarView DataContext="{Binding ActionBar}" />
                     </StackPanel>
 
-                    <!-- Notes -->
-                    <StackPanel x:Name="NotesSection" Spacing="8"
-                                IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="NOTES" Classes="Kicker" />
-                        <controls:MarkdownTextBlock Text="{Binding Notes}" />
-                    </StackPanel>
-
-                </StackPanel>
-
-                <!-- Right: Cover Image + Metadata -->
-                <StackPanel x:Name="MetadataPanel" Grid.Column="1"
-                            Width="280"
-                            Margin="16,-100,24,24"
-                            Spacing="16"
-                            VerticalAlignment="Top"
-                            ZIndex="1">
-
-                    <!-- Cover Image -->
-                    <Border CornerRadius="{DynamicResource RadiusLarge}"
-                            BorderBrush="#1FFFFFFF"
+                    <!-- Cover -->
+                    <Border Grid.Column="2"
+                            Margin="0,100,0,0"
+                            CornerRadius="{DynamicResource RadiusLarge}"
+                            BorderBrush="{DynamicResource HairlineBorderBrush}"
                             BorderThickness="1"
                             Background="Black"
-                            BoxShadow="0 16 40 0 #B3000000">
+                            BoxShadow="0 16 40 0 #B3000000"
+                            VerticalAlignment="Bottom">
                         <Border CornerRadius="{DynamicResource RadiusLarge}" ClipToBounds="True">
                             <components:Cover Source="{Binding CoverPath}"
                                               MimeType="{Binding CoverMimeType}"
@@ -196,163 +269,254 @@
                                               AlwaysAnimate="True" />
                         </Border>
                     </Border>
+                </Grid>
 
-                    <!-- Players -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding HasPlayerInfo}">
-                        <TextBlock Text="PLAYERS" Classes="Header" />
-                        <WrapPanel Orientation="Horizontal">
-                            <Border Classes="Tag" Margin="0,0,6,6" Padding="10,5"
-                                    IsVisible="{Binding Singleplayer}">
-                                <TextBlock Text="Singleplayer" FontSize="{DynamicResource FontSizeCaption}" />
-                            </Border>
-                            <ItemsControl ItemsSource="{Binding MultiplayerModeDetails}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="sys:String">
-                                        <Border Classes="Tag"
-                                                Margin="0,0,6,6"
-                                                Padding="10,5">
-                                            <TextBlock Text="{Binding}" FontSize="{DynamicResource FontSizeCaption}" />
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </WrapPanel>
-                    </StackPanel>
+                <!-- Back (overlaid at top-left, below title bar) -->
+                <IconButton Command="{Binding GoBackCommand}"
+                            Text="{Binding BackLabel}"
+                            Classes="Glass Dark"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="24,56,0,0"
+                            Padding="9,6,12,6"
+                            IconType="Regular"
+                            IconValue="CaretLeft"
+                            Size="14"
+                            ZIndex="2" />
+            </Panel>
+            <!-- ══ Body: tabs on the left, details rail on the right ══════════ -->
+            <Grid Margin="32,22,32,32" ColumnDefinitions="*,24,296">
 
-                    <!-- Developers -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="DEVELOPERS" Classes="Header" />
-                        <ItemsControl ItemsSource="{Binding DeveloperList}">
+                <StackPanel x:Name="LeftContent" Grid.Column="0" Spacing="18">
+
+                    <!-- Plugin tabs are appended to this strip in code-behind -->
+                    <Border BorderBrush="{DynamicResource HairlineDividerBrush}" BorderThickness="0,0,0,1">
+                        <StackPanel x:Name="TabStrip" Orientation="Horizontal" Spacing="22">
+                            <Button x:Name="OverviewTabButton" Classes="DetailTab active"
+                                    Content="Overview" Click="TabButton_Click" />
+                            <Button x:Name="MediaTabButton" Classes="DetailTab"
+                                    Content="Media" Click="TabButton_Click"
+                                    IsVisible="{Binding HasMedia}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Only the selected tab's content is attached, so hidden tabs don't play video -->
+                    <Panel x:Name="TabHost">
+
+                        <!-- Overview -->
+                        <StackPanel x:Name="OverviewContent" Spacing="24">
+                            <!-- The negative bottom margin cancels the leading under the last line, so the gap
+                                 to the next section matches the others -->
+                            <controls:MarkdownTextBlock Text="{Binding Description}"
+                                                         Margin="0,0,0,-8"
+                                                         TextElement.Foreground="{DynamicResource TextSecondaryBrush}"
+                                                         IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                            <!-- Tags; each searches the library -->
+                            <StackPanel Spacing="10" IsVisible="{Binding HasTags}">
+                                <TextBlock Text="TAGS" Classes="Kicker" />
+                                <WrapPanel Classes="Chips" Margin="0,0,0,-8">
+                                    <ItemsControl ItemsSource="{Binding VisibleTagList}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <Button Classes="Badge"
+                                                        Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <TextBlock Text="{Binding}" />
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Button Classes="Badge Primary"
+                                            IsVisible="{Binding HasMoreTags}"
+                                            Command="{Binding ToggleTagsExpandedCommand}">
+                                        <TextBlock Text="{Binding ShowMoreTagsLabel}" />
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <!-- Media strip -->
+                            <StackPanel x:Name="MediaSection" Spacing="10" IsVisible="{Binding HasMedia}">
+                                <TextBlock Text="MEDIA" Classes="Kicker" />
+                                <!-- Pulled left by the carousel's arrow gutter so the tiles line up with the text above -->
+                                <CarouselControl ItemsSource="{Binding MediaItems}"
+                                                 Margin="-32,0,0,0"
+                                                 ItemWidth="208"
+                                                 VisibleItems="4"
+                                                 Gap="12">
+                                    <CarouselControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
+                                            <ContentControl Width="208" Height="117"
+                                                            Content="{Binding}"
+                                                            ContentTemplate="{StaticResource MediaTileTemplate}" />
+                                        </DataTemplate>
+                                    </CarouselControl.ItemTemplate>
+                                </CarouselControl>
+                            </StackPanel>
+
+                            <!-- Notes -->
+                            <StackPanel x:Name="NotesSection" Spacing="10"
+                                        IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="NOTES" Classes="Kicker" />
+                                <controls:MarkdownTextBlock Text="{Binding Notes}"
+                                                             TextElement.Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Media: every screenshot and video in justified rows that fill the column,
+                             each tile at its own aspect ratio -->
+                        <ItemsControl x:Name="MediaContent" ItemsSource="{Binding MediaItems}">
+                            <ItemsControl.Styles>
+                                <!-- Not a carousel, so nothing marks videos as on screen; play them once attached -->
+                                <Style Selector="InlineVideoPlayer">
+                                    <Setter Property="PlaysWhenAttached" Value="True" />
+                                </Style>
+                                <Style Selector="ContentPresenter" x:DataType="vmComponents:GameMediaItemViewModel">
+                                    <Setter Property="controls:JustifiedPanel.AspectRatio" Value="{Binding AspectRatio}" />
+                                </Style>
+                            </ItemsControl.Styles>
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
+                                    <controls:JustifiedPanel TargetRowHeight="220" Spacing="12" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:String">
-                                    <Button Classes="Badge"
-                                            Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
-                                            CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding}" />
-                                    </Button>
+                                <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
+                                    <ContentControl Content="{Binding}"
+                                                    ContentTemplate="{StaticResource MediaTileTemplate}" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
-
-                    <!-- Publishers -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="PUBLISHERS" Classes="Header" />
-                        <ItemsControl ItemsSource="{Binding PublisherList}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:String">
-                                    <Button Classes="Badge"
-                                            Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
-                                            CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding}" />
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
-                    <!-- Genres -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="GENRES" Classes="Header" />
-                        <ItemsControl ItemsSource="{Binding GenreList}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:String">
-                                    <Button Classes="Badge"
-                                            Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
-                                            CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding}" />
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
-                    <!-- Tags — limited to 5, expandable -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="TAGS" Classes="Header" />
-                        <WrapPanel Orientation="Horizontal">
-                            <ItemsControl ItemsSource="{Binding VisibleTagList}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="sys:String">
-                                        <Button Classes="Badge"
-                                                Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
-                                                CommandParameter="{Binding}">
-                                            <TextBlock Text="{Binding}" />
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <Button Classes="Badge Primary"
-                                    IsVisible="{Binding HasMoreTags}"
-                                    Command="{Binding ToggleTagsExpandedCommand}">
-                                <TextBlock Text="{Binding ShowMoreTagsLabel}" />
-                            </Button>
-                        </WrapPanel>
-                    </StackPanel>
-
-                    <!-- Tools -->
-                    <StackPanel Classes="Badges"
-                                IsVisible="{Binding HasTools}">
-                        <TextBlock Text="TOOLS" Classes="Header" />
-                        <ItemsControl ItemsSource="{Binding Tools}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ToolItemViewModel">
-                                    <Border Classes="Tag"
-                                            Margin="0,0,0,6"
-                                            Padding="10,5">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{Binding Name}"
-                                                       FontSize="{DynamicResource FontSizeCaption}"
-                                                       VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1"
-                                                       Text="Installed"
-                                                       FontSize="{DynamicResource FontSizeKicker}"
-                                                       Opacity="0.6"
-                                                       VerticalAlignment="Center"
-                                                       IsVisible="{Binding IsInstalled}" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
+                    </Panel>
                 </StackPanel>
 
-            </Grid>
+                <!-- Right rail -->
+                <StackPanel x:Name="MetadataPanel" Grid.Column="2" Spacing="14">
 
-        </Grid>
+                    <Border Classes="Card" Padding="0">
+                        <StackPanel>
+                            <Border Padding="16,13"
+                                    BorderBrush="{DynamicResource HairlineDividerBrush}"
+                                    BorderThickness="0,0,0,1">
+                                <TextBlock Text="DETAILS" Classes="Kicker" />
+                            </Border>
+
+                            <StackPanel Margin="16,6,16,12">
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Developer" />
+                                    <ItemsControl Grid.Column="2" ItemsSource="{Binding DeveloperList}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <Button Classes="DetailLink"
+                                                        Content="{Binding}"
+                                                        Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Publisher" />
+                                    <ItemsControl Grid.Column="2" ItemsSource="{Binding PublisherList}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <Button Classes="DetailLink"
+                                                        Content="{Binding}"
+                                                        Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Genre" />
+                                    <ItemsControl Grid.Column="2" ItemsSource="{Binding GenreList}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <Button Classes="DetailLink"
+                                                        Content="{Binding}"
+                                                        Command="{Binding $parent[UserControl].((vm:GameDetailViewModel)DataContext).SearchForCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding ReleasedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Released" />
+                                    <TextBlock Classes="DetailValue" Text="{Binding ReleasedText}" />
+                                </Grid>
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding PlayersText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Players" />
+                                    <TextBlock Classes="DetailValue" Text="{Binding PlayersText}" />
+                                </Grid>
+                                <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                      IsVisible="{Binding Platforms, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Classes="DetailLabel" Text="Platforms" />
+                                    <TextBlock Classes="DetailValue" Text="{Binding Platforms}" />
+                                </Grid>
+
+                                <!-- This machine's install -->
+                                <StackPanel IsVisible="{Binding ActionBar.IsInstalled}">
+                                    <Border Height="1" Margin="0,6"
+                                            Background="{DynamicResource HairlineDividerBrush}" />
+                                    <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                          IsVisible="{Binding ActionBar.InstalledVersion, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Classes="DetailLabel" Text="Version" />
+                                        <TextBlock Classes="DetailValue" Text="{Binding ActionBar.InstalledVersion}" />
+                                    </Grid>
+                                    <Grid Classes="DetailRow" ColumnDefinitions="96,12,*"
+                                          IsVisible="{Binding SizeOnDiskText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Classes="DetailLabel" Text="On disk" />
+                                        <TextBlock Classes="DetailValue" Text="{Binding SizeOnDiskText}" />
+                                    </Grid>
+                                    <Grid Classes="DetailRow" ColumnDefinitions="96,12,*">
+                                        <TextBlock Classes="DetailLabel" Text="Location" />
+                                        <TextBlock Classes="DetailValue" Text="{Binding ActionBar.InstallDirectory}" />
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tools -->
+                    <Border Classes="Card" Padding="0" IsVisible="{Binding HasTools}">
+                        <StackPanel>
+                            <Border Padding="16,13"
+                                    BorderBrush="{DynamicResource HairlineDividerBrush}"
+                                    BorderThickness="0,0,0,1">
+                                <TextBlock Text="TOOLS" Classes="Kicker" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding Tools}" Margin="16,6,16,10">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ToolItemViewModel">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,6">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="{DynamicResource FontSizeLabel}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <Border Grid.Column="1" Classes="StatusTag Success"
+                                                    Margin="12,0,0,0"
+                                                    IsVisible="{Binding IsInstalled}">
+                                                <TextBlock Text="INSTALLED" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

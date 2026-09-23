@@ -22,6 +22,19 @@ public class InlineVideoPlayer : Control, IDisposable, ICarouselPlaybackItem
         set => SetValue(VideoPathProperty, value);
     }
 
+    /// <summary>
+    /// Plays whenever attached, for hosts that aren't a carousel (e.g. a grid) and so never call
+    /// <see cref="SetCarouselActive"/>. Detaching still stops playback.
+    /// </summary>
+    public static readonly StyledProperty<bool> PlaysWhenAttachedProperty =
+        AvaloniaProperty.Register<InlineVideoPlayer, bool>(nameof(PlaysWhenAttached));
+
+    public bool PlaysWhenAttached
+    {
+        get => GetValue(PlaysWhenAttachedProperty);
+        set => SetValue(PlaysWhenAttachedProperty, value);
+    }
+
     private VideoFrameRenderer? _renderer;
     private bool _isAttached;
     private bool _disposed;
@@ -58,12 +71,20 @@ public class InlineVideoPlayer : Control, IDisposable, ICarouselPlaybackItem
             if (!string.IsNullOrEmpty(path) && _isAttached && _isActive)
                 StartPlayback(path);
         }
+        else if (change.Property == PlaysWhenAttachedProperty && change.GetNewValue<bool>() && _isAttached)
+        {
+            // A style can set this after the control is already attached.
+            SetCarouselActive(true);
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         _isAttached = true;
+
+        if (PlaysWhenAttached)
+            _isActive = true;
 
         // Playback is started by the carousel via SetCarouselActive once it has
         // determined which items are on-screen.

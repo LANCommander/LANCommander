@@ -43,6 +43,19 @@
             <Setter Property="IsTabStop" Value="True" />
         </Style>
 
+        <!-- Hero-sized controls: Play/Install and the square glass buttons share one 46px row -->
+        <Style Selector="SplitButton.Hero">
+            <Setter Property="Height" Value="46" />
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style Selector="IconButton.Square">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
         <!-- Hover: turn button red (error/danger) -->
         <Style Selector="SplitButton.Running:pointerover /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource ButtonErrorBgBrush}" />
@@ -58,21 +71,14 @@
         </Style>
     </UserControl.Styles>
     
-    <StackPanel Spacing="12" HorizontalAlignment="Left">
-        <!-- Game Action Bar -->
-        <Border Padding="0,0,0,8"
-                Background="Transparent">
-            <StackPanel Spacing="16">
-                <!-- Primary Action Row + Stats -->
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                    <!-- Buttons (left side) -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+    <!-- Play/Install, square shortcuts, then the play stats after a divider -->
+    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
                     <!-- Install SplitButton (not installed). Flyout assigned in code-behind. -->
                     <SplitButton x:Name="InstallSplitButton"
                                  Command="{Binding InstallCommand}"
                                  IsVisible="{Binding !IsInstalled}"
                                  IsEnabled="{Binding CanInstall}"
-                                 Classes="Primary Large">
+                                 Classes="Primary Large Hero">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
                             <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
@@ -89,7 +95,7 @@
                                  Classes.Stopping="{Binding IsStopping}"
                                  Classes.Success="{Binding ShowPlayLabel}"
                                  Classes.Primary="{Binding !ShowPlayLabel}"
-                                 Classes="Large">
+                                 Classes="Large Hero">
                         <Panel>
                             <!-- Idle + update available: Update -->
                             <StackPanel Orientation="Horizontal" Spacing="8"
@@ -126,7 +132,8 @@
                     <SplitButton Command="{Binding OpenPowerShellConsoleCommand}"
                                  IsVisible="{Binding IsScriptDebuggingEnabled}"
                                  IsEnabled="{Binding IsInstalled}"
-                                 Padding="12,14"
+                                 Classes="Hero"
+                                 Padding="14,0"
                                  ToolTip.Tip="Debug Scripts">
                         <Icon Type="Regular" Value="Bug" Width="16" Height="16" />
 
@@ -145,32 +152,54 @@
                     <IconButton Command="{Binding AddToLibraryCommand}"
                                 IsVisible="{Binding !IsInLibrary}"
                                 IsEnabled="{Binding !IsAddingToLibrary}"
-                                Classes="Text"
+                                Classes="Glass Dark Square"
                                 IconType="Regular"
                                 IconValue="Plus"
-                                Padding="12"
+                                Size="18"
                                 ToolTip.Tip="Add to Library" />
 
-                    </StackPanel>
+                    <IconButton Command="{Binding BrowseFilesCommand}"
+                                IsVisible="{Binding IsInstalled}"
+                                Classes="Glass Dark Square"
+                                IconType="Regular"
+                                IconValue="FolderOpen"
+                                Size="18"
+                                ToolTip.Tip="Browse Files" />
 
-                    <!-- Stats (right side) -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="32" VerticalAlignment="Center" Margin="48,0,0,0">
+                    <IconButton Command="{Binding OpenFirstManualCommand}"
+                                IsVisible="{Binding HasManuals}"
+                                Classes="Glass Dark Square"
+                                IconType="Regular"
+                                IconValue="BookOpen"
+                                Size="18"
+                                ToolTip.Tip="Open Manual" />
+
+                    <!-- Same consolidated game menu as the split button's caret; flyout assigned in code-behind -->
+                    <IconButton x:Name="MoreButton"
+                                Classes="Glass Dark Square"
+                                IconType="Regular"
+                                IconValue="DotsThree"
+                                Size="18"
+                                ToolTip.Tip="More Actions" />
+
+                    <Border Width="1" Height="28" Margin="8,0" VerticalAlignment="Center"
+                            Background="{DynamicResource HairlineBorderBrush}" />
+
+                    <!-- Stats -->
+                    <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
                         <StackPanel Spacing="3"
                                     IsVisible="{Binding DownloadSizeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <TextBlock Text="DOWNLOAD SIZE" Classes="Kicker" />
                             <TextBlock Text="{Binding DownloadSizeText}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
-                        <StackPanel Spacing="2">
+                        <StackPanel Spacing="3">
                             <TextBlock Text="PLAY TIME" Classes="Kicker" />
                             <TextBlock Text="{Binding PlayTime}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
-                        <StackPanel Spacing="2">
+                        <StackPanel Spacing="3">
                             <TextBlock Text="LAST PLAYED" Classes="Kicker" />
                             <TextBlock Text="{Binding LastPlayed}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
                     </StackPanel>
-                </Grid>
-            </StackPanel>
-        </Border>
     </StackPanel>
 </UserControl>

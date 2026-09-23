@@ -388,6 +388,7 @@ public partial class App : Application
             registry.Register<GameDetailViewModel>(() => new GameDetailView());
             registry.Register<SettingsViewModel>(() => new SettingsView());
             registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
+            registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
 
             // Packaging wizard, plus each of its steps. Registering the steps in the same
             // registry is what lets the wizard host them in a ContentControl, and leaves room

@@ -1509,42 +1509,15 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         if (!IsInstalled || IsVerifyingFiles || string.IsNullOrEmpty(InstallDirectory)) return;
 
+        // Checking and repairing happen on their own page, so the user sees what is wrong before
+        // anything on disk is replaced.
+        var verify = new VerifyFilesViewModel(_serviceProvider, GameId, Title, InstallDirectory);
+
         IsVerifyingFiles = true;
-        StatusMessage = "Verifying files...";
+        verify.Finished += (_, _) => IsVerifyingFiles = verify.IsBusy;
 
-        try
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-
-            var conflicts = await gameClient.ValidateFilesAsync(InstallDirectory, GameId);
-            var conflictList = conflicts?.ToList() ?? new();
-
-            if (conflictList.Count == 0)
-            {
-                StatusMessage = "All files verified successfully";
-                _logger.LogInformation("File verification passed for game {GameId} ({Title})", GameId, Title);
-            }
-            else
-            {
-                StatusMessage = $"{conflictList.Count} file(s) need repair, restoring...";
-                _logger.LogInformation("File verification found {Count} conflict(s) for game {GameId} ({Title}), restoring", conflictList.Count, GameId, Title);
-
-                await gameClient.RestoreFilesAsync(InstallDirectory, GameId, conflictList.Select(c => c.FullName));
-
-                StatusMessage = $"{conflictList.Count} file(s) restored";
-                _logger.LogInformation("File restoration complete for game {GameId} ({Title})", GameId, Title);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to verify files for game {GameId} ({Title})", GameId, Title);
-            StatusMessage = $"Verification failed: {ex.Message}";
-        }
-        finally
-        {
-            IsVerifyingFiles = false;
-        }
+        _serviceProvider.GetRequiredService<INavigationService>().NavigateTo(verify);
+        await verify.StartAsync();
     }
 
     [RelayCommand]

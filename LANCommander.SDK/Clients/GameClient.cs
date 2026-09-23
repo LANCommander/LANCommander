@@ -2840,7 +2840,23 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The game's install directory</param>
         /// <param name="gameId">The game's ID</param>
         /// <returns>List of file conflicts</returns>
-        public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
+        public Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
+            => ValidateFilesAsync(installDirectory, gameId, progress: null, CancellationToken.None);
+
+        /// <summary>
+        /// Get the archive associated with the installed version of the game and return any non-matching files in the
+        /// current install, reporting each file as it is checked and each conflict as it is found.
+        /// </summary>
+        /// <param name="installDirectory">The game's install directory</param>
+        /// <param name="gameId">The game's ID</param>
+        /// <param name="progress">Receives running counts, the current file and newly found conflicts; throttled.</param>
+        /// <param name="cancellationToken">Stops the check between files and between read chunks.</param>
+        /// <returns>List of file conflicts</returns>
+        public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(
+            string installDirectory,
+            Guid gameId,
+            IProgress<ArchiveValidationProgress> progress,
+            CancellationToken cancellationToken = default)
         {
             var archives = await GetGameInstallationArchivesEntries(installDirectory, gameId);
             var entries = archives?.BaseGame?.Entries?.ToList() ?? [];
@@ -2868,68 +2884,108 @@ namespace LANCommander.SDK.Services
                 .SelectMany(dep => dep.Value?.Entries?.Select(entry => new { GameId = (Guid?)dep.Key, ArchiveEntry = entry }) ?? [])
                 .ToLookup(tentry => tentry.ArchiveEntry, tentry => tentry.GameId) ?? Enumerable.Empty<Guid?>().ToLookup(x => default(ArchiveEntry));
 
-            var conflictedEntries = new List<ArchiveValidationConflict>();
-
             var savePathEntries = archives?.BaseGame?.SavePaths.ToList() ?? [];
             var depSavePathEntries = archives?.Addons?.SelectMany(dep => dep.Value?.SavePaths ?? []).ToList() ?? [];
             savePathEntries.AddRange(depSavePathEntries);
 
-            foreach (var entry in entries)
+            // Directories and save files are never checked; filter first so the reported total is honest.
+            var filesToCheck = entries
+                .Where(entry => !entry.FullName.EndsWith('/'))
+                .Where(entry => !savePathEntries.Any(e => e.ArchivePath.Equals(entry.FullName, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            // Hashing is synchronous CPU/IO; keep it off the caller's (often UI) thread.
+            return await Task.Run(() =>
             {
-                if (savePathEntries.Any(e => e.ArchivePath.Equals(entry.FullName, StringComparison.OrdinalIgnoreCase)))
-                    continue;
+                var conflictedEntries = new List<ArchiveValidationConflict>();
+                var total = filesToCheck.Count;
+                var lastReport = System.Diagnostics.Stopwatch.StartNew();
 
-                if (entry.FullName.EndsWith('/'))
-                    continue;
-
-                var localFile = Path.Combine(installDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
-
-                if (!Path.Exists(localFile))
-                    conflictedEntries.Add(new ArchiveValidationConflict
-                    {
-                        GameId = lookupEntry[entry]?.FirstOrDefault() ?? gameId,
-
-                        Name = entry.Name,
-                        FullName = entry.FullName,
-                        Crc32 = entry.Crc32,
-                        Length = entry.Length,
-                    });
-                else
+                for (var i = 0; i < total; i++)
                 {
-                    uint crc = 0;
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    if (File.Exists(localFile))
+                    var entry = filesToCheck[i];
+                    var localFile = Path.Combine(installDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+                    ArchiveValidationConflict conflict = null;
+
+                    if (!Path.Exists(localFile))
                     {
-                        using (FileStream fs = File.Open(localFile, FileMode.Open))
-                        {
-                            var buffer = new byte[65536];
-
-                            while (true)
-                            {
-                                var count = fs.Read(buffer, 0, buffer.Length);
-
-                                if (count == 0)
-                                    break;
-
-                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
-                            }
-                        }
-                    }
-
-                    if (crc == 0 || crc != entry.Crc32)
-                        conflictedEntries.Add(new ArchiveValidationConflict
+                        conflict = new ArchiveValidationConflict
                         {
                             GameId = lookupEntry[entry]?.FirstOrDefault() ?? gameId,
+                            Type = ArchiveValidationConflictType.Missing,
 
                             Name = entry.Name,
                             FullName = entry.FullName,
                             Crc32 = entry.Crc32,
-                            LocalFileInfo = new FileInfo(localFile)
-                        });
-                }
-            }
+                            Length = entry.Length,
+                        };
+                    }
+                    else
+                    {
+                        uint crc = 0;
+                        // A directory where a file belongs can't match. An empty file's CRC is legitimately 0.
+                        var isFile = File.Exists(localFile);
 
-            return conflictedEntries;
+                        if (isFile)
+                        {
+                            using (FileStream fs = File.Open(localFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                var buffer = new byte[65536];
+
+                                while (true)
+                                {
+                                    cancellationToken.ThrowIfCancellationRequested();
+
+                                    var count = fs.Read(buffer, 0, buffer.Length);
+
+                                    if (count == 0)
+                                        break;
+
+                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                                }
+                            }
+                        }
+
+                        if (!isFile || crc != entry.Crc32)
+                            conflict = new ArchiveValidationConflict
+                            {
+                                GameId = lookupEntry[entry]?.FirstOrDefault() ?? gameId,
+                                Type = ArchiveValidationConflictType.Mismatch,
+
+                                Name = entry.Name,
+                                FullName = entry.FullName,
+                                Crc32 = entry.Crc32,
+                                LocalCrc32 = crc,
+                                Length = entry.Length,
+                                LocalFileInfo = new FileInfo(localFile)
+                            };
+                    }
+
+                    if (conflict != null)
+                        conflictedEntries.Add(conflict);
+
+                    // Every conflict is reported so none is dropped; plain progress at most every 100 ms.
+                    if (progress != null && (conflict != null || lastReport.ElapsedMilliseconds >= 100 || i == total - 1))
+                    {
+                        progress.Report(new ArchiveValidationProgress
+                        {
+                            CheckedFiles = i + 1,
+                            TotalFiles = total,
+                            CurrentFile = entry.FullName,
+                            Conflict = conflict,
+                        });
+
+                        lastReport.Restart();
+                    }
+                }
+
+                if (total == 0)
+                    progress?.Report(new ArchiveValidationProgress { CheckedFiles = 0, TotalFiles = 0 });
+
+                return (IEnumerable<ArchiveValidationConflict>)conflictedEntries;
+            }, cancellationToken);
         }
 
         /// <summary>

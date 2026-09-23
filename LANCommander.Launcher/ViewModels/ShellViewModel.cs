@@ -48,6 +48,7 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel gd   => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
         SettingsViewModel _      => "Settings",
         DownloadQueueViewModel _ => "Downloads",
+        VerifyFilesViewModel _   => "Verify Files",
         PackagingWizardViewModel _ => "Package a Game",
         _ => string.Empty
     };

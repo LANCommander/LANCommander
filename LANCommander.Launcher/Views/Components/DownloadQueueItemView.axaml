@@ -10,13 +10,12 @@
         <Style Selector="Border.QueueItem">
             <Setter Property="Background" Value="Transparent" />
         </Style>
-        <Style Selector="Border.QueueItem.Expanded">
-            <Setter Property="Background">
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                    <GradientStop Color="#FF181818" Offset="0" />
-                    <GradientStop Color="#FF0D0D0D" Offset="1" />
-                </LinearGradientBrush>
-            </Setter>
+        <!-- Header is a click target for expand/collapse, not a button look: overlay hover only -->
+        <Style Selector="Button.QueueItemHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+        </Style>
+        <Style Selector="Button.QueueItemHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
         </Style>
     </UserControl.Styles>
 
@@ -25,50 +24,61 @@
             ClipToBounds="True">
         <StackPanel>
             <!-- Item header (clickable) -->
-            <Button Background="Transparent"
+            <Button Classes="QueueItemHeader"
+                    Background="Transparent"
                     BorderThickness="0"
-                    Padding="8"
+                    Padding="18,16"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     Command="{Binding $parent[local:DownloadQueueItemView].ToggleExpandedCommand}"
                     CommandParameter="{Binding}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Cover art -->
-                    <Border Grid.Column="0" Width="64" Height="86"
-                            CornerRadius="0" ClipToBounds="True">
+                    <Border Grid.Column="0" Width="48" Height="72"
+                            CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+                            VerticalAlignment="Center">
                         <local:Cover Source="{Binding CoverPath}"
                                      Title="{Binding Title}" />
                     </Border>
 
                     <!-- Info -->
-                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{Binding Title}"
-                                   FontSize="14" FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center" Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding StatusKickerText}"
+                                       Classes="Kicker"
+                                       Foreground="{DynamicResource AccentTextBrush}"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding IsActive}" />
+                        </StackPanel>
 
-                        <!-- Active state -->
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                        <!-- Active state: sizes · percent · speed on one mono line, then the bar -->
+                        <TextBlock Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    IsVisible="{Binding IsActive}">
                             <TextBlock.Text>
-                                <MultiBinding StringFormat="{}{0}  {1}">
+                                <MultiBinding StringFormat="{}{0} · {1} · {2}">
                                     <Binding Path="ProgressText" />
                                     <Binding Path="PercentText" />
+                                    <Binding Path="SpeedText" />
                                 </MultiBinding>
                             </TextBlock.Text>
                         </TextBlock>
                         <ProgressBar Value="{Binding Progress}"
                                      Minimum="0" Maximum="1"
-                                     Height="4" CornerRadius="2"
+                                     Height="6" MinHeight="6"
+                                     Margin="0,8,0,0"
+                                     Background="{DynamicResource SurfaceCanvasBrush}"
                                      IsVisible="{Binding IsActive}" />
-                        <TextBlock Text="{Binding SpeedText}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextDisabledBrush}"
-                                   IsVisible="{Binding IsActive}" />
 
                         <!-- Queued state -->
                         <TextBlock Text="{DynamicResource Queued}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource FontSizeKicker}"
                                    Foreground="{DynamicResource TextDisabledBrush}"
                                    IsVisible="{Binding IsQueued}" />
 
@@ -76,24 +86,27 @@
                         <StackPanel Orientation="Horizontal" Spacing="6"
                                     IsVisible="{Binding IsCompleted}">
                             <TextBlock Text="{DynamicResource Complete}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource FontSizeKicker}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Text="{Binding CompletedOnText}"
-                                   FontSize="10"
+                                   FontSize="{DynamicResource FontSizeKicker}"
                                    Foreground="{DynamicResource TextDisabledBrush}"
                                    IsVisible="{Binding CompletedOnText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     </StackPanel>
 
                     <!-- Cancel button (active) -->
-                    <IconButton Grid.Column="2"
-                                Command="{Binding $parent[local:DownloadQueueItemView].CancelCommand}"
-                                CommandParameter="{Binding}"
-                                Classes="Text Error"
-                                Width="32" Height="32"
-                                IconType="Regular"
-                                IconValue="X"
-                                IsVisible="{Binding IsActive}" />
+                    <Button Grid.Column="2"
+                            Command="{Binding $parent[local:DownloadQueueItemView].CancelCommand}"
+                            CommandParameter="{Binding}"
+                            Classes="Secondary"
+                            Width="34" Height="34" Padding="0"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Cancel"
+                            IsVisible="{Binding IsActive}">
+                        <Icon Type="Regular" Value="X" Width="14" Height="14" Foreground="{DynamicResource ErrorTextBrush}" />
+                    </Button>
                     
                     <IconButton Grid.Column="2"
                                 Command="{Binding $parent[local:DownloadQueueItemView].RemoveCommand}"
@@ -136,7 +149,7 @@
             <Border IsVisible="{Binding IsExpanded}"
                     Padding="16,8,16,12"
                     Background="Transparent"
-                    BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    BorderBrush="{DynamicResource SurfaceBrush}">
                 <Grid ColumnDefinitions="2*,3*">
                     <!-- Task timeline -->
                     <ItemsControl Grid.Column="0" ItemsSource="{Binding Tasks}">
@@ -146,7 +159,7 @@
                                 <!-- Top half of connecting line (hidden for first item) -->
                                 <Border Grid.Column="0"
                                         Width="2" Height="12"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        Background="{DynamicResource SurfaceBrush}"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Top"
                                         IsVisible="{Binding ShowTopLine}" />
@@ -154,7 +167,7 @@
                                 <!-- Bottom half of connecting line (hidden for last item) -->
                                 <Border Grid.Column="0"
                                         Width="2" Height="12"
-                                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                        Background="{DynamicResource SurfaceBrush}"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Bottom"
                                         IsVisible="{Binding ShowBottomLine}" />
@@ -162,7 +175,7 @@
                                 <!-- Filled dot (completed) -->
                                 <Ellipse Grid.Column="0"
                                          Width="10" Height="10"
-                                         Fill="{DynamicResource SystemAccentColor}"
+                                         Fill="{DynamicResource AccentTextBrush}"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center"
                                          IsVisible="{Binding IsCompleted}" />
@@ -170,7 +183,7 @@
                                 <!-- Running dot -->
                                 <Ellipse Grid.Column="0"
                                          Width="10" Height="10"
-                                         Fill="{DynamicResource SystemAccentColor}"
+                                         Fill="{DynamicResource AccentTextBrush}"
                                          Opacity="0.6"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center"
@@ -180,7 +193,7 @@
                                 <Ellipse Grid.Column="0"
                                          Width="10" Height="10"
                                          Fill="Transparent"
-                                         Stroke="{DynamicResource SystemAccentColor}"
+                                         Stroke="{DynamicResource AccentTextBrush}"
                                          StrokeThickness="1.5"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center"
@@ -197,7 +210,7 @@
                                 <!-- Skipped dot -->
                                 <Ellipse Grid.Column="0"
                                          Width="10" Height="10"
-                                         Fill="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                         Fill="{DynamicResource SurfaceBrush}"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center"
                                          IsVisible="{Binding IsSkipped}" />
@@ -206,12 +219,12 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
                                             VerticalAlignment="Center" Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Title}"
-                                               FontSize="12"
+                                               FontSize="{DynamicResource FontSizeCaption}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{Binding ErrorMessage}"
-                                               FontSize="10"
+                                               FontSize="{DynamicResource FontSizeKicker}"
                                                Foreground="{DynamicResource ErrorBrush}"
                                                VerticalAlignment="Center"
                                                IsVisible="{Binding IsFailed}"
@@ -230,7 +243,7 @@
                                IsVisible="{Binding HasSpeedData}">
                         <TextBlock DockPanel.Dock="Top"
                                    Text="{Binding SpeedChartLabel}"
-                                   FontSize="10"
+                                   FontSize="{DynamicResource FontSizeKicker}"
                                    Foreground="{DynamicResource TextDisabledBrush}"
                                    Margin="0,0,0,2" />
                         <lvc:CartesianChart MinHeight="80"

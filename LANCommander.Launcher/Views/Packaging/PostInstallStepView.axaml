@@ -5,32 +5,20 @@
              x:Class="LANCommander.Launcher.Views.Packaging.PostInstallStepView"
              x:DataType="vm:PostInstallStepViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="Border.badge">
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="5,1" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Border.badge > TextBlock">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-    </UserControl.Styles>
-
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
             <TextBlock Text="Additional Changes"
-                       FontSize="15"
+                       FontSize="{DynamicResource FontSizeSection}"
                        FontWeight="SemiBold" />
 
-            <TextBlock FontSize="12"
+            <TextBlock FontSize="{DynamicResource FontSizeCaption}"
                        Opacity="0.7"
                        TextWrapping="Wrap"
                        Text="Apply any additional changes to the game files now. When you're ready to continue packaging, click the rescan button." />
 
             <TextBlock Text="{Binding InstallDirectory}"
-                       FontSize="11"
+                       FontSize="{DynamicResource FontSizeKicker}"
                        Opacity="0.55"
                        TextWrapping="Wrap" />
         </StackPanel>
@@ -39,13 +27,13 @@
                 Margin="0,0,0,10"
                 Padding="12"
                 CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                Background="{DynamicResource SurfaceBrush}">
             <Grid RowDefinitions="Auto,Auto">
                 <DockPanel Grid.Row="0">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
                         <!-- First in the row because it is the other way of making a change, not
                              a variation on rescanning. -->
-                        <Button Content="Run &amp; Monitor"
+                        <Button Classes="Secondary" Content="Run &amp; Monitor"
                                 Click="OnRunInstallerClick"
                                 IsVisible="{Binding !IsMonitoring}"
                                 ToolTip.Tip="Select another executable to run and monitor for additional file and registry changes"
@@ -57,12 +45,12 @@
                                 IsVisible="{Binding IsMonitoring}"
                                 Padding="14,5" />
 
-                        <Button Content="Browse"
+                        <Button Classes="Secondary" Content="Browse"
                                 Command="{Binding BrowseInstallFolderCommand}"
                                 ToolTip.Tip="Open the install folder"
                                 Padding="12,5" />
 
-                        <Button Content="Reset"
+                        <Button Classes="Secondary" Content="Reset"
                                 Command="{Binding ResetBaselineCommand}"
                                 IsEnabled="{Binding !IsScanning}"
                                 ToolTip.Tip="Treat the folder as it is now as the starting point, and forget the changes listed below."
@@ -87,20 +75,20 @@
                              HorizontalAlignment="Left"
                              IsVisible="{Binding HasScanned}">
                     <StackPanel>
-                        <TextBlock Text="Baseline" FontSize="11" Opacity="0.7" />
-                        <TextBlock Text="{Binding BaselineFileCount}" FontSize="18" FontWeight="Bold" />
+                        <TextBlock Text="Baseline" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding BaselineFileCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" />
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="Added" FontSize="11" Opacity="0.7" />
-                        <TextBlock Text="{Binding AddedCount}" FontSize="18" FontWeight="Bold" Foreground="#7FBF7F" />
+                        <TextBlock Text="Added" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding AddedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource SuccessTextBrush}" />
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="Changed" FontSize="11" Opacity="0.7" />
-                        <TextBlock Text="{Binding ModifiedCount}" FontSize="18" FontWeight="Bold" Foreground="#7FA8BF" />
+                        <TextBlock Text="Changed" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding ModifiedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource Primary4Brush}" />
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="Removed" FontSize="11" Opacity="0.7" />
-                        <TextBlock Text="{Binding RemovedCount}" FontSize="18" FontWeight="Bold" Foreground="#BF7F7F" />
+                        <TextBlock Text="Removed" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding RemovedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource ErrorTextBrush}" />
                     </StackPanel>
                 </UniformGrid>
             </Grid>
@@ -110,7 +98,7 @@
              installer has actually been run through the step. -->
         <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10">
             <TextBlock Text="{Binding Status}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FontSizeCaption}"
                        TextWrapping="Wrap"
                        IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
@@ -119,7 +107,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
                         <TextBlock Text="{Binding}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource FontSizeKicker}"
                                    Opacity="0.7"
                                    TextTrimming="CharacterEllipsis" />
                     </DataTemplate>
@@ -137,7 +125,7 @@
         <!-- What changed -->
         <Border Grid.Row="4"
                 CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                Background="{DynamicResource SurfaceBrush}">
             <Grid RowDefinitions="*,Auto">
                 <ListBox Grid.Row="0"
                          ItemsSource="{Binding Changes}"
@@ -145,14 +133,14 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:DirectoryChangeItem">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Border Classes="badge" Background="#1F3A1F" IsVisible="{Binding IsAdded}">
-                                    <TextBlock Text="added" Foreground="#7FBF7F" />
+                                <Border Classes="StatusTag Success" IsVisible="{Binding IsAdded}">
+                                    <TextBlock Text="ADDED" />
                                 </Border>
-                                <Border Classes="badge" Background="#1F2E3A" IsVisible="{Binding IsModified}">
-                                    <TextBlock Text="changed" Foreground="#7FA8BF" />
+                                <Border Classes="StatusTag" IsVisible="{Binding IsModified}">
+                                    <TextBlock Text="CHANGED" />
                                 </Border>
-                                <Border Classes="badge" Background="#3A1F1F" IsVisible="{Binding IsRemoved}">
-                                    <TextBlock Text="removed" Foreground="#BF7F7F" />
+                                <Border Classes="StatusTag Error" IsVisible="{Binding IsRemoved}">
+                                    <TextBlock Text="REMOVED" />
                                 </Border>
 
                                 <TextBlock Text="{Binding RelativePath}"
@@ -161,7 +149,7 @@
                                            ToolTip.Tip="{Binding Path}" />
 
                                 <TextBlock Text="{Binding Size}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource FontSizeKicker}"
                                            Opacity="0.6"
                                            VerticalAlignment="Center" />
                             </StackPanel>
@@ -171,8 +159,8 @@
 
                 <TextBlock Grid.Row="1"
                            Margin="8,6"
-                           FontSize="11"
-                           Foreground="#FFA500"
+                           FontSize="{DynamicResource FontSizeKicker}"
+                           Foreground="{DynamicResource WarningTextBrush}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsChangeListTruncated}"
                            Text="Only the first 2,000 changes are listed. The counts above are complete, and every changed file is still included in the package." />

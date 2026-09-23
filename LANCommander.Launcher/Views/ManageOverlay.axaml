@@ -29,7 +29,7 @@
                           Content="{Binding DisplayName}" />
                 <TextBlock Text="{Binding Description}"
                            IsVisible="{Binding HasDescription}"
-                           FontSize="12" Opacity="0.45"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                            TextWrapping="Wrap" />
             </StackPanel>
         </DataTemplate>
@@ -39,10 +39,10 @@
             <StackPanel Spacing="4" Margin="0,0,0,10">
                 <TextBlock Text="{Binding DisplayName}"
                            IsVisible="{Binding HasLabel}"
-                           FontSize="13" FontWeight="SemiBold" />
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Description}"
                            IsVisible="{Binding HasDescription}"
-                           FontSize="12" Opacity="0.45"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                            TextWrapping="Wrap" />
                 <ComboBox ItemsSource="{Binding Choices}"
                           SelectedItem="{Binding SelectedChoice}"
@@ -61,10 +61,10 @@
             <StackPanel Spacing="4" Margin="0,0,0,10">
                 <TextBlock Text="{Binding DisplayName}"
                            IsVisible="{Binding HasLabel}"
-                           FontSize="13" FontWeight="SemiBold" />
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Description}"
                            IsVisible="{Binding HasDescription}"
-                           FontSize="12" Opacity="0.45"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                            TextWrapping="Wrap" />
                 <NumericUpDown Value="{Binding Value}"
                                Increment="1"
@@ -78,10 +78,10 @@
             <StackPanel Spacing="4" Margin="0,0,0,10">
                 <TextBlock Text="{Binding DisplayName}"
                            IsVisible="{Binding HasLabel}"
-                           FontSize="13" FontWeight="SemiBold" />
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Description}"
                            IsVisible="{Binding HasDescription}"
-                           FontSize="12" Opacity="0.45"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                            TextWrapping="Wrap" />
                 <TextBox Text="{Binding Value}"
                          HorizontalAlignment="Stretch" />
@@ -90,17 +90,18 @@
 
         <!-- list row → fields + remove -->
         <DataTemplate DataType="vm:GameOptionListRowViewModel">
-            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            <Border Background="{DynamicResource SurfaceRaisedBrush}"
                     Padding="8" Margin="0,0,0,6">
                 <DockPanel>
                     <Button DockPanel.Dock="Right"
-                            Content="✕"
-                            Background="Transparent"
-                            Padding="6,2"
+                            Classes="Text"
+                            Padding="6,4"
                             VerticalAlignment="Top"
                             Margin="6,0,0,0"
                             IsEnabled="{Binding CanRemove}"
-                            Command="{Binding RemoveCommand}" />
+                            Command="{Binding RemoveCommand}">
+                        <Icon Type="Regular" Value="X" Width="12" Height="12" />
+                    </Button>
                     <ItemsControl ItemsSource="{Binding Fields}" />
                 </DockPanel>
             </Border>
@@ -111,19 +112,19 @@
             <StackPanel Spacing="4" Margin="0,0,0,10">
                 <TextBlock Text="{Binding DisplayName}"
                            IsVisible="{Binding HasLabel}"
-                           FontSize="13" FontWeight="SemiBold" />
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Description}"
                            IsVisible="{Binding HasDescription}"
-                           FontSize="12" Opacity="0.45"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                            TextWrapping="Wrap" />
                 <ItemsControl ItemsSource="{Binding Rows}" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Content="Add Item"
+                    <Button Classes="Secondary" Content="Add Item"
                             IsEnabled="{Binding CanAdd}"
                             Command="{Binding AddRowCommand}" />
                     <TextBlock Text="{Binding BoundsHint}"
                                IsVisible="{Binding HasBoundsHint}"
-                               FontSize="12" Opacity="0.45"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
                                VerticalAlignment="Center" />
                 </StackPanel>
             </StackPanel>
@@ -149,7 +150,7 @@
             <ItemsControl ItemsSource="{Binding Versions}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:GameVersionItemViewModel">
-                        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                        <Border Background="{DynamicResource SurfaceRaisedBrush}"
                                 Padding="12,10"
                                 Margin="0,0,0,6"
                                 CornerRadius="4">
@@ -160,7 +161,7 @@
                                                 Spacing="8"
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="Installed"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource FontSizeKicker}"
                                                    Opacity="0.55"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding IsInstalled}" />
@@ -172,18 +173,18 @@
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="{Binding VersionLabel}"
                                                    FontWeight="SemiBold"
-                                                   FontSize="14" />
+                                                   FontSize="{DynamicResource FontSizeBody}" />
                                         <TextBlock Text="{Binding CreatedOnText}"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource FontSizeKicker}"
                                                    Opacity="0.55"
                                                    IsVisible="{Binding CreatedOnKnown}" />
                                     </StackPanel>
                                 </DockPanel>
                                 <TextBlock Text="{Binding ChangelogText}"
-                                           FontSize="12"
+                                           FontSize="{DynamicResource FontSizeCaption}"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding HasChangelog}" />
-                                <TextBlock FontSize="11"
+                                <TextBlock FontSize="{DynamicResource FontSizeKicker}"
                                            Opacity="0.55"
                                            IsVisible="{Binding HasSize}">
                                     <Run Text="Download:" />
@@ -196,77 +197,131 @@
             </ItemsControl>
         </DataTemplate>
 
-        <!-- Saves section -->
+        <!-- Saves section: server saves as a list group, newest first. The newest gets the
+             selected-row treatment (Raised + accent rail) and a LATEST tag. -->
         <DataTemplate DataType="vm:GameSavesViewModel">
-            <StackPanel Spacing="6">
+            <StackPanel Spacing="10">
+                <DockPanel IsVisible="{Binding HasSaves}">
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="{Binding TotalSizeText}"
+                               Classes="Mono"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="ON THE SERVER" Classes="Kicker" VerticalAlignment="Center" />
+                        <Border Classes="CountPill Neutral">
+                            <TextBlock Text="{Binding Saves.Count}" />
+                        </Border>
+                    </StackPanel>
+                </DockPanel>
+
                 <TextBlock Text="No cloud saves for this game yet."
-                           FontSize="12"
-                           Opacity="0.55"
+                           Classes="Caption"
                            IsVisible="{Binding IsEmpty}" />
-                <ItemsControl ItemsSource="{Binding Saves}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:GameSaveItemViewModel">
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    Padding="12,10"
-                                    Margin="0,0,0,6"
-                                    CornerRadius="4">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Right"
-                                                Orientation="Horizontal"
-                                                Spacing="8"
-                                                VerticalAlignment="Center">
-                                        <Button Content="Download"
-                                                Classes="Primary"
-                                                IsEnabled="{Binding !IsBusy}"
-                                                Command="{Binding DownloadCommand}" />
-                                        <Button Content="Delete"
-                                                Classes="Text"
-                                                IsEnabled="{Binding !IsBusy}"
-                                                Command="{Binding DeleteCommand}" />
-                                    </StackPanel>
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding CreatedOnText}"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="14" />
-                                        <TextBlock Text="{Binding SizeText}"
-                                                   FontSize="11"
-                                                   Opacity="0.55"
+
+                <Border Classes="Card"
+                        ClipToBounds="True"
+                        IsVisible="{Binding HasSaves}">
+                    <ItemsControl ItemsSource="{Binding Saves}">
+                        <ItemsControl.Styles>
+                            <Style Selector="Border.SaveRow">
+                                <Setter Property="MinHeight" Value="48" />
+                                <Setter Property="Padding" Value="14,0,8,0" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+                                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                            </Style>
+                            <!-- Rail as a left border; padding trimmed by the same 2px so columns stay put -->
+                            <Style Selector="Border.SaveRow.Latest">
+                                <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+                                <Setter Property="BorderThickness" Value="2,0,0,0" />
+                                <Setter Property="Padding" Value="12,0,8,0" />
+                            </Style>
+                        </ItemsControl.Styles>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GameSaveItemViewModel">
+                                <Border Classes="SaveRow" Classes.Latest="{Binding IsLatest}">
+                                    <!-- Timestamp | relative time + LATEST (shrinks first) | size | actions -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding TimestampText}"
+                                                   Classes="Mono"
+                                                   FontSize="{DynamicResource FontSizeLabel}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,14,0" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                                                    VerticalAlignment="Center" ClipToBounds="True">
+                                            <TextBlock Text="{Binding RelativeText}"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <Border Classes="StatusTag" IsVisible="{Binding IsLatest}">
+                                                <TextBlock Text="LATEST" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding SizeText}"
+                                                   Classes="Mono"
+                                                   FontSize="{DynamicResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="12,0"
                                                    IsVisible="{Binding HasSize}" />
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4"
+                                                    VerticalAlignment="Center">
+                                            <Button Classes="Secondary"
+                                                    Width="30" Height="30" Padding="0"
+                                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                                    ToolTip.Tip="Download this save"
+                                                    IsEnabled="{Binding !IsBusy}"
+                                                    Command="{Binding DownloadCommand}">
+                                                <Icon Type="Regular" Value="DownloadSimple" Width="14" Height="14" />
+                                            </Button>
+                                            <Button Classes="Text Error"
+                                                    Width="30" Height="30" Padding="0"
+                                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                                    ToolTip.Tip="Delete this save"
+                                                    IsEnabled="{Binding !IsBusy}"
+                                                    Command="{Binding DeleteCommand}">
+                                                <Icon Type="Regular" Value="Trash" Width="14" Height="14" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
             </StackPanel>
         </DataTemplate>
 
     </UserControl.DataTemplates>
 
     <!-- Full-window dim backdrop -->
-    <Grid Background="#AA000000">
+    <Grid Background="{DynamicResource ScrimBrush}">
 
         <!-- Centered card -->
-        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+        <Border Classes="Dialog"
                 Width="720"
                 MaxHeight="640"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                BoxShadow="0 8 40 8 #88000000">
+                VerticalAlignment="Center">
 
             <DockPanel>
 
                 <!-- ── Header ─────────────────────────────────────────────── -->
-                <Border DockPanel.Dock="Top" Padding="20,16,20,8">
-                    <TextBlock FontSize="18" FontWeight="Bold"
+                <Border DockPanel.Dock="Top" Classes="DialogHeader">
+                    <TextBlock FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
                                Text="{Binding DialogTitle}" />
                 </Border>
 
                 <!-- ── Footer ─────────────────────────────────────────────── -->
-                <Border DockPanel.Dock="Bottom" Padding="20,12,20,16">
+                <Border DockPanel.Dock="Bottom" Classes="DialogFooterBar">
                     <DockPanel>
-                        <Button DockPanel.Dock="Left"
+                        <Button Classes="Secondary" DockPanel.Dock="Left"
                                 Content="Close"
                                 Click="Close_Click" />
                         <StackPanel Orientation="Horizontal"
@@ -275,7 +330,7 @@
                                     Classes="DialogFooter">
                             <TextBlock Text="{Binding SelectedSection.Status}"
                                        Opacity="0.6"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource FontSizeCaption}"
                                        VerticalAlignment="Center" />
                             <Button Content="{Binding SelectedSection.ActionText}"
                                     Classes="Primary"
@@ -290,7 +345,7 @@
 
                     <!-- Left navigation -->
                     <ListBox Grid.Column="0"
-                             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                             Background="{DynamicResource SurfaceRaisedBrush}"
                              ItemsSource="{Binding Sections}"
                              SelectedItem="{Binding SelectedSection}">
                         <ListBox.ItemTemplate>

@@ -8,33 +8,31 @@
              controls:AutoFocus.IsEnabled="True">
 
     <!-- Full-window dim backdrop -->
-    <Grid Background="#AA000000">
+    <Grid Background="{DynamicResource ScrimBrush}">
 
         <!-- Centered card -->
-        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+        <Border Classes="Dialog"
                 Width="460"
                 MaxHeight="600"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                BoxShadow="0 8 40 8 #88000000">
+                VerticalAlignment="Center">
 
             <DockPanel>
 
                 <!-- ── Header ─────────────────────────────────────────────── -->
-                <Border DockPanel.Dock="Top" Padding="20,16,20,0">
-                    <TextBlock FontSize="18" FontWeight="Bold"
-                               HorizontalAlignment="Center"
+                <Border DockPanel.Dock="Top" Classes="DialogHeader">
+                    <TextBlock FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
                                Text="{Binding DialogTitle}" />
                 </Border>
 
                 <!-- ── Buttons ────────────────────────────────────────────── -->
-                <Border DockPanel.Dock="Bottom" Padding="20,16">
+                <Border DockPanel.Dock="Bottom" Classes="DialogFooterBar">
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 Spacing="8"
                                 Classes="DialogFooter">
-                        <Button Content="Cancel"
+                        <Button Classes="Secondary" Content="Cancel"
                                 Click="Cancel_Click" />
                         <Button Content="{Binding ConfirmButtonText}"
                                 Classes="Primary"
@@ -45,7 +43,7 @@
                 <!-- ── Body ───────────────────────────────────────────────── -->
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
-                              Padding="20,24,20,8">
+                              Padding="20,18">
                     <views:InstallOptionsBody />
                 </ScrollViewer>
 

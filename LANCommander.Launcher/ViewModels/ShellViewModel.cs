@@ -120,6 +120,9 @@ public partial class ShellViewModel : ViewModelBase
     public bool IsLibraryActive => !IsDepotActive;
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
 
+    /// <summary>Host (and port) of the connected server, for the library rail's status line.</summary>
+    public string ServerHost => _serviceProvider.GetService<IConnectionClient>()?.GetServerAddress()?.Authority ?? string.Empty;
+
     [ObservableProperty]
     private bool _areUserLibrariesEnabled = true;
 
@@ -266,6 +269,7 @@ public partial class ShellViewModel : ViewModelBase
 
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
+        OnPropertyChanged(nameof(ServerHost));
 
         // Default to the library whenever user libraries are enabled; fall back to the depot only
         // when libraries are turned off server-side.

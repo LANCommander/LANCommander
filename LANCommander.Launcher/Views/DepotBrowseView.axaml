@@ -7,12 +7,9 @@
              x:DataType="vm:DepotBrowseViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Button.active">
-            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
-        </Style>
         <!-- Locked filter chip: looks like an active tag but non-interactive (no hover change) -->
         <Style Selector="Border.locked-chip">
-            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="8,4" />
         </Style>
@@ -22,18 +19,18 @@
 
         <!-- ── Filter Bar ──────────────────────────────────────────────────── -->
         <StackPanel DockPanel.Dock="Bottom"
-                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                    Background="{DynamicResource SurfaceRaisedBrush}">
 
             <!-- Advanced panel — expands upward above the quick row -->
             <Border IsVisible="{Binding IsAdvancedFilterOpen}"
                     Padding="12,10,12,4"
-                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderBrush="{DynamicResource HairlineBorderBrush}"
                     BorderThickness="0,0,0,1">
                 <WrapPanel Orientation="Horizontal" ItemWidth="180">
 
                     <!-- Sort -->
                     <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Sort" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Sort" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <Grid ColumnDefinitions="*,Auto">
                             <ComboBox Grid.Column="0"
                                       SelectedItem="{Binding SelectedSortBy}"
@@ -43,7 +40,7 @@
                                     <enums:SortBy>DateReleased</enums:SortBy>
                                 </ComboBox.Items>
                             </ComboBox>
-                            <Button Grid.Column="1"
+                            <Button Classes="Secondary" Grid.Column="1"
                                     Command="{Binding ToggleSortDirectionCommand}"
                                     Padding="8,6" Margin="4,0,0,0">
                                 <Panel>
@@ -57,7 +54,7 @@
                     <!-- Group by (hidden when collection is locked — grouping is implicit) -->
                     <StackPanel Spacing="4" Margin="0,0,12,8"
                                 IsVisible="{Binding !IsCollectionLocked}">
-                        <TextBlock Text="Group By" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Group By" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableGroupByOptions}"
                                   SelectedItem="{Binding SelectedGroupBy}"
                                   HorizontalAlignment="Stretch" />
@@ -66,7 +63,7 @@
                     <!-- Genre — hidden when genre is locked -->
                     <StackPanel Spacing="4" Margin="0,0,12,8"
                                 IsVisible="{Binding !IsGenreLocked}">
-                        <TextBlock Text="Genre" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Genre" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableGenres}"
                                   SelectedItem="{Binding SelectedGenre}"
                                   PlaceholderText="Any"
@@ -82,7 +79,7 @@
                     <!-- Tags — hidden when tag is locked -->
                     <StackPanel Spacing="4" Margin="0,0,12,8"
                                 IsVisible="{Binding !IsTagLocked}">
-                        <TextBlock Text="Tag" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Tag" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableTags}"
                                   SelectedItem="{Binding SelectedTag}"
                                   PlaceholderText="Any"
@@ -91,7 +88,7 @@
 
                     <!-- Developer -->
                     <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Developer" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Developer" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailableDevelopers}"
                                   SelectedItem="{Binding SelectedDeveloper}"
                                   PlaceholderText="Any"
@@ -100,7 +97,7 @@
 
                     <!-- Publisher -->
                     <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Publisher" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Publisher" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{Binding AvailablePublishers}"
                                   SelectedItem="{Binding SelectedPublisher}"
                                   PlaceholderText="Any"
@@ -109,7 +106,7 @@
 
                     <!-- Multiplayer -->
                     <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Multiplayer" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Multiplayer" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailableMultiplayerTypes}"
                                   SelectedItem="{Binding SelectedMultiplayerType}"
                                   PlaceholderText="Any"
@@ -118,7 +115,7 @@
 
                     <!-- Player Count -->
                     <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Min Players" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Min Players" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailablePlayerCounts}"
                                   SelectedItem="{Binding SelectedMinPlayers}"
                                   PlaceholderText="Any"
@@ -128,7 +125,7 @@
                     <!-- In Library (depot only) -->
                     <StackPanel Spacing="4" Margin="0,0,12,8"
                                 IsVisible="{Binding ShowInLibraryFilter}">
-                        <TextBlock Text="Ownership" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="Ownership" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
                         <ToggleButton IsChecked="{Binding ShowInLibraryOnly}"
                                       Content="In Library Only"
                                       HorizontalAlignment="Stretch" />
@@ -161,11 +158,11 @@
                             VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock Text="{Binding LockedFilterLabel}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource FontSizeKicker}"
                                        Opacity="0.7"
                                        VerticalAlignment="Center" />
                             <TextBlock Text="{Binding LockedFilterValue}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource FontSizeCaption}"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center" />
                             <Icon Type="Regular" Value="Lock" Width="10" Height="10"
@@ -180,24 +177,22 @@
 
                     <!-- View type toggle -->
                     <Border Grid.Column="3"
-                            CornerRadius="2"
-                            Margin="0,0,8,0"
-                            Padding="4"
-                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                            Classes="Segmented"
+                            Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="Segment"
                                     ToolTip.Tip="Grid view"
                                     Classes.active="{Binding IsGridView}"
                                     Click="GridViewButton_Click">
                                 <Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
                             </Button>
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                            <Button Classes="Segment"
                                     ToolTip.Tip="List view"
                                     Classes.active="{Binding IsListView}"
                                     Click="ListViewButton_Click">
                                 <Icon Type="Regular" Value="Rows" Width="14" Height="14" />
                             </Button>
-                            <Button Background="Transparent" BorderThickness="0" Padding="8,6"
+                            <Button Classes="Segment"
                                     ToolTip.Tip="Horizontal view"
                                     Classes.active="{Binding IsHorizontalView}"
                                     Click="HorizontalViewButton_Click">
@@ -219,9 +214,10 @@
                     <!-- Clear button — uses ClearAdditionalFiltersCommand to preserve locked filter -->
                     <Button Grid.Column="5"
                             Command="{Binding ClearAdditionalFiltersCommand}"
-                            Content="✕"
                             Classes="Text Error"
-                            Padding="8,6" />
+                            Padding="8,6">
+                        <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                    </Button>
 
                 </Grid>
             </Border>
@@ -235,7 +231,7 @@
                 HorizontalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
             </StackPanel>
         </Border>
 

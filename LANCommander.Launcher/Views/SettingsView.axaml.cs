@@ -63,7 +63,7 @@ public partial class SettingsView : UserControl
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
-            if (this.TryFindResource("SystemControlBackgroundChromeMediumLowBrush", out var brush) && brush is IBrush background)
+            if (this.TryFindResource("SurfaceRaisedBrush", out var brush) && brush is IBrush background)
                 card.Background = background;
 
             SectionsPanel.Children.Add(card);

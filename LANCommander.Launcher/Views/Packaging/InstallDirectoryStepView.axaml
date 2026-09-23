@@ -6,16 +6,16 @@
 
     <StackPanel Spacing="10">
         <TextBlock Text="Where was the game installed?"
-                   FontSize="15"
+                   FontSize="{DynamicResource FontSizeSection}"
                    FontWeight="SemiBold" />
 
         <TextBlock Text="Files in the package are stored relative to this folder."
-                   FontSize="12"
+                   FontSize="{DynamicResource FontSizeCaption}"
                    Opacity="0.7"
                    TextWrapping="Wrap" />
 
         <DockPanel>
-            <Button DockPanel.Dock="Right"
+            <Button Classes="Secondary" DockPanel.Dock="Right"
                     Content="Browse..."
                     Click="OnBrowseClick"
                     Margin="8,0,0,0"
@@ -26,7 +26,7 @@
         </DockPanel>
 
         <TextBlock Text="{Binding DetectionSummary}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FontSizeCaption}"
                    Opacity="0.7"
                    TextWrapping="Wrap" />
     </StackPanel>

@@ -13,13 +13,13 @@
         <!-- Header -->
         <Border Grid.Row="0" 
                 Padding="16,12" 
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                Background="{DynamicResource SurfaceRaisedBrush}">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{Binding Title}" 
-                           FontSize="18" 
+                           FontSize="{DynamicResource FontSizeSection}" 
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
-                <Button Grid.Column="1" 
+                <Button Classes="Secondary" Grid.Column="1" 
                         Content="Close" 
                         Command="{Binding CloseCommand}"
                         Padding="16,8" />

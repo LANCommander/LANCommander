@@ -10,7 +10,7 @@
         <StackPanel Spacing="12" MaxWidth="620" HorizontalAlignment="Stretch">
 
             <TextBlock Text="Build the package"
-                       FontSize="15"
+                       FontSize="{DynamicResource FontSizeSection}"
                        FontWeight="SemiBold" />
 
             <!-- Save and publish are independent: either, both, or the build button stays off. -->
@@ -18,7 +18,7 @@
                 <CheckBox Content="Save an .lcx file" IsChecked="{Binding SaveToDisk}" />
 
                 <DockPanel Margin="24,0,0,0" IsEnabled="{Binding SaveToDisk}">
-                    <Button DockPanel.Dock="Right"
+                    <Button Classes="Secondary" DockPanel.Dock="Right"
                             Content="Browse..."
                             Click="OnBrowseClick"
                             Margin="8,0,0,0"
@@ -34,7 +34,7 @@
                           IsEnabled="{Binding CanPublish}" />
 
                 <TextBlock Margin="24,0,0,0"
-                           FontSize="12"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            Opacity="0.7"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !CanPublish}"
@@ -50,7 +50,7 @@
                               HorizontalAlignment="Left" />
 
                     <StackPanel Spacing="4" HorizontalAlignment="Left" Width="240">
-                        <TextBlock Text="Compression" FontSize="12" Opacity="0.7" />
+                        <TextBlock Text="Compression" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                         <ComboBox SelectedItem="{Binding CompressionLevel}"
                                   ItemsSource="{Binding CompressionLevels}"
                                   HorizontalAlignment="Stretch" />
@@ -76,26 +76,19 @@
                        TextWrapping="Wrap"
                        IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-            <Border Padding="10"
-                    CornerRadius="4"
-                    Background="#3A2020"
-                    BorderBrush="#E05A5A"
-                    BorderThickness="1"
+            <Border Classes="Notice Error"
                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="#FFB0B0"
-                           TextWrapping="Wrap" />
+                <DockPanel>
+                    <Icon DockPanel.Dock="Left" Type="Regular" Value="WarningCircle" Width="14" Height="14" Margin="0,1,10,0" VerticalAlignment="Top" />
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+                </DockPanel>
             </Border>
 
-            <Border Padding="10"
-                    CornerRadius="4"
-                    Background="#203A20"
-                    BorderBrush="#7FBF7F"
-                    BorderThickness="1"
-                    IsVisible="{Binding IsComplete}">
-                <TextBlock Text="Done."
-                           Foreground="#B0FFB0"
-                           TextWrapping="Wrap" />
+            <Border Classes="Notice Success" IsVisible="{Binding IsComplete}">
+                <DockPanel>
+                    <Icon DockPanel.Dock="Left" Type="Regular" Value="CheckCircle" Width="14" Height="14" Margin="0,1,10,0" VerticalAlignment="Top" />
+                    <TextBlock Text="Done." TextWrapping="Wrap" />
+                </DockPanel>
             </Border>
         </StackPanel>
     </ScrollViewer>

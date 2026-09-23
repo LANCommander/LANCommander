@@ -13,7 +13,7 @@
 
     <Window.Styles>
         <Style Selector="ToggleButton.AddonItem">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -21,7 +21,7 @@
             <Setter Property="CornerRadius" Value="6" />
         </Style>
         <Style Selector="ToggleButton.AddonItem:checked">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         </Style>
     </Window.Styles>
 
@@ -29,7 +29,7 @@
 
         <!-- ── Header ───────────────────────────────────────────────────── -->
         <Border Padding="20,16,20,0">
-            <TextBlock FontSize="18" FontWeight="Bold"
+            <TextBlock FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold"
                        HorizontalAlignment="Center"
                        TextTrimming="CharacterEllipsis">
                 <Run Text="Install " /><Run Text="{Binding GameTitle}" />
@@ -42,18 +42,18 @@
             <UniformGrid Columns="2">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="Download Size"
-                               FontSize="11" Opacity="0.55"
+                               FontSize="{DynamicResource FontSizeKicker}" Opacity="0.55"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="{Binding DownloadSizeText}"
-                               FontSize="18" FontWeight="SemiBold"
+                               FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="Space Required"
-                               FontSize="11" Opacity="0.55"
+                               FontSize="{DynamicResource FontSizeKicker}" Opacity="0.55"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="{Binding SpaceRequiredText}"
-                               FontSize="18" FontWeight="SemiBold"
+                               FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </UniformGrid>
@@ -68,17 +68,17 @@
                             Content="None"
                             Background="Transparent"
                             Padding="8,2"
-                            FontSize="12"
+                            FontSize="{DynamicResource FontSizeCaption}"
                             Click="DeselectAllAddons_Click" />
                     <Button DockPanel.Dock="Right"
                             Content="All"
                             Background="Transparent"
                             Padding="8,2"
-                            FontSize="12"
+                            FontSize="{DynamicResource FontSizeCaption}"
                             Margin="0,0,4,0"
                             Click="SelectAllAddons_Click" />
                     <TextBlock Text="Optional Add-ons"
-                               FontSize="13" FontWeight="SemiBold"
+                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </DockPanel>
 
@@ -100,11 +100,11 @@
                                               VerticalAlignment="Center" />
                                         <TextBlock DockPanel.Dock="Right"
                                                    Text="{Binding TypeLabel}"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource FontSizeKicker}"
                                                    Opacity="0.55"
                                                    VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding Title}"
-                                                   FontSize="13"
+                                                   FontSize="{DynamicResource FontSizeLabel}"
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" />
                                     </DockPanel>
@@ -121,7 +121,7 @@
                 Padding="20,16,20,0">
             <StackPanel Spacing="8">
                 <TextBlock Text="Install Location"
-                           FontSize="13" FontWeight="SemiBold" />
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                 <ComboBox ItemsSource="{Binding InstallDirectories}"
                           SelectedItem="{Binding SelectedInstallDirectory}"
                           HorizontalAlignment="Stretch" />
@@ -134,7 +134,7 @@
                         HorizontalAlignment="Right"
                         Spacing="8"
                         Classes="DialogFooter">
-                <Button Content="Cancel"
+                <Button Classes="Secondary" Content="Cancel"
                         Click="Cancel_Click" />
                 <Button Content="Install"
                         Classes="Primary"

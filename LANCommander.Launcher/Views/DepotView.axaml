@@ -16,7 +16,7 @@
             <Setter Property="CornerRadius" Value="100" />
             <Setter Property="Padding" Value="14,6" />
             <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.browse-chip:pointerover">
@@ -34,7 +34,7 @@
                         HorizontalAlignment="Center"
                         IsVisible="{Binding IsLoading}">
                 <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="13" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
             </StackPanel>
 
             <!-- ══ Error ═════════════════════════════════════════════════════════ -->
@@ -42,7 +42,7 @@
                     Background="#22FF4D4F"
                     CornerRadius="4"
                     Padding="12">
-                <TextBlock Text="{Binding StatusMessage}" Foreground="#FF4D4F" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorTextBrush}" TextWrapping="Wrap" />
             </Border>
 
             <!-- ══ Empty state ════════════════════════════════════════════════════ -->
@@ -57,15 +57,16 @@
                     </MultiBinding>
                 </StackPanel.IsVisible>
                 <Icon Type="Regular" Value="Storefront" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
-                <TextBlock Text="Nothing Here Yet" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+                <TextBlock Text="Nothing Here Yet" FontSize="{DynamicResource FontSizeBody}" Opacity="0.5" HorizontalAlignment="Center" />
                 <TextBlock Text="Games will appear here once they're available on the server."
-                           FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
+                           FontSize="{DynamicResource FontSizeLabel}" Opacity="0.4" HorizontalAlignment="Center" />
             </StackPanel>
 
             <!-- ══ POPULAR ════════════════════════════════════════════════════════
                  Hero + logo cards in 16:9 boxes.
             ═══════════════════════════════════════════════════════════════════════ -->
             <CarouselControl Title="Popular"
+                                      Kicker="ON THIS SERVER"
                                       WrapItems="True"
                                       ItemsSource="{Binding PopularGames}"
                                       ItemWidth="460"
@@ -90,15 +91,19 @@
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="1"
-                           Text="Search"
-                           FontSize="18" FontWeight="SemiBold"
+                           Text="SEARCH"
+                           Classes="Kicker"
                            VerticalAlignment="Center"
                            Margin="0,0,0,10" />
                 <TextBox Grid.Row="1" Grid.Column="1"
                          Watermark="Search games…"
                          Text="{Binding SearchText}"
-                         FontSize="16"
-                         Padding="14,10">
+                         FontSize="{DynamicResource FontSizeBody}"
+                         Padding="8,10,14,10">
+                    <TextBox.InnerLeftContent>
+                        <Icon Type="Regular" Value="MagnifyingGlass" Width="16" Height="16" Margin="14,0,0,0"
+                              Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </TextBox.InnerLeftContent>
                     <TextBox.KeyBindings>
                         <KeyBinding Gesture="Return" Command="{Binding SearchCommand}" />
                     </TextBox.KeyBindings>

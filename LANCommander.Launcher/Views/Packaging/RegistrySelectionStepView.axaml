@@ -9,19 +9,19 @@
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                <Button Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
-                <Button Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
+                <Button Classes="Secondary" Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
+                <Button Classes="Secondary" Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
             </StackPanel>
 
             <TextBlock Text="Choose the registry changes to recreate"
-                       FontSize="15"
+                       FontSize="{DynamicResource FontSizeSection}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center" />
         </DockPanel>
 
         <Border Grid.Row="1"
                 CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                Background="{DynamicResource SurfaceBrush}">
             <TreeView ItemsSource="{Binding Roots}" Padding="6">
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="components:CheckableTreeNode"
@@ -32,14 +32,14 @@
                                       MinWidth="0" />
 
                             <TextBlock Text="+"
-                                       Foreground="#7FBF7F"
+                                       Foreground="{DynamicResource SuccessTextBrush}"
                                        FontWeight="Bold"
                                        VerticalAlignment="Center"
                                        ToolTip.Tip="Key created"
                                        IsVisible="{Binding IsCreate}" />
 
                             <TextBlock Text="~"
-                                       Foreground="#7FA8BF"
+                                       Foreground="{DynamicResource Primary4Brush}"
                                        FontWeight="Bold"
                                        VerticalAlignment="Center"
                                        ToolTip.Tip="Value written"
@@ -55,7 +55,7 @@
         <TextBlock Grid.Row="2"
                    Margin="0,8,0,0"
                    Text="{Binding Summary}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FontSizeCaption}"
                    Opacity="0.7"
                    TextWrapping="Wrap" />
     </Grid>

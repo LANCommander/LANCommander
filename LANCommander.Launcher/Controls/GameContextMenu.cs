@@ -202,9 +202,9 @@ public static class GameContextMenu
         items.Add(Item("Manage", vm, "ManageCommand", visiblePath: "CanManage"));
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Verify Files", vm, "VerifyFilesCommand", visiblePath: "IsInstalled", enabledPath: "IsVerifyingFiles", enabledInvert: true));
-        items.Add(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true));
+        items.Add(Destructive(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true)));
         items.Add(Item("Add to Library", vm, "AddToLibraryCommand", visiblePath: "IsInLibrary", visibleInvert: true));
-        items.Add(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary"));
+        items.Add(Destructive(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary")));
 
         AppendPluginItems(items, vm.GameId);
 
@@ -290,6 +290,13 @@ public static class GameContextMenu
                 Converter = enabledInvert ? Invert : null,
             });
 
+        return item;
+    }
+
+    /// <summary>Marks a row that removes something; the theme gives these the error colour.</summary>
+    private static MenuItem Destructive(MenuItem item)
+    {
+        item.Classes.Add("Destructive");
         return item;
     }
 

@@ -10,25 +10,25 @@
             <StackPanel Spacing="10" MaxWidth="620" HorizontalAlignment="Stretch">
 
                 <DockPanel>
-                    <Button DockPanel.Dock="Right"
+                    <Button Classes="Secondary" DockPanel.Dock="Right"
                             Content="Look up..."
                             Command="{Binding OpenSearchCommand}"
                             Margin="8,0,0,0"
                             Padding="14,6" />
 
                     <TextBlock Text="Describe the game"
-                               FontSize="15"
+                               FontSize="{DynamicResource FontSizeSection}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </DockPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Title" FontSize="12" Opacity="0.7" />
+                    <TextBlock Text="Title" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                     <TextBox Text="{Binding GameTitle}" />
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Sort title" FontSize="12" Opacity="0.7" />
+                    <TextBlock Text="Sort title" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                     <TextBox Text="{Binding SortTitle}" Watermark="Defaults to the title" />
                 </StackPanel>
 
@@ -36,12 +36,12 @@
                      sit in clipped them, so it now sizes to its own content. -->
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <StackPanel Spacing="4" Width="140">
-                        <TextBlock Text="Version" FontSize="12" Opacity="0.7" />
+                        <TextBlock Text="Version" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                         <TextBox Text="{Binding Version}" />
                     </StackPanel>
 
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Released on" FontSize="12" Opacity="0.7" />
+                        <TextBlock Text="Released on" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                         <DatePicker SelectedDate="{Binding ReleasedOn}"
                                     HorizontalAlignment="Left" />
                     </StackPanel>
@@ -53,7 +53,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Description" FontSize="12" Opacity="0.7" />
+                    <TextBlock Text="Description" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                     <TextBox Text="{Binding Description}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
@@ -61,7 +61,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Notes" FontSize="12" Opacity="0.7" />
+                    <TextBlock Text="Notes" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.7" />
                     <TextBox Text="{Binding Notes}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
@@ -81,12 +81,12 @@
                     CornerRadius="6"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
-                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                    Background="{DynamicResource SurfaceBrush}">
 
                 <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
                     <TextBlock Grid.Row="0"
                                Text="Look up metadata"
-                               FontSize="15"
+                               FontSize="{DynamicResource FontSizeSection}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,10" />
 
@@ -122,7 +122,7 @@
 
                     <Border Grid.Row="3"
                             CornerRadius="4"
-                            Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                            Background="{DynamicResource SurfaceBrush}">
                         <Panel>
                             <ListBox ItemsSource="{Binding SearchResults}"
                                      SelectedItem="{Binding SelectedResult}"
@@ -132,7 +132,7 @@
                                         <StackPanel Spacing="2" Margin="0,4">
                                             <TextBlock Text="{Binding Data.Title}" FontWeight="SemiBold" />
                                             <TextBlock Text="{Binding Data.Description}"
-                                                       FontSize="11"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
                                                        Opacity="0.7"
                                                        MaxLines="2"
                                                        TextTrimming="CharacterEllipsis"
@@ -143,7 +143,7 @@
                             </ListBox>
 
                             <TextBlock Text="{Binding SearchError}"
-                                       Foreground="#E05A5A"
+                                       Foreground="{DynamicResource ErrorTextBrush}"
                                        Margin="12"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Top"
@@ -160,7 +160,7 @@
                                 Spacing="8"
                                 HorizontalAlignment="Right"
                                 Margin="0,10,0,0">
-                        <Button Content="Cancel" Command="{Binding CloseSearchCommand}" Padding="16,6" />
+                        <Button Classes="Secondary" Content="Cancel" Command="{Binding CloseSearchCommand}" Padding="16,6" />
                         <Button Content="Use selected"
                                 Classes="Primary"
                                 Command="{Binding ApplySelectedResultCommand}"

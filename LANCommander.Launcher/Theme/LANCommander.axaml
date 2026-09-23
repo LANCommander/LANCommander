@@ -11,7 +11,7 @@
     <Setter Property="Background" Value="{DynamicResource ButtonDefaultBgBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
     <Setter Property="Padding" Value="12,6" />
   </Style>
 
@@ -24,15 +24,19 @@
     <Setter Property="Background" Value="{DynamicResource ButtonDefaultActiveBrush}" />
   </Style>
 
-  <!-- Focus-visible: highlight with inset box-shadow so layout is not affected -->
-  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter,
-                   local|IconButton:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BoxShadow" Value="inset 0 0 0 2 #994096FF" />
-    <Setter Property="CornerRadius" Value="4" />
-  </Style>
-  <Style Selector="SplitButton:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BoxShadow" Value="inset 0 0 0 2 #994096FF" />
-    <Setter Property="CornerRadius" Value="4" />
+  <!-- Keyboard/gamepad focus: 2px accent ring offset 2px outside the button, replacing Fluent's white/black
+       adorner; it must stay visible over artwork for big-screen mode. Drawn as an adorner because an outer
+       BoxShadow gets clipped to the button's own bounds. CornerRadius = RadiusMedium + the 4px offset. -->
+  <Style Selector="Button, local|IconButton, SplitButton">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderThickness="2"
+                BorderBrush="{DynamicResource FocusRingBrush}"
+                CornerRadius="8"
+                Margin="-4"
+                AdornerLayer.IsClipEnabled="False" />
+      </FocusAdornerTemplate>
+    </Setter>
   </Style>
 
   <!-- ===================================================== -->
@@ -43,7 +47,7 @@
   <Style Selector="Button.Primary, Button.Success, Button.Warning, Button.Error,
                    local|IconButton.Primary, local|IconButton.Success, local|IconButton.Warning, local|IconButton.Error">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
     <Setter Property="Padding" Value="12,6" />
   </Style>
 
@@ -126,7 +130,7 @@
   <!-- shared base for all solid SplitButton variants -->
   <Style Selector="SplitButton.Primary, SplitButton.Success, SplitButton.Warning, SplitButton.Error">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
   </Style>
 
   <Style Selector="SplitButton.Primary:disabled, SplitButton.Success:disabled, SplitButton.Warning:disabled, SplitButton.Error:disabled">
@@ -270,6 +274,25 @@
     <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
   </Style>
   
+  <!-- Flyout open: Fluent paints both halves its neutral FlyoutOpen grey; keep the variant's colour
+       (its pressed shade) so the button doesn't go grey while its menu is showing. -->
+  <Style Selector="SplitButton.Primary:flyout-open /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPrimaryActiveBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Success:flyout-open /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonSuccessActiveBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Warning:flyout-open /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonWarningActiveBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningTextBrush}" />
+  </Style>
+  <Style Selector="SplitButton.Error:flyout-open /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonErrorActiveBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorTextBrush}" />
+  </Style>
+
   <!-- ===================================================== -->
   <!-- TOGGLEBUTTONS — helpers                               -->
   <!-- ===================================================== -->
@@ -277,7 +300,7 @@
   <!-- shared base for all solid ToggleButton variants -->
   <Style Selector="ToggleButton.Primary, ToggleButton.Success, ToggleButton.Warning, ToggleButton.Error">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
   </Style>
 
   <Style Selector="ToggleButton.Primary:disabled, ToggleButton.Success:disabled, ToggleButton.Warning:disabled, ToggleButton.Error:disabled">
@@ -422,75 +445,99 @@
   </Style>
 
   <!-- ===================================================== -->
-  <!-- BUTTONS — Text variant (declared after solid so      -->
-  <!-- declaration order wins for equal-specificity rules)  -->
+  <!-- BUTTONS — Text / ghost variant (declared after solid -->
+  <!-- so declaration order wins for equal-specificity rules) -->
   <!-- ===================================================== -->
 
-  <Style Selector="Button.Text, local|IconButton.Text">
+  <!-- Ghost: no fill, secondary text at rest, the shared state overlays on hover/press.
+       Foreground is also set on the presenter so FluentTheme's pointerover foreground
+       doesn't override it. -->
+  <Style Selector="Button.Text,
+                   local|IconButton.Text">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
   <Style Selector="Button.Text:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="Button.Text:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Text:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Text:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
   </Style>
 
-  <!-- Text + color: two-class selector wins over single-class solid styles -->
-  <Style Selector="Button.Text.Primary, local|IconButton.Text.Primary">
+  <!-- Ghost + color: text takes the lighter status tint, which reads on dark surfaces
+       where the fill colour doesn't. Two-class selector wins over single-class solid styles. -->
+  <Style Selector="Button.Text.Primary,
+                   local|IconButton.Text.Primary">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource ButtonPrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Primary:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
-  <Style Selector="Button.Text.Success, local|IconButton.Text.Success">
+  <Style Selector="Button.Text.Success,
+                   local|IconButton.Text.Success">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource ButtonSuccessBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Success:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Success:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Success:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Success:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
   </Style>
 
-  <Style Selector="Button.Text.Warning, local|IconButton.Text.Warning">
+  <Style Selector="Button.Text.Warning,
+                   local|IconButton.Text.Warning">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource ButtonWarningBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Warning:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Warning:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Warning:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Warning:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
   </Style>
 
-  <Style Selector="Button.Text.Error, local|IconButton.Text.Error">
+  <Style Selector="Button.Text.Error,
+                   local|IconButton.Text.Error">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource ButtonErrorBgBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Error:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Error:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextHoverBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
   </Style>
   <Style Selector="Button.Text.Error:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Text.Error:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonTextPressedBgBrush}" />
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
   </Style>
 
   <!-- ===================================================== -->
@@ -515,7 +562,12 @@
       <Setter Property="Background" Value="{DynamicResource ButtonGlassDarkBgBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+  </Style>
+  <!-- Over artwork: a 14% hairline ring keeps the button's edge visible on any image -->
+  <Style Selector="Button.Glass.Dark /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Glass.Dark /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BoxShadow" Value="inset 0 0 0 1 #24FFFFFF" />
   </Style>
   <Style Selector="Button.Glass.Dark:pointerover /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Glass.Dark:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -524,6 +576,368 @@
   <Style Selector="Button.Glass.Dark:pressed /template/ ContentPresenter#PART_ContentPresenter,
                    local|IconButton.Glass.Dark:pressed /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource ButtonGlassDarkPressedBgBrush}" />
+  </Style>
+
+  <!-- Large (hero Play/Install) buttons take the panel radius.
+       Declared after every variant so it wins at equal specificity. -->
+  <Style Selector="Button.Large, SplitButton.Large, local|IconButton.Large">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- BUTTONS — Hairline edges                              -->
+  <!-- (inset shadows, so no layout cost; declared after    -->
+  <!-- every variant so later rules here win)               -->
+  <!-- ===================================================== -->
+
+  <!-- Secondary: the default Raised fill plus a hairline ring and lit top edge. Opt-in, because
+       plain Buttons are also used as transparent click targets that shouldn't get a ring. -->
+  <Style Selector="Button.Secondary /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Secondary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource HairlineShadow}" />
+  </Style>
+  <Style Selector="Button.Secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource HairlineHoverShadow}" />
+  </Style>
+  <Style Selector="Button.Secondary:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource HairlinePressedShadow}" />
+  </Style>
+
+  <!-- Solid fills: lit top edge only -->
+  <Style Selector="Button.Primary /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Success /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Warning /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Error /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Primary /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Success /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Warning /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Error /template/ ContentPresenter#PART_ContentPresenter,
+                   SplitButton.Primary /template/ Button /template/ ContentPresenter#PART_ContentPresenter,
+                   SplitButton.Success /template/ Button /template/ ContentPresenter#PART_ContentPresenter,
+                   SplitButton.Warning /template/ Button /template/ ContentPresenter#PART_ContentPresenter,
+                   SplitButton.Error /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource SolidHighlightShadow}" />
+  </Style>
+  <!-- Ghost + colour (.Text.Error etc.) also matches the solid selectors above; ghosts have no edge -->
+  <Style Selector="Button.Text /template/ ContentPresenter#PART_ContentPresenter,
+                   local|IconButton.Text /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource NoShadow}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- SEGMENTED CONTROL                                     -->
+  <!-- Border.Segmented track holding Button.Segment items;  -->
+  <!-- the current one gets .active                          -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Border.Segmented">
+    <Setter Property="Background" Value="{DynamicResource SurfaceChromeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="Padding" Value="2" />
+  </Style>
+  <!-- Item radius = track radius minus its padding, so the curves stay concentric -->
+  <Style Selector="Button.Segment">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style Selector="Button.Segment:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Segment:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Segment.active">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.Segment.active:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.Segment.active:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- PROGRESS                                              -->
+  <!-- (Fluent fills with the OS accent; brand blue on a    -->
+  <!-- Raised trough instead)                               -->
+  <!-- ===================================================== -->
+
+  <Style Selector="ProgressBar">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusFull}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- TYPE SCALE                                            -->
+  <!-- (TextBlock classes; sizes are resources in           -->
+  <!-- ColorPalette.axaml so views can also use them bare)  -->
+  <!-- ===================================================== -->
+
+  <Style Selector="TextBlock.Display">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-1" />
+  </Style>
+  <Style Selector="TextBlock.Title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+  </Style>
+  <Style Selector="TextBlock.Section">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.2" />
+  </Style>
+  <Style Selector="TextBlock.Body">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+  </Style>
+  <Style Selector="TextBlock.Label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.Caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <!-- Kicker text is written uppercase in the source; Avalonia has no text-transform -->
+  <Style Selector="TextBlock.Kicker">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.9" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <!-- Figures: sizes, speeds, versions, paths -->
+  <Style Selector="TextBlock.Mono">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="SelectableTextBlock.Mono">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="TextBox.Mono">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- RAIL NAVIGATION                                       -->
+  <!-- Full-width rows in a side rail; the current page     -->
+  <!-- gets .active (Raised + accent rail)                   -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Button.RailNav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,0,10,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.RailNav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.RailNav:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <!-- Rail as a left border with the padding trimmed by the same 2px, so the label doesn't shift -->
+  <Style Selector="Button.RailNav.active">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+    <Setter Property="Padding" Value="10,0,10,0" />
+  </Style>
+  <Style Selector="Button.RailNav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.RailNav.active:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
+  <!-- Count pill (rail badges, section totals) -->
+  <Style Selector="Border.CountPill">
+    <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusFull}" />
+    <Setter Property="Padding" Value="7,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.CountPill > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <!-- Neutral: section totals, where the count is information rather than a call to act -->
+  <Style Selector="Border.CountPill.Neutral">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="8,1" />
+  </Style>
+  <Style Selector="Border.CountPill.Neutral > TextBlock">
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- STATUS TAGS                                           -->
+  <!-- Tinted fill + tinted edge + light text; accent by    -->
+  <!-- default, .Success / .Warning / .Error for status      -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Border.StatusTag">
+    <Setter Property="MinHeight" Value="20" />
+    <Setter Property="Padding" Value="7,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="#33177DDC" />
+    <Setter Property="BorderBrush" Value="#664096FF" />
+  </Style>
+  <Style Selector="Border.StatusTag > TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource Primary4Brush}" />
+  </Style>
+  <Style Selector="Border.StatusTag.Success">
+    <Setter Property="Background" Value="#3349AA19" />
+    <Setter Property="BorderBrush" Value="#6B73D13D" />
+  </Style>
+  <Style Selector="Border.StatusTag.Success > TextBlock">
+    <Setter Property="Foreground" Value="#95DE64" />
+  </Style>
+  <Style Selector="Border.StatusTag.Warning">
+    <Setter Property="Background" Value="#33D89614" />
+    <Setter Property="BorderBrush" Value="#66FFC53D" />
+  </Style>
+  <Style Selector="Border.StatusTag.Warning > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+  </Style>
+  <Style Selector="Border.StatusTag.Error">
+    <Setter Property="Background" Value="#33DC4446" />
+    <Setter Property="BorderBrush" Value="#61FF7875" />
+  </Style>
+  <Style Selector="Border.StatusTag.Error > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- NOTICES                                               -->
+  <!-- Inline callouts: tinted fill and edge, secondary     -->
+  <!-- caption text, icon in the status colour               -->
+  <!-- ===================================================== -->
+
+  <Style Selector="Border.Notice">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Background" Value="#24177DDC" />
+    <Setter Property="BorderBrush" Value="#524096FF" />
+  </Style>
+  <Style Selector="Border.Notice TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Border.Notice Icon">
+    <Setter Property="Foreground" Value="{DynamicResource Primary4Brush}" />
+  </Style>
+  <Style Selector="Border.Notice.Success">
+    <Setter Property="Background" Value="#2449AA19" />
+    <Setter Property="BorderBrush" Value="#5273D13D" />
+  </Style>
+  <Style Selector="Border.Notice.Success Icon">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+  </Style>
+  <Style Selector="Border.Notice.Warning">
+    <Setter Property="Background" Value="#24D89614" />
+    <Setter Property="BorderBrush" Value="#52FFC53D" />
+  </Style>
+  <Style Selector="Border.Notice.Warning Icon">
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+  </Style>
+  <Style Selector="Border.Notice.Error">
+    <Setter Property="Background" Value="#24DC4446" />
+    <Setter Property="BorderBrush" Value="#52FF7875" />
+  </Style>
+  <Style Selector="Border.Notice.Error Icon">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- TREES                                                 -->
+  <!-- 28px rows at radius 2                                 -->
+  <!-- ===================================================== -->
+
+  <Style Selector="TreeViewItem">
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- SURFACES                                              -->
+  <!-- ===================================================== -->
+
+  <!-- Card: Surface with a hairline edge and lit top edge; views set their own Padding -->
+  <Style Selector="Border.Card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource SurfaceHighlightShadow}" />
+  </Style>
+
+  <!-- Dialog: the exception to the tone rule. A panel this large would look washed out at Popover, so it
+       stays on Surface, sits on the scrim and floats on the deeper dialog shadow. -->
+  <Style Selector="Border.Dialog">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource DialogShadow}" />
+  </Style>
+
+  <!-- Dialog header: title row over a hairline -->
+  <Style Selector="Border.DialogHeader">
+    <Setter Property="MinHeight" Value="54" />
+    <Setter Property="Padding" Value="20,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.DialogHeader > TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- Dialog footer: actions under a hairline -->
+  <Style Selector="Border.DialogFooterBar">
+    <Setter Property="Padding" Value="20,14" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+
+  <!-- Tag: small non-clickable label with a hairline edge (player modes, tools); matches Button.Badge -->
+  <Style Selector="Border.Tag">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+  </Style>
+  <Style Selector="Border.Tag TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
   </Style>
 
   <!-- ===================================================== -->
@@ -538,13 +952,85 @@
   </Style>
 
   <!-- ===================================================== -->
+  <!-- MENUS                                                 -->
+  <!-- (colours come from the MenuFlyout overrides in       -->
+  <!-- ColorPalette.axaml) 5px menu padding so the           -->
+  <!-- highlighted row's inset reads evenly; 32px rows at    -->
+  <!-- radius 2 against the menu's 6                         -->
+  <!-- ===================================================== -->
+
+  <Style Selector="MenuFlyoutPresenter">
+    <Setter Property="Padding" Value="5" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter MenuItem, ContextMenu MenuItem">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+  </Style>
+  <!-- A destructive row is the only one that takes a colour -->
+  <Style Selector="MenuItem.Destructive">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+  </Style>
+  <Style Selector="MenuItem.Destructive:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter Separator, ContextMenu Separator">
+    <Setter Property="Margin" Value="8,5" />
+    <Setter Property="Background" Value="{DynamicResource HairlineBorderBrush}" />
+  </Style>
+
+  <!-- ===================================================== -->
+  <!-- LIST ROWS                                             -->
+  <!-- (hover/pressed/selected fills come from the Fluent    -->
+  <!-- list brush overrides in ColorPalette.axaml)           -->
+  <!-- ===================================================== -->
+
+  <Style Selector="ListBoxItem, ComboBoxItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+  </Style>
+
+  <!-- Selected row: Raised (from the Fluent override) plus a 2px accent rail. Fluent's template is a lone
+       ContentPresenter; this keeps it (its state styles target it by name) and overlays the rail, so the
+       content doesn't shift. An inset BoxShadow can't draw a one-sided rail: Avalonia translates both the
+       hole and the outline by the offset. Views that replace the template draw their own rail. -->
+  <Style Selector="ListBoxItem">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <ContentPresenter Name="PART_ContentPresenter"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Content="{TemplateBinding Content}"
+                            Padding="{TemplateBinding Padding}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+          <Border Name="PART_SelectionRail"
+                  Width="2"
+                  Margin="0,6"
+                  CornerRadius="1"
+                  HorizontalAlignment="Left"
+                  Background="{DynamicResource AccentTextBrush}"
+                  IsVisible="False" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBoxItem:selected /template/ Border#PART_SelectionRail">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+
+  <!-- ===================================================== -->
   <!-- TEXT INPUTS                                           -->
   <!-- ===================================================== -->
 
   <Style Selector="TextBox">
     <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
     <Setter Property="Padding" Value="8,4" />
   </Style>
 
@@ -616,12 +1102,14 @@
   </Style>
   
   <!-- ===================================================== -->
-  <!-- TOAST (CUSTOM CONTROL STYLE)                          -->
+  <!-- TEXT INPUTS — defaults                                -->
+  <!-- Black well with a hairline edge; accent edge on      -->
+  <!-- focus (colours in ColorPalette.axaml Input*)          -->
   <!-- ===================================================== -->
-  
+
   <Style Selector="TextBox">
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
 
   <Style Selector="TextBox.Glass /template/ Border">

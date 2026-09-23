@@ -68,7 +68,7 @@
                     VerticalAlignment="Center"
                     Padding="4,0,12,0">
                 <TextBlock Text="{Binding ShellViewModel.ContentViewTitle}"
-                           FontSize="13"
+                           FontSize="{DynamicResource FontSizeLabel}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
             </Border>
@@ -122,8 +122,8 @@
                         VerticalAlignment="Center"
                         ToolTip.Tip="Offline Mode — click to reconnect">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="⚠" Foreground="#FFA500" VerticalAlignment="Center" />
-                        <TextBlock Text="Offline Mode" Foreground="#FFA500" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Icon Type="Regular" Value="Warning" Width="14" Height="14" Foreground="#FFA500" VerticalAlignment="Center" />
+                        <TextBlock Text="Offline Mode" Foreground="#FFA500" FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -161,7 +161,7 @@
                         <Panel Width="22" Height="22">
                             <!-- Fallback: shown when no avatar is available -->
                             <Border CornerRadius="2"
-                                    Background="#1A7AC4"
+                                    Background="{DynamicResource AccentFillBrush}"
                                     IsVisible="{Binding !ShellViewModel.Profile.HasAvatar}">
                                 <Icon Type="Regular" Value="User" Width="13" Height="13" Color="White" />
                             </Border>
@@ -177,7 +177,7 @@
                         <TextBlock Text="{Binding ShellViewModel.Profile.Alias}"
                                    VerticalAlignment="Center"
                                    Foreground="White"
-                                   FontSize="13" />
+                                   FontSize="{DynamicResource FontSizeLabel}" />
                     </StackPanel>
                 </Button>
 
@@ -199,7 +199,7 @@
                             IsVisible="{Binding HasBattery}">
                     <Icon Type="Regular" Value="{Binding BatteryIcon}" Width="18" Height="18" Color="White" />
                     <TextBlock Text="{Binding BatteryPercent, StringFormat='{}{0}%'}"
-                               Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                               Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Volume (interactive: click opens a slider that changes system volume) -->
@@ -212,7 +212,7 @@
                         <Flyout Placement="Bottom">
                             <StackPanel Spacing="8" Width="60">
                                 <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
-                                           HorizontalAlignment="Center" FontSize="12" />
+                                           HorizontalAlignment="Center" FontSize="{DynamicResource FontSizeCaption}" />
                                 <Slider Orientation="Vertical"
                                         Height="140"
                                         HorizontalAlignment="Center"
@@ -224,14 +224,14 @@
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                         <Icon Type="Regular" Value="{Binding VolumeIcon}" Width="18" Height="18" Color="White" />
                         <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
-                                   Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                                   Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
                 <!-- Time -->
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Icon Type="Regular" Value="Clock" Width="18" Height="18" Color="White" />
-                    <TextBlock Text="{Binding Time}" Foreground="White" FontSize="13" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Time}" Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
                 </StackPanel>
             </StackPanel>
 
@@ -241,32 +241,26 @@
                 <Button x:Name="MinimizeButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="MinimizeButton_Click">
-                    <TextBlock Text="—" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <!-- Minus as a Rectangle: the Icon control stretches geometry to its bounds, and a lone horizontal line has none -->
+                    <Rectangle Width="12" Height="1.6" Fill="{Binding $parent[Button].Foreground}" />
                 </Button>
                 <Button x:Name="MaximizeButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="MaximizeButton_Click">
-                    <TextBlock Text="□" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Icon Type="Regular" Value="Square" Width="12" Height="12" />
                 </Button>
                 <Button x:Name="CloseButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="CloseButton_Click">
@@ -275,9 +269,7 @@
                             <Setter Property="Background" Value="#C42B1C" />
                         </Style>
                     </Button.Styles>
-                    <TextBlock Text="✕" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Icon Type="Regular" Value="X" Width="13" Height="13" />
                 </Button>
             </StackPanel>
         </Grid>

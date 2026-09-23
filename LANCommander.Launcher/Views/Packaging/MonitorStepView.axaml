@@ -9,7 +9,7 @@
 
         <!-- Installer picker -->
         <DockPanel Grid.Row="0" Margin="0,0,0,10">
-            <Button DockPanel.Dock="Right"
+            <Button Classes="Secondary" DockPanel.Dock="Right"
                     Content="Browse..."
                     Click="OnBrowseClick"
                     IsEnabled="{Binding !IsMonitoring}"

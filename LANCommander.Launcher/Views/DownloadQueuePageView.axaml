@@ -2,124 +2,260 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
              xmlns:components="using:LANCommander.Launcher.Views.Components"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
              x:Class="LANCommander.Launcher.Views.DownloadQueuePageView"
              x:DataType="vm:DownloadQueueViewModel">
+
+    <UserControl.Styles>
+        <!-- A row inside a list group: hairline divider under each -->
+        <Style Selector="Border.QueueRow">
+            <Setter Property="MinHeight" Value="58" />
+            <Setter Property="Padding" Value="18,0,12,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style Selector="Border.QueueRow.Finished">
+            <Setter Property="MinHeight" Value="52" />
+        </Style>
+        <!-- Finished items sit in a recessed well: done, so quieter than the live queue -->
+        <Style Selector="Border.FinishedGroup">
+            <Setter Property="Background" Value="{DynamicResource SurfaceChromeBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <!-- Stat tile in the header -->
+        <Style Selector="Border.StatTile">
+            <Setter Property="MinWidth" Value="128" />
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Padding" Value="14,0" />
+        </Style>
+    </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*">
 
         <!-- Header -->
-        <Border Grid.Row="0"
-                Padding="16,52,16,12"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <DockPanel>
-                <Button DockPanel.Dock="Left"
-                        Command="{Binding BackCommand}"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Padding="8,4"
-                        Margin="0,0,12,0"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Back">
-                    <TextBlock Text="&#x2190;" FontSize="16" VerticalAlignment="Center" />
-                </Button>
+        <DockPanel Grid.Row="0" Margin="32,56,32,18">
+            <Button DockPanel.Dock="Left"
+                    Classes="Text"
+                    Command="{Binding BackCommand}"
+                    Width="32" Height="32" Padding="0"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Margin="-8,0,10,0"
+                    VerticalAlignment="Bottom"
+                    ToolTip.Tip="Back">
+                <Icon Type="Regular" Value="ArrowLeft" Width="16" Height="16" />
+            </Button>
 
-                <Button DockPanel.Dock="Right"
+            <StackPanel DockPanel.Dock="Right"
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        VerticalAlignment="Bottom">
+                <Border Classes="Card StatTile" IsVisible="{Binding HasActiveDownload}">
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="THROUGHPUT" Classes="Kicker" />
+                        <TextBlock Text="{Binding TransferSpeedText}" Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="Card StatTile"
+                        IsVisible="{Binding TimeRemainingValue, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="REMAINING" Classes="Kicker" />
+                        <TextBlock Text="{Binding TimeRemainingValue}" Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
+                    </StackPanel>
+                </Border>
+                <Button Classes="Secondary"
                         Content="Clear completed"
                         Command="{Binding ClearCompletedCommand}"
-                        Background="Transparent"
-                        Padding="10,4"
-                        VerticalAlignment="Center"
-                        IsVisible="{Binding HasCompletedItems}" />
+                        MinHeight="44"
+                        Padding="16,0"
+                        VerticalContentAlignment="Center"
+                        IsVisible="{Binding HasFinishedItems}" />
+            </StackPanel>
 
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Downloads" FontSize="20" FontWeight="Bold" />
-                    <TextBlock Text="{Binding ActiveCount, StringFormat='{}{0} active'}"
-                               FontSize="12" Opacity="0.7"
-                               IsVisible="{Binding HasActiveDownload}" />
-                </StackPanel>
-            </DockPanel>
-        </Border>
+            <StackPanel VerticalAlignment="Bottom">
+                <TextBlock Text="TRANSFER QUEUE" Classes="Kicker" Margin="0,0,0,4" />
+                <TextBlock Text="Downloads" Classes="Title" />
+            </StackPanel>
+        </DockPanel>
 
         <!-- Content -->
         <Panel Grid.Row="1">
 
             <!-- Empty state -->
-            <StackPanel Spacing="12"
+            <StackPanel Spacing="8"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         IsVisible="{Binding !HasItems}">
-                <Icon Type="Regular" Value="DownloadSimple" Width="32" Height="32" HorizontalAlignment="Center" />
-                <TextBlock Text="Empty Queue" FontSize="16" Opacity="0.5" HorizontalAlignment="Center" />
+                <Icon Type="Regular" Value="DownloadSimple" Width="28" Height="28" HorizontalAlignment="Center"
+                      Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4" />
+                <TextBlock Text="Nothing queued" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" />
                 <TextBlock Text="Install a game from the Depot to see it here."
-                           FontSize="13" Opacity="0.4" HorizontalAlignment="Center" />
+                           Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}"
+                           HorizontalAlignment="Center" />
             </StackPanel>
 
-            <!-- Queue list -->
             <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding HasItems}">
-                <StackPanel Margin="16,12,16,16" Spacing="0">
+                <StackPanel Margin="32,0,32,24" Spacing="18">
 
-                    <!-- IN PROGRESS -->
-                    <TextBlock Text="IN PROGRESS"
-                               FontSize="11" FontWeight="SemiBold"
-                               LetterSpacing="1"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,8"
-                               IsVisible="{Binding HasActiveDownload}" />
+                    <!-- Active transfer: its own card -->
+                    <Border Classes="Card" ClipToBounds="True" IsVisible="{Binding HasActiveDownload}">
+                        <ItemsControl ItemsSource="{Binding QueueItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:InstallQueueItemViewModel">
+                                    <components:DownloadQueueItemView
+                                        IsVisible="{Binding IsActive}"
+                                        ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
+                                        CancelCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).CancelCommand}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
 
-                    <ItemsControl ItemsSource="{Binding QueueItems}"
-                                  IsVisible="{Binding HasActiveDownload}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <components:DownloadQueueItemView
-                                    IsVisible="{Binding IsActive}"
-                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                    CancelCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).CancelCommand}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- Up next -->
+                    <StackPanel Spacing="10" IsVisible="{Binding HasQueuedItems}">
+                        <TextBlock Text="UP NEXT" Classes="Kicker" />
+                        <Border Classes="Card" ClipToBounds="True">
+                            <ItemsControl ItemsSource="{Binding QueueItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallQueueItemViewModel">
+                                        <Border Classes="QueueRow" IsVisible="{Binding IsQueued}">
+                                            <DockPanel VerticalAlignment="Center">
+                                                <Button DockPanel.Dock="Right"
+                                                        Classes="Text"
+                                                        Width="30" Height="30" Padding="0"
+                                                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                                        ToolTip.Tip="Remove from queue"
+                                                        Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                                                </Button>
+                                                <TextBlock DockPanel.Dock="Right"
+                                                           Text="{Binding TotalSizeText}"
+                                                           Classes="Mono"
+                                                           FontSize="{DynamicResource FontSizeCaption}"
+                                                           Foreground="{DynamicResource TextTertiaryBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="14,0" />
+                                                <Border DockPanel.Dock="Left"
+                                                        Width="32" Height="32"
+                                                        CornerRadius="{DynamicResource RadiusMedium}"
+                                                        ClipToBounds="True"
+                                                        Background="{DynamicResource SurfaceRaisedBrush}"
+                                                        Margin="0,0,14,0">
+                                                    <Image controls:AsyncImage.Source="{Binding IconPath}"
+                                                           controls:AsyncImage.DecodeWidth="64"
+                                                           Stretch="UniformToFill"
+                                                           IsVisible="{Binding HasIcon}" />
+                                                </Border>
+                                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                    <Border Classes="StatusTag" IsVisible="{Binding IsUpdate}">
+                                                        <TextBlock Text="UPDATE" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </StackPanel>
 
-                    <!-- NEXT UP -->
-                    <TextBlock Text="NEXT UP"
-                               FontSize="11" FontWeight="SemiBold"
-                               LetterSpacing="1"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,12,0,8"
-                               IsVisible="{Binding HasQueuedItems}" />
+                    <!-- Finished: completed and failed -->
+                    <StackPanel Spacing="10" IsVisible="{Binding HasFinishedItems}">
+                        <TextBlock Text="FINISHED" Classes="Kicker" />
+                        <Border Classes="FinishedGroup">
+                            <ItemsControl ItemsSource="{Binding QueueItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:InstallQueueItemViewModel">
+                                        <Panel>
+                                            <!-- Completed -->
+                                            <Border Classes="QueueRow Finished" IsVisible="{Binding IsCompleted}">
+                                                <DockPanel VerticalAlignment="Center">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6"
+                                                                VerticalAlignment="Center">
+                                                        <Button Classes="Success"
+                                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).PlayCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                MinHeight="30" Padding="12,0"
+                                                                VerticalContentAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <Icon Type="Regular" Value="Play" Width="12" Height="12" />
+                                                                <TextBlock Text="{DynamicResource Play}" FontSize="{DynamicResource FontSizeLabel}"
+                                                                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Classes="Text"
+                                                                Width="30" Height="30" Padding="0"
+                                                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                                                ToolTip.Tip="View in library"
+                                                                Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ViewInLibraryCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <Icon Type="Regular" Value="Books" Width="15" Height="15" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                    <TextBlock DockPanel.Dock="Right"
+                                                               Classes="Mono"
+                                                               FontSize="{DynamicResource FontSizeCaption}"
+                                                               Foreground="{DynamicResource TextTertiaryBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="14,0">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0} · {1}">
+                                                                <Binding Path="CompletedOnText" />
+                                                                <Binding Path="TotalSizeText" />
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                    <Icon DockPanel.Dock="Left" Type="Regular" Value="CheckCircle"
+                                                          Width="16" Height="16" Margin="0,0,14,0"
+                                                          Foreground="{DynamicResource SuccessTextBrush}" />
+                                                    <TextBlock Text="{Binding Title}"
+                                                               FontSize="{DynamicResource FontSizeBody}"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Border>
 
-                    <ItemsControl ItemsSource="{Binding QueueItems}"
-                                  IsVisible="{Binding HasQueuedItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <components:DownloadQueueItemView
-                                    IsVisible="{Binding IsQueued}"
-                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                    RemoveCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <!-- COMPLETED -->
-                    <TextBlock Text="COMPLETED"
-                               FontSize="11" FontWeight="SemiBold"
-                               LetterSpacing="1"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,12,0,8"
-                               IsVisible="{Binding HasCompletedItems}" />
-
-                    <ItemsControl ItemsSource="{Binding QueueItems}"
-                                  IsVisible="{Binding HasCompletedItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:InstallQueueItemViewModel">
-                                <components:DownloadQueueItemView
-                                    IsVisible="{Binding IsCompleted}"
-                                    ToggleExpandedCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ToggleItemExpandedCommand}"
-                                    ViewInLibraryCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).ViewInLibraryCommand}"
-                                    PlayCommand="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).PlayCommand}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                            <!-- Failed -->
+                                            <Border Classes="QueueRow Finished" IsVisible="{Binding IsFailed}">
+                                                <DockPanel VerticalAlignment="Center">
+                                                    <Button DockPanel.Dock="Right"
+                                                            Classes="Secondary"
+                                                            Content="Remove"
+                                                            FontSize="{DynamicResource FontSizeCaption}"
+                                                            MinHeight="28" Padding="11,0"
+                                                            VerticalContentAlignment="Center"
+                                                            Command="{Binding $parent[ItemsControl].((vm:DownloadQueueViewModel)DataContext).RemoveCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Icon DockPanel.Dock="Left" Type="Regular" Value="WarningCircle"
+                                                          Width="16" Height="16" Margin="0,0,14,0"
+                                                          Foreground="{DynamicResource ErrorTextBrush}" />
+                                                    <TextBlock FontSize="{DynamicResource FontSizeBody}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center">
+                                                        <Run Text="{Binding Title}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        <Run Text=" — install failed" Foreground="{DynamicResource ErrorTextBrush}" />
+                                                    </TextBlock>
+                                                </DockPanel>
+                                            </Border>
+                                        </Panel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </StackPanel>
 
                 </StackPanel>
             </ScrollViewer>

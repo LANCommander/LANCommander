@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using LANCommander.Launcher.Helpers;
 
@@ -52,8 +53,31 @@ public partial class Cover : UserControl
     public static readonly DirectProperty<Cover, double> FallbackFontSizeProperty =
         AvaloniaProperty.RegisterDirect<Cover, double>(nameof(FallbackFontSize), o => o.FallbackFontSize);
 
+    public static readonly DirectProperty<Cover, IBrush> FallbackBackgroundProperty =
+        AvaloniaProperty.RegisterDirect<Cover, IBrush>(nameof(FallbackBackground), o => o.FallbackBackground);
+
+    // Fallback plate tones: six hues at matched lightness, each run as a 155° gradient into a darker
+    // stop of the same hue, so a shelf of games without art has some depth without reading as six
+    // accent colours. The title picks one via a stable hash.
+    private static readonly (Color Light, Color Dark)[] FallbackTones =
+    {
+        (Color.Parse("#33383F"), Color.Parse("#1C1F24")), // slate
+        (Color.Parse("#313A34"), Color.Parse("#1B211D")), // green
+        (Color.Parse("#363140"), Color.Parse("#1E1B24")), // violet
+        (Color.Parse("#3A352D"), Color.Parse("#201D18")), // amber
+        (Color.Parse("#3A3339"), Color.Parse("#201C20")), // plum
+        (Color.Parse("#2E363C"), Color.Parse("#191D21")), // steel
+    };
+
+    private static readonly IBrush[] FallbackBrushes = Array.ConvertAll(FallbackTones, tone =>
+        (IBrush)new ImmutableLinearGradientBrush(
+            new[] { new ImmutableGradientStop(0, tone.Light), new ImmutableGradientStop(1, tone.Dark) },
+            startPoint: new RelativePoint(0.29, 0.05, RelativeUnit.Relative),
+            endPoint: new RelativePoint(0.71, 0.95, RelativeUnit.Relative)));
+
     private bool _hasCover;
     private double _fallbackFontSize = 12;
+    private IBrush _fallbackBackground = FallbackBrushes[0];
     private CancellationTokenSource? _loadCts;
     private VideoFrameRenderer? _videoRenderer;
     private bool _isAnimatedCover;
@@ -118,6 +142,12 @@ public partial class Cover : UserControl
         private set => SetAndRaise(FallbackFontSizeProperty, ref _fallbackFontSize, value);
     }
 
+    public IBrush FallbackBackground
+    {
+        get => _fallbackBackground;
+        private set => SetAndRaise(FallbackBackgroundProperty, ref _fallbackBackground, value);
+    }
+
     public Cover()
     {
         InitializeComponent();
@@ -135,6 +165,29 @@ public partial class Cover : UserControl
         {
             UpdateAnimationState();
         }
+        else if (change.Property == TitleProperty)
+        {
+            FallbackBackground = FallbackBrushes[FallbackToneIndex(Title)];
+        }
+    }
+
+    /// <summary>
+    /// FNV-1a over the title, so a game keeps its plate across launches
+    /// (<see cref="string.GetHashCode()"/> is randomised per process).
+    /// </summary>
+    private static int FallbackToneIndex(string? title)
+    {
+        if (string.IsNullOrEmpty(title))
+            return 0;
+
+        var hash = 2166136261u;
+        foreach (var c in title)
+        {
+            hash ^= c;
+            hash *= 16777619u;
+        }
+
+        return (int)(hash % (uint)FallbackBrushes.Length);
     }
 
     protected override Size MeasureOverride(Size availableSize)

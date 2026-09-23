@@ -8,7 +8,8 @@
              KeyDown="OnKeyDown"
              controls:AutoFocus.IsEnabled="True">
 
-    <Grid Background="#EE000000">
+    <!-- 90% scrim: the one place the dim goes past the dialog scrim, so art reads on its own -->
+    <Grid Background="#E6000000">
         <!-- Backdrop: click outside content to close -->
         <Border Background="Transparent" PointerPressed="Backdrop_PointerPressed" />
 
@@ -17,34 +18,46 @@
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch">
 
-            <!-- Close button (floating top-right) -->
-            <IconButton Grid.Row="0"
+            <!-- Close (floating top-right), with the keyboard hint beside it -->
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal"
+                        Spacing="10"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Classes="Glass"
-                        IconType="Regular"
-                        IconValue="X"
-                        Size="16"
-                        Width="32"
-                        Height="32"
-                        Padding="0"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Click="Close_Click"
                         ZIndex="2"
-                        Margin="0,0,0,8" />
+                        Margin="0,0,0,8">
+                <Border BorderBrush="#24FFFFFF" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusSmall}"
+                        Padding="6,1"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="Esc" Classes="Mono"
+                               FontSize="{DynamicResource FontSizeKicker}"
+                               Foreground="{DynamicResource TextTertiaryBrush}" />
+                </Border>
+                <IconButton Classes="Glass Dark"
+                            IconType="Regular"
+                            IconValue="X"
+                            Size="16"
+                            Width="36"
+                            Height="36"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            ToolTip.Tip="Close"
+                            Click="Close_Click" />
+            </StackPanel>
 
             <!-- Navigation: Previous -->
             <IconButton Grid.Row="0"
                         x:Name="PrevButton"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Classes="Glass"
+                        Classes="Glass Dark"
                         IconType="Regular"
                         IconValue="CaretLeft"
                         Size="20"
                         Width="40"
-                        Height="40"
+                        Height="72"
                         Padding="0"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
@@ -57,12 +70,12 @@
                         x:Name="NextButton"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
-                        Classes="Glass"
+                        Classes="Glass Dark"
                         IconType="Regular"
                         IconValue="CaretRight"
                         Size="20"
                         Width="40"
-                        Height="40"
+                        Height="72"
                         Padding="0"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
@@ -143,9 +156,10 @@
                     <TextBlock Grid.Column="2"
                                x:Name="TimeLabel"
                                Text="0:00 / 0:00"
+                               Classes="Mono"
                                VerticalAlignment="Center"
-                               FontSize="12"
-                               Opacity="0.7"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="8,0" />
 
                     <!-- Volume toggle -->
@@ -164,10 +178,11 @@
             <!-- Item counter -->
             <TextBlock Grid.Row="1"
                        x:Name="ItemCounter"
+                       Classes="Mono"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Bottom"
-                       FontSize="12"
-                       Opacity="0.5"
+                       FontSize="{DynamicResource FontSizeLabel}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,8,0,0" />
 
         </Grid>

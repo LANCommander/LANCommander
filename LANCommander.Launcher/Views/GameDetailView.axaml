@@ -49,25 +49,13 @@
                            Stretch="UniformToFill"
                            IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                    <!-- Top fade gradient -->
-                    <Border VerticalAlignment="Top"
-                            Height="120"
-                            IsHitTestVisible="False">
+                    <!-- Hero fade: dark under the title bar, clear through the art, into black at the base -->
+                    <Border IsHitTestVisible="False">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                <GradientStop Color="#55000000" Offset="0" />
-                                <GradientStop Color="#00000000" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-
-                    <!-- Bottom fade gradient -->
-                    <Border VerticalAlignment="Bottom"
-                            Height="128"
-                            IsHitTestVisible="False">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                <GradientStop Color="#00000000" Offset="0" />
+                                <GradientStop Color="#B3000000" Offset="0" />
+                                <GradientStop Color="#14000000" Offset="0.28" />
+                                <GradientStop Color="#94000000" Offset="0.70" />
                                 <GradientStop Color="#FF000000" Offset="1" />
                             </LinearGradientBrush>
                         </Border.Background>
@@ -108,7 +96,7 @@
                                VerticalAlignment="Bottom"
                                Margin="24,0,0,28"
                                Text="{Binding Title}"
-                               FontSize="32"
+                               FontSize="{DynamicResource FontSizeDisplay}"
                                FontWeight="Bold"
                                Foreground="White"
                                IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
@@ -130,7 +118,7 @@
 
                     <!-- Screenshots / Videos carousel -->
                     <StackPanel x:Name="MediaSection" Spacing="8" IsVisible="{Binding HasMedia}">
-                        <TextBlock Text="Media" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="MEDIA" Classes="Kicker" />
                         <CarouselControl ItemsSource="{Binding MediaItems}"
                                                   ItemWidth="384"
                                                   VisibleItems="2"
@@ -170,7 +158,7 @@
                                         <Border Name="FocusBorder"
                                                 CornerRadius="4"
                                                 BorderThickness="2"
-                                                BorderBrush="#994096FF"
+                                                BorderBrush="{DynamicResource FocusRingBrush}"
                                                 IsVisible="False" />
                                     </Panel>
                                 </DataTemplate>
@@ -181,7 +169,7 @@
                     <!-- Notes -->
                     <StackPanel x:Name="NotesSection" Spacing="8"
                                 IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="14" Opacity="0.7" />
+                        <TextBlock Text="NOTES" Classes="Kicker" />
                         <controls:MarkdownTextBlock Text="{Binding Notes}" />
                     </StackPanel>
 
@@ -196,19 +184,27 @@
                             ZIndex="1">
 
                     <!-- Cover Image -->
-                    <components:Cover Source="{Binding CoverPath}"
-                                      MimeType="{Binding CoverMimeType}"
-                                      Title="{Binding Title}"
-                                      AlwaysAnimate="True" />
+                    <Border CornerRadius="{DynamicResource RadiusLarge}"
+                            BorderBrush="#1FFFFFFF"
+                            BorderThickness="1"
+                            Background="Black"
+                            BoxShadow="0 16 40 0 #B3000000">
+                        <Border CornerRadius="{DynamicResource RadiusLarge}" ClipToBounds="True">
+                            <components:Cover Source="{Binding CoverPath}"
+                                              MimeType="{Binding CoverMimeType}"
+                                              Title="{Binding Title}"
+                                              AlwaysAnimate="True" />
+                        </Border>
+                    </Border>
 
                     <!-- Players -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding HasPlayerInfo}">
-                        <TextBlock Text="Players" Classes="Header" />
+                        <TextBlock Text="PLAYERS" Classes="Header" />
                         <WrapPanel Orientation="Horizontal">
-                            <Border Margin="0,0,6,6" Padding="10,5" CornerRadius="4" Background="#22FFFFFF"
+                            <Border Classes="Tag" Margin="0,0,6,6" Padding="10,5"
                                     IsVisible="{Binding Singleplayer}">
-                                <TextBlock Text="Singleplayer" FontSize="12" />
+                                <TextBlock Text="Singleplayer" FontSize="{DynamicResource FontSizeCaption}" />
                             </Border>
                             <ItemsControl ItemsSource="{Binding MultiplayerModeDetails}">
                                 <ItemsControl.ItemsPanel>
@@ -218,11 +214,10 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="sys:String">
-                                        <Border Margin="0,0,6,6"
-                                                Padding="10,5"
-                                                CornerRadius="4"
-                                                Background="#22FFFFFF">
-                                            <TextBlock Text="{Binding}" FontSize="12" />
+                                        <Border Classes="Tag"
+                                                Margin="0,0,6,6"
+                                                Padding="10,5">
+                                            <TextBlock Text="{Binding}" FontSize="{DynamicResource FontSizeCaption}" />
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -233,7 +228,7 @@
                     <!-- Developers -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding Developers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Developers" Classes="Header" />
+                        <TextBlock Text="DEVELOPERS" Classes="Header" />
                         <ItemsControl ItemsSource="{Binding DeveloperList}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -255,7 +250,7 @@
                     <!-- Publishers -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding Publishers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Publishers" Classes="Header" />
+                        <TextBlock Text="PUBLISHERS" Classes="Header" />
                         <ItemsControl ItemsSource="{Binding PublisherList}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -277,7 +272,7 @@
                     <!-- Genres -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Genres" Classes="Header" />
+                        <TextBlock Text="GENRES" Classes="Header" />
                         <ItemsControl ItemsSource="{Binding GenreList}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -299,7 +294,7 @@
                     <!-- Tags — limited to 5, expandable -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Tags" Classes="Header" />
+                        <TextBlock Text="TAGS" Classes="Header" />
                         <WrapPanel Orientation="Horizontal">
                             <ItemsControl ItemsSource="{Binding VisibleTagList}">
                                 <ItemsControl.ItemsPanel>
@@ -329,22 +324,21 @@
                     <!-- Tools -->
                     <StackPanel Classes="Badges"
                                 IsVisible="{Binding HasTools}">
-                        <TextBlock Text="Tools" Classes="Header" />
+                        <TextBlock Text="TOOLS" Classes="Header" />
                         <ItemsControl ItemsSource="{Binding Tools}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ToolItemViewModel">
-                                    <Border Margin="0,0,0,6"
-                                            Padding="10,5"
-                                            CornerRadius="4"
-                                            Background="#22FFFFFF">
+                                    <Border Classes="Tag"
+                                            Margin="0,0,0,6"
+                                            Padding="10,5">
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Grid.Column="0"
                                                        Text="{Binding Name}"
-                                                       FontSize="12"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
                                                        VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1"
                                                        Text="Installed"
-                                                       FontSize="11"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
                                                        Opacity="0.6"
                                                        VerticalAlignment="Center"
                                                        IsVisible="{Binding IsInstalled}" />

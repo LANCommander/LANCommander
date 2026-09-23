@@ -18,11 +18,11 @@
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" 
-                               FontSize="16" 
+                               FontSize="{DynamicResource FontSizeSection}" 
                                FontWeight="SemiBold"
                                Foreground="White" />
                     <TextBlock Text="{Binding WorkingDirectory}" 
-                               FontSize="11" 
+                               FontSize="{DynamicResource FontSizeKicker}" 
                                Foreground="#888888"
                                IsVisible="{Binding WorkingDirectory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>

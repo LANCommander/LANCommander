@@ -113,7 +113,7 @@
                            Text="{Binding PasswordRequirements}"
                            Foreground="White"
                            Opacity="0.75"
-                           FontSize="12"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            TextWrapping="Wrap" />
 
                 <Panel IsVisible="{Binding ShowPrimaryButtons}">
@@ -145,14 +145,14 @@
                     <TextBlock Text="{Binding StatusMessage}"
                                Foreground="White"
                                Opacity="0.75"
-                               FontSize="12"
+                               FontSize="{DynamicResource FontSizeCaption}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
 
                 <TextBlock IsVisible="{Binding HasError}"
                            Text="{Binding StatusMessage}"
                            Foreground="#FF6B6B"
-                           FontSize="12"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            TextWrapping="Wrap"
                            HorizontalAlignment="Center" />
 
@@ -167,13 +167,13 @@
                         <TextBlock Text="Don't have an account? Register"
                                    Foreground="White"
                                    Opacity="0.75"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource FontSizeCaption}"
                                    TextDecorations="Underline"
                                    IsVisible="{Binding !IsRegistering}" />
                         <TextBlock Text="Already have an account? Sign In"
                                    Foreground="White"
                                    Opacity="0.75"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource FontSizeCaption}"
                                    TextDecorations="Underline"
                                    IsVisible="{Binding IsRegistering}" />
                     </Panel>
@@ -183,7 +183,7 @@
                     <StackPanel IsVisible="{Binding ShowProviderButtons}" Spacing="12">
                         <Grid ColumnDefinitions="*,Auto,*" Margin="0,4" IsVisible="{Binding ShowProviderSeparator}">
                             <Separator Grid.Column="0" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="or" Foreground="White" Opacity="0.5" Margin="12,0" FontSize="12" />
+                            <TextBlock Grid.Column="1" Text="or" Foreground="White" Opacity="0.5" Margin="12,0" FontSize="{DynamicResource FontSizeCaption}" />
                             <Separator Grid.Column="2" VerticalAlignment="Center" />
                         </Grid>
 

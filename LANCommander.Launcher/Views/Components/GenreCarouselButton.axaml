@@ -11,7 +11,7 @@
         <Style Selector="Button.GenreCarouselButton">
             <Setter Property="Padding" Value="0" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
         </Style>
         
         <Style Selector="Button.GenreCarouselButton Border.GlassOverlay">
@@ -37,16 +37,16 @@
             ClipToBounds="False"
             Command="{Binding $parent[local:GenreCarouselButton].Command}"
             CommandParameter="{Binding $parent[local:GenreCarouselButton].CommandParameter}">
+        <!-- Clip art, scrim and hover glass to the card's rounded corners -->
+        <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True">
         <Panel>
-            <!-- Fallback background when no hero image -->
-            <Border IsVisible="{Binding !HasBackground}">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#3D1A6B" Offset="0" />
-                        <GradientStop Color="#0F3460" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+            <!-- Fallback when no hero image: a Surface card with a hairline edge -->
+            <Border IsVisible="{Binding !HasBackground}"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource HairlineBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource RadiusMedium}"
+                    BoxShadow="{DynamicResource SurfaceHighlightShadow}" />
 
             <!-- Hero background image -->
             <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
@@ -54,19 +54,19 @@
                    Stretch="UniformToFill"
                    IsVisible="{Binding HasBackground}" />
 
-            <!-- Always-visible colored gradient overlay -->
-            <Border IsHitTestVisible="False">
+            <!-- Neutral scrim over hero art so the name stays legible -->
+            <Border IsHitTestVisible="False" IsVisible="{Binding HasBackground}">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#881A0A3B" Offset="0" />
-                        <GradientStop Color="#EE1A0A3B" Offset="1" />
+                        <GradientStop Color="#88000000" Offset="0" />
+                        <GradientStop Color="#DD000000" Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>
             </Border>
 
             <!-- Always-visible genre name -->
             <TextBlock Text="{Binding Name}"
-                       FontSize="20" FontWeight="SemiBold"
+                       FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold"
                        TextWrapping="Wrap" TextAlignment="Center"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Margin="10" Foreground="White" />
@@ -82,5 +82,6 @@
                 </Border.Background>
             </Border>
         </Panel>
+        </Border>
     </Button>
 </UserControl>

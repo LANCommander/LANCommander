@@ -6,15 +6,15 @@
         <!-- Toolbar -->
         <Border Grid.Row="0" 
                 Padding="8" 
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+                Background="{DynamicResource SurfaceBrush}">
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                <Button x:Name="PrevPageButton" Content="◀" Padding="8,4" ToolTip.Tip="Previous Page" />
+                <Button Classes="Secondary" x:Name="PrevPageButton" Padding="8,4" ToolTip.Tip="Previous Page"><Icon Type="Regular" Value="CaretLeft" Width="14" Height="14" /></Button>
                 <TextBlock x:Name="PageIndicator" VerticalAlignment="Center" Margin="8,0" />
-                <Button x:Name="NextPageButton" Content="▶" Padding="8,4" ToolTip.Tip="Next Page" />
-                <Border Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,0" />
-                <Button x:Name="ZoomOutButton" Content="−" Padding="8,4" ToolTip.Tip="Zoom Out" />
+                <Button Classes="Secondary" x:Name="NextPageButton" Padding="8,4" ToolTip.Tip="Next Page"><Icon Type="Regular" Value="CaretRight" Width="14" Height="14" /></Button>
+                <Border Width="1" Background="{DynamicResource HairlineBorderBrush}" Margin="8,0" />
+                <Button Classes="Secondary" x:Name="ZoomOutButton" Padding="8,4" ToolTip.Tip="Zoom Out"><Rectangle Width="14" Height="1.6" Fill="{Binding $parent[Button].Foreground}" /></Button>
                 <TextBlock x:Name="ZoomIndicator" VerticalAlignment="Center" Margin="8,0" />
-                <Button x:Name="ZoomInButton" Content="+" Padding="8,4" ToolTip.Tip="Zoom In" />
+                <Button Classes="Secondary" x:Name="ZoomInButton" Padding="8,4" ToolTip.Tip="Zoom In"><Icon Type="Regular" Value="Plus" Width="14" Height="14" /></Button>
             </StackPanel>
         </Border>
         

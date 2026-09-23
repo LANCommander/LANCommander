@@ -64,9 +64,10 @@
             <Setter Property="ClipToBounds" Value="False" />
             <Setter Property="Template">
                 <ControlTemplate>
+                    <!-- 1.6px per the design's icon spec; Path strokes after stretching, so this holds at every size -->
                     <Path Fill="Transparent"
                           Stroke="{TemplateBinding Foreground}"
-                          StrokeThickness="1"
+                          StrokeThickness="1.6"
                           Data="{TemplateBinding Data}"
                           Stretch="Uniform"
                           HorizontalAlignment="Center"

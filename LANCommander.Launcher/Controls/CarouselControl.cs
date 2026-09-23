@@ -48,6 +48,10 @@ public class CarouselControl : TemplatedControl
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<CarouselControl, string?>(nameof(Title));
 
+    /// <summary>Optional small uppercase label above <see cref="Title"/> (e.g. "ON THIS SERVER").</summary>
+    public static readonly StyledProperty<string?> KickerProperty =
+        AvaloniaProperty.Register<CarouselControl, string?>(nameof(Kicker));
+
     public static readonly StyledProperty<IDataTemplate?> ItemTemplateProperty =
         AvaloniaProperty.Register<CarouselControl, IDataTemplate?>(nameof(ItemTemplate));
 
@@ -97,6 +101,12 @@ public class CarouselControl : TemplatedControl
     {
         get => GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
+    }
+
+    public string? Kicker
+    {
+        get => GetValue(KickerProperty);
+        set => SetValue(KickerProperty, value);
     }
 
     public IDataTemplate? ItemTemplate

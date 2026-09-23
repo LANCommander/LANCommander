@@ -19,7 +19,7 @@
                           VerticalScrollBarVisibility="Auto">
                 <SelectableTextBlock x:Name="OutputTextBlock"
                                      FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-                                     FontSize="13"
+                                     FontSize="{DynamicResource FontSizeLabel}"
                                      Foreground="#CCCCCC"
                                      TextWrapping="NoWrap" />
             </ScrollViewer>
@@ -43,7 +43,7 @@
                 <TextBox Grid.Column="1"
                          x:Name="CommandInput"
                          FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-                         FontSize="13"
+                         FontSize="{DynamicResource FontSizeLabel}"
                          Background="#1E1E1E"
                          Foreground="#CCCCCC"
                          BorderThickness="1"

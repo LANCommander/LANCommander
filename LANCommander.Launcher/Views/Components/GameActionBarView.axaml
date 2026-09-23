@@ -87,7 +87,9 @@
                                  Classes.Running="{Binding IsRunning}"
                                  Classes.Starting="{Binding IsStarting}"
                                  Classes.Stopping="{Binding IsStopping}"
-                                 Classes="Primary Large">
+                                 Classes.Success="{Binding ShowPlayLabel}"
+                                 Classes.Primary="{Binding !ShowPlayLabel}"
+                                 Classes="Large">
                         <Panel>
                             <!-- Idle + update available: Update -->
                             <StackPanel Orientation="Horizontal" Spacing="8"
@@ -99,7 +101,7 @@
                             <!-- Idle + no update: Play / Starting -->
                             <StackPanel Orientation="Horizontal" Spacing="8"
                                         IsVisible="{Binding ShowPlayLabel}">
-                                <TextBlock Text="▶" FontWeight="Bold" IsVisible="{Binding !IsStarting}" />
+                                <Icon Type="Regular" Value="Play" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Play" FontWeight="SemiBold" IsVisible="{Binding !IsStarting}" />
                                 <TextBlock Text="Starting" IsVisible="{Binding IsStarting}" />
                             </StackPanel>
@@ -126,7 +128,7 @@
                                  IsEnabled="{Binding IsInstalled}"
                                  Padding="12,14"
                                  ToolTip.Tip="Debug Scripts">
-                        <TextBlock Text="🐛" />
+                        <Icon Type="Regular" Value="Bug" Width="16" Height="16" />
 
                         <SplitButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedLeft">
@@ -153,18 +155,18 @@
 
                     <!-- Stats (right side) -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="32" VerticalAlignment="Center" Margin="48,0,0,0">
-                        <StackPanel Spacing="2"
+                        <StackPanel Spacing="3"
                                     IsVisible="{Binding DownloadSizeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="Download Size" FontSize="11" Opacity="0.6" />
-                            <TextBlock Text="{Binding DownloadSizeText}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="DOWNLOAD SIZE" Classes="Kicker" />
+                            <TextBlock Text="{Binding DownloadSizeText}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Play Time" FontSize="11" Opacity="0.6" />
-                            <TextBlock Text="{Binding PlayTime}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="PLAY TIME" Classes="Kicker" />
+                            <TextBlock Text="{Binding PlayTime}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Last Played" FontSize="11" Opacity="0.6" />
-                            <TextBlock Text="{Binding LastPlayed}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="LAST PLAYED" Classes="Kicker" />
+                            <TextBlock Text="{Binding LastPlayed}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
                     </StackPanel>
                 </Grid>

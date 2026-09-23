@@ -8,30 +8,25 @@
 
     <Border HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            CornerRadius="0"
+            CornerRadius="{DynamicResource RadiusMedium}"
             ClipToBounds="True">
         <Panel>
             <Image x:Name="CoverImage"
                    Stretch="UniformToFill"
                    IsVisible="{Binding HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}" />
 
-            <Border IsVisible="{Binding !HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#3D1A6B" Offset="0" />
-                        <GradientStop Color="#0F3460" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-
+            <!-- Fallback plate: title-hashed tone, title set top-left -->
+            <Border IsVisible="{Binding !HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}"
+                    Background="{Binding FallbackBackground, RelativeSource={RelativeSource AncestorType=local:Cover}}">
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=local:Cover}}"
                            FontSize="{Binding FallbackFontSize, RelativeSource={RelativeSource AncestorType=local:Cover}}"
                            FontWeight="SemiBold"
+                           LetterSpacing="-0.15"
                            TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Margin="10"
-                           Foreground="White" />
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"
+                           Margin="12"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
             </Border>
 
             <ContentPresenter Content="{Binding Overlay, RelativeSource={RelativeSource AncestorType=local:Cover}}" />

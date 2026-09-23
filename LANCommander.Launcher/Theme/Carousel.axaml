@@ -13,27 +13,32 @@
                         <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Row 0: header — title in col 1, "See all" in col 2 (both align with items/right-button) -->
-                    <TextBlock Grid.Row="0" Grid.Column="1"
-                               Text="{TemplateBinding Title}"
-                               FontSize="18" FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,0,10"
-                               IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    
-                    <IconButton Grid.Row="0" Grid.Column="1"
-                                Text="See all"
-                                Classes="Text"
-                                Command="{TemplateBinding SeeAllCommand}"
-                                IsVisible="{TemplateBinding SeeAllCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                Padding="8,4"
-                                Margin="0, 0, 0, 10"
-                                Size="12"
-                                Opacity="0.6"
-                                HorizontalAlignment="Right"
-                                IconType="Regular"
-                                IconValue="CaretRight"
-                                IconPlacement="Right" />
+                    <!-- Row 0: header — optional kicker over the title in col 1, "See all" at the right of col 1
+                         (both align with the items / right button) -->
+                    <StackPanel Grid.Row="0" Grid.Column="1"
+                                Margin="0,0,0,12"
+                                VerticalAlignment="Bottom"
+                                IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Classes="Kicker"
+                                   Text="{TemplateBinding Kicker}"
+                                   Margin="0,0,0,3"
+                                   IsVisible="{TemplateBinding Kicker, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Classes="Section"
+                                   Text="{TemplateBinding Title}" />
+                    </StackPanel>
+
+                    <!-- "See all": an accent text link, not a chip -->
+                    <Button Grid.Row="0" Grid.Column="1"
+                            Content="See all"
+                            Classes="Text Primary"
+                            Command="{TemplateBinding SeeAllCommand}"
+                            IsVisible="{TemplateBinding SeeAllCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            FontSize="{DynamicResource FontSizeLabel}"
+                            FontWeight="Medium"
+                            Padding="8,4"
+                            Margin="0,0,-8,10"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom" />
 
                     <!-- Row 1: left button | clipped items | right button -->
                     <Button x:Name="PART_LeftButton"

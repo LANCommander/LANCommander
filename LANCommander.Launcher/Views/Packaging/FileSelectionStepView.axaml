@@ -9,37 +9,39 @@
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                <Button Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
-                <Button Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
-                <Button Content="Rescan" Command="{Binding RefreshCommand}" Padding="12,5" />
+                <Button Classes="Secondary" Content="Select all" Command="{Binding SelectAllCommand}" Padding="12,5" />
+                <Button Classes="Secondary" Content="Select none" Command="{Binding SelectNoneCommand}" Padding="12,5" />
+                <Button Classes="Secondary" Content="Rescan" Command="{Binding RefreshCommand}" Padding="12,5" />
             </StackPanel>
 
             <TextBlock Text="Choose the files to include"
-                       FontSize="15"
+                       FontSize="{DynamicResource FontSizeSection}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center" />
         </DockPanel>
 
-        <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,8">
+        <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,12">
             <!-- The disk sweep recovers files written by processes that could not be instrumented
                  in time, which is the main practical mitigation for the injection race. -->
-            <TextBlock FontSize="12"
-                       Foreground="#7FBF7F"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding HasSweptFiles}"
-                       Text="{Binding SweptFileCount, StringFormat='{}Found {0} additional file(s) in the install folder that were not captured while monitoring. They are included by default.'}" />
+            <Border Classes="Notice Success" IsVisible="{Binding HasSweptFiles}">
+                <DockPanel>
+                    <Icon DockPanel.Dock="Left" Type="Regular" Value="CheckCircle" Width="14" Height="14" Margin="0,1,10,0" VerticalAlignment="Top" />
+                    <TextBlock TextWrapping="Wrap"
+                               Text="{Binding SweptFileCount, StringFormat='{}Found {0} additional file(s) in the install folder that were not captured while monitoring. They are included by default.'}" />
+                </DockPanel>
+            </Border>
 
-            <TextBlock FontSize="12"
-                       Foreground="#7FA8BF"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding HasPostInstallFiles}"
-                       Text="{Binding PostInstallFileCount, StringFormat='{}{0} file(s) were added or changed after the install finished; they are marked in the tree below.'}" />
+            <Border Classes="Notice Info" IsVisible="{Binding HasPostInstallFiles}">
+                <DockPanel>
+                    <Icon DockPanel.Dock="Left" Type="Regular" Value="Info" Width="14" Height="14" Margin="0,1,10,0" VerticalAlignment="Top" />
+                    <TextBlock TextWrapping="Wrap"
+                               Text="{Binding PostInstallFileCount, StringFormat='{}{0} file(s) were added or changed after the install finished; they are marked in the tree below.'}" />
+                </DockPanel>
+            </Border>
         </StackPanel>
 
-        <Border Grid.Row="2"
-                CornerRadius="4"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-            <TreeView ItemsSource="{Binding Roots}" Padding="6">
+        <Border Grid.Row="2" Classes="Card" Padding="6,8">
+            <TreeView ItemsSource="{Binding Roots}">
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="components:CheckableTreeNode"
                                       ItemsSource="{Binding Children}">
@@ -51,15 +53,10 @@
 
                             <!-- Marks what the Customize step saw appear or change, so a no-CD
                                  patch is findable among the installer's thousands of files. -->
-                            <Border CornerRadius="3"
-                                    Padding="5,1"
+                            <Border Classes="StatusTag"
                                     VerticalAlignment="Center"
-                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                                     IsVisible="{Binding HasAnnotation}">
-                                <TextBlock Text="{Binding Annotation}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="#7FA8BF" />
+                                <TextBlock Text="{Binding Annotation}" />
                             </Border>
                         </StackPanel>
                     </TreeDataTemplate>
@@ -70,7 +67,8 @@
         <TextBlock Grid.Row="3"
                    Margin="0,8,0,0"
                    Text="{Binding Summary}"
-                   FontSize="12"
-                   Opacity="0.7" />
+                   Classes="Mono"
+                   FontSize="{DynamicResource FontSizeCaption}"
+                   Foreground="{DynamicResource TextSecondaryBrush}" />
     </Grid>
 </UserControl>

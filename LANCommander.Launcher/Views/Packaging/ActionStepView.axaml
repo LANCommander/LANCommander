@@ -8,7 +8,7 @@
         <!-- Avalonia has no SharedSizeGroup, so the header and the rows repeat the same column
              widths. Change one and change the other. -->
         <Style Selector="TextBlock.columnHeader">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
             <Setter Property="Opacity" Value="0.7" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
             <Setter Property="Margin" Value="0,0,8,0" />
@@ -29,10 +29,10 @@
 
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
             <TextBlock Text="How should the game be started?"
-                       FontSize="15"
+                       FontSize="{DynamicResource FontSizeSection}"
                        FontWeight="SemiBold" />
 
-            <TextBlock FontSize="12"
+            <TextBlock FontSize="{DynamicResource FontSizeCaption}"
                        Opacity="0.7"
                        TextWrapping="Wrap"
                        Text="Each action is an entry point the launcher offers. Most games need one; add more for a separate multiplayer executable, a dedicated server, or a configuration tool. The primary action is what the Play button runs." />
@@ -47,7 +47,7 @@
         <Border Grid.Row="2"
                 CornerRadius="4"
                 Padding="8"
-                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                Background="{DynamicResource SurfaceBrush}">
             <!-- Vertical scrolling only: the row spans the step's full width, so the path — the
                  longest thing in it — gets whatever the fixed columns leave over. -->
             <ScrollViewer HorizontalScrollBarVisibility="Disabled"
@@ -108,7 +108,7 @@
                                               Width="14"
                                               Height="14"
                                               Margin="4,0,0,0"
-                                              Foreground="#FFA500"
+                                              Foreground="{DynamicResource WarningTextBrush}"
                                               IsVisible="{Binding IsPathMissing}"
                                               ToolTip.Tip="This path is not among the files going into the package." />
                                     </Grid>
@@ -138,7 +138,7 @@
                                         <Button Classes="rowAction"
                                                 Command="{Binding TestCommand}"
                                                 ToolTip.Tip="Run this action now, to check the path and arguments">
-                                            <Icon Type="Regular" Value="Play" Width="12" Height="12" Foreground="#7FBF7F" />
+                                            <Icon Type="Regular" Value="Play" Width="12" Height="12" Foreground="{DynamicResource SuccessTextBrush}" />
                                         </Button>
 
                                         <Button Classes="rowAction"
@@ -156,7 +156,7 @@
                                         <Button Classes="rowAction"
                                                 Command="{Binding RemoveCommand}"
                                                 ToolTip.Tip="Remove this action">
-                                            <Icon Type="Regular" Value="Trash" Width="12" Height="12" Foreground="#BF7F7F" />
+                                            <Icon Type="Regular" Value="Trash" Width="12" Height="12" Foreground="{DynamicResource ErrorTextBrush}" />
                                         </Button>
                                     </StackPanel>
                                 </Grid>
@@ -178,14 +178,14 @@
         <TextBlock Grid.Row="4"
                    Margin="0,8,0,0"
                    Text="{Binding Summary}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FontSizeCaption}"
                    Opacity="0.7"
                    TextWrapping="Wrap" />
 
         <TextBlock Grid.Row="5"
                    Margin="0,4,0,0"
                    Text="{Binding TestStatus}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FontSizeCaption}"
                    Opacity="0.85"
                    TextWrapping="Wrap"
                    IsVisible="{Binding HasTestStatus}" />

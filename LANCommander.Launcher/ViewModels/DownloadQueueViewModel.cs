@@ -38,6 +38,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
     private readonly TaskbarProgressService _taskbarProgressService;
     private InstallService? _installService;
 
+    /// <summary>Set only by the debug download fixture; always false in release builds.</summary>
+    private bool _fixtureActive;
+
     [ObservableProperty]
     private bool _isExpanded;
 
@@ -65,6 +68,10 @@ public partial class DownloadQueueViewModel : ViewModelBase
     [ObservableProperty]
     private string _timeRemainingText = string.Empty;
 
+    /// <summary>Just the duration ("3m 47s"), for places that already label it as remaining.</summary>
+    [ObservableProperty]
+    private string _timeRemainingValue = string.Empty;
+
     [ObservableProperty]
     private bool _hasActiveDownload;
 
@@ -73,6 +80,13 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasCompletedItems;
+
+    [ObservableProperty]
+    private bool _hasFailedItems;
+
+    /// <summary>Completed or failed: the items the "finished" group and Clear completed act on.</summary>
+    [ObservableProperty]
+    private bool _hasFinishedItems;
 
     [ObservableProperty]
     private bool _hasItems;
@@ -111,6 +125,11 @@ public partial class DownloadQueueViewModel : ViewModelBase
         _installService.OnInstallFail += OnInstallFail;
 
         RefreshQueue();
+
+#if DEBUG
+        if (IsFixtureRequested)
+            _ = SeedFixtureAsync();
+#endif
     }
 
     private Task OnQueueChanged()
@@ -200,10 +219,12 @@ public partial class DownloadQueueViewModel : ViewModelBase
                     remaining = $"{ts.Seconds}s";
 
                 TimeRemainingText = Localize("TimeRemaining", remaining);
+                TimeRemainingValue = remaining;
             }
             else
             {
                 TimeRemainingText = string.Empty;
+                TimeRemainingValue = string.Empty;
             }
 
             // Update the matching queue item. May be null for a sub-install (e.g. an addon)
@@ -299,7 +320,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
     private async Task RefreshQueueAsync()
     {
-        if (_installService == null)
+        // A debug fixture owns the queue (see DownloadQueueViewModel.Fixture.cs); don't let the
+        // empty real queue wipe it.
+        if (_installService == null || _fixtureActive)
             return;
 
         var sourceIds = _installService.Queue.Select(i => i.Id).ToHashSet();
@@ -342,10 +365,16 @@ public partial class DownloadQueueViewModel : ViewModelBase
             }
         }
 
-        // Update state flags
+        UpdateStateFlags();
+    }
+
+    private void UpdateStateFlags()
+    {
         HasActiveDownload = QueueItems.Any(i => i.IsActive);
         HasQueuedItems = QueueItems.Any(i => i.Status == InstallStatus.Queued);
         HasCompletedItems = QueueItems.Any(i => i.Status == InstallStatus.Complete);
+        HasFailedItems = QueueItems.Any(i => i.Status == InstallStatus.Failed);
+        HasFinishedItems = HasCompletedItems || HasFailedItems;
         HasItems = QueueItems.Any();
         ActiveCount = QueueItems.Count(i => i.IsActive || i.Status == InstallStatus.Queued);
         HasPendingItems = ActiveCount > 0;
@@ -536,7 +565,11 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     private long _bytesDownloaded;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TotalSizeText))]
     private long _totalBytes;
+
+    /// <summary>Total size for list rows, e.g. "4.7 GB"; empty until the size is known.</summary>
+    public string TotalSizeText => TotalBytes > 0 ? ByteSize.FromBytes(TotalBytes).ToString("0.##") : string.Empty;
 
     [ObservableProperty]
     private Guid _coverId;
@@ -581,7 +614,11 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     private string _percentText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusKickerText))]
     private string _statusText = string.Empty;
+
+    /// <summary>Status as an uppercase kicker ("DOWNLOADING"); the UI has no text-transform.</summary>
+    public string StatusKickerText => StatusText.ToUpperInvariant();
 
     [ObservableProperty]
     private string? _completedOnText;
@@ -610,7 +647,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     private Axis[] _speedYAxes = { new Axis {
         IsVisible = true,
         MinLimit = 0,
-        LabelsPaint = new SolidColorPaint(SKColors.Gray),
+        LabelsPaint = new SolidColorPaint(SKColor.Parse("#8C8C8C")), // TextTertiary
         TextSize = 10,
         SeparatorsPaint = null,
         Labeler = v => $"{ByteSize.FromBytes(v).MegaBytes:0.#}",
@@ -624,8 +661,9 @@ public partial class InstallQueueItemViewModel : ViewModelBase
             {
                 Values = _speedValues,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
-                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(40)),
+                // Brand accent (AccentText, #4096FF) rather than DodgerBlue
+                Stroke = new SolidColorPaint(SKColor.Parse("#4096FF"), 2),
+                Fill = new SolidColorPaint(SKColor.Parse("#4096FF").WithAlpha(40)),
                 LineSmoothness = 0.3,
                 AnimationsSpeed = TimeSpan.FromMilliseconds(150),
                 YToolTipLabelFormatter = point => $"{ByteSize.FromBytes(point.Coordinate.PrimaryValue).MegaBytes:0.##} MB/s",

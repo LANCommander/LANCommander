@@ -37,6 +37,12 @@ public partial class ServerSelectionViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<DiscoveredServer> DiscoveredServers { get; } = new();
 
+    /// <summary>
+    /// Whether constructing the view model starts a LAN scan. Debug fixtures turn this off so a
+    /// server that happens to be on the network never shows up in a screenshot.
+    /// </summary>
+    internal static bool ScanOnStartup { get; set; } = true;
+
     public event EventHandler? ServerConnected;
 
     public ServerSelectionViewModel(
@@ -54,7 +60,8 @@ public partial class ServerSelectionViewModel : ViewModelBase, IDisposable
         if (_settingsProvider.CurrentValue.Authentication?.ServerAddress != null)
             ServerAddress = _settingsProvider.CurrentValue.Authentication.ServerAddress.ToString();
 
-        _ = ScanAsync();
+        if (ScanOnStartup)
+            _ = ScanAsync();
     }
 
     [RelayCommand]

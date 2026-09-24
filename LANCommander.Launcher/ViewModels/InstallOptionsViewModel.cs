@@ -54,14 +54,23 @@ public partial class InstallOptionsViewModel : ViewModelBase
 
     // ── Free space on the chosen drive ────────────────────────────────────────
 
-    private DriveInfo? SelectedDrive
+    /// <summary>
+    /// Replaces the drive lookup when set. Debug fixtures use it so the free-space line shows the same
+    /// numbers on every machine.
+    /// </summary>
+    internal static Func<string?, (string Name, long AvailableFreeSpace)?>? FreeSpaceOverride { get; set; }
+
+    private (string Name, long AvailableFreeSpace)? SelectedDrive
     {
         get
         {
+            if (FreeSpaceOverride != null)
+                return FreeSpaceOverride(SelectedInstallDirectory);
+
             try
             {
                 var root = Path.GetPathRoot(SelectedInstallDirectory);
-                return string.IsNullOrEmpty(root) ? null : new DriveInfo(root) is { IsReady: true } drive ? drive : null;
+                return string.IsNullOrEmpty(root) ? null : new DriveInfo(root) is { IsReady: true } drive ? (drive.Name, drive.AvailableFreeSpace) : null;
             }
             catch
             {

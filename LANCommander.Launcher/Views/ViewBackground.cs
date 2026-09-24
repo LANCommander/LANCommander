@@ -28,6 +28,12 @@ internal static class ViewBackground
     /// </summary>
     public static bool Enabled { get; set; } = true;
 
+    /// <summary>
+    /// When set, this asset is shown instead of a random pick. Debug fixtures use it so
+    /// screenshots show a real background without changing from run to run.
+    /// </summary>
+    public static string? Override { get; set; }
+
     public static void Apply(Image target)
     {
         if (!Enabled)
@@ -35,7 +41,7 @@ internal static class ViewBackground
 
         try
         {
-            var uri = new Uri(Backgrounds[Random.Shared.Next(Backgrounds.Length)]);
+            var uri = new Uri(Override ?? Backgrounds[Random.Shared.Next(Backgrounds.Length)]);
             target.Source = new Bitmap(AssetLoader.Open(uri));
         }
         catch { /* silently ignore missing assets */ }

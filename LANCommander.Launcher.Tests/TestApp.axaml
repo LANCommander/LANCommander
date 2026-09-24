@@ -1,16 +1,18 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="using:LANCommander.Launcher.Converters"
              x:Class="LANCommander.Launcher.Tests.TestApp"
              RequestedThemeVariant="Dark">
+    <!-- The launcher's own theme, so screenshots and baselines look like the real app. -->
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://LANCommander.Launcher/Theme/AppStyles.axaml" />
     </Application.Styles>
 
-    <!-- Converters that views resolve from the application's resource scope.
-         The real App.axaml declares these globally; mirror only what the views
-         under test require so unstyled baselines stay otherwise unchanged. -->
     <Application.Resources>
-        <converters:MultiplyConverter x:Key="MultiplyConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://LANCommander.Launcher/Theme/AppResources.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

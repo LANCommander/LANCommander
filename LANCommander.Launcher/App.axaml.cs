@@ -34,7 +34,7 @@ namespace LANCommander.Launcher;
 
 public partial class App : Application
 {
-    public static IServiceProvider? Services { get; private set; }
+    public static IServiceProvider? Services { get; internal set; }
     private static ILogger<App>? _logger;
 
     public override void Initialize()
@@ -44,6 +44,16 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+#if DEBUG
+        // Previewing fixtures replaces the launcher entirely: no settings, server or database.
+        if (Fixtures.FixturePreview.IsRequested && ApplicationLifetime is IClassicDesktopStyleApplicationLifetime previewDesktop)
+        {
+            Fixtures.FixturePreview.Start(previewDesktop);
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+#endif
+
         try
         {
             // Configure services
@@ -369,48 +379,54 @@ public partial class App : Application
         // as inline DataTemplates in MainWindow.axaml / ShellView.axaml. Plugins may append further
         // mappings during initialization. Ordering preserves the DepotGameDetailViewModel-before-
         // GameDetailViewModel rule via most-derived-first matching in ViewRegistry.
-        services.AddSingleton<IViewRegistry>(_ =>
-        {
-            var registry = new ViewRegistry();
-
-            // App-level shell hosted in MainWindow's ContentControl
-            registry.Register<SplashViewModel>(() => new SplashView());
-            registry.Register<ServerSelectionViewModel>(() => new ServerSelectionView());
-            registry.Register<LoginViewModel>(() => new LoginView());
-            registry.Register<ShellViewModel>(() => new ShellView());
-
-            // Shell content hosted in ShellView's TransitioningContentControl
-            registry.Register<DepotViewModel>(() => new DepotView());
-            registry.Register<DepotBrowseViewModel>(() => new DepotBrowseView());
-            registry.Register<DepotGameDetailViewModel>(() => new GameDetailView());
-            registry.Register<GamesListViewModel>(() => new GamesListView());
-            registry.Register<LibraryViewModel>(() => new GamesListView());
-            registry.Register<GameDetailViewModel>(() => new GameDetailView());
-            registry.Register<SettingsViewModel>(() => new SettingsView());
-            registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
-            registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
-
-            // Packaging wizard, plus each of its steps. Registering the steps in the same
-            // registry is what lets the wizard host them in a ContentControl, and leaves room
-            // for a plugin to replace an individual step later.
-            registry.Register<PackagingWizardViewModel>(() => new PackagingWizardView());
-            registry.Register<MonitorStepViewModel>(() => new MonitorStepView());
-            registry.Register<InstallDirectoryStepViewModel>(() => new InstallDirectoryStepView());
-            registry.Register<PostInstallStepViewModel>(() => new PostInstallStepView());
-            registry.Register<FileSelectionStepViewModel>(() => new FileSelectionStepView());
-            registry.Register<RegistrySelectionStepViewModel>(() => new RegistrySelectionStepView());
-            registry.Register<MetadataStepViewModel>(() => new MetadataStepView());
-            registry.Register<ActionStepViewModel>(() => new ActionStepView());
-            registry.Register<OutputStepViewModel>(() => new OutputStepView());
-
-            return registry;
-        });
+        services.AddSingleton<IViewRegistry>(_ => CreateViewRegistry());
 
         // Plugin framework: discover drop-in plugins and let them register services. Must be the last
         // registration step because the service provider is built immediately after this method returns.
         LANCommander.SDK.Plugins.PluginBootstrap.ConfigurePlugins(services, LANCommander.SDK.Plugins.PluginHost.Launcher);
     }
     
+    /// <summary>
+    /// The built-in view model to view mappings. Shared with the debug fixture host so fixtures
+    /// resolve views exactly as the running app does.
+    /// </summary>
+    internal static ViewRegistry CreateViewRegistry()
+    {
+        var registry = new ViewRegistry();
+
+        // App-level shell hosted in MainWindow's ContentControl
+        registry.Register<SplashViewModel>(() => new SplashView());
+        registry.Register<ServerSelectionViewModel>(() => new ServerSelectionView());
+        registry.Register<LoginViewModel>(() => new LoginView());
+        registry.Register<ShellViewModel>(() => new ShellView());
+
+        // Shell content hosted in ShellView's TransitioningContentControl
+        registry.Register<DepotViewModel>(() => new DepotView());
+        registry.Register<DepotBrowseViewModel>(() => new DepotBrowseView());
+        registry.Register<DepotGameDetailViewModel>(() => new GameDetailView());
+        registry.Register<GamesListViewModel>(() => new GamesListView());
+        registry.Register<LibraryViewModel>(() => new GamesListView());
+        registry.Register<GameDetailViewModel>(() => new GameDetailView());
+        registry.Register<SettingsViewModel>(() => new SettingsView());
+        registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
+        registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
+
+        // Packaging wizard, plus each of its steps. Registering the steps in the same
+        // registry is what lets the wizard host them in a ContentControl, and leaves room
+        // for a plugin to replace an individual step later.
+        registry.Register<PackagingWizardViewModel>(() => new PackagingWizardView());
+        registry.Register<MonitorStepViewModel>(() => new MonitorStepView());
+        registry.Register<InstallDirectoryStepViewModel>(() => new InstallDirectoryStepView());
+        registry.Register<PostInstallStepViewModel>(() => new PostInstallStepView());
+        registry.Register<FileSelectionStepViewModel>(() => new FileSelectionStepView());
+        registry.Register<RegistrySelectionStepViewModel>(() => new RegistrySelectionStepView());
+        registry.Register<MetadataStepViewModel>(() => new MetadataStepView());
+        registry.Register<ActionStepViewModel>(() => new ActionStepView());
+        registry.Register<OutputStepViewModel>(() => new OutputStepView());
+
+        return registry;
+    }
+
     private static OSPlatform GetOSPlatform()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

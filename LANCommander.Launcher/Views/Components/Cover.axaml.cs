@@ -390,6 +390,8 @@ public partial class Cover : UserControl, ICarouselLazyItem
             }
         }
 
+        PendingLoads.Begin();
+
         try
         {
             // Debounce: wait briefly so covers that are scrolled past quickly
@@ -423,6 +425,10 @@ public partial class Cover : UserControl, ICarouselLazyItem
             if (!ct.IsCancellationRequested)
                 await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
         }
+        finally
+        {
+            PendingLoads.End();
+        }
     }
 
     private async Task LoadRemoteImageAsync(Uri uri, CancellationToken ct)
@@ -444,6 +450,8 @@ public partial class Cover : UserControl, ICarouselLazyItem
                 return;
             }
         }
+
+        PendingLoads.Begin();
 
         try
         {
@@ -470,6 +478,10 @@ public partial class Cover : UserControl, ICarouselLazyItem
         {
             if (!ct.IsCancellationRequested)
                 await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
+        }
+        finally
+        {
+            PendingLoads.End();
         }
     }
 

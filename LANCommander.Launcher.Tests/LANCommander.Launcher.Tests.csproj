@@ -30,11 +30,12 @@
     <ProjectReference Include="..\LANCommander.Launcher\LANCommander.Launcher.csproj" />
   </ItemGroup>
 
-  <!-- Baseline images are committed to source and copied to output for tests to load -->
+  <!-- Baselines are read from and refreshed in the source tree (see ScreenshotHelper) -->
   <ItemGroup>
-    <Content Include="Baselines\**\*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ProjectDirectory</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

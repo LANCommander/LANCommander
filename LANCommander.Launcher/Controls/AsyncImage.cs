@@ -118,6 +118,8 @@ public class AsyncImage : AvaloniaObject
 
     private static async void LoadAsync(Image image, string source, int width, int height, CancellationTokenSource cts)
     {
+        PendingLoads.Begin();
+
         try
         {
             var bitmap = await RemoteImageCache.LoadAsync(source, width, height, cts.Token);
@@ -146,6 +148,10 @@ public class AsyncImage : AvaloniaObject
             // Network/decoding failures leave the image blank and raise Failed for views that want a fallback.
             if (!cts.IsCancellationRequested)
                 await Dispatcher.UIThread.InvokeAsync(() => MarkFailed(image, source, cts));
+        }
+        finally
+        {
+            PendingLoads.End();
         }
     }
 

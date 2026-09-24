@@ -28,9 +28,9 @@ public partial class GameActionBarViewModel
     public static bool IsInstallOptionsFixtureRequested =>
         Environment.GetEnvironmentVariable(InstallOptionsFixtureVariable) is "1" or "true";
 
-    private const long MB = 1024L * 1024;
+    internal const long MB = 1024L * 1024;
 
-    private static readonly (string Title, GameType Type, long DownloadMb, bool Selected)[] FixtureAddons =
+    internal static readonly (string Title, GameType Type, long DownloadMb, bool Selected)[] FixtureAddons =
     [
         ("Battlefield 1942: The Road to Rome",            GameType.Expansion, 412,  true),
         ("Battlefield 1942: Secret Weapons of WWII",      GameType.Expansion, 538,  true),
@@ -48,7 +48,7 @@ public partial class GameActionBarViewModel
         ("Interstate '82 Conversion",                     GameType.Mod,       95,   false),
     ];
 
-    private static readonly (string Name, long DownloadMb)[] FixtureTools =
+    internal static readonly (string Name, long DownloadMb)[] FixtureTools =
     [
         ("BF1942 Dedicated Server",  164),
         ("BF Remote Console",        3),

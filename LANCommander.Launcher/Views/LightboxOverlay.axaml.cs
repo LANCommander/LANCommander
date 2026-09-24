@@ -201,6 +201,8 @@ public partial class LightboxOverlay : UserControl
             return;
         }
 
+        PendingLoads.Begin();
+
         try
         {
             // Thumbnail strip items are 120 logical px wide.
@@ -214,6 +216,10 @@ public partial class LightboxOverlay : UserControl
         catch
         {
             target.Source = item.ImageSource;
+        }
+        finally
+        {
+            PendingLoads.End();
         }
     }
 

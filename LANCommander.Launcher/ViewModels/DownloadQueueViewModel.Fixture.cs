@@ -110,7 +110,27 @@ public partial class DownloadQueueViewModel
         _fixtureTimer.Start();
     }
 
-    private static List<InstallTaskDefinition> FixtureTasks() => new()
+    /// <summary>
+    /// Fills the queue for a visual fixture (see <see cref="Fixtures.FixtureContext"/>) and, when
+    /// given, reports progress for the active item through the same handler real installs use.
+    /// Unlike <see cref="SeedFixtureAsync"/> nothing moves afterwards.
+    /// </summary>
+    internal void SeedForFixture(IEnumerable<InstallQueueItemViewModel> items, InstallProgress? progress = null)
+    {
+        _fixtureActive = true;
+
+        QueueItems.Clear();
+
+        foreach (var item in items)
+            QueueItems.Add(item);
+
+        UpdateStateFlags();
+
+        if (progress != null)
+            _ = OnProgress(progress);
+    }
+
+    internal static List<InstallTaskDefinition> FixtureTasks() => new()
     {
         new() { Type = InstallTaskType.DownloadAndExtract, Title = "Download and extract", Order = 0, ReportsProgress = true, IsCritical = true },
         new() { Type = InstallTaskType.WriteManifest,      Title = "Write manifest",       Order = 1 },

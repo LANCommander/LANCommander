@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Threading;
 
 namespace LANCommander.Launcher.Tests.Helpers;
 
@@ -27,12 +30,16 @@ public static class ScreenshotHelper
         ?? Path.Combine(AppContext.BaseDirectory, "Diffs");
 
     /// <summary>
-    /// Directory containing the committed baseline PNG files.
-    /// Populated from the Baselines/ folder in the test project (Content items).
+    /// Directory containing the committed baseline PNG files: the Baselines/ folder in the source
+    /// tree, so refreshed baselines are compared against straight away rather than after a rebuild
+    /// copies them.
     /// </summary>
     public static string BaselinesDirectory { get; } =
         Environment.GetEnvironmentVariable("VISUAL_BASELINES_DIR")
-        ?? Path.Combine(AppContext.BaseDirectory, "Baselines");
+        ?? Path.Combine(
+            typeof(ScreenshotHelper).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .Single(a => a.Key == "ProjectDirectory").Value!,
+            "Baselines");
 
     /// <summary>
     /// Renders the window, saves the screenshot under <paramref name="name"/>.png,
@@ -41,6 +48,14 @@ public static class ScreenshotHelper
     public static string Capture(TopLevel window, string name)
     {
         Directory.CreateDirectory(ScreenshotsDirectory);
+
+        // A render tick commits what the UI thread changed and the next one draws it, so a single
+        // capture can return a frame from before the last change (an image that just loaded, say).
+        for (var i = 0; i < 3; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
 
         var bitmap = window.CaptureRenderedFrame()
             ?? throw new InvalidOperationException($"CaptureRenderedFrame returned null for '{name}'.");

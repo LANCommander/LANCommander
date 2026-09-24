@@ -50,7 +50,10 @@ public partial class GameSaveItemViewModel : ViewModelBase
     /// <summary>Sortable timestamp for the mono column, e.g. 2026-09-22 20:41.</summary>
     public string TimestampText => Save.CreatedOn.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
-    public string RelativeText => ToRelative(DateTime.Now - Save.CreatedOn.ToLocalTime());
+    public string RelativeText => ToRelative(Now() - Save.CreatedOn.ToLocalTime());
+
+    /// <summary>The current time. Debug fixtures pin it so "3 days ago" stays true.</summary>
+    internal static Func<DateTime> Now { get; set; } = () => DateTime.Now;
 
     /// <summary>Newest save on the server; set by <see cref="GameSavesViewModel.SetSaves"/>.</summary>
     [ObservableProperty]

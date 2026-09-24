@@ -60,6 +60,18 @@ class Program
             }
         }
 
+#if DEBUG
+        // A fixture preview touches none of the launcher's data, so it can run beside a normal instance.
+        if (Fixtures.FixturePreview.IsRequested)
+        {
+            BuildAvaloniaApp()
+                .WithDeveloperTools()
+                .StartWithClassicDesktopLifetime(args);
+
+            return;
+        }
+#endif
+
         // Only one GUI instance should run at a time. The launcher hides to the tray on
         // close, so a user may relaunch it without realizing it's still running. If another
         // instance already holds the lock, ask it to surface its window, then exit.

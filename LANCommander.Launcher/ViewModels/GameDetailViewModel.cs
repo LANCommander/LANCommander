@@ -32,6 +32,10 @@ public partial class GameDetailViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
     private readonly ILogger<GameDetailViewModel> _logger;
 
+    // Reopening a game (or opening another) while a previous load is still awaiting would let the
+    // stale load append its tools/media into the new game's lists; stale loads bail on mismatch
+    private int _loadVersion;
+
     [ObservableProperty]
     private Guid _id;
 
@@ -270,6 +274,8 @@ public partial class GameDetailViewModel : ViewModelBase
     /// </summary>
     public async Task LoadGameAsync(SDK.Models.Game game)
     {
+        var version = ++_loadVersion;
+
         Id = game.Id;
         Title = game.Title ?? "Unknown";
         Description = game.Description ?? string.Empty;
@@ -335,8 +341,11 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Tools
         Tools.Clear();
-        await LoadToolsAsync(game);
+        await LoadToolsAsync(game, version);
         OnPropertyChanged(nameof(HasTools));
+
+        if (version != _loadVersion)
+            return;
 
         // Reset media items and tag state while we re-load
         MediaItems.Clear();
@@ -371,13 +380,17 @@ public partial class GameDetailViewModel : ViewModelBase
 
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
+
+        if (version != _loadVersion)
+            return;
+
         _ = MeasureInstallSizeAsync();
 
         if (game.Media != null && game.Media.Any())
         {
             // Start loading screenshots/videos in the background immediately so videos
             // begin streaming without waiting on the essential media downloads below.
-            _ = LoadCarouselMediaAsync(game);
+            _ = LoadCarouselMediaAsync(game, version);
 
             // Load essential media (cover, logo, background, icon) — needed for page layout
             try
@@ -404,7 +417,7 @@ public partial class GameDetailViewModel : ViewModelBase
     /// are downloaded/decoded concurrently and pop in as each one finishes, so no item
     /// blocks the others.
     /// </summary>
-    private async Task LoadCarouselMediaAsync(SDK.Models.Game game)
+    private async Task LoadCarouselMediaAsync(SDK.Models.Game game, int version)
     {
         if (game.Media == null)
             return;
@@ -432,20 +445,24 @@ public partial class GameDetailViewModel : ViewModelBase
                 {
                     // Videos only need a stream URL — set them immediately so they don't
                     // wait behind screenshot downloads.
-                    ReplaceMediaItem(index, new GameMediaItemViewModel
+                    ReplaceMediaItem(version, index, new GameMediaItemViewModel
                     {
                         IsVideo  = true,
+                        Name     = media.Name ?? string.Empty,
                         MimeType = media.MimeType ?? string.Empty,
                         Path     = mediaClient.GetAbsoluteStreamUrl(media)
                     });
                 }
                 else
                 {
-                    screenshotTasks.Add(LoadScreenshotAsync(index, media, mediaClient));
+                    screenshotTasks.Add(LoadScreenshotAsync(version, index, media, mediaClient));
                 }
             }
 
             await Task.WhenAll(screenshotTasks);
+
+            if (version != _loadVersion)
+                return;
 
             // Remove any remaining skeletons (e.g. if some items failed to load)
             for (var i = MediaItems.Count - 1; i >= 0; i--)
@@ -470,7 +487,7 @@ public partial class GameDetailViewModel : ViewModelBase
     /// Downloads (if needed) and decodes a single screenshot, then swaps it into the
     /// carousel in place of its skeleton. Runs concurrently with other screenshots.
     /// </summary>
-    private async Task LoadScreenshotAsync(int index, SDK.Models.Media media, MediaClient mediaClient)
+    private async Task LoadScreenshotAsync(int version, int index, SDK.Models.Media media, MediaClient mediaClient)
     {
         try
         {
@@ -491,9 +508,10 @@ public partial class GameDetailViewModel : ViewModelBase
                 return Bitmap.DecodeToWidth(stream, 768, BitmapInterpolationMode.HighQuality);
             });
 
-            ReplaceMediaItem(index, new GameMediaItemViewModel
+            ReplaceMediaItem(version, index, new GameMediaItemViewModel
             {
                 IsVideo     = false,
+                Name        = media.Name ?? string.Empty,
                 MimeType    = media.MimeType ?? string.Empty,
                 Path        = localPath,
                 ImageSource = bitmap
@@ -510,8 +528,11 @@ public partial class GameDetailViewModel : ViewModelBase
     /// it if the index no longer points at a skeleton. Always invoked on the UI thread via
     /// awaited continuations, so collection access is serialized.
     /// </summary>
-    private void ReplaceMediaItem(int index, GameMediaItemViewModel item)
+    private void ReplaceMediaItem(int version, int index, GameMediaItemViewModel item)
     {
+        if (version != _loadVersion)
+            return;
+
         if (index < MediaItems.Count && MediaItems[index].IsSkeleton)
             MediaItems[index] = item;
         else
@@ -572,7 +593,7 @@ public partial class GameDetailViewModel : ViewModelBase
     private static string? ResolveEssentialMediaPath(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)
         => MediaSourceResolver.Resolve(mediaCollection.FirstOrDefault(m => m.Type == type), mediaClient);
 
-    private async Task LoadToolsAsync(SDK.Models.Game game)
+    private async Task LoadToolsAsync(SDK.Models.Game game, int version)
     {
         try
         {
@@ -589,11 +610,19 @@ public partial class GameDetailViewModel : ViewModelBase
 
             if (tools != null)
             {
+                var items = new List<ToolItemViewModel>();
+
                 foreach (var tool in tools)
                 {
                     var isInstalled = await toolService.IsToolInstalledForGameAsync(game.Id, tool.Id);
-                    Tools.Add(new ToolItemViewModel(tool, isInstalled));
+                    items.Add(new ToolItemViewModel(tool, isInstalled));
                 }
+
+                if (version != _loadVersion)
+                    return;
+
+                foreach (var item in items)
+                    Tools.Add(item);
             }
         }
         catch (Exception ex)

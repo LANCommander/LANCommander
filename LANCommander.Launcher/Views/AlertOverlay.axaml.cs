@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Controls;
 
 namespace LANCommander.Launcher.Views;
 
@@ -16,15 +17,17 @@ public partial class AlertOverlay : UserControl
     public AlertOverlay()
     {
         InitializeComponent();
+        ModalEscape.Enable(this, () => Close());
     }
 
     public AlertOverlay(string title, string message) : this()
     {
-        TitleText.Text = title;
+        TitleBar.Title = title;
         MessageText.Text = message;
     }
 
     private void OK_Click(object? sender, RoutedEventArgs e) => Close();
+    private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
     private void Close()
     {

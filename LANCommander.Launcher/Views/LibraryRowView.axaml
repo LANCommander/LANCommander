@@ -55,131 +55,60 @@
 
     <Grid ColumnDefinitions="250,*">
 
-        <!-- ═══ LEFT PANEL: Compact Game List ═══ -->
-        <Border Grid.Column="0"
-                BorderBrush="{DynamicResource HairlineBorderBrush}"
-                BorderThickness="0,0,1,0">
-            <DockPanel Margin="0,48,0,0">
+        <!-- ═══ LEFT PANEL: shared rail with this page's title list ═══ -->
+        <components:NavRail Grid.Column="0" ActivePage="Library">
+            <components:NavRail.RailContent>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="Kicker" Text="ALL TITLES" Margin="16,0,16,8" />
 
-                <!-- Navigation. This rail only exists on the Library page, so Library is always current. -->
-                <StackPanel DockPanel.Dock="Top" Margin="8,4,8,0" Spacing="2">
-                    <Button Classes="RailNav active"
-                            Command="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).ShowLibraryCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Icon Type="Regular" Value="Books" Width="16" Height="16" VerticalAlignment="Center" />
-                            <TextBlock Text="Library" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="RailNav"
-                            Command="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).ShowDepotCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Icon Type="Regular" Value="Storefront" Width="16" Height="16" VerticalAlignment="Center" />
-                            <TextBlock Text="Depot" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="RailNav"
-                            Command="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).ShowDownloadQueueCommand}">
-                        <DockPanel>
-                            <Border DockPanel.Dock="Right" Classes="CountPill"
-                                    IsVisible="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).DownloadQueue.HasPendingItems}">
-                                <TextBlock Text="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).DownloadQueue.ActiveCount}" />
-                            </Border>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Icon Type="Regular" Value="DownloadSimple" Width="16" Height="16" VerticalAlignment="Center" />
-                                <TextBlock Text="Downloads" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Button>
-                </StackPanel>
-
-                <Border DockPanel.Dock="Top" Height="1" Margin="12"
-                        Background="{DynamicResource HairlineBorderBrush}" />
-
-                <TextBlock DockPanel.Dock="Top" Classes="Kicker" Text="ALL TITLES" Margin="16,0,16,8" />
-
-                <!-- Status: connection, settings, sign out -->
-                <Border DockPanel.Dock="Bottom"
-                        Height="46"
-                        Padding="10,0"
-                        BorderBrush="{DynamicResource HairlineBorderBrush}"
-                        BorderThickness="0,1,0,0">
-                    <DockPanel VerticalAlignment="Center">
-                        <Button DockPanel.Dock="Right" Classes="Text"
-                                Width="30" Height="30" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                ToolTip.Tip="Sign out"
-                                Command="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).LogoutCommand}">
-                            <Icon Type="Regular" Value="SignOut" Width="16" Height="16" />
-                        </Button>
-                        <Button DockPanel.Dock="Right" Classes="Text"
-                                Width="30" Height="30" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                ToolTip.Tip="Settings"
-                                Command="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).ShowSettingsCommand}">
-                            <Icon Type="Regular" Value="Gear" Width="16" Height="16" />
-                        </Button>
-                        <Panel DockPanel.Dock="Left" Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center">
-                            <Ellipse Fill="{DynamicResource SuccessTextBrush}"
-                                     IsVisible="{Binding !$parent[local:ShellView].((vm:ShellViewModel)DataContext).IsOfflineMode}" />
-                            <Ellipse Fill="{DynamicResource WarningTextBrush}"
-                                     IsVisible="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).IsOfflineMode}" />
-                        </Panel>
-                        <TextBlock Classes="Caption"
-                                   Foreground="{DynamicResource TextTertiaryBrush}"
-                                   Text="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).ServerHost}"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center" />
-                    </DockPanel>
-                </Border>
-
-            <ListBox x:Name="GameListBox"
-                     Classes="CompactGamesList"
-                     ItemsSource="{Binding Games}"
-                     SelectedItem="{Binding SelectedGame}"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     Tapped="GameList_Tapped"
-                     KeyDown="GameList_KeyDown">
-                <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <VirtualizingStackPanel />
-                    </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                    <DataTemplate DataType="vmComponents:GameItemViewModel">
-                        <Border Classes="CompactListRow">
-                            <DockPanel>
-                                <Image controls:AsyncImage.Source="{Binding IconPath}"
-                                       controls:AsyncImage.DecodeWidth="48"
-                                       Width="22" Height="22"
-                                       Stretch="Uniform"
-                                       Margin="0,0,10,0"
-                                       VerticalAlignment="Center" />
-                                <StackPanel VerticalAlignment="Center" MinWidth="0">
-                                    <TextBlock Text="{Binding Title}"
-                                               FontSize="{DynamicResource FontSizeBody}"
-                                               TextTrimming="CharacterEllipsis"
-                                               Opacity="{Binding IsInstalled, Converter={x:Static converters:BoolToDoubleConverter.Instance}}" />
-                                    <TextBlock Text="Update Available"
-                                               FontSize="{DynamicResource FontSizeKicker}"
-                                               Foreground="{DynamicResource AccentTextBrush}"
-                                               IsVisible="{Binding IsUpdateAvailable}" />
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            </DockPanel>
-        </Border>
+                    <ListBox x:Name="GameListBox"
+                             Classes="CompactGamesList"
+                             ItemsSource="{Binding Games}"
+                             SelectedItem="{Binding SelectedGame}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             Tapped="GameList_Tapped"
+                             KeyDown="GameList_KeyDown">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vmComponents:GameItemViewModel">
+                                <Border Classes="CompactListRow">
+                                    <DockPanel>
+                                        <Image controls:AsyncImage.Source="{Binding IconPath}"
+                                               controls:AsyncImage.DecodeWidth="48"
+                                               Width="22" Height="22"
+                                               Stretch="Uniform"
+                                               Margin="0,0,10,0"
+                                               VerticalAlignment="Center" />
+                                        <StackPanel VerticalAlignment="Center" MinWidth="0">
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="{DynamicResource FontSizeBody}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Opacity="{Binding IsInstalled, Converter={x:Static converters:BoolToDoubleConverter.Instance}}" />
+                                            <TextBlock Text="Update Available"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
+                                                       Foreground="{DynamicResource AccentTextBrush}"
+                                                       IsVisible="{Binding IsUpdateAvailable}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </components:NavRail.RailContent>
+        </components:NavRail>
 
         <!-- ═══ RIGHT PANEL: Carousels + Grid ═══ -->
         <ScrollViewer x:Name="RightPanelScrollViewer"
                       Classes="TitlebarOffset"
                       Grid.Column="1"
                       HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto"
-                      SizeChanged="RightPanelScrollViewer_SizeChanged">
+                      VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
 
                 <!-- ══ RECENTLY PLAYED ═══════════════════════════════════════════════ -->
@@ -229,49 +158,58 @@
                     </CarouselControl.ItemTemplate>
                 </CarouselControl>
 
-                <!-- ══ ALL GAMES GRID (75% size) ═════════════════════════════════════ -->
-                <StackPanel Margin="32,0,32,0" Spacing="4">
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right"
-                                Command="{Binding ClearCollectionFilterCommand}"
-                                Classes="Text Error"
-                                Padding="8,4"
-                                Focusable="False"
-                                IsVisible="{Binding IsCollectionFiltered}">
-                            <Icon Type="Regular" Value="X" Width="14" Height="14" />
-                        </Button>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBlock Text="All Games" Classes="Section" VerticalAlignment="Center"
-                                       IsVisible="{Binding !IsCollectionFiltered}" />
-                            <TextBlock Text="{Binding FilteredCollectionName}" Classes="Section" VerticalAlignment="Center"
-                                       IsVisible="{Binding IsCollectionFiltered}" />
-                            <Border Classes="CountPill Neutral">
-                                <TextBlock Text="{Binding Games.Count}" />
-                            </Border>
-                        </StackPanel>
-                    </DockPanel>
-                    <ItemsRepeater x:Name="LibraryGridItemsRepeater"
-                                   ItemsSource="{Binding Games}"
-                                   ClipToBounds="False"
-                                   controls:DirectionalNavigation.IsEnabled="True">
-                        <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="105" MinItemHeight="158"
-                                               MinColumnSpacing="12" MinRowSpacing="12"
-                                               ItemsStretch="None"
-                                               ItemsJustification="Start" />
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
-                            <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                <components:CoverButton
-                                    Width="{Binding $parent[local:LibraryRowView].SmallCoverWidth}"
-                                    Height="{Binding $parent[local:LibraryRowView].SmallCoverHeight}"
-                                    controls:GameContextMenu.IsEnabled="True"
-                                    Command="{Binding $parent[ItemsRepeater].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
-                                    CommandParameter="{Binding}" />
-                            </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                </StackPanel>
+                <!-- ══ ALL GAMES GRID ═════════════════════════════════════════════════
+                     In the carousels' shared columns, so the grid spans exactly their item area. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="AllGamesPanel" Grid.Column="1" Spacing="4"
+                                SizeChanged="AllGamesPanel_SizeChanged">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Command="{Binding ClearCollectionFilterCommand}"
+                                    Classes="Text Error"
+                                    Padding="8,4"
+                                    Focusable="False"
+                                    IsVisible="{Binding IsCollectionFiltered}">
+                                <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                            </Button>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="All Games" Classes="Section" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsCollectionFiltered}" />
+                                <TextBlock Text="{Binding FilteredCollectionName}" Classes="Section" VerticalAlignment="Center"
+                                           IsVisible="{Binding IsCollectionFiltered}" />
+                                <Border Classes="CountPill Neutral">
+                                    <TextBlock Text="{Binding Games.Count}" />
+                                </Border>
+                            </StackPanel>
+                        </DockPanel>
+                        <ItemsRepeater x:Name="LibraryGridItemsRepeater"
+                                       ItemsSource="{Binding Games}"
+                                       ClipToBounds="False"
+                                       controls:DirectionalNavigation.IsEnabled="True">
+                            <ItemsRepeater.Layout>
+                                <UniformGridLayout MinItemWidth="105" MinItemHeight="158"
+                                                   MinColumnSpacing="12" MinRowSpacing="12"
+                                                   ItemsStretch="None"
+                                                   ItemsJustification="Start" />
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate DataType="vmComponents:GameItemViewModel">
+                                    <components:CoverButton
+                                        Width="{Binding $parent[local:LibraryRowView].SmallCoverWidth}"
+                                        Height="{Binding $parent[local:LibraryRowView].SmallCoverHeight}"
+                                        controls:GameContextMenu.IsEnabled="True"
+                                        Command="{Binding $parent[ItemsRepeater].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
+                                        CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </StackPanel>
+                </Grid>
 
             </StackPanel>
         </ScrollViewer>

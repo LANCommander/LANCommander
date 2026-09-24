@@ -17,6 +17,9 @@ namespace LANCommander.Launcher.ViewModels;
 /// <summary>Which dimension (if any) of the initial navigation is locked and cannot be cleared.</summary>
 public enum LockedFilterKind { None, Genre, Tag, Collection }
 
+/// <summary>Starting views offered by the Depot rail's BROWSE section.</summary>
+public enum DepotBrowsePreset { None, NewReleases, PlayTogether, Backlog }
+
 public partial class DepotBrowseViewModel : GamesCollectionViewModel
 {
     private readonly IServiceProvider _serviceProvider;
@@ -56,6 +59,13 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
     private string _browseTitle = "All Games";
 
     public override string ViewTitle => BrowseTitle;
+
+    /// <summary>
+    /// Which of the rail's BROWSE rows this view came from ("All", "NewReleases", "PlayTogether",
+    /// "Backlog"), or null for a genre, tag, collection or search, which have no row.
+    /// </summary>
+    [ObservableProperty]
+    private string? _railSelection;
     public override bool ShowInLibraryFilter => true;
     public override bool ShowInstalledFilter => false;
 
@@ -77,8 +87,13 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         string? preFilterGenre = null,
         string? preFilterTag = null,
         string? preFilterCollection = null,
-        string? preFilterSearch = null)
+        string? preFilterSearch = null,
+        DepotBrowsePreset preset = DepotBrowsePreset.None)
     {
+        // Play together narrows the pool itself: the multiplayer filter only picks one mode at a time.
+        if (preset == DepotBrowsePreset.PlayTogether)
+            allGames = allGames.Where(g => g.HasLocalMultiplayer || g.HasLanMultiplayer || g.HasOnlineMultiplayer);
+
         _allGames.Clear();
         _allGames.AddRange(allGames);
 
@@ -105,7 +120,8 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         ShowInLibraryOnly       = false;
         SelectedSortBy          = SortBy.Title;
         SortAscending           = true;
-        SelectedGroupBy         = GroupBy.None;
+        // Horizontal only offers grouped layouts (see AvailableGroupByOptions), so it starts on letters
+        SelectedGroupBy         = IsHorizontalView ? GroupBy.FirstLetter : GroupBy.None;
 
         // Apply pre-filter
         if (!string.IsNullOrEmpty(preFilterGenre))
@@ -128,11 +144,35 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         if (!string.IsNullOrEmpty(preFilterSearch))
             SearchText = preFilterSearch;
 
+        switch (preset)
+        {
+            case DepotBrowsePreset.NewReleases:
+                SelectedSortBy = SortBy.DateReleased;
+                SortAscending  = false;
+                break;
+            case DepotBrowsePreset.Backlog:
+                ShowInLibraryOnly = true;
+                break;
+        }
+
+        var hasPreFilter = !string.IsNullOrEmpty(preFilterGenre) || !string.IsNullOrEmpty(preFilterTag)
+            || !string.IsNullOrEmpty(preFilterCollection) || !string.IsNullOrEmpty(preFilterSearch);
+
+        RailSelection = hasPreFilter ? null
+            : preset == DepotBrowsePreset.None ? "All"
+            : preset.ToString();
+
         BrowseTitle = !string.IsNullOrEmpty(preFilterGenre)     ? preFilterGenre
             : !string.IsNullOrEmpty(preFilterTag)               ? preFilterTag
             : !string.IsNullOrEmpty(preFilterCollection)        ? preFilterCollection
             : !string.IsNullOrEmpty(preFilterSearch)            ? $"Search: {preFilterSearch}"
-            : "All Games";
+            : preset switch
+            {
+                DepotBrowsePreset.NewReleases  => "New Releases",
+                DepotBrowsePreset.PlayTogether => "Play Together",
+                DepotBrowsePreset.Backlog      => "Your Backlog",
+                _                              => "All Games",
+            };
 
         ApplyFilters();
     }

@@ -1,7 +1,13 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
-        xmlns:local="clr-namespace:LANCommander.Launcher.Controls">
+        xmlns:local="clr-namespace:LANCommander.Launcher.Controls"
+        xmlns:converters="using:LANCommander.Launcher.Converters">
+
+  <Styles.Resources>
+    <!-- Percentage (0-100) to arc degrees for ProgressBar.Ring -->
+    <converters:MultiplyConverter x:Key="RingSweepConverter" />
+  </Styles.Resources>
 
   <!-- ===================================================== -->
   <!-- BUTTONS — Base                                        -->
@@ -676,6 +682,50 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusFull}" />
   </Style>
 
+  <!-- Circular variant: a trough ring with the value drawn as an arc clockwise from 12 o'clock.
+       Indeterminate swaps in a spinning quarter arc. -->
+  <Style Selector="ProgressBar.Ring">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <!-- Required part; ProgressBar sizes it for the linear bar, the arc below does the drawing -->
+          <Border x:Name="PART_Indicator" IsVisible="False" />
+          <Ellipse Stroke="{TemplateBinding Background}" StrokeThickness="2.5" />
+          <Arc Stroke="{TemplateBinding Foreground}"
+               StrokeThickness="2.5"
+               StrokeLineCap="Round"
+               StartAngle="-90"
+               SweepAngle="{Binding Percentage, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource RingSweepConverter}, ConverterParameter=3.6}"
+               IsVisible="{Binding !IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}" />
+          <Arc Classes="RingSpinner"
+               Stroke="{TemplateBinding Foreground}"
+               StrokeThickness="2.5"
+               StrokeLineCap="Round"
+               StartAngle="-90"
+               SweepAngle="90"
+               RenderTransform="rotate(0deg)"
+               IsVisible="{TemplateBinding IsIndeterminate}" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ProgressBar.Ring /template/ Arc.RingSpinner">
+    <Style.Animations>
+      <Animation Duration="0:0:1" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="RotateTransform.Angle" Value="0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="RotateTransform.Angle" Value="360" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
   <!-- ===================================================== -->
   <!-- TYPE SCALE                                            -->
   <!-- (TextBlock classes; sizes are resources in           -->
@@ -911,10 +961,11 @@
     <Setter Property="BoxShadow" Value="{DynamicResource DialogShadow}" />
   </Style>
 
-  <!-- Dialog header: title row over a hairline -->
+  <!-- Dialog header: title row over a hairline. The right padding is short because the header ends
+       in DialogTitleBar's close button, which sits 8px from the edge. -->
   <Style Selector="Border.DialogHeader">
     <Setter Property="MinHeight" Value="54" />
-    <Setter Property="Padding" Value="20,0" />
+    <Setter Property="Padding" Value="20,0,8,0" />
     <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
@@ -1058,22 +1109,66 @@
   <!-- COMBOBOX (SELECT)                                     -->
   <!-- ===================================================== -->
 
+  <!-- The closed dropdown is an input well, same as a TextBox: black, hairline edge, stronger edge on
+       hover, accent edge when open or keyboard/gamepad focused. The caret flips and takes the accent
+       while open. -->
   <Style Selector="ComboBox">
-    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="12,0,0,0" />
   </Style>
-  <Style Selector="ComboBox /template/ Border#Background">
-    <Setter Property="BorderThickness" Value="0" />
+  <Style Selector="ComboBox:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
   </Style>
-
-  <!-- ===================================================== -->
-  <!-- NUMERIC UP/DOWN                                       -->
-  <!-- ===================================================== -->
-
-  <Style Selector="NumericUpDown">
-    <Setter Property="BorderThickness" Value="0" />
+  <Style Selector="ComboBox:pressed /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
   </Style>
-  <Style Selector="NumericUpDown /template/ ButtonSpinner">
-    <Setter Property="BorderThickness" Value="0" />
+  <Style Selector="ComboBox:focus-visible /template/ Border#Background">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+  </Style>
+  <Style Selector="ComboBox:dropdownopen /template/ Border#Background">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+  </Style>
+  <Style Selector="ComboBox:disabled /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource Gray3Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+  </Style>
+  <!-- Fluent's focus-visible overlay repaints the well in its own unfocused grey -->
+  <Style Selector="ComboBox /template/ Border#HighlightBackground">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <!-- Fluent recolours the selection on focus; keep it the input text colour -->
+  <Style Selector="ComboBox:focus-visible /template/ ContentControl#ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
+  </Style>
+  <Style Selector="ComboBox:focused:pressed /template/ ContentControl#ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource InputTextBrush}" />
+  </Style>
+  <Style Selector="ComboBox /template/ TextBlock#PlaceholderTextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource InputPlaceholderBrush}" />
+  </Style>
+  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="ComboBox:focus-visible /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="ComboBox:dropdownopen /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    <Setter Property="RenderTransform" Value="rotate(180deg)" />
+  </Style>
+  <Style Selector="ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
   </Style>
 
   <!-- ===================================================== -->
@@ -1115,6 +1210,88 @@
   <Style Selector="TextBox.Glass /template/ Border">
     <Setter Property="Background" Value="#88000000" />
   </Style>
-  
+
+  <!-- ===================================================== -->
+  <!-- NUMERIC UP/DOWN                                       -->
+  <!-- The spinner draws the input well so the buttons sit  -->
+  <!-- inside it; the inner TextBox gives up its own well.  -->
+  <!-- Kept after the TextBox styles: order wins here.      -->
+  <!-- ===================================================== -->
+
+  <Style Selector="NumericUpDown /template/ ButtonSpinner">
+    <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+  </Style>
+  <Style Selector="NumericUpDown:pointerover /template/ ButtonSpinner">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown:focus-within /template/ ButtonSpinner">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown:disabled /template/ ButtonSpinner">
+    <Setter Property="Background" Value="{DynamicResource Gray3Brush}" />
+  </Style>
+
+  <Style Selector="NumericUpDown /template/ TextBox">
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- One style per state: a pseudoclass style outranks a plain one regardless of order, so the
+       TextBox:pointerover/:focus-within wells above (and Fluent's :focus thickness) would otherwise
+       redraw a square box over the spinner's frame. -->
+  <Style Selector="NumericUpDown /template/ TextBox /template/ Border">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ TextBox:pointerover /template/ Border">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ TextBox:focus /template/ Border">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ TextBox:focus-within /template/ Border">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ TextBox:disabled /template/ Border">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="Margin" Value="0,3" />
+  </Style>
+  <!-- Fluent's spinner RepeatButton template doesn't bind CornerRadius through -->
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton /template/ ContentPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StatePressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ RepeatButton:nth-last-child(1)">
+    <Setter Property="Margin" Value="0,3,3,3" />
+  </Style>
+
 
 </Styles>

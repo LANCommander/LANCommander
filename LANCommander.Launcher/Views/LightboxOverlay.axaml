@@ -8,183 +8,245 @@
              KeyDown="OnKeyDown"
              controls:AutoFocus.IsEnabled="True">
 
+    <UserControl.Styles>
+        <!-- Prev/next: ghost buttons, tall enough to hit easily beside the frame -->
+        <Style Selector="IconButton.LightboxNav">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="72" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+        </Style>
+
+        <!-- Filmstrip: dimmed thumbnails, the current one lit with an accent ring -->
+        <Style Selector="Button.FilmstripThumb">
+            <Setter Property="Width" Value="120" />
+            <Setter Property="Height" Value="71" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.FilmstripThumb:pointerover">
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
+        <Style Selector="Button.FilmstripThumb:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.FilmstripThumb:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.FilmstripThumb.current">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="Button.FilmstripThumb.current:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+    </UserControl.Styles>
+
     <!-- 90% scrim: the one place the dim goes past the dialog scrim, so art reads on its own -->
     <Grid Background="#E6000000">
         <!-- Backdrop: click outside content to close -->
         <Border Background="Transparent" PointerPressed="Backdrop_PointerPressed" />
 
-        <Grid RowDefinitions="*,Auto"
-              Margin="48"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch">
+        <Grid RowDefinitions="56,*,Auto">
 
-            <!-- Close (floating top-right), with the keyboard hint beside it -->
-            <StackPanel Grid.Row="0"
-                        Orientation="Horizontal"
-                        Spacing="10"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        ZIndex="2"
-                        Margin="0,0,0,8">
-                <Border BorderBrush="#24FFFFFF" BorderThickness="1"
-                        CornerRadius="{DynamicResource RadiusSmall}"
-                        Padding="6,1"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="Esc" Classes="Mono"
-                               FontSize="{DynamicResource FontSizeKicker}"
-                               Foreground="{DynamicResource TextTertiaryBrush}" />
-                </Border>
-                <IconButton Classes="Glass Dark"
-                            IconType="Regular"
-                            IconValue="X"
-                            Size="16"
-                            Width="36"
-                            Height="36"
-                            Padding="0"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            ToolTip.Tip="Close"
-                            Click="Close_Click" />
-            </StackPanel>
-
-            <!-- Navigation: Previous -->
-            <IconButton Grid.Row="0"
-                        x:Name="PrevButton"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Classes="Glass Dark"
-                        IconType="Regular"
-                        IconValue="CaretLeft"
-                        Size="20"
-                        Width="40"
-                        Height="72"
-                        Padding="0"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Click="Prev_Click"
-                        ZIndex="2"
-                        Margin="-36,0,0,0" />
-
-            <!-- Navigation: Next -->
-            <IconButton Grid.Row="0"
-                        x:Name="NextButton"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Classes="Glass Dark"
-                        IconType="Regular"
-                        IconValue="CaretRight"
-                        Size="20"
-                        Width="40"
-                        Height="72"
-                        Padding="0"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Click="Next_Click"
-                        ZIndex="2"
-                        Margin="0,0,-36,0" />
-
-            <!-- Content area -->
-            <Panel Grid.Row="0" x:Name="ContentPanel">
-                <!-- Image display -->
-                <Border x:Name="ImageBorder"
-                        ClipToBounds="True"
-                        IsVisible="False"
-                        PointerPressed="Content_PointerPressed">
-                    <Image x:Name="LightboxImage"
-                           Stretch="Uniform"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-                </Border>
-
-                <!-- Video display -->
-                <Border x:Name="VideoBorder"
-                        ClipToBounds="True"
-                        IsVisible="False"
-                        PointerPressed="Content_PointerPressed" />
-
-                <!-- PDF display -->
-                <Border x:Name="PdfBorder"
-                        ClipToBounds="True"
-                        IsVisible="False"
-                        PointerPressed="Content_PointerPressed">
-                    <components:PdfViewerControl x:Name="PdfViewer" />
-                </Border>
-
-                <!-- Loading indicator -->
-                <ProgressBar x:Name="LoadingIndicator"
-                             IsIndeterminate="True"
-                             Width="200"
-                             Height="4"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"
-                             IsVisible="False" />
-            </Panel>
-
-            <!-- Video transport controls (only visible for video items) -->
-            <Border Grid.Row="1"
-                    x:Name="TransportControls"
-                    Padding="4,8"
-                    Margin="0,8,0,0"
-                    IsVisible="False">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="32">
-
-                    <!-- Play / Pause -->
-                    <Button Grid.Column="0"
-                            x:Name="PlayPauseButton"
-                            Classes="Text"
-                            Click="PlayPause_Click"
-                            Padding="6"
+            <!-- ══ Chrome: where you are on the left, close on the right ══════════ -->
+            <DockPanel Grid.Row="0" Margin="24,0,12,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10"
                             VerticalAlignment="Center">
-                        <Icon x:Name="PlayPauseIcon" Type="Fill" Value="Pause" Width="18" Height="18" />
-                    </Button>
+                    <Border BorderBrush="#24FFFFFF" BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusSmall}"
+                            Padding="6,1"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="Esc" Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeKicker}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </Border>
+                    <IconButton Classes="Glass Dark"
+                                IconType="Regular"
+                                IconValue="X"
+                                Size="16"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                ToolTip.Tip="Close"
+                                Click="Close_Click" />
+                </StackPanel>
 
-                    <!-- Seek slider -->
-                    <Slider Grid.Column="1"
-                            x:Name="SeekSlider"
-                            Minimum="0" Maximum="1"
-                            IsSnapToTickEnabled="False"
-                            VerticalAlignment="Center"
-                            Margin="8,0">
-                        <Slider.Resources>
-                            <GridLength x:Key="SliderPreContentMargin">0</GridLength>
-                            <GridLength x:Key="SliderPostContentMargin">0</GridLength>
-                            <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
-                        </Slider.Resources>
-                    </Slider>
-
-                    <!-- Time label -->
-                    <TextBlock Grid.Column="2"
-                               x:Name="TimeLabel"
-                               Text="0:00 / 0:00"
-                               Classes="Mono"
-                               VerticalAlignment="Center"
-                               FontSize="{DynamicResource FontSizeCaption}"
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock x:Name="ChromeTitle"
+                               FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="480"
+                               VerticalAlignment="Center" />
+                    <Border x:Name="ChromeDivider" Width="1" Height="13" VerticalAlignment="Center"
+                            Background="#2EFFFFFF" />
+                    <TextBlock x:Name="ChromeSection"
+                               FontSize="{DynamicResource FontSizeLabel}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="8,0" />
+                               VerticalAlignment="Center" />
+                    <TextBlock x:Name="ItemCounter"
+                               Classes="Mono"
+                               FontSize="{DynamicResource FontSizeLabel}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
 
-                    <!-- Volume toggle -->
-                    <Button Grid.Column="3"
-                            x:Name="VolumeButton"
-                            Classes="Text"
-                            Click="Volume_Click"
-                            Padding="6"
-                            VerticalAlignment="Center">
-                        <Icon x:Name="VolumeIcon" Type="Fill" Value="SpeakerHigh" Width="16" Height="16" />
-                    </Button>
+            <!-- ══ Stage: arrows either side of the content. The transport row is a fixed height
+                 and always reserved, so the content row - and the arrows centred on it - stay put
+                 whether a video (with its seek bar) or a screenshot is showing. ══ -->
+            <Grid Grid.Row="1" ColumnDefinitions="88,*,88" RowDefinitions="*,52">
 
-                </Grid>
-            </Border>
+                <IconButton Grid.Column="0" Grid.Row="0"
+                            x:Name="PrevButton"
+                            Classes="Text LightboxNav"
+                            HorizontalAlignment="Center"
+                            IconType="Regular"
+                            IconValue="CaretLeft"
+                            Size="24"
+                            ToolTip.Tip="Previous"
+                            Click="Prev_Click" />
 
-            <!-- Item counter -->
-            <TextBlock Grid.Row="1"
-                       x:Name="ItemCounter"
-                       Classes="Mono"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Bottom"
-                       FontSize="{DynamicResource FontSizeLabel}"
-                       Foreground="{DynamicResource TextTertiaryBrush}"
-                       Margin="0,8,0,0" />
+                <IconButton Grid.Column="2" Grid.Row="0"
+                            x:Name="NextButton"
+                            Classes="Text LightboxNav"
+                            HorizontalAlignment="Center"
+                            IconType="Regular"
+                            IconValue="CaretRight"
+                            Size="24"
+                            ToolTip.Tip="Next"
+                            Click="Next_Click" />
 
+                <!-- Content area -->
+                <Panel Grid.Column="1" Grid.Row="0" x:Name="ContentPanel">
+                    <!-- Image display: the frame hugs the picture -->
+                    <Border x:Name="ImageBorder"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            CornerRadius="{DynamicResource RadiusLarge}"
+                            BorderBrush="{DynamicResource HairlineBorderStrongBrush}"
+                            BorderThickness="1"
+                            BoxShadow="0 24 64 0 #C7000000"
+                            IsVisible="False"
+                            PointerPressed="Content_PointerPressed">
+                        <Border CornerRadius="{DynamicResource RadiusLarge}" ClipToBounds="True">
+                            <Image x:Name="LightboxImage"
+                                   Stretch="Uniform" />
+                        </Border>
+                    </Border>
+
+                    <!-- Video display -->
+                    <Border x:Name="VideoBorder"
+                            ClipToBounds="True"
+                            IsVisible="False"
+                            PointerPressed="Content_PointerPressed" />
+
+                    <!-- PDF display -->
+                    <Border x:Name="PdfBorder"
+                            ClipToBounds="True"
+                            IsVisible="False"
+                            PointerPressed="Content_PointerPressed">
+                        <components:PdfViewerControl x:Name="PdfViewer" />
+                    </Border>
+
+                    <!-- Loading indicator -->
+                    <ProgressBar x:Name="LoadingIndicator"
+                                 IsIndeterminate="True"
+                                 Width="200"
+                                 Height="4"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 IsVisible="False" />
+                </Panel>
+
+                <!-- Video transport controls (only visible for video items; the row keeps its height) -->
+                <Border Grid.Column="1" Grid.Row="1"
+                        x:Name="TransportControls"
+                        Padding="4,10,4,0"
+                        IsVisible="False"
+                        PointerPressed="Content_PointerPressed">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Height="32">
+
+                        <!-- Play / Pause -->
+                        <Button Grid.Column="0"
+                                x:Name="PlayPauseButton"
+                                Classes="Text"
+                                Click="PlayPause_Click"
+                                Padding="6"
+                                VerticalAlignment="Center">
+                            <Icon x:Name="PlayPauseIcon" Type="Fill" Value="Pause" Width="18" Height="18" />
+                        </Button>
+
+                        <!-- Seek slider -->
+                        <Slider Grid.Column="1"
+                                x:Name="SeekSlider"
+                                Minimum="0" Maximum="1"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"
+                                Margin="8,0">
+                            <Slider.Resources>
+                                <GridLength x:Key="SliderPreContentMargin">0</GridLength>
+                                <GridLength x:Key="SliderPostContentMargin">0</GridLength>
+                                <x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+                            </Slider.Resources>
+                        </Slider>
+
+                        <!-- Time label -->
+                        <TextBlock Grid.Column="2"
+                                   x:Name="TimeLabel"
+                                   Text="0:00 / 0:00"
+                                   Classes="Mono"
+                                   VerticalAlignment="Center"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="8,0" />
+
+                        <!-- Volume toggle -->
+                        <Button Grid.Column="3"
+                                x:Name="VolumeButton"
+                                Classes="Text"
+                                Click="Volume_Click"
+                                Padding="6"
+                                VerticalAlignment="Center">
+                            <Icon x:Name="VolumeIcon" Type="Fill" Value="SpeakerHigh" Width="16" Height="16" />
+                        </Button>
+
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ══ Caption and filmstrip. Both keep a fixed size for the whole session (the caption
+                 line is reserved if any item has one), so the stage above never resizes. ══ -->
+            <StackPanel Grid.Row="2" Spacing="14" Margin="24,4,24,24">
+                <TextBlock x:Name="CaptionText"
+                           Height="18"
+                           FontSize="{DynamicResource FontSizeLabel}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis"
+                           HorizontalAlignment="Center"
+                           IsVisible="False" />
+                <ScrollViewer x:Name="FilmstripScroller"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              IsVisible="False">
+                    <StackPanel x:Name="Filmstrip" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" />
+                </ScrollViewer>
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

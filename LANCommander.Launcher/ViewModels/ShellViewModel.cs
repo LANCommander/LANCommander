@@ -26,7 +26,6 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContentViewTitle))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     [NotifyPropertyChangedFor(nameof(IsTitlebarTinted))]
     private ViewModelBase? _contentView;
 
@@ -35,7 +34,6 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoOnline))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     private bool _isOfflineMode;
 
     public string ContentViewTitle => ContentView switch
@@ -53,8 +51,6 @@ public partial class ShellViewModel : ViewModelBase
         _ => string.Empty
     };
 
-    public bool IsRefreshVisible =>
-        (ContentView is GamesCollectionViewModel || ContentView is DepotViewModel) && !IsOfflineMode && !IsSyncing;
     public bool IsTitlebarTinted => true;
 
     partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -92,7 +88,6 @@ public partial class ShellViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsSyncing))]
     [NotifyPropertyChangedFor(nameof(IsImportIndeterminate))]
     [NotifyPropertyChangedFor(nameof(ImportProgress))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     private bool _isImportRunning;
 
     [ObservableProperty]
@@ -120,9 +115,6 @@ public partial class ShellViewModel : ViewModelBase
 
     public bool IsLibraryActive => !IsDepotActive;
     public bool CanGoOnline => IsOfflineMode && !IsCheckingConnection;
-
-    /// <summary>Host (and port) of the connected server, for the library rail's status line.</summary>
-    public string ServerHost => _serviceProvider.GetService<IConnectionClient>()?.GetServerAddress()?.Authority ?? string.Empty;
 
     [ObservableProperty]
     private bool _areUserLibrariesEnabled = true;
@@ -161,7 +153,7 @@ public partial class ShellViewModel : ViewModelBase
     private bool _isNavigating;
 
     // Tracks the most recent depot browse filter so the view can be refreshed after library changes
-    private (string? Genre, string? Tag, string? Collection, string? Search) _lastDepotBrowseFilter;
+    private (string? Genre, string? Tag, string? Collection, string? Search, DepotBrowsePreset Preset) _lastDepotBrowseFilter;
 
     public event EventHandler? LogoutRequested;
 
@@ -236,6 +228,7 @@ public partial class ShellViewModel : ViewModelBase
         DepotViewModel.BrowseByTagRequested        += OnDepotBrowseByTag;
         DepotViewModel.BrowseByCollectionRequested += OnDepotBrowseByCollection;
         DepotViewModel.BrowseAllRequested          += OnDepotBrowseAll;
+        DepotViewModel.BrowsePresetRequested       += OnDepotBrowsePreset;
 
         DepotBrowseViewModel.GameSelected += OnDepotGameSelected;
 
@@ -270,7 +263,6 @@ public partial class ShellViewModel : ViewModelBase
 
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
-        OnPropertyChanged(nameof(ServerHost));
 
         // Default to the library whenever user libraries are enabled; fall back to the depot only
         // when libraries are turned off server-side.
@@ -622,12 +614,18 @@ public partial class ShellViewModel : ViewModelBase
         NavigateToDepotBrowse();
     }
 
-    /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
-    private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null)
+    private void OnDepotBrowsePreset(object? sender, DepotBrowsePreset preset)
     {
-        _lastDepotBrowseFilter = (genre, tag, collection, search);
+        NavigateToDepotBrowse(preset: preset);
+    }
+
+    /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
+    private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null,
+        DepotBrowsePreset preset = DepotBrowsePreset.None)
+    {
+        _lastDepotBrowseFilter = (genre, tag, collection, search, preset);
         
-        DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search);
+        DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search, preset);
         IsDepotActive = true;
         
         _navigationService.NavigateTo(DepotBrowseViewModel);
@@ -646,7 +644,8 @@ public partial class ShellViewModel : ViewModelBase
                 _lastDepotBrowseFilter.Genre,
                 _lastDepotBrowseFilter.Tag,
                 _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search);
+                _lastDepotBrowseFilter.Search,
+                _lastDepotBrowseFilter.Preset);
     }
 
     private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
@@ -664,7 +663,8 @@ public partial class ShellViewModel : ViewModelBase
                 _lastDepotBrowseFilter.Genre,
                 _lastDepotBrowseFilter.Tag,
                 _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search);
+                _lastDepotBrowseFilter.Search,
+                _lastDepotBrowseFilter.Preset);
 
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();

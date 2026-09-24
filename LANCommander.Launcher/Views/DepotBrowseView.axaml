@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
              xmlns:enums="using:LANCommander.Launcher.Settings.Enums"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              xmlns:local="using:LANCommander.Launcher.Views"
              x:Class="LANCommander.Launcher.Views.DepotBrowseView"
              x:DataType="vm:DepotBrowseViewModel">
@@ -10,248 +11,230 @@
         <!-- Locked filter chip: looks like an active tag but non-interactive (no hover change) -->
         <Style Selector="Border.locked-chip">
             <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
-            <Setter Property="CornerRadius" Value="4" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+
+        <!-- Rail filters: a small label over each full-width control -->
+        <Style Selector="StackPanel.RailField">
+            <Setter Property="Spacing" Value="5" />
+        </Style>
+        <Style Selector="StackPanel.RailField > TextBlock.FieldLabel">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+        </Style>
+        <Style Selector="StackPanel.RailField ComboBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
     </UserControl.Styles>
 
-    <DockPanel>
+    <Grid ColumnDefinitions="250,*">
 
-        <!-- ── Filter Bar ──────────────────────────────────────────────────── -->
-        <StackPanel DockPanel.Dock="Bottom"
-                    Background="{DynamicResource SurfaceRaisedBrush}">
+        <!-- ═══ LEFT PANEL: the depot rail, with this view's filters under the BROWSE rows ═══ -->
+        <components:NavRail Grid.Column="0" ActivePage="Depot">
+            <components:NavRail.RailContent>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,0,16">
 
-            <!-- Advanced panel — expands upward above the quick row -->
-            <Border IsVisible="{Binding IsAdvancedFilterOpen}"
-                    Padding="12,10,12,4"
-                    BorderBrush="{DynamicResource HairlineBorderBrush}"
-                    BorderThickness="0,0,0,1">
-                <WrapPanel Orientation="Horizontal" ItemWidth="180">
+                        <!-- DataContext is the Depot home's view model: it holds the counts and the navigation -->
+                        <components:DepotBrowseLinks
+                            DataContext="{Binding $parent[local:ShellView].((vm:ShellViewModel)DataContext).DepotViewModel}"
+                            Selected="{Binding $parent[local:DepotBrowseView].((vm:DepotBrowseViewModel)DataContext).RailSelection}" />
 
-                    <!-- Sort -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Sort" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <Grid ColumnDefinitions="*,Auto">
-                            <ComboBox Grid.Column="0"
-                                      SelectedItem="{Binding SelectedSortBy}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.Items>
-                                    <enums:SortBy>Title</enums:SortBy>
-                                    <enums:SortBy>DateReleased</enums:SortBy>
-                                </ComboBox.Items>
-                            </ComboBox>
-                            <Button Classes="Secondary" Grid.Column="1"
-                                    Command="{Binding ToggleSortDirectionCommand}"
-                                    Padding="8,6" Margin="4,0,0,0">
-                                <Panel>
-                                    <Icon Type="Regular" Value="ArrowUp"   Width="12" Height="12" IsVisible="{Binding SortAscending}" />
-                                    <Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
-                                </Panel>
-                            </Button>
-                        </Grid>
+                        <Border Height="1" Margin="12"
+                                Background="{DynamicResource HairlineBorderBrush}" />
+
+                        <!-- ── Filters ─────────────────────────────────────────────── -->
+                        <StackPanel Margin="16,0" Spacing="14">
+                            <DockPanel>
+                                <!-- Clears what the user added; a locked genre/tag/collection stays -->
+                                <Button DockPanel.Dock="Right"
+                                        Classes="Text Primary"
+                                        Content="Clear"
+                                        Command="{Binding ClearAdditionalFiltersCommand}"
+                                        FontSize="{DynamicResource FontSizeCaption}"
+                                        Padding="6,2"
+                                        Margin="0,0,-6,0"
+                                        VerticalAlignment="Center" />
+                                <TextBlock Classes="Kicker" Text="FILTERS" VerticalAlignment="Center" />
+                            </DockPanel>
+
+                            <!-- Locked filter chip — shown when navigated from genre/tag/collection -->
+                            <Border Classes="locked-chip" IsVisible="{Binding HasLockedFilter}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="{Binding LockedFilterLabel}"
+                                               FontSize="{DynamicResource FontSizeKicker}"
+                                               Opacity="0.7"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding LockedFilterValue}"
+                                               FontSize="{DynamicResource FontSizeCaption}"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                    <Icon Type="Regular" Value="Lock" Width="10" Height="10"
+                                          Opacity="0.7" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBox Watermark="Search titles…"
+                                     Text="{Binding SearchText}">
+                                <TextBox.InnerLeftContent>
+                                    <Icon Type="Regular" Value="MagnifyingGlass" Width="14" Height="14" Margin="10,0,0,0"
+                                          Foreground="{DynamicResource TextTertiaryBrush}" />
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+
+                            <!-- View type -->
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="View" />
+                                <Border Classes="Segmented" HorizontalAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="2">
+                                        <Button Classes="Segment"
+                                                ToolTip.Tip="Grid view"
+                                                Classes.active="{Binding IsGridView}"
+                                                Click="GridViewButton_Click">
+                                            <Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
+                                        </Button>
+                                        <Button Classes="Segment"
+                                                ToolTip.Tip="List view"
+                                                Classes.active="{Binding IsListView}"
+                                                Click="ListViewButton_Click">
+                                            <Icon Type="Regular" Value="Rows" Width="14" Height="14" />
+                                        </Button>
+                                        <Button Classes="Segment"
+                                                ToolTip.Tip="Horizontal view"
+                                                Classes.active="{Binding IsHorizontalView}"
+                                                Click="HorizontalViewButton_Click">
+                                            <Icon Type="Regular" Value="ArrowsHorizontal" Width="14" Height="14" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Sort -->
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="Sort" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <ComboBox Grid.Column="0"
+                                              SelectedItem="{Binding SelectedSortBy}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.Items>
+                                            <enums:SortBy>Title</enums:SortBy>
+                                            <enums:SortBy>DateReleased</enums:SortBy>
+                                        </ComboBox.Items>
+                                    </ComboBox>
+                                    <Button Classes="Secondary" Grid.Column="1"
+                                            Command="{Binding ToggleSortDirectionCommand}"
+                                            ToolTip.Tip="Sort direction"
+                                            Padding="9,0" Margin="6,0,0,0"
+                                            VerticalAlignment="Stretch">
+                                        <Panel>
+                                            <Icon Type="Regular" Value="ArrowUp"   Width="12" Height="12" IsVisible="{Binding SortAscending}" />
+                                            <Icon Type="Regular" Value="ArrowDown" Width="12" Height="12" IsVisible="{Binding !SortAscending}" />
+                                        </Panel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Group by (hidden when collection is locked — grouping is implicit) -->
+                            <StackPanel Classes="RailField" IsVisible="{Binding !IsCollectionLocked}">
+                                <TextBlock Classes="FieldLabel" Text="Group by" />
+                                <ComboBox ItemsSource="{Binding AvailableGroupByOptions}"
+                                          SelectedItem="{Binding SelectedGroupBy}" />
+                            </StackPanel>
+
+                            <!-- Genre — hidden when genre is locked -->
+                            <StackPanel Classes="RailField" IsVisible="{Binding !IsGenreLocked}">
+                                <TextBlock Classes="FieldLabel" Text="Genre" />
+                                <ComboBox ItemsSource="{Binding AvailableGenres}"
+                                          SelectedItem="{Binding SelectedGenre}"
+                                          PlaceholderText="Any">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- Tags — hidden when tag is locked -->
+                            <StackPanel Classes="RailField" IsVisible="{Binding !IsTagLocked}">
+                                <TextBlock Classes="FieldLabel" Text="Tag" />
+                                <ComboBox ItemsSource="{Binding AvailableTags}"
+                                          SelectedItem="{Binding SelectedTag}"
+                                          PlaceholderText="Any" />
+                            </StackPanel>
+
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="Developer" />
+                                <ComboBox ItemsSource="{Binding AvailableDevelopers}"
+                                          SelectedItem="{Binding SelectedDeveloper}"
+                                          PlaceholderText="Any" />
+                            </StackPanel>
+
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="Publisher" />
+                                <ComboBox ItemsSource="{Binding AvailablePublishers}"
+                                          SelectedItem="{Binding SelectedPublisher}"
+                                          PlaceholderText="Any" />
+                            </StackPanel>
+
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="Multiplayer" />
+                                <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailableMultiplayerTypes}"
+                                          SelectedItem="{Binding SelectedMultiplayerType}"
+                                          PlaceholderText="Any" />
+                            </StackPanel>
+
+                            <StackPanel Classes="RailField">
+                                <TextBlock Classes="FieldLabel" Text="Min players" />
+                                <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailablePlayerCounts}"
+                                          SelectedItem="{Binding SelectedMinPlayers}"
+                                          PlaceholderText="Any" />
+                            </StackPanel>
+
+                            <!-- In Library (depot only) -->
+                            <CheckBox Content="In my library only"
+                                      IsChecked="{Binding ShowInLibraryOnly}"
+                                      IsVisible="{Binding ShowInLibraryFilter}"
+                                      FontSize="{DynamicResource FontSizeLabel}" />
+                        </StackPanel>
                     </StackPanel>
+                </ScrollViewer>
+            </components:NavRail.RailContent>
+        </components:NavRail>
 
-                    <!-- Group by (hidden when collection is locked — grouping is implicit) -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8"
-                                IsVisible="{Binding !IsCollectionLocked}">
-                        <TextBlock Text="Group By" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{Binding AvailableGroupByOptions}"
-                                  SelectedItem="{Binding SelectedGroupBy}"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
+        <!-- ═══ RIGHT PANEL: results ═══ -->
+        <DockPanel Grid.Column="1">
 
-                    <!-- Genre — hidden when genre is locked -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8"
-                                IsVisible="{Binding !IsGenreLocked}">
-                        <TextBlock Text="Genre" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{Binding AvailableGenres}"
-                                  SelectedItem="{Binding SelectedGenre}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </StackPanel>
-
-                    <!-- Tags — hidden when tag is locked -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8"
-                                IsVisible="{Binding !IsTagLocked}">
-                        <TextBlock Text="Tag" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{Binding AvailableTags}"
-                                  SelectedItem="{Binding SelectedTag}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                    <!-- Developer -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Developer" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{Binding AvailableDevelopers}"
-                                  SelectedItem="{Binding SelectedDeveloper}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                    <!-- Publisher -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Publisher" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{Binding AvailablePublishers}"
-                                  SelectedItem="{Binding SelectedPublisher}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                    <!-- Multiplayer -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Multiplayer" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailableMultiplayerTypes}"
-                                  SelectedItem="{Binding SelectedMultiplayerType}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                    <!-- Player Count -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8">
-                        <TextBlock Text="Min Players" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ComboBox ItemsSource="{x:Static vm:GamesCollectionViewModel.AvailablePlayerCounts}"
-                                  SelectedItem="{Binding SelectedMinPlayers}"
-                                  PlaceholderText="Any"
-                                  HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                    <!-- In Library (depot only) -->
-                    <StackPanel Spacing="4" Margin="0,0,12,8"
-                                IsVisible="{Binding ShowInLibraryFilter}">
-                        <TextBlock Text="Ownership" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.6" />
-                        <ToggleButton IsChecked="{Binding ShowInLibraryOnly}"
-                                      Content="In Library Only"
-                                      HorizontalAlignment="Stretch" />
-                    </StackPanel>
-
-                </WrapPanel>
+            <!-- ── Loading ─────────────────────────────────────────────────────── -->
+            <Border DockPanel.Dock="Top"
+                    IsVisible="{Binding IsLoading}"
+                    Padding="16,54,16,10"
+                    HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                    <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
+                </StackPanel>
             </Border>
 
-            <!-- Quick row -->
-            <Border Padding="12,8">
-                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
-
-                    <!-- Back to Depot button (always visible on solid bar background) -->
-                    <Button Grid.Column="0"
-                            Command="{Binding GoBackCommand}"
-                            Classes="Text"
-                            Padding="8,6"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Icon Type="Regular" Value="ArrowLeft" Width="13" Height="13" VerticalAlignment="Center" />
-                            <TextBlock Text="Depot" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Locked filter chip — shown when navigated from genre/tag/collection -->
-                    <Border Grid.Column="1"
-                            Classes="locked-chip"
-                            Margin="0,0,8,0"
-                            IsVisible="{Binding HasLockedFilter}"
-                            VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="{Binding LockedFilterLabel}"
-                                       FontSize="{DynamicResource FontSizeKicker}"
-                                       Opacity="0.7"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding LockedFilterValue}"
-                                       FontSize="{DynamicResource FontSizeCaption}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
-                            <Icon Type="Regular" Value="Lock" Width="10" Height="10"
-                                           Opacity="0.7" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBox Grid.Column="2"
-                             Watermark="Search games..."
-                             Text="{Binding SearchText}"
-                             Margin="0,0,8,0" />
-
-                    <!-- View type toggle -->
-                    <Border Grid.Column="3"
-                            Classes="Segmented"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                            <Button Classes="Segment"
-                                    ToolTip.Tip="Grid view"
-                                    Classes.active="{Binding IsGridView}"
-                                    Click="GridViewButton_Click">
-                                <Icon Type="Regular" Value="SquaresFour" Width="14" Height="14" />
-                            </Button>
-                            <Button Classes="Segment"
-                                    ToolTip.Tip="List view"
-                                    Classes.active="{Binding IsListView}"
-                                    Click="ListViewButton_Click">
-                                <Icon Type="Regular" Value="Rows" Width="14" Height="14" />
-                            </Button>
-                            <Button Classes="Segment"
-                                    ToolTip.Tip="Horizontal view"
-                                    Classes.active="{Binding IsHorizontalView}"
-                                    Click="HorizontalViewButton_Click">
-                                <Icon Type="Regular" Value="ArrowsHorizontal" Width="14" Height="14" />
-                            </Button>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Advanced toggle -->
-                    <ToggleButton Grid.Column="4"
-                                  Classes="Text"
-                                  IsChecked="{Binding IsAdvancedFilterOpen}"
-                                  Padding="8,6"
-                                  Margin="0,0,8,0"
-                                  ToolTip.Tip="Advanced filters">
-                        <Icon Type="Regular" Value="FunnelSimple" Width="14" Height="14" />
-                    </ToggleButton>
-
-                    <!-- Clear button — uses ClearAdditionalFiltersCommand to preserve locked filter -->
-                    <Button Grid.Column="5"
-                            Command="{Binding ClearAdditionalFiltersCommand}"
-                            Classes="Text Error"
-                            Padding="8,6">
-                        <Icon Type="Regular" Value="X" Width="14" Height="14" />
-                    </Button>
-
-                </Grid>
+            <!-- ── Error ──────────────────────────────────────────────────────── -->
+            <Border DockPanel.Dock="Top"
+                    Classes="Notice Error"
+                    IsVisible="{Binding HasError}"
+                    Margin="16,54,16,0">
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
             </Border>
 
-        </StackPanel>
+            <!-- ── Sub-views ──────────────────────────────────────────────────── -->
+            <Grid>
+                <local:GamesGridView    IsVisible="{Binding IsGridViewFlat}" />
+                <local:GamesRowView     IsVisible="{Binding IsListViewFlat}" />
+                <local:GamesShelfView   IsVisible="{Binding IsHorizontalViewFlat}" />
+                <local:GamesGroupedView IsVisible="{Binding IsGrouped}" />
+            </Grid>
 
-        <!-- ── Loading ─────────────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding IsLoading}"
-                Padding="16,54,16,10"
-                HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
-            </StackPanel>
-        </Border>
-
-        <!-- ── Error ──────────────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding HasError}"
-                Padding="12"
-                Margin="16,44,16,0"
-                CornerRadius="0">
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="IndianRed" />
-        </Border>
-
-        <!-- ── Sub-views ──────────────────────────────────────────────────── -->
-        <Grid>
-            <local:GamesGridView    IsVisible="{Binding IsGridViewFlat}" />
-            <local:GamesRowView     IsVisible="{Binding IsListViewFlat}" />
-            <local:GamesShelfView   IsVisible="{Binding IsHorizontalViewFlat}" />
-            <local:GamesGroupedView IsVisible="{Binding IsGrouped}" />
-        </Grid>
-
-    </DockPanel>
+        </DockPanel>
+    </Grid>
 
 </UserControl>

@@ -158,8 +158,11 @@
         <StackPanel>
 
             <!-- ══ Hero: art behind the logo and status line, ending just above the action row;
-                 the cover overlaps it on the right and bottom-aligns with the action row ══ -->
-            <Panel>
+                 the cover overlaps it on the right and bottom-aligns with the action row.
+                 Fixed height: under the ScrollViewer's unbounded height a UniformToFill image measures
+                 to its own aspect ratio, which would let the background art decide the hero's size.
+                 544 = the 444px cover plus 100px of art above it ══ -->
+            <Panel Height="544">
                 <!-- 64 = the 46px action row plus the 18px gap above it -->
                 <Border x:Name="HeroBackdrop"
                         Margin="0,0,0,64"
@@ -213,22 +216,29 @@
                     <StackPanel Grid.Column="0" VerticalAlignment="Bottom" Margin="0,108,0,0">
 
                         <!-- Sized by aspect ratio in code-behind (equal area, capped), so wide and
-                             square logos carry similar weight; the title stands in when there's no logo -->
+                             square logos carry similar weight; the title stands in when there's no logo
+                             or it fails to load -->
                         <Image x:Name="LogoImage"
                                controls:AsyncImage.Source="{Binding LogoPath}"
                                Stretch="Uniform"
                                HorizontalAlignment="Left"
                                VerticalAlignment="Bottom"
                                Margin="0,0,0,18"
-                               IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                               IsVisible="{Binding Source, RelativeSource={RelativeSource Self}, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Text="{Binding Title}"
                                    Classes="Display"
                                    Foreground="White"
                                    MaxWidth="640"
                                    HorizontalAlignment="Left"
                                    TextWrapping="Wrap"
-                                   Margin="0,0,0,14"
-                                   IsVisible="{Binding LogoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                   Margin="0,0,0,14">
+                            <TextBlock.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                    <Binding Path="LogoPath" Converter="{x:Static StringConverters.IsNullOrEmpty}" />
+                                    <Binding ElementName="LogoImage" Path="(controls:AsyncImage.Failed)" />
+                                </MultiBinding>
+                            </TextBlock.IsVisible>
+                        </TextBlock>
 
                         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,18">
                             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -253,9 +263,9 @@
                         <components:GameActionBarView DataContext="{Binding ActionBar}" />
                     </StackPanel>
 
-                    <!-- Cover -->
+                    <!-- Cover: pinned to 2:3 so off-ratio art crops instead of resizing the hero -->
                     <Border Grid.Column="2"
-                            Margin="0,100,0,0"
+                            Height="444"
                             CornerRadius="{DynamicResource RadiusLarge}"
                             BorderBrush="{DynamicResource HairlineBorderBrush}"
                             BorderThickness="1"

@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:views="using:LANCommander.Launcher.Views"
+             x:Class="LANCommander.Launcher.Views.Components.NavRail"
+             x:Name="Root">
+
+    <!-- The left rail shared by the Library and Depot pages: page navigation at the top, the page's
+         own section (RailContent) below. -->
+    <Border BorderBrush="{DynamicResource HairlineBorderBrush}"
+            BorderThickness="0,0,1,0">
+        <DockPanel Margin="0,48,0,0">
+
+            <StackPanel DockPanel.Dock="Top" Margin="8,4,8,0" Spacing="2">
+                <Button Classes="RailNav"
+                        Classes.active="{Binding ActivePage, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Library}"
+                        Command="{Binding $parent[views:ShellView].((vm:ShellViewModel)DataContext).ShowLibraryCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Icon Type="Regular" Value="Books" Width="16" Height="16" VerticalAlignment="Center" />
+                        <TextBlock Text="Library" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="RailNav"
+                        Classes.active="{Binding ActivePage, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Depot}"
+                        Command="{Binding $parent[views:ShellView].((vm:ShellViewModel)DataContext).ShowDepotCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Icon Type="Regular" Value="Storefront" Width="16" Height="16" VerticalAlignment="Center" />
+                        <TextBlock Text="Depot" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="RailNav"
+                        Command="{Binding $parent[views:ShellView].((vm:ShellViewModel)DataContext).ShowDownloadQueueCommand}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Right" Classes="CountPill"
+                                IsVisible="{Binding $parent[views:ShellView].((vm:ShellViewModel)DataContext).DownloadQueue.HasPendingItems}">
+                            <TextBlock Text="{Binding $parent[views:ShellView].((vm:ShellViewModel)DataContext).DownloadQueue.ActiveCount}" />
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Icon Type="Regular" Value="DownloadSimple" Width="16" Height="16" VerticalAlignment="Center" />
+                            <TextBlock Text="Downloads" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+            </StackPanel>
+
+            <Border DockPanel.Dock="Top" Height="1" Margin="12"
+                    Background="{DynamicResource HairlineBorderBrush}" />
+
+            <ContentPresenter Content="{Binding RailContent, ElementName=Root}" />
+        </DockPanel>
+    </Border>
+</UserControl>

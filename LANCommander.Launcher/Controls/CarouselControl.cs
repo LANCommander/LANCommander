@@ -28,6 +28,16 @@ public interface ICarouselPlaybackItem
     void SetCarouselActive(bool active);
 }
 
+/// <summary>
+/// Implemented by carousel item content that is expensive to load (e.g. cover art). The carousel
+/// reports when an item is within a page of the viewport, regardless of window focus, so long
+/// carousels only load what's near the screen instead of everything at once.
+/// </summary>
+public interface ICarouselLazyItem
+{
+    void SetCarouselNearViewport(bool near);
+}
+
 public class CarouselControl : TemplatedControl
 {
     public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
@@ -490,14 +500,44 @@ public class CarouselControl : TemplatedControl
         {
             var itemLeft = i * step;
             var itemRight = itemLeft + ItemWidth;
-            var visible = _windowActive && itemRight > scroll && itemLeft < scroll + viewportWidth;
+            var inViewport = itemRight > scroll && itemLeft < scroll + viewportWidth;
+            var visible = _windowActive && inViewport;
+
+            // A page either side, so paging lands on items that have already loaded.
+            var near = itemRight > scroll - viewportWidth && itemLeft < scroll + 2 * viewportWidth;
 
             var container = _itemsControl.ContainerFromIndex(i);
             if (container == null) continue;
 
-            foreach (var item in container.GetVisualDescendants().OfType<ICarouselPlaybackItem>())
-                item.SetCarouselActive(visible);
+            foreach (var item in container.GetVisualDescendants())
+            {
+                if (item is ICarouselPlaybackItem playback)
+                    playback.SetCarouselActive(visible);
+
+                if (item is ICarouselLazyItem lazy)
+                    lazy.SetCarouselNearViewport(near);
+            }
         }
+    }
+
+    private bool _visibilityUpdateQueued;
+
+    /// <summary>
+    /// Asks for a visibility pass once layout settles. Item content calls this when it attaches,
+    /// since containers can be prepared before their templates (and so their lazy items) exist.
+    /// </summary>
+    public void QueueVisibilityUpdate()
+    {
+        if (_visibilityUpdateQueued)
+            return;
+
+        _visibilityUpdateQueued = true;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            _visibilityUpdateQueued = false;
+            UpdateItemVisibility();
+        }, DispatcherPriority.Loaded);
     }
 
     private void SnapToCurrentIndex()
@@ -513,13 +553,16 @@ public class CarouselControl : TemplatedControl
         if (_clipPanel == null) return;
         if (_itemsContainer is Border border)
             border.Padding = new Thickness(ItemOverflow);
+
         UpdateClipGeometry();
         SnapToCurrentIndex();
     }
 
-    // Replaces ClipToBounds with a geometry clip that is tight on left/right
-    // but extended by 2*ItemOverflow top and bottom, giving hovered items room
-    // to scale without being clipped while scrolled-off items still are.
+    // Replaces ClipToBounds with a geometry clip extended top and bottom by 2*ItemOverflow, giving hovered
+    // items room to scale without being clipped while scrolled-off items still are. Left and right stay
+    // tight: items end exactly where the nav columns begin, so the arrows sit flush against them and the
+    // item area lines up with content in the same shared columns (e.g. a cover grid). The trade-off is that
+    // an edge item's hover growth (~3px) is clipped at the arrow column.
     private void UpdateClipGeometry()
     {
         if (_clipPanel == null) return;
@@ -528,10 +571,8 @@ public class CarouselControl : TemplatedControl
         {
             _clipGeometry ??= new RectangleGeometry();
             var b = _clipPanel.Bounds;
-            // Extend clip vertically by ItemOverflow to allow hover-scale effects, but
-            // keep left/right tight so scrolled-off items don't bleed behind the nav buttons.
             var vPad = ItemOverflow * 2;
-            _clipGeometry.Rect = new Rect(-ItemOverflow, -vPad, b.Width + 2 * ItemOverflow, b.Height + 2 * vPad);
+            _clipGeometry.Rect = new Rect(0, -vPad, b.Width, b.Height + 2 * vPad);
             _clipPanel.Clip = _clipGeometry;
         }
         else

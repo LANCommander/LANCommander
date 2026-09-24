@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using global::Avalonia;
 using global::Avalonia.Controls;
@@ -11,6 +14,7 @@ using global::Avalonia.Interactivity;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.ViewModels.Components;
 
@@ -39,9 +43,16 @@ public partial class LightboxOverlay : UserControl
     private long _videoStartTimeMs;
     private EventHandler<EventArgs>? _endReachedHandler;
 
+    // Filmstrip thumbnails, one per item, in item order
+    private readonly List<Button> _thumbs = new();
+
+    /// <summary>Screenshot names are often just the uploaded file name, which makes a poor caption.</summary>
+    private static readonly Regex FileNamePattern = new(@"\.[A-Za-z0-9]{2,5}$", RegexOptions.Compiled);
+
     public LightboxOverlay()
     {
         InitializeComponent();
+        ModalEscape.Enable(this, CloseOverlay);
         SeekSlider.AddHandler(RangeBase.ValueChangedEvent, SeekSlider_ValueChanged);
     }
 
@@ -51,18 +62,31 @@ public partial class LightboxOverlay : UserControl
     /// <param name="items">All items available for navigation.</param>
     /// <param name="startIndex">Index of the item to show first.</param>
     /// <param name="videoStartTimeMs">For video items, the starting playback position.</param>
-    public void Show(IReadOnlyList<LightboxItem> items, int startIndex = 0, long videoStartTimeMs = 0)
+    /// <param name="title">Shown in the top-left chrome, usually the game's title.</param>
+    public void Show(IReadOnlyList<LightboxItem> items, int startIndex = 0, long videoStartTimeMs = 0, string? title = null)
     {
         _items = items;
         _currentIndex = Math.Clamp(startIndex, 0, Math.Max(0, items.Count - 1));
         _videoStartTimeMs = videoStartTimeMs;
 
+        var isManuals = items.Count > 0 && items.All(i => i.Type == LightboxItemType.Pdf);
+
+        ChromeTitle.Text = title ?? string.Empty;
+        ChromeTitle.IsVisible = !string.IsNullOrEmpty(title);
+        ChromeDivider.IsVisible = ChromeTitle.IsVisible;
+        ChromeSection.Text = isManuals ? (items.Count == 1 ? "Manual" : "Manuals") : "Media";
+
+        // Reserve the caption line for the whole session if any item has one, so moving between
+        // items never resizes the stage.
+        CaptionText.IsVisible = items.Any(i => CaptionFor(i) != null);
+
+        BuildFilmstrip(isManuals);
         ShowCurrentItem();
         Focus();
     }
 
     /// <summary>Shows the lightbox as an overlay on the main window.</summary>
-    public static LightboxOverlay ShowOverlay(IReadOnlyList<LightboxItem> items, int startIndex = 0, long videoStartTimeMs = 0)
+    public static LightboxOverlay ShowOverlay(IReadOnlyList<LightboxItem> items, int startIndex = 0, long videoStartTimeMs = 0, string? title = null)
     {
         var overlay = new LightboxOverlay
         {
@@ -83,9 +107,125 @@ public partial class LightboxOverlay : UserControl
             new Binding("Bounds.Height") { Source = layer });
 
         layer.Children.Add(overlay);
-        overlay.Show(items, startIndex, videoStartTimeMs);
+        overlay.Show(items, startIndex, videoStartTimeMs, title);
 
         return overlay;
+    }
+
+    /// <summary>A manual's title, or a screenshot/video name that reads like a caption; null otherwise.</summary>
+    private static string? CaptionFor(LightboxItem item)
+    {
+        var name = item.Title?.Trim();
+
+        if (string.IsNullOrEmpty(name))
+            return null;
+
+        return item.Type == LightboxItemType.Pdf || !FileNamePattern.IsMatch(name) ? name : null;
+    }
+
+    // ── Filmstrip ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// One thumbnail per screenshot or video, clickable to jump there. Manuals have no useful
+    /// thumbnail, so they're navigated with the arrows only.
+    /// </summary>
+    private void BuildFilmstrip(bool isManuals)
+    {
+        Filmstrip.Children.Clear();
+        _thumbs.Clear();
+
+        FilmstripScroller.IsVisible = !isManuals && _items.Count > 1;
+
+        if (!FilmstripScroller.IsVisible)
+            return;
+
+        for (var i = 0; i < _items.Count; i++)
+        {
+            var item = _items[i];
+            var index = i;
+
+            var image = new Image { Stretch = Stretch.UniformToFill };
+            var tile = new Panel();
+
+            tile.Children.Add(new Border { Background = (IBrush?)this.FindResource("SurfaceBrush") });
+            tile.Children.Add(image);
+
+            if (item.Type == LightboxItemType.Video)
+            {
+                tile.Children.Add(new Icon
+                {
+                    Type = IconVariant.Fill,
+                    Value = "Play",
+                    Width = 18,
+                    Height = 18,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                });
+            }
+
+            var thumb = new Button
+            {
+                Content = new Border
+                {
+                    CornerRadius = new CornerRadius(4),
+                    ClipToBounds = true,
+                    Margin = new Thickness(1),
+                    Child = tile,
+                },
+            };
+            thumb.Classes.Add("FilmstripThumb");
+            thumb.Click += (_, _) => GoTo(index);
+
+            _thumbs.Add(thumb);
+            Filmstrip.Children.Add(thumb);
+
+            _ = LoadThumbnailAsync(item, image);
+        }
+    }
+
+    /// <summary>
+    /// Decodes a small copy of a screenshot for its thumbnail, off the UI thread. Videos use their
+    /// preview frame when the caller supplied one and otherwise keep the play glyph on a plain tile.
+    /// </summary>
+    private static async Task LoadThumbnailAsync(LightboxItem item, Image target)
+    {
+        if (item.Type == LightboxItemType.Video)
+        {
+            target.Source = item.ImageSource;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(item.Path) || !File.Exists(item.Path))
+        {
+            target.Source = item.ImageSource;
+            return;
+        }
+
+        try
+        {
+            target.Source = await Task.Run(() =>
+            {
+                using var stream = File.OpenRead(item.Path);
+                return Bitmap.DecodeToWidth(stream, 240, BitmapInterpolationMode.HighQuality);
+            });
+        }
+        catch
+        {
+            target.Source = item.ImageSource;
+        }
+    }
+
+    private void GoTo(int index)
+    {
+        if (index == _currentIndex || index < 0 || index >= _items.Count)
+            return;
+
+        StopVideo();
+
+        _videoStartTimeMs = 0;
+        _currentIndex = index;
+        ShowCurrentItem();
+        Focus();
     }
 
     // ── Navigation ───────────────────────────────────────────────────────
@@ -118,6 +258,13 @@ public partial class LightboxOverlay : UserControl
         PrevButton.IsVisible = _items.Count > 1;
         NextButton.IsVisible = _items.Count > 1;
         ItemCounter.Text = _items.Count > 1 ? $"{_currentIndex + 1} / {_items.Count}" : string.Empty;
+        CaptionText.Text = CaptionFor(item) ?? string.Empty;
+
+        for (var i = 0; i < _thumbs.Count; i++)
+            _thumbs[i].Classes.Set("current", i == _currentIndex);
+
+        if (_currentIndex < _thumbs.Count)
+            _thumbs[_currentIndex].BringIntoView();
 
         switch (item.Type)
         {

@@ -126,11 +126,12 @@ public partial class LoginViewModel : ViewModelBase
 
     public async Task LoadAuthenticationProvidersAsync()
     {
-        AuthenticationProviders.Clear();
-
         try
         {
             var providers = await _authenticationClient.GetAuthenticationProvidersAsync();
+
+            // Clear after the await so overlapping calls replace rather than append
+            AuthenticationProviders.Clear();
 
             if (providers != null)
             {
@@ -141,6 +142,7 @@ public partial class LoginViewModel : ViewModelBase
         catch
         {
             // External providers unavailable - username/password login still works
+            AuthenticationProviders.Clear();
         }
 
         AllowPassword = await _authenticationClient.GetPasswordAllowedAsync();

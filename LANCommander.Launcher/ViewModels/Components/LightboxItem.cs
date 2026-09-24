@@ -17,7 +17,7 @@ public class LightboxItem
     /// <summary>Local file path or streaming URL.</summary>
     public string Path { get; set; } = string.Empty;
 
-    /// <summary>Optional title (used for PDFs).</summary>
+    /// <summary>Optional title: a manual's name, or a screenshot/video name shown as its caption.</summary>
     public string? Title { get; set; }
 
     /// <summary>Pre-loaded bitmap for screenshot display.</summary>

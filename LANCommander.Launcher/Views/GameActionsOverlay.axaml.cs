@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.ViewModels.Components;
 using ManifestAction = LANCommander.SDK.Models.Manifest.Action;
 
@@ -14,6 +15,7 @@ public partial class GameActionsOverlay : UserControl
     public GameActionsOverlay()
     {
         InitializeComponent();
+        ModalEscape.Enable(this, () => Close(null));
     }
 
     private void Action_Click(object? sender, RoutedEventArgs e)
@@ -23,6 +25,7 @@ public partial class GameActionsOverlay : UserControl
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close(null);
+    private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close(null);
 
     private void Close(ManifestAction? action)
     {

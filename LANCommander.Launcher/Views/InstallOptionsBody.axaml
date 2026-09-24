@@ -5,164 +5,169 @@
              x:DataType="vm:InstallOptionsViewModel">
 
     <UserControl.Styles>
-        <!-- Addon toggle button: looks like a list row -->
-        <Style Selector="ToggleButton.AddonItem">
-            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
-            <Setter Property="Padding" Value="10,8" />
+        <!-- Option rows: checkbox, name, type, size; the whole row toggles -->
+        <Style Selector="Border.OptionRow">
+            <Setter Property="MinHeight" Value="42" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <!-- Fluent draws the box at the top of a 32px strip, so the checkbox is centred in the row
+             rather than stretched to it; that keeps the box level with the text -->
+        <Style Selector="Border.OptionRow CheckBox">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="11,0,4,0" />
         </Style>
-        <Style Selector="ToggleButton.AddonItem:checked">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <!-- Long names wrap to a second line, then trim. (NoWrap would report the full text width,
+             and the list lays every row out at its widest child, pushing sizes past the edge.) -->
+        <Style Selector="TextBlock.OptionName">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxLines" Value="2" />
+            <Setter Property="Margin" Value="0,6" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.OptionNote">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="12,0,0,0" />
+        </Style>
+        <Style Selector="TextBlock.OptionSize">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Width" Value="72" />
+        </Style>
+        <!-- All / None: small ghost links beside a section kicker -->
+        <Style Selector="Button.SelectLink">
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Spacing="0">
+    <StackPanel Spacing="20">
 
-        <!-- ── Size info ─────────────────────────────────────────── -->
-        <Border IsVisible="{Binding HasSizeInfo}"
-                Padding="0,0,0,8">
-            <UniformGrid Columns="2">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="Download Size"
-                               FontSize="{DynamicResource FontSizeKicker}" Opacity="0.55"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding DownloadSizeText}"
-                               FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="Space Required"
-                               FontSize="{DynamicResource FontSizeKicker}" Opacity="0.55"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding SpaceRequiredText}"
-                               FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
-            </UniformGrid>
-        </Border>
-
-        <!-- ── Addons ─────────────────────────────────────────────── -->
-        <Border IsVisible="{Binding HasAddons}"
-                Padding="0,16,0,0">
-            <StackPanel Spacing="8">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Content="None"
-                            Background="Transparent"
-                            Padding="8,2"
-                            FontSize="{DynamicResource FontSizeCaption}"
-                            Click="DeselectAllAddons_Click" />
-                    <Button DockPanel.Dock="Right"
-                            Content="All"
-                            Background="Transparent"
-                            Padding="8,2"
-                            FontSize="{DynamicResource FontSizeCaption}"
-                            Margin="0,0,4,0"
-                            Click="SelectAllAddons_Click" />
-                    <TextBlock Text="Optional Add-ons"
-                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </DockPanel>
-
-                <ScrollViewer MaxHeight="280"
-                              HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Addons}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:InstallAddonItemViewModel">
-                                <ToggleButton Classes="AddonItem"
-                                              IsChecked="{Binding IsSelected}"
-                                              Margin="0,0,0,3">
-                                    <DockPanel>
-                                        <Icon DockPanel.Dock="Left"
-                                              Type="Regular" Value="Check"
-                                              Width="12" Height="12"
-                                              IsVisible="{Binding IsSelected}"
-                                              Margin="0,0,10,0"
-                                              VerticalAlignment="Center" />
-                                        <TextBlock DockPanel.Dock="Right"
-                                                   Text="{Binding TypeLabel}"
-                                                   FontSize="{DynamicResource FontSizeKicker}"
-                                                   Opacity="0.55"
-                                                   VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="{DynamicResource FontSizeLabel}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" />
-                                    </DockPanel>
-                                </ToggleButton>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+        <!-- ── Install location ─────────────────────────────────────── -->
+        <StackPanel Spacing="7" IsVisible="{Binding SelectedInstallDirectory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="Install to"
+                       FontSize="{DynamicResource FontSizeLabel}" FontWeight="Medium"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <!-- A choice only when there's more than one configured folder (or when modifying) -->
+            <ComboBox ItemsSource="{Binding InstallDirectories}"
+                      SelectedItem="{Binding SelectedInstallDirectory}"
+                      HorizontalAlignment="Stretch"
+                      IsVisible="{Binding ShowInstallDirectory}" />
+            <TextBlock Text="{Binding SelectedInstallDirectory}" Classes="Mono"
+                       FontSize="{DynamicResource FontSizeLabel}"
+                       TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding !ShowInstallDirectory}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1,0,0"
+                        IsVisible="{Binding HasFreeSpaceInfo}">
+                <TextBlock Text="{Binding FreeSpaceText}" Classes="Mono"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Foreground="{DynamicResource TextTertiaryBrush}" />
+                <Border Width="1" Height="11" VerticalAlignment="Center"
+                        Background="{DynamicResource HairlineBorderStrongBrush}" />
+                <TextBlock Text="{Binding SpaceVerdictText}" Classes="Mono"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Foreground="{DynamicResource SuccessTextBrush}"
+                           IsVisible="{Binding HasEnoughSpace}" />
+                <TextBlock Text="{Binding SpaceVerdictText}" Classes="Mono"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Foreground="{DynamicResource ErrorTextBrush}"
+                           IsVisible="{Binding !HasEnoughSpace}" />
             </StackPanel>
-        </Border>
+        </StackPanel>
 
-        <!-- ── Tools ──────────────────────────────────────────────── -->
-        <Border IsVisible="{Binding HasTools}"
-                Padding="0,16,0,0">
-            <StackPanel Spacing="8">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Content="None"
-                            Background="Transparent"
-                            Padding="8,2"
-                            FontSize="{DynamicResource FontSizeCaption}"
-                            Click="DeselectAllTools_Click" />
-                    <Button DockPanel.Dock="Right"
-                            Content="All"
-                            Background="Transparent"
-                            Padding="8,2"
-                            FontSize="{DynamicResource FontSizeCaption}"
-                            Margin="0,0,4,0"
-                            Click="SelectAllTools_Click" />
-                    <TextBlock Text="Optional Tools"
-                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </DockPanel>
+        <!-- ── What to install: the base game, then optional add-ons ─── -->
+        <StackPanel IsVisible="{Binding HasAddons}">
+            <DockPanel Margin="0,0,0,4">
+                <Button DockPanel.Dock="Right" Classes="Text SelectLink" Content="None"
+                        Click="DeselectAllAddons_Click" />
+                <Button DockPanel.Dock="Right" Classes="Text SelectLink" Content="All"
+                        Click="SelectAllAddons_Click" />
+                <TextBlock Text="WHAT TO INSTALL" Classes="Kicker" VerticalAlignment="Center" />
+            </DockPanel>
 
-                <ScrollViewer MaxHeight="280"
-                              HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Tools}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:InstallToolItemViewModel">
-                                <ToggleButton Classes="AddonItem"
-                                              IsChecked="{Binding IsSelected}"
-                                              Margin="0,0,0,3">
-                                    <DockPanel>
-                                        <Icon DockPanel.Dock="Left"
-                                              Type="Regular" Value="Check"
-                                              Width="12" Height="12"
-                                              IsVisible="{Binding IsSelected}"
-                                              Margin="0,0,10,0"
-                                              VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="{DynamicResource FontSizeLabel}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" />
-                                    </DockPanel>
-                                </ToggleButton>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </StackPanel>
-        </Border>
+            <!-- The base game always installs; shown so the sizes add up to the total -->
+            <Border Classes="OptionRow" IsVisible="{Binding !IsModify}">
+                <CheckBox IsChecked="True" IsHitTestVisible="False" Focusable="False">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Classes="OptionName" Text="Base game" />
+                        <TextBlock Grid.Column="1" Classes="OptionNote" Text="required" />
+                        <TextBlock Grid.Column="2" Classes="OptionSize Mono" Text="{Binding BaseDownloadSizeText}" />
+                    </Grid>
+                </CheckBox>
+            </Border>
 
-        <!-- ── Install directory ──────────────────────────────────── -->
-        <Border IsVisible="{Binding ShowInstallDirectory}"
-                Padding="0,16,0,0">
-            <StackPanel Spacing="8">
-                <TextBlock Text="Install Location"
-                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
-                <ComboBox ItemsSource="{Binding InstallDirectories}"
-                          SelectedItem="{Binding SelectedInstallDirectory}"
-                          HorizontalAlignment="Stretch" />
-            </StackPanel>
+            <ItemsControl ItemsSource="{Binding Addons}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:InstallAddonItemViewModel">
+                        <Border Classes="OptionRow">
+                            <CheckBox IsChecked="{Binding IsSelected}">
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Classes="OptionName" Text="{Binding Title}" />
+                                    <TextBlock Grid.Column="1" Classes="OptionNote" Text="{Binding TypeLabel}" />
+                                    <TextBlock Grid.Column="2" Classes="OptionSize Mono" Text="{Binding SizeText}" />
+                                </Grid>
+                            </CheckBox>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ── Tools ─────────────────────────────────────────────────── -->
+        <StackPanel IsVisible="{Binding HasTools}">
+            <DockPanel Margin="0,0,0,4">
+                <Button DockPanel.Dock="Right" Classes="Text SelectLink" Content="None"
+                        Click="DeselectAllTools_Click" />
+                <Button DockPanel.Dock="Right" Classes="Text SelectLink" Content="All"
+                        Click="SelectAllTools_Click" />
+                <TextBlock Text="TOOLS" Classes="Kicker" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <ItemsControl ItemsSource="{Binding Tools}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:InstallToolItemViewModel">
+                        <Border Classes="OptionRow">
+                            <CheckBox IsChecked="{Binding IsSelected}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="OptionName" Text="{Binding Title}" />
+                                    <TextBlock Grid.Column="1" Classes="OptionSize Mono" Text="{Binding SizeText}" />
+                                </Grid>
+                            </CheckBox>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- ── Total ─────────────────────────────────────────────────── -->
+        <Border BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,1,0,0"
+                Padding="0,12,0,0"
+                IsVisible="{Binding ShowTotal}">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                <TextBlock Text="Total download"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="Medium"
+                           VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding DownloadSizeText}" Classes="Mono"
+                           FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium"
+                           VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                           Text="{Binding SpaceRequiredText, StringFormat='{}{0} on disk once installed'}"
+                           Classes="Mono"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
+                           HorizontalAlignment="Right"
+                           Margin="0,2,0,0" />
+            </Grid>
         </Border>
 
     </StackPanel>

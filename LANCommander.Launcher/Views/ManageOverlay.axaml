@@ -4,6 +4,7 @@
              xmlns:models="using:LANCommander.SDK.Models"
              xmlns:views="using:LANCommander.Launcher.Views"
              xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.ManageOverlay"
              x:DataType="vm:ManageOverlayViewModel"
              controls:AutoFocus.IsEnabled="True">
@@ -313,9 +314,8 @@
 
                 <!-- ── Header ─────────────────────────────────────────────── -->
                 <Border DockPanel.Dock="Top" Classes="DialogHeader">
-                    <TextBlock FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"
-                               Text="{Binding DialogTitle}" />
+                    <components:DialogTitleBar Title="{Binding DialogTitle}"
+                                               CloseRequested="TitleBar_CloseRequested" />
                 </Border>
 
                 <!-- ── Footer ─────────────────────────────────────────────── -->
@@ -365,9 +365,10 @@
                     <!-- Right content -->
                     <ScrollViewer Grid.Column="1"
                                   HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  Padding="20,8,20,8">
-                        <ContentControl Content="{Binding SelectedSection.Content}" />
+                                  VerticalScrollBarVisibility="Auto">
+                        <!-- Margin on the content rather than Padding on the ScrollViewer, which this
+                             Avalonia version leaves out of the scroll extent -->
+                        <ContentControl Margin="20,8,20,8" Content="{Binding SelectedSection.Content}" />
                     </ScrollViewer>
 
                 </Grid>

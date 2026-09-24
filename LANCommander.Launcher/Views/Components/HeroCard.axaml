@@ -87,6 +87,11 @@
                     Margin="8" IsVisible="{Binding ShowInLibraryBadge}">
                 <Icon Type="Regular" Value="Check" Width="11" Height="11" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Border>
+
+            <!-- Hairline ring and lit top edge, matching covers and genre tiles -->
+            <Border CornerRadius="{DynamicResource RadiusMedium}"
+                    BoxShadow="{DynamicResource HairlineShadow}"
+                    IsHitTestVisible="False" />
         </Panel>
     </Button>
 

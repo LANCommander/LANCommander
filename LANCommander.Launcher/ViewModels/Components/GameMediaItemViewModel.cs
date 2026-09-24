@@ -26,6 +26,10 @@ public partial class GameMediaItemViewModel : ObservableObject
     [ObservableProperty]
     private string _mimeType = string.Empty;
 
+    /// <summary>Name given to the media on the server; the lightbox shows it as a caption.</summary>
+    [ObservableProperty]
+    private string _name = string.Empty;
+
     /// <summary>Pre-loaded bitmap for screenshot display (loaded from local file or remote URL).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AspectRatio))]

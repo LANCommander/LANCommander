@@ -1,6 +1,8 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using ByteSizeLib;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,6 +19,10 @@ public partial class InstallOptionsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasMultipleDirectories))]
+    [NotifyPropertyChangedFor(nameof(FreeSpaceText))]
+    [NotifyPropertyChangedFor(nameof(HasFreeSpaceInfo))]
+    [NotifyPropertyChangedFor(nameof(HasEnoughSpace))]
+    [NotifyPropertyChangedFor(nameof(SpaceVerdictText))]
     private string _selectedInstallDirectory = string.Empty;
 
     [ObservableProperty]
@@ -37,6 +43,43 @@ public partial class InstallOptionsViewModel : ViewModelBase
 
     public bool HasMultipleDirectories => InstallDirectories.Count > 1;
     public bool ShowInstallDirectory => AlwaysShowDirectory || HasMultipleDirectories;
+
+    /// <summary>
+    /// Changing an existing install (Manage → Modify) rather than a fresh one. The base game is
+    /// already on disk, so its row and the download total don't apply.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowTotal))]
+    private bool _isModify;
+
+    // ── Free space on the chosen drive ────────────────────────────────────────
+
+    private DriveInfo? SelectedDrive
+    {
+        get
+        {
+            try
+            {
+                var root = Path.GetPathRoot(SelectedInstallDirectory);
+                return string.IsNullOrEmpty(root) ? null : new DriveInfo(root) is { IsReady: true } drive ? drive : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    public bool HasFreeSpaceInfo => SelectedDrive != null;
+
+    /// <summary>e.g. "218 GB free on D:".</summary>
+    public string FreeSpaceText => SelectedDrive is { } drive
+        ? $"{ByteSize.FromBytes(drive.AvailableFreeSpace).ToString("0.#")} free on {drive.Name.TrimEnd('\\', '/')}"
+        : string.Empty;
+
+    public bool HasEnoughSpace => SelectedDrive is not { } drive || drive.AvailableFreeSpace >= TotalSpaceRequired;
+
+    public string SpaceVerdictText => HasEnoughSpace ? "enough room" : "not enough room";
 
     // ── Addons ────────────────────────────────────────────────────────────────
 
@@ -64,8 +107,12 @@ public partial class InstallOptionsViewModel : ViewModelBase
 
     public string DownloadSizeText => ByteSize.FromBytes(TotalDownloadSize).ToString("0.##");
     public string SpaceRequiredText => ByteSize.FromBytes(TotalSpaceRequired).ToString("0.##");
+    public string BaseDownloadSizeText => BaseDownloadSize > 0 ? ByteSize.FromBytes(BaseDownloadSize).ToString("0.##") : string.Empty;
 
     public bool HasSizeInfo => HasAddons || HasTools;
+
+    /// <summary>The download total is only meaningful for a fresh install with something to choose.</summary>
+    public bool ShowTotal => HasSizeInfo && !IsModify;
 
     private long TotalDownloadSize =>
         BaseDownloadSize
@@ -81,6 +128,9 @@ public partial class InstallOptionsViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(DownloadSizeText));
         OnPropertyChanged(nameof(SpaceRequiredText));
+        OnPropertyChanged(nameof(BaseDownloadSizeText));
+        OnPropertyChanged(nameof(HasEnoughSpace));
+        OnPropertyChanged(nameof(SpaceVerdictText));
     }
 
     // ── Result ────────────────────────────────────────────────────────────────
@@ -102,6 +152,7 @@ public partial class InstallToolItemViewModel : ViewModelBase
 
     public long DownloadSize { get; }
     public long SpaceRequired { get; }
+    public string SizeText => DownloadSize > 0 ? ByteSize.FromBytes(DownloadSize).ToString("0.##") : string.Empty;
 
     [ObservableProperty]
     private bool _isSelected;
@@ -139,6 +190,7 @@ public partial class InstallAddonItemViewModel : ViewModelBase
 
     public long DownloadSize { get; }
     public long SpaceRequired { get; }
+    public string SizeText => DownloadSize > 0 ? ByteSize.FromBytes(DownloadSize).ToString("0.##") : string.Empty;
 
     [ObservableProperty]
     private bool _isSelected;

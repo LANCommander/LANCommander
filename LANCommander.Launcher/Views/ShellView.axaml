@@ -43,26 +43,48 @@
                 Padding="10,0">
             <Grid ColumnDefinitions="Auto,*,Auto" Height="56">
 
-                <!-- Left: Depot / Library toggle -->
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            IsVisible="{Binding AreUserLibrariesEnabled}">
-                    <IconButton Command="{Binding ShowLibraryCommand}"
-                                Text="Library"
-                                Classes="Text"
-                                IconType="Regular"
-                                IconValue="Books"
-                                Size="16"
-                                IsVisible="{Binding IsDepotActive}" />
+                <!-- Left: connection status. Online it refreshes the library, offline it reconnects,
+                     and while an import runs it becomes that import's progress. -->
+                <Panel Grid.Column="0" Width="36" Height="36" VerticalAlignment="Center">
+                    <Button Classes="Text"
+                            Width="36" Height="36"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding RefreshCommand}"
+                            ToolTip.Tip="Connected">
+                        <Button.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!IsOfflineMode" />
+                                <Binding Path="!IsSyncing" />
+                            </MultiBinding>
+                        </Button.IsVisible>
+                        <Icon Type="Regular" Value="ArrowsClockwise" Width="18" Height="18" />
+                    </Button>
 
-                    <IconButton Command="{Binding ShowDepotCommand}"
-                                Text="Depot"
-                                Classes="Text"
-                                IconType="Regular"
-                                IconValue="Storefront"
-                                Size="16"
-                                IsVisible="{Binding IsLibraryActive}" />
-                </StackPanel>
+                    <Button Classes="Text"
+                            Width="36" Height="36"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding TryGoOnlineCommand}"
+                            IsEnabled="{Binding CanGoOnline}"
+                            IsVisible="{Binding IsOfflineMode}"
+                            ToolTip.Tip="Offline — click to reconnect">
+                        <Icon Type="Regular" Value="CloudSlash" Width="18" Height="18"
+                              Foreground="{DynamicResource WarningTextBrush}" />
+                    </Button>
+
+                    <ProgressBar Classes="Ring"
+                                 Value="{Binding ImportProgress}"
+                                 IsIndeterminate="{Binding IsImportIndeterminate}"
+                                 IsVisible="{Binding IsSyncing}"
+                                 Minimum="0" Maximum="1"
+                                 Width="18" Height="18"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 ToolTip.Tip="Syncing library" />
+                </Panel>
 
                 <!-- Center: active download OR idle downloads button -->
                 <Panel Grid.Column="1" HorizontalAlignment="Stretch" Margin="16,0">

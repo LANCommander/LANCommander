@@ -45,6 +45,37 @@ public partial class DepotViewModel : ViewModelBase
     [ObservableProperty] private bool _hasBrowseCollections;
     [ObservableProperty] private bool _hasContent;
 
+    // ── Rail counts (whole catalogue, not the capped carousels) ──────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SearchWatermark))]
+    private int _totalTitles;
+
+    [ObservableProperty] private int _multiplayerTitles;
+    [ObservableProperty] private int _backlogTitles;
+
+    public string SearchWatermark => TotalTitles > 0 ? $"Search {TotalTitles:N0} titles…" : "Search games…";
+
+    // ── Genre chips: the most common genres first, the rest behind "See all" ──
+
+    private const int GenreChipLimit = 12;
+
+    public ObservableCollection<DepotGenreChip> GenreChips { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleGenreChips))]
+    [NotifyPropertyChangedFor(nameof(GenreToggleLabel))]
+    private bool _genresExpanded;
+
+    public IEnumerable<DepotGenreChip> VisibleGenreChips =>
+        GenresExpanded ? GenreChips : GenreChips.Take(GenreChipLimit);
+
+    public bool HasMoreGenres => GenreChips.Count > GenreChipLimit;
+    public string GenreToggleLabel => GenresExpanded ? "Show fewer" : "See all";
+
+    [RelayCommand]
+    private void ToggleGenres() => GenresExpanded = !GenresExpanded;
+
     // ── Carousels ─────────────────────────────────────────────────────────────
 
     public ObservableCollection<GameItemViewModel> PopularGames    { get; } = new();
@@ -54,7 +85,6 @@ public partial class DepotViewModel : ViewModelBase
 
     // ── Browse data ───────────────────────────────────────────────────────────
 
-    public ObservableCollection<GenreCarouselButtomViewModel> BrowseGenres { get; } = new();
     public ObservableCollection<string> BrowseTags        { get; } = new();
     public ObservableCollection<GenreCarouselButtomViewModel> BrowseCollections { get; } = new();
 
@@ -70,6 +100,7 @@ public partial class DepotViewModel : ViewModelBase
     public event EventHandler<string>? BrowseByTagRequested;
     public event EventHandler<string>? BrowseByCollectionRequested;
     public event EventHandler? BrowseAllRequested;
+    public event EventHandler<DepotBrowsePreset>? BrowsePresetRequested;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -105,9 +136,10 @@ public partial class DepotViewModel : ViewModelBase
         NewReleases.Clear();
         MultiplayerGames.Clear();
         BacklogGames.Clear();
-        BrowseGenres.Clear();
         BrowseTags.Clear();
         BrowseCollections.Clear();
+        GenreChips.Clear();
+        GenresExpanded = false;
 
         _logger.LogInformation("Loading depot home (offline: {IsOffline})", IsOfflineMode);
 
@@ -221,34 +253,13 @@ public partial class DepotViewModel : ViewModelBase
                         if (!string.IsNullOrEmpty(t.Name)) tagSet.Add(t.Name);
             }
 
-            // Reuse hero paths already downloaded for popular games where possible;
-            // otherwise fetch the background for a representative game from that genre.
+            // Collection tiles reuse hero paths already fetched for popular games where possible;
+            // otherwise they fetch the background for a representative game.
             var popularHeroMap = popularFull
                 .Where(v => v != null && !string.IsNullOrEmpty(v!.HeroPath))
                 .ToDictionary(v => v!.Id, v => v!.HeroPath);
 
             var rng = new Random();
-
-            var genreHeroTasks = genreGamesMap
-                .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(async kv =>
-                {
-                    var popularRep = kv.Value.FirstOrDefault(g => popularHeroMap.ContainsKey(g.Id));
-                    
-                    if (popularRep != null)
-                        return (Name: kv.Key, HeroPath: popularHeroMap[popularRep.Id]);
-
-                    var rep = kv.Value[rng.Next(kv.Value.Count)];
-                    var heroPath = await FetchGameHeroAsync(rep, mediaClient, gameClient);
-                    
-                    return (Name: kv.Key, HeroPath: heroPath);
-                })
-                .ToList();
-
-            var genreHeroes = await Task.WhenAll(genreHeroTasks);
-
-            foreach (var (name, heroPath) in genreHeroes)
-                BrowseGenres.Add(new GenreCarouselButtomViewModel(new Genre { Name = name }, heroPath));
 
             var collectionHeroTasks = collectionGamesMap
                 .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
@@ -273,16 +284,28 @@ public partial class DepotViewModel : ViewModelBase
 
             foreach (var name in tagSet) BrowseTags.Add(name);
 
+            foreach (var (name, games) in genreGamesMap
+                .OrderByDescending(kv => kv.Value.Count)
+                .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+                GenreChips.Add(new DepotGenreChip(name, games.Count));
+
+            TotalTitles       = allGames.Count;
+            MultiplayerTitles = allGames.Count(g => g.MultiplayerModes?.Any() == true);
+            BacklogTitles     = allGames.Count(g => librarySet.Contains(g.Id));
+
             // Update visibility flags
             HasPopularGames     = PopularGames.Count > 0;
             HasNewReleases      = NewReleases.Count > 0;
             HasMultiplayerGames = MultiplayerGames.Count > 0;
             HasBacklogGames     = BacklogGames.Count > 0;
-            HasBrowseGenres     = BrowseGenres.Count > 0;
+            HasBrowseGenres     = GenreChips.Count > 0;
             HasBrowseTags       = BrowseTags.Count > 0;
             HasBrowseCollections = BrowseCollections.Count > 0;
             HasBrowseData       = HasBrowseGenres || HasBrowseTags || HasBrowseCollections;
             HasContent          = HasPopularGames || HasNewReleases || HasMultiplayerGames || HasBacklogGames || HasBrowseData;
+
+            OnPropertyChanged(nameof(VisibleGenreChips));
+            OnPropertyChanged(nameof(HasMoreGenres));
 
             _logger.LogInformation(
                 "Depot home loaded — popular:{P} new:{N} mp:{M} backlog:{B}",
@@ -329,6 +352,9 @@ public partial class DepotViewModel : ViewModelBase
 
         HasPopularGames  = PopularGames.Count > 0;
         HasBacklogGames  = BacklogGames.Count > 0;
+        TotalTitles      = BacklogGames.Count;
+        BacklogTitles    = BacklogGames.Count;
+        MultiplayerTitles = 0;
         HasBrowseData    = false;
         HasBrowseGenres  = false;
         HasBrowseTags    = false;
@@ -404,6 +430,16 @@ public partial class DepotViewModel : ViewModelBase
     private void BrowseAll()
         => BrowseAllRequested?.Invoke(this, EventArgs.Empty);
 
+    // The rail's starting views, and the matching carousels' "See all"
+    [RelayCommand]
+    private void BrowseNewReleases() => BrowsePresetRequested?.Invoke(this, DepotBrowsePreset.NewReleases);
+
+    [RelayCommand]
+    private void BrowsePlayTogether() => BrowsePresetRequested?.Invoke(this, DepotBrowsePreset.PlayTogether);
+
+    [RelayCommand]
+    private void BrowseBacklog() => BrowsePresetRequested?.Invoke(this, DepotBrowsePreset.Backlog);
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private async Task<GameItemViewModel?> FetchGameWithMediaAsync(
@@ -467,3 +503,6 @@ public partial class DepotViewModel : ViewModelBase
         return mediaClient.GetAbsoluteThumbnailUrl(media);
     }
 }
+
+/// <summary>A genre chip on the Depot home: the genre and how many titles carry it.</summary>
+public record DepotGenreChip(string Name, int Count);

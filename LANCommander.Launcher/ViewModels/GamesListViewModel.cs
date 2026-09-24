@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.ViewModels.Components;
@@ -22,6 +23,10 @@ public partial class GamesListViewModel : GamesCollectionViewModel
 
     private IEnumerable<ListItem>? _depotItems;
 
+    // Startup fires the background depot load and the post-import reload concurrently; each
+    // clears _allGames before awaiting, so unserialized runs append both result sets.
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+
     public override string ViewTitle => "Depot — All Games";
     public override bool ShowInLibraryFilter => true;
     public override bool ShowInstalledFilter => false;
@@ -39,6 +44,20 @@ public partial class GamesListViewModel : GamesCollectionViewModel
 
     [RelayCommand]
     private async Task LoadGamesInternalAsync()
+    {
+        await _loadLock.WaitAsync();
+
+        try
+        {
+            await LoadGamesCoreAsync();
+        }
+        finally
+        {
+            _loadLock.Release();
+        }
+    }
+
+    private async Task LoadGamesCoreAsync()
     {
         IsLoading = true;
         HasError = false;

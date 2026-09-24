@@ -164,7 +164,15 @@ public partial class MetadataStepViewModel : PackagingStepViewModel
     {
         try
         {
-            foreach (var subProvider in await _metadataClient.GetSubProvidersAsync(provider))
+            var subProviders = await _metadataClient.GetSubProvidersAsync(provider);
+
+            // The selection may have changed (or bounced back) while this request was in flight
+            if (SelectedProvider != provider)
+                return;
+
+            SubProviders.Clear();
+
+            foreach (var subProvider in subProviders)
                 SubProviders.Add(subProvider);
         }
         catch (Exception ex)

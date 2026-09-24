@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.ViewModels;
 
 namespace LANCommander.Launcher.Views;
@@ -19,6 +20,7 @@ public partial class ManageOverlay : UserControl
     public ManageOverlay()
     {
         InitializeComponent();
+        ModalEscape.Enable(this, () => Close());
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -36,6 +38,7 @@ public partial class ManageOverlay : UserControl
     private void OnRequestClose(object? sender, EventArgs e) => Close();
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
+    private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
     private void Close()
     {

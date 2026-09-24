@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
              xmlns:views="using:LANCommander.Launcher.Views"
              xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.InstallOptionsOverlay"
              x:DataType="vm:InstallOptionsViewModel"
              controls:AutoFocus.IsEnabled="True">
@@ -12,7 +13,7 @@
 
         <!-- Centered card -->
         <Border Classes="Dialog"
-                Width="460"
+                Width="560"
                 MaxHeight="600"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
@@ -21,9 +22,8 @@
 
                 <!-- ── Header ─────────────────────────────────────────────── -->
                 <Border DockPanel.Dock="Top" Classes="DialogHeader">
-                    <TextBlock FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"
-                               Text="{Binding DialogTitle}" />
+                    <components:DialogTitleBar Title="{Binding DialogTitle}"
+                                               CloseRequested="TitleBar_CloseRequested" />
                 </Border>
 
                 <!-- ── Buttons ────────────────────────────────────────────── -->
@@ -42,9 +42,10 @@
 
                 <!-- ── Body ───────────────────────────────────────────────── -->
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto"
-                              Padding="20,18">
-                    <views:InstallOptionsBody />
+                              VerticalScrollBarVisibility="Auto">
+                    <!-- Margin on the content rather than Padding on the ScrollViewer, which this
+                         Avalonia version leaves out of the scroll extent -->
+                    <views:InstallOptionsBody Margin="20,18" />
                 </ScrollViewer>
 
             </DockPanel>

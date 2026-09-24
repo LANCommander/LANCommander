@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.ViewModels;
 
 namespace LANCommander.Launcher.Views;
@@ -13,10 +14,12 @@ public partial class InstallOptionsOverlay : UserControl
     public InstallOptionsOverlay()
     {
         InitializeComponent();
+        ModalEscape.Enable(this, () => Close(false));
     }
 
     private void Confirm_Click(object? sender, RoutedEventArgs e) => Close(true);
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close(false);
+    private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close(false);
 
     private void Close(bool? result)
     {

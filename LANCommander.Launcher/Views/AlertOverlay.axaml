@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.AlertOverlay"
              controls:AutoFocus.IsEnabled="True">
 
@@ -18,9 +19,9 @@
 
                 <!-- Header -->
                 <Border Classes="DialogHeader">
-                    <TextBlock x:Name="TitleText"
-                               Text="Error"
-                               FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" />
+                    <components:DialogTitleBar x:Name="TitleBar"
+                                               Title="Error"
+                                               CloseRequested="TitleBar_CloseRequested" />
                 </Border>
 
                 <!-- Message -->

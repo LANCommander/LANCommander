@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             x:Class="LANCommander.Launcher.Views.Components.DepotBrowseLinks"
+             x:DataType="vm:DepotViewModel"
+             x:Name="Root">
+
+    <UserControl.Styles>
+        <!-- Rail rows, a little shorter than the page nav above them; they share its hover and active look -->
+        <Style Selector="Button.RailBrowse">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+        </Style>
+        <Style Selector="Button.RailBrowse TextBlock.Count">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- The Depot's starting views. DataContext is the DepotViewModel (it holds the counts and raises the
+         navigation); Selected names the row to light: All, NewReleases, PlayTogether or Backlog. -->
+    <StackPanel Spacing="2" Margin="8,0">
+        <TextBlock Classes="Kicker" Text="BROWSE" Margin="8,0,8,6" />
+
+        <Button Classes="RailNav RailBrowse"
+                Classes.active="{Binding Selected, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=All}"
+                Command="{Binding BrowseAllCommand}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="Count Mono" Text="{Binding TotalTitles}" />
+                <TextBlock Text="All titles" VerticalAlignment="Center" />
+            </DockPanel>
+        </Button>
+        <Button Classes="RailNav RailBrowse"
+                Classes.active="{Binding Selected, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=NewReleases}"
+                Command="{Binding BrowseNewReleasesCommand}">
+            <TextBlock Text="New releases" VerticalAlignment="Center" />
+        </Button>
+        <Button Classes="RailNav RailBrowse"
+                Classes.active="{Binding Selected, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=PlayTogether}"
+                Command="{Binding BrowsePlayTogetherCommand}"
+                IsVisible="{Binding !IsOfflineMode}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="Count Mono" Text="{Binding MultiplayerTitles}" />
+                <TextBlock Text="Play together" VerticalAlignment="Center" />
+            </DockPanel>
+        </Button>
+        <Button Classes="RailNav RailBrowse"
+                Classes.active="{Binding Selected, ElementName=Root, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Backlog}"
+                Command="{Binding BrowseBacklogCommand}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="Count Mono" Text="{Binding BacklogTitles}" />
+                <TextBlock Text="Your backlog" VerticalAlignment="Center" />
+            </DockPanel>
+        </Button>
+    </StackPanel>
+</UserControl>

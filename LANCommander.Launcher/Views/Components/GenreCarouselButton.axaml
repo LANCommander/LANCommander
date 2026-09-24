@@ -40,13 +40,9 @@
         <!-- Clip art, scrim and hover glass to the card's rounded corners -->
         <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True">
         <Panel>
-            <!-- Fallback when no hero image: a Surface card with a hairline edge -->
+            <!-- Fallback when no hero image: a Surface card; the hairline ring below draws its edge -->
             <Border IsVisible="{Binding !HasBackground}"
-                    Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{DynamicResource HairlineBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{DynamicResource RadiusMedium}"
-                    BoxShadow="{DynamicResource SurfaceHighlightShadow}" />
+                    Background="{DynamicResource SurfaceBrush}" />
 
             <!-- Hero background image -->
             <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
@@ -81,6 +77,11 @@
                     </LinearGradientBrush>
                 </Border.Background>
             </Border>
+
+            <!-- Hairline ring and lit top edge over art and fallback alike, matching covers -->
+            <Border CornerRadius="{DynamicResource RadiusMedium}"
+                    BoxShadow="{DynamicResource HairlineShadow}"
+                    IsHitTestVisible="False" />
         </Panel>
         </Border>
     </Button>

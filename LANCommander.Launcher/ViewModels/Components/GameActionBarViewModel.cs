@@ -36,6 +36,10 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<GameActionBarViewModel> _logger;
 
+    // Detail load, install-complete refresh and post-launch refresh can overlap; only the newest
+    // LoadActionsAsync may populate the lists or the Play actions show up twice
+    private int _actionsLoadVersion;
+
     [ObservableProperty]
     private Guid _gameId;
 
@@ -373,6 +377,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     /// </summary>
     private async Task LoadActionsAsync()
     {
+        var version = ++_actionsLoadVersion;
+
         Actions.Clear();
         SecondaryActions.Clear();
         HasMultipleActions = false;
@@ -390,6 +396,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             if (actions != null && actions.Any())
             {
                 var shims = await gameClient.GetShimsAsync(InstallDirectory, GameId);
+
+                if (version != _actionsLoadVersion)
+                    return;
 
                 // Only disambiguate when two actions share the exact same name; the bridged one is suffixed
                 // with the compatibility runtime it launches through (e.g. "Play (via Proton)").
@@ -962,6 +971,14 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         if (IsInstalling) return;
 
+#if DEBUG
+        if (IsInstallOptionsFixtureRequested)
+        {
+            await ShowInstallOptionsFixtureAsync();
+            return;
+        }
+#endif
+
         IsInstalling = true;
         StatusMessage = "Preparing to install...";
 
@@ -1466,6 +1483,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         optionsVm.DialogTitle = $"Modify {optionsVm.GameTitle}";
         optionsVm.ConfirmButtonText = "Apply";
         optionsVm.AlwaysShowDirectory = true;
+        optionsVm.IsModify = true;
 
         // Fetch base game archive sizes
         try
@@ -1693,7 +1711,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                     startIndex = i;
             }
 
-            LightboxOverlay.ShowOverlay(items, startIndex);
+            LightboxOverlay.ShowOverlay(items, startIndex, title: Title);
         }
         catch (Exception ex)
         {

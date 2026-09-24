@@ -9,198 +9,270 @@
              x:DataType="vm:DepotViewModel">
 
     <UserControl.Styles>
-        <!-- Browse chip buttons -->
-        <Style Selector="Button.browse-chip">
-            <Setter Property="Background" Value="#22FFFFFF" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="100" />
-            <Setter Property="Padding" Value="14,6" />
+        <!-- Genre pills: name and title count -->
+        <Style Selector="Button.GenrePill">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="14,0" />
             <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusFull}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontWeight" Value="Medium" />
         </Style>
-        <Style Selector="Button.browse-chip:pointerover">
-            <Setter Property="Background" Value="#44FFFFFF" />
+        <Style Selector="Button.GenrePill /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BoxShadow" Value="{DynamicResource SurfaceHighlightShadow}" />
+        </Style>
+        <Style Selector="Button.GenrePill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderStrongBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.GenrePill:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBorderStrongBrush}" />
+        </Style>
+        <Style Selector="Button.GenrePill TextBlock.Count">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer Classes="TitlebarOffset"
-                  HorizontalScrollBarVisibility="Disabled"
-                  controls:ScrollPersistence.ViewModel="{Binding}">
-        <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
+    <Grid ColumnDefinitions="250,*">
 
-            <!-- ══ Loading ══════════════════════════════════════════════════════ -->
-            <StackPanel Orientation="Horizontal" Spacing="10"
-                        HorizontalAlignment="Center"
-                        IsVisible="{Binding IsLoading}">
-                <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
+        <!-- ═══ LEFT PANEL: shared rail with the depot's starting views ═══ -->
+        <components:NavRail Grid.Column="0" ActivePage="Depot">
+            <components:NavRail.RailContent>
+                <components:DepotBrowseLinks />
+            </components:NavRail.RailContent>
+        </components:NavRail>
+
+        <!-- ═══ RIGHT PANEL ═══ -->
+        <ScrollViewer Grid.Column="1"
+                      Classes="TitlebarOffset"
+                      HorizontalScrollBarVisibility="Disabled"
+                      controls:ScrollPersistence.ViewModel="{Binding}">
+            <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
+
+                <!-- ══ Loading ══════════════════════════════════════════════════════ -->
+                <StackPanel Orientation="Horizontal" Spacing="10"
+                            HorizontalAlignment="Center"
+                            IsVisible="{Binding IsLoading}">
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                    <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
+                </StackPanel>
+
+                <!-- ══ Error ═════════════════════════════════════════════════════════ -->
+                <Border Classes="Notice Error" IsVisible="{Binding HasError}">
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                </Border>
+
+                <!-- ══ Empty state ════════════════════════════════════════════════════ -->
+                <StackPanel Spacing="12"
+                            HorizontalAlignment="Center"
+                            Margin="0,40,0,0">
+                    <StackPanel.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="!IsLoading" />
+                            <Binding Path="!HasContent" />
+                            <Binding Path="!HasError" />
+                        </MultiBinding>
+                    </StackPanel.IsVisible>
+                    <Icon Type="Regular" Value="Storefront" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
+                    <TextBlock Text="Nothing Here Yet" FontSize="{DynamicResource FontSizeBody}" Opacity="0.5" HorizontalAlignment="Center" />
+                    <TextBlock Text="Games will appear here once they're available on the server."
+                               FontSize="{DynamicResource FontSizeLabel}" Opacity="0.4" HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <!-- ══ POPULAR ════════════════════════════════════════════════════════
+                     Hero + logo cards in 16:9 boxes.
+                ═══════════════════════════════════════════════════════════════════════ -->
+                <CarouselControl Title="Popular"
+                                 Kicker="ON THIS SERVER"
+                                 WrapItems="True"
+                                 ItemsSource="{Binding PopularGames}"
+                                 ItemWidth="460"
+                                 VisibleItems="4"
+                                 Gap="16"
+                                 SeeAllCommand="{Binding BrowseAllCommand}"
+                                 IsVisible="{Binding HasPopularGames}">
+                    <CarouselControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                            <components:HeroCard Width="460" Height="215"
+                                                 Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                                 CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </CarouselControl.ItemTemplate>
+                </CarouselControl>
+
+                <!-- ══ SEARCH ════════════════════════════════════════════════════════ -->
+                <Grid RowDefinitions="Auto,Auto">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="1"
+                               Text="SEARCH"
+                               Classes="Kicker"
+                               VerticalAlignment="Center"
+                               Margin="0,0,0,10" />
+                    <TextBox Grid.Row="1" Grid.Column="1"
+                             Watermark="{Binding SearchWatermark}"
+                             Text="{Binding SearchText}"
+                             FontSize="{DynamicResource FontSizeBody}"
+                             MinHeight="44"
+                             VerticalContentAlignment="Center"
+                             Padding="8,10,14,10">
+                        <TextBox.InnerLeftContent>
+                            <Icon Type="Regular" Value="MagnifyingGlass" Width="16" Height="16" Margin="14,0,0,0"
+                                  Foreground="{DynamicResource TextTertiaryBrush}" />
+                        </TextBox.InnerLeftContent>
+                        <TextBox.InnerRightContent>
+                            <!-- Key hint: Enter runs the search -->
+                            <Border BorderBrush="#24FFFFFF" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusSmall}"
+                                    Padding="6,1"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="Enter" Classes="Mono"
+                                           FontSize="{DynamicResource FontSizeKicker}"
+                                           Foreground="{DynamicResource TextTertiaryBrush}" />
+                            </Border>
+                        </TextBox.InnerRightContent>
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Return" Command="{Binding SearchCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                </Grid>
+
+                <!-- ══ GENRES ════════════════════════════════════════════════════════
+                     The most common genres as pills with counts; the rest behind "See all".
+                ═══════════════════════════════════════════════════════════════════════ -->
+                <Grid IsVisible="{Binding HasBrowseGenres}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Classes="Text Primary"
+                                    Content="{Binding GenreToggleLabel}"
+                                    Command="{Binding ToggleGenresCommand}"
+                                    IsVisible="{Binding HasMoreGenres}"
+                                    FontSize="{DynamicResource FontSizeLabel}"
+                                    FontWeight="Medium"
+                                    Padding="8,4"
+                                    Margin="0,0,-8,0"
+                                    VerticalAlignment="Center" />
+                            <TextBlock Text="Genres" Classes="Section" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding VisibleGenreChips}" Margin="0,0,0,-8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepotGenreChip">
+                                    <Button Classes="GenrePill"
+                                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByGenreCommand}"
+                                            CommandParameter="{Binding Name}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            <TextBlock Classes="Count Mono" Text="{Binding Count}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ══ NEW RELEASES ═══════════════════════════════════════════════════
+                     Games sorted by release date, newest first.
+                ═══════════════════════════════════════════════════════════════════════ -->
+                <CarouselControl Title="New Releases"
+                                 ItemsSource="{Binding NewReleases}"
+                                 ItemWidth="160"
+                                 VisibleItems="6"
+                                 Gap="16"
+                                 ItemOverflow="14"
+                                 SeeAllCommand="{Binding BrowseNewReleasesCommand}"
+                                 IsVisible="{Binding HasNewReleases}">
+                    <CarouselControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                            <components:CoverButton Width="160" Height="240"
+                                                    Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </CarouselControl.ItemTemplate>
+                </CarouselControl>
+
+                <CarouselControl Title="Collections"
+                                 WrapItems="True"
+                                 ItemsSource="{Binding BrowseCollections}"
+                                 ItemWidth="200"
+                                 VisibleItems="4"
+                                 IsVisible="{Binding HasBrowseCollections}">
+                    <CarouselControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
+                            <components:GenreCarouselButton
+                                Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByCollectionCommand}"
+                                CommandParameter="{Binding Name}"
+                                Width="200" Height="150" />
+                        </DataTemplate>
+                    </CarouselControl.ItemTemplate>
+                </CarouselControl>
+
+                <!-- ══ BACKLOG ════════════════════════════════════════════════════════
+                     Games already in the user's library.
+                ═══════════════════════════════════════════════════════════════════════ -->
+                <CarouselControl Title="Your Backlog"
+                                 ItemsSource="{Binding BacklogGames}"
+                                 ItemWidth="160"
+                                 VisibleItems="6"
+                                 Gap="16"
+                                 ItemOverflow="14"
+                                 SeeAllCommand="{Binding BrowseBacklogCommand}"
+                                 IsVisible="{Binding HasBacklogGames}">
+                    <CarouselControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                            <components:CoverButton Width="160" Height="240"
+                                Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </CarouselControl.ItemTemplate>
+                </CarouselControl>
+
+                <!-- ══ PLAY TOGETHER ══════════════════════════════════════════════════
+                     Games that support multiplayer modes (LAN, local, online).
+                ═══════════════════════════════════════════════════════════════════════ -->
+                <CarouselControl Title="Play Together"
+                                 ItemsSource="{Binding MultiplayerGames}"
+                                 ItemWidth="160"
+                                 VisibleItems="6"
+                                 Gap="16"
+                                 ItemOverflow="14"
+                                 SeeAllCommand="{Binding BrowsePlayTogetherCommand}"
+                                 IsVisible="{Binding HasMultiplayerGames}">
+                    <CarouselControl.ItemTemplate>
+                        <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                            <components:CoverButton Width="160" Height="240"
+                                Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
+                                CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </CarouselControl.ItemTemplate>
+                </CarouselControl>
+
             </StackPanel>
-
-            <!-- ══ Error ═════════════════════════════════════════════════════════ -->
-            <Border IsVisible="{Binding HasError}"
-                    Background="#22FF4D4F"
-                    CornerRadius="4"
-                    Padding="12">
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorTextBrush}" TextWrapping="Wrap" />
-            </Border>
-
-            <!-- ══ Empty state ════════════════════════════════════════════════════ -->
-            <StackPanel Spacing="12"
-                        HorizontalAlignment="Center"
-                        Margin="0,40,0,0">
-                <StackPanel.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="!IsLoading" />
-                        <Binding Path="!HasContent" />
-                        <Binding Path="!HasError" />
-                    </MultiBinding>
-                </StackPanel.IsVisible>
-                <Icon Type="Regular" Value="Storefront" Width="32" Height="32" HorizontalAlignment="Center" Opacity="0.4" />
-                <TextBlock Text="Nothing Here Yet" FontSize="{DynamicResource FontSizeBody}" Opacity="0.5" HorizontalAlignment="Center" />
-                <TextBlock Text="Games will appear here once they're available on the server."
-                           FontSize="{DynamicResource FontSizeLabel}" Opacity="0.4" HorizontalAlignment="Center" />
-            </StackPanel>
-
-            <!-- ══ POPULAR ════════════════════════════════════════════════════════
-                 Hero + logo cards in 16:9 boxes.
-            ═══════════════════════════════════════════════════════════════════════ -->
-            <CarouselControl Title="Popular"
-                                      Kicker="ON THIS SERVER"
-                                      WrapItems="True"
-                                      ItemsSource="{Binding PopularGames}"
-                                      ItemWidth="460"
-                                      VisibleItems="4"
-                                      Gap="16"
-                                      SeeAllCommand="{Binding BrowseAllCommand}"
-                                      IsVisible="{Binding HasPopularGames}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
-                        <components:HeroCard Width="460" Height="215"
-                                             Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
-                                             CommandParameter="{Binding}" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-            
-            <!-- ══ SEARCH ════════════════════════════════════════════════════════ -->
-            <Grid RowDefinitions="Auto,Auto">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Row="0" Grid.Column="1"
-                           Text="SEARCH"
-                           Classes="Kicker"
-                           VerticalAlignment="Center"
-                           Margin="0,0,0,10" />
-                <TextBox Grid.Row="1" Grid.Column="1"
-                         Watermark="Search games…"
-                         Text="{Binding SearchText}"
-                         FontSize="{DynamicResource FontSizeBody}"
-                         Padding="8,10,14,10">
-                    <TextBox.InnerLeftContent>
-                        <Icon Type="Regular" Value="MagnifyingGlass" Width="16" Height="16" Margin="14,0,0,0"
-                              Foreground="{DynamicResource TextTertiaryBrush}" />
-                    </TextBox.InnerLeftContent>
-                    <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Return" Command="{Binding SearchCommand}" />
-                    </TextBox.KeyBindings>
-                </TextBox>
-            </Grid>
-
-            <CarouselControl Title="Genres"
-                                      WrapItems="True"
-                                      ItemsSource="{Binding BrowseGenres}"
-                                      ItemWidth="200"
-                                      VisibleItems="4"
-                                      IsVisible="{Binding HasBrowseGenres}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
-                        <components:GenreCarouselButton
-                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByGenreCommand}"
-                            CommandParameter="{Binding Name}"
-                            Width="200" Height="150" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-
-            <!-- ══ NEW RELEASES ═══════════════════════════════════════════════════
-                 Games sorted by release date, newest first.
-            ═══════════════════════════════════════════════════════════════════════ -->
-            <CarouselControl Title="New Releases"
-                                      ItemsSource="{Binding NewReleases}"
-                                      ItemWidth="160"
-                                      VisibleItems="6"
-                                      Gap="16"
-                                      ItemOverflow="14"
-                                      SeeAllCommand="{Binding BrowseAllCommand}"
-                                      IsVisible="{Binding HasNewReleases}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
-                        <components:CoverButton Width="160" Height="240"
-                                                Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
-                                                CommandParameter="{Binding}" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-            
-            <CarouselControl Title="Collections"
-                                      WrapItems="True"
-                                      ItemsSource="{Binding BrowseCollections}"
-                                      ItemWidth="200"
-                                      VisibleItems="4"
-                                      IsVisible="{Binding HasBrowseCollections}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
-                        <components:GenreCarouselButton
-                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).BrowseByCollectionCommand}"
-                            CommandParameter="{Binding Name}"
-                            Width="200" Height="150" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-
-            <!-- ══ BACKLOG ════════════════════════════════════════════════════════
-                 Games already in the user's library.
-            ═══════════════════════════════════════════════════════════════════════ -->
-            <CarouselControl Title="Your Backlog"
-                                      ItemsSource="{Binding BacklogGames}"
-                                      ItemWidth="160"
-                                      VisibleItems="6"
-                                      Gap="16"
-                                      ItemOverflow="14"
-                                      IsVisible="{Binding HasBacklogGames}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
-                        <components:CoverButton Width="160" Height="240"
-                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
-                            CommandParameter="{Binding}" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-
-            <!-- ══ PLAY TOGETHER ══════════════════════════════════════════════════
-                 Games that support multiplayer modes (LAN, local, online).
-            ═══════════════════════════════════════════════════════════════════════ -->
-            <CarouselControl Title="Play Together"
-                                      ItemsSource="{Binding MultiplayerGames}"
-                                      ItemWidth="160"
-                                      VisibleItems="6"
-                                      Gap="16"
-                                      ItemOverflow="14"
-                                      SeeAllCommand="{Binding BrowseAllCommand}"
-                                      IsVisible="{Binding HasMultiplayerGames}">
-                <CarouselControl.ItemTemplate>
-                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
-                        <components:CoverButton Width="160" Height="240"
-                            Command="{Binding $parent[local:DepotView].((vm:DepotViewModel)DataContext).ViewGameCommand}"
-                            CommandParameter="{Binding}" />
-                    </DataTemplate>
-                </CarouselControl.ItemTemplate>
-            </CarouselControl>
-
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

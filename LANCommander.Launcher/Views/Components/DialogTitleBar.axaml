@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LANCommander.Launcher.Views.Components.DialogTitleBar"
+             x:Name="Root">
+
+    <!-- Sits inside Border.DialogHeader: title (and optional subtitle) with a ghost close on the right.
+         The header's short right padding puts the close button 8px from the edge. (A negative margin
+         here would overflow the layout slot and Avalonia clips the button's right side.) -->
+    <DockPanel>
+        <IconButton DockPanel.Dock="Right"
+                    Classes="Text"
+                    IconType="Regular"
+                    IconValue="X"
+                    Size="16"
+                    Width="34"
+                    Height="34"
+                    Padding="0"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource TextTertiaryBrush}"
+                    ToolTip.Tip="Close"
+                    Click="Close_Click" />
+
+        <StackPanel Spacing="2" VerticalAlignment="Center" Margin="0,0,12,0">
+            <TextBlock Text="{Binding Title, ElementName=Root}"
+                       FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Subtitle, ElementName=Root}"
+                       Classes="Caption"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding Subtitle, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+    </DockPanel>
+</UserControl>

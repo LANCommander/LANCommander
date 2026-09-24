@@ -10,11 +10,13 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.Helpers;
 
 namespace LANCommander.Launcher.Views.Components;
 
-public partial class Cover : UserControl
+public partial class Cover : UserControl, ICarouselLazyItem
 {
     private static readonly HttpClient _httpClient = new();
 
@@ -53,6 +55,9 @@ public partial class Cover : UserControl
     public static readonly DirectProperty<Cover, double> FallbackFontSizeProperty =
         AvaloniaProperty.RegisterDirect<Cover, double>(nameof(FallbackFontSize), o => o.FallbackFontSize);
 
+    public static readonly DirectProperty<Cover, Thickness> FallbackPaddingProperty =
+        AvaloniaProperty.RegisterDirect<Cover, Thickness>(nameof(FallbackPadding), o => o.FallbackPadding);
+
     public static readonly DirectProperty<Cover, IBrush> FallbackBackgroundProperty =
         AvaloniaProperty.RegisterDirect<Cover, IBrush>(nameof(FallbackBackground), o => o.FallbackBackground);
 
@@ -77,6 +82,7 @@ public partial class Cover : UserControl
 
     private bool _hasCover;
     private double _fallbackFontSize = 12;
+    private Thickness _fallbackPadding = new(12);
     private IBrush _fallbackBackground = FallbackBrushes[0];
     private CancellationTokenSource? _loadCts;
     private VideoFrameRenderer? _videoRenderer;
@@ -86,6 +92,12 @@ public partial class Cover : UserControl
     // Source for an animated cover whose stream is deferred until it should actually
     // play (hover/focus), so the depot doesn't stream every video cover up front.
     private string? _animatedSource;
+
+    // Loads wait until the cover is attached. Inside a carousel they wait further, until the carousel
+    // reports the cover within a page of the viewport, so a long carousel doesn't fetch every cover.
+    private (string? Source, string? MimeType)? _pendingLoad;
+    private CarouselControl? _carousel;
+    private bool _nearViewport;
 
     public string? Source
     {
@@ -142,6 +154,12 @@ public partial class Cover : UserControl
         private set => SetAndRaise(FallbackFontSizeProperty, ref _fallbackFontSize, value);
     }
 
+    public Thickness FallbackPadding
+    {
+        get => _fallbackPadding;
+        private set => SetAndRaise(FallbackPaddingProperty, ref _fallbackPadding, value);
+    }
+
     public IBrush FallbackBackground
     {
         get => _fallbackBackground;
@@ -159,7 +177,7 @@ public partial class Cover : UserControl
 
         if (change.Property == SourceProperty || change.Property == MimeTypeProperty)
         {
-            LoadCover(Source, MimeType);
+            RequestLoad(Source, MimeType);
         }
         else if (change.Property == IsPlayingAnimationProperty || change.Property == AlwaysAnimateProperty)
         {
@@ -209,17 +227,66 @@ public partial class Cover : UserControl
         return result;
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        _carousel = this.FindAncestorOfType<CarouselControl>();
+
+        if (_carousel != null)
+            _carousel.QueueVisibilityUpdate();
+        else
+            FlushPendingLoad();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _lastLoadedSource = null;
+        _carousel = null;
+        _nearViewport = false;
         StopVideo();
         base.OnDetachedFromVisualTree(e);
     }
 
+    /// <inheritdoc />
+    public void SetCarouselNearViewport(bool near)
+    {
+        _nearViewport = near;
+
+        if (near)
+            FlushPendingLoad();
+    }
+
+    private void RequestLoad(string? source, string? mimeType)
+    {
+        var canLoad = VisualRoot != null && (_carousel == null || _nearViewport);
+
+        if (!canLoad)
+        {
+            _pendingLoad = (source, mimeType);
+            return;
+        }
+
+        _pendingLoad = null;
+        LoadCover(source, mimeType);
+    }
+
+    private void FlushPendingLoad()
+    {
+        if (_pendingLoad is not { } pending)
+            return;
+
+        _pendingLoad = null;
+        LoadCover(pending.Source, pending.MimeType);
+    }
+
     private void UpdateFallbackFontSize(Size size)
     {
+        // Title and inset both track the cover's short side: ~16px type in 12px of inset on a
+        // 160px shelf cover, capped so the detail page's large cover doesn't shout.
         var minDimension = Math.Min(size.Width, size.Height);
-        FallbackFontSize = Math.Max(8, minDimension * 0.09);
+        FallbackFontSize = Math.Clamp(minDimension * 0.1, 8, 28);
+        FallbackPadding = new Thickness(Math.Clamp(minDimension * 0.08, 6, 20));
     }
 
     private static bool IsAnimatedMimeType(string? mimeType)

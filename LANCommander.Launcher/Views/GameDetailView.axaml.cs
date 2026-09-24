@@ -277,6 +277,7 @@ public partial class GameDetailView : UserControl
             {
                 Type = m.IsVideo ? LightboxItemType.Video : LightboxItemType.Image,
                 Path = m.Path,
+                Title = m.Name,
                 // The carousel bitmap is a downscaled thumbnail; let the lightbox
                 // load the full-resolution image from Path for fullscreen display.
                 ImageSource = m.IsVideo ? m.ImageSource : null,
@@ -301,7 +302,7 @@ public partial class GameDetailView : UserControl
             }
         }
 
-        var overlay = LightboxOverlay.ShowOverlay(lightboxItems, tappedIndex, videoStartTimeMs);
+        var overlay = LightboxOverlay.ShowOverlay(lightboxItems, tappedIndex, videoStartTimeMs, detailVm.Title);
 
         // When the lightbox closes, resume the inline video player if one was paused
         if (inlinePlayer != null)

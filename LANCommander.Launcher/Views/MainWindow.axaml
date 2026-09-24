@@ -48,10 +48,10 @@
         <Grid VerticalAlignment="Top"
               Height="40"
               ZIndex="10"
-              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+              ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 
             <!-- Translucent tint — hidden on depot/library so covers show through -->
-            <Border Grid.ColumnSpan="6"
+            <Border Grid.ColumnSpan="5"
                     IsHitTestVisible="False"
                     Background="#80000000"
                     IsVisible="{Binding ShowTitlebarTint}" />
@@ -80,32 +80,8 @@
                     PointerPressed="TitleBarDragRegion_PointerPressed"
                     DoubleTapped="TitleBarDragRegion_DoubleTapped" />
 
-            <!-- Refresh button (visible when a games collection is active and not syncing) -->
-            <Border Grid.Column="3"
-                    IsVisible="{Binding ShellViewModel.IsRefreshVisible}"
-                    Padding="0,0,2,0"
-                    VerticalAlignment="Center">
-                <IconButton Classes="Text"
-                            Command="{Binding ShellViewModel.RefreshCommand}"
-                            IconType="Regular"
-                            IconValue="ArrowsClockwise"
-                            Width="40" Height="40" />
-            </Border>
-
-            <!-- Import progress bar (replaces refresh button while syncing) -->
-            <Border Grid.Column="3"
-                    IsVisible="{Binding ShellViewModel.IsSyncing}"
-                    Padding="4,0,4,0"
-                    VerticalAlignment="Center">
-                <ProgressBar Value="{Binding ShellViewModel.ImportProgress}"
-                             IsIndeterminate="{Binding ShellViewModel.IsImportIndeterminate}"
-                             Minimum="0" Maximum="1"
-                             Width="100" Height="4"
-                             VerticalAlignment="Center" />
-            </Border>
-
             <!-- Profile button + offline indicator (visible only when shell is active) -->
-            <Border Grid.Column="4"
+            <Border Grid.Column="3"
                     IsVisible="{Binding IsShellActive}"
                     Padding="0,0,4,0"
                     VerticalAlignment="Center">
@@ -186,7 +162,7 @@
 
             <!-- Big Screen status items (battery / volume / time) — shown only in big screen mode,
                  where the window controls are hidden, so the two panels never overlap. -->
-            <StackPanel Grid.Column="5"
+            <StackPanel Grid.Column="4"
                         Orientation="Horizontal"
                         Spacing="16"
                         VerticalAlignment="Center"
@@ -236,7 +212,7 @@
             </StackPanel>
 
             <!-- Window Controls (hidden in big screen mode) -->
-            <StackPanel Grid.Column="5" Orientation="Horizontal"
+            <StackPanel Grid.Column="4" Orientation="Horizontal"
                         IsVisible="{Binding IsNotBigScreenMode}">
                 <Button x:Name="MinimizeButton"
                         Width="46"

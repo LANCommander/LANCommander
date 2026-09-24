@@ -160,6 +160,9 @@ public class CarouselControl : TemplatedControl
     private double _currentOffsetX = 0;
     private WindowBase? _hostWindow;
     private bool _windowActive = true;
+    private int _scrollGeneration;
+
+    private static readonly TimeSpan ScrollDuration = TimeSpan.FromMilliseconds(350);
 
     static CarouselControl()
     {
@@ -200,7 +203,7 @@ public class CarouselControl : TemplatedControl
                 new TransformOperationsTransition
                 {
                     Property = RenderTransformProperty,
-                    Duration = TimeSpan.FromMilliseconds(350),
+                    Duration = ScrollDuration,
                     Easing = new CubicEaseOut()
                 }
             };
@@ -453,16 +456,27 @@ public class CarouselControl : TemplatedControl
         _currentOffsetX = offsetX;
         _itemsContainer.RenderTransform = TranslateX(offsetX);
         UpdateItemVisibility();
+
+        // Tight sides while items slide past the edges; re-evaluate once the last scroll has landed
+        var generation = ++_scrollGeneration;
+        UpdateClipGeometry(tightSides: true);
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (generation == _scrollGeneration)
+                UpdateClipGeometry();
+        }, ScrollDuration);
     }
 
     private void ScrollInstant(double offsetX)
     {
         if (_itemsContainer == null) return;
         _currentOffsetX = offsetX;
+        _scrollGeneration++;
         _itemsContainer.Transitions = null;
         _itemsContainer.RenderTransform = TranslateX(offsetX);
         _itemsContainer.Transitions = _transitions;
         UpdateItemVisibility();
+        UpdateClipGeometry();
     }
 
     private static ITransform TranslateX(double x) =>
@@ -551,35 +565,67 @@ public class CarouselControl : TemplatedControl
     private void ApplyItemOverflow()
     {
         if (_clipPanel == null) return;
+        // Horizontal only: vertical room for hover growth comes from the clip geometry, so padding here
+        // would just push the items away from the header and the next section
         if (_itemsContainer is Border border)
-            border.Padding = new Thickness(ItemOverflow);
+            border.Padding = new Thickness(ItemOverflow, 0);
 
         UpdateClipGeometry();
         SnapToCurrentIndex();
     }
 
-    // Replaces ClipToBounds with a geometry clip extended top and bottom by 2*ItemOverflow, giving hovered
-    // items room to scale without being clipped while scrolled-off items still are. Left and right stay
-    // tight: items end exactly where the nav columns begin, so the arrows sit flush against them and the
-    // item area lines up with content in the same shared columns (e.g. a cover grid). The trade-off is that
-    // an edge item's hover growth (~3px) is clipped at the arrow column.
-    private void UpdateClipGeometry()
+    // Replaces ClipToBounds with a geometry clip extended well past the top and bottom, giving hovered
+    // items room to scale and cast their shadow without being clipped while scrolled-off items still are. Left and right extend
+    // by ItemOverflow only when no item intrudes into that strip (i.e. the edge falls in a gap), so a fully
+    // visible edge item can grow into the arrow column while a partially scrolled-off one stays cut at the
+    // edge. While a scroll animates the sides stay tight, since items slide through those strips.
+    private void UpdateClipGeometry() => UpdateClipGeometry(tightSides: false);
+
+    private void UpdateClipGeometry(bool tightSides)
     {
         if (_clipPanel == null) return;
 
-        if (ItemOverflow > 0 || WrapItems)
+        // Always applied: it's the only thing hiding scrolled-off items, since the control doesn't clip to bounds
+        _clipGeometry ??= new RectangleGeometry();
+        var b = _clipPanel.Bounds;
+        // Items never scroll vertically, so the clip only has to leave room for hover growth and the
+        // popover shadow (which reaches ~44px below a cover); a panel height either way is ample
+        var vPad = b.Height;
+        var leftPad = 0.0;
+        var rightPad = 0.0;
+
+        if (!tightSides && ItemOverflow > 0)
         {
-            _clipGeometry ??= new RectangleGeometry();
-            var b = _clipPanel.Bounds;
-            var vPad = ItemOverflow * 2;
-            _clipGeometry.Rect = new Rect(0, -vPad, b.Width, b.Height + 2 * vPad);
-            _clipPanel.Clip = _clipGeometry;
+            var scroll = -_currentOffsetX - ItemOverflow;
+            if (!AnyItemIntersects(scroll - ItemOverflow, scroll))
+                leftPad = ItemOverflow;
+            if (!AnyItemIntersects(scroll + b.Width, scroll + b.Width + ItemOverflow))
+                rightPad = ItemOverflow;
         }
-        else
+
+        _clipGeometry.Rect = new Rect(-leftPad, -vPad, b.Width + leftPad + rightPad, b.Height + 2 * vPad);
+        _clipPanel.Clip = _clipGeometry;
+    }
+
+    /// <summary>Whether any item overlaps the item-space span [<paramref name="from"/>, <paramref name="to"/>).</summary>
+    private bool AnyItemIntersects(double from, double to)
+    {
+        var count = _itemsControl?.ItemCount ?? 0;
+        var step = ItemWidth + Gap;
+        if (count == 0 || step <= 0) return false;
+
+        // Only the items nearest the span can reach it
+        var first = Math.Max(0, (int)Math.Floor(from / step));
+        var last = Math.Min(count - 1, (int)Math.Floor(to / step));
+
+        for (var i = first; i <= last; i++)
         {
-            _clipPanel.Clip = null;
-            _clipGeometry = null;
+            var itemLeft = i * step;
+            if (itemLeft + ItemWidth > from && itemLeft < to)
+                return true;
         }
+
+        return false;
     }
 
     // Compensates for the Border padding on PART_ItemsContainer: the padding

@@ -166,13 +166,14 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel x:Name="AllGamesPanel" Grid.Column="1" Spacing="4"
+                    <StackPanel x:Name="AllGamesPanel" Grid.Column="1" Spacing="12"
                                 SizeChanged="AllGamesPanel_SizeChanged">
                         <DockPanel>
                             <Button DockPanel.Dock="Right"
                                     Command="{Binding ClearCollectionFilterCommand}"
                                     Classes="Text Error"
                                     Padding="8,4"
+                                    Margin="0,-4"
                                     Focusable="False"
                                     IsVisible="{Binding IsCollectionFiltered}">
                                 <Icon Type="Regular" Value="X" Width="14" Height="14" />

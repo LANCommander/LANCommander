@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using ByteSizeLib;
 using LANCommander.Packaging;
 using LANCommander.Packaging.Changes;
 
@@ -42,6 +43,22 @@ public class CheckableTreeNode : INotifyPropertyChanged
 
     public bool IsUpdate => Indicator == "~";
 
+    /// <summary>Tag text for the tree row; tags are written uppercase since Avalonia has no text-transform.</summary>
+    public string? AnnotationText => Annotation?.ToUpperInvariant();
+
+    /// <summary>A file that existed before and was modified gets the warning tag rather than the accent one.</summary>
+    public bool IsChangedAnnotation => Annotation == "changed";
+
+    /// <summary>Bytes on disk: a file's own length, or everything under a directory. Null when not known.</summary>
+    public long? Size { get; set; }
+
+    public string SizeText => Size is { } size ? ByteSize.FromBytes(size).ToString("0.##") : string.Empty;
+
+    /// <summary>Drives the dimmed label, so what is left out reads as left out at a glance.</summary>
+    public bool IsExcluded => _isChecked == false;
+
+    public bool IsRoot => Parent == null;
+
     public bool IsLeaf => Children.Count == 0;
 
     public ObservableCollection<CheckableTreeNode> Children { get; } = new();
@@ -64,7 +81,7 @@ public class CheckableTreeNode : INotifyPropertyChanged
 
             _isChecked = effective;
 
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+            NotifyCheckedChanged();
 
             if (_suppressEvents)
                 return;
@@ -91,13 +108,19 @@ public class CheckableTreeNode : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    private void NotifyCheckedChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExcluded)));
+    }
+
     private void SetChildrenChecked(bool value)
     {
         foreach (var child in Children)
         {
             child._suppressEvents = true;
             child._isChecked = value;
-            child.PropertyChanged?.Invoke(child, new PropertyChangedEventArgs(nameof(IsChecked)));
+            child.NotifyCheckedChanged();
             child._suppressEvents = false;
 
             child.SetChildrenChecked(value);
@@ -119,7 +142,7 @@ public class CheckableTreeNode : INotifyPropertyChanged
 
         _suppressEvents = true;
         _isChecked = newState;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+        NotifyCheckedChanged();
         _suppressEvents = false;
 
         Parent?.RecalculateChecked();
@@ -169,6 +192,34 @@ public class CheckableTreeNode : INotifyPropertyChanged
     public int CountTotalLeaves() =>
         Children.Count == 0 ? 1 : Children.Sum(c => c.CountTotalLeaves());
 
+    public long SumCheckedSize() =>
+        Children.Count == 0
+            ? IsChecked == true ? Size ?? 0 : 0
+            : Children.Sum(c => c.SumCheckedSize());
+
+    /// <summary>Rolls leaf sizes up into their directories.</summary>
+    private long? AggregateSizes()
+    {
+        if (Children.Count == 0)
+            return Size;
+
+        long total = 0;
+        var known = false;
+
+        foreach (var child in Children)
+        {
+            if (child.AggregateSizes() is { } size)
+            {
+                total += size;
+                known = true;
+            }
+        }
+
+        Size = known ? total : null;
+
+        return Size;
+    }
+
     /// <summary>
     /// Builds a directory tree from absolute paths and their paths relative to the install root.
     /// </summary>
@@ -176,9 +227,11 @@ public class CheckableTreeNode : INotifyPropertyChanged
     /// Optional badge per absolute path, used to mark the files a post-install patch touched so
     /// the user can see their patching in among the thousands of files the installer produced.
     /// </param>
+    /// <param name="sizeOf">Optional length lookup per absolute path; directories get the sum.</param>
     public static CheckableTreeNode BuildFileTree(
         IEnumerable<(string FullPath, string RelativePath)> files,
-        IReadOnlyDictionary<string, string>? annotations = null)
+        IReadOnlyDictionary<string, string>? annotations = null,
+        Func<string, long?>? sizeOf = null)
     {
         var root = new CheckableTreeNode { Name = "Root", IsExpanded = true };
 
@@ -215,6 +268,7 @@ public class CheckableTreeNode : INotifyPropertyChanged
                                  annotations.TryGetValue(fullPath, out var annotation)
                         ? annotation
                         : null,
+                    Size = isLeaf ? sizeOf?.Invoke(fullPath) : null,
                     // Deep trees are unreadable fully expanded; the first couple of levels are
                     // enough to orient the user.
                     IsExpanded = i < 2,
@@ -224,6 +278,8 @@ public class CheckableTreeNode : INotifyPropertyChanged
                 current = node;
             }
         }
+
+        root.AggregateSizes();
 
         return root;
     }

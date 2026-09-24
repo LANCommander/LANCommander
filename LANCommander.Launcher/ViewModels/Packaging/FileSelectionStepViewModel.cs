@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ByteSizeLib;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.ViewModels.Components;
@@ -126,14 +127,18 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
 
         _root = CheckableTreeNode.BuildFileTree(
             allPaths.Select(p => (p, Path.GetRelativePath(installDirectory, p))),
-            annotations);
+            annotations,
+            GetFileSize);
 
+        // The install folder itself heads the tree, so the whole capture can be toggled from one row.
+        _root.Name = installDirectory;
         _root.OnTreeSelectionChanged = UpdateSummary;
 
         Roots.Clear();
 
-        foreach (var child in _root.Children)
-            Roots.Add(child);
+        // A childless root would count itself as one selected file.
+        if (_root.Children.Count > 0)
+            Roots.Add(_root);
 
         _builtFor = installDirectory;
         _builtWithPostInstallCount = Package.PostInstallFiles.Count;
@@ -188,6 +193,18 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
         return found;
     }
 
+    private static long? GetFileSize(string path)
+    {
+        try
+        {
+            return new FileInfo(path).Length;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     private static bool IsUnder(string path, string directory) =>
         !string.IsNullOrWhiteSpace(directory) &&
         path.StartsWith(directory, StringComparison.OrdinalIgnoreCase);
@@ -214,7 +231,9 @@ public partial class FileSelectionStepViewModel : PackagingStepViewModel
         var selected = Roots.Sum(r => r.CountCheckedLeaves());
         var total = Roots.Sum(r => r.CountTotalLeaves());
 
-        Summary = $"{selected} of {total} file(s) selected.";
+        var selectedSize = ByteSize.FromBytes(Roots.Sum(r => r.SumCheckedSize())).ToString("0.##");
+
+        Summary = $"{selected} of {total} file(s) selected · {selectedSize}";
 
         CanGoNext = selected > 0;
     }

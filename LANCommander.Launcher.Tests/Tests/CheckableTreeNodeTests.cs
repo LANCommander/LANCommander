@@ -49,6 +49,32 @@ public class CheckableTreeNodeTests
     }
 
     [Fact]
+    public void RollsFileSizesUpIntoDirectories()
+    {
+        var sizes = new Dictionary<string, long>
+        {
+            [@"C:\Games\Example\game.exe"] = 1000,
+            [@"C:\Games\Example\Data\a.dat"] = 200,
+            [@"C:\Games\Example\Data\b.dat"] = 30,
+        };
+
+        var root = CheckableTreeNode.BuildFileTree(
+            sizes.Keys.Select(p => (p, p.Substring(@"C:\Games\Example\".Length))),
+            sizeOf: p => sizes[p]);
+
+        var data = root.Children.First(c => c.Name == "Data");
+
+        Assert.Equal(230, data.Size);
+        Assert.Equal(1230, root.Size);
+
+        // The summary's byte total follows the selection, not the tree.
+        data.Children[0].IsChecked = false;
+
+        Assert.Equal(1030, root.SumCheckedSize());
+        Assert.True(data.Children[0].IsExcluded);
+    }
+
+    [Fact]
     public void UncheckingALeafDeselectsIt()
     {
         // The bug behind "non-selected items show up in Launch Action": the control cycled to

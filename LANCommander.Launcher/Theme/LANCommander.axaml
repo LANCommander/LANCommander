@@ -929,13 +929,236 @@
 
   <!-- ===================================================== -->
   <!-- TREES                                                 -->
-  <!-- 28px rows at radius 2                                 -->
+  <!-- 28px rows at radius 2, 18px of indent per level with  -->
+  <!-- a hairline guide down each open branch. The caret     -->
+  <!-- column is fixed, so leaves line up with the folders   -->
+  <!-- above them. Sit the TreeView in a Border.Card at      -->
+  <!-- Padding 6,8. Row content: CheckBox, Icon.TreeIcon,    -->
+  <!-- TextBlock.TreeLabel, then StatusTag / TreeMeta docked -->
+  <!-- right, 8px apart.                                     -->
   <!-- ===================================================== -->
 
+  <!-- Rows trim to the panel rather than widening it; deep install trees otherwise grow a horizontal scrollbar -->
+  <Style Selector="TreeView">
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </Style>
+
+  <!-- Replaces Fluent's template, which indents by padding the header and has no guides. Children sit in a
+       Border whose left edge is the guide: 14px in, so it runs under the caret's centre (8px row padding +
+       half the 13px caret), plus 1px edge and 3px padding for 18px per level. The part names differ from
+       Fluent's, so its state styles don't reach in. PART_Header keeps the double-tap-to-expand hook. -->
   <Style Selector="TreeViewItem">
     <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <!-- Focus is an inset ring on the row (below); an adorner would wrap the whole open branch -->
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel>
+          <Panel Name="PART_Header" MinHeight="{TemplateBinding MinHeight}">
+            <Border Name="PART_Row"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}" />
+            <Border Name="PART_SelectionRail"
+                    Width="2"
+                    Margin="0,6"
+                    CornerRadius="1"
+                    HorizontalAlignment="Left"
+                    Background="{DynamicResource AccentTextBrush}"
+                    IsVisible="False" />
+            <Grid ColumnDefinitions="13,*" Margin="{TemplateBinding Padding}">
+              <!-- The glyph is content rather than template so the rotation style below can reach it -->
+              <ToggleButton Name="PART_Caret"
+                            Focusable="False"
+                            Cursor="Hand"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
+                <ToggleButton.Template>
+                  <ControlTemplate>
+                    <ContentPresenter Background="Transparent"
+                                      Content="{TemplateBinding Content}"
+                                      HorizontalContentAlignment="Center"
+                                      VerticalContentAlignment="Center" />
+                  </ControlTemplate>
+                </ToggleButton.Template>
+                <Path Name="PART_CaretGlyph"
+                      Width="13"
+                      Height="13"
+                      Data="M4.9,3 L8.4,6.5 L4.9,10"
+                      Stroke="{DynamicResource TextSecondaryBrush}"
+                      StrokeThickness="1.3"
+                      StrokeLineCap="Round"
+                      StrokeJoin="Round"
+                      Stretch="None"
+                      RenderTransformOrigin="50%,50%"
+                      RenderTransform="rotate(0deg)">
+                  <Path.Transitions>
+                    <Transitions>
+                      <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" />
+                    </Transitions>
+                  </Path.Transitions>
+                </Path>
+              </ToggleButton>
+              <ContentPresenter Name="PART_HeaderPresenter"
+                                Grid.Column="1"
+                                Margin="8,0,0,0"
+                                Focusable="False"
+                                Content="{TemplateBinding Header}"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Center" />
+            </Grid>
+          </Panel>
+          <Border Name="PART_Guide"
+                  Margin="14,0,0,0"
+                  Padding="3,0,0,0"
+                  BorderThickness="1,0,0,0"
+                  BorderBrush="#17FFFFFF"
+                  IsVisible="{TemplateBinding IsExpanded}">
+            <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
+          </Border>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="TreeViewItem /template/ ToggleButton#PART_Caret:checked Path#PART_CaretGlyph">
+    <Setter Property="RenderTransform" Value="rotate(90deg)" />
+  </Style>
+  <!-- The caret hides but keeps its column, so leaves stay aligned with folders -->
+  <Style Selector="TreeViewItem:empty /template/ ToggleButton#PART_Caret,
+                   TreeViewItem:empty /template/ Border#PART_Guide">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <!-- Hover keys off the row itself: an item is :pointerover whenever any row in its branch is -->
+  <Style Selector="TreeViewItem /template/ Panel#PART_Header:pointerover > Border#PART_Row">
+    <Setter Property="Background" Value="{DynamicResource StateHoverBrush}" />
+  </Style>
+  <!-- Selected: Raised plus the 2px accent rail, as in lists; declared after hover so it holds under the pointer -->
+  <Style Selector="TreeViewItem:selected /template/ Border#PART_Row">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+  </Style>
+  <Style Selector="TreeViewItem:selected /template/ Border#PART_SelectionRail">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="TreeViewItem:focus-visible /template/ Border#PART_Row">
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusRingShadow}" />
+  </Style>
+
+  <!-- Tree checkbox: 15px at radius 2. Checked and partly checked both fill with the accent; a folder whose
+       children disagree shows a bar, not a tick. Glyphs are drawn inside the 1px edge, hence the offsets. -->
+  <Style Selector="TreeViewItem CheckBox">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderThickness="2"
+                BorderBrush="{DynamicResource FocusRingBrush}"
+                CornerRadius="5"
+                Margin="-3"
+                AdornerLayer.IsClipEnabled="False" />
+      </FocusAdornerTemplate>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Box"
+                Width="15"
+                Height="15"
+                CornerRadius="{DynamicResource RadiusSmall}"
+                BorderThickness="1"
+                BorderBrush="#47FFFFFF"
+                Background="Transparent">
+          <Panel>
+            <Path Name="PART_Tick"
+                  Data="M3.8,6.7 L5.5,8.4 L9.2,4.8"
+                  Stroke="White"
+                  StrokeThickness="1.4"
+                  StrokeLineCap="Round"
+                  StrokeJoin="Round"
+                  Stretch="None"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top"
+                  IsVisible="False" />
+            <Path Name="PART_Bar"
+                  Data="M4,6.5 L9,6.5"
+                  Stroke="White"
+                  StrokeThickness="1.4"
+                  StrokeLineCap="Round"
+                  Stretch="None"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top"
+                  IsVisible="False" />
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="TreeViewItem CheckBox:pointerover /template/ Border#PART_Box">
+    <Setter Property="BorderBrush" Value="#73FFFFFF" />
+  </Style>
+  <Style Selector="TreeViewItem CheckBox:checked /template/ Border#PART_Box,
+                   TreeViewItem CheckBox:indeterminate /template/ Border#PART_Box">
+    <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillBrush}" />
+  </Style>
+  <Style Selector="TreeViewItem CheckBox:checked /template/ Path#PART_Tick,
+                   TreeViewItem CheckBox:indeterminate /template/ Path#PART_Bar">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="TreeViewItem CheckBox:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <!-- Row content -->
+  <Style Selector="Icon.TreeIcon">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="Value" Value="File" />
+  </Style>
+  <Style Selector="Icon.TreeIcon.Folder">
+    <Setter Property="Value" Value="FolderSimple" />
+  </Style>
+  <!-- Folder names in the UI face; file names (.Mono) and the root path in mono at 12 -->
+  <Style Selector="TextBlock.TreeLabel">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.TreeLabel.Mono">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+  </Style>
+  <Style Selector="TextBlock.TreeLabel.Root">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <!-- What is left out reads as left out -->
+  <Style Selector="TextBlock.TreeLabel.Excluded">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <!-- Right-hand figures: sizes, counts -->
+  <Style Selector="TextBlock.TreeMeta">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- Status tags run a step smaller in a 28px row -->
+  <Style Selector="TreeViewItem Border.StatusTag">
+    <Setter Property="MinHeight" Value="18" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TreeViewItem Border.StatusTag > TextBlock">
+    <Setter Property="FontSize" Value="10" />
   </Style>
 
   <!-- ===================================================== -->

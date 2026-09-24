@@ -42,23 +42,46 @@
 
         <Border Grid.Row="2" Classes="Card" Padding="6,8">
             <TreeView ItemsSource="{Binding Roots}">
+                <!-- The node decides what starts open; without this every branch starts collapsed -->
+                <TreeView.Styles>
+                    <Style Selector="TreeViewItem" x:DataType="components:CheckableTreeNode">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    </Style>
+                </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="components:CheckableTreeNode"
                                       ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                      IsThreeState="False"
-                                      MinWidth="0" />
-                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Left"
+                                      Margin="0,0,8,0"
+                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      IsThreeState="False" />
+                            <Icon DockPanel.Dock="Left"
+                                  Margin="0,0,8,0"
+                                  Classes="TreeIcon"
+                                  Classes.Folder="{Binding !IsLeaf}" />
+
+                            <TextBlock DockPanel.Dock="Right"
+                                       Margin="8,0,0,0"
+                                       Classes="TreeMeta"
+                                       Text="{Binding SizeText}" />
 
                             <!-- Marks what the Customize step saw appear or change, so a no-CD
                                  patch is findable among the installer's thousands of files. -->
-                            <Border Classes="StatusTag"
-                                    VerticalAlignment="Center"
+                            <Border DockPanel.Dock="Right"
+                                    Margin="8,0,0,0"
+                                    Classes="StatusTag"
+                                    Classes.Warning="{Binding IsChangedAnnotation}"
                                     IsVisible="{Binding HasAnnotation}">
-                                <TextBlock Text="{Binding Annotation}" />
+                                <TextBlock Text="{Binding AnnotationText}" />
                             </Border>
-                        </StackPanel>
+
+                            <TextBlock Classes="TreeLabel"
+                                       Classes.Mono="{Binding IsLeaf}"
+                                       Classes.Root="{Binding IsRoot}"
+                                       Classes.Excluded="{Binding IsExcluded}"
+                                       Text="{Binding Name}" />
+                        </DockPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>

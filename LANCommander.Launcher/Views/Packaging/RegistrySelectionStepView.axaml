@@ -5,6 +5,16 @@
              x:Class="LANCommander.Launcher.Views.Packaging.RegistrySelectionStepView"
              x:DataType="vm:RegistrySelectionStepViewModel">
 
+    <!-- Values are not files; the theme's file glyph would say otherwise -->
+    <UserControl.Styles>
+        <Style Selector="Icon.TreeIcon">
+            <Setter Property="Value" Value="Hash" />
+        </Style>
+        <Style Selector="Icon.TreeIcon.Folder">
+            <Setter Property="Value" Value="FolderSimple" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,*,Auto">
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
@@ -19,34 +29,48 @@
                        VerticalAlignment="Center" />
         </DockPanel>
 
-        <Border Grid.Row="1"
-                CornerRadius="4"
-                Background="{DynamicResource SurfaceBrush}">
-            <TreeView ItemsSource="{Binding Roots}" Padding="6">
+        <Border Grid.Row="1" Classes="Card" Padding="6,8">
+            <TreeView ItemsSource="{Binding Roots}">
+                <!-- The node decides what starts open; without this every branch starts collapsed -->
+                <TreeView.Styles>
+                    <Style Selector="TreeViewItem" x:DataType="components:CheckableTreeNode">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    </Style>
+                </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="components:CheckableTreeNode"
                                       ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                      IsThreeState="False"
-                                      MinWidth="0" />
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Left"
+                                      Margin="0,0,8,0"
+                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      IsThreeState="False" />
+                            <Icon DockPanel.Dock="Left"
+                                  Margin="0,0,8,0"
+                                  Classes="TreeIcon"
+                                  Classes.Folder="{Binding !IsLeaf}" />
 
-                            <TextBlock Text="+"
-                                       Foreground="{DynamicResource SuccessTextBrush}"
-                                       FontWeight="Bold"
-                                       VerticalAlignment="Center"
-                                       ToolTip.Tip="Key created"
-                                       IsVisible="{Binding IsCreate}" />
+                            <Border DockPanel.Dock="Right"
+                                    Margin="8,0,0,0"
+                                    Classes="StatusTag"
+                                    ToolTip.Tip="Key created"
+                                    IsVisible="{Binding IsCreate}">
+                                <TextBlock Text="CREATED" />
+                            </Border>
+                            <Border DockPanel.Dock="Right"
+                                    Margin="8,0,0,0"
+                                    Classes="StatusTag Warning"
+                                    ToolTip.Tip="Value written"
+                                    IsVisible="{Binding IsUpdate}">
+                                <TextBlock Text="WRITTEN" />
+                            </Border>
 
-                            <TextBlock Text="~"
-                                       Foreground="{DynamicResource Primary4Brush}"
-                                       FontWeight="Bold"
-                                       VerticalAlignment="Center"
-                                       ToolTip.Tip="Value written"
-                                       IsVisible="{Binding IsUpdate}" />
-
-                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                        </StackPanel>
+                            <!-- Keys read as folders; values in mono like file names -->
+                            <TextBlock Classes="TreeLabel"
+                                       Classes.Mono="{Binding IsLeaf}"
+                                       Classes.Excluded="{Binding IsExcluded}"
+                                       Text="{Binding Name}" />
+                        </DockPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>

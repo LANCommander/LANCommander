@@ -66,6 +66,7 @@
 
             <!-- Logo (bottom-left) -->
             <Image controls:AsyncImage.Source="{Binding LogoPath}"
+                   controls:AsyncImage.DecodeWidth="190"
                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
                    MaxWidth="190" MaxHeight="72"
                    Margin="14,0,0,14"

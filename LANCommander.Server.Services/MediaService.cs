@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 using LANCommander.SDK;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace LANCommander.Server.Services
 {
@@ -237,24 +238,135 @@ namespace LANCommander.Server.Services
             return await WriteToFileAsync(media, stream);
         }
 
-        public async Task<string> GenerateThumbnailAsync(Media media, int quality = 75)
+        public async Task<string> GenerateThumbnailAsync(Media media, int? quality = null)
         {
-            var source = GetMediaPath(media);
             var destination = GetThumbnailPath(media);
+            var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
 
-            if (!File.Exists(source))
-                return String.Empty;
+            // The source is (re)written whenever this runs, so any sized variants cut from the old file are stale.
+            DeleteSizedThumbnails(media);
+
+            if (config == null || !config.Thumbnails.Enabled)
+                return destination;
+
+            await RenderThumbnailAsync(media, destination, quality ?? config.Thumbnails.Quality, (width, height) => new Size(
+                (int)Math.Clamp(width * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Width, config.Thumbnails.MaxSize.Width),
+                (int)Math.Clamp(height * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Height, config.Thumbnails.MaxSize.Height)));
+
+            return destination;
+        }
+
+        /// <summary>
+        /// Sizes a sized thumbnail request is rounded up to, so an anonymous caller can't make the server
+        /// render and cache a variant for every pixel width.
+        /// </summary>
+        private static readonly int[] SizedThumbnailSteps = [64, 128, 192, 256, 384, 512, 768, 1024, 1280, 1536, 1920, 2560, 3840];
+
+        private static readonly ConcurrentDictionary<string, Lazy<Task<bool>>> SizedThumbnailRenders = new();
+
+        internal static int SnapThumbnailSize(int size)
+        {
+            if (size <= 0)
+                return 0;
+
+            foreach (var step in SizedThumbnailSteps)
+            {
+                if (step >= size)
+                    return step;
+            }
+
+            return SizedThumbnailSteps[^1];
+        }
+
+        /// <summary>
+        /// Path to a thumbnail fitting <paramref name="width"/> by <paramref name="height"/> pixels (either may be
+        /// zero to leave that axis unconstrained), rendered from the original on first request and cached next to it.
+        /// Never enlarges past the original. Falls back to the default thumbnail when no size is asked for, the media
+        /// type has thumbnails turned off, or the variant can't be rendered.
+        /// </summary>
+        public async Task<string> GetThumbnailPathAsync(Media media, int width, int height)
+        {
+            width = SnapThumbnailSize(width);
+            height = SnapThumbnailSize(height);
 
             var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);
+
+            if ((width == 0 && height == 0)
+                || config == null
+                || !config.Thumbnails.Enabled
+                || media.MimeType?.StartsWith("video/") == true)
+                return GetThumbnailPath(media);
+
+            var destination = GetSizedThumbnailPath(media, width, height);
+
+            if (File.Exists(destination))
+                return destination;
+
+            // A freshly opened depot asks for every cover at once; render each variant once rather than per request.
+            var render = SizedThumbnailRenders.GetOrAdd(destination, _ => new Lazy<Task<bool>>(() =>
+                RenderThumbnailAsync(media, destination, config.Thumbnails.Quality, (sourceWidth, sourceHeight) =>
+                {
+                    var scale = 1d;
+
+                    if (width > 0)
+                        scale = Math.Min(scale, (double)width / sourceWidth);
+
+                    if (height > 0)
+                        scale = Math.Min(scale, (double)height / sourceHeight);
+
+                    return new Size(
+                        Math.Max(1, (int)Math.Round(sourceWidth * scale)),
+                        Math.Max(1, (int)Math.Round(sourceHeight * scale)));
+                })));
+
+            try
+            {
+                return await render.Value ? destination : GetThumbnailPath(media);
+            }
+            finally
+            {
+                SizedThumbnailRenders.TryRemove(new KeyValuePair<string, Lazy<Task<bool>>>(destination, render));
+            }
+        }
+
+        /// <summary>
+        /// Ends in <c>.Thumb</c> so the regenerate-thumbnails tool clears variants and the orphaned-files scan skips them.
+        /// </summary>
+        private static string GetSizedThumbnailPath(Media media, int width, int height) =>
+            $"{GetMediaPath(media)}.{(width > 0 ? $"w{width}" : "")}{(height > 0 ? $"h{height}" : "")}.Thumb";
+
+        private static void DeleteSizedThumbnails(Media media)
+        {
+            var mediaPath = GetMediaPath(media);
+            var directory = Path.GetDirectoryName(mediaPath);
+
+            if (String.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                return;
+
+            foreach (var variant in Directory.EnumerateFiles(directory, $"{Path.GetFileName(mediaPath)}.*.Thumb"))
+                FileHelpers.DeleteIfExists(variant);
+        }
+
+        /// <summary>
+        /// Decodes the media's source (page one of a PDF, the largest frame of an ICO), resizes it into the box
+        /// <paramref name="getSize"/> returns for the source dimensions, and writes it to <paramref name="destination"/>:
+        /// PNG when transparency matters, JPEG otherwise.
+        /// </summary>
+        private async Task<bool> RenderThumbnailAsync(Media media, string destination, int quality, Func<int, int, Size> getSize)
+        {
+            var source = GetMediaPath(media);
+
+            if (!File.Exists(source))
+                return false;
+
+            // Skip thumbnail generation for video types
+            if (media.MimeType?.StartsWith("video/") == true)
+                return false;
 
             Stream? stream = null;
 
             try
             {
-                // Skip thumbnail generation for video types
-                if (media.MimeType?.StartsWith("video/") == true)
-                    return String.Empty;
-
                 if (media.MimeType == MediaTypeNames.Application.Pdf)
                 {
                     using (var pdfStream = new FileStream(source, FileMode.Open, FileAccess.Read))
@@ -270,52 +382,52 @@ namespace LANCommander.Server.Services
                 }
                 else
                 {
-                    stream = new FileStream(source, FileMode.Open, FileAccess.Read);
+                    stream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
                 }
 
-                if (config != null && config.Thumbnails.Enabled)
+                // ImageSharp has no ICO decoder, so icons are unpacked by our own PE/ICO reader.
+                using (var image = IsIcon(media)
+                           ? IconFile.DecodeLargestFrame(stream)
+                           : await Image.LoadAsync<Rgba32>(stream))
                 {
-                    // ImageSharp has no ICO decoder, so icons are unpacked by our own PE/ICO reader.
-                    using (var image = IsIcon(media)
-                               ? IconFile.DecodeLargestFrame(stream)
-                               : await Image.LoadAsync<Rgba32>(stream))
+                    var resizeOptions = new ResizeOptions
                     {
-                        int thumbsizeX = (int)Math.Clamp(image.Width * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Width, config.Thumbnails.MaxSize.Width);
-                        int thumbsizeY = (int)Math.Clamp(image.Height * (config.Thumbnails.Scale / 100f), config.Thumbnails.MinSize.Height, config.Thumbnails.MaxSize.Height);
-                        var resizeOptions = new ResizeOptions
-                        {
-                            Mode = ResizeMode.Max,
-                            Size = new Size(thumbsizeX, thumbsizeY),
-                            Sampler = KnownResamplers.Bicubic,
-                        };
+                        Mode = ResizeMode.Max,
+                        Size = getSize(image.Width, image.Height),
+                        Sampler = KnownResamplers.Bicubic,
+                    };
 
-                        image.Mutate(context => context.Resize(resizeOptions));
+                    image.Mutate(context => context.Resize(resizeOptions));
 
-                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && (media.MimeType == MediaTypeNames.Image.Png || media.MimeType == MediaTypeNames.Image.Webp || IsIcon(media)) && HasTransparentPixels(image))
+                    if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && (media.MimeType == MediaTypeNames.Image.Png || media.MimeType == MediaTypeNames.Image.Webp || IsIcon(media)) && HasTransparentPixels(image))
+                    {
+                        await image.SaveAsPngAsync(destination);
+                    }
+                    else
+                    {
+                        await image.SaveAsJpegAsync(destination, new JpegEncoder
                         {
-                            await image.SaveAsPngAsync(destination);
-                        }
-                        else
-                        {
-                            await image.SaveAsJpegAsync(destination, new JpegEncoder
-                            {
-                                Quality = quality
-                            });
-                        }
+                            Quality = quality
+                        });
                     }
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Could not generate thumbnail for media with ID {MediaId}", media.Id);
+
+                // Don't leave a half-written file behind to be served as if it were complete.
+                FileHelpers.DeleteIfExists(destination);
+
+                return false;
             }
             finally
             {
                 if (stream is not null)
                     await stream.DisposeAsync();
             }
-
-            return destination;
         }
 
         /// <summary>Both the legacy and the IANA-registered MIME type turn up on ICO uploads.</summary>
@@ -352,6 +464,7 @@ namespace LANCommander.Server.Services
         {
             FileHelpers.DeleteIfExists(GetMediaPath(media));
             FileHelpers.DeleteIfExists(GetThumbnailPath(media));
+            DeleteSizedThumbnails(media);
         }
 
         public void DeleteLocalMediaFiles(IEnumerable<Media> medias)

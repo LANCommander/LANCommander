@@ -79,7 +79,7 @@
                                 <Border Classes="CompactListRow">
                                     <DockPanel>
                                         <Image controls:AsyncImage.Source="{Binding IconPath}"
-                                               controls:AsyncImage.DecodeWidth="48"
+                                               controls:AsyncImage.DecodeWidth="22"
                                                Width="22" Height="22"
                                                Stretch="Uniform"
                                                Margin="0,0,10,0"

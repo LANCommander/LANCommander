@@ -177,7 +177,7 @@
                                 IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <Panel>
                                 <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
-                                       controls:AsyncImage.DecodeWidth="1600"
+                                       controls:AsyncImage.DecodeWidth="1920"
                                        Stretch="UniformToFill"
                                        VerticalAlignment="Top">
                                     <Image.Effect>
@@ -190,7 +190,7 @@
 
                         <!-- Background image -->
                         <Image controls:AsyncImage.Source="{Binding BackgroundPath}"
-                               controls:AsyncImage.DecodeWidth="1600"
+                               controls:AsyncImage.DecodeWidth="1920"
                                Stretch="UniformToFill"
                                IsVisible="{Binding BackgroundPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
@@ -220,6 +220,7 @@
                              or it fails to load -->
                         <Image x:Name="LogoImage"
                                controls:AsyncImage.Source="{Binding LogoPath}"
+                               controls:AsyncImage.DecodeWidth="560"
                                Stretch="Uniform"
                                HorizontalAlignment="Left"
                                VerticalAlignment="Bottom"

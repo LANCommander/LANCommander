@@ -450,7 +450,7 @@ public partial class Cover : UserControl, ICarouselLazyItem
             // Debounce remote loads as well.
             await Task.Delay(50, ct);
 
-            var data = await _httpClient.GetByteArrayAsync(uri, ct);
+            var data = await _httpClient.GetByteArrayAsync(ThumbnailUrl.WithSize(uri.AbsoluteUri, decodeWidth, 0), ct);
             if (ct.IsCancellationRequested) return;
 
             using var stream = new MemoryStream(data);

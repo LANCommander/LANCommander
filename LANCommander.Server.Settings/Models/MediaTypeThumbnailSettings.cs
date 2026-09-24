@@ -6,5 +6,5 @@ public class MediaTypeThumbnailSettings
     public ThumbnailSize MaxSize { get; set; } = new();
     public int Scale { get; set; } = 50;
     public bool Enabled { get; set; } = true;
-    public int Quality { get; set; } = 75;
+    public int Quality { get; set; } = 85;
 }

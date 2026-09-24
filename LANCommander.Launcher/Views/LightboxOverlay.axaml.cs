@@ -203,10 +203,12 @@ public partial class LightboxOverlay : UserControl
 
         try
         {
+            // Thumbnail strip items are 120 logical px wide.
+            var decodeWidth = DisplayScaling.ToPixels(120, target);
             target.Source = await Task.Run(() =>
             {
                 using var stream = File.OpenRead(item.Path);
-                return Bitmap.DecodeToWidth(stream, 240, BitmapInterpolationMode.HighQuality);
+                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.HighQuality);
             });
         }
         catch

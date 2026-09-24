@@ -148,10 +148,14 @@ public class HqMediaGrabber(
         {
             MediaType.Video => gameCoverUrl ?? string.Empty,
             MediaType.Manual => "/static/pdf.png",
-            _ => Downscale(media.SourceUrl) ?? gameCoverUrl ?? string.Empty,
+            _ => Downscale(media.SourceUrl, type) ?? gameCoverUrl ?? string.Empty,
         };
 
-    internal static string? Downscale(string? url)
+    /// <summary>
+    /// Swaps an IGDB image URL's size token for a picker-sized one. Kind-specific tokens (<c>t_cover_big</c>)
+    /// say what they are; size-only tokens (<c>t_1080p</c>) take the kind from <paramref name="type"/>.
+    /// </summary>
+    internal static string? Downscale(string? url, MediaType? type = null)
     {
         if (string.IsNullOrWhiteSpace(url))
             return null;
@@ -160,16 +164,28 @@ public class HqMediaGrabber(
             || !uri.Host.Equals("images.igdb.com", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        return IgdbSizeToken.Replace(url, match => match.Groups["kind"].Value.ToLowerInvariant() switch
+        return IgdbSizeToken.Replace(url, match =>
         {
-            "screenshot" => "/t_screenshot_med/",
-            "cover" => "/t_cover_small/",
-            _ => match.Value,
+            var kind = match.Groups["kind"].Success
+                ? match.Groups["kind"].Value.ToLowerInvariant()
+                : type switch
+                {
+                    MediaType.Screenshot => "screenshot",
+                    MediaType.Cover => "cover",
+                    _ => null,
+                };
+
+            return kind switch
+            {
+                "screenshot" => "/t_screenshot_med/",
+                "cover" => "/t_cover_small/",
+                _ => match.Value,
+            };
         }, 1);
     }
 
     private static readonly Regex IgdbSizeToken = new(
-        @"/t_(?<kind>screenshot|cover)_[a-z0-9_]+/",
+        @"/t_(?:(?<kind>screenshot|cover)_[a-z0-9_]+|720p|1080p|original)/",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)

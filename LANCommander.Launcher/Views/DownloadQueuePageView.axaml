@@ -150,7 +150,7 @@
                                                         Background="{DynamicResource SurfaceRaisedBrush}"
                                                         Margin="0,0,14,0">
                                                     <Image controls:AsyncImage.Source="{Binding IconPath}"
-                                                           controls:AsyncImage.DecodeWidth="64"
+                                                           controls:AsyncImage.DecodeWidth="32"
                                                            Stretch="UniformToFill"
                                                            IsVisible="{Binding HasIcon}" />
                                                 </Border>

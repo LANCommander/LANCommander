@@ -72,6 +72,26 @@ public class HqMediaGrabberTests
         HqMediaGrabber.Downscale(source).ShouldBe(expected);
     }
 
+    // HQ stores IGDB covers and screenshots at t_1080p so they hold up on scaled displays; the token
+    // doesn't say what the image is, so the picker preview takes that from the media type.
+    [Theory]
+    [InlineData(MediaType.Cover,
+        "https://images.igdb.com/igdb/image/upload/t_1080p/co1abc.jpg",
+        "https://images.igdb.com/igdb/image/upload/t_cover_small/co1abc.jpg")]
+    [InlineData(MediaType.Screenshot,
+        "https://images.igdb.com/igdb/image/upload/t_1080p/sc1abc.jpg",
+        "https://images.igdb.com/igdb/image/upload/t_screenshot_med/sc1abc.jpg")]
+    [InlineData(MediaType.Screenshot,
+        "https://images.igdb.com/igdb/image/upload/t_original/sc1abc.jpg",
+        "https://images.igdb.com/igdb/image/upload/t_screenshot_med/sc1abc.jpg")]
+    [InlineData(MediaType.Background,
+        "https://images.igdb.com/igdb/image/upload/t_1080p/ar1abc.jpg",
+        "https://images.igdb.com/igdb/image/upload/t_1080p/ar1abc.jpg")]
+    public void SizeOnlyIgdbTokensAreDownscaledByMediaType(MediaType type, string source, string expected)
+    {
+        HqMediaGrabber.Downscale(source, type).ShouldBe(expected);
+    }
+
     [Theory]
     [InlineData("https://images.igdb.com/igdb/image/upload/t_thumb/co1abc.png")]
     [InlineData("https://cdn.example.com/igdb/image/upload/t_screenshot_big/sc1abc.jpg")]

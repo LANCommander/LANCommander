@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Services;
@@ -499,13 +500,14 @@ public partial class GameDetailViewModel : ViewModelBase
                 localPath = fileInfo.FullName;
             }
 
-            // Decode downscaled: the carousel slot is 384 logical px, so ~2x covers
-            // HiDPI/UniformToFill without holding the full-resolution source in memory.
+            // Decode downscaled to the carousel slot (384 logical px) at the display's scaling,
+            // without holding the full-resolution source in memory.
             // The lightbox loads the full-res image from Path when it needs it.
+            var decodeWidth = DisplayScaling.ToPixels(384);
             var bitmap = await Task.Run(() =>
             {
                 using var stream = File.OpenRead(localPath);
-                return Bitmap.DecodeToWidth(stream, 768, BitmapInterpolationMode.HighQuality);
+                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.HighQuality);
             });
 
             ReplaceMediaItem(version, index, new GameMediaItemViewModel

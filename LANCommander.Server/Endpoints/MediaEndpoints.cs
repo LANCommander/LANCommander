@@ -40,17 +40,27 @@ public static class MediaEndpoints
         return TypedResults.Ok(sdkMapper.ToSdk(media));
     }
 
+    /// <summary>
+    /// Serves the media's thumbnail. Clients on scaled displays can pass the device-pixel <paramref name="width"/>
+    /// and/or <paramref name="height"/> they'll draw it at to get a variant sized for that instead of the default.
+    /// </summary>
     internal static async Task<Results<FileStreamHttpResult, NotFound, InternalServerError>> ThumbnailAsync(
         Guid id,
         [FromServices] MediaService mediaService,
-        [FromServices] ILoggerFactory loggerFactory)
+        [FromServices] ILoggerFactory loggerFactory,
+        [FromQuery] int? width = null,
+        [FromQuery] int? height = null)
     {
         var logger = loggerFactory.CreateLogger(nameof(MediaEndpoints));
         try
         {
             var media = await mediaService.GetAsync(id);
 
-            var fs = File.OpenRead(mediaService.GetThumbnailPath(media));
+            var path = width > 0 || height > 0
+                ? await mediaService.GetThumbnailPathAsync(media, width ?? 0, height ?? 0)
+                : mediaService.GetThumbnailPath(media);
+
+            var fs = File.OpenRead(path);
 
             return TypedResults.File(fs, GetThumbnailContentType(fs, media.MimeType));
         }

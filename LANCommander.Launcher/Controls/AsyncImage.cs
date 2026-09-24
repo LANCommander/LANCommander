@@ -28,6 +28,13 @@ public class AsyncImage : AvaloniaObject
     public static readonly AttachedProperty<int> DecodeHeightProperty =
         AvaloniaProperty.RegisterAttached<AsyncImage, Image, int>("DecodeHeight");
 
+    /// <summary>
+    /// Set when the current source couldn't be fetched or decoded, so a view can swap in a fallback.
+    /// Cleared whenever the source changes.
+    /// </summary>
+    public static readonly AttachedProperty<bool> FailedProperty =
+        AvaloniaProperty.RegisterAttached<AsyncImage, Image, bool>("Failed");
+
     // Per-Image cancellation token for the in-flight load, so rapid source changes
     // (e.g. carousel container recycling) don't race to set a stale bitmap.
     private static readonly AttachedProperty<CancellationTokenSource?> LoadCtsProperty =
@@ -49,12 +56,16 @@ public class AsyncImage : AvaloniaObject
     public static int GetDecodeHeight(Image image) => image.GetValue(DecodeHeightProperty);
     public static void SetDecodeHeight(Image image, int value) => image.SetValue(DecodeHeightProperty, value);
 
+    public static bool GetFailed(Image image) => image.GetValue(FailedProperty);
+    public static void SetFailed(Image image, bool value) => image.SetValue(FailedProperty, value);
+
     private static void Reload(Image image)
     {
         var previous = image.GetValue(LoadCtsProperty);
         previous?.Cancel();
         previous?.Dispose();
         image.SetValue(LoadCtsProperty, null);
+        SetFailed(image, false);
 
         var source = GetSource(image);
 
@@ -88,8 +99,14 @@ public class AsyncImage : AvaloniaObject
         {
             var bitmap = await RemoteImageCache.LoadAsync(source, width, height, cts.Token);
 
-            if (bitmap == null || cts.IsCancellationRequested)
+            if (cts.IsCancellationRequested)
                 return;
+
+            if (bitmap == null)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => MarkFailed(image, source, cts));
+                return;
+            }
 
             // Apply at Background priority so a burst of image completions (the whole
             // depot realizes at once — carousels aren't virtualized) yields to scroll
@@ -103,7 +120,15 @@ public class AsyncImage : AvaloniaObject
         }
         catch
         {
-            // Network/decoding failures leave the image blank; visibility is driven by the path binding.
+            // Network/decoding failures leave the image blank and raise Failed for views that want a fallback.
+            if (!cts.IsCancellationRequested)
+                await Dispatcher.UIThread.InvokeAsync(() => MarkFailed(image, source, cts));
         }
+    }
+
+    private static void MarkFailed(Image image, string source, CancellationTokenSource cts)
+    {
+        if (!cts.IsCancellationRequested && GetSource(image) == source)
+            SetFailed(image, true);
     }
 }

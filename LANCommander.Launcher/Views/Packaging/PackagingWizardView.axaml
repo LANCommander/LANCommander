@@ -129,10 +129,21 @@
                                             </Panel>
                                         </Border>
 
-                                        <TextBlock Classes="stepLabel"
-                                                   Classes.current="{Binding IsCurrent}"
-                                                   Classes.complete="{Binding IsComplete}"
-                                                   Text="{Binding Title}" />
+                                        <!-- The current label is SemiBold, which is wider; an invisible
+                                             SemiBold copy reserves that width on every step so the
+                                             steps after it don't shift as the current one moves. -->
+                                        <Panel>
+                                            <TextBlock Classes="stepLabel"
+                                                       FontWeight="SemiBold"
+                                                       Opacity="0"
+                                                       IsHitTestVisible="False"
+                                                       Text="{Binding Title}" />
+
+                                            <TextBlock Classes="stepLabel"
+                                                       Classes.current="{Binding IsCurrent}"
+                                                       Classes.complete="{Binding IsComplete}"
+                                                       Text="{Binding Title}" />
+                                        </Panel>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

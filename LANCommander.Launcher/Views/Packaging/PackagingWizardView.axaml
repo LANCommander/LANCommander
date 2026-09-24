@@ -154,6 +154,12 @@
                                 Orientation="Horizontal"
                                 Spacing="8"
                                 Margin="16,0,0,0">
+                        <!-- Set apart from Back/Next: it leaves the wizard, it doesn't move through it. -->
+                        <Button Classes="Secondary" Content="{Binding ExitLabel}"
+                                Command="{Binding ExitCommand}"
+                                Margin="0,0,8,0"
+                                Padding="16,6" />
+
                         <Button Classes="Secondary" Content="Back"
                                 Command="{Binding BackCommand}"
                                 IsEnabled="{Binding CanGoBack}"

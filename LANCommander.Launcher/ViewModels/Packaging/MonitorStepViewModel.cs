@@ -17,7 +17,6 @@ public partial class MonitorStepViewModel : CaptureStepViewModel
     public MonitorStepViewModel(PackagingWizardViewModel wizard, IServiceProvider serviceProvider)
         : base(wizard, serviceProvider)
     {
-        Status = "Choose an installer to monitor.";
     }
 
     public override string Title => "Monitor";
@@ -26,14 +25,15 @@ public partial class MonitorStepViewModel : CaptureStepViewModel
     {
         base.Reset();
 
-        Status = "Choose an installer to monitor.";
+        // Left empty: the installer box's watermark already says what to do first.
+        Status = string.Empty;
     }
 
     /// <summary>Monitoring cannot be re-entered, so there is nowhere to go back to.</summary>
     public override bool CanGoBack => false;
 
     protected override string MonitoringStatus =>
-        "Monitoring. Complete the install, then choose Stop.";
+        "Complete the install, then stop monitoring.";
 
     protected override string CaptureFinishedStatus =>
         "Capture finished. Continue to choose what goes into the package.";

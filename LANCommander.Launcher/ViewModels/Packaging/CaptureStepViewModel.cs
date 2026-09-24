@@ -50,7 +50,11 @@ public abstract partial class CaptureStepViewModel : PackagingStepViewModel
     protected ILogger Logger { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InstallerName))]
     private string _installerPath = string.Empty;
+
+    /// <summary>Just the file name, for the monitoring indicator.</summary>
+    public string InstallerName => Path.GetFileName(InstallerPath);
 
     [ObservableProperty]
     private string _status = string.Empty;

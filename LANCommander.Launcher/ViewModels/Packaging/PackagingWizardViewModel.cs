@@ -25,11 +25,13 @@ namespace LANCommander.Launcher.ViewModels.Packaging;
 public partial class PackagingWizardViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly INavigationService _navigationService;
     private readonly ILogger<PackagingWizardViewModel> _logger;
 
     public PackagingWizardViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _navigationService = serviceProvider.GetRequiredService<INavigationService>();
         _logger = serviceProvider.GetRequiredService<ILogger<PackagingWizardViewModel>>();
 
         Session = serviceProvider.GetRequiredService<IPackagingSessionService>();
@@ -60,6 +62,7 @@ public partial class PackagingWizardViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanGoBack))]
     [NotifyPropertyChangedFor(nameof(NextLabel))]
     [NotifyPropertyChangedFor(nameof(IsLastStep))]
+    [NotifyPropertyChangedFor(nameof(ExitLabel))]
     private PackagingStepViewModel _currentStep;
 
     partial void OnCurrentStepChanged(PackagingStepViewModel value) => SyncStepIndicators();
@@ -107,6 +110,9 @@ public partial class PackagingWizardViewModel : ViewModelBase
     }
 
     public string NextLabel => CurrentStep.NextLabel;
+
+    /// <summary>Leaving from the last step is finishing up, not abandoning the package.</summary>
+    public string ExitLabel => IsLastStep ? "Close" : "Cancel";
 
     /// <summary>
     /// Prepares a brand new package. Called each time the wizard is opened.
@@ -175,6 +181,13 @@ public partial class PackagingWizardViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Returns to wherever the wizard was opened from. Leaving the page is what stops a capture
+    /// in progress (see <see cref="ShutdownAsync"/>), so there is nothing to tear down here.
+    /// </summary>
+    [RelayCommand]
+    private void Exit() => _navigationService.GoBack();
+
     [RelayCommand]
     private async Task BackAsync()
     {
@@ -220,6 +233,7 @@ public partial class PackagingWizardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsLastStep));
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(NextLabel));
+        OnPropertyChanged(nameof(ExitLabel));
     }
 
     /// <summary>

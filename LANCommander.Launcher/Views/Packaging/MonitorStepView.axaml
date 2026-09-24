@@ -5,9 +5,10 @@
              x:Class="LANCommander.Launcher.Views.Packaging.MonitorStepView"
              x:DataType="vm:MonitorStepViewModel">
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,*">
 
-        <!-- Installer picker -->
+        <!-- Installer picker. Browsing starts the capture on its own; Enter does the same for a
+             typed path, so there is no separate Start button. -->
         <DockPanel Grid.Row="0" Margin="0,0,0,10">
             <Button Classes="Secondary" DockPanel.Dock="Right"
                     Content="Browse..."
@@ -18,32 +19,13 @@
 
             <TextBox Text="{Binding InstallerPath}"
                      Watermark="Choose the installer to monitor"
-                     IsEnabled="{Binding !IsMonitoring}" />
+                     IsEnabled="{Binding !IsMonitoring}">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding StartCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
         </DockPanel>
 
-        <!-- Status + controls -->
-        <DockPanel Grid.Row="1" Margin="0,0,0,10">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                <Button Content="Start"
-                        Classes="Primary"
-                        Command="{Binding StartCommand}"
-                        IsVisible="{Binding !IsMonitoring}"
-                        Padding="16,6" />
-
-                <!-- The Packager had no way to end a capture early, so an installer that left a
-                     helper running stranded the wizard. -->
-                <Button Content="Stop monitoring"
-                        Classes="Primary"
-                        Command="{Binding StopCommand}"
-                        IsVisible="{Binding IsMonitoring}"
-                        Padding="16,6" />
-            </StackPanel>
-
-            <TextBlock Text="{Binding Status}"
-                       VerticalAlignment="Center"
-                       TextWrapping="Wrap" />
-        </DockPanel>
-
-        <packaging:CapturePanelView Grid.Row="2" />
+        <packaging:CapturePanelView Grid.Row="1" />
     </Grid>
 </UserControl>

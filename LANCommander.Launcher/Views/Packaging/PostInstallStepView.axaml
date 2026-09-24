@@ -39,12 +39,6 @@
                                 ToolTip.Tip="Select another executable to run and monitor for additional file and registry changes"
                                 Padding="12,5" />
 
-                        <Button Content="Stop monitoring"
-                                Classes="Primary"
-                                Command="{Binding StopCommand}"
-                                IsVisible="{Binding IsMonitoring}"
-                                Padding="14,5" />
-
                         <Button Classes="Secondary" Content="Browse"
                                 Command="{Binding BrowseInstallFolderCommand}"
                                 ToolTip.Tip="Open the install folder"
@@ -94,16 +88,11 @@
             </Grid>
         </Border>
 
-        <!-- Monitoring state, and what has been run so far. Both stay out of the way until an
-             installer has actually been run through the step. -->
-        <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10">
-            <TextBlock Text="{Binding Status}"
-                       FontSize="{DynamicResource FontSizeCaption}"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-            <ItemsControl ItemsSource="{Binding AdditionalInstallers}"
-                          IsVisible="{Binding HasAdditionalInstallers}">
+        <!-- What has been run so far. Stays out of the way until an installer has actually been
+             run through the step. -->
+        <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10"
+                    IsVisible="{Binding HasAdditionalInstallers}">
+            <ItemsControl ItemsSource="{Binding AdditionalInstallers}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
                         <TextBlock Text="{Binding}"
@@ -116,11 +105,18 @@
         </StackPanel>
 
         <!-- Only once something has been run: an empty log panel on a step most people will walk
-             straight past is just noise. -->
+             straight past is just noise. The status also opens it, so an installer that could
+             not be started still says why. -->
         <packaging:CapturePanelView Grid.Row="3"
                                     Height="200"
-                                    Margin="0,0,0,10"
-                                    IsVisible="{Binding HasLog}" />
+                                    Margin="0,0,0,10">
+            <packaging:CapturePanelView.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                    <Binding Path="HasLog" />
+                    <Binding Path="Status" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                </MultiBinding>
+            </packaging:CapturePanelView.IsVisible>
+        </packaging:CapturePanelView>
 
         <!-- What changed -->
         <Border Grid.Row="4"

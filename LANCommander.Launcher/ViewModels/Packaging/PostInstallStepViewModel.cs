@@ -44,17 +44,11 @@ public partial class PostInstallStepViewModel : CaptureStepViewModel
 
     public override string Title => "Customize";
 
-    /// <summary>
-    /// Needs somewhere to watch. Without a detected install folder there is nothing to compare
-    /// against, and the step would be a dead end rather than an optional one.
-    /// </summary>
-    public override bool IsApplicable => !string.IsNullOrWhiteSpace(Package.InstallDirectory);
-
     /// <summary>Plenty of games need no patching at all, so the step is skippable.</summary>
     protected override bool CaptureIsOptional => true;
 
     protected override string MonitoringStatus =>
-        "Monitoring. Complete the patch or mod install, then choose Stop.";
+        "Complete the patch or mod install, then stop monitoring.";
 
     protected override string CaptureFinishedStatus =>
         "Patch capture finished. Run another, make more changes by hand, or continue.";

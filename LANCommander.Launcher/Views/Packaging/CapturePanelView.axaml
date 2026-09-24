@@ -4,6 +4,22 @@
              x:Class="LANCommander.Launcher.Views.Packaging.CapturePanelView"
              x:DataType="vm:CaptureStepViewModel">
 
+    <UserControl.Styles>
+        <!-- Slow pulse on the indicator, so a running capture reads as live at a glance. -->
+        <Style Selector="Ellipse.MonitoringDot">
+            <Style.Animations>
+                <Animation Duration="0:0:1.6" IterationCount="Infinite" PlaybackDirection="Alternate">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.25" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </UserControl.Styles>
+
     <!-- The parts of a capture that look the same wherever it is run from: the base installer on
          the Monitor step, and any patch or mod installer on the Customize step. Typed against
          the shared base so both inherit it rather than keeping two copies in sync. -->
@@ -35,30 +51,79 @@
             </DockPanel>
         </Border>
 
-        <!-- Counters -->
+        <!-- Counters, with the live capture's controls on the right -->
         <Border Grid.Row="1"
                 Classes="Card"
                 Margin="0,0,0,10"
                 Padding="16,12">
             <StackPanel Spacing="8">
-                <!-- Uniform columns so the counters hold their position as the numbers climb
-                     during a capture instead of shuffling sideways on every tick. -->
-                <UniformGrid Columns="3"
-                             MinWidth="240"
-                             HorizontalAlignment="Left">
-                    <StackPanel>
-                        <TextBlock Text="FILES" Classes="Kicker" Margin="0,0,0,3" />
-                        <TextBlock Text="{Binding FileCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <!-- Uniform columns so the counters hold their position as the numbers climb
+                         during a capture instead of shuffling sideways on every tick. -->
+                    <UniformGrid Grid.Column="0"
+                                 Columns="3"
+                                 MinWidth="240"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Center">
+                        <StackPanel>
+                            <TextBlock Text="FILES" Classes="Kicker" Margin="0,0,0,3" />
+                            <TextBlock Text="{Binding FileCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="REGISTRY" Classes="Kicker" Margin="0,0,0,3" />
+                            <TextBlock Text="{Binding RegistryCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="PROCESSES" Classes="Kicker" Margin="0,0,0,3" />
+                            <TextBlock Text="{Binding ProcessCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <!-- The only way to end a capture early, so an installer that leaves a helper
+                         running cannot strand the wizard. -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="14"
+                                Margin="16,0,0,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsMonitoring}">
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,0,0,3">
+                                <Ellipse Classes="MonitoringDot"
+                                         Width="8"
+                                         Height="8"
+                                         VerticalAlignment="Center"
+                                         Fill="{DynamicResource ErrorTextBrush}" />
+                                <TextBlock Text="MONITORING" Classes="Kicker" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding InstallerName}"
+                                       ToolTip.Tip="{Binding InstallerPath}"
+                                       FontSize="{DynamicResource FontSizeCaption}"
+                                       HorizontalAlignment="Right"
+                                       MaxWidth="260"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Button Classes="Text"
+                                Command="{Binding StopCommand}"
+                                ToolTip.Tip="Stop monitoring"
+                                AutomationProperties.Name="Stop monitoring"
+                                VerticalAlignment="Center"
+                                Padding="8">
+                            <Icon Type="Fill" Value="Stop" Width="18" Height="18" />
+                        </Button>
                     </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="REGISTRY" Classes="Kicker" Margin="0,0,0,3" />
-                        <TextBlock Text="{Binding RegistryCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
-                    </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="PROCESSES" Classes="Kicker" Margin="0,0,0,3" />
-                        <TextBlock Text="{Binding ProcessCount}" Classes="Mono" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Medium" />
-                    </StackPanel>
-                </UniformGrid>
+                </Grid>
+
+                <TextBlock Text="{Binding Status}"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Opacity="0.7"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                 <!-- Injection is a poll-and-inject race; a short-lived child can finish before it
                      can be hooked. Say so rather than quietly producing a partial capture. -->
@@ -66,7 +131,7 @@
                            FontSize="{DynamicResource FontSizeCaption}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding HasUninstrumentedProcesses}"
-                           Text="{Binding UninstrumentedProcessCount, StringFormat='{}{0} process(es) were seen but could not be monitored. Some files may be missing — the install folder is also scanned on the following steps.'}" />
+                           Text="{Binding UninstrumentedProcessCount, StringFormat='{}{0} process(es) were seen but could not be monitored.'}" />
 
                 <TextBlock Foreground="{DynamicResource WarningTextBrush}"
                            FontSize="{DynamicResource FontSizeCaption}"

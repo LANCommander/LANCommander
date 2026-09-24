@@ -3,6 +3,9 @@
         xmlns:local="clr-namespace:LANCommander.Launcher.Controls">
 
     <Style Selector="local|CarouselControl">
+        <!-- PART_ClipPanel's geometry clip does the clipping; bounds clipping here would cut hovered items
+             at the carousel's bottom edge -->
+        <Setter Property="ClipToBounds" Value="False" />
         <Setter Property="Template">
             <ControlTemplate>
                 <!-- Single grid so title column aligns with the clip-panel column -->

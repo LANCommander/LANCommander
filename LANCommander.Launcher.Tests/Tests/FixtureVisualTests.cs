@@ -30,6 +30,7 @@ public class FixtureVisualTests
     private static readonly Dictionary<Type, string> UncoveredViews = new()
     {
         [typeof(VideoPlayerOverlay)] = "Unused, and plays through LibVLC as soon as it has a video, so it can't render the same way twice.",
+        [typeof(LANCommander.Launcher.Views.ScriptDebugger.CommandsView)] = "Lists the PowerShell commands and modules installed on the machine running it, so it can't render the same way twice.",
     };
 
     public static TheoryData<string> Fixtures => new(FixtureCatalog.All.Select(f => f.Name));

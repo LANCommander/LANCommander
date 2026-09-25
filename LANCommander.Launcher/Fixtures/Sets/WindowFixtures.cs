@@ -3,16 +3,22 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using LANCommander.Launcher.Services.ScriptDebugging;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
+using LANCommander.Launcher.ViewModels.ScriptDebugger;
+using LANCommander.Launcher.ViewModels.ScriptDebugger.Items;
 using LANCommander.Launcher.Views;
-using LANCommander.Launcher.Views.Components;
+using LANCommander.Launcher.Views.ScriptDebugger;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
-using Microsoft.Extensions.Logging;
+using LANCommander.SDK.PowerShell.Debugging;
+using LANCommander.SDK.PowerShell.Debugging.Hosting;
 
 namespace LANCommander.Launcher.Fixtures.Sets;
 
-/// <summary>Windows of their own: chat, the script console, the manual viewer and the install dialog.</summary>
+/// <summary>Windows of their own: chat, the script debugger, the manual viewer and the install dialog.</summary>
 public static class WindowFixtures
 {
     private static readonly User Me = Person("Pat");
@@ -59,31 +65,47 @@ public static class WindowFixtures
             return new ChatWindow { DataContext = chat };
         }) { Width = 760, Height = 540 },
 
-        new("Console.Output", "The script console while a script runs", _ =>
+        new("ScriptDebugger.NotInstalled", "The script debugger for a game that isn't installed, a breakpoint set on its install script", context =>
         {
-            var window = Console();
+            var debugger = ScriptDebugger(context, installed: false);
 
-            foreach (var line in ScriptOutput)
-                window.ConsoleControl.OnOutput(LogLevel.Information, line);
+            debugger.SelectedDocument!.Breakpoints.Toggle(5);
+            debugger.SelectedPanelIndex = 3;
 
-            return window;
-        }) { Width = 1000, Height = 650 },
+            return new ScriptDebuggerWindow { DataContext = debugger };
+        }) { Width = 1400, Height = 860 },
 
-        new("Console.DebugBreak", "The script console after a script, waiting for commands", _ =>
+        new("ScriptDebugger.Stopped", "Stopped at a breakpoint in an elevated install script", context =>
+            new ScriptDebuggerWindow { DataContext = StoppedDebugger(context) }) { Width = 1400, Height = 860 },
+
+        new("ScriptDebugger.CallStack", "Stopped, with the call stack on show", context =>
         {
-            var window = Console();
+            var debugger = StoppedDebugger(context);
 
-            foreach (var line in ScriptOutput)
-                window.ConsoleControl.OnOutput(LogLevel.Information, line);
+            debugger.SelectedPanelIndex = 2;
 
-            // What a debug break prints; the break itself waits on the user forever.
-            window.ConsoleControl.OnOutput(LogLevel.Information, "\n--------- DEBUG MODE ---------");
-            window.ConsoleControl.OnOutput(LogLevel.Information, "Script execution complete. You can now run commands.");
-            window.ConsoleControl.OnOutput(LogLevel.Information, "Type 'exit' to close this window.\n");
-            window.ConsoleControl.IsInputEnabled = true;
+            return new ScriptDebuggerWindow { DataContext = debugger };
+        }) { Width = 1400, Height = 860 },
 
-            return window;
-        }) { Width = 1000, Height = 650 },
+        new("ScriptDebugger.Watch", "Stopped, with watch expressions evaluated", context =>
+        {
+            var debugger = StoppedDebugger(context);
+            var controller = new DebugSessionController();
+
+            foreach (var (expression, value, isError) in new[]
+            {
+                ("$PlayerAlias", "Pat", false),
+                ("(Get-Item $ini).Length", "18422", false),
+                ("$Missing.Name", "The variable '$Missing' cannot be retrieved because it has not been set.", true),
+            })
+            {
+                debugger.Watch.Items.Add(new WatchItemViewModel(expression, controller) { Value = value, IsError = isError });
+            }
+
+            debugger.SelectedPanelIndex = 1;
+
+            return new ScriptDebuggerWindow { DataContext = debugger };
+        }) { Width = 1400, Height = 860 },
 
         new("Window.ManualViewer", "The manual viewer with no document to show", _ =>
             new ManualViewerWindow
@@ -120,19 +142,115 @@ public static class WindowFixtures
         }) { Width = 460, Height = 600 },
     ];
 
-    private static readonly string[] ScriptOutput =
-    [
-        "Running install script for Unreal Tournament 2004",
-        @"Writing C:\Games\Unreal Tournament 2004\System\UT2004.ini",
-        "Setting player name to Pat",
-        "Registering CD key",
-        "Install script finished with exit code 0",
-    ];
+    private const string InstallDirectory = @"C:\Games\Unreal Tournament 2004";
 
-    private static PowerShellConsoleWindow Console() => new()
+    private static readonly Guid Ut2004 = FixtureGames.IdFor("Unreal Tournament 2004");
+    private static readonly Guid DirectX = FixtureGames.IdFor("DirectX 9.0c");
+
+    private static readonly string InstallScriptPath = ScriptHelper.GetScriptFilePath(InstallDirectory, Ut2004, ScriptType.Install);
+
+    /// <summary>The install script as it sits in an install directory, with the header the launcher adds.</summary>
+    private const string InstallScript = "#Requires -RunAsAdministrator\r\n\r\n" + ServerInstallScript;
+
+    /// <summary>The install script as the server stores it: the admin flag is kept separately.</summary>
+    private const string ServerInstallScript = """
+        Write-Host "Configuring Unreal Tournament 2004"
+
+        $ini = Join-Path $InstallDirectory 'System\UT2004.ini'
+
+        Write-ReplaceContentInFile -Regex '^Name=.+' -Replacement "Name=$PlayerAlias" -FilePath $ini
+        New-Item -Path 'HKLM:\SOFTWARE\Unreal Technology\Installed Apps\UT2004' -Force | Out-Null
+
+        $Return = 0
+        """;
+
+    /// <summary>The installed game's install script, stopped at line 7 in an elevated process.</summary>
+    private static ScriptDebuggerWindowViewModel StoppedDebugger(FixtureContext context)
     {
-        DataContext = new PowerShellConsoleViewModel("Install Scripts - Unreal Tournament 2004", @"C:\Games\Unreal Tournament 2004"),
-    };
+        var debugger = ScriptDebugger(context, installed: true);
+
+        debugger.SelectedDocument!.Breakpoints.Toggle(7);
+        debugger.Owners[0].Scripts[0].IsRunning = true;
+
+        debugger.State = DebugSessionState.Stopped;
+        debugger.CurrentLine = 7;
+        debugger.StatusText = "Stopped at line 7";
+        debugger.RemoteSessionText = "Elevated (PID 4242)";
+
+        debugger.CallStack.Show(
+        [
+            new CallStackFrameInfo { Index = 0, FunctionName = "<ScriptBlock>", ScriptName = InstallScriptPath, LineNumber = 7 },
+            new CallStackFrameInfo { Index = 1, FunctionName = "<ScriptBlock>", ScriptName = null, LineNumber = 1 },
+        ]);
+
+        debugger.Variables.Show(
+        [
+            new VariableInfo { Name = "InstallDirectory", TypeName = "String", Value = "\"C:\\Games\\Unreal Tournament 2004\"", HasChildren = false },
+            new VariableInfo { Name = "GameManifest", TypeName = "Game", Value = "[Game]", HasChildren = true, Handle = 0 },
+            new VariableInfo { Name = "ini", TypeName = "String", Value = "\"C:\\Games\\Unreal Tournament 2004\\System\\UT2004.ini\"", HasChildren = false },
+            new VariableInfo { Name = "ServerAddress", TypeName = "String", Value = "\"http://lancommander.lan:1337\"", HasChildren = false },
+        ]);
+
+        debugger.Console.AppendLine(ConsoleOutputKind.System, "> Unreal Tournament 2004: Install");
+        debugger.Console.AppendLine(ConsoleOutputKind.System, "[debugger] Install script attached: " + InstallScriptPath);
+        debugger.Console.AppendLine(ConsoleOutputKind.Host, "Configuring Unreal Tournament 2004");
+        debugger.Console.SetDebuggerStopped(true);
+
+        return debugger;
+    }
+
+    /// <summary>
+    /// A debugger window over a canned workspace: the game's own scripts and a redistributable's. Nothing
+    /// is read from disk or the server, and no script runs.
+    /// </summary>
+    private static ScriptDebuggerWindowViewModel ScriptDebugger(FixtureContext context, bool installed)
+    {
+        var source = installed ? ScriptSource.Installed : ScriptSource.Server;
+
+        ScriptEntry Entry(Guid owner, ScriptOwnerKind kind, string ownerName, ScriptType type, bool requiresAdmin = false) => new()
+        {
+            Key = new ScriptKey(owner, type),
+            OwnerKind = kind,
+            OwnerName = ownerName,
+            ServerScriptId = FixtureGames.IdFor($"script {owner} {type}"),
+            Name = type.ToString(),
+            RequiresAdmin = requiresAdmin,
+            Source = source,
+            LocalPath = installed ? ScriptHelper.GetScriptFilePath(InstallDirectory, owner, type) : null,
+            DraftPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "lc-fixture-no-drafts", owner.ToString(), type.ToString()),
+            ServerContents = type == ScriptType.Install && owner == Ut2004 ? ServerInstallScript : "$Return = 0",
+        };
+
+        var workspace = new ScriptWorkspace(
+            Ut2004,
+            "Unreal Tournament 2004",
+            installed ? InstallDirectory : null,
+            installed,
+            [
+                new ScriptOwnerNode(ScriptOwnerKind.Game, Ut2004, "Unreal Tournament 2004", false,
+                [
+                    Entry(Ut2004, ScriptOwnerKind.Game, "Unreal Tournament 2004", ScriptType.Install, requiresAdmin: true),
+                    Entry(Ut2004, ScriptOwnerKind.Game, "Unreal Tournament 2004", ScriptType.Uninstall),
+                    Entry(Ut2004, ScriptOwnerKind.Game, "Unreal Tournament 2004", ScriptType.NameChange),
+                    Entry(Ut2004, ScriptOwnerKind.Game, "Unreal Tournament 2004", ScriptType.KeyChange),
+                ]),
+                new ScriptOwnerNode(ScriptOwnerKind.Redistributable, DirectX, "DirectX 9.0c", false,
+                [
+                    Entry(DirectX, ScriptOwnerKind.Redistributable, "DirectX 9.0c", ScriptType.DetectInstall),
+                    Entry(DirectX, ScriptOwnerKind.Redistributable, "DirectX 9.0c", ScriptType.Install, requiresAdmin: true),
+                ]),
+            ]);
+
+        var debugger = new ScriptDebuggerWindowViewModel(context.Services, Ut2004);
+
+        debugger.ApplyWorkspace(workspace);
+
+        // Installed entries point at files that don't exist here; show the script's text regardless.
+        if (installed)
+            debugger.SelectedDocument!.Load(InstallScript);
+
+        return debugger;
+    }
 
     private static User Person(string name) => new() { Id = FixtureGames.IdFor("user " + name), UserName = name.ToLowerInvariant(), Alias = name };
 

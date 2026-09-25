@@ -16,19 +16,19 @@ using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Plugins;
+using LANCommander.SDK.PowerShell.Debugging;
+using LANCommander.SDK.PowerShell.Debugging.Remote;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher;
 
 class Program
 {
-    // Used to pass the service provider and args into ScriptDebugApp
-    internal static IServiceProvider? HeadlessServiceProvider;
-    internal static string[]? HeadlessArgs;
     internal static bool BigScreenMode;
 
     private static readonly string[] CliVerbs =
@@ -108,9 +108,6 @@ class Program
 
         IConfiguration configuration = configurationBuilder.Build();
 
-        var settings = new Settings.Settings();
-        configuration.Bind(settings);
-
         var services = new ServiceCollection();
 
         var logDirectory = Path.Combine(AppPaths.GetConfigDirectory(), "Logs");
@@ -141,64 +138,78 @@ class Program
         // provider is built. UI extensions register harmlessly but are never resolved in headless mode.
         var pluginLoader = PluginBootstrap.ConfigurePlugins(services, PluginHost.Launcher);
 
+        UseRemoteScriptDebugger(services, args);
+
         var serviceProvider = services.BuildServiceProvider();
 
         await pluginLoader.InitializeAllAsync(serviceProvider).ConfigureAwait(false);
 
-        if (settings.Debug.EnableScriptDebugging)
-        {
-            HeadlessServiceProvider = serviceProvider;
-            HeadlessArgs = args;
+        using var scope = serviceProvider.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-            AppBuilder.Configure<ScriptDebugApp>()
-                .UsePlatformDetect()
-                .WithInterFont()
-                .LogToTrace()
-                .WithRenderingOverrides()
-                .StartWithClassicDesktopLifetime(args);
-        }
-        else
+        try
         {
-            using var scope = serviceProvider.CreateScope();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
+            var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
+            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
 
-            try
+            logger.LogInformation("Running headless with data directory {DataDirectory}", AppPaths.GetConfigDirectory());
+
+            await connectionClient.ConnectAsync().ConfigureAwait(false);
+
+            if (!await connectionClient.PingAsync().ConfigureAwait(false))
+                await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
+
+            if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
             {
-                var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
-                var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
-                var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
-                var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-
-                logger.LogInformation("Running headless with data directory {DataDirectory}", AppPaths.GetConfigDirectory());
-
-                await connectionClient.ConnectAsync().ConfigureAwait(false);
-
-                if (!await connectionClient.PingAsync().ConfigureAwait(false))
-                    await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
-
-                if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
+                settingsProvider.Update(static s => s.Games.InstallDirectories = GetOSPlatform() switch
                 {
-                    settingsProvider.Update(static s => s.Games.InstallDirectories = GetOSPlatform() switch
-                    {
-                        var platform when platform == OSPlatform.Windows => [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")],
-                        var platform when platform == OSPlatform.Linux => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
-                        var platform when platform == OSPlatform.OSX => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
-                        _ => throw new NotSupportedException("Unsupported OS platform")
-                    });
-                }
-
-                await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
-                await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
-
-                await commandLineService.ParseCommandLineAsync(args);
+                    var platform when platform == OSPlatform.Windows => [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")],
+                    var platform when platform == OSPlatform.Linux => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+                    var platform when platform == OSPlatform.OSX => [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")],
+                    _ => throw new NotSupportedException("Unsupported OS platform")
+                });
             }
-            catch (Exception ex)
-            {
-                logger.LogCritical(ex, "Headless run failed before completing");
 
-                Environment.ExitCode = 1;
-            }
+            await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
+            await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
+
+            await commandLineService.ParseCommandLineAsync(args);
         }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, "Headless run failed before completing");
+
+            Environment.ExitCode = 1;
+        }
+
+        if (serviceProvider.GetService<IScriptDebugBroker>() is IAsyncDisposable broker)
+            await broker.DisposeAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// When the launcher runs a script elevated while its script debugger is watching, it passes the
+    /// debugger's pipe on the command line. Scripts this process runs then attach to the launcher's
+    /// debugger window over that pipe instead of running unobserved.
+    /// </summary>
+    private static void UseRemoteScriptDebugger(IServiceCollection services, string[] args)
+    {
+        var pipe = GetArgumentValue(args, "--DebugPipe");
+        var token = GetArgumentValue(args, "--DebugToken");
+
+        if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token))
+            return;
+
+        services.Replace(ServiceDescriptor.Singleton<IScriptDebugBroker>(sp =>
+            new PipeScriptDebugBroker(pipe, token, sp.GetRequiredService<ILogger<PipeScriptDebugBroker>>())));
+    }
+
+    private static string? GetArgumentValue(string[] args, string name)
+    {
+        var index = Array.FindIndex(args, a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        return index < 0 || index + 1 >= args.Length ? null : args[index + 1];
     }
 
     private static void ApplyDataDirectoryOverride(string[] args)
@@ -232,67 +243,5 @@ class Program
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             return OSPlatform.OSX;
         throw new NotSupportedException("Unsupported OS platform");
-    }
-}
-
-/// <summary>
-/// Minimal Avalonia application used when EnableScriptDebugging is true.
-/// Shows only a PowerShellConsoleWindow and runs the requested script inside it.
-/// </summary>
-internal class ScriptDebugApp : Application
-{
-    public override void OnFrameworkInitializationCompleted()
-    {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-
-            var vm = new PowerShellConsoleViewModel("Script Debugger", string.Empty);
-            var window = new PowerShellConsoleWindow { DataContext = vm };
-            vm.CloseAction = () => window.Close();
-
-            desktop.MainWindow = window;
-            window.Show();
-
-            _ = RunScriptAsync(window, Program.HeadlessServiceProvider!, Program.HeadlessArgs!);
-        }
-
-        base.OnFrameworkInitializationCompleted();
-    }
-
-    private static async Task RunScriptAsync(
-        PowerShellConsoleWindow window,
-        IServiceProvider serviceProvider,
-        string[] args)
-    {
-        try
-        {
-            using var scope = serviceProvider.CreateScope();
-            var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
-            var commandLineService = scope.ServiceProvider.GetRequiredService<CommandLineService>();
-            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-
-            await connectionClient.ConnectAsync().ConfigureAwait(false);
-
-            if (!await connectionClient.PingAsync().ConfigureAwait(false))
-                await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
-
-            if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)
-            {
-                settingsProvider.Update(static s => s.Games.InstallDirectories = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    ? [Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:", "Games")]
-                    : [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games")]);
-            }
-
-            await databaseContext.Database.MigrateAsync().ConfigureAwait(false);
-            await databaseContext.EnableWalModeAsync().ConfigureAwait(false);
-
-            await commandLineService.ParseCommandLineAsync(args).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            window.ConsoleControl.OnOutput(LogLevel.Error, $"Fatal error: {ex.Message}");
-        }
     }
 }

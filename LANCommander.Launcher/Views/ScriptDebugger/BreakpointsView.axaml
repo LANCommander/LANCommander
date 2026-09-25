@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             xmlns:services="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             x:Class="LANCommander.Launcher.Views.ScriptDebugger.BreakpointsView"
+             x:DataType="vm:BreakpointsViewModel">
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="4">
+      <Button Content="Remove all" Command="{Binding RemoveAllCommand}" />
+    </Border>
+
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="services:BreakpointModel">
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+            <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" />
+
+            <!-- Click the line to jump to it in the editor. -->
+            <Button Grid.Column="1" Classes="link" Content="{Binding Display}"
+                    Command="{Binding $parent[UserControl].((vm:BreakpointsViewModel)DataContext).NavigateCommand}"
+                    CommandParameter="{Binding}" />
+
+            <TextBlock Grid.Column="2" Margin="12,0" VerticalAlignment="Center" Foreground="#808080"
+                       Text="{Binding HitCount, StringFormat='hits: {0}'}" />
+            <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#DCC06A" Text="pending"
+                       IsVisible="{Binding !IsBound}" />
+
+            <Button Grid.Column="4" Classes="link" Content="Remove" Margin="12,0,0,0"
+                    Command="{Binding $parent[UserControl].((vm:BreakpointsViewModel)DataContext).RemoveCommand}"
+                    CommandParameter="{Binding}" />
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

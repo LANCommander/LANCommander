@@ -1,0 +1,231 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+        xmlns:views="using:LANCommander.Launcher.Views.ScriptDebugger"
+        x:Class="LANCommander.Launcher.Views.ScriptDebugger.ScriptDebuggerWindow"
+        x:DataType="vm:ScriptDebuggerWindowViewModel"
+        Title="{Binding Title}"
+        Width="1400" Height="860"
+        MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E">
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="F5" Command="{Binding RunCommand}" />
+    <KeyBinding Gesture="Shift+F5" Command="{Binding StopCommand}" />
+    <KeyBinding Gesture="F10" Command="{Binding StepOverCommand}" />
+    <KeyBinding Gesture="F11" Command="{Binding StepIntoCommand}" />
+    <KeyBinding Gesture="Shift+F11" Command="{Binding StepOutCommand}" />
+    <KeyBinding Gesture="F9" Command="{Binding ToggleBreakpointCommand}" />
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+  </Window.KeyBindings>
+
+  <!-- Tool-window proportions, scoped to this window so none of it leaks into the launcher. -->
+  <Window.Styles>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TabControl">
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Border.toolbar Button">
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Border.banner Button">
+      <Setter Property="Padding" Value="10,2" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.panelHeader">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#9A9A9A" />
+      <Setter Property="Padding" Value="8,5" />
+    </Style>
+    <Style Selector="ListBox.dense ListBoxItem">
+      <Setter Property="Padding" Value="6,0" />
+      <Setter Property="MinHeight" Value="18" />
+    </Style>
+    <Style Selector="TreeView.dense TreeViewItem">
+      <Setter Property="MinHeight" Value="24" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="2,0" />
+      <Setter Property="FontFamily" Value="Cascadia Code,Consolas,monospace" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#3F3F46" />
+    </Style>
+    <Style Selector="Border.badge">
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <!-- Toolbar -->
+    <Border Classes="toolbar" DockPanel.Dock="Top" Background="#2D2D30" Padding="6,4" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+          <Button Content="{Binding IsStopped, Converter={x:Static views:ScriptDebuggerWindow.RunLabel}}"
+                  Command="{Binding RunCommand}"
+                  IsEnabled="{Binding CanRun}"
+                  ToolTip.Tip="Continue from a breakpoint, or run the selected script on its own (F5)" />
+          <Button Content="Stop" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" ToolTip.Tip="Stop the script (Shift+F5)" />
+          <Border Width="1" Height="20" Margin="6,0" Background="#3F3F46" VerticalAlignment="Center" />
+          <Button Content="Step Over" Command="{Binding StepOverCommand}" IsEnabled="{Binding CanStep}" ToolTip.Tip="F10" />
+          <Button Content="Step Into" Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into, or run the selected script and break on its first line (F11)" />
+          <Button Content="Step Out" Command="{Binding StepOutCommand}" IsEnabled="{Binding CanStep}" ToolTip.Tip="Shift+F11" />
+          <Border Width="1" Height="20" Margin="6,0" Background="#3F3F46" VerticalAlignment="Center" />
+          <Button Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding HasDocument}" ToolTip.Tip="Ctrl+S" />
+          <Button Content="Discard Draft" Command="{Binding DiscardDraftCommand}" IsVisible="{Binding CanDiscardDraft}" />
+          <Button Content="Upload to Server" Command="{Binding UploadCommand}" IsVisible="{Binding CanUpload}"
+                  ToolTip.Tip="Replace the server's copy of this script with the text in the editor" />
+          <Border Width="1" Height="20" Margin="6,0" Background="#3F3F46" VerticalAlignment="Center" />
+          <Button Content="Refresh" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsLoading}" />
+          <ToggleButton Content="Commands" IsChecked="{Binding IsCommandsPaneVisible, Mode=TwoWay}" Padding="10,4" FontSize="13" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+          <Border Classes="badge" Background="#5A1D1D" IsVisible="{Binding RemoteSessionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding RemoteSessionText}" Foreground="#F4A0A0" FontSize="12" />
+          </Border>
+          <Border Classes="badge" Background="#1F3A52"
+                  ToolTip.Tip="Any of this game's scripts that runs while this window is open (install, play, uninstall, name or key change) stops at its breakpoints.">
+            <TextBlock Text="Attached" Foreground="#9CDCFE" FontSize="12" />
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Banners -->
+    <Border Classes="banner" DockPanel.Dock="Top" Background="#1F3A52" Padding="8,4" IsVisible="{Binding HasPendingDrafts}">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="#D4D4D4" TextWrapping="Wrap"
+                   Text="{Binding PendingDraftCount, StringFormat='{}{0} draft(s) were saved before this game was installed and have not been applied to its scripts yet.'}" />
+        <Button Grid.Column="1" Margin="8,0,0,0" Content="Apply Drafts" Command="{Binding ApplyPendingDraftsCommand}" />
+        <Button Grid.Column="2" Margin="4,0,0,0" Content="Discard" Command="{Binding DiscardPendingDraftsCommand}" />
+      </Grid>
+    </Border>
+
+    <Border Classes="banner" DockPanel.Dock="Top" Background="#4B3A00" Padding="8,4" IsVisible="{Binding HasUploadConflict}">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="#F0D080" TextWrapping="Wrap"
+                   Text="The server's copy of this script changed after it was opened here. Uploading replaces those changes." />
+        <Button Grid.Column="1" Margin="8,0,0,0" Content="Overwrite Server Copy" Command="{Binding OverwriteUploadCommand}" />
+        <Button Grid.Column="2" Margin="4,0,0,0" Content="Cancel" Command="{Binding CancelUploadCommand}" />
+      </Grid>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="#007ACC" Padding="8,3">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="White" />
+        <TextBlock Grid.Column="1" Margin="16,0" Foreground="White" Text="{Binding Console.ProgressText}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="2" Margin="8,0" Foreground="White"
+                   Text="{Binding ErrorCount, StringFormat='{}{0} parse error(s)'}"
+                   IsVisible="{Binding ErrorCount, Converter={x:Static views:ScriptDebuggerWindow.IsPositive}}" />
+        <TextBlock Grid.Column="3" Margin="8,0" Foreground="White" Text="{Binding CaretText}" />
+        <TextBlock Grid.Column="4" Margin="8,0" Foreground="White" Text="{Binding State}" />
+      </Grid>
+    </Border>
+
+    <Grid ColumnDefinitions="260,4,*,Auto,Auto">
+
+      <!-- Scripts -->
+      <Border Grid.Column="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Classes="panelHeader" Text="SCRIPTS" />
+
+          <TextBlock DockPanel.Dock="Top" Margin="8,4" Foreground="#9A9A9A" FontSize="12" TextWrapping="Wrap"
+                     Text="Not installed: showing the server's scripts. Edits are saved as drafts."
+                     IsVisible="{Binding !IsInstalled}" />
+
+          <TextBlock DockPanel.Dock="Top" Margin="8,4" Foreground="#DCC06A" FontSize="12" TextWrapping="Wrap"
+                     Text="{Binding WorkspaceMessage}" IsVisible="{Binding HasWorkspaceMessage}" />
+
+          <TextBlock DockPanel.Dock="Top" Margin="8,4" Foreground="#808080" Text="Loading..." IsVisible="{Binding IsLoading}" />
+
+          <TreeView x:Name="ScriptTree" Classes="dense" Background="Transparent"
+                    ItemsSource="{Binding Owners}"
+                    SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}">
+            <TreeView.Styles>
+              <Style Selector="TreeViewItem">
+                <Setter Property="IsExpanded" Value="True" />
+              </Style>
+            </TreeView.Styles>
+            <TreeView.DataTemplates>
+              <TreeDataTemplate DataType="vm:ScriptOwnerViewModel" ItemsSource="{Binding Scripts}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#D4D4D4" />
+                  <TextBlock Text="{Binding KindLabel}" Foreground="#808080" FontSize="11" VerticalAlignment="Center" />
+                </StackPanel>
+              </TreeDataTemplate>
+              <DataTemplate DataType="vm:ScriptItemViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Ellipse Width="7" Height="7" Fill="#E5C07B" VerticalAlignment="Center" IsVisible="{Binding IsRunning}"
+                           ToolTip.Tip="Running" />
+                  <TextBlock Text="{Binding Name}" Foreground="#D4D4D4" />
+                  <TextBlock Text="*" Foreground="#D4D4D4" IsVisible="{Binding IsDirty}" />
+                  <TextBlock Text="{Binding SourceLabel}" Foreground="#6A9955" FontSize="11" VerticalAlignment="Center" />
+                  <TextBlock Text="admin" Foreground="#F4A0A0" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding RequiresAdmin}"
+                             ToolTip.Tip="Runs elevated. It is debugged in the elevated process over a pipe." />
+                </StackPanel>
+              </DataTemplate>
+            </TreeView.DataTemplates>
+          </TreeView>
+        </DockPanel>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Width="4" VerticalAlignment="Stretch" Background="#3F3F46" />
+
+      <!-- Editor and debug panels -->
+      <Grid Grid.Column="2" RowDefinitions="*,4,300">
+
+        <views:EditorView Grid.Row="0" />
+
+        <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="#3F3F46" />
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,4,*">
+
+          <TabControl Grid.Column="0" SelectedIndex="{Binding SelectedPanelIndex, Mode=TwoWay}">
+            <TabItem Header="Variables">
+              <views:VariablesView DataContext="{Binding Variables}" />
+            </TabItem>
+            <TabItem Header="Watch">
+              <views:WatchView DataContext="{Binding Watch}" />
+            </TabItem>
+            <TabItem Header="Call Stack">
+              <views:CallStackView DataContext="{Binding CallStack}" />
+            </TabItem>
+            <TabItem Header="Breakpoints">
+              <views:BreakpointsView DataContext="{Binding Breakpoints}" />
+            </TabItem>
+          </TabControl>
+
+          <GridSplitter Grid.Column="1" Width="4" VerticalAlignment="Stretch" Background="#3F3F46" />
+
+          <views:ConsoleView Grid.Column="2" DataContext="{Binding Console}" />
+        </Grid>
+      </Grid>
+
+      <GridSplitter Grid.Column="3" Width="4" VerticalAlignment="Stretch" Background="#3F3F46"
+                    IsVisible="{Binding IsCommandsPaneVisible}" />
+
+      <!--
+        The ContentControl keeps the window view model as its DataContext, so IsVisible binds to the
+        toggle while the pane itself binds to Commands. An Auto column collapses when its child is hidden.
+      -->
+      <ContentControl Grid.Column="4" Width="340" IsVisible="{Binding IsCommandsPaneVisible}">
+        <views:CommandsView DataContext="{Binding Commands}" />
+      </ContentControl>
+    </Grid>
+  </DockPanel>
+</Window>

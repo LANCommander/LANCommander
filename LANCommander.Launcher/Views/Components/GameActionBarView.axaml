@@ -128,10 +128,10 @@
                         <!-- Flyout assigned in code-behind (consolidated game menu). -->
                     </SplitButton>
 
-                    <!-- Debug Scripts button (when script debugging is enabled and installed) -->
-                    <SplitButton Command="{Binding OpenPowerShellConsoleCommand}"
+                    <!-- Debug Scripts button (when script debugging is enabled). Works before install too:
+                         the debugger lists the server's scripts and catches them as the install runs. -->
+                    <SplitButton Command="{Binding OpenScriptDebuggerCommand}"
                                  IsVisible="{Binding IsScriptDebuggingEnabled}"
-                                 IsEnabled="{Binding IsInstalled}"
                                  Classes="Hero"
                                  Padding="14,0"
                                  ToolTip.Tip="Debug Scripts">
@@ -139,12 +139,9 @@
 
                         <SplitButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem Header="Open PowerShell Console" Command="{Binding OpenPowerShellConsoleCommand}" />
-                                <Separator />
-                                <MenuItem Header="Run Install Scripts" Command="{Binding RunInstallScriptsCommand}" />
-                                <MenuItem Header="Run Uninstall Scripts" Command="{Binding RunUninstallScriptsCommand}" />
-                                <MenuItem Header="Run Name Change Scripts" Command="{Binding RunNameChangeScriptsCommand}" />
-                                <MenuItem Header="Run Key Change Scripts" Command="{Binding RunKeyChangeScriptsCommand}" />
+                                <MenuItem Header="Open Script Debugger" Command="{Binding OpenScriptDebuggerCommand}" />
+                                <MenuItem Header="Open PowerShell Console" Command="{Binding OpenPowerShellConsoleCommand}"
+                                          IsEnabled="{Binding IsInstalled}" />
                             </MenuFlyout>
                         </SplitButton.Flyout>
                     </SplitButton>

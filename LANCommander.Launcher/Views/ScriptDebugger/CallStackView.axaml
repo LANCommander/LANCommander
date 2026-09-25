@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             xmlns:items="using:LANCommander.Launcher.ViewModels.ScriptDebugger.Items"
+             x:Class="LANCommander.Launcher.Views.ScriptDebugger.CallStackView"
+             x:DataType="vm:CallStackViewModel">
+
+  <ListBox ItemsSource="{Binding Frames}" SelectedItem="{Binding SelectedFrame}" Background="Transparent">
+    <ListBox.ItemTemplate>
+      <DataTemplate x:DataType="items:CallStackFrameViewModel">
+        <TextBlock Text="{Binding Display}" FontFamily="Cascadia Code,Consolas,monospace" />
+      </DataTemplate>
+    </ListBox.ItemTemplate>
+  </ListBox>
+</UserControl>

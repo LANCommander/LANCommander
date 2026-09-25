@@ -13,8 +13,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
-using LANCommander.SDK.Plugins;
-using LANCommander.SDK.PowerShell.Extensions;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell.Debugging;
+using LANCommander.SDK.PowerShell.Debugging.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Settings = LANCommander.SDK.Models.Settings;
@@ -33,12 +34,16 @@ namespace LANCommander.SDK.PowerShell
         public PowerShellVariableList Variables { get; private set; }
         public Dictionary<string, string> Arguments { get; private set; }
 
+        /// <summary>The file passed to <see cref="UseFile"/>, or null for inline scripts.</summary>
+        public string FilePath { get; private set; }
+
         private IntPtr _wow64 = IntPtr.Zero;
         private readonly IServiceProvider ServiceProvider;
         private readonly ILogger<PowerShellScript> Logger;
         private IEnumerable<IScriptDebugger> Debuggers { get; set; }
         private System.Management.Automation.PowerShell Context { get; set; }
         private IScriptDebugContext DebugContext { get; set; }
+        private DebugSession _debugSession;
 
         private const string Logo = @"
    __   ___   _  _______                              __       
@@ -70,6 +75,22 @@ namespace LANCommander.SDK.PowerShell
 
         public PowerShellScript UseFile(string path)
         {
+            FilePath = path;
+
+            // A debugger watching this script gets the chance to write unsaved edits or a draft to the
+            // file first, so what runs (and what an elevated child process reads) is what the editor shows.
+            if (Identity is { } identity)
+            {
+                try
+                {
+                    Broker?.PrepareScriptFile(identity, path);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "The script debugger could not prepare {ScriptPath}", path);
+                }
+            }
+
             Contents = File.ReadAllText(path);
 
             if (RequiresAdmin())
@@ -148,7 +169,10 @@ namespace LANCommander.SDK.PowerShell
         {
             try
             {
-                Context?.Stop();
+                if (_debugSession is { } session)
+                    session.RequestStop();
+                else
+                    Context?.Stop();
             }
             catch (Exception ex)
             {
@@ -163,6 +187,47 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        private IScriptDebugBroker Broker => ServiceProvider.GetService<IScriptDebugBroker>();
+
+        /// <summary>
+        /// What this script is, for the script debugger: derived from the <c>.lancommander/&lt;id&gt;/&lt;Type&gt;.ps1</c>
+        /// path it was loaded from and the manifest variables it was given. Null for inline scripts.
+        /// </summary>
+        public ScriptIdentity Identity
+        {
+            get
+            {
+                if (!ScriptHelper.TryParseScriptFilePath(FilePath, out var installDirectory, out var ownerId, out var type))
+                    return null;
+
+                var ownerKind = HasVariable("RedistributableManifest") ? ScriptOwnerKind.Redistributable
+                    : HasVariable("ToolManifest") ? ScriptOwnerKind.Tool
+                    : ScriptOwnerKind.Game;
+
+                var gameId = (Variables.FirstOrDefault(v => v.Name == "GameManifest")?.Value as LANCommander.SDK.Models.Manifest.Game)?.Id;
+
+                return new ScriptIdentity(new ScriptKey(ownerId, type), ownerKind, gameId, installDirectory, FilePath);
+            }
+        }
+
+        /// <summary>True when a script debugger will attach to this script when it runs.</summary>
+        public bool IsDebuggerAttached
+        {
+            get
+            {
+                try
+                {
+                    return Identity is { } identity && Broker?.IsAttached(identity) == true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+        }
+
+        private bool HasVariable(string name) => Variables.Any(v => v.Name == name);
+
         private bool RequiresAdmin()
         {
             var pattern = @"^[ \t]*#(\s?Requires\s?Admin|Requires -RunAsAdministrator)";
@@ -170,120 +235,22 @@ namespace LANCommander.SDK.PowerShell
             return Regex.IsMatch(Contents, pattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
         }
 
-        /// <summary>
-        /// Builds the runspace configuration. When <paramref name="bypassExecutionPolicy"/> is set we
-        /// prefer an execution policy of <see cref="Microsoft.PowerShell.ExecutionPolicy.Bypass"/> so
-        /// unsigned game scripts run without prompting.
-        /// </summary>
-        private InitialSessionState CreateSessionState(bool bypassExecutionPolicy)
-        {
-            var initialSessionState = InitialSessionState.CreateDefault();
-
-            if (bypassExecutionPolicy)
-                initialSessionState.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
-
-            initialSessionState.AddCustomCmdlets();
-
-            RegisterPluginCmdlets(initialSessionState);
-
-            return initialSessionState;
-        }
-
-        /// <summary>
-        /// Opens a PowerShell runspace, preferring an execution policy of Bypass on Windows. Applying a
-        /// process-scope Bypass during <see cref="Runspace.Open"/> can throw on machines where the
-        /// execution policy is locked down by Group Policy; in that case we fall back to opening the
-        /// runspace with the system default policy so script execution is never silently skipped.
-        /// </summary>
-        private Runspace OpenRunspace()
-        {
-            var bypassExecutionPolicy = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-            var runspace = RunspaceFactory.CreateRunspace(CreateSessionState(bypassExecutionPolicy));
-
-            try
-            {
-                runspace.Open();
-
-                return runspace;
-            }
-            catch (Exception ex) when (bypassExecutionPolicy)
-            {
-                Logger?.LogWarning(ex, "Failed to open PowerShell runspace with ExecutionPolicy.Bypass; retrying with the system default execution policy");
-
-                runspace.Dispose();
-
-                var fallback = RunspaceFactory.CreateRunspace(CreateSessionState(false));
-
-                fallback.Open();
-
-                return fallback;
-            }
-        }
-
         public async Task<T?> ExecuteAsync<T>()
         {
+            var attachment = await TryAttachDebuggerAsync();
+
+            if (attachment is not null)
+                return await ExecuteUnderDebuggerAsync<T>(attachment);
+
             T? result = default;
 
             DisableWow64Redirection();
 
-            using Runspace runspace = OpenRunspace();
+            var builder = new PowerShellRunspaceBuilder(ServiceProvider, Logger);
 
-            var modulesPath = AppPaths.GetConfigPath("Modules");
+            using Runspace runspace = builder.Open();
 
-            var moduleSources = new List<string>();
-
-            if (Directory.Exists(modulesPath))
-                moduleSources.AddRange(Directory.GetDirectories(modulesPath));
-
-            moduleSources.AddRange(GetPluginModulePaths());
-
-            foreach (var moduleDirectory in moduleSources)
-            {
-                ImportModuleIntoRunspace(runspace, moduleDirectory);
-            }
-
-            // Ensure TLS 1.2 is available for web requests (GitHub, etc.)
-            using (var tls = System.Management.Automation.PowerShell.Create())
-            {
-                Logger.LogInformation("Ensuring TLS 1.2 is enabled for PowerShell runspace");
-                tls.Runspace = runspace;
-                tls.AddScript("[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12");
-                tls.Invoke();
-            }
-
-            runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
-
-            foreach (var variable in Variables)
-            {
-                Logger.LogInformation("Setting PowerShell variable ${VariableName} = {VariableValue}", variable.Name, variable.Value);
-                runspace.SessionStateProxy.SetVariable(variable.Name, variable.Value);
-            }
-
-            runspace.SessionStateProxy.SetVariable("Logo", Logo);
-            runspace.SessionStateProxy.SetVariable("ScriptType", Type);
-            runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
-
-            // Store services in session state for cmdlets to access
-            var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
-            if (settingsProvider is not null)
-            {
-                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.SettingsProviderKey, settingsProvider);
-            }
-
-            var apiRequestFactory = ServiceProvider.GetService<ApiRequestFactory>();
-            if (apiRequestFactory is not null)
-            {
-                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.ApiRequestFactoryKey, apiRequestFactory);
-            }
-
-            var profileClient = ServiceProvider.GetService<Services.ProfileClient>();
-            if (profileClient is not null)
-            {
-                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.ProfileClientKey, profileClient);
-            }
-
-            // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
+            builder.Initialize(runspace, WorkingDirectory, Type, Variables, Logo);
 
             Context = System.Management.Automation.PowerShell.Create();
 
@@ -305,7 +272,7 @@ namespace LANCommander.SDK.PowerShell
             Context.Streams.Warning.DataAdded += Warning_DataAdded;
             Context.Streams.Error.DataAdded += Error_DataAdded;
 
-            if (Debug)
+            if (Debug && HasLegacyDebuggers())
             {
                 AddDebugHeader();
             }
@@ -356,7 +323,7 @@ namespace LANCommander.SDK.PowerShell
                     await dbg.EndAsync(DebugContext);
                 });
 
-                if (Debug)
+                if (Debug && HasLegacyDebuggers())
                 {
                     await DebugAsync(async dbg =>
                     {
@@ -372,94 +339,120 @@ namespace LANCommander.SDK.PowerShell
             return result;
         }
 
-        private void RegisterPluginCmdlets(InitialSessionState initialSessionState)
+        private async Task<ScriptDebugAttachment> TryAttachDebuggerAsync()
         {
-            IEnumerable<IPluginPowerShellExtension> extensions;
+            var broker = Broker;
+
+            if (broker is null || Identity is not { } identity)
+                return null;
 
             try
             {
-                extensions = ServiceProvider.GetServices<IPluginPowerShellExtension>();
+                return await broker.TryAttachAsync(identity);
             }
             catch (Exception ex)
             {
-                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell extensions");
-                return;
-            }
-
-            foreach (var extension in extensions)
-            {
-                IEnumerable<Type> cmdletTypes;
-
-                try
-                {
-                    cmdletTypes = extension.GetCmdletTypes() ?? Enumerable.Empty<Type>();
-                }
-                catch (Exception ex)
-                {
-                    Logger?.LogWarning(ex, "Plugin PowerShell extension {Extension} failed to enumerate cmdlet types", extension.GetType().FullName);
-                    continue;
-                }
-
-                foreach (var cmdletType in cmdletTypes)
-                {
-                    try
-                    {
-                        var attribute = cmdletType.GetCustomAttribute<CmdletAttribute>();
-
-                        if (attribute == null)
-                        {
-                            Logger?.LogWarning("Plugin cmdlet type {CmdletType} is missing a [Cmdlet] attribute and was skipped", cmdletType.FullName);
-                            continue;
-                        }
-
-                        var cmdletName = $"{attribute.VerbName}-{attribute.NounName}";
-
-                        initialSessionState.Commands.Add(new SessionStateCmdletEntry(cmdletName, cmdletType, null));
-
-                        Logger?.LogDebug("Registered plugin cmdlet {CmdletName} from {CmdletType}", cmdletName, cmdletType.FullName);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger?.LogWarning(ex, "Could not register plugin cmdlet {CmdletType}", cmdletType.FullName);
-                    }
-                }
+                Logger.LogWarning(ex, "The script debugger could not attach to the {ScriptType} script; running it normally", Type);
+                return null;
             }
         }
 
-        private IEnumerable<string> GetPluginModulePaths()
+        /// <summary>
+        /// Runs the script under the interactive debugger. The runspace is prepared exactly as it is for a
+        /// normal run, and the result is read back the same way, so the script cannot tell the difference.
+        /// </summary>
+        private async Task<T?> ExecuteUnderDebuggerAsync<T>(ScriptDebugAttachment attachment)
         {
-            IEnumerable<IPluginPowerShellExtension> extensions;
+            var builder = new PowerShellRunspaceBuilder(ServiceProvider, Logger);
+            var session = new DebugSession(attachment.Sink);
+
+            _debugSession = session;
 
             try
             {
-                extensions = ServiceProvider.GetServices<IPluginPowerShellExtension>();
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogWarning(ex, "Could not resolve plugin PowerShell extensions");
-                yield break;
-            }
-
-            foreach (var extension in extensions)
-            {
-                IEnumerable<string> modulePaths;
-
                 try
                 {
-                    modulePaths = extension.GetModulePaths() ?? Enumerable.Empty<string>();
+                    attachment.SessionStarted(session);
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogWarning(ex, "Plugin PowerShell extension {Extension} failed to enumerate module paths", extension.GetType().FullName);
-                    continue;
+                    Logger.LogWarning(ex, "The script debugger failed to observe the {ScriptType} script session", Type);
                 }
 
-                foreach (var modulePath in modulePaths)
+                var variableNames = String.Join(", ", Variables.Select(v => "$" + v.Name));
+
+                attachment.Sink.WriteLine(ConsoleOutputKind.System, $"[debugger] {Type} script attached: {FilePath}");
+                attachment.Sink.WriteLine(ConsoleOutputKind.System, $"[debugger] Variables: {variableNames}");
+
+                Logger.LogInformation("Executing PowerShell script of type {ScriptType} under the script debugger", Type);
+
+                session.Start(new DebugLaunchRequest
                 {
-                    if (!string.IsNullOrWhiteSpace(modulePath))
-                        yield return modulePath;
-                }
+                    ScriptPath = FilePath,
+                    ScriptContents = Contents,
+                    Breakpoints = attachment.Breakpoints,
+                    StepIntoOnStart = attachment.StepIntoOnStart,
+                    Preamble = "Write-Host $Logo",
+                    OnPipelineThreadStarted = DisableWow64Redirection,
+                    OnPipelineThreadCompleted = RevertWow64Redirection,
+                    OpenRunspace = host =>
+                    {
+                        var runspace = builder.Open(host, PSThreadOptions.UseCurrentThread);
+
+                        builder.Initialize(runspace, WorkingDirectory, Type, Variables, Logo);
+
+                        return runspace;
+                    },
+                    CaptureResult = (powerShell, output) =>
+                    {
+                        foreach (var error in powerShell.Streams.Error)
+                            Logger.LogError("Script error: {InvocationName} : {ErrorMessage}", error.InvocationInfo?.InvocationName, error.Exception?.Message);
+
+                        var returnValue = powerShell.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
+
+                        if (returnValue is null && output.Count > 0)
+                            returnValue = output[^1];
+
+                        if (returnValue is null)
+                        {
+                            Logger.LogWarning("Script did not return a value via $Return or the pipeline");
+                            return null;
+                        }
+
+                        var converted = ConvertResult<T>(returnValue);
+
+                        if (converted is null)
+                            Logger.LogWarning("Script returned a value but it could not be converted to {ExpectedType}", typeof(T).Name);
+
+                        return converted;
+                    },
+                });
+
+                var completion = await session.Completion;
+
+                if (completion.Faulted)
+                    Logger.LogError("Could not execute script: {ErrorMessage}", completion.ErrorMessage);
+
+                return completion.Result is T typed ? typed : default;
             }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not execute script");
+
+                return default;
+            }
+            finally
+            {
+                _debugSession = null;
+                session.Dispose();
+            }
+        }
+
+        private bool HasLegacyDebuggers()
+        {
+            Debuggers ??= ServiceProvider.GetServices<IScriptDebugger>();
+
+            return Debuggers.Any();
         }
 
         private void AddDebugHeader()
@@ -476,31 +469,6 @@ namespace LANCommander.SDK.PowerShell
 
             Context.AddScript("Write-Host ''");
             Context.AddScript("Write-Host 'Enter \"exit\" to continue'");
-        }
-
-        private void ImportModuleIntoRunspace(Runspace runspace, string moduleDirectory)
-        {
-            Logger.LogInformation("Importing PowerShell module from {ModuleDirectory}", moduleDirectory);
-            try
-            {
-                using var import = System.Management.Automation.PowerShell.Create();
-
-                import.Runspace = runspace;
-
-                import.AddCommand("Import-Module")
-                    .AddParameter("Name", moduleDirectory)
-                    .AddParameter("ErrorAction", "Stop");
-
-                import.Invoke();
-
-                if (import.HadErrors)
-                    foreach (var error in import.Streams.Error)
-                        Logger.LogWarning("Failed to load module {ModuleDirectory}: {ErrorMessage}", moduleDirectory, error.Exception?.Message);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Failed to load module {ModuleDirectory}", moduleDirectory);
-            }
         }
 
         private static T? ConvertResult<T>(object value)

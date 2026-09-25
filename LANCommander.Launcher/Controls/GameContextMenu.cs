@@ -200,6 +200,7 @@ public static class GameContextMenu
         items.Add(Item("Browse Files", vm, "BrowseFilesCommand", visiblePath: "IsInstalled"));
         items.Add(Item("View Manual", vm, "OpenFirstManualCommand", visiblePath: "HasManuals"));
         items.Add(Item("Manage", vm, "ManageCommand", visiblePath: "CanManage"));
+        items.Add(Item("Debug Scripts", vm, "OpenScriptDebuggerCommand", visiblePath: "IsScriptDebuggingEnabled"));
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Verify Files", vm, "VerifyFilesCommand", visiblePath: "IsInstalled", enabledPath: "IsVerifyingFiles", enabledInvert: true));
         items.Add(Destructive(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true)));

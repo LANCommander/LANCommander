@@ -16,7 +16,6 @@ using LANCommander.Launcher.Views;
 using LANCommander.SDK.Clients;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
-using LANCommander.Launcher.Services.PowerShell;
 using LANCommander.SDK.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
@@ -1751,135 +1750,21 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Opens a console window, runs the specified script type using the SDK's script execution, then stays interactive
+    /// Opens this game's script debugger, or brings it to the front. While it is open, the game's
+    /// scripts stop at their breakpoints whenever they run, whether or not the game is installed yet.
     /// </summary>
-    private async Task OpenScriptTerminalAsync(ScriptType scriptType, string scriptTypeName)
+    [RelayCommand]
+    private void OpenScriptDebugger()
     {
-        if (string.IsNullOrEmpty(InstallDirectory) || !Directory.Exists(InstallDirectory))
-        {
-            StatusMessage = "Game is not installed";
-            return;
-        }
-
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var scriptClient = scope.ServiceProvider.GetRequiredService<ScriptClient>();
-            var scriptDebugger = _serviceProvider.GetRequiredService<ScriptDebugger>();
-
-            // Create and show the console window
-            var viewModel = new PowerShellConsoleViewModel($"{scriptTypeName} Scripts - {Title}", InstallDirectory);
-            var window = new Views.PowerShellConsoleWindow
-            {
-                DataContext = viewModel
-            };
-
-            viewModel.CloseAction = () => window.Close();
-
-            // Wire up the debugger events to the console control
-            var console = window.ConsoleControl;
-
-            scriptDebugger.OnDebugStart = context =>
-            {
-                console.OnDebugStart(context);
-                return Task.CompletedTask;
-            };
-
-            scriptDebugger.OnOutput = (level, message) =>
-            {
-                console.OnOutput(level, message);
-                return Task.CompletedTask;
-            };
-
-            scriptDebugger.OnDebugBreak = async context =>
-            {
-                await console.OnDebugBreakAsync(context);
-            };
-
-            scriptDebugger.OnDebugEnd = context =>
-            {
-                console.OnDebugEnd(context);
-                return Task.CompletedTask;
-            };
-
-            // Show the window
-            window.Show();
-
-            // Run the appropriate script type
-            // The script client already handles debug mode when EnableScriptDebugging is true
-            scriptClient.Debug = true; // Force debug mode for this execution
-
-            StatusMessage = $"Running {scriptTypeName} scripts...";
-
-            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
-            var manifests = await gameClient.GetManifestsAsync(InstallDirectory, GameId);
-
-            foreach (var manifest in manifests)
-            {
-                switch (scriptType)
-                {
-                    case ScriptType.Install:
-                        await scriptClient.Game_RunInstallScriptAsync(InstallDirectory, GameId);
-                        break;
-                    case ScriptType.Uninstall:
-                        await scriptClient.Game_RunUninstallScriptAsync(InstallDirectory, GameId);
-                        break;
-                    case ScriptType.NameChange:
-                        var userService = scope.ServiceProvider.GetRequiredService<UserService>();
-                        var user = await userService.GetCurrentUser();
-                        await scriptClient.Game_RunNameChangeScriptAsync(InstallDirectory, GameId, user.GetUserNameSafe ?? SDK.Models.Settings.DEFAULT_GAME_USERNAME);
-
-                        break;
-                    case ScriptType.KeyChange:
-                        var key = await gameClient.GetAllocatedKeyAsync(manifest.Id);
-                        await scriptClient.Game_RunKeyChangeScriptAsync(InstallDirectory, GameId, key);
-                        break;
-                }
-            }
-
-            StatusMessage = $"{scriptTypeName} scripts completed";
+            _serviceProvider.GetRequiredService<ScriptDebuggerWindowService>().Open(GameId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run {ScriptType} scripts for {Title}", scriptTypeName, Title);
-            StatusMessage = $"Script error: {ex.Message}";
+            _logger.LogError(ex, "Failed to open the script debugger for {Title}", Title);
+            StatusMessage = $"Failed to open the script debugger: {ex.Message}";
         }
-    }
-
-    /// <summary>
-    /// Runs install scripts in a debug console
-    /// </summary>
-    [RelayCommand]
-    private Task RunInstallScriptsAsync()
-    {
-        return OpenScriptTerminalAsync(ScriptType.Install, "Install");
-    }
-
-    /// <summary>
-    /// Runs uninstall scripts in a debug console
-    /// </summary>
-    [RelayCommand]
-    private Task RunUninstallScriptsAsync()
-    {
-        return OpenScriptTerminalAsync(ScriptType.Uninstall, "Uninstall");
-    }
-
-    /// <summary>
-    /// Runs name change scripts
-    /// </summary>
-    [RelayCommand]
-    private Task RunNameChangeScriptsAsync()
-    {
-        return OpenScriptTerminalAsync(ScriptType.NameChange, "Name Change");
-    }
-
-    /// <summary>
-    /// Runs key change scripts
-    /// </summary>
-    [RelayCommand]
-    private Task RunKeyChangeScriptsAsync()
-    {
-        return OpenScriptTerminalAsync(ScriptType.KeyChange, "Key Change");
     }
 }
 

@@ -334,6 +334,9 @@ public partial class App : Application
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
 
+        // One script debugger window per game, opened from the game's action bar or context menu.
+        services.AddSingleton<ScriptDebuggerWindowService>();
+
         // Input
         services.AddSingleton<GamepadService>();
 

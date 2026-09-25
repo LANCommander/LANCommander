@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ae="using:AvaloniaEdit"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             x:Class="LANCommander.Launcher.Views.ScriptDebugger.EditorView"
+             x:DataType="vm:ScriptDebuggerWindowViewModel">
+
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <Border Grid.Row="0" Background="#252526" Padding="8,4" BorderBrush="#3F3F46" BorderThickness="0,0,0,1"
+            IsVisible="{Binding HasDocument}">
+      <TextBlock Text="{Binding SelectedDocument.SourceLabel}" Foreground="#9A9A9A" FontSize="11"
+                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SelectedDocument.SourceLabel}" />
+    </Border>
+
+    <Border Grid.Row="1" Background="#4B3A00" Padding="8,4"
+            IsVisible="{Binding SourceUnavailableMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Text="{Binding SourceUnavailableMessage}" Foreground="#F0D080" TextWrapping="Wrap" />
+    </Border>
+
+    <ae:TextEditor Grid.Row="2"
+                   x:Name="Editor"
+                   ShowLineNumbers="True"
+                   Background="#1E1E1E"
+                   Foreground="#D4D4D4"
+                   LineNumbersForeground="#858585"
+                   FontFamily="Cascadia Code,Consolas,monospace"
+                   FontSize="14"
+                   WordWrap="False"
+                   IsEnabled="{Binding HasDocument}" />
+  </Grid>
+</UserControl>

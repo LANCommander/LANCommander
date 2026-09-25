@@ -2090,6 +2090,28 @@ namespace LANCommander.SDK.Services
                 stream = await StreamLatestArchiveAsync(game.Id);
 
                 var monitor = new FileTransferMonitor(stream.Length);
+                var monitorLock = new object();
+
+                // Called from both the reader's progress callback (thread pool) and the entry loop,
+                // which is the only source of updates while skipped entries are being drained
+                void ReportTransfer()
+                {
+                    lock (monitorLock)
+                    {
+                        if (!monitor.CanUpdate())
+                            return;
+
+                        monitor.Update(stream.Position);
+
+                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = monitor.GetSpeed();
+                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                    }
+                }
+
                 var progress = new Progress<ProgressReport>(report =>
                 {
                     if (cancellationToken.IsCancellationRequested)
@@ -2103,17 +2125,7 @@ namespace LANCommander.SDK.Services
                         return;
                     }
 
-                    if (monitor.CanUpdate())
-                    {
-                        monitor.Update(stream.Position);
-
-                        _installProgress.BytesTransferred = monitor.GetBytesTransferred();
-                        _installProgress.TotalBytes = stream.Length;
-                        _installProgress.TransferSpeed = monitor.GetSpeed();
-                        _installProgress.TimeRemaining = monitor.GetTimeRemaining();
-
-                        OnInstallProgressUpdate?.Invoke(_installProgress);
-                    }
+                    ReportTransfer();
 
                     OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
                     {
@@ -2124,7 +2136,11 @@ namespace LANCommander.SDK.Services
 
                 _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
 
-                _installProgress.Status = InstallStatus.Downloading;
+                _installProgress.Status = skipFiles?.Count > 0 ? InstallStatus.VerifyingFiles : InstallStatus.Downloading;
+                _installProgress.BytesTransferred = 0;
+                _installProgress.TotalBytes = stream.Length;
+                _installProgress.TransferSpeed = 0;
+                _installProgress.TimeRemaining = TimeSpan.Zero;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
@@ -2147,6 +2163,8 @@ namespace LANCommander.SDK.Services
 
                         // If pre-flight verification confirmed this file exists locally, skip it
                         bool shouldSkip = skipFiles != null && skipFiles.Contains(entryKey);
+
+                        _installProgress.Status = shouldSkip ? InstallStatus.VerifyingFiles : InstallStatus.Downloading;
 
                         if (!shouldSkip)
                         {
@@ -2171,6 +2189,8 @@ namespace LANCommander.SDK.Services
                             }
 
                         entriesProcessed++;
+
+                        ReportTransfer();
                     }
                     catch (IOException ex)
                     {

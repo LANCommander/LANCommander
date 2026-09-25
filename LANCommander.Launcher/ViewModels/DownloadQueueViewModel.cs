@@ -188,18 +188,29 @@ public partial class DownloadQueueViewModel : ViewModelBase
 
             _taskbarProgressService.Report(progress);
 
+            // InstallProgress.Progress is NaN until the archive size is known
+            var percent = progress.TotalBytes > 0 && !float.IsNaN(progress.Progress) ? progress.Progress : 0f;
+
             CurrentStatus = GetDisplayName(progress.Status);
-            CurrentProgress = progress.Progress;
+            CurrentProgress = percent;
             CurrentTransferSpeed = progress.TransferSpeed;
 
-            // Format progress text
-            var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred);
-            var totalBytes = ByteSize.FromBytes(progress.TotalBytes);
+            // Format progress text. While streaming past files already on disk, surface the phase
+            // itself, since the footer otherwise only shows the status in a tooltip
+            if (progress.Status == InstallStatus.VerifyingFiles)
+            {
+                CurrentProgressText = $"{CurrentStatus} · {percent:P0}";
+            }
+            else
+            {
+                var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred);
+                var totalBytes = ByteSize.FromBytes(progress.TotalBytes);
 
-            CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({progress.Progress:P0})";
+                CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({percent:P0})";
+            }
 
             // Format transfer speed
-            TransferSpeedText = $"{ByteSize.FromBytes(progress.TransferSpeed)}/s";
+            TransferSpeedText = progress.TransferSpeed > 0 ? $"{ByteSize.FromBytes(progress.TransferSpeed)}/s" : string.Empty;
 
             // Format time remaining
             var bytesRemaining = progress.TotalBytes - progress.BytesTransferred;
@@ -232,7 +243,7 @@ public partial class DownloadQueueViewModel : ViewModelBase
             // footer/taskbar above still reflect it.
             if (item != null)
             {
-                item.UpdateProgress(progress.Status, progress.Progress, progress.TransferSpeed, progress.BytesTransferred, progress.TotalBytes);
+                item.UpdateProgress(progress.Status, percent, progress.TransferSpeed, progress.BytesTransferred, progress.TotalBytes);
 
                 // Ensure footer visibility and CurrentItem are up-to-date
                 // without waiting for the next OnQueueChanged cycle

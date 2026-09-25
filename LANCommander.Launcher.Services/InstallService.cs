@@ -130,6 +130,12 @@ namespace LANCommander.Launcher.Services
                 queueItem.BytesDownloaded = progress.BytesTransferred;
                 queueItem.TotalBytes = progress.TotalBytes;
                 queueItem.TransferSpeed = progress.TransferSpeed;
+
+                // Mirror the extraction phase so queue refreshes don't revert "Verifying Files" to
+                // "Downloading"; all other states are owned by the queue itself
+                if (queueItem.Status.ValueIsIn(InstallStatus.Downloading, InstallStatus.VerifyingFiles)
+                    && progress.Status.ValueIsIn(InstallStatus.Downloading, InstallStatus.VerifyingFiles))
+                    queueItem.Status = progress.Status;
             }
         }
 
@@ -230,7 +236,7 @@ namespace LANCommander.Launcher.Services
             foreach (var planItem in plan.Items.OrderBy(i => i.Order))
             {
                 // Skip if already queued
-                if (Queue.Any(i => i.Id == planItem.EntityId && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading)))
+                if (Queue.Any(i => i.Id == planItem.EntityId && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading, InstallStatus.VerifyingFiles)))
                 {
                     Logger?.LogInformation("[InstallQueue] Add: Skipping plan item {Title} ({EntityId}), already in queue", planItem.Title, planItem.EntityId);
                     continue;
@@ -351,7 +357,7 @@ namespace LANCommander.Launcher.Services
 
             foreach (var planItem in plan.Items.OrderBy(i => i.Order))
             {
-                if (Queue.Any(i => i.Id == planItem.EntityId && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading)))
+                if (Queue.Any(i => i.Id == planItem.EntityId && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading, InstallStatus.VerifyingFiles)))
                     continue;
 
                 var queueItem = new InstallQueueTool(planItem, toolInfo);
@@ -995,7 +1001,7 @@ namespace LANCommander.Launcher.Services
 
             // If a switch/install for this game is already in flight, don't queue a duplicate.
             if (Queue.Any(i => i.Id == localGame.Id
-                && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading)))
+                && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading, InstallStatus.VerifyingFiles)))
             {
                 Logger?.LogInformation("[InstallQueue] AddVersionSwitch: Game {GameId} already has an active queue item, skipping", localGame.Id);
                 return;

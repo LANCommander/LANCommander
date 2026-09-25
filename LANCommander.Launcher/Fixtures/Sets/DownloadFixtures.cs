@@ -58,11 +58,22 @@ public static class DownloadFixtures
 
             return context.ShellWindow(library);
         }),
+
+        new("Shell.Verifying", "The library, with the footer showing an install verifying files already on disk", context =>
+        {
+            SeedQueue(context.Shell.DownloadQueue, expanded: false, status: InstallStatus.VerifyingFiles);
+
+            var library = context.Shell.LibraryViewModel;
+            library.SelectedViewType = Settings.Enums.GameViewType.Grid;
+            library.SeedFixture(FixtureGames.Library.Select(g => g.ToItem(libraryBadge: false)));
+
+            return context.ShellWindow(library);
+        }),
     ];
 
-    internal static void SeedQueue(DownloadQueueViewModel queue, bool expanded)
+    internal static void SeedQueue(DownloadQueueViewModel queue, bool expanded, InstallStatus status = InstallStatus.Downloading)
     {
-        var active = Item(FixtureGames.Battlefield1942, InstallStatus.Downloading, (long)(4.7 * GB), (long)(1.9 * GB));
+        var active = Item(FixtureGames.Battlefield1942, status, (long)(4.7 * GB), (long)(1.9 * GB));
 
         active.IsExpanded = expanded;
 
@@ -75,7 +86,7 @@ public static class DownloadFixtures
 
         // A steady transfer, so the speed chart has something level to draw.
         for (var i = 0; i < 60; i++)
-            active.UpdateProgress(InstallStatus.Downloading, active.Progress, Speed + (i % 5) * 400_000, active.BytesDownloaded, active.TotalBytes);
+            active.UpdateProgress(status, active.Progress, Speed + (i % 5) * 400_000, active.BytesDownloaded, active.TotalBytes);
 
         queue.SeedForFixture(
             [
@@ -89,7 +100,7 @@ public static class DownloadFixtures
             {
                 Game = new SDK.Models.Game { Id = active.Id, Title = active.Title },
                 Title = active.Title,
-                Status = InstallStatus.Downloading,
+                Status = status,
                 TransferSpeed = Speed,
                 BytesTransferred = active.BytesDownloaded,
                 TotalBytes = active.TotalBytes,

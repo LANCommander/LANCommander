@@ -6,24 +6,22 @@
              x:DataType="vm:WatchViewModel">
 
   <DockPanel>
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4">
-      <TextBox Grid.Column="0" Watermark="Add expression, e.g. $total + 100"
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8">
+      <TextBox Grid.Column="0" Classes="Code" Watermark="Add expression, e.g. $total + 100"
                Text="{Binding NewExpression, Mode=TwoWay}">
         <TextBox.KeyBindings>
           <KeyBinding Gesture="Enter" Command="{Binding AddCommand}" />
         </TextBox.KeyBindings>
       </TextBox>
-      <Button Grid.Column="1" Margin="4,0,0,0" Content="Add" Command="{Binding AddCommand}" />
+      <Button Grid.Column="1" Classes="Secondary" Margin="6,0,0,0" Padding="12,4" Content="Add" Command="{Binding AddCommand}" />
     </Grid>
 
-    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent">
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent" Padding="4,0">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="items:WatchItemViewModel">
           <Grid ColumnDefinitions="200,*">
-            <TextBlock Grid.Column="0" Text="{Binding Expression}" Foreground="#9CDCFE"
-                       FontFamily="Cascadia Code,Consolas,monospace" />
-            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="NoWrap"
-                       FontFamily="Cascadia Code,Consolas,monospace"
+            <TextBlock Grid.Column="0" Classes="Code" Text="{Binding Expression}" Foreground="#9CDCFE" />
+            <TextBlock Grid.Column="1" Classes="Code" Text="{Binding Value}" TextWrapping="NoWrap"
                        Foreground="{Binding Foreground}" />
           </Grid>
         </DataTemplate>

@@ -200,26 +200,32 @@ public static class WindowFixtures
     }
 
     /// <summary>
-    /// A debugger window over a canned workspace: the game's own scripts and a redistributable's. Nothing
-    /// is read from disk or the server, and no script runs.
+    /// A debugger window over a canned workspace: the game's own scripts, a redistributable's, and an addon's
+    /// and a tool's that aren't installed. Nothing is read from disk or the server, and no script runs.
     /// </summary>
     private static ScriptDebuggerWindowViewModel ScriptDebugger(FixtureContext context, bool installed)
     {
-        var source = installed ? ScriptSource.Installed : ScriptSource.Server;
+        var bonusPack = FixtureGames.IdFor("UT2004 Mega Pack");
+        var serverTool = FixtureGames.IdFor("UT2004 Dedicated Server");
 
-        ScriptEntry Entry(Guid owner, ScriptOwnerKind kind, string ownerName, ScriptType type, bool requiresAdmin = false) => new()
+        ScriptEntry Entry(Guid owner, ScriptOwnerKind kind, string ownerName, ScriptType type, bool requiresAdmin = false, bool onServer = false)
         {
-            Key = new ScriptKey(owner, type),
-            OwnerKind = kind,
-            OwnerName = ownerName,
-            ServerScriptId = FixtureGames.IdFor($"script {owner} {type}"),
-            Name = type.ToString(),
-            RequiresAdmin = requiresAdmin,
-            Source = source,
-            LocalPath = installed ? ScriptHelper.GetScriptFilePath(InstallDirectory, owner, type) : null,
+            var local = installed && !onServer;
+
+            return new()
+            {
+                Key = new ScriptKey(owner, type),
+                OwnerKind = kind,
+                OwnerName = ownerName,
+                ServerScriptId = FixtureGames.IdFor($"script {owner} {type}"),
+                Name = type.ToString(),
+                RequiresAdmin = requiresAdmin,
+                Source = local ? ScriptSource.Installed : ScriptSource.Server,
+                LocalPath = local ? ScriptHelper.GetScriptFilePath(InstallDirectory, owner, type) : null,
             DraftPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "lc-fixture-no-drafts", owner.ToString(), type.ToString()),
-            ServerContents = type == ScriptType.Install && owner == Ut2004 ? ServerInstallScript : "$Return = 0",
-        };
+                ServerContents = type == ScriptType.Install && owner == Ut2004 ? ServerInstallScript : "$Return = 0",
+            };
+        }
 
         var workspace = new ScriptWorkspace(
             Ut2004,
@@ -238,6 +244,14 @@ public static class WindowFixtures
                 [
                     Entry(DirectX, ScriptOwnerKind.Redistributable, "DirectX 9.0c", ScriptType.DetectInstall),
                     Entry(DirectX, ScriptOwnerKind.Redistributable, "DirectX 9.0c", ScriptType.Install, requiresAdmin: true),
+                ]),
+                new ScriptOwnerNode(ScriptOwnerKind.Game, bonusPack, "Mega Pack", true,
+                [
+                    Entry(bonusPack, ScriptOwnerKind.Game, "Mega Pack", ScriptType.Install, onServer: true),
+                ]),
+                new ScriptOwnerNode(ScriptOwnerKind.Tool, serverTool, "Dedicated Server", false,
+                [
+                    Entry(serverTool, ScriptOwnerKind.Tool, "Dedicated Server", ScriptType.BeforeStart, onServer: true),
                 ]),
             ]);
 

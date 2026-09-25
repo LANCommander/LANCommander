@@ -41,38 +41,94 @@ public class ScriptDebugWorkspaceService(
         var title = game?.Title ?? "Game";
 
         if (game is { Installed: true } && !string.IsNullOrWhiteSpace(game.InstallDirectory) && ManifestHelper.Exists(game.InstallDirectory, gameId))
-            return await LoadInstalledAsync(gameId, title, game.InstallDirectory);
+            return await LoadInstalledAsync(gameId, title, game.InstallDirectory, cancellationToken);
 
-        if (connectionClient.IsOfflineMode() || !connectionClient.IsConnected())
+        if (!IsOnline)
             return new ScriptWorkspace(gameId, title, null, false, [], "Connect to the server to view scripts for games that aren't installed.");
 
         return await LoadFromServerAsync(gameId, title, cancellationToken);
     }
 
-    private async Task<ScriptWorkspace> LoadInstalledAsync(Guid gameId, string title, string installDirectory)
+    private bool IsOnline => !connectionClient.IsOfflineMode() && connectionClient.IsConnected();
+
+    /// <summary>
+    /// What is installed is listed from the install directory, since those files are what runs. Everything
+    /// else the game can pull in (addons, redistributables and tools that aren't installed) is listed from
+    /// the server, so its scripts can be read, edited as drafts and broken into when it gets installed.
+    /// </summary>
+    private async Task<ScriptWorkspace> LoadInstalledAsync(Guid gameId, string title, string installDirectory, CancellationToken cancellationToken)
     {
+        var installed = await LoadInstalledOwnersAsync(gameId, installDirectory);
+
+        ServerScriptCatalog? catalog = null;
+        string? message = null;
+
+        if (IsOnline)
+        {
+            try
+            {
+                catalog = await FetchServerCatalogAsync(gameId, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Could not list the server's scripts for game {GameId}", gameId);
+            }
+        }
+
+        if (catalog is null)
+            message = "Only installed scripts are listed. Connect to the server to see the scripts of addons, redistributables and tools that aren't installed.";
+
         var owners = new List<ScriptOwnerNode>();
+
+        foreach (var server in catalog?.Owners ?? [])
+        {
+            if (installed.Remove(server.Id, out var local))
+                owners.Add(local);
+            else
+                owners.Add(ServerOwner(gameId, server));
+        }
+
+        // Installed, but no longer listed by the server (or the server couldn't be reached).
+        owners.AddRange(installed.Values);
+
+        return new ScriptWorkspace(gameId, title, installDirectory, true, owners.Where(o => o.Scripts.Count > 0).ToList(), message);
+    }
+
+    /// <summary>
+    /// Owners installed in the game's directory, keyed by id, in the order the launcher runs them. An addon
+    /// counts as installed when its manifest is there; a redistributable or tool when its manifest or any of
+    /// its script files is.
+    /// </summary>
+    private async Task<Dictionary<Guid, ScriptOwnerNode>> LoadInstalledOwnersAsync(Guid gameId, string installDirectory)
+    {
+        var owners = new Dictionary<Guid, ScriptOwnerNode>();
         var manifests = await gameClient.GetManifestsAsync(installDirectory, gameId);
         var main = manifests.FirstOrDefault(m => m.Id == gameId);
 
         foreach (var manifest in manifests)
-            owners.Add(InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Game, manifest.Id, manifest.Title, manifest.Id != gameId, manifest.Scripts));
+            owners.TryAdd(manifest.Id, InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Game, manifest.Id, manifest.Title, manifest.Id != gameId, manifest.Scripts));
 
         foreach (var redistributable in main?.Redistributables ?? [])
         {
-            var manifest = await TryReadManifestAsync<Manifest.Redistributable>(installDirectory, redistributable.Id) ?? redistributable;
+            var manifest = await TryReadManifestAsync<Manifest.Redistributable>(installDirectory, redistributable.Id);
+            var node = InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Redistributable, redistributable.Id,
+                (manifest ?? redistributable).Name, false, (manifest ?? redistributable).Scripts);
 
-            owners.Add(InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Redistributable, manifest.Id, manifest.Name, false, manifest.Scripts));
+            if (manifest is not null || node.Scripts.Count > 0)
+                owners.TryAdd(node.Id, node);
         }
 
         foreach (var tool in main?.Tools ?? [])
         {
-            var manifest = await TryReadManifestAsync<Manifest.Tool>(installDirectory, tool.Id) ?? tool;
+            var manifest = await TryReadManifestAsync<Manifest.Tool>(installDirectory, tool.Id);
+            var node = InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Tool, tool.Id,
+                (manifest ?? tool).Name, false, (manifest ?? tool).Scripts);
 
-            owners.Add(InstalledOwner(gameId, installDirectory, ScriptOwnerKind.Tool, manifest.Id, manifest.Name, false, manifest.Scripts));
+            if (manifest is not null || node.Scripts.Count > 0)
+                owners.TryAdd(node.Id, node);
         }
 
-        return new ScriptWorkspace(gameId, title, installDirectory, true, owners.Where(o => o.Scripts.Count > 0).ToList());
+        return owners;
     }
 
     private ScriptOwnerNode InstalledOwner(
@@ -119,20 +175,40 @@ public class ScriptDebugWorkspaceService(
 
     private async Task<ScriptWorkspace> LoadFromServerAsync(Guid gameId, string title, CancellationToken cancellationToken)
     {
-        var owners = new List<ScriptOwnerNode>();
+        var catalog = await FetchServerCatalogAsync(gameId, cancellationToken);
+
+        if (catalog is null)
+            return new ScriptWorkspace(gameId, title, null, false, [], "The server did not return this game.");
+
+        var owners = catalog.Owners.Select(o => ServerOwner(gameId, o)).Where(o => o.Scripts.Count > 0).ToList();
+
+        title = string.IsNullOrWhiteSpace(catalog.Title) ? title : catalog.Title;
+
+        return new ScriptWorkspace(gameId, title, null, false, owners);
+    }
+
+    /// <summary>
+    /// Everything on the server whose scripts can run for this game: the game, all of its addons, its
+    /// redistributables and its tools, each with its scripts. Null if the server doesn't know the game.
+    /// </summary>
+    protected virtual async Task<ServerScriptCatalog?> FetchServerCatalogAsync(Guid gameId, CancellationToken cancellationToken)
+    {
         var manifest = await gameClient.GetManifestAsync(gameId);
 
         if (manifest is null)
-            return new ScriptWorkspace(gameId, title, null, false, [], "The server did not return this game.");
+            return null;
 
-        owners.Add(ServerOwner(gameId, ScriptOwnerKind.Game, manifest.Id, manifest.Title, false, manifest.Scripts,
-            await TryGetScriptsAsync(() => gameClient.GetScriptsAsync(manifest.Id))));
+        var owners = new List<ServerScriptOwner>
+        {
+            new(ScriptOwnerKind.Game, manifest.Id, manifest.Title, false, manifest.Scripts,
+                await TryGetScriptsAsync(() => gameClient.GetScriptsAsync(manifest.Id))),
+        };
 
         foreach (var addon in manifest.Addons ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            owners.Add(ServerOwner(gameId, ScriptOwnerKind.Game, addon.Id, addon.Title, true, addon.Scripts,
+            owners.Add(new(ScriptOwnerKind.Game, addon.Id, addon.Title, true, addon.Scripts,
                 await TryGetScriptsAsync(() => gameClient.GetScriptsAsync(addon.Id))));
         }
 
@@ -140,7 +216,7 @@ public class ScriptDebugWorkspaceService(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            owners.Add(ServerOwner(gameId, ScriptOwnerKind.Redistributable, redistributable.Id, redistributable.Name, false, redistributable.Scripts,
+            owners.Add(new(ScriptOwnerKind.Redistributable, redistributable.Id, redistributable.Name, false, redistributable.Scripts,
                 await TryGetScriptsAsync(() => redistributableClient.GetScriptsAsync(redistributable.Id))));
         }
 
@@ -148,48 +224,39 @@ public class ScriptDebugWorkspaceService(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            owners.Add(ServerOwner(gameId, ScriptOwnerKind.Tool, tool.Id, tool.Name, false, tool.Scripts,
+            owners.Add(new(ScriptOwnerKind.Tool, tool.Id, tool.Name, false, tool.Scripts,
                 await TryGetScriptsAsync(() => toolClient.GetScriptsAsync(tool.Id))));
         }
 
-        title = string.IsNullOrWhiteSpace(manifest.Title) ? title : manifest.Title;
-
-        return new ScriptWorkspace(gameId, title, null, false, owners.Where(o => o.Scripts.Count > 0).ToList());
+        return new ServerScriptCatalog(manifest.Title, owners);
     }
 
-    private ScriptOwnerNode ServerOwner(
-        Guid gameId,
-        ScriptOwnerKind kind,
-        Guid ownerId,
-        string name,
-        bool isAddon,
-        IEnumerable<Manifest.Script>? manifestScripts,
-        IReadOnlyList<SDK.Models.Script> serverScripts)
+    private static ScriptOwnerNode ServerOwner(Guid gameId, ServerScriptOwner owner)
     {
         var entries = new List<ScriptEntry>();
 
         // A game's script list spans every version; the manifest names the ones the version that would
-        // be installed uses. Owners without a manifest script list (older servers) fall back to the
-        // newest script of each type.
-        var wanted = manifestScripts?.Select(s => s.Id).ToHashSet() ?? [];
+        // be installed uses. Owners without a manifest script list (older servers, and addons and tools,
+        // whose scripts the game's manifest doesn't carry) fall back to the newest script of each type.
+        var wanted = owner.ManifestScripts?.Select(s => s.Id).ToHashSet() ?? [];
 
         foreach (var type in LauncherScriptTypes)
         {
-            var candidates = serverScripts.Where(s => s.Type == type).ToList();
+            var candidates = owner.Scripts.Where(s => s.Type == type).ToList();
             var script = candidates.FirstOrDefault(s => wanted.Contains(s.Id))
                 ?? (wanted.Count == 0 ? candidates.OrderByDescending(s => s.UpdatedOn).FirstOrDefault() : null);
 
             if (script is null)
                 continue;
 
-            var key = new ScriptKey(ownerId, type);
+            var key = new ScriptKey(owner.Id, type);
             var draftPath = ScriptDrafts.GetPath(gameId, key);
 
             entries.Add(new ScriptEntry
             {
                 Key = key,
-                OwnerKind = kind,
-                OwnerName = name,
+                OwnerKind = owner.Kind,
+                OwnerName = owner.Name,
                 ServerScriptId = script.Id,
                 Name = string.IsNullOrWhiteSpace(script.Name) ? type.ToString() : script.Name,
                 RequiresAdmin = script.RequiresAdmin,
@@ -199,7 +266,7 @@ public class ScriptDebugWorkspaceService(
             });
         }
 
-        return new ScriptOwnerNode(kind, ownerId, name, isAddon, entries);
+        return new ScriptOwnerNode(owner.Kind, owner.Id, owner.Name, owner.IsAddon, entries);
     }
 
     private async Task<IReadOnlyList<SDK.Models.Script>> TryGetScriptsAsync(Func<Task<IEnumerable<SDK.Models.Script>>> fetch)
@@ -303,3 +370,15 @@ public class ScriptDebugWorkspaceService(
             baseContents is null ? null : ScriptHelper.StripRequiresAdminHeader(baseContents));
     }
 }
+
+/// <summary>What the server lists for a game: the game itself, then its addons, redistributables and tools.</summary>
+public sealed record ServerScriptCatalog(string? Title, IReadOnlyList<ServerScriptOwner> Owners);
+
+/// <summary>One owner on the server, with the scripts its manifest names and every script it has.</summary>
+public sealed record ServerScriptOwner(
+    ScriptOwnerKind Kind,
+    Guid Id,
+    string Name,
+    bool IsAddon,
+    IEnumerable<Manifest.Script>? ManifestScripts,
+    IReadOnlyList<SDK.Models.Script> Scripts);

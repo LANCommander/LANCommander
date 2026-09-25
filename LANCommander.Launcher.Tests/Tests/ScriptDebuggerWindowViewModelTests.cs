@@ -3,8 +3,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using AvaloniaEdit;
+using LANCommander.Launcher.Views.ScriptDebugger;
 using LANCommander.Launcher.Services.ScriptDebugging;
 using LANCommander.Launcher.ViewModels.ScriptDebugger;
 using LANCommander.SDK.Abstractions;
@@ -130,27 +136,143 @@ public sealed class ScriptDebuggerWindowViewModelTests : IDisposable
         Assert.Equal(5, run.Result);
     }
 
-    private ScriptWorkspace Workspace(string path)
+    [AvaloniaTheory]
+    [InlineData("$a = 1\n$b = 2\n$c = 3\n$d = 4")]
+    [InlineData("$a = 1\n$b = 20\n$c = 3\n$d = 4\n$e = 5")]
+    public void ReloadingTheText_KeepsBreakpointsOnTheirLines(string reloaded)
     {
-        var key = new ScriptKey(_gameId, ScriptType.Install);
+        var document = new ScriptDocumentViewModel(Entry(ScriptType.Install, "unused"), "$a = 1\n$b = 2\n$c = 3\n$d = 4");
 
+        var breakpoint = document.Breakpoints.Toggle(2)!;
+        breakpoint.Enabled = false;
+
+        document.Load(reloaded);
+
+        Assert.Equal(2, breakpoint.Line);
+        Assert.False(breakpoint.Enabled);
+        Assert.Single(document.Breakpoints.Items);
+        Assert.Equal(2, document.Breakpoints.Published.Single().Line);
+    }
+
+    [AvaloniaFact]
+    public void SwitchingScripts_WhileStopped_KeepsTheHaltedLine()
+    {
+        var path = ScriptHelper.GetScriptFilePath(_installDirectory, _gameId, ScriptType.Install);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "$first = 1\n$second = $first + 1\n$Return = $second * 21");
+
+        using var debugger = new ScriptDebuggerWindowViewModel(_services, _gameId);
+
+        debugger.ApplyWorkspace(Workspace(path, Entry(ScriptType.Uninstall, Path.Combine(_installDirectory, "Uninstall.ps1"))));
+        debugger.SelectedDocument!.Breakpoints.Toggle(2);
+
+        var run = Task.Run(() => Script(path).ExecuteAsync<int>());
+
+        PumpUntil(() => debugger.IsStopped);
+
+        var install = debugger.Owners[0].Scripts[0];
+        var uninstall = debugger.Owners[0].Scripts[1];
+
+        debugger.SelectedTreeItem = uninstall;
+        Assert.Equal(0, debugger.CurrentLine);
+
+        debugger.SelectedTreeItem = install;
+        Assert.Equal(2, debugger.CurrentLine);
+
+        debugger.RunCommand.Execute(null);
+
+        PumpUntil(() => run.IsCompleted && debugger.IsIdle);
+    }
+
+    [AvaloniaFact]
+    public void CtrlPlusMinusAndCtrlWheel_ChangeTheEditorFontSize()
+    {
+        var path = ScriptHelper.GetScriptFilePath(_installDirectory, _gameId, ScriptType.Install);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, string.Join("\n", Enumerable.Range(1, 200).Select(i => $"$line{i} = {i}")));
+
+        using var debugger = new ScriptDebuggerWindowViewModel(_services, _gameId);
+        debugger.ApplyWorkspace(Workspace(path));
+
+        var window = new ScriptDebuggerWindow { DataContext = debugger };
+        window.Show();
+
+        var editor = window.GetVisualDescendants().OfType<TextEditor>().Single();
+        editor.Focus();
+        Dispatcher.UIThread.RunJobs();
+
+        var start = ScriptDebuggerWindowViewModel.DefaultEditorFontSize;
+        Assert.Equal(start, editor.FontSize);
+
+        window.KeyPress(Key.OemPlus, RawInputModifiers.Control, PhysicalKey.Equal, "=");
+        window.KeyPress(Key.Add, RawInputModifiers.Control, PhysicalKey.NumPadAdd, "+");
+        Assert.Equal(start + 2, editor.FontSize);
+
+        window.KeyPress(Key.OemMinus, RawInputModifiers.Control, PhysicalKey.Minus, "-");
+        Assert.Equal(start + 1, editor.FontSize);
+
+        // Over the editor, Ctrl+wheel zooms and doesn't scroll; a plain wheel still scrolls.
+        var centre = editor.TranslatePoint(new Point(editor.Bounds.Width / 2, editor.Bounds.Height / 2), window)!.Value;
+        var scroll = editor.TextArea.TextView.ScrollOffset;
+
+        window.MouseWheel(centre, new Vector(0, 1), RawInputModifiers.Control);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(start + 2, editor.FontSize);
+        Assert.Equal(scroll, editor.TextArea.TextView.ScrollOffset);
+
+        window.MouseWheel(centre, new Vector(0, -1), RawInputModifiers.Control);
+        window.MouseWheel(centre, new Vector(0, -1), RawInputModifiers.Control);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(start, editor.FontSize);
+
+        window.MouseWheel(centre, new Vector(0, -1), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(start, editor.FontSize);
+        Assert.True(editor.TextArea.TextView.ScrollOffset.Y > scroll.Y);
+
+        // Clamped at both ends, and Ctrl+0 puts it back.
+        for (var i = 0; i < 100; i++)
+            debugger.ZoomOutCommand.Execute(null);
+
+        Assert.Equal(ScriptDebuggerWindowViewModel.MinEditorFontSize, editor.FontSize);
+
+        window.KeyPress(Key.D0, RawInputModifiers.Control, PhysicalKey.Digit0, "0");
+        Assert.Equal(start, editor.FontSize);
+
+        window.Close();
+    }
+
+    [Fact]
+    public void ScriptItems_ShowTheNameAndTheTypeSeparately()
+    {
+        var item = new ScriptItemViewModel(Entry(ScriptType.BeforeStart, "unused") with { Name = "Mount ISO" });
+
+        Assert.Equal("Mount ISO", item.Name);
+        Assert.Equal("Before Start", item.TypeLabel);
+    }
+
+    private ScriptWorkspace Workspace(string path, params ScriptEntry[] others)
+    {
         return new ScriptWorkspace(_gameId, "Test Game", _installDirectory, true,
         [
             new ScriptOwnerNode(ScriptOwnerKind.Game, _gameId, "Test Game", false,
             [
-                new ScriptEntry
-                {
-                    Key = key,
-                    OwnerKind = ScriptOwnerKind.Game,
-                    OwnerName = "Test Game",
-                    Name = "Install",
-                    Source = ScriptSource.Installed,
-                    LocalPath = path,
-                    DraftPath = Path.Combine(_installDirectory, "no-drafts", "Install.ps1"),
-                },
+                Entry(ScriptType.Install, path),
+                ..others,
             ]),
         ]);
     }
+
+    private ScriptEntry Entry(ScriptType type, string path) => new()
+    {
+        Key = new ScriptKey(_gameId, type),
+        OwnerKind = ScriptOwnerKind.Game,
+        OwnerName = "Test Game",
+        Name = type.ToString(),
+        Source = ScriptSource.Installed,
+        LocalPath = path,
+        DraftPath = Path.Combine(_installDirectory, "no-drafts", type + ".ps1"),
+    };
 
     private PowerShellScript Script(string path) =>
         new PowerShellScript(_services, ScriptType.Install, Options.Create(new SdkSettings()))

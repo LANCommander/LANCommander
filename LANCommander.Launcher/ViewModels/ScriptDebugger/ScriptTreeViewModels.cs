@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LANCommander.Launcher.Services.ScriptDebugging;
 using LANCommander.SDK.PowerShell.Debugging;
@@ -38,7 +39,9 @@ public sealed partial class ScriptItemViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Name))]
+    [NotifyPropertyChangedFor(nameof(TypeLabel))]
     [NotifyPropertyChangedFor(nameof(SourceLabel))]
+    [NotifyPropertyChangedFor(nameof(IsOnServer))]
     [NotifyPropertyChangedFor(nameof(RequiresAdmin))]
     private ScriptEntry _entry;
 
@@ -50,9 +53,15 @@ public sealed partial class ScriptItemViewModel : ObservableObject
 
     public ScriptKey Key => Entry.Key;
 
-    public string Name => Entry.Name == Entry.Type.ToString() ? Entry.Type.ToString() : $"{Entry.Type}: {Entry.Name}";
+    public string Name => Entry.Name;
+
+    /// <summary>The script type in words, e.g. "Before Start", shown as a badge beside the name.</summary>
+    public string TypeLabel => WordBoundary().Replace(Entry.Type.ToString(), " ");
 
     public bool RequiresAdmin => Entry.RequiresAdmin;
+
+    /// <summary>Only on the server: not installed and no draft. Shown as a cloud rather than a label.</summary>
+    public bool IsOnServer => Entry.Source == ScriptSource.Server;
 
     public string SourceLabel => Entry.Source switch
     {
@@ -60,4 +69,7 @@ public sealed partial class ScriptItemViewModel : ObservableObject
         ScriptSource.Draft => "draft",
         _ => "server",
     };
+
+    [GeneratedRegex("(?<=[a-z])(?=[A-Z])")]
+    private static partial Regex WordBoundary();
 }

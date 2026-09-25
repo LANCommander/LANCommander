@@ -53,6 +53,8 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
     private volatile bool _stepIntoNextRun;
     private ScriptKey? _runningKey;
     private ScriptType? _runningType;
+    private int _stoppedLine;
+    private string _stoppedSourceMessage = string.Empty;
     private volatile bool _disposed;
 
     public ScriptDebuggerWindowViewModel(IServiceProvider services, Guid gameId)
@@ -190,6 +192,14 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
 
     [ObservableProperty]
     private bool _isCommandsPaneVisible;
+
+    public const double DefaultEditorFontSize = 14;
+    public const double MinEditorFontSize = 8;
+    public const double MaxEditorFontSize = 40;
+
+    /// <summary>The editor's font size, changed with Ctrl +/- or Ctrl and the scroll wheel.</summary>
+    [ObservableProperty]
+    private double _editorFontSize = DefaultEditorFontSize;
 
     /// <summary>The debug panel on show: Variables, Watch, Call Stack or Breakpoints.</summary>
     [ObservableProperty]
@@ -336,7 +346,12 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
             Breakpoints.NavigateRequested += line => NavigateToLineRequested?.Invoke(line);
 
         HasUploadConflict = false;
-        CurrentLine = newValue is not null && newValue.Key == _runningKey && IsStopped ? CurrentLine : 0;
+
+        // The halted line belongs to the running script; switching back to it brings the highlight back.
+        var showsStop = newValue is not null && newValue.Key == _runningKey && IsStopped;
+
+        CurrentLine = showsStop ? _stoppedLine : 0;
+        SourceUnavailableMessage = showsStop ? _stoppedSourceMessage : string.Empty;
     }
 
     private ScriptDocumentViewModel GetOrOpenDocument(ScriptEntry entry)
@@ -572,6 +587,15 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
     [RelayCommand]
     private void ToggleCommandsPane() => IsCommandsPaneVisible = !IsCommandsPaneVisible;
 
+    [RelayCommand]
+    private void ZoomIn() => EditorFontSize = Math.Min(MaxEditorFontSize, EditorFontSize + 1);
+
+    [RelayCommand]
+    private void ZoomOut() => EditorFontSize = Math.Max(MinEditorFontSize, EditorFontSize - 1);
+
+    [RelayCommand]
+    private void ResetZoom() => EditorFontSize = DefaultEditorFontSize;
+
     /// <summary>
     /// Run the selected script on its own, the same way the launcher would: through ScriptClient, with
     /// the variables it gets in production, elevated if it needs to be. This window attaches to it like
@@ -589,7 +613,9 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
         {
             StatusText = document.Entry.Type == ScriptType.RunWrapper
                 ? "RunWrapper scripts run when the game is played."
-                : "Install the game to run its scripts. Breakpoints set now are hit during installation.";
+                : installDirectory is null
+                    ? "Install the game to run its scripts. Breakpoints set now are hit during installation."
+                    : $"Install {document.Entry.OwnerName} to run its scripts. Breakpoints set now are hit during installation.";
             return;
         }
 
@@ -835,6 +861,9 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
                 NavigateToLineRequested?.Invoke(nearest.LineNumber);
         }
 
+        _stoppedLine = CurrentLine;
+        _stoppedSourceMessage = SourceUnavailableMessage;
+
         Console.SetDebuggerStopped(true);
         StatusText = CurrentLine > 0 ? "Stopped at line " + CurrentLine : "Stopped";
 
@@ -845,12 +874,39 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
 
     private void OnResumed()
     {
-        CurrentLine = 0;
-        SourceUnavailableMessage = string.Empty;
+        ClearStop();
         Variables.Clear();
         CallStack.Clear();
         Watch.MarkUnavailable();
         Console.SetDebuggerStopped(false);
+    }
+
+    private void ClearStop()
+    {
+        _stoppedLine = 0;
+        _stoppedSourceMessage = string.Empty;
+        CurrentLine = 0;
+        SourceUnavailableMessage = string.Empty;
+    }
+
+    /// <summary>
+    /// Evaluate an expression the user is hovering over in the editor, in the scope the script is stopped
+    /// in. Null when not stopped, or when the script resumed before the answer came back.
+    /// </summary>
+    public async Task<EvaluationResult?> EvaluateHoverAsync(string expression)
+    {
+        if (!IsStopped)
+            return null;
+
+        try
+        {
+            return await _controller.EvaluateAsync(expression);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not evaluate {Expression} for a hover", expression);
+            return null;
+        }
     }
 
     private async void OnFrameSelected(CallStackFrameViewModel? frame)
@@ -932,7 +988,7 @@ public sealed partial class ScriptDebuggerWindowViewModel : ViewModelBase, IScri
         var document = RunningDocument;
         var type = _runningType;
 
-        CurrentLine = 0;
+        ClearStop();
         State = DebugSessionState.Idle;
         RemoteSessionText = null;
         Console.SetDebuggerStopped(false);

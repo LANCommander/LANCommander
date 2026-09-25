@@ -26,7 +26,8 @@ public sealed class BreakpointMargin : AbstractMargin
 {
     private const double MinimumWidth = 18.0;
 
-    private static readonly IBrush Background = new ImmutableSolidColorBrush(Color.FromRgb(0x25, 0x25, 0x26));
+    // Transparent over the editor's card, but still a fill so the gutter takes clicks.
+    private static readonly IBrush Background = Brushes.Transparent;
     private static readonly IBrush EnabledFill = new ImmutableSolidColorBrush(Color.FromRgb(0xE5, 0x14, 0x00));
     private static readonly IBrush BoundFill = new ImmutableSolidColorBrush(Color.FromRgb(0xE5, 0x14, 0x00));
     private static readonly IPen OutlinePen =
@@ -75,8 +76,8 @@ public sealed class BreakpointMargin : AbstractMargin
 
     public override void Render(DrawingContext context)
     {
-        // Filling the whole margin is not only cosmetic: an Avalonia control with no background
-        // can fall through hit-testing, and then the click handler below never runs.
+        // Filling the whole margin, even transparently, is what makes it hit-testable: an Avalonia
+        // control that draws nothing falls through, and then the click handler below never runs.
         context.FillRectangle(Background, new Rect(Bounds.Size));
 
         var textView = TextView;

@@ -65,7 +65,17 @@ public sealed class BreakpointStore
             return null;
         }
 
-        var anchor = _document.CreateAnchor(_document.GetLineByNumber(line).Offset);
+        var model = new BreakpointModel(CreateAnchor(_document, line));
+        model.PropertyChanged += OnBreakpointPropertyChanged;
+        Items.Add(model);
+        RaiseChanged();
+        BreakpointToggled?.Invoke(this, new BreakpointChangedEventArgs(line, model.Enabled, Added: true));
+        return model;
+    }
+
+    private static TextAnchor CreateAnchor(TextDocument document, int line)
+    {
+        var anchor = document.CreateAnchor(document.GetLineByNumber(line).Offset);
 
         // SurviveDeletion keeps the anchor usable if the user deletes the line: it migrates to the
         // deletion point, landing the breakpoint on the following line, which is what VS and
@@ -73,12 +83,28 @@ public sealed class BreakpointStore
         anchor.SurviveDeletion = true;
         anchor.MovementType = AnchorMovementType.AfterInsertion;
 
-        var model = new BreakpointModel(anchor);
-        model.PropertyChanged += OnBreakpointPropertyChanged;
-        Items.Add(model);
+        return anchor;
+    }
+
+    /// <summary>
+    /// Run a wholesale text replacement (a reload from disk or the server) and keep every breakpoint on
+    /// its line number. Anchors can't follow such a replacement: the delete collapses them to offset 0
+    /// and the insert then pushes them to the end of the new text, i.e. onto the last line.
+    /// </summary>
+    public void ReplaceText(Action replace)
+    {
+        var lines = Items.Select(b => (Model: b, b.Line)).ToArray();
+
+        replace();
+
+        if (_document is null || lines.Length == 0)
+            return;
+
+        foreach (var (model, line) in lines)
+            model.Reanchor(CreateAnchor(_document, Math.Clamp(line, 1, _document.LineCount)));
+
+        DeduplicateAnchors();
         RaiseChanged();
-        BreakpointToggled?.Invoke(this, new BreakpointChangedEventArgs(line, model.Enabled, Added: true));
-        return model;
     }
 
     public void Remove(BreakpointModel model)

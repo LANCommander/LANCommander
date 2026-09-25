@@ -6,27 +6,31 @@
              x:DataType="vm:BreakpointsViewModel">
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Padding="4">
-      <Button Content="Remove all" Command="{Binding RemoveAllCommand}" />
+    <Border DockPanel.Dock="Top" Padding="8">
+      <Button Classes="Secondary" Padding="12,4" Content="Remove all" Command="{Binding RemoveAllCommand}" />
     </Border>
 
-    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent">
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent" Padding="4,0">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="services:BreakpointModel">
-          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
             <CheckBox Grid.Column="0" IsChecked="{Binding Enabled, Mode=TwoWay}" />
 
             <!-- Click the line to jump to it in the editor. -->
-            <Button Grid.Column="1" Classes="link" Content="{Binding Display}"
+            <Button Grid.Column="1" Classes="Text" Padding="6,2" Content="{Binding Display}"
+                    FontFamily="{DynamicResource MonoFontFamily}"
                     Command="{Binding $parent[UserControl].((vm:BreakpointsViewModel)DataContext).NavigateCommand}"
                     CommandParameter="{Binding}" />
 
-            <TextBlock Grid.Column="2" Margin="12,0" VerticalAlignment="Center" Foreground="#808080"
+            <TextBlock Grid.Column="2" Classes="Caption Mono" Margin="12,0" VerticalAlignment="Center"
                        Text="{Binding HitCount, StringFormat='hits: {0}'}" />
-            <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#DCC06A" Text="pending"
-                       IsVisible="{Binding !IsBound}" />
 
-            <Button Grid.Column="4" Classes="link" Content="Remove" Margin="12,0,0,0"
+            <Border Grid.Column="3" Classes="StatusTag Warning" VerticalAlignment="Center" IsVisible="{Binding !IsBound}"
+                    ToolTip.Tip="Applied the next time the script stops">
+              <TextBlock Text="PENDING" />
+            </Border>
+
+            <Button Grid.Column="4" Classes="Text Error" Margin="8,0,0,0" Padding="6,2" Content="Remove"
                     Command="{Binding $parent[UserControl].((vm:BreakpointsViewModel)DataContext).RemoveCommand}"
                     CommandParameter="{Binding}" />
           </Grid>

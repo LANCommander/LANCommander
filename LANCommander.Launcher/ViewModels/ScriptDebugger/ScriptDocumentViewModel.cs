@@ -66,16 +66,20 @@ public sealed partial class ScriptDocumentViewModel : ObservableObject
     /// <summary>Replace the text wholesale and treat it as the saved state.</summary>
     public void Load(string text)
     {
-        _loading = true;
+        // Starting a run reloads the file it runs from, which is usually what is already on screen.
+        if (text != Document.Text)
+        {
+            _loading = true;
 
-        try
-        {
-            Document.Text = text;
-            Document.UndoStack.ClearAll();
-        }
-        finally
-        {
-            _loading = false;
+            try
+            {
+                Breakpoints.ReplaceText(() => Document.Text = text);
+                Document.UndoStack.ClearAll();
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
 
         BaseContents = text;

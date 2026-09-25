@@ -1,6 +1,10 @@
 using System;
 using System.ComponentModel;
+using System.Management.Automation.Language;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using LANCommander.Launcher.Controls.ScriptEditor;
@@ -20,6 +24,11 @@ public partial class EditorView : UserControl
     private readonly CurrentLineRenderer _currentLine = new();
     private readonly DebouncedParser _parser = new(TimeSpan.FromMilliseconds(250));
 
+    private const int HoverMaxLines = 20;
+    private const int HoverMaxLength = 2000;
+
+    private SyntaxSnapshot _snapshot = SyntaxSnapshot.Empty;
+    private int _hoverSequence;
     private BreakpointMargin? _margin;
     private ScriptDebuggerWindowViewModel? _model;
     private ScriptDocumentViewModel? _document;
@@ -34,6 +43,13 @@ public partial class EditorView : UserControl
         textView.LineTransformers.Add(_colorizer);
 
         Editor.TextArea.Caret.PositionChanged += OnCaretChanged;
+
+        textView.PointerHover += OnPointerHover;
+        textView.PointerHoverStopped += (_, _) => CloseHover();
+        textView.ScrollOffsetChanged += (_, _) => CloseHover();
+
+        // Tunnel, so Ctrl+wheel zooms before the editor's ScrollViewer takes it as a scroll.
+        Editor.AddHandler(PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
 
         _parser.Parsed += OnParsed;
         DataContextChanged += OnDataContextChanged;
@@ -67,6 +83,11 @@ public partial class EditorView : UserControl
 
         switch (e.PropertyName)
         {
+            case nameof(ScriptDebuggerWindowViewModel.State):
+                if (!_model.IsStopped)
+                    CloseHover();
+                break;
+
             case nameof(ScriptDebuggerWindowViewModel.CurrentLine):
                 _currentLine.Line = _model.CurrentLine;
 
@@ -111,6 +132,7 @@ public partial class EditorView : UserControl
 
     private void OnParsed(SyntaxSnapshot snapshot)
     {
+        _snapshot = snapshot;
         _colorizer.Update(snapshot);
         _squiggles.Update(snapshot);
         _model?.SetParseErrorCount(snapshot.Errors.Length);
@@ -139,6 +161,130 @@ public partial class EditorView : UserControl
 
         Editor.Document.Insert(Editor.CaretOffset, text);
         Editor.Focus();
+    }
+
+    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (_model is null || !e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.Delta.Y == 0)
+            return;
+
+        if (e.Delta.Y > 0)
+            _model.ZoomInCommand.Execute(null);
+        else
+            _model.ZoomOutCommand.Execute(null);
+
+        e.Handled = true;
+    }
+
+    /// <summary>While stopped, show the value of the variable under the pointer.</summary>
+    private async void OnPointerHover(object? sender, PointerEventArgs e)
+    {
+        if (_model is not { IsStopped: true } || _document is null)
+            return;
+
+        var textView = Editor.TextArea.TextView;
+        var position = textView.GetPositionFloor(e.GetPosition(textView) + textView.ScrollOffset);
+
+        if (position is null)
+            return;
+
+        var offset = Editor.Document.GetOffset(position.Value.Location);
+        var expression = FindVariableAt(_snapshot, offset);
+
+        if (expression is null)
+            return;
+
+        var sequence = ++_hoverSequence;
+        var result = await _model.EvaluateHoverAsync(expression);
+
+        // The pointer moved on, or the script resumed, while the value was on its way.
+        if (sequence != _hoverSequence || result is null)
+            return;
+
+        var value = result.Output.Trim();
+
+        if (!result.IsError && value.Length == 0)
+            value = "$null";
+
+        HoverExpression.Text = expression;
+        HoverValue.Text = Truncate(value);
+        HoverValue[!TextBlock.ForegroundProperty] = HoverValue.GetResourceObservable(
+            result.IsError ? "ErrorTextBrush" : "TextPrimaryBrush").ToBinding();
+        HoverPopup.IsOpen = true;
+    }
+
+    private void CloseHover()
+    {
+        _hoverSequence++;
+        HoverPopup.IsOpen = false;
+    }
+
+    /// <summary>
+    /// The variable token covering the offset, as an expression to evaluate. A splat written <c>@name</c>
+    /// becomes <c>$name</c>. Looks inside expandable strings so "$path\file" works too.
+    /// </summary>
+    private static string? FindVariableAt(SyntaxSnapshot snapshot, int offset)
+    {
+        for (var i = snapshot.FirstIndexAtOrBefore(offset); i < snapshot.Count; i++)
+        {
+            var token = snapshot[i];
+
+            if (token.Extent.StartOffset > offset)
+                break;
+
+            if (token.Extent.EndOffset > offset && FindVariableIn(token, offset) is { } found)
+                return found;
+        }
+
+        return null;
+    }
+
+    private static string? FindVariableIn(Token token, int offset)
+    {
+        if (token.Extent.StartOffset > offset || token.Extent.EndOffset <= offset)
+            return null;
+
+        switch (token)
+        {
+            case StringExpandableToken { NestedTokens.Count: > 0 } expandable:
+                foreach (var nested in expandable.NestedTokens)
+                {
+                    if (FindVariableIn(nested, offset) is { } found)
+                        return found;
+                }
+
+                return null;
+
+            case VariableToken { Kind: TokenKind.Variable } variable:
+                return variable.Text;
+
+            case VariableToken { Kind: TokenKind.SplattedVariable } splatted:
+                return "$" + splatted.Text[1..];
+
+            default:
+                return null;
+        }
+    }
+
+    private static string Truncate(string value)
+    {
+        var truncated = false;
+
+        if (value.Length > HoverMaxLength)
+        {
+            value = value[..HoverMaxLength];
+            truncated = true;
+        }
+
+        var lines = value.Split('\n');
+
+        if (lines.Length > HoverMaxLines)
+        {
+            value = string.Join('\n', lines[..HoverMaxLines]);
+            truncated = true;
+        }
+
+        return truncated ? value.TrimEnd() + "\n…" : value;
     }
 
     private void NavigateToLine(int line)

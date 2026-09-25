@@ -10,8 +10,8 @@ public partial class ScriptDebuggerWindow : Window
     public static readonly IValueConverter IsPositive =
         new FuncValueConverter<int, bool>(value => value > 0);
 
-    public static readonly IValueConverter RunLabel =
-        new FuncValueConverter<bool, string>(stopped => stopped ? "Continue" : "Run");
+    public static readonly IValueConverter RunTip =
+        new FuncValueConverter<bool, string>(stopped => stopped ? "Continue (F5)" : "Run the selected script on its own (F5)");
 
     private ScriptDebuggerWindowViewModel? _model;
 

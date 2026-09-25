@@ -30,8 +30,9 @@ public sealed partial class WatchItemViewModel : ObservableObject
 
     public IBrush Foreground => IsError ? ErrorBrush : NormalBrush;
 
-    private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.FromRgb(0xF4, 0x47, 0x47));
-    private static readonly IBrush NormalBrush = new ImmutableSolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
+    // The launcher's ErrorText and TextPrimary tokens.
+    private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.FromRgb(0xFF, 0x78, 0x75));
+    private static readonly IBrush NormalBrush = new ImmutableSolidColorBrush(Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF));
 
     partial void OnIsErrorChanged(bool value) => OnPropertyChanged(nameof(Foreground));
 

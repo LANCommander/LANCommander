@@ -18,11 +18,22 @@ namespace LANCommander.Launcher.ViewModels.ScriptDebugger;
 /// </remarks>
 public sealed partial class BreakpointModel : ObservableObject
 {
-    private readonly TextAnchor _anchor;
+    private TextAnchor _anchor;
 
     public BreakpointModel(TextAnchor anchor) => _anchor = anchor;
 
     public TextAnchor Anchor => _anchor;
+
+    /// <summary>
+    /// Move onto a fresh anchor. Used when the document's text is replaced wholesale, which would
+    /// otherwise carry every anchor to the end of the new text.
+    /// </summary>
+    internal void Reanchor(TextAnchor anchor)
+    {
+        _anchor = anchor;
+        OnPropertyChanged(nameof(Line));
+        OnPropertyChanged(nameof(Display));
+    }
 
     public int Line => _anchor.IsDeleted ? 0 : _anchor.Line;
 

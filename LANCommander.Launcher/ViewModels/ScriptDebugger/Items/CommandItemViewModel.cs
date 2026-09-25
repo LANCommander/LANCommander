@@ -14,7 +14,7 @@ public sealed class CommandItemViewModel
 {
     private static readonly IBrush CmdletBrush = new ImmutableSolidColorBrush(Color.FromRgb(0xDC, 0xDC, 0xAA));
     private static readonly IBrush FunctionBrush = new ImmutableSolidColorBrush(Color.FromRgb(0x9C, 0xDC, 0xFE));
-    private static readonly IBrush AliasBrush = new ImmutableSolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+    private static readonly IBrush AliasBrush = new ImmutableSolidColorBrush(Color.FromArgb(0x8C, 0xFF, 0xFF, 0xFF));
 
     public CommandItemViewModel(CommandInfoSnapshot info) => Info = info;
 

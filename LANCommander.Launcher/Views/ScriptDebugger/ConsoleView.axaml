@@ -6,20 +6,18 @@
              x:DataType="vm:ConsoleViewModel">
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
-      <TextBlock Classes="panelHeader" Text="CONSOLE" />
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,0,0,1">
+      <TextBlock Classes="Kicker PaneHeader" Text="CONSOLE" />
     </Border>
 
-    <Border DockPanel.Dock="Bottom" Padding="4" Background="#1E1E1E">
+    <Border DockPanel.Dock="Bottom" Padding="8" BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,1,0,0">
       <Grid ColumnDefinitions="Auto,*">
-        <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0"
-                   Foreground="#DCDCAA" FontFamily="Cascadia Code,Consolas,monospace"
-                   Text="{Binding InputPrompt}" />
-        <TextBox Grid.Column="1" x:Name="Input"
+        <TextBlock Grid.Column="0" Classes="Code" VerticalAlignment="Center" Margin="2,0,8,0"
+                   Foreground="#DCDCAA" Text="{Binding InputPrompt}" />
+        <TextBox Grid.Column="1" Classes="Code" x:Name="Input"
                  Text="{Binding InputText, Mode=TwoWay}"
                  IsEnabled="{Binding IsInputEnabled}"
-                 Watermark="Evaluate while stopped, or answer Read-Host"
-                 FontFamily="Cascadia Code,Consolas,monospace">
+                 Watermark="Evaluate while stopped, or answer Read-Host">
           <TextBox.KeyBindings>
             <KeyBinding Gesture="Enter" Command="{Binding SubmitCommand}" />
           </TextBox.KeyBindings>
@@ -27,11 +25,10 @@
       </Grid>
     </Border>
 
-    <ListBox x:Name="Output" Classes="dense" ItemsSource="{Binding Lines}" Background="#1E1E1E">
+    <ListBox x:Name="Output" Classes="Dense" ItemsSource="{Binding Lines}" Background="Transparent" Padding="0,4">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="items:ConsoleLineViewModel">
-          <TextBlock Text="{Binding Text}" Foreground="{Binding Foreground}"
-                     FontFamily="Cascadia Code,Consolas,monospace" TextWrapping="Wrap" />
+          <TextBlock Classes="Code" Text="{Binding Text}" Foreground="{Binding Foreground}" TextWrapping="Wrap" />
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>

@@ -17,7 +17,8 @@ namespace LANCommander.Launcher.Services.Tests.Tests;
 
 /// <summary>
 /// The script debugger's view of a game: which scripts it lists, where their text comes from, and where
-/// edits go. Installed games are read from the install directory; server calls are not exercised here.
+/// edits go. Installed games are read from the install directory; the server is faked at the catalogue it
+/// returns.
 /// </summary>
 public sealed class ScriptDebugWorkspaceServiceTests : IDisposable
 {
@@ -58,7 +59,7 @@ public sealed class ScriptDebugWorkspaceServiceTests : IDisposable
         return context;
     }
 
-    private ScriptDebugWorkspaceService CreateSubject(DatabaseContext context, bool offline = false)
+    private ScriptDebugWorkspaceService CreateSubject(DatabaseContext context, bool offline = false, ServerScriptCatalog? catalog = null)
     {
         var connection = new Mock<IConnectionClient>();
         connection.Setup(c => c.IsOfflineMode()).Returns(offline);
@@ -71,15 +72,29 @@ public sealed class ScriptDebugWorkspaceServiceTests : IDisposable
         var gameClient = new GameClient(
             NullLogger<GameClient>.Instance, null!, null!, null!, null!, connection.Object, null!, null!, null!, null!, null!, null!, null!);
 
-        return new ScriptDebugWorkspaceService(
-            NullLogger<ScriptDebugWorkspaceService>.Instance,
-            gameService,
-            gameClient,
-            redistributableClient: null!,
-            toolClient: null!,
-            scriptClient: null!,
-            connection.Object);
+        return new FakeServerWorkspaceService(gameService, gameClient, connection.Object, catalog);
     }
+
+    /// <summary>Stands in for the server: the catalogue it would return, or none (the server was unreachable).</summary>
+    private sealed class FakeServerWorkspaceService(
+        GameService gameService,
+        GameClient gameClient,
+        IConnectionClient connection,
+        ServerScriptCatalog? catalog)
+        : ScriptDebugWorkspaceService(NullLogger<ScriptDebugWorkspaceService>.Instance, gameService, gameClient, null!, null!, null!, connection)
+    {
+        protected override Task<ServerScriptCatalog?> FetchServerCatalogAsync(Guid gameId, CancellationToken cancellationToken) =>
+            catalog is null ? throw new HttpRequestException("unreachable") : Task.FromResult<ServerScriptCatalog?>(catalog);
+    }
+
+    private static SDK.Models.Script ServerScript(ScriptType type, string name, string contents) => new()
+    {
+        Id = Guid.NewGuid(),
+        Type = type,
+        Name = name,
+        Contents = contents,
+        UpdatedOn = DateTime.UtcNow,
+    };
 
     private async Task WriteInstalledGameAsync()
     {
@@ -146,6 +161,67 @@ public sealed class ScriptDebugWorkspaceServiceTests : IDisposable
         redistributable.Scripts.Single().Type.ShouldBe(ScriptType.DetectInstall);
 
         workspace.OwnerIds.ShouldBe([_gameId, _redistributableId], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task InstalledGame_AlsoListsTheServersScripts_ForAddonsAndToolsThatArentInstalled()
+    {
+        await WriteInstalledGameAsync();
+
+        var installedAddonId = Guid.NewGuid();
+        var missingAddonId = Guid.NewGuid();
+        var toolId = Guid.NewGuid();
+
+        // One addon is installed alongside the game; the other, and the tool, are only on the server.
+        var main = await ManifestHelper.ReadAsync<Manifest.Game>(_installDirectory, _gameId);
+        main!.Addons = [new Manifest.Game { Id = installedAddonId, Title = "Installed Pack", Type = GameType.Expansion }];
+        await ManifestHelper.WriteAsync(main, _installDirectory);
+        await ManifestHelper.WriteAsync(new Manifest.Game { Id = installedAddonId, Title = "Installed Pack", Type = GameType.Expansion }, _installDirectory);
+        WriteScript(installedAddonId, ScriptType.Install, "Write-Host 'installed pack'");
+
+        var catalog = new ServerScriptCatalog("Test Game",
+        [
+            new(ScriptOwnerKind.Game, _gameId, "Test Game", false, null, [ServerScript(ScriptType.AfterStop, "Newer", "server copy")]),
+            new(ScriptOwnerKind.Game, installedAddonId, "Installed Pack", true, null, [ServerScript(ScriptType.Uninstall, "Remove", "server copy")]),
+            new(ScriptOwnerKind.Game, missingAddonId, "Missing Pack", true, null, [ServerScript(ScriptType.Install, "Unpack", "Write-Host 'missing pack'")]),
+            new(ScriptOwnerKind.Redistributable, _redistributableId, "Runtime", false, null, []),
+            new(ScriptOwnerKind.Tool, toolId, "Server Browser", false, null, [ServerScript(ScriptType.BeforeStart, "Launch", "Write-Host 'tool'")]),
+        ]);
+
+        await using var context = CreateContext(installed: true);
+        var workspace = await CreateSubject(context, catalog: catalog).LoadAsync(_gameId);
+
+        workspace.Message.ShouldBeNull();
+        workspace.Owners.Select(o => o.Id).ShouldBe([_gameId, installedAddonId, missingAddonId, _redistributableId, toolId]);
+
+        // What is installed is listed from disk only, so the server's newer scripts for it don't appear.
+        workspace.Owners[0].Scripts.ShouldAllBe(s => s.Source == ScriptSource.Installed);
+        workspace.Owners[0].Scripts.ShouldNotContain(s => s.Type == ScriptType.AfterStop);
+        workspace.Owners[1].Scripts.Single().Source.ShouldBe(ScriptSource.Installed);
+
+        var missing = workspace.Owners[2].Scripts.ShouldHaveSingleItem();
+        missing.Source.ShouldBe(ScriptSource.Server);
+        missing.Name.ShouldBe("Unpack");
+        missing.ServerContents.ShouldBe("Write-Host 'missing pack'");
+        missing.CanRunDirectly.ShouldBeFalse();
+
+        var tool = workspace.Owners[4];
+        tool.Kind.ShouldBe(ScriptOwnerKind.Tool);
+        tool.Scripts.Single().Source.ShouldBe(ScriptSource.Server);
+
+        workspace.OwnerIds.ShouldBe([_gameId, installedAddonId, missingAddonId, _redistributableId, toolId], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task InstalledGame_WhenTheServerCantBeReached_ListsWhatIsInstalledAndSaysSo()
+    {
+        await WriteInstalledGameAsync();
+
+        await using var context = CreateContext(installed: true);
+        var workspace = await CreateSubject(context, catalog: null).LoadAsync(_gameId);
+
+        workspace.Owners.Select(o => o.Id).ShouldBe([_gameId, _redistributableId]);
+        workspace.Message.ShouldNotBeNullOrEmpty();
     }
 
     [Fact]

@@ -7,26 +7,45 @@
 
   <Grid RowDefinitions="Auto,Auto,*">
 
-    <Border Grid.Row="0" Background="#252526" Padding="8,4" BorderBrush="#3F3F46" BorderThickness="0,0,0,1"
+    <!-- Where the open script comes from -->
+    <Border Grid.Row="0" Padding="12,8" BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,0,0,1"
             IsVisible="{Binding HasDocument}">
-      <TextBlock Text="{Binding SelectedDocument.SourceLabel}" Foreground="#9A9A9A" FontSize="11"
+      <TextBlock Classes="Caption Mono" Text="{Binding SelectedDocument.SourceLabel}"
                  TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SelectedDocument.SourceLabel}" />
     </Border>
 
-    <Border Grid.Row="1" Background="#4B3A00" Padding="8,4"
+    <Border Grid.Row="1" Classes="Notice Warning" Margin="8,8,8,0" Padding="10,6"
             IsVisible="{Binding SourceUnavailableMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-      <TextBlock Text="{Binding SourceUnavailableMessage}" Foreground="#F0D080" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding SourceUnavailableMessage}" TextWrapping="Wrap" />
     </Border>
 
+    <!-- The code keeps its own syntax palette; the surface around it is the card's -->
     <ae:TextEditor Grid.Row="2"
                    x:Name="Editor"
+                   Margin="0,4,0,0"
                    ShowLineNumbers="True"
-                   Background="#1E1E1E"
-                   Foreground="#D4D4D4"
-                   LineNumbersForeground="#858585"
-                   FontFamily="Cascadia Code,Consolas,monospace"
-                   FontSize="14"
+                   Background="Transparent"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   LineNumbersForeground="{DynamicResource TextDisabledBrush}"
+                   FontFamily="{DynamicResource CodeFontFamily}"
+                   FontSize="{Binding EditorFontSize}"
                    WordWrap="False"
                    IsEnabled="{Binding HasDocument}" />
+
+    <!-- The value of the variable under the pointer while stopped. Filled in from code-behind. -->
+    <Popup Grid.Row="2" x:Name="HoverPopup" Placement="Pointer" IsLightDismissEnabled="False">
+      <Border Background="{DynamicResource SurfacePopoverBrush}"
+              BorderBrush="{DynamicResource HairlineBorderStrongBrush}" BorderThickness="1"
+              CornerRadius="{DynamicResource RadiusLarge}"
+              BoxShadow="{DynamicResource PopoverShadow}"
+              Margin="12" Padding="10,8" MaxWidth="700">
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="HoverExpression" Foreground="#9CDCFE"
+                     FontFamily="{DynamicResource CodeFontFamily}" FontSize="{DynamicResource FontSizeCaption}" />
+          <TextBlock x:Name="HoverValue" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"
+                     FontFamily="{DynamicResource CodeFontFamily}" FontSize="{DynamicResource FontSizeCaption}" />
+        </StackPanel>
+      </Border>
+    </Popup>
   </Grid>
 </UserControl>

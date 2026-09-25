@@ -5,10 +5,10 @@
              x:Class="LANCommander.Launcher.Views.ScriptDebugger.CallStackView"
              x:DataType="vm:CallStackViewModel">
 
-  <ListBox ItemsSource="{Binding Frames}" SelectedItem="{Binding SelectedFrame}" Background="Transparent">
+  <ListBox ItemsSource="{Binding Frames}" SelectedItem="{Binding SelectedFrame}" Background="Transparent" Padding="4,6">
     <ListBox.ItemTemplate>
       <DataTemplate x:DataType="items:CallStackFrameViewModel">
-        <TextBlock Text="{Binding Display}" FontFamily="Cascadia Code,Consolas,monospace" />
+        <TextBlock Classes="Code" Text="{Binding Display}" />
       </DataTemplate>
     </ListBox.ItemTemplate>
   </ListBox>

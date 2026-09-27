@@ -1,0 +1,35 @@
+@implements IComponentFixtureSet
+
+@code {
+    static readonly IconType[] Sample =
+    [
+        IconType.X, IconType.PencilSimple, IconType.Trash, IconType.MagnifyingGlass, IconType.Plus,
+        IconType.UploadSimple, IconType.DownloadSimple, IconType.FolderOpen, IconType.GameController, IconType.Gear,
+    ];
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Icon.Weights", "The same icons in regular, bold, fill and duotone weights",
+            @<div style="display: grid; gap: 12px; font-size: 24px">
+                <div style="display: flex; gap: 12px">@foreach (var type in Sample) { <Icon Type="type" /> }</div>
+                <div style="display: flex; gap: 12px">@foreach (var type in Sample) { <Icon Type="type" Bold /> }</div>
+                <div style="display: flex; gap: 12px">@foreach (var type in Sample) { <Icon Type="type" Fill /> }</div>
+                <div style="display: flex; gap: 12px">@foreach (var type in Sample) { <Icon Type="type" DuoTone /> }</div>
+            </div>)
+        {
+            Width = 400,
+            Covers = [typeof(Icon)],
+        },
+        new("Icon.InheritsText", "Icons take the size and colour of the text around them",
+            @<div style="display: grid; gap: 8px">
+                <span style="font-size: 12px"><Icon Type="IconType.Info" /> Small text</span>
+                <span style="font-size: 16px"><Icon Type="IconType.Info" /> Body text</span>
+                <span style="font-size: 24px; color: var(--rz-primary)"><Icon Type="IconType.Info" /> Large primary text</span>
+                <span style="color: var(--rz-danger)"><Icon Type="IconType.Warning" Fill /> Danger text</span>
+            </div>)
+        {
+            Width = 320,
+            Covers = [typeof(Icon)],
+        },
+    ];
+}

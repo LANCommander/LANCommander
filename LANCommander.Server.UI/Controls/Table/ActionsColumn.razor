@@ -1,0 +1,41 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@implements IDisposable
+
+@* The row's action buttons (edit, delete, ...), right-aligned in the last column *@
+<RadzenDataGridColumn TItem="TItem"
+                      Title=""
+                      Sortable="false"
+                      Pickable="false"
+                      Resizable="false"
+                      Width="@Width"
+                      TextAlign="TextAlign.Right"
+                      CssClass="lc-table-actions"
+                      HeaderCssClass="lc-table-actions">
+    <Template Context="item">
+        <div class="lc-table-actions-content">@ChildContent(item)</div>
+    </Template>
+</RadzenDataGridColumn>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment<TItem> ChildContent { get; set; } = default!;
+
+    /// <summary>Navigation properties the actions need, comma separated.</summary>
+    [Parameter] public string? Include { get; set; }
+
+    /// <summary>Fits two icon buttons (edit, delete); widen for more. The grid needs a fixed width here.</summary>
+    [Parameter] public string Width { get; set; } = "112px";
+
+    [CascadingParameter] internal ITableHost? Host { get; set; }
+
+    TableColumnInfo _info = default!;
+
+    protected override void OnInitialized()
+    {
+        _info = new TableColumnInfo { Key = "__actions", Includes = TableColumnIncludes.Parse(Include) };
+
+        Host?.Register(_info);
+    }
+
+    public void Dispose() => Host?.Unregister(_info);
+}

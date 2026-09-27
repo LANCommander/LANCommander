@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -9,6 +9,8 @@
 	<Version>1.1.0</Version>
 	<Company>LANCommander</Company>
 	<Product>Server</Product>
+    <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
+    <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -77,7 +79,6 @@
     </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign.Charts" />
     <PackageReference Include="CaseConverter" />
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="Hangfire.AspNetCore" />
@@ -124,7 +125,9 @@
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
-    <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.UI\LANCommander.Server.UI.csproj" />
+    <!-- Control gallery (/_fixtures) and seeded data for development; never shipped -->
+    <ProjectReference Include="..\LANCommander.Server.UI.Fixtures\LANCommander.Server.UI.Fixtures.csproj" Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
 
   <ItemGroup>

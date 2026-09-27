@@ -1,0 +1,201 @@
+@using LANCommander.Server.Models
+@using Action = LANCommander.Server.Data.Models.Action
+@inject ActionService ActionService
+@inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+
+@* The launch actions of the game, server or tool whose Id is cascaded, in the order they are offered *@
+<Flex Vertical Gap="Gap.Large">
+    <Spin Loading="_loading">
+        <Table TItem="Action" Items="_actions" Key="a => a" NoPaging EmptyText="No actions yet" SettingsKey="action-editor">
+            <Columns>
+                <TemplateColumn TItem="Action" Title="Name" Width="16%">
+                    <TextInput @bind-Value="context.Name" />
+                </TemplateColumn>
+                <TemplateColumn TItem="Action" Title="Path" Width="26%">
+                    <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" Title="Select Action Executable" OnSelected="path => OnPathSelected(path, context)" />
+                </TemplateColumn>
+                <TemplateColumn TItem="Action" Title="Arguments" Width="18%">
+                    <Flex Gap="Gap.Small" Align="Align.Center">
+                        <TextInput @bind-Value="context.Arguments" Style="flex: 1" />
+                        <Button Text Small Icon="IconType.BracketsCurly" title="Insert variables" OnClick="() => PickVariablesAsync(context, nameof(Action.Arguments))" />
+                    </Flex>
+                </TemplateColumn>
+                <TemplateColumn TItem="Action" Title="Working Dir" Width="18%">
+                    <Flex Gap="Gap.Small" Align="Align.Center">
+                        <TextInput @bind-Value="context.WorkingDirectory" Style="flex: 1" />
+                        <Button Text Small Icon="IconType.BracketsCurly" title="Insert variables" OnClick="() => PickVariablesAsync(context, nameof(Action.WorkingDirectory))" />
+                    </Flex>
+                </TemplateColumn>
+                <TemplateColumn TItem="Action" Title="Platforms" Width="160px">
+                    <RuntimePlatformSelect @bind-Value="context.Platforms" Style="width: 100%" />
+                </TemplateColumn>
+                <TemplateColumn TItem="Action" Title="Primary" Width="80px">
+                    <Checkbox @bind-Value="context.PrimaryAction" aria-label="Primary action" />
+                </TemplateColumn>
+                <ActionsColumn TItem="Action" Width="130px">
+                    <Button Text Icon="IconType.ArrowUp" title="Move up" Disabled="_actions.IndexOf(context) == 0" OnClick="() => Move(context, -1)" />
+                    <Button Text Icon="IconType.ArrowDown" title="Move down" Disabled="_actions.IndexOf(context) == _actions.Count - 1" OnClick="() => Move(context, 1)" />
+                    <Popconfirm OnConfirm="() => RemoveAsync(context)" Title="Are you sure you want to remove this action?" OkText="Remove" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Remove" />
+                    </Popconfirm>
+                </ActionsColumn>
+            </Columns>
+        </Table>
+    </Spin>
+
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Action</Button>
+    </Flex>
+</Flex>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
+
+    Archive? _archive;
+
+    // For games, actions belong to the game's latest version rather than the game itself
+    Guid? _gameVersionId;
+
+    // Replaced rather than changed in place, so the table notices new orders
+    List<Action> _actions = new();
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (GameId is { } gameId && gameId != Guid.Empty)
+                _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(gameId);
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The actions could not be loaded");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    async Task LoadAsync()
+    {
+        if (GameId.HasValue)
+        {
+            _actions = (await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.GameVersionId == _gameVersionId)).ToList();
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
+        }
+        else if (ServerId.HasValue)
+            _actions = (await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ServerId == ServerId.Value)).ToList();
+        else if (ToolId.HasValue)
+        {
+            _actions = (await ActionService.SortBy(a => a.SortOrder).GetAsync(a => a.ToolId == ToolId.Value)).ToList();
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == ToolId);
+        }
+    }
+
+    void Add()
+    {
+        var action = new Action
+        {
+            PrimaryAction = _actions.Count == 0,
+            GameId = GameId,
+            ServerId = ServerId,
+            ToolId = ToolId,
+        };
+
+        SetOrder([.. _actions, action]);
+    }
+
+    async Task RemoveAsync(Action action)
+    {
+        try
+        {
+            if (action.Id != Guid.Empty)
+                await ActionService.DeleteAsync(action);
+
+            SetOrder(_actions.Where(a => a != action).ToList());
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The action could not be removed");
+        }
+    }
+
+    void Move(Action action, int offset)
+    {
+        var actions = _actions.ToList();
+        var index = actions.IndexOf(action);
+        var target = index + offset;
+
+        if (target < 0 || target >= actions.Count)
+            return;
+
+        actions.RemoveAt(index);
+        actions.Insert(target, action);
+
+        SetOrder(actions);
+    }
+
+    void SetOrder(List<Action> actions)
+    {
+        for (var i = 0; i < actions.Count; i++)
+            actions[i].SortOrder = i;
+
+        _actions = actions;
+    }
+
+    /// <summary>Saves every action, e.g. from the page header's Save button.</summary>
+    public async Task Save()
+    {
+        try
+        {
+            foreach (var action in _actions)
+            {
+                if (action.Id == Guid.Empty)
+                    await ActionService.AddAsync(action);
+                else
+                    await ActionService.UpdateAsync(action);
+            }
+
+            await LoadAsync();
+
+            Notifications.Success("Actions updated!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not update actions!");
+        }
+    }
+
+    void OnPathSelected(string path, Action action)
+    {
+        action.Path = path;
+        action.WorkingDirectory = "{InstallDir}";
+    }
+
+    async Task PickVariablesAsync(Action action, string fieldName)
+    {
+        var current = fieldName == nameof(Action.Arguments) ? action.Arguments : action.WorkingDirectory;
+
+        var result = await Dialogs.OpenAsync<VariablePickerDialog, VariablePickerOptions, string>($"Edit {fieldName}", new VariablePickerOptions
+        {
+            Value = current ?? "",
+            FieldName = fieldName,
+        }, new DialogSettings { OkText = "Apply" });
+
+        if (result == null)
+            return;
+
+        if (fieldName == nameof(Action.Arguments))
+            action.Arguments = result;
+        else
+            action.WorkingDirectory = result;
+    }
+}

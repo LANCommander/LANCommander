@@ -1,0 +1,37 @@
+.lc-divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    border-top: 1px solid var(--lc-border-subtle-color);
+}
+
+.lc-divider-with-text {
+    border-top: 0;
+    color: var(--rz-text-title-color);
+    font-weight: 600;
+
+    &::before,
+    &::after {
+        content: "";
+        flex: 1;
+        border-top: 1px solid var(--lc-border-subtle-color);
+    }
+
+    .lc-divider-text {
+        padding: 0 1em;
+        white-space: nowrap;
+    }
+
+    &.lc-divider-left::before,
+    &.lc-divider-right::after {
+        flex: 0 0 5%;
+    }
+}
+
+.lc-divider-vertical {
+    display: inline-block;
+    height: 0.9em;
+    margin: 0 0.5em;
+    border-inline-start: 1px solid var(--lc-border-color);
+    vertical-align: middle;
+}

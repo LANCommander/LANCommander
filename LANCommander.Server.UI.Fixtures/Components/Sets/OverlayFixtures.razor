@@ -1,0 +1,51 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Tooltip.Open", "A tooltip shown while hovering an icon button",
+            @<div style="padding: 48px 0 0 96px; height: 60px">
+                <Tooltip Title="Delete this game" Delay="0">
+                    <Button Text Danger Icon="IconType.Trash" id="tooltip-target" />
+                </Tooltip>
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Hover = "#tooltip-target",
+            WaitFor = ".lc-tooltip",
+            Covers = [typeof(Tooltip)],
+        },
+        new("Popconfirm.Open", "A delete confirmation popover opened from an icon button",
+            @<div style="height: 160px">
+                <Popconfirm Title="Are you sure you want to delete this collection?" OkText="Delete" Danger OnConfirm="() => { }">
+                    <Button Text Danger Icon="IconType.X" id="popconfirm-target" />
+                </Popconfirm>
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Click = "#popconfirm-target",
+            WaitFor = ".lc-popconfirm",
+            Covers = [typeof(Popconfirm)],
+        },
+        new("Dialog.Open", "A dialog opened through DialogService, with the standard footer",
+            @<OpenOnRender What="OpenOnRender.Overlay.Dialog" />)
+        {
+            FullPage = true,
+            WaitFor = ".lc-dialog-footer",
+        },
+        new("Dialog.Confirm", "A destructive confirmation opened through AlertService",
+            @<OpenOnRender What="OpenOnRender.Overlay.Confirm" />)
+        {
+            FullPage = true,
+            WaitFor = ".lc-confirm",
+        },
+        new("Notification.Levels", "Success, info, warning and error notifications",
+            @<OpenOnRender What="OpenOnRender.Overlay.Notifications" />)
+        {
+            FullPage = true,
+            WaitFor = ".rz-notification-item",
+        },
+    ];
+}

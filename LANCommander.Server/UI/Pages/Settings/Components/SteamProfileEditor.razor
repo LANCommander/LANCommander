@@ -2,34 +2,34 @@
 @using LANCommander.Steam.Abstractions
 @using LANCommander.Steam.Enums
 @inject ISteamCmdService SteamCmdService
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 
-<Spin Spinning="_connectionStatus == SteamCmdConnectionStatus.Unknown">
-    <Form Model="this" Layout="@FormLayout.Vertical" OnFinish="Authenticate">
-        @if (_connectionStatus == SteamCmdConnectionStatus.Unauthenticated)
-        {
-            <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Middle" Align="FlexAlign.End">
-                <FormItem Label="Username" Style="flex-grow: 1;">
-                    <Input Value="Username" ValueChanged="UsernameChanged" Disabled="_processingLogin" />
+<Spin Loading="_connectionStatus == SteamCmdConnectionStatus.Unknown">
+    @if (_connectionStatus == SteamCmdConnectionStatus.Unauthenticated)
+    {
+        <Form Model="this" OnSubmit="AuthenticateAsync" Disabled="_processingLogin">
+            <Flex Gap="Gap.Medium" Align="Align.End">
+                <FormItem Label="Username" Style="flex-grow: 1">
+                    <TextInput Value="@Username" ValueChanged="UsernameChanged" />
                 </FormItem>
-                <FormItem Label="Password" Style="flex-grow: 1;">
-                    <InputPassword @bind-Value="_password" Disabled="_processingLogin"/>
+                <FormItem Label="Password" Style="flex-grow: 1">
+                    <PasswordInput @bind-Value="_password" />
                 </FormItem>
                 <FormItem>
-                    <Button Type="ButtonType.Primary" Loading="_processingLogin" HtmlType="submit">Login</Button>
+                    <Button Primary Submit Loading="_processingLogin">Login</Button>
                 </FormItem>
             </Flex>
-        }
-    </Form>
+        </Form>
+    }
 
-    <Form Model="this" Layout="FormLayout.Vertical">
+    <Form Model="this">
         @if (_connectionStatus != SteamCmdConnectionStatus.Unauthenticated)
         {
             <FormItem Label="Username">
-                <Input Value="Username" Disabled />
+                <TextInput Value="@Username" Disabled />
             </FormItem>
         }
-    
+
         <FormItem Label="Install Directory">
             <FilePicker Value="@InstallDirectory" ValueChanged="InstallDirectoryChanged" Root="@_rootPath" />
         </FormItem>
@@ -37,98 +37,81 @@
 </Spin>
 
 @code {
-    [Parameter] public string Username { get; set; }
-    [Parameter] public EventCallback<string> UsernameChanged { get; set; }
-    [Parameter] public string InstallDirectory { get; set; }
-    [Parameter] public EventCallback<string> InstallDirectoryChanged { get; set; }
+    [Parameter] public string? Username { get; set; }
+    [Parameter] public EventCallback<string?> UsernameChanged { get; set; }
+    [Parameter] public string? InstallDirectory { get; set; }
+    [Parameter] public EventCallback<string?> InstallDirectoryChanged { get; set; }
     [Parameter] public EventCallback OnAuthenticated { get; set; }
-    
+
     string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     SteamCmdConnectionStatus _connectionStatus = SteamCmdConnectionStatus.Unknown;
-    
-    bool _processingLogin = false;
-    string _password = String.Empty;
 
-    MessageConfig _loginMessage = new MessageConfig();
+    bool _processingLogin;
+    string? _password = String.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        if (!String.IsNullOrWhiteSpace(Username))
-            _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
-        else
+        try
+        {
+            if (!String.IsNullOrWhiteSpace(Username))
+                _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
+            else
+                _connectionStatus = SteamCmdConnectionStatus.Unauthenticated;
+        }
+        catch (Exception ex)
+        {
             _connectionStatus = SteamCmdConnectionStatus.Unauthenticated;
+
+            Notifications.Error(ex, "The Steam connection could not be checked");
+        }
     }
 
-    async Task Authenticate()
+    async Task AuthenticateAsync()
     {
         _processingLogin = true;
-        await InvokeAsync(StateHasChanged);
 
-        _loginMessage.Content = "Logging into Steam...";
-        _loginMessage.Key = Guid.NewGuid().ToString();
-        _loginMessage.Duration = 0;
+        var progress = Notifications.ShowPersistent(NotificationLevel.Info, "Logging into Steam...", "Check the Steam mobile app to confirm this login");
 
-        MessageService.Loading(_loginMessage);
-        
-        MessageService.Info("Check the Steam mobile app to confirm this login", 10);
-        
-        var status = await SteamCmdService.LoginToSteamAsync(Username, _password);
-
-        if (status == SteamCmdStatus.Success)
+        try
         {
-            _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
-            
-            _loginMessage.Content = "Successfully authenticated to Steam!";
-            _loginMessage.Duration = 3;
-            
-            MessageService.Success(_loginMessage);
-            
-            _password = String.Empty;
+            var status = await SteamCmdService.LoginToSteamAsync(Username, _password);
 
-            if (UsernameChanged.HasDelegate)
-                await UsernameChanged.InvokeAsync(Username);
+            progress.Close();
 
-            if (InstallDirectoryChanged.HasDelegate)
-                await InstallDirectoryChanged.InvokeAsync(InstallDirectory);
-
-            if (OnAuthenticated.HasDelegate)
-                await OnAuthenticated.InvokeAsync();
-        }
-        else
-        {
-            switch (status)
+            if (status == SteamCmdStatus.Success)
             {
-                case SteamCmdStatus.InvalidUsername:
-                case SteamCmdStatus.InvalidPassword:
-                    _loginMessage.Content = "Invalid username or password";
-                    break;
-                    
-                case SteamCmdStatus.ExecutableNotFound:
-                    _loginMessage.Content = "SteamCMD executable not found";
-                    break;
-                    
-                case SteamCmdStatus.PathNotConfigured:
-                    _loginMessage.Content = "SteamCMD path not configured";
-                    break;
-                    
-                case SteamCmdStatus.Error:
-                    _loginMessage.Content = "SteamCMD returned an error, check logs for info.";
-                    break;
-                    
-                case SteamCmdStatus.UnknownError:
-                default:
-                    _loginMessage.Content = "An unknown error occurred, check logs for more info";
-                    break;
+                _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
+
+                Notifications.Success("Successfully authenticated to Steam!");
+
+                _password = String.Empty;
+
+                await UsernameChanged.InvokeAsync(Username);
+                await InstallDirectoryChanged.InvokeAsync(InstallDirectory);
+                await OnAuthenticated.InvokeAsync();
             }
-            
-            _loginMessage.Duration = 8;
-            
-            MessageService.Error(_loginMessage);
+            else
+            {
+                Notifications.Error(status switch
+                {
+                    SteamCmdStatus.InvalidUsername or SteamCmdStatus.InvalidPassword => "Invalid username or password",
+                    SteamCmdStatus.ExecutableNotFound => "SteamCMD executable not found",
+                    SteamCmdStatus.PathNotConfigured => "SteamCMD path not configured",
+                    SteamCmdStatus.Error => "SteamCMD returned an error, check logs for info.",
+                    _ => "An unknown error occurred, check logs for more info",
+                });
+            }
         }
-        
-        _processingLogin = false;
-        
-        await InvokeAsync(StateHasChanged);
+        catch (Exception ex)
+        {
+            progress.Close();
+
+            Notifications.Error(ex, "Could not log into Steam");
+        }
+        finally
+        {
+            _processingLogin = false;
+        }
     }
 }

@@ -1,137 +1,125 @@
-@using System.Collections
 @using LANCommander.Server.Settings.Enums
 @inject UpdateService UpdateService
 @inject NavigationManager NavigationManager
+@inject ILogger<LauncherDownloadButton> Logger
 
+@* The launcher downloads for this server's version, listed in a popover under one button *@
 <div class="login-download-pane-container">
-    <Popover Trigger="new[] { Trigger.Hover }">
-        <ContentTemplate>
-            <Flex Vertical Gap="FlexGap.Small">
-                @if (IsInitializing)
+    <Popover MaxWidth="360">
+        <Content>
+            <Flex Vertical Gap="Gap.Small">
+                @if (_loading)
                 {
-                    <span ita>Fetching Launchers &mldr;</span>
+                    <Typography Secondary>Fetching launchers&hellip;</Typography>
                 }
-                else if (DownloadLinks.Count() == 0) 
+                else if (_failed)
                 {
-                    <span>No Launchers available</span>
+                    <Typography Danger>The launchers could not be listed.</Typography>
+                }
+                else if (!_links.Any())
+                {
+                    <Typography Secondary>No launchers available</Typography>
                 }
 
-                @foreach (var downloadLink in DownloadLinks)
+                @foreach (var link in _links)
                 {
-                    <Button Type="ButtonType.Text"
-                            Block
-                            Icon="@downloadLink.Icon"
-                            OnClick="() => NavigationManager.NavigateTo(downloadLink.Url, true)"
-                            Style="text-align: left">
-                        <GridRow Wrap="false" Align="@RowAlign.Middle" Justify="@RowJustify.SpaceBetween">
-                            <GridCol Flex=@("auto")>
-                                @downloadLink.Name
+                    <Button Text Block Icon="link.Icon" Class="login-download-link" OnClick="() => NavigationManager.NavigateTo(link.Url, true)">
+                        <span class="login-download-link-name">@link.Name</span>
 
-                                @foreach (var tag in downloadLink.Tags)
-                                {
-                                    <Tag Icon="@tag.Icon" Color="@(tag.ColorOverride ?? TagColor.Green)">@tag.Name</Tag>
-                                }
-                            </GridCol>
-                            <GridCol Flex=@("none")>
-                                <div style="padding-left: 8px;">
-                                    @if (downloadLink.IsOnline)
-                                    {
-                                        <Icon Type="@IconType.Outline.Cloud" />
-                                    }
-                                </div>
-                            </GridCol>
-                        </GridRow>
+                        @foreach (var tag in link.Tags)
+                        {
+                            @switch (tag.Kind)
+                            {
+                                case DownloadTagKind.Nightly:
+                                    <Tag Danger Icon="IconType.Fire">@tag.Name</Tag>
+                                    break;
+                                case DownloadTagKind.Prerelease:
+                                    <Tag Warning>@tag.Name</Tag>
+                                    break;
+                                default:
+                                    <Tag Success>@tag.Name</Tag>
+                                    break;
+                            }
+                        }
+
+                        @if (link.IsOnline)
+                        {
+                            <Icon Type="IconType.Cloud" title="Downloads from GitHub" />
+                        }
                     </Button>
-
                 }
             </Flex>
-        </ContentTemplate>
+        </Content>
         <ChildContent>
-            <Button Type="ButtonType.Primary" 
-                    Size="ButtonSize.Large" 
-                    Disabled="@(DownloadLinks.Count() == 0)"
-                    Loading="@(DownloadLinks.Count() == 0)"
-            >
-                Download Launcher
-            </Button>
+            <Button Primary Large Icon="IconType.DownloadSimple" Loading="_loading">Download Launcher</Button>
         </ChildContent>
     </Popover>
 </div>
 
 @code {
-    class DownloadLink
+    enum DownloadTagKind
     {
-        public class Tag
-        {
-            public Tag(string name)
-            {
-                Name = name;
-                Icon = string.Empty;
-            }
-            public string Name { get; set; }
-            public string Icon { get; set; }
-            public TagColor? ColorOverride { get; set; }
-        }
-
-        public string Name { get; set; }
-        public string Url { get; set; }
-        public string Icon { get; set; }
-        public Tag[] Tags { get; set; }
-        public bool IsOnline { get; set; }
+        Format,
+        Prerelease,
+        Nightly,
     }
 
-    bool IsInitializing = false;
+    record DownloadTag(string Name, DownloadTagKind Kind);
 
-    IEnumerable<DownloadLink> DownloadLinks = new List<DownloadLink>();
+    record DownloadLink(string Name, string Url, IconType Icon, DownloadTag[] Tags, bool IsOnline);
 
-    readonly string DefaultIcon = IconType.Fill.QuestionCircle;
-    readonly Hashtable _iconMap = new()
+    bool _loading = true;
+    bool _failed;
+    List<DownloadLink> _links = [];
+
+    static IconType PlatformIcon(LauncherPlatform platform) => platform switch
     {
-        [LauncherPlatform.Windows] = IconType.Fill.Windows,
-        [LauncherPlatform.Linux] = IconType.Outline.Qq, // Not Linux, but QQ penguin
-        [LauncherPlatform.macOS] = IconType.Fill.Apple,
+        LauncherPlatform.Windows => IconType.WindowsLogo,
+        LauncherPlatform.Linux => IconType.LinuxLogo,
+        LauncherPlatform.macOS => IconType.AppleLogo,
+        _ => IconType.Question,
     };
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            IsInitializing = true;
-            var artifacts = await UpdateService.GetLauncherArtifactsAsync();
+            var artifacts = (await UpdateService.GetLauncherArtifactsAsync()).ToList();
 
-            DownloadLinks = artifacts
+            _links = artifacts
                 .OrderBy(a => a.Platform)
                 .ThenBy(a => a.Architecture)
                 .Select(a =>
                 {
-                    var tags = new List<DownloadLink.Tag>();
+                    var tags = new List<DownloadTag>();
 
-                    if (artifacts.Count(art => art.Platform == a.Platform && art.Architecture == a.Architecture) > 1)
+                    // Only label the format when there is more than one download for the platform
+                    if (artifacts.Count(other => other.Platform == a.Platform && other.Architecture == a.Architecture) > 1)
                     {
-                        if (a.Url.ToLower().EndsWith(".exe"))
-                            tags.Add(new DownloadLink.Tag("exe"));
-                        else if (a.Url.ToLower().EndsWith(".zip"))
-                            tags.Add(new DownloadLink.Tag("zip"));
+                        if (a.Url.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                            tags.Add(new DownloadTag("exe", DownloadTagKind.Format));
+                        else if (a.Url.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                            tags.Add(new DownloadTag("zip", DownloadTagKind.Format));
                     }
 
                     if (a.IsNightly)
-                        tags.Add(new DownloadLink.Tag("nightly") { Icon = IconType.Fill.Fire, ColorOverride = TagColor.Volcano });
+                        tags.Add(new DownloadTag("nightly", DownloadTagKind.Nightly));
                     else if (a.IsPrerelease)
-                        tags.Add(new DownloadLink.Tag("pre") { ColorOverride = TagColor.Gold });
+                        tags.Add(new DownloadTag("pre", DownloadTagKind.Prerelease));
 
-                    return new DownloadLink
-                    {
-                        Name = $"{a.Platform} ({a.Architecture})",
-                        Icon = _iconMap[a.Platform]?.ToString() ?? DefaultIcon,
-                        Url = a.Url,
-                        Tags = tags.ToArray(),
-                        IsOnline = a.IsOnline,
-                    };
-                });
+                    return new DownloadLink($"{a.Platform} ({a.Architecture})", a.Url, PlatformIcon(a.Platform), tags.ToArray(), a.IsOnline);
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _failed = true;
+
+            Logger.LogError(ex, "Could not list the launcher downloads");
         }
         finally
         {
-            IsInitializing = false;
+            _loading = false;
         }
     }
 }

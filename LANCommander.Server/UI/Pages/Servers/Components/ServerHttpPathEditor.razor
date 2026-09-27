@@ -1,65 +1,61 @@
-﻿@using System.Collections.ObjectModel
 @inject NavigationManager NavigationManager
 @inject ServerHttpPathService ServerHttpPathService
-@inject IMessageService MessageService
-@inject ILogger<ServerHttpPathEditor> Logger
+@inject NotificationService Notifications
 
-<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    <Table TItem="ServerHttpPath" DataSource="@_httpPaths" HidePagination="true" Responsive>
-        <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
-            <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
-        </PropertyColumn>
-        <PropertyColumn Property="p => p.Path">
-            <Input Type="InputType.Text" @bind-Value="context.Path" />
-        </PropertyColumn>
-        <ActionColumn>
-            <Space Style="display: flex; justify-content: end">
-                @if (context != null && context.Id != Guid.Empty)
+@* The folders a server hosts over HTTP, and the URL path each is served at *@
+<Flex Vertical Gap="Gap.Large" Class="@Class" Style="@Style">
+    <Table TItem="ServerHttpPath" Items="_httpPaths" Key="p => p" NoPaging EmptyText="No paths are hosted" SettingsKey="server-http-paths">
+        <Columns>
+            <TemplateColumn TItem="ServerHttpPath" Title="Local Path">
+                <FilePicker @bind-Value="context.LocalPath" Title="Select Local Path" Root="@WorkingDirectory" />
+            </TemplateColumn>
+            <TemplateColumn TItem="ServerHttpPath" Title="Path">
+                <TextInput @bind-Value="context.Path" Prefix="@($"/Server/{ServerId}/")" />
+            </TemplateColumn>
+            <ActionsColumn TItem="ServerHttpPath">
+                @if (context.Id != Guid.Empty)
                 {
-                    <SpaceItem>
-                        <a class="ant-btn ant-btn-text ant-btn-icon-only" href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path.TrimStart('/')}")" target="_blank">
-                            <Icon Type="@IconType.Outline.Eye" />
-                        </a>
-                    </SpaceItem>
+                    <Button Text Icon="IconType.Eye" title="Open" Href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path?.TrimStart('/')}").ToString()" NewTab />
                 }
-                <SpaceItem>
-                    <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
+                <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveAsync(context)" />
+            </ActionsColumn>
+        </Columns>
     </Table>
-    <Flex Justify="FlexJustify.End">
-        <Button OnClick="Add" Type="@ButtonType.Primary">Add Path</Button>
+
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Path</Button>
     </Flex>
 </Flex>
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
-    [Parameter] public string WorkingDirectory { get; set; }
+    [Parameter] public string? WorkingDirectory { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
 
-    ObservableCollection<ServerHttpPath> _httpPaths = new();
+    // Replaced rather than changed in place, so the table notices additions and removals
+    List<ServerHttpPath> _httpPaths = new();
 
-    protected override async Task OnInitializedAsync() => await LoadHttpPaths();
+    protected override Task OnInitializedAsync() => LoadAsync();
 
-    async Task LoadHttpPaths()
+    async Task LoadAsync() =>
+        _httpPaths = (await ServerHttpPathService.GetAsync(p => p.ServerId == ServerId)).ToList();
+
+    void Add() => _httpPaths = [.. _httpPaths, new ServerHttpPath { ServerId = ServerId }];
+
+    async Task RemoveAsync(ServerHttpPath httpPath)
     {
-        _httpPaths = new ObservableCollection<ServerHttpPath>(await ServerHttpPathService.GetAsync(p => p.ServerId == ServerId));
-    }
-
-    void Add()
-    {
-        _httpPaths.Add(new ServerHttpPath
+        try
         {
-            ServerId = ServerId,
-        });
-    }
+            if (httpPath.Id != Guid.Empty)
+                await ServerHttpPathService.DeleteAsync(httpPath);
 
-    async Task Remove(ServerHttpPath httpPath)
-    {
-        if (httpPath.Id != Guid.Empty)
-            await ServerHttpPathService.DeleteAsync(httpPath);
-        
-        _httpPaths.Remove(httpPath);
+            _httpPaths = _httpPaths.Where(p => p != httpPath).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The path could not be removed");
+        }
     }
 
     public async Task Save()
@@ -74,14 +70,13 @@
                     await ServerHttpPathService.UpdateAsync(httpPath);
             }
 
-            await LoadHttpPaths();
+            await LoadAsync();
 
-            MessageService.Success("HTTP paths updated!");
+            Notifications.Success("HTTP paths updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not update HTTP paths!");
-            Logger.LogError(ex, "Could not update HTTP paths!");
+            Notifications.Error(ex, "Could not update HTTP paths!");
         }
     }
 }

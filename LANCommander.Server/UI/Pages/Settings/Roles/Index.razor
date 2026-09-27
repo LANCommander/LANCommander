@@ -1,156 +1,150 @@
-﻿@page "/Settings/Roles"
+@page "/Settings/Roles"
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
 @inject RoleService RoleService
 @inject NavigationManager NavigationManager
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject AlertService Alerts
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Roles" />
 
-<DataTable
-    TItem="Role"
-    @ref="Table"
-    Size="TableSize.Small"
-    @bind-Total="Total"
-    Responsive
-    ColumnPicker
-    Searchable
-    OnRowDoubleClick="@(role => NavigationManager.NavigateTo($"/Settings/Roles/{role.Id}"))"
-    SearchProperty="r => r.Name">
-    <Columns>
-        <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        
-        <DataActions TData="string">
-            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
+<PageContent>
+    <DataTable TItem="Role"
+               @ref="Table"
+               Small
+               ColumnPicker
+               SearchProperty="r => r.Name"
+               OnRowDoubleClick="@(role => NavigationManager.NavigateTo($"/Settings/Roles/{role.Id}"))">
+        <RightToolbar>
+            <Flex Justify="Justify.End" Align="Align.Center" Gap="Gap.Small">
+                <span class="nowrap">Default Role:</span>
+                <Select TValue="Guid" Items="RoleItems" Value="_defaultRoleId" ValueChanged="DefaultRoleChanged" Disabled="Loading" Style="min-width: 160px" />
+                <Button Primary Icon="IconType.Plus" OnClick="AddRoleAsync">Add Role</Button>
+            </Flex>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="r => r.Name" Title="Name" Sortable DefaultSort="ColumnSort.Ascending" />
 
-            @if (context.Name != RoleService.AdministratorRoleName)
-            {
-                <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                </Popconfirm>
-            }
-            else
-            {
-                <Tooltip Title="The administrator role cannot be deleted.">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
-                </Tooltip>
-            }
-        </DataActions>
-    </Columns>
-    <RightToolbar>
-        <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="FlexGap.Small">
-            <span style="white-space: nowrap;">Default Role:</span>
-            <Select
-                TItem="Role"
-                TItemValue="Guid"
-                DataSource="Roles"
-                OnSelectedItemChanged="DefaultRoleChanged"
-                LabelName="Name"
-                ValueName="Id"
-                DefaultActiveFirstOption="false"
-                @bind-Value="_defaultRoleId"
-                Disabled="Loading"
-                Style="min-width: 100px;"></Select>
-            <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
-        </Flex>
-    </RightToolbar>
-</DataTable>
+            <ActionsColumn TItem="Role">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Settings/Roles/{context.Id}")" title="Edit" />
 
-<Modal Title="Add a Role" @bind-Visible="AddRoleDialogVisible" OnOk="AddRole" OnCancel="() => AddRoleDialogVisible = false">
-    <Form Model="NewRole">
-        <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" />
-        </FormItem>
-    </Form>
-</Modal>
+                @if (context.Name != RoleService.AdministratorRoleName)
+                {
+                    <Popconfirm OnConfirm="() => DeleteRoleAsync(context)" Title="Are you sure you want to delete this role?" OkText="Delete" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Delete" />
+                    </Popconfirm>
+                }
+                else
+                {
+                    <Tooltip Title="The administrator role cannot be deleted.">
+                        <Button Text Icon="IconType.X" Disabled aria-label="Delete" />
+                    </Tooltip>
+                }
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
 @code {
     bool Loading = true;
-    bool AddRoleDialogVisible = false;
 
     Guid _defaultRoleId;
 
-    IEnumerable<Role> Roles { get; set; } = new List<Role>();
-    Role NewRole { get; set; } = new();
+    IEnumerable<SelectItem<Guid>> RoleItems = [];
 
-    DataTable<Role> Table;
-    int Total;
+    DataTable<Role> Table = default!;
 
     protected override async Task OnInitializedAsync()
     {
         _defaultRoleId = Settings.Value.Server.Roles.DefaultRoleId;
 
-        Roles = await RoleService.AsNoTracking().SortBy(r => r.Name).GetAsync();
+        await LoadRolesAsync();
 
         Loading = false;
     }
 
-    async Task DeleteRole(Role role)
+    async Task LoadRolesAsync()
     {
-        role = await RoleService.FirstOrDefaultAsync(r => r.Name == role.Name);
+        var roles = await RoleService.AsNoTracking().SortBy(r => r.Name).GetAsync();
 
-        if (role.Name == RoleService.AdministratorRoleName)
-        {
-            MessageService.Error("Cannot delete the administrator role!");
-        }
-        else
-        {
-            await RoleService.DeleteAsync(role);
-
-            await Table.ReloadAsync();
-
-            MessageService.Success($"Deleted {role.Name}!");
-        }
+        RoleItems = roles.ToSelectItems(r => r.Id, r => r.Name).ToList();
     }
 
-    void ShowNewRoleDialog()
+    async Task DeleteRoleAsync(Role role)
     {
-        AddRoleDialogVisible = true;
-    }
-
-    async Task AddRole()
-    {
-        if ((await RoleService.ExistsAsync(r => r.Name == NewRole.Name)))
-        {
-            MessageService.Error("A role with that name already exists!");
-
-            AddRoleDialogVisible = false;
-
-            return;
-        }
-
         try
         {
-            await RoleService.AddAsync(new Role
+            var dbRole = await RoleService.FirstOrDefaultAsync(r => r.Name == role.Name);
+
+            if (dbRole == null || dbRole.Name == RoleService.AdministratorRoleName)
             {
-                Name = NewRole.Name
-            });
+                Notifications.Error("Cannot delete the administrator role!");
+                return;
+            }
+
+            await RoleService.DeleteAsync(dbRole);
 
             await Table.ReloadAsync();
+            await LoadRolesAsync();
 
-            MessageService.Success("Role added!");
+            Notifications.Success($"Deleted {dbRole.Name}!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not add role!");
-            Logger.LogError(ex, "Could not add role!");
+            Notifications.Error(ex, $"Could not delete {role.Name}");
         }
     }
 
-    async Task DefaultRoleChanged(Role defaultRole)
+    async Task AddRoleAsync()
     {
-        if (defaultRole != null && !Loading && defaultRole.Id != Settings.Value.Server.Roles.DefaultRoleId)
+        var name = await Alerts.PromptAsync("Add a Role", "Name", okText: "Add");
+
+        if (String.IsNullOrWhiteSpace(name))
+            return;
+
+        try
         {
+            if (await RoleService.ExistsAsync(r => r.Name == name))
+            {
+                Notifications.Error("A role with that name already exists!");
+                return;
+            }
+
+            await RoleService.AddAsync(new Role { Name = name });
+
+            await Table.ReloadAsync();
+            await LoadRolesAsync();
+
+            Notifications.Success("Role added!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not add role!");
+        }
+    }
+
+    void DefaultRoleChanged(Guid defaultRoleId)
+    {
+        if (Loading || defaultRoleId == Guid.Empty || defaultRoleId == Settings.Value.Server.Roles.DefaultRoleId)
+            return;
+
+        try
+        {
+            _defaultRoleId = defaultRoleId;
+
             SettingsProvider.Update(s =>
             {
-                s.Server.Roles.DefaultRoleId = defaultRole.Id;
+                s.Server.Roles.DefaultRoleId = defaultRoleId;
             });
 
-            MessageService.Success($"Default role updated!");
+            Notifications.Success("Default role updated!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The default role could not be changed");
         }
     }
 }

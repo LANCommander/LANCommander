@@ -1,180 +1,151 @@
-﻿@page "/Issues/{id:guid}"
+@page "/Issues/{id:guid}"
 @page "/Issues/Add"
 @using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
 @inject IssueService IssueService
 @inject UserService UserService
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject ILogger<Edit> Logger
 
-<Layout Class="panel-layout">
-    <Content>
-        <PageHeader>
-            <PageHeaderTitle>
-                @if (Id == null || Id == Guid.Empty)
-                {
-                    <Text>Add New Issue</Text>
-                }
-                else
-                {
-                    <Text>Edit Issue</Text>
-                }
-            </PageHeaderTitle>
-            <PageHeaderExtra>
-                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                    @if (Id != Guid.Empty)
-                    {
-                        <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
-                    }
+<PageHeader Title="@(Id == Guid.Empty ? "Add New Issue" : "Edit Issue")">
+    <Extra>
+        @if (Id != Guid.Empty)
+        {
+            <Button Icon="IconType.CheckCircle" OnClick="ResolveAsync" Disabled="IsResolved" Loading="_resolving">Resolve</Button>
+        }
+        <Button Primary Icon="IconType.FloppyDisk" OnClick="SaveAsync" Disabled="IsResolved" Loading="_saving">Save</Button>
+    </Extra>
+</PageHeader>
 
-                    <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
-                </Flex>
-            </PageHeaderExtra>
-        </PageHeader>
+<PageContent Loading="_loading">
+    @if (_issue.ResolvedOn != null)
+    {
+        <Alert Success>
+            This issue was resolved on <LocalTime Value="_issue.ResolvedOn" /> by @_issue.ResolvedBy?.UserName
+            and was reported by @_issue.CreatedBy?.UserName on <LocalTime Value="_issue.CreatedOn" />.
+        </Alert>
+    }
+    else if (Id != Guid.Empty)
+    {
+        <Alert Info>This issue was reported by @_issue.CreatedBy?.UserName on <LocalTime Value="_issue.CreatedOn" />.</Alert>
+    }
 
-        <div class="panel-layout-content">
-            @if (Issue?.ResolvedOn != null)
-            {
-                <Alert Type="@AlertType.Success" Message="@($"This issue was resolved on {Issue.ResolvedOn} by {Issue?.ResolvedBy?.UserName} and was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
-            }
-            else if (Id != Guid.Empty)
-            {
-                <Alert Type="@AlertType.Info" Message="@($"This issue was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
-            }
-
-            <Form Model="@Issue" Layout="@FormLayout.Vertical">
-                <FormItem Label="Game">
-                    <GridRow Wrap="false" Gutter="16">
-                        <GridCol Flex=@("auto")>
-                            <Select TItem="Game"
-                                    TItemValue="Guid"
-                                    DataSource="@Games?.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
-                                    @bind-Value="@context.GameId"
-                                    LabelName="Title"
-                                    ValueName="Id"
-                                    Placeholder="Select a Game"
-                                    DefaultActiveFirstOption="false"
-                                    EnableSearch
-                                    Disabled="context?.ResolvedOn != null">
-                                <ItemTemplate Context="game">
-                                    <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
-                                    @game.Title
-                                </ItemTemplate>
-                            </Select>
-                        </GridCol>
-                        <GridCol Flex=@("none")>
-                            @if (context.Game != null && context.GameId != Guid.Empty)
-                            {
-                                <a href="/Games/@(context.Game?.Id)" target="_blank" class="ant-btn ant-btn-primary">Edit</a>
-                            }
-                            else
-                            {
-                                <Button Type="@ButtonType.Primary" Disabled="true">Edit</Button>
-                            }
-                        </GridCol>
-                    </GridRow>
-                </FormItem>
-                <FormItem Label="Description">
-                    <TextArea AutoFocus @bind-Value="@context.Description" ShowCount MinRows="30" Disabled="context?.ResolvedOn != null" />
-                </FormItem>
-            </Form>
-        </div>
-    </Content>
-</Layout>
+    <Form Model="_issue" Disabled="IsResolved" OnSubmit="SaveAsync">
+        <FormItem Label="Game" Required>
+            <Flex Gap="Gap.Medium">
+                <Select @bind-Value="_issue.GameId" Items="_games" Searchable Placeholder="Select a Game" Style="flex: 1" />
+                <Button Primary Href="@($"/Games/{_issue.GameId}")" NewTab Disabled="@(_issue.GameId == Guid.Empty)">Edit</Button>
+            </Flex>
+        </FormItem>
+        <FormItem Label="Description">
+            <TextArea @bind-Value="_issue.Description" AutoFocus Counter Rows="20" />
+        </FormItem>
+    </Form>
+</PageContent>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Issue Issue = new Issue();
+    Issue _issue = new();
+    IEnumerable<SelectItem<Guid>> _games = [];
+    bool _loading = true;
+    bool _saving;
+    bool _resolving;
 
-    IEnumerable<Game> Games = new List<Game>();
+    bool IsResolved => _issue.ResolvedOn != null;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    async Task LoadAsync()
     {
-        await LoadData();
-    }
+        _loading = true;
 
-    private async Task LoadData()
-    {
-        if (Id == Guid.Empty)
-            Issue = new Issue();
-        else
-            Issue = await IssueService
-                .Include(
-                    i => i.Game,
-                    i => i.CreatedBy,
-                    i => i.UpdatedBy,
-                    i => i.ResolvedBy
-                ).GetAsync(Id);
-        
-        Games = await GameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon)).GetAsync();
-    }
-
-    private async Task Save()
-    {
         try
         {
-            if (Issue.Id != Guid.Empty)
-            {
-                Issue = await IssueService.UpdateAsync(Issue);
+            if (Id != Guid.Empty)
+                _issue = await IssueService
+                    .Include(i => i.Game, i => i.CreatedBy, i => i.UpdatedBy, i => i.ResolvedBy)
+                    .GetAsync(Id);
 
-                MessageService.Success("Issue updated!");
+            var games = await GameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon)).GetAsync();
+
+            _games = games
+                .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+                .ToSelectItems(g => g.Id, g => g.Title, image: GetIcon)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load the issue!");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        _saving = true;
+
+        try
+        {
+            if (_issue.Id != Guid.Empty)
+            {
+                _issue = await IssueService.UpdateAsync(_issue);
+
+                Notifications.Success("Issue updated!");
             }
             else
             {
-                Issue = await IssueService.AddAsync(Issue);
+                _issue = await IssueService.AddAsync(_issue);
 
-                NavigationManager.LocationChanged += NotifyIssueAdded;
+                Notifications.Success("Issue added!");
 
-                NavigationManager.NavigateTo($"/Issues/{Issue.Id}");
+                NavigationManager.NavigateTo($"/Issues/{_issue.Id}");
             }
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save issue!");
-            Logger?.LogError(ex, "Could not save issue!");
+            Notifications.Error(ex, "Could not save issue!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
-    private async Task Resolve()
+    async Task ResolveAsync()
     {
+        _resolving = true;
+
         try
         {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = await UserService.GetAsync(authState.User.Identity.Name);
-            
-            await IssueService.ResolveAsync(Issue.Id, user.Id);
+            var user = await UserService.GetAsync(authState.User.Identity!.Name!);
 
-            Issue = await IssueService.GetAsync(Issue.Id);
-                
-            MessageService.Success("Issue resolved!");
+            await IssueService.ResolveAsync(_issue.Id, user.Id);
 
-            await LoadData();
+            Notifications.Success("Issue resolved!");
+
+            await LoadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not resolve issue!");
-            Logger?.LogError(ex, "Could not resolve issue!");
+            Notifications.Error(ex, "Could not resolve issue!");
+        }
+        finally
+        {
+            _resolving = false;
         }
     }
 
-    private string GetIcon(Game game)
+    static string GetIcon(Game game)
     {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+        var media = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
-    }
-
-    private void NotifyIssueAdded(object? sender, LocationChangedEventArgs e)
-    {
-        NavigationManager.LocationChanged -= NotifyIssueAdded;
-
-        MessageService.Success("Issue added!");
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
     }
 }

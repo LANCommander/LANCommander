@@ -7,7 +7,7 @@ namespace LANCommander.Server.UI.Tests.Components;
 
 /// <summary>
 /// bUnit component tests for the metadata (Tags) management page. Replaces the flaky
-/// Playwright <c>MetadataTests</c> CRUD flows. Rendering and the add-via-modal flow run
+/// Playwright <c>MetadataTests</c> CRUD flows. Rendering and the add-via-prompt flow run
 /// synchronously in-process, removing the SignalR circuit races that made the modal +
 /// data-table-reload Playwright tests unreliable.
 /// </summary>
@@ -37,8 +37,7 @@ public class MetadataComponentTests : BUnitTestContext
             cut.FindAll("button"),
             b => b.TextContent.Contains("Add Tag", StringComparison.OrdinalIgnoreCase));
 
-        // The empty DataTable renders AntDesign's "No Data" placeholder once the async load
-        // completes.
+        // The empty table renders its "No data" placeholder once the async load completes.
         cut.WaitForAssertion(
             () => Assert.Contains("No Data", cut.Markup, StringComparison.OrdinalIgnoreCase),
             timeout: TimeSpan.FromSeconds(10));
@@ -49,22 +48,22 @@ public class MetadataComponentTests : BUnitTestContext
     {
         await ClearTagsAsync();
 
+        // Dialogs open in the ComponentHost, which App.razor renders beside the page
+        var host = Render<LANCommander.Server.UI.Controls.ComponentHost>();
         var cut = Render<TagsIndex>();
 
-        // Open the "New Tag" modal.
+        // Open the "New Tag" prompt.
         var addButton = cut.FindAll("button")
             .First(b => b.TextContent.Contains("Add Tag", StringComparison.OrdinalIgnoreCase));
         addButton.Click();
 
-        // Fill in the tag name inside the modal and confirm. AntDesign's Input commits its
-        // bound value on the change event, so dispatch both input and change.
-        var input = cut.WaitForElement(".ant-modal input", timeout: TimeSpan.FromSeconds(5));
+        // The prompt's input updates on every keystroke, enabling the Add button.
+        var input = host.WaitForElement(".lc-dialog input", timeout: TimeSpan.FromSeconds(5));
         input.Input("Action");
-        input.Change("Action");
 
-        var okButton = cut.FindAll(".ant-modal button")
-            .First(b => b.TextContent.Trim().Equals("OK", StringComparison.OrdinalIgnoreCase));
-        okButton.Click();
+        var addConfirm = host.FindAll(".lc-dialog-footer button")
+            .First(b => b.TextContent.Trim().Equals("Add", StringComparison.OrdinalIgnoreCase));
+        addConfirm.Click();
 
         // The new tag is persisted and the data table reloads to show it.
         cut.WaitForAssertion(

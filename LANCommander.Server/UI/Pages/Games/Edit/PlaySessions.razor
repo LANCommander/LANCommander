@@ -1,37 +1,29 @@
-﻿@page "/Games/{id:guid}/PlaySessions"
-@using SortDirection = AntDesign.SortDirection
+@page "/Games/{id:guid}/PlaySessions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject PlaySessionService PlaySessionService
-@inject IMessageService MessageService
-@inject ILogger<PlaySessions> Logger
+@inject NotificationService Notifications
 
-<GameEditView Id="Id" Title="Play Sessions">
-    <DataTable
-        TItem="PlaySession"
-        Query="ps => ps.GameId == Id"
-        Responsive
-        Context="session">
+<GameEditView Id="Id" Title="Play Sessions" Context="game">
+    <DataTable TItem="PlaySession" @ref="_table" Small SettingsKey="game-play-sessions" Query="ps => ps.GameId == Id">
         <Columns>
-            <BoundDataColumn Property="ps => ps.Start" Sortable>
-                <LocalTime Value="session.Start" />
-            </BoundDataColumn>
-            <BoundDataColumn Property="ps => ps.End" Sortable DefaultSortOrder="SortDirection.Descending">
-                <LocalTime Value="session.End" />
-            </BoundDataColumn>
-            <BoundDataColumn Property="ps => ps.Duration" Sortable>
-                @if (session.Duration.HasValue)
+            <BoundColumn Property="ps => ps.Start" Sortable>
+                <LocalTime Value="context.Start" />
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.End" Sortable DefaultSort="ColumnSort.Descending">
+                <LocalTime Value="context.End" />
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.Duration" Sortable>
+                @if (context.Duration is { } duration)
                 {
-                    <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
+                    @($"{(int)duration.TotalHours}:{duration.Minutes:D2}:{duration.Seconds:D2}")
                 }
-            </BoundDataColumn>
-            <BoundDataColumn Property="ps => ps.User != null ? ps.User.UserName : String.Empty" Title="User" Sortable Include="User"/>
-            <DataActions TData="string">
-                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                    <Popconfirm OnConfirm="() => Delete(session)" Title="Are you sure you want to delete this session?">
-                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
-                    </Popconfirm>
-                </Flex>
-            </DataActions>
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.User != null ? ps.User.UserName : String.Empty" Title="User" Include="User" Sortable />
+            <ActionsColumn TItem="PlaySession">
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this session?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
         </Columns>
     </DataTable>
 </GameEditView>
@@ -39,16 +31,22 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private async Task Delete(PlaySession session)
+    DataTable<PlaySession>? _table;
+
+    async Task DeleteAsync(PlaySession session)
     {
         try
         {
             await PlaySessionService.DeleteAsync(session);
+
+            Notifications.Success("Session deleted");
+
+            if (_table != null)
+                await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error($"Could not delete play session!");
-            Logger.LogError(ex, "Could not delete the play session!");
+            Notifications.Error(ex, "Could not delete the play session!");
         }
     }
 }

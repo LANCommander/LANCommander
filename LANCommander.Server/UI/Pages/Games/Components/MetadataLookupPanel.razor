@@ -1,259 +1,163 @@
-@using AntDesign.TableModels
 @using LANCommander.Server.ImportExport.Factories
 @using LANCommander.Server.Services.Providers.Metadata
+@using ManifestGame = LANCommander.SDK.Models.Manifest.Game
 @inject MetadataService MetadataService
 @inject GameService GameService
 @inject ImportContextFactory ImportContextFactory
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject ILogger<MetadataLookupPanel> Logger
 
-<Spin Spinning="_importing" Tip="@_importStatus">
-
-<Flex Gap="FlexGap.Small" Style="margin-bottom: 12px;">
-    <Input @bind-Value="Search" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" AutoFocus="AutoFocus" />
-    <Button OnClick="() => SearchForGame(Search)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Search) || !_availableProviders.Any())">Search</Button>
-</Flex>
-
-@if (_stage == ModalStage.Search)
-{
-    @if (_errorMessage != null)
-    {
-        <Result Status="ResultStatus.Error" Title="Search Failed" SubTitle="@_errorMessage">
-            <Extra>
-                <Button OnClick="DismissError">Dismiss</Button>
-            </Extra>
-        </Result>
-    }
-    else if (_hasSearched)
-    {
-        <Table
-            @ref="ResultsTable"
-            TItem="MetadataSearchResult<SDK.Models.Manifest.Game>"
-            DataSource="@(_results?.Results ?? [])"
-            HidePagination="true"
-            Loading="_loading"
-            OnRowClick="OnRowClicked"
-            @bind-SelectedRows="SelectedResults"
-            Responsive>
-
-            <Selection Key="@context.Id" Type="SelectionType.Radio"/>
-            <PropertyColumn Property="g => g.Data.Title" Title="Title"/>
-            <PropertyColumn Property="g => g.Data.ReleasedOn" Title="Released">
-                @(context.Data.ReleasedOn != default ? context.Data.ReleasedOn.ToString("MM/dd/yyyy") : "—")
-            </PropertyColumn>
-            <PropertyColumn Property="g => g.Data.Platforms" Title="Platforms">
-                @string.Join(", ", context.Data.Platforms?.Select(p => p.Name) ?? [])
-            </PropertyColumn>
-            <PropertyColumn Property="g => g.Data.Developers" Title="Developers">
-                @string.Join(", ", context.Data.Developers?.Select(d => d.Name) ?? [])
-            </PropertyColumn>
-        </Table>
-
-        @if (_results?.More ?? false)
-        {
-            <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
-        }
-    }
-
-    <Flex Gap="FlexGap.Small" Justify="FlexJustify.End" Style="margin-top: 12px;">
-        <Select Value="_selectedProvider" ValueChanged="OnProviderChanged" DataSource="_availableProviders" TItem="string" TItemValue="string"/>
-        @if (_availableSubProviders?.Any() == true)
-        {
-            <Select Value="_selectedSubProvider" ValueChanged="OnSubProviderChanged" TItem="string" TItemValue="string">
-                @foreach (var sp in _availableSubProviders)
-                {
-                    <SelectOption Value="@sp.Slug" Label="@sp.Name" TItemValue="string" TItem="string" />
-                }
-            </Select>
-        }
-        @if (ShowCancel)
-        {
-            <Button OnClick="HandleCancel" Style="margin-left: 0;">Cancel</Button>
-        }
+@*
+    Searches a metadata provider for a game, then lets the user choose which of the fetched fields
+    to import over the game's own (or to create a new game when GameId is empty).
+*@
+<Spin Loading="_importing" Tip="@_importStatus">
+    <Flex Gap="Gap.Small" Style="margin-bottom: 12px">
+        <TextInput @bind-Value="Search" Immediate OnEnter="() => SearchForGameAsync(Search)" AutoFocus="AutoFocus" Icon="IconType.MagnifyingGlass" Style="flex: 1" />
+        <Button Primary Loading="_loading && _stage == Stage.Search" Disabled="@(String.IsNullOrWhiteSpace(Search) || !_availableProviders.Any())" OnClick="() => SearchForGameAsync(Search)">Search</Button>
     </Flex>
 
-    @ChildContent
-}
-else if (_stage == ModalStage.Merge)
-{
-    @if (_errorMessage != null)
+    @if (_stage == Stage.Search)
     {
-        <Result Status="ResultStatus.Error" Title="Import Failed" SubTitle="@_errorMessage">
-            <Extra>
-                <Button OnClick="DismissError">Dismiss</Button>
-            </Extra>
-        </Result>
+        @if (_errorMessage != null)
+        {
+            <Result Danger Title="Search Failed" SubTitle="@_errorMessage">
+                <Button OnClick="() => _errorMessage = null">Dismiss</Button>
+            </Result>
+        }
+        else if (_hasSearched)
+        {
+            <Spin Loading="_loading">
+                <Table TItem="MetadataSearchResult<ManifestGame>"
+                       Items="_resultRows"
+                       Key="r => r.Id"
+                       NoPaging
+                       Small
+                       EmptyText="No games were found"
+                       SettingsKey="metadata-lookup-results"
+                       OnRowClick="BeginMergeAsync">
+                    <Columns>
+                        <TemplateColumn TItem="MetadataSearchResult<ManifestGame>" Title="Title">
+                            <Typography Strong>@context.Data.Title</Typography>
+                        </TemplateColumn>
+                        <TemplateColumn TItem="MetadataSearchResult<ManifestGame>" Title="Released" Width="110px">
+                            @(context.Data.ReleasedOn != default ? context.Data.ReleasedOn.ToString("MM/dd/yyyy") : "—")
+                        </TemplateColumn>
+                        <TemplateColumn TItem="MetadataSearchResult<ManifestGame>" Title="Platforms">
+                            @string.Join(", ", context.Data.Platforms?.Select(p => p.Name) ?? [])
+                        </TemplateColumn>
+                        <TemplateColumn TItem="MetadataSearchResult<ManifestGame>" Title="Developers">
+                            @string.Join(", ", context.Data.Developers?.Select(d => d.Name) ?? [])
+                        </TemplateColumn>
+                    </Columns>
+                </Table>
+            </Spin>
+
+            @if (_results?.More ?? false)
+            {
+                <Button Block Primary Style="margin-top: 8px" OnClick="ShowMoreAsync">Show More</Button>
+            }
+        }
+
+        <Flex Gap="Gap.Small" Justify="Justify.End" Style="margin-top: 12px">
+            <Select TValue="string" Items="_providerItems" Value="_selectedProvider" ValueChanged="OnProviderChangedAsync" Style="min-width: 160px" />
+            @if (_subProviderItems.Any())
+            {
+                <Select TValue="string" Items="_subProviderItems" Value="_selectedSubProvider" ValueChanged="OnSubProviderChangedAsync" Style="min-width: 160px" />
+            }
+            @if (ShowCancel)
+            {
+                <Button OnClick="CancelAsync">Cancel</Button>
+            }
+        </Flex>
+
+        @ChildContent
     }
     else
     {
-        <div class="ant-table">
-            <div class="ant-table-container">
-                <div class="ant-table-content">
-                    <table class="metadata-merge-table">
-                        <thead class="ant-table-thead">
-                            <tr>
-                                <th>Import</th>
-                                <th>Field</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody class="ant-table-tbody">
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importTitle" /></td>
-                                <td class="ant-table-cell">Title</td>
-                                <td class="ant-table-cell">@_fetchedManifest?.Title</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importDescription" /></td>
-                                <td class="ant-table-cell">Description</td>
-                                <td class="ant-table-cell"><span class="metadata-merge-truncate">@_fetchedManifest?.Description</span></td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importReleasedOn" /></td>
-                                <td class="ant-table-cell">Released On</td>
-                                <td class="ant-table-cell">@(_fetchedManifest?.ReleasedOn.ToString("MM/dd/yyyy"))</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importSingleplayer" /></td>
-                                <td class="ant-table-cell">Singleplayer</td>
-                                <td class="ant-table-cell">@(_fetchedManifest?.Singleplayer == true ? "Yes" : "No")</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importEngine" /></td>
-                                <td class="ant-table-cell">Engine</td>
-                                <td class="ant-table-cell">@(_fetchedManifest?.Engine?.Name ?? "—")</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importDevelopers" /></td>
-                                <td class="ant-table-cell">Developers</td>
-                                <td class="ant-table-cell">
-                                    @foreach (var item in _fetchedManifest?.Developers ?? [])
-                                    {
-                                        <Tag>@item.Name</Tag>
-                                    }
-                                </td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importPublishers" /></td>
-                                <td class="ant-table-cell">Publishers</td>
-                                <td class="ant-table-cell">
-                                    @foreach (var item in _fetchedManifest?.Publishers ?? [])
-                                    {
-                                        <Tag>@item.Name</Tag>
-                                    }
-                                </td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importGenres" /></td>
-                                <td class="ant-table-cell">Genres</td>
-                                <td class="ant-table-cell">
-                                    @foreach (var item in _fetchedManifest?.Genres ?? [])
-                                    {
-                                        <Tag>@item.Name</Tag>
-                                    }
-                                </td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importTags" /></td>
-                                <td class="ant-table-cell">Tags</td>
-                                <td class="ant-table-cell">
-                                    @foreach (var item in _fetchedManifest?.Tags ?? [])
-                                    {
-                                        <Tag>@item.Name</Tag>
-                                    }
-                                </td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importMultiplayerModes" /></td>
-                                <td class="ant-table-cell">Multiplayer Modes</td>
-                                <td class="ant-table-cell">@(_fetchedManifest?.MultiplayerModes?.Count ?? 0) mode(s)</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importSavePaths" /></td>
-                                <td class="ant-table-cell">Save Paths</td>
-                                <td class="ant-table-cell">@(_fetchedManifest?.SavePaths?.Count ?? 0) path(s)</td>
-                            </tr>
-                            <tr class="ant-table-row">
-                                <td class="ant-table-cell"><Checkbox @bind-Checked="_importExternalIds" /></td>
-                                <td class="ant-table-cell">External IDs</td>
-                                <td class="ant-table-cell">
-                                    @foreach (var item in _fetchedManifest?.ExternalIds ?? [])
-                                    {
-                                        <Tag>@item.Provider: @item.ExternalId</Tag>
-                                    }
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    }
-
-    <Flex Gap="FlexGap.Small" Justify="FlexJustify.End" Style="margin-top: 12px;">
-        <Button OnClick="ImportWithMerge" Loading="_loading" Type="ButtonType.Primary">Import</Button>
-        <Button OnClick="BackToSearch" Disabled="_loading">Back</Button>
-        @if (ShowCancel)
+        @if (_errorMessage != null)
         {
-            <Button OnClick="HandleCancel" Disabled="_loading">Cancel</Button>
+            <Result Danger Title="Import Failed" SubTitle="@_errorMessage">
+                <Button OnClick="() => _errorMessage = null">Dismiss</Button>
+            </Result>
         }
-    </Flex>
-}
+        else
+        {
+            <Table TItem="MergeField" Items="_mergeFields" Key="f => f.Name" NoPaging Small SettingsKey="metadata-lookup-merge">
+                <Columns>
+                    <TemplateColumn TItem="MergeField" Title="Import" Width="80px">
+                        <Checkbox @bind-Value="context.Import" aria-label="@($"Import {context.Name}")" />
+                    </TemplateColumn>
+                    <TemplateColumn TItem="MergeField" Title="Field" Width="160px">
+                        @context.Name
+                    </TemplateColumn>
+                    <TemplateColumn TItem="MergeField" Title="Value">
+                        <div class="metadata-merge-value">@context.Value</div>
+                    </TemplateColumn>
+                </Columns>
+            </Table>
+        }
 
+        <Flex Gap="Gap.Small" Justify="Justify.End" Style="margin-top: 12px">
+            <Button Primary Loading="_loading" OnClick="ImportWithMergeAsync">Import</Button>
+            <Button Disabled="_loading" OnClick="BackToSearch">Back</Button>
+            @if (ShowCancel)
+            {
+                <Button Disabled="_loading" OnClick="CancelAsync">Cancel</Button>
+            }
+        </Flex>
+    }
 </Spin>
 
 @code {
-    private enum ModalStage { Search, Merge }
+    enum Stage { Search, Merge }
+
+    /// <summary>One field of the fetched metadata, and whether to take it.</summary>
+    sealed class MergeField(string name, bool import, RenderFragment value)
+    {
+        public string Name { get; } = name;
+
+        public bool Import { get; set; } = import;
+
+        public RenderFragment Value { get; } = value;
+    }
 
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public EventCallback<Guid> OnImported { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool AutoFocus { get; set; }
     [Parameter] public bool ShowCancel { get; set; } = true;
-    [Parameter] public string Search { get; set; } = string.Empty;
-    [Parameter] public EventCallback<string> SearchChanged { get; set; }
-    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string? Search { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    ITable? ResultsTable;
-
-    MetadataSearchResultsCollection<SDK.Models.Manifest.Game>? _results;
+    MetadataSearchResultsCollection<ManifestGame>? _results;
+    List<MetadataSearchResult<ManifestGame>> _resultRows = new();
     IReadOnlyCollection<SDK.Models.Manifest.GameExternalId> _externalIds = [];
 
-    IEnumerable<MetadataSearchResult<SDK.Models.Manifest.Game>> SelectedResults { get; set; }
-    bool _loading = false;
-    bool _hasSearched = false;
+    bool _loading;
+    bool _hasSearched;
     int _limit = 10;
-    int _offset = 0;
+    int _offset;
 
     string _selectedProvider = string.Empty;
     IEnumerable<string> _availableProviders = [];
+    IEnumerable<SelectItem<string>> _providerItems = [];
 
     string? _selectedSubProvider;
-    IEnumerable<(string Slug, string Name)>? _availableSubProviders;
+    IEnumerable<SelectItem<string>> _subProviderItems = [];
 
-    ModalStage _stage = ModalStage.Search;
-    string? _errorMessage = null;
-    LANCommander.SDK.Models.Manifest.Game? _fetchedManifest = null;
+    Stage _stage = Stage.Search;
+    string? _errorMessage;
+    ManifestGame? _fetchedManifest;
+    List<MergeField> _mergeFields = new();
 
-    bool _importing = false;
+    bool _importing;
     string _importStatus = "Importing...";
-
-    bool _importTitle = true;
-    bool _importDescription = true;
-    bool _importReleasedOn = true;
-    bool _importSingleplayer = true;
-    bool _importEngine = true;
-    bool _importDevelopers = true;
-    bool _importPublishers = true;
-    bool _importGenres = true;
-    bool _importTags = true;
-    bool _importMultiplayerModes = true;
-    bool _importSavePaths = true;
-    bool _importExternalIds = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _availableProviders = MetadataService.GetProviderNames();
+        _availableProviders = MetadataService.GetProviderNames().ToList();
+        _providerItems = _availableProviders.ToSelectItems(p => p, p => p).ToList();
         _selectedProvider = _availableProviders.FirstOrDefault() ?? string.Empty;
 
         if (GameId != Guid.Empty)
@@ -273,60 +177,45 @@ else if (_stage == ModalStage.Merge)
         await UpdateSubProvidersAsync();
     }
 
-    private async Task OnProviderChanged(string provider)
+    async Task OnProviderChangedAsync(string? provider)
     {
-        _selectedProvider = provider;
+        _selectedProvider = provider ?? string.Empty;
         _errorMessage = null;
+
         await UpdateSubProvidersAsync();
 
         if (!string.IsNullOrWhiteSpace(Search))
-            await SearchForGame(Search);
+            await SearchForGameAsync(Search);
     }
 
-    private async Task OnSubProviderChanged(string subProvider)
+    async Task OnSubProviderChangedAsync(string? subProvider)
     {
         _selectedSubProvider = subProvider;
         _errorMessage = null;
 
         if (!string.IsNullOrWhiteSpace(Search))
-            await SearchForGame(Search);
+            await SearchForGameAsync(Search);
     }
 
-    private async Task UpdateSubProvidersAsync()
+    async Task UpdateSubProvidersAsync()
     {
         var provider = MetadataService.GetProvider(_selectedProvider);
+        var subProviders = provider is null ? null : await provider.GetSubProvidersAsync();
 
-        if (provider is not null)
-        {
-            _availableSubProviders = await provider.GetSubProvidersAsync();
-            _selectedSubProvider = _availableSubProviders?.FirstOrDefault().Slug;
-        }
-        else
-        {
-            _availableSubProviders = null;
-            _selectedSubProvider = null;
-        }
+        _subProviderItems = subProviders?.Select(sp => new SelectItem<string>(sp.Slug, sp.Name)).ToList() ?? [];
+        _selectedSubProvider = subProviders?.FirstOrDefault().Slug;
     }
 
-    private async Task OnRowClicked(RowData<MetadataSearchResult<SDK.Models.Manifest.Game>> row)
+    async Task SearchForGameAsync(string? title, bool newSearch = true)
     {
-        ResultsTable?.SetSelection([row.Data.Id]);
-        await BeginMerge();
-    }
+        if (string.IsNullOrWhiteSpace(title))
+            return;
 
-    private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
-    {
-        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && !String.IsNullOrWhiteSpace(Search))
-            await SearchForGame(Search);
-    }
-
-    private async Task SearchForGame(string title, bool newSearch = true)
-    {
         var provider = MetadataService.GetProvider(_selectedProvider);
 
         if (provider is null)
         {
-            MessageService.Error($"Provider \"{_selectedProvider}\" is not available");
+            Notifications.Error($"Provider \"{_selectedProvider}\" is not available");
             return;
         }
 
@@ -342,21 +231,24 @@ else if (_stage == ModalStage.Merge)
                 _offset = 0;
             }
 
-            _results = _availableSubProviders?.Any() == true
+            _results = _subProviderItems.Any()
                 ? await provider.SearchGamesAsync(title, _selectedSubProvider, _limit, _offset)
                 : await provider.SearchGamesAsync(title, _limit, _offset);
 
             if (newSearch)
                 await SeedFromExternalIdsAsync(provider);
 
-            _loading = false;
+            _resultRows = _results?.Results.ToList() ?? [];
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "An error occurred searching {Provider}", _selectedProvider);
 
-            _loading = false;
             _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
@@ -365,11 +257,8 @@ else if (_stage == ModalStage.Merge)
     /// directly and float that result to the top. A store ID is an exact match, where matching on
     /// title is a guess.
     /// </summary>
-    private async Task SeedFromExternalIdsAsync(IMetadataProvider provider)
+    async Task SeedFromExternalIdsAsync(IMetadataProvider provider)
     {
-        if (_externalIds.Count == 0)
-            return;
-
         foreach (var externalId in _externalIds)
         {
             if (string.IsNullOrWhiteSpace(externalId.Provider) || string.IsNullOrWhiteSpace(externalId.ExternalId))
@@ -393,14 +282,13 @@ else if (_stage == ModalStage.Merge)
 
             results.Insert(0, resolved);
 
-            _results = new MetadataSearchResultsCollection<SDK.Models.Manifest.Game>(
-                results, _results?.More ?? false, _limit, _offset);
+            _results = new MetadataSearchResultsCollection<ManifestGame>(results, _results?.More ?? false, _limit, _offset);
 
             return;
         }
     }
 
-    private async Task BeginMerge()
+    async Task BeginMergeAsync(MetadataSearchResult<ManifestGame> selected)
     {
         var provider = MetadataService.GetProvider(_selectedProvider);
 
@@ -412,37 +300,22 @@ else if (_stage == ModalStage.Merge)
 
         try
         {
-            var selected = SelectedResults.First();
-
             var manifest = await provider.GetGameAsync(selected.Id);
 
             if (manifest is null)
             {
                 _errorMessage = "Could not retrieve game metadata from the provider.";
-                _loading = false;
                 return;
             }
 
             _fetchedManifest = manifest;
-
-            _importTitle = true;
-            _importDescription = !string.IsNullOrWhiteSpace(manifest.Description);
-            _importReleasedOn = manifest.ReleasedOn != default;
-            _importSingleplayer = true;
-            _importEngine = manifest.Engine != null;
-            _importDevelopers = manifest.Developers?.Any() == true;
-            _importPublishers = manifest.Publishers?.Any() == true;
-            _importGenres = manifest.Genres?.Any() == true;
-            _importTags = manifest.Tags?.Any() == true;
-            _importMultiplayerModes = manifest.MultiplayerModes?.Any() == true;
-            _importSavePaths = manifest.SavePaths?.Any() == true;
-            _importExternalIds = manifest.ExternalIds?.Any() == true;
-
-            _stage = ModalStage.Merge;
+            _mergeFields = MergeFields(manifest);
+            _stage = Stage.Merge;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "An error occurred fetching metadata from {Provider}", _selectedProvider);
+
             _errorMessage = ex.Message;
         }
         finally
@@ -451,7 +324,34 @@ else if (_stage == ModalStage.Merge)
         }
     }
 
-    private async Task ImportWithMerge()
+    static RenderFragment Tags(IEnumerable<string>? names) => __builder =>
+    {
+        foreach (var name in names ?? [])
+        {
+            <Tag>@name</Tag>
+        }
+    };
+
+    // Fields with nothing to import start unchecked, so they don't blank the game's own values
+    static List<MergeField> MergeFields(ManifestGame manifest) =>
+    [
+        new("Title", true, @<text>@manifest.Title</text>),
+        new("Description", !string.IsNullOrWhiteSpace(manifest.Description), @<span class="metadata-merge-truncate">@manifest.Description</span>),
+        new("Released On", manifest.ReleasedOn != default, @<text>@manifest.ReleasedOn.ToString("MM/dd/yyyy")</text>),
+        new("Singleplayer", true, @<text>@(manifest.Singleplayer ? "Yes" : "No")</text>),
+        new("Engine", manifest.Engine != null, @<text>@(manifest.Engine?.Name ?? "—")</text>),
+        new("Developers", manifest.Developers?.Any() == true, Tags(manifest.Developers?.Select(d => d.Name))),
+        new("Publishers", manifest.Publishers?.Any() == true, Tags(manifest.Publishers?.Select(p => p.Name))),
+        new("Genres", manifest.Genres?.Any() == true, Tags(manifest.Genres?.Select(g => g.Name))),
+        new("Tags", manifest.Tags?.Any() == true, Tags(manifest.Tags?.Select(t => t.Name))),
+        new("Multiplayer Modes", manifest.MultiplayerModes?.Any() == true, @<text>@(manifest.MultiplayerModes?.Count ?? 0) mode(s)</text>),
+        new("Save Paths", manifest.SavePaths?.Any() == true, @<text>@(manifest.SavePaths?.Count ?? 0) path(s)</text>),
+        new("External IDs", manifest.ExternalIds?.Any() == true, Tags(manifest.ExternalIds?.Select(e => $"{e.Provider}: {e.ExternalId}"))),
+    ];
+
+    bool Importing(string field) => _mergeFields.FirstOrDefault(f => f.Name == field)?.Import ?? false;
+
+    async Task ImportWithMergeAsync()
     {
         if (_fetchedManifest is null)
             return;
@@ -463,110 +363,108 @@ else if (_stage == ModalStage.Merge)
 
         try
         {
-            LANCommander.SDK.Models.Manifest.Game? existing = null;
-
-            if (GameId != Guid.Empty)
-                existing = await GameService.GetManifestAsync(GameId);
+            ManifestGame? existing = GameId != Guid.Empty ? await GameService.GetManifestAsync(GameId) : null;
 
             var manifest = _fetchedManifest;
             manifest.Id = GameId == Guid.Empty ? Guid.NewGuid() : GameId;
 
-            if (!_importTitle && existing != null)
+            if (!Importing("Title") && existing != null)
                 manifest.Title = existing.Title;
 
-            if (!_importDescription && existing != null)
+            if (!Importing("Description") && existing != null)
                 manifest.Description = existing.Description;
 
-            if (!_importReleasedOn && existing != null)
+            if (!Importing("Released On") && existing != null)
                 manifest.ReleasedOn = existing.ReleasedOn;
 
-            if (!_importSingleplayer && existing != null)
+            if (!Importing("Singleplayer") && existing != null)
                 manifest.Singleplayer = existing.Singleplayer;
 
-            if (!_importEngine)
+            if (!Importing("Engine"))
                 manifest.Engine = existing?.Engine;
 
-            if (!_importDevelopers)
-                manifest.Developers = existing?.Developers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
+            if (!Importing("Developers"))
+                manifest.Developers = existing?.Developers ?? new List<SDK.Models.Manifest.Company>();
 
-            if (!_importPublishers)
-                manifest.Publishers = existing?.Publishers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
+            if (!Importing("Publishers"))
+                manifest.Publishers = existing?.Publishers ?? new List<SDK.Models.Manifest.Company>();
 
-            if (!_importGenres)
-                manifest.Genres = existing?.Genres ?? new List<LANCommander.SDK.Models.Manifest.Genre>();
+            if (!Importing("Genres"))
+                manifest.Genres = existing?.Genres ?? new List<SDK.Models.Manifest.Genre>();
 
-            if (!_importTags)
-                manifest.Tags = existing?.Tags ?? new List<LANCommander.SDK.Models.Manifest.Tag>();
+            if (!Importing("Tags"))
+                manifest.Tags = existing?.Tags ?? new List<SDK.Models.Manifest.Tag>();
 
-            if (!_importMultiplayerModes)
-                manifest.MultiplayerModes = existing?.MultiplayerModes ?? new List<LANCommander.SDK.Models.Manifest.MultiplayerMode>();
+            if (!Importing("Multiplayer Modes"))
+                manifest.MultiplayerModes = existing?.MultiplayerModes ?? new List<SDK.Models.Manifest.MultiplayerMode>();
 
-            if (!_importSavePaths)
-                manifest.SavePaths = existing?.SavePaths ?? new List<LANCommander.SDK.Models.Manifest.SavePath>();
+            if (!Importing("Save Paths"))
+                manifest.SavePaths = existing?.SavePaths ?? new List<SDK.Models.Manifest.SavePath>();
 
-            if (!_importExternalIds)
-                manifest.ExternalIds = existing?.ExternalIds ?? new List<LANCommander.SDK.Models.Manifest.GameExternalId>();
+            if (!Importing("External IDs"))
+                manifest.ExternalIds = existing?.ExternalIds ?? new List<SDK.Models.Manifest.GameExternalId>();
 
-            using var context = ImportContextFactory.Create();
-            await context.InitializeMetadataUpdateAsync(manifest);
-            await context.ImportQueueAsync();
-
-            _loading = false;
+            using (var context = ImportContextFactory.Create())
+            {
+                await context.InitializeMetadataUpdateAsync(manifest);
+                await context.ImportQueueAsync();
+            }
 
             await OnImported.InvokeAsync(manifest.Id);
 
-            _importing = false;
             Reset();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "An error occurred importing metadata from {Provider}", _selectedProvider);
+
             _errorMessage = ex.Message;
+        }
+        finally
+        {
             _loading = false;
             _importing = false;
         }
     }
 
+    /// <summary>Shows progress over the panel, e.g. while art is downloaded after an import.</summary>
     public async Task UpdateStatusAsync(string status)
     {
+        _importing = true;
         _importStatus = status;
+
         await InvokeAsync(StateHasChanged);
     }
 
-    private void BackToSearch()
+    void BackToSearch()
     {
-        _stage = ModalStage.Search;
+        _stage = Stage.Search;
         _errorMessage = null;
         _fetchedManifest = null;
-        SelectedResults = [];
     }
 
-    private void DismissError()
-    {
-        _errorMessage = null;
-    }
-
-    private void Reset()
+    void Reset()
     {
         _results = null;
-        _limit = 10;
+        _resultRows = new();
         _offset = 0;
         _hasSearched = false;
-        _stage = ModalStage.Search;
+        _stage = Stage.Search;
         _errorMessage = null;
         _fetchedManifest = null;
     }
 
-    private async Task HandleCancel()
+    async Task CancelAsync()
     {
         Reset();
+
         await OnCancel.InvokeAsync();
     }
 
-    private async Task ShowMore()
+    async Task ShowMoreAsync()
     {
         _offset += _results?.Limit ?? _limit;
 
-        await SearchForGame(Search, false);
+        await SearchForGameAsync(Search, false);
     }
 }

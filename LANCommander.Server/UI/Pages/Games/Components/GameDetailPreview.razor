@@ -4,14 +4,13 @@
 @using LANCommander.Server.Services.Models
 @using Microsoft.EntityFrameworkCore
 @using System.Net.Mime
-@using LANCommander.UI.Providers
+@using LANCommander.Server.UI.Providers
 @inject MediaService MediaService
 @inject GameService GameService
 @inject IMediaGrabberService MediaGrabberService
-@inject ModalService ModalService
-@inject IMessageService MessageService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 @inject IOptions<Settings> Settings
-@inject ILogger<GameDetailPreview> Logger
 @inject ScriptProvider ScriptProvider
 
 <div class="game-detail-preview">
@@ -24,7 +23,7 @@
 
         @if (bgUrl != null)
         {
-            <img class="game-detail-preview__hero-bg" src="@bgUrl" />
+            <img class="game-detail-preview__hero-bg" src="@bgUrl" alt="" />
         }
 
         <div class="game-detail-preview__hero-gradient-top"></div>
@@ -36,15 +35,15 @@
                 @{ var bgInputId = "bg-upload-" + Guid.NewGuid(); }
                 <InputFile id="@bgInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Background)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
                 <label class="game-detail-preview__overlay-btn" for="@bgInputId" title="Upload Background">
-                    <Icon Type="@IconType.Outline.Upload" />
+                    <Icon Type="IconType.UploadSimple" />
                 </label>
                 <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Background)" title="Search Background">
-                    <Icon Type="@IconType.Outline.Search" />
+                    <Icon Type="IconType.MagnifyingGlass" />
                 </button>
                 @if (bgMedia != null)
                 {
                     <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Background)" title="Remove Background">
-                        <Icon Type="@IconType.Outline.Delete" />
+                        <Icon Type="IconType.Trash" />
                     </button>
                 }
             </div>
@@ -60,7 +59,7 @@
 
             @if (logoUrl != null)
             {
-                <img class="game-detail-preview__logo-img" src="@logoUrl" />
+                <img class="game-detail-preview__logo-img" src="@logoUrl" alt="@_game?.Title" />
             }
             else
             {
@@ -73,15 +72,15 @@
                     @{ var logoInputId = "logo-upload-" + Guid.NewGuid(); }
                     <InputFile id="@logoInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Logo)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
                     <label class="game-detail-preview__overlay-btn" for="@logoInputId" title="Upload Logo">
-                        <Icon Type="@IconType.Outline.Upload" />
+                        <Icon Type="IconType.UploadSimple" />
                     </label>
                     <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Logo)" title="Search Logo">
-                        <Icon Type="@IconType.Outline.Search" />
+                        <Icon Type="IconType.MagnifyingGlass" />
                     </button>
                     @if (logoMedia != null)
                     {
                         <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Logo)" title="Remove Logo">
-                            <Icon Type="@IconType.Outline.Delete" />
+                            <Icon Type="IconType.Trash" />
                         </button>
                     }
                 </div>
@@ -111,29 +110,16 @@
 
                         <Dropdown>
                             <Overlay>
-                                <Menu Mode="MenuMode.Vertical">
-                                    <SubMenu Key="screenshot" Title="Screenshot">
-                                        <MenuItem OnClick="() => ClickFileInput(_ssInputId)">
-                                            <Icon Type="@IconType.Outline.Upload" /> Upload
-                                        </MenuItem>
-                                        <MenuItem OnClick="() => SearchMediaByType(MediaType.Screenshot)">
-                                            <Icon Type="@IconType.Outline.Search" /> Search
-                                        </MenuItem>
-                                    </SubMenu>
-                                    <SubMenu Key="video" Title="Video">
-                                        <MenuItem OnClick="() => ClickFileInput(_vidInputId)">
-                                            <Icon Type="@IconType.Outline.Upload" /> Upload
-                                        </MenuItem>
-                                        <MenuItem OnClick="() => SearchMediaByType(MediaType.Video)">
-                                            <Icon Type="@IconType.Outline.Search" /> Search
-                                        </MenuItem>
-                                    </SubMenu>
+                                <Menu>
+                                    <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_ssInputId)">Upload Screenshots</MenuItem>
+                                    <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Screenshot)">Search Screenshots</MenuItem>
+                                    <MenuDivider />
+                                    <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_vidInputId)">Upload Videos</MenuItem>
+                                    <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Video)">Search Videos</MenuItem>
                                 </Menu>
                             </Overlay>
                             <ChildContent>
-                                <Button Size="@ButtonSize.Small" Type="ButtonType.Text">
-                                    <Icon Type="@IconType.Outline.Plus" />
-                                </Button>
+                                <Button Text Small Icon="IconType.Plus" title="Add screenshots or videos" />
                             </ChildContent>
                         </Dropdown>
                     </div>
@@ -145,25 +131,25 @@
                         <div class="game-detail-preview__carousel-item">
                             @if (media.Type == MediaType.Video)
                             {
-                                <video class="game-detail-preview__carousel-video" src="@GetMediaDownloadUrl(media)" muted loop />
+                                <video class="game-detail-preview__carousel-video" src="@GetMediaDownloadUrl(media)" muted loop></video>
                                 <div class="game-detail-preview__carousel-video-badge">
-                                    <Icon Type="@IconType.Outline.PlayCircle" />
+                                    <Icon Type="IconType.PlayCircle" Fill />
                                 </div>
                             }
                             else
                             {
-                                <img class="game-detail-preview__carousel-img" src="@GetMediaDownloadUrl(media)" />
+                                <img class="game-detail-preview__carousel-img" src="@GetMediaDownloadUrl(media)" alt="" />
                             }
                             <div class="game-detail-preview__carousel-item-overlay">
                                 <button class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaLeft(media)" title="Move Left">
-                                    <Icon Type="@IconType.Outline.Left" />
+                                    <Icon Type="IconType.CaretLeft" />
                                 </button>
                                 <button class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaRight(media)" title="Move Right">
-                                    <Icon Type="@IconType.Outline.Right" />
+                                    <Icon Type="IconType.CaretRight" />
                                 </button>
-                                <Popconfirm Title="Remove this media?" OnConfirm="() => RemoveMedia(media)">
+                                <Popconfirm Title="Remove this media?" OkText="Remove" Danger OnConfirm="() => RemoveMedia(media)">
                                     <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" title="Remove">
-                                        <Icon Type="@IconType.Outline.Delete" />
+                                        <Icon Type="IconType.Trash" />
                                     </button>
                                 </Popconfirm>
                             </div>
@@ -173,7 +159,7 @@
                     @if (!GetMediaList(MediaType.Screenshot, MediaType.Video).Any())
                     {
                         <div class="game-detail-preview__carousel-empty">
-                            <Empty Description="@("No screenshots or videos")" Simple />
+                            <Empty Small Description="No screenshots or videos" />
                         </div>
                     }
                 </div>
@@ -191,11 +177,11 @@
 
                 @if (coverUrl != null && coverMedia?.MimeType?.StartsWith("video/") == true)
                 {
-                    <video class="game-detail-preview__cover-img" src="@coverUrl" autoplay muted loop />
+                    <video class="game-detail-preview__cover-img" src="@coverUrl" autoplay muted loop></video>
                 }
                 else if (coverUrl != null)
                 {
-                    <img class="game-detail-preview__cover-img" src="@coverUrl" />
+                    <img class="game-detail-preview__cover-img" src="@coverUrl" alt="@_game?.Title" />
                 }
                 else
                 {
@@ -210,15 +196,15 @@
                         @{ var coverInputId = "cover-upload-" + Guid.NewGuid(); }
                         <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.apng,.mp4,.webm,.mkv" />
                         <label class="game-detail-preview__overlay-btn" for="@coverInputId" title="Upload Cover">
-                            <Icon Type="@IconType.Outline.Upload" />
+                            <Icon Type="IconType.UploadSimple" />
                         </label>
                         <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Cover)" title="Search Cover">
-                            <Icon Type="@IconType.Outline.Search" />
+                            <Icon Type="IconType.MagnifyingGlass" />
                         </button>
                         @if (coverMedia != null)
                         {
                             <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Cover)" title="Remove Cover">
-                                <Icon Type="@IconType.Outline.Delete" />
+                                <Icon Type="IconType.Trash" />
                             </button>
                         }
                     </div>
@@ -340,8 +326,8 @@
     ];
 
     List<Media> _media = new();
-    Game _game;
-    IJSObjectReference _domHelper;
+    Game? _game;
+    IJSObjectReference? _domHelper;
 
     protected override async Task OnInitializedAsync()
     {
@@ -367,8 +353,11 @@
             _domHelper = await ScriptProvider.ImportModuleAsync("DomHelper");
     }
 
-    async Task ClickFileInput(string inputId) =>
-        await _domHelper.InvokeVoidAsync("ClickElement", inputId);
+    async Task ClickFileInput(string inputId)
+    {
+        if (_domHelper != null)
+            await _domHelper.InvokeVoidAsync("ClickElement", inputId);
+    }
 
     Media? GetMedia(MediaType type) =>
         _media.FirstOrDefault(m => m.Type == type);
@@ -397,17 +386,17 @@
         var config = Settings.Value.Server.Media.GetMediaTypeConfig(type);
         var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
 
-        foreach (var file in e.GetMultipleFiles())
+        foreach (var file in e.GetMultipleFiles(maximumFileCount: 50))
         {
             if (!validTypes.Contains(file.ContentType))
             {
-                MessageService.Error($"Unsupported file type: {file.Name}");
+                Notifications.Error($"Unsupported file type: {file.Name}");
                 continue;
             }
 
             if (file.Size > config.MaxFileSize)
             {
-                MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}: {file.Name}");
+                Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}: {file.Name}");
                 continue;
             }
 
@@ -444,40 +433,36 @@
         }
 
         await RefreshMedia();
-        MessageService.Success($"{type} uploaded!");
+        Notifications.Success($"{type} uploaded!");
     }
 
     async Task SearchMediaByType(MediaType type)
     {
         var multiSelect = type == MediaType.Screenshot || type == MediaType.Video;
 
-        var modalOptions = new ModalOptions
-        {
-            Title = $"Download {type}",
-            Maximizable = false,
-            DefaultMaximized = true,
-            Closable = true,
-            OkText = "Select",
-        };
-
-        var grabberOptions = new MediaGrabberOptions
+        var downloadResult = await Dialogs.OpenAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>($"Download {type}", new MediaGrabberOptions
         {
             Type = type,
-            Search = _game.Title,
-            MultiSelect = multiSelect
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
-
-        modalRef.OnOk = async (downloadResult) =>
+            Search = _game?.Title ?? "",
+            MultiSelect = multiSelect,
+        }, new DialogSettings
         {
-            if (multiSelect && downloadResult.Results.Any())
+            Size = DialogSize.Full,
+            OkText = "Select",
+        });
+
+        if (downloadResult == null)
+            return;
+
+        try
+        {
+            if (multiSelect)
             {
                 foreach (var entry in downloadResult.Results)
                 {
                     using var download = entry.Download;
 
-                    var media = new Media
+                    await MediaService.WriteToFileAsync(new Media
                     {
                         GameId = GameId,
                         Type = type,
@@ -486,49 +471,45 @@
                         StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
                         Crc32 = string.Empty,
                         SortOrder = GetNextSortOrder(type)
-                    };
-
-                    await MediaService.WriteToFileAsync(media, download.Stream);
+                    }, download.Stream);
                 }
-
-                await RefreshMedia();
-                return;
             }
-
-            using var singleDownload = downloadResult.Download;
-
-            var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
-            var existing = isSingular ? GetMedia(type) : null;
-
-            Media singleMedia;
-
-            if (existing != null)
+            else if (downloadResult.Download != null)
             {
-                singleMedia = existing;
-                singleMedia.SourceUrl = downloadResult.Result.SourceUrl;
-                singleMedia.MimeType = singleDownload.MimeType;
+                using var singleDownload = downloadResult.Download;
 
-                MediaService.DeleteLocalMediaFile(singleMedia);
-                singleMedia = await MediaService.WriteToFileAsync(singleMedia, singleDownload.Stream);
-            }
-            else
-            {
-                singleMedia = new Media
+                // Background, logo and cover are one of each: replace the existing one
+                var existing = GetMedia(type);
+
+                if (existing != null)
                 {
-                    GameId = GameId,
-                    Type = type,
-                    SourceUrl = downloadResult.Result.SourceUrl,
-                    MimeType = singleDownload.MimeType,
-                    StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
-                    Crc32 = string.Empty,
-                    SortOrder = GetNextSortOrder(type)
-                };
+                    existing.SourceUrl = downloadResult.Result.SourceUrl;
+                    existing.MimeType = singleDownload.MimeType;
 
-                singleMedia = await MediaService.WriteToFileAsync(singleMedia, singleDownload.Stream);
+                    MediaService.DeleteLocalMediaFile(existing);
+                    await MediaService.WriteToFileAsync(existing, singleDownload.Stream);
+                }
+                else
+                {
+                    await MediaService.WriteToFileAsync(new Media
+                    {
+                        GameId = GameId,
+                        Type = type,
+                        SourceUrl = downloadResult.Result.SourceUrl,
+                        MimeType = singleDownload.MimeType,
+                        StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
+                        Crc32 = string.Empty,
+                        SortOrder = GetNextSortOrder(type)
+                    }, singleDownload.Stream);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"The {type} could not be saved");
+        }
 
-            await RefreshMedia();
-        };
+        await RefreshMedia();
     }
 
     async Task RemoveMediaByType(MediaType type)
@@ -541,12 +522,17 @@
 
     async Task RemoveMedia(Media media)
     {
-        _media.Remove(media);
+        try
+        {
+            if (media.Id != Guid.Empty)
+                await MediaService.DeleteAsync(media);
 
-        if (media.Id != Guid.Empty)
-            await MediaService.DeleteAsync(media);
-
-        await InvokeAsync(StateHasChanged);
+            _media.Remove(media);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The media could not be removed");
+        }
     }
 
     int GetNextSortOrder(MediaType type)

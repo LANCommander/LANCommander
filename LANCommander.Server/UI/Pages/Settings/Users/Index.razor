@@ -1,200 +1,204 @@
-﻿@page "/Settings/Users"
+@page "/Settings/Users"
 @using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
 @using Microsoft.Extensions.Options
 @inject UserService UserService
+@inject RoleService RoleService
 @inject IOptions<Settings> Settings
-@inject SettingsProvider<Settings> SettingsProvider
-@inject ModalService ModalService
-@inject IMessageService MessageService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Users" />
 
-<DataTable
-    TItem="User"
-    @ref="Table"
-    Size="TableSize.Small"
-    @bind-Total="Total"
-    Responsive
-    ColumnPicker
-    Searchable
-    OnRowDoubleClick="@(user => NavigationManager.NavigateTo($"/Settings/Users/{user.UserName}"))"
-    SearchProperty="u => u.UserName">
-    <Columns>
-        <BoundDataColumn Title="Username" Property="u => u.UserName" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        
-        <DataColumn TData="string" Title="Roles" Include="UserRoles,UserRoles.Role">
-            @foreach (var role in context.Roles)
+<PageContent>
+    <DataTable TItem="User"
+               @ref="Table"
+               Small
+               ColumnPicker
+               SearchProperty="u => u.UserName"
+               OnRowDoubleClick="@(user => NavigationManager.NavigateTo($"/Settings/Users/{user.UserName}"))">
+        <RightToolbar>
+            <Button Primary Icon="IconType.Plus" OnClick="CreateUserAsync">Add User</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="u => u.UserName" Title="Username" Sortable DefaultSort="ColumnSort.Ascending" />
+
+            <TemplateColumn TItem="User" Title="Roles" Include="UserRoles,UserRoles.Role">
+                @foreach (var role in context.Roles ?? [])
+                {
+                    <Tag>@role.Name</Tag>
+                }
+            </TemplateColumn>
+
+            <TemplateColumn TItem="User" Title="Saves" Include="GameSaves">
+                <ByteSize Value="@(context.GameSaves?.Sum(s => s.Size) ?? 0)" />
+            </TemplateColumn>
+
+            <BoundColumn Property="u => u.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+
+            @if (Settings.Value.Server.Authentication.RequireApproval)
             {
-                <Tag>@role.Name</Tag>
+                <BoundColumn Property="u => u.Approved" Title="Approved" Sortable>
+                    <Checkbox Value="context.Approved" Disabled aria-label="Approved" />
+                </BoundColumn>
+
+                <BoundColumn Property="u => u.ApprovedOn" Title="Approved On" Sortable>
+                    <LocalTime Value="context.ApprovedOn" />
+                </BoundColumn>
             }
-        </DataColumn>
-        
-        <DataColumn TData="long" Title="Saves" Include="GameSaves">
-            <ByteSize Value="@(context?.GameSaves?.Sum(s => s.Size) ?? 0)" />
-        </DataColumn>
-        
-        <BoundDataColumn Title="Created On" Property="u => u.CreatedOn" Sortable>
-            <LocalTime Value="context.CreatedOn" />
-        </BoundDataColumn>
-        
-        @if (Settings.Value.Server.Authentication.RequireApproval)
-        {
-            <DataColumn TData="bool" Title="Approved">
-                <Checkbox Checked="context.Approved" />
-            </DataColumn>
-            
-            <BoundDataColumn Title="Approved On" Property="u => u.ApprovedOn" Sortable>
-                <LocalTime Value="context.ApprovedOn" />
-            </BoundDataColumn>
-        }
-        
-        <DataActions TData="string">
-            <DropdownButton Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
-                <Overlay>
-                    <Menu>
-                        @if (Settings.Value.Server.Authentication.RequireApproval && !context.Approved)
-                        {
-                            <MenuItem OnClick="() => ApproveUser(context)">Approve</MenuItem>
-                        }
-                        
-                        <MenuItem OnClick="() => ManageRoles(context)">Manage Roles</MenuItem>
-                        <MenuItem OnClick="() => ChangePassword(context)">Change Password</MenuItem>
 
-                        @if (!context.Roles?.Any(r => r.Name == RoleService.AdministratorRoleName) ?? true)
-                        {
-                            <MenuItem OnClick="() => PromoteUser(context)">Promote</MenuItem>
-                        }
-                        else
-                        {
-                            <MenuItem OnClick="() => DemoteUser(context)">Demote</MenuItem>
-                        }
-                    </Menu>
-                </Overlay>
-                <ChildContent>
-                    <Icon Type="@IconType.Outline.Edit" />
-                </ChildContent>
-            </DropdownButton>
-            
-            <Popconfirm Title="Are you sure you want to delete this user?" OnConfirm="() => DeleteUser(context)">
-                <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Danger />
-            </Popconfirm>
-        </DataActions>
-    </Columns>
+            <ActionsColumn TItem="User" Width="150px">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Settings/Users/{context.UserName}")" title="Edit" />
 
-    <RightToolbar>
-        <Button OnClick="() => CreateUserDialogVisible = true" Type="@ButtonType.Primary">Add User</Button>
-    </RightToolbar>
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @if (Settings.Value.Server.Authentication.RequireApproval && !context.Approved)
+                            {
+                                <MenuItem Icon="IconType.CheckCircle" OnClick="() => ApproveUserAsync(context)">Approve</MenuItem>
+                            }
 
-    <PaginationTemplate>
-        <Pagination
-            Total="context.Total"
-            PageSize="context.PageSize"
-            Current="context.PageIndex"
-            DefaultPageSize="25"
-            PageSizeOptions="new [] { 25, 50, 100, 200 }"
-            ShowSizeChanger
-            OnChange="context.HandlePageChange" />
-    </PaginationTemplate>
-</DataTable>
+                            <MenuItem Icon="IconType.UsersThree" OnClick="() => ManageRolesAsync(context)">Manage Roles</MenuItem>
+                            <MenuItem Icon="IconType.Key" Href="@($"/Settings/Users/{context.Id}/ChangePassword")">Change Password</MenuItem>
 
-<CreateUserDialog @bind-Visible="CreateUserDialogVisible" OnCreated="() => Table.ReloadAsync()" />
+                            @if (!IsAdministrator(context))
+                            {
+                                <MenuItem Icon="IconType.ArrowFatUp" OnClick="() => PromoteUserAsync(context)">Promote</MenuItem>
+                            }
+                            else
+                            {
+                                <MenuItem Icon="IconType.ArrowFatDown" OnClick="() => DemoteUserAsync(context)">Demote</MenuItem>
+                            }
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Text Icon="IconType.DotsThree" title="More" />
+                    </ChildContent>
+                </Dropdown>
+
+                <Popconfirm Title="Are you sure you want to delete this user?" OkText="Delete" Danger OnConfirm="() => DeleteUserAsync(context)">
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
 @code {
-    ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();
-    
-    bool Loading = true;
-    bool CreateUserDialogVisible = false;
+    DataTable<User> Table = default!;
 
-    DataTable<User> Table;
-    int Total;
+    static bool IsAdministrator(User user) => user.Roles?.Any(r => r.Name == RoleService.AdministratorRoleName) ?? false;
 
-    private async Task ApproveUser(User user)
+    async Task<bool> IsOnlyAdministratorAsync(User user) =>
+        IsAdministrator(user) && (await RoleService.GetUsersAsync(RoleService.AdministratorRoleName)).Count() == 1;
+
+    async Task CreateUserAsync()
     {
-        var dbUser = await UserService.GetAsync(user.Id);
+        var user = await Dialogs.OpenAsync<CreateUserDialog, User>("Add a User", new DialogSettings { OkText = "Create" });
 
-        if (dbUser != null)
+        if (user != null)
+            await Table.ReloadAsync();
+    }
+
+    async Task ApproveUserAsync(User user)
+    {
+        try
         {
-            dbUser.Approved = true;
-            dbUser.ApprovedOn = DateTime.UtcNow;
+            var dbUser = await UserService.GetAsync(user.Id);
 
-            await UserService.UpdateAsync(dbUser);
+            if (dbUser != null)
+            {
+                dbUser.Approved = true;
+                dbUser.ApprovedOn = DateTime.UtcNow;
 
-            await MessageService.SuccessAsync($"Approved {user.UserName}!");
+                await UserService.UpdateAsync(dbUser);
+
+                Notifications.Success($"Approved {user.UserName}!");
+
+                await Table.ReloadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not approve {user.UserName}");
+        }
+    }
+
+    async Task PromoteUserAsync(User user)
+    {
+        try
+        {
+            await UserService.AddToRoleAsync(user.UserName, RoleService.AdministratorRoleName);
+
+            Notifications.Success($"Promoted {user.UserName}!");
 
             await Table.ReloadAsync();
         }
-    }
-
-    private async Task PromoteUser(User user)
-    {
-        var dbUser = await UserService.GetAsync(user.Id);
-
-        await UserService.AddToRoleAsync(dbUser.UserName, RoleService.AdministratorRoleName);
-
-        await MessageService.SuccessAsync($"Promoted {user.UserName}!");
-
-        await Table.ReloadAsync();
-    }
-
-    private async Task DemoteUser(User user)
-    {
-        var dbUser = await UserService.GetAsync(user.Id);
-
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1)
+        catch (Exception ex)
         {
-            MessageService.Error("Cannot demote the only administrator!");
+            Notifications.Error(ex, $"Could not promote {user.UserName}");
         }
-        else
+    }
+
+    async Task DemoteUserAsync(User user)
+    {
+        try
         {
-            await UserService.RemoveFromRole(dbUser.UserName, RoleService.AdministratorRoleName);
+            if (await IsOnlyAdministratorAsync(user))
+            {
+                Notifications.Error("Cannot demote the only administrator!");
+                return;
+            }
+
+            await UserService.RemoveFromRole(user.UserName, RoleService.AdministratorRoleName);
+
+            Notifications.Success($"Demoted {user.UserName}!");
 
             await Table.ReloadAsync();
         }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not demote {user.UserName}");
+        }
     }
 
-    private async Task DeleteUser(User user)
+    async Task DeleteUserAsync(User user)
     {
-        var dbUser = await UserService.GetAsync(user.Id);
+        try
+        {
+            if (await IsOnlyAdministratorAsync(user))
+            {
+                Notifications.Error("Cannot delete the only administrator!");
+                return;
+            }
 
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1 && user.Roles.Any(r => r.Name == RoleService.AdministratorRoleName))
-        {
-            MessageService.Error("Cannot delete the only administrator!");
-        }
-        else
-        {
+            var dbUser = await UserService.GetAsync(user.Id);
+
             await UserService.DeleteAsync(dbUser);
 
             await Table.ReloadAsync();
 
-            MessageService.Success($"Deleted {user.UserName}!");
+            Notifications.Success($"Deleted {user.UserName}!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not delete {user.UserName}");
         }
     }
 
-    private void ChangePassword(User user)
+    async Task ManageRolesAsync(User user)
     {
-        NavigationManager.NavigateTo($"/Settings/Users/{user.Id}/ChangePassword", true);
-    }
-
-    private async Task ManageRoles(User user)
-    {
-        var modalOptions = new ModalOptions()
+        var updated = await Dialogs.OpenAsync<ManageRolesDialog, Guid, bool>("Manage Roles", user.Id, new DialogSettings
         {
-            Title = "Manage Roles",
-            Maximizable = false,
-            DefaultMaximized = false,
-            Closable = true,
-            Draggable = true,
-            OkText = "Update Roles"
-        };
+            Size = DialogSize.Large,
+            OkText = "Update Roles",
+        });
 
-        var modalRef = await ModalService.CreateModalAsync<ManageRolesDialog, Guid, Guid>(modalOptions, user.Id);
-
-        modalRef.OnOk = async (Guid) =>
-        {
+        if (updated)
             await Table.ReloadAsync();
-        };
     }
 }

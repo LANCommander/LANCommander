@@ -1,0 +1,178 @@
+@using LANCommander.SDK.Enums
+@inherits Dialog<ArchiveUploadOptions, bool>
+@inject ArchiveService ArchiveService
+@inject GameVersionService GameVersionService
+@inject StorageLocationService StorageLocationService
+@inject AlertService Alerts
+@inject NotificationService Notifications
+@inject ILogger<ArchiveUploadDialog> Logger
+
+@*
+    Uploads a ZIP as a new archive (or a replacement file for Options.ArchiveId), or takes one that is
+    already on the server. Uploads carry on in the background if the dialog is closed.
+*@
+@if (_archive == null)
+{
+    <Spin />
+}
+else
+{
+    <Form Model="_archive">
+        <FormItem Label="Version" Required>
+            <TextInput @bind-Value="_archive.Version" Immediate AutoFocus />
+        </FormItem>
+
+        <FormItem Label="Path">
+            <StorageLocationSelector Type="StorageLocationType.Archive" @bind-Value="_storageLocation" />
+        </FormItem>
+
+        <FormItem>
+            <ChunkUploader @ref="_uploader"
+                           Accept=".zip"
+                           @bind-File="_file"
+                           @bind-Status="_status"
+                           StorageLocationId="@(_storageLocation?.Id ?? Guid.Empty)"
+                           ObjectKey="@_archive.ObjectKey"
+                           Hint="Only ZIP files are supported as archives"
+                           OnUploadError="OnUploadErrorAsync" />
+        </FormItem>
+    </Form>
+
+    <Flex Justify="Justify.End" Align="Align.Center" Gap="Gap.Small">
+        <Tooltip Title="Moves the selected local file instead of copying it">
+            <Checkbox @bind-Value="_moveLocalFile" Disabled="_status != ChunkUploadStatus.Idle">Move</Checkbox>
+        </Tooltip>
+        <FilePickerButton EntrySelectable="@(entry => entry.Name?.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true)"
+                          Title="Choose an Archive"
+                          OkText="Use File"
+                          OnSelected="OnLocalFileSelectedAsync"
+                          Root="@_rootPath"
+                          Disabled="@(_status != ChunkUploadStatus.Idle || !HasVersion)">
+            Use Local File
+        </FilePickerButton>
+        <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || _status != ChunkUploadStatus.Idle || !HasVersion)" OnClick="StartAsync">Upload</Button>
+        <Button OnClick="CancelClickedAsync">Cancel</Button>
+    </Flex>
+}
+
+@code {
+    Archive? _archive;
+    StorageLocation? _storageLocation;
+    ChunkUploader? _uploader;
+    IBrowserFile? _file;
+    ChunkUploadStatus _status;
+    bool _moveLocalFile;
+
+    readonly string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+
+    bool HasVersion => !String.IsNullOrWhiteSpace(_archive?.Version);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Options.ArchiveId is { } archiveId && archiveId != Guid.Empty)
+            _archive = await ArchiveService.Include(a => a.StorageLocation).GetAsync(archiveId);
+
+        if (_archive == null)
+        {
+            _archive = new Archive
+            {
+                GameId = Options.GameId,
+                RedistributableId = Options.RedistributableId,
+                ToolId = Options.ToolId,
+            };
+
+            // Tag the upload against the game's current version unless the uploader picks another
+            if (Options.GameId is { } gameId && gameId != Guid.Empty)
+                _archive.Version = await GameVersionService.GetLatestVersionNumberAsync(gameId) ?? string.Empty;
+        }
+
+        _storageLocation = _archive.StorageLocation ?? await StorageLocationService.DefaultAsync(StorageLocationType.Archive);
+    }
+
+    async Task StartAsync()
+    {
+        // Capture now: the upload may finish after this dialog has closed
+        var details = (_archive!.GameId, _archive.RedistributableId, _archive.ToolId, _archive.Version);
+        var onUploaded = Options.OnUploaded;
+
+        await _uploader!.StartAsync(async objectKey =>
+        {
+            try
+            {
+                var archiveId = await CompleteArchiveAsync(objectKey, details);
+
+                if (archiveId != null && onUploaded != null)
+                    await onUploaded(archiveId.Value);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to process uploaded archive");
+            }
+        });
+    }
+
+    /// <summary>Links the stored upload to its game, tool or redistributable and records its sizes.</summary>
+    async Task<Guid?> CompleteArchiveAsync(string objectKey, (Guid? GameId, Guid? RedistributableId, Guid? ToolId, string Version) details)
+    {
+        var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey);
+
+        if (archive == null)
+        {
+            Logger.LogError("Archive record not found for object key {ObjectKey}", objectKey);
+            return null;
+        }
+
+        archive.GameId = details.GameId;
+        archive.RedistributableId = details.RedistributableId;
+        archive.ToolId = details.ToolId;
+        archive.Version = details.Version;
+        archive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(archive);
+        archive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(archive);
+
+        await ArchiveService.UpdateAsync(archive);
+
+        return archive.Id;
+    }
+
+    async Task OnLocalFileSelectedAsync(string path)
+    {
+        try
+        {
+            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, _storageLocation?.Id ?? Guid.Empty, _moveLocalFile);
+
+            var archiveId = await CompleteArchiveAsync(objectKey.ToString(), (_archive!.GameId, _archive.RedistributableId, _archive.ToolId, _archive.Version));
+
+            if (archiveId != null && Options.OnUploaded != null)
+                await Options.OnUploaded(archiveId.Value);
+
+            Notifications.Success("Archive uploaded!");
+
+            await CloseAsync(true);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "An unknown error occurred while trying to use a local file");
+        }
+    }
+
+    async Task CancelClickedAsync()
+    {
+        if (_status == ChunkUploadStatus.Uploading &&
+            !await Alerts.ConfirmAsync("The upload will continue in the background. You can track its progress in the sidebar.", "Continue in Background?"))
+            return;
+
+        if (_status == ChunkUploadStatus.Idle && _uploader != null)
+            await _uploader.ClearAsync();
+
+        await CancelAsync();
+    }
+
+    async Task OnUploadErrorAsync(string message)
+    {
+        Logger.LogError("Archive failed to upload: {Message}", message);
+
+        Notifications.Error("Archive failed to upload!", message);
+
+        await CancelAsync();
+    }
+}

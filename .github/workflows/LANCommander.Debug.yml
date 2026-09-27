@@ -57,8 +57,8 @@ jobs:
 
       # UI
       - name: Generate PowerShell Completions
-        run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
-      - run: cd ./LANCommander.UI; npm install; npm run package
+        run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+      - run: cd ./LANCommander.Server.UI; npm install; npm run package
       - run: cd ./LANCommander.Server; npm install
 
       - name: Restore dependencies

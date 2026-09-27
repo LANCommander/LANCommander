@@ -1,0 +1,26 @@
+.lc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    color: var(--rz-text-secondary-color);
+    text-align: center;
+
+    .lc-empty-icon {
+        font-size: 3rem;
+        color: var(--rz-base-500);
+    }
+
+    .lc-empty-actions {
+        margin-top: 0.5rem;
+    }
+}
+
+.lc-empty-small {
+    padding: 0.75rem;
+
+    .lc-empty-icon {
+        font-size: 1.75rem;
+    }
+}

@@ -1,0 +1,69 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.SDK.Services
+@inject IChatClient ChatClient
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+
+@* Chat threads down the side, the selected thread's conversation beside them *@
+<div class="chat">
+    <div class="chat-list">
+        <Button Primary Block Icon="IconType.ChatCircleDots" OnClick="StartThreadAsync">New Thread</Button>
+
+        <Divider />
+
+        <ChatList Threads="_threads" @bind-SelectedThread="_thread" />
+    </div>
+
+    @if (_thread != null)
+    {
+        <ChatThread Id="_thread.Id" />
+    }
+    else
+    {
+        <div class="chat-thread chat-thread-empty">
+            <Empty Description="Pick a thread, or start a new one" Icon="IconType.ChatsCircle" />
+        </div>
+    }
+</div>
+
+@code {
+    IEnumerable<SDK.Models.ChatThread> _threads = [];
+    SDK.Models.ChatThread? _thread;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _threads = await ChatClient.GetThreadsAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The chat threads could not be loaded");
+        }
+    }
+
+    async Task StartThreadAsync()
+    {
+        var users = await ChatClient.GetUsersAsync();
+
+        var participants = await Dialogs.OpenAsync<ChatUsersDialog, IEnumerable<SDK.Models.User>, IEnumerable<SDK.Models.User>>("New Thread", users, new DialogSettings
+        {
+            OkText = "Start",
+        });
+
+        if (participants == null || !participants.Any())
+            return;
+
+        try
+        {
+            var threadId = await ChatClient.StartThreadAsync(participants.Select(u => u.Id.ToString()));
+
+            _thread = await ChatClient.GetThreadAsync(threadId);
+            _threads = await ChatClient.GetThreadsAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The thread could not be started");
+        }
+    }
+}

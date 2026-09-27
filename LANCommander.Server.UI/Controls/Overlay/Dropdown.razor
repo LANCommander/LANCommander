@@ -1,0 +1,56 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A menu of actions opened by clicking the wrapped content; closes when an item is chosen *@
+<span @ref="_trigger" @attributes="AdditionalAttributes" class="@_class" style="@Style"
+      @onclick="ClickAsync"
+      @oncontextmenu="RightClickAsync"
+      @oncontextmenu:preventDefault="ContextMenu">
+    @ChildContent
+</span>
+
+<RadzenPopup @ref="_popup" Style="display: none; position: absolute" Lazy="true" CloseOnClickOutside="true">
+    <div class="lc-dropdown">
+        <CascadingValue Value="this" IsFixed>
+            @Overlay
+        </CascadingValue>
+    </div>
+</RadzenPopup>
+
+@code {
+    /// <summary>What opens the dropdown when clicked, usually a button.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The dropdown's content, usually a Menu of MenuItems.</summary>
+    [Parameter] public RenderFragment? Overlay { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Opens on right-click instead of click, like a context menu.</summary>
+    [Parameter] public bool ContextMenu { get; set; }
+
+    ElementReference _trigger;
+    RadzenPopup? _popup;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-dropdown-trigger").Add(Class).Build();
+    }
+
+    Task ClickAsync() => ContextMenu ? Task.CompletedTask : ToggleAsync();
+
+    Task RightClickAsync() => ContextMenu ? ToggleAsync() : Task.CompletedTask;
+
+    async Task ToggleAsync()
+    {
+        if (!Disabled && _popup != null)
+            await _popup.ToggleAsync(_trigger);
+    }
+
+    public async Task CloseAsync()
+    {
+        if (_popup != null)
+            await _popup.CloseAsync();
+    }
+}

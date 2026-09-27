@@ -1,125 +1,78 @@
-﻿@using LANCommander.Server.Models
-@using Microsoft.EntityFrameworkCore
-@inherits FeedbackComponent<AddToCollectionOptions, IEnumerable<Collection>>
+@using LANCommander.Server.Models
+@inherits Dialog<AddToCollectionOptions, IEnumerable<Collection>>
 @inject CollectionService CollectionService
 @inject GameService GameService
-@inject IMessageService MessageService
-@inject ILogger<AddToCollectionDialog> Logger
+@inject NotificationService Notifications
 
-<Select
-    AllowClear
-    Mode="SelectMode.Multiple"
-    TItem="Collection"
-    TItemValue="Guid"
-    DataSource="@Collections"
-    @bind-Values="SelectedCollections"
-    LabelName="@nameof(Collection.Name)"
-    ValueName="@nameof(Collection.Id)"
-    Placeholder="Select a Collection"
-    DropdownRender="@DropdownRender" />
+@* Adds the games in Options to one or more collections, which can also be created here *@
+<Flex Vertical Gap="Gap.Medium">
+    <Select TValue="Guid" Multiple Clearable Searchable Items="_collectionItems" @bind-Values="_selected" Placeholder="Select a Collection" />
+
+    <InputGroup Block>
+        <TextInput @bind-Value="_newCollectionName" Immediate Placeholder="New collection name" OnEnter="AddCollectionAsync" Style="flex: 1" />
+        <Button Icon="IconType.Plus" Disabled="@(String.IsNullOrWhiteSpace(_newCollectionName))" OnClick="AddCollectionAsync">Add New Collection</Button>
+    </InputGroup>
+</Flex>
 
 @code {
-    ICollection<Collection> Collections = new List<Collection>();
+    IEnumerable<SelectItem<Guid>> _collectionItems = [];
+    IEnumerable<Guid> _selected = [];
+    string? _newCollectionName;
 
-    IEnumerable<Guid> SelectedCollections;
+    protected override bool CanConfirm => _selected.Any();
 
-    string NewCollectionName;
+    protected override Task OnInitializedAsync() => LoadAsync();
 
-    protected override async Task OnInitializedAsync()
+    async Task LoadAsync()
     {
-        await LoadData();
+        var collections = await CollectionService.SortBy(c => c.Name).GetAsync();
+
+        _collectionItems = collections.ToSelectItems(c => c.Id, c => c.Name).ToList();
     }
 
-    async Task LoadData()
+    async Task AddCollectionAsync()
     {
-        Collections = await CollectionService.SortBy(c => c.Name).GetAsync();
-    }
+        if (String.IsNullOrWhiteSpace(_newCollectionName))
+            return;
 
-    RenderFragment DropdownRender(RenderFragment originNode)
-    {
-        RenderFragment customDropdownRender =
-            @<Template>
-                <div>
-                    @originNode
-                    <Divider Style="margin: 4px 0"></Divider>
-                    <Space Direction="SpaceDirection.Horizontal" Style="padding: 4px 8px; width: 100%;">
-                        <SpaceItem Style="flex-grow: 1;">
-                            <Input Style="flex: auto;" @bind-Value="@NewCollectionName" BindOnInput="true" />
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Button Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(NewCollectionName))" OnClick="AddCollection">Add New Collection</Button>
-                        </SpaceItem>
-                    </Space>
-                </div>
-            </Template>
-    ;
-
-        return customDropdownRender;
-    }
-
-    async Task AddCollection(MouseEventArgs args)
-    {
         try
         {
-            if (!String.IsNullOrWhiteSpace(NewCollectionName))
-            {
-                await CollectionService.AddAsync(new Collection()
-                {
-                    Name = NewCollectionName
-                });
+            var collection = await CollectionService.AddAsync(new Collection { Name = _newCollectionName });
 
-                await LoadData();
+            await LoadAsync();
 
-                MessageService.Success("Collection added!");
-            }
+            // Most likely the games should go in the collection just made
+            _selected = [.. _selected, collection.Id];
+            _newCollectionName = null;
+
+            Notifications.Success("Collection added!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not add a new collection!");
-            Logger.LogError(ex, "Could not add a new collection!");
+            Notifications.Error(ex, "Could not add a new collection!");
         }
     }
 
-    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    protected override async Task<bool> OnOkAsync()
     {
-        ICollection<Collection> collections;
-        
-        collections = await CollectionService
+        var collections = await CollectionService
             .Include(c => c.Games)
-            .GetAsync(c => SelectedCollections.Contains(c.Id));
+            .GetAsync(c => _selected.Contains(c.Id));
 
-        try
+        foreach (var collection in collections)
         {
-            foreach (var collection in collections)
-            {
-                if (collection.Games == null)
-                    collection.Games = new List<Game>();
+            collection.Games ??= new List<Game>();
 
-                foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
-                {
-                    var game = await GameService.GetAsync(gameId);
+            foreach (var gameId in Options.GameIds.Where(id => !collection.Games.Any(g => g.Id == id)))
+                collection.Games.Add(await GameService.GetAsync(gameId));
 
-                    collection.Games.Add(game);
-                }
-
-                await CollectionService.UpdateAsync(collection);
-            }
-
-            if (collections.Count > 1)
-                MessageService.Success("Added to collections!");
-            else
-                MessageService.Success("Added to collection!");
-        }
-        catch (Exception ex)
-        {
-            if (collections.Count > 1)
-                MessageService.Error("Could not add to collections!");
-            else
-                MessageService.Error("Could not add to collection!");
-
-            Logger.LogError(ex, "Could not add to collection(s)!");
+            await CollectionService.UpdateAsync(collection);
         }
 
-        await base.OkCancelRefWithResult!.OnOk(collections);
+        Notifications.Success(collections.Count > 1 ? "Added to collections!" : "Added to collection!");
+
+        Result = collections;
+
+        return true;
     }
 }

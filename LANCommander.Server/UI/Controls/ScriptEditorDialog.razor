@@ -1,0 +1,365 @@
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Models
+@using LANCommander.Server.UI.Components
+@using OptionSchema = LANCommander.SDK.Models.OptionSchema
+@using OptionChoiceYamlConverter = LANCommander.SDK.Models.OptionChoiceYamlConverter
+@using YamlDotNet.Serialization
+@using YamlDotNet.Serialization.NamingConventions
+@inherits Dialog<ScriptEditorOptions, Script>
+@inject ScriptService ScriptService
+@inject ModuleService ModuleService
+@inject ArchiveService ArchiveService
+@inject ServerService ServerService
+@inject RedistributableService RedistributableService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+@inject ILogger<ScriptEditorDialog> Logger
+
+@* Adds or edits a script of a game, redistributable, server or tool (or a system script) *@
+@if (_loading)
+{
+    <Spin />
+}
+else
+{
+    <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Style="margin-bottom: 16px">
+        <Flex Gap="Gap.Small" Wrap Align="Align.Center">
+            @foreach (var group in _snippets.Select(s => s.Group).Distinct())
+            {
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @foreach (var snippet in _snippets.Where(s => s.Group == group))
+                            {
+                                <MenuItem OnClick="() => InsertSnippetAsync(snippet)">@snippet.Name</MenuItem>
+                            }
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Primary>@group</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            @if (_variables.Any())
+            {
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @foreach (var variable in _variables)
+                            {
+                                <MenuItem OnClick="() => InsertTextAsync(variable)">@variable</MenuItem>
+                            }
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Primary Icon="IconType.BracketsCurly">Variables</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            @if (_optionKeys.Any())
+            {
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @foreach (var optionKey in _optionKeys)
+                            {
+                                <MenuItem OnClick="() => InsertOptionValueAsync(optionKey)">$Options.@optionKey</MenuItem>
+                            }
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Primary Icon="IconType.SlidersHorizontal">Options</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            @if (_archive != null)
+            {
+                <Button Text Icon="IconType.FolderOpen" OnClick="BrowseForPathAsync">Browse</Button>
+            }
+
+            @if (IsDebuggable && HasDebugTarget)
+            {
+                <Tooltip Title="Debug">
+                    <Button Text Icon="IconType.Play" aria-label="Debug" Disabled="_debugging" OnClick="DebugAsync" />
+                </Tooltip>
+            }
+        </Flex>
+
+        <Checkbox @bind-Value="_script.RequiresAdmin">Requires Admin</Checkbox>
+    </Flex>
+
+    <CodeInput @ref="_codeInput"
+               @bind-Value="_script.Contents"
+               Language="Languages.PowerShell"
+               OnSave="SaveFromEditorAsync"
+               ScriptType="@_script.Type.ToString()"
+               ModuleFunctions="@_moduleFunctions"
+               OnReady="OnEditorReadyAsync" />
+
+    <PowerShellConsole @ref="_console" Id="_id" @bind-Active="_debugging" />
+
+    <Form @ref="_form" Model="_script" Style="margin-top: 16px">
+        <FormItem Label="Name" Required>
+            <TextInput @bind-Value="_script.Name" />
+        </FormItem>
+
+        <FormItem Label="Description">
+            <TextArea @bind-Value="_script.Description" MaxLength="500" Counter />
+        </FormItem>
+
+        <FormItem Label="Platforms">
+            <RuntimePlatformSelect @bind-Value="_script.Platforms" />
+        </FormItem>
+    </Form>
+}
+
+@code {
+    readonly Guid _id = Guid.NewGuid();
+
+    Form? _form;
+    CodeInput? _codeInput;
+    PowerShellConsole? _console;
+    IEnumerable<Snippet> _snippets = [];
+    List<ModuleFunctionCompletion> _moduleFunctions = new();
+    List<string> _variables = new();
+    List<string> _optionKeys = new();
+    string _redistributableName = string.Empty;
+
+    bool _loading = true;
+    bool _debugging;
+    bool _isNewScript;
+
+    Archive? _archive;
+
+    Script _script = new();
+
+    bool IsDebuggable => _script.Type == ScriptType.Package;
+
+    bool HasDebugTarget =>
+        (Options.GameId.HasValue && Options.GameId != Guid.Empty) ||
+        (Options.ToolId.HasValue && Options.ToolId != Guid.Empty) ||
+        (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty);
+
+    static readonly string[] ClientDisplayVariables = ["$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"];
+
+    static readonly string[] ClientVariables = ["$InstallDirectory", "$WorkingDirectory", "$ServerAddress", "$DefaultInstallDirectory", "$GameManifest"];
+
+    static readonly string[] SessionVariables = ["$PlayerAlias", "$Server", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId", "$ToolManifest", "$RedistributableManifest"];
+
+    static readonly string[] ServerGameVariables = ["$WorkingDirectory", "$Server", "$Game", "$User", "$ServerId", "$ServerName", "$ServerHost", "$ServerPort", "$GameTitle", "$GameId"];
+
+    // The variables each script type is run with
+    static readonly Dictionary<ScriptType, string[]> VariablesByScriptType = new()
+    {
+        [ScriptType.Install] = [.. ClientVariables, "$ToolManifest", "$RedistributableManifest", .. ClientDisplayVariables],
+        [ScriptType.Uninstall] = [.. ClientVariables, .. ClientDisplayVariables],
+        [ScriptType.BeforeStart] = [.. ClientVariables, .. SessionVariables, .. ClientDisplayVariables],
+        [ScriptType.AfterStop] = [.. ClientVariables, .. SessionVariables, .. ClientDisplayVariables],
+        [ScriptType.NameChange] = [.. ClientVariables, "$OldPlayerAlias", "$NewPlayerAlias", "$RedistributableManifest", .. ClientDisplayVariables],
+        [ScriptType.KeyChange] = [.. ClientVariables, "$AllocatedKey", .. ClientDisplayVariables],
+        [ScriptType.DetectInstall] = [.. ClientVariables, "$ToolManifest", "$RedistributableManifest", .. ClientDisplayVariables],
+        [ScriptType.SaveUpload] = [.. ClientVariables, .. ClientDisplayVariables],
+        [ScriptType.SaveDownload] = [.. ClientVariables, .. ClientDisplayVariables],
+        [ScriptType.Package] = ["$WorkingDirectory", "$Game", "$Tool", "$Redistributable"],
+        [ScriptType.GameStarted] = ServerGameVariables,
+        [ScriptType.GameStopped] = ServerGameVariables,
+        [ScriptType.UserRegistration] = ["$WorkingDirectory", "$User"],
+        [ScriptType.UserLogin] = ["$WorkingDirectory", "$User"],
+        [ScriptType.RunWrapper] = [.. ClientVariables, "$RedistributableManifest", "$ExecutablePath", "$Arguments"],
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Options.ScriptId != Guid.Empty)
+        {
+            _script = await ScriptService.GetAsync(Options.ScriptId);
+
+            if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+                await LoadRedistributableOptionsAsync(redistributableId);
+        }
+        else
+        {
+            _isNewScript = true;
+
+            var scriptType = Options.ScriptType ?? ScriptType.Install;
+
+            _script = new Script
+            {
+                Type = scriptType,
+                Name = scriptType.GetDisplayName(),
+            };
+
+            if (Options.GameId is { } gameId && gameId != Guid.Empty)
+            {
+                _script.GameId = gameId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == gameId);
+            }
+            else if (Options.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+            {
+                _script.RedistributableId = redistributableId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == redistributableId);
+                await LoadRedistributableOptionsAsync(redistributableId);
+            }
+            else if (Options.ServerId is { } serverId && serverId != Guid.Empty)
+            {
+                _script.ServerId = serverId;
+                var server = await ServerService.GetAsync(serverId);
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
+            }
+            else if (Options.ToolId is { } toolId && toolId != Guid.Empty)
+            {
+                _script.ToolId = toolId;
+                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == toolId);
+            }
+        }
+
+        _variables = VariablesByScriptType.TryGetValue(_script.Type, out var variables) ? variables.ToList() : ["$WorkingDirectory"];
+        _snippets = ScriptService.GetSnippets();
+
+        _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
+            .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
+            .ToList();
+
+        _loading = false;
+    }
+
+    async Task OnEditorReadyAsync()
+    {
+        if (_isNewScript && _codeInput != null && Options.ScriptType.HasValue)
+            await _codeInput.InsertTemplateAsync(Options.ScriptType.Value.ToString());
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        if (!await SaveAsync())
+            return false;
+
+        Result = _script;
+
+        return true;
+    }
+
+    // Ctrl+S in the editor saves without closing
+    async Task SaveFromEditorAsync()
+    {
+        try
+        {
+            if (await SaveAsync())
+                Notifications.Success("Script saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Script could not be saved!");
+        }
+    }
+
+    async Task<bool> SaveAsync()
+    {
+        if (_form?.Validate() == false)
+            return false;
+
+        _script = _script.Id == Guid.Empty
+            ? await ScriptService.AddAsync(_script)
+            : await ScriptService.UpdateAsync(_script);
+
+        return true;
+    }
+
+    async Task DebugAsync()
+    {
+        if (!IsDebuggable || _console == null)
+            return;
+
+        try
+        {
+            if (!await SaveAsync())
+                return;
+
+            if (Options.GameId is { } gameId && gameId != Guid.Empty)
+                await _console.DebugPackagingScript(gameId);
+            else if (Options.ToolId is { } toolId && toolId != Guid.Empty)
+                await _console.DebugToolPackagingScript(toolId);
+            else if (Options.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+                await _console.DebugRedistributablePackagingScript(redistributableId);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The script could not be debugged");
+        }
+    }
+
+    async Task BrowseForPathAsync()
+    {
+        var results = await Dialogs.OpenAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>("Choose Reference", new FilePickerOptions
+        {
+            ArchiveId = _archive?.Id ?? Guid.Empty,
+            Select = true,
+            Multiple = false,
+        }, new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Insert File Path",
+        });
+
+        var path = results?.FirstOrDefault()?.Path;
+
+        if (path != null)
+            await InsertTextAsync($"$InstallDirectory\\{path.Replace('/', '\\')}");
+    }
+
+    async Task InsertTextAsync(string text)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertText(text);
+    }
+
+    async Task InsertSnippetAsync(Snippet snippet)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertSnippet(snippet.Content);
+    }
+
+    async Task InsertOptionValueAsync(string optionKey)
+    {
+        var text = $"$Options.{optionKey}";
+
+        if (string.IsNullOrEmpty(_script.Contents) || !_script.Contents.Contains("Get-RedistributableOptions"))
+            text = $"$Options = Get-RedistributableOptions -Path $InstallDirectory -Id $GameManifest.Id -Name \"{_redistributableName}\"\n" + text;
+
+        await InsertTextAsync(text);
+    }
+
+    async Task LoadRedistributableOptionsAsync(Guid redistributableId)
+    {
+        try
+        {
+            var redistributable = await RedistributableService.GetAsync(redistributableId);
+
+            if (redistributable == null)
+                return;
+
+            _redistributableName = redistributable.Name ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(redistributable.OptionSchema))
+            {
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                    .WithTypeConverter(new OptionChoiceYamlConverter())
+                    .IgnoreUnmatchedProperties()
+                    .Build();
+
+                var schema = deserializer.Deserialize<OptionSchema>(redistributable.OptionSchema);
+
+                if (schema != null)
+                    _optionKeys = schema.GetFlattenedOptions().Keys.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load redistributable option schema");
+        }
+    }
+}

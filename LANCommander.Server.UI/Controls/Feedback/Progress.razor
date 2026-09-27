@@ -1,0 +1,61 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (Circle)
+{
+    <RadzenProgressBarCircular Attributes="_attributes"
+                               Style="@Style"
+                               Value="Value"
+                               Mode="@(Indeterminate ? ProgressBarMode.Indeterminate : ProgressBarMode.Determinate)"
+                               ShowValue="!NoValue"
+                               ProgressBarStyle="_style"
+                               Size="@(Small ? ProgressBarCircularSize.Small : ProgressBarCircularSize.Medium)" />
+}
+else
+{
+    <RadzenProgressBar Attributes="_attributes"
+                       Style="@Style"
+                       Value="Value"
+                       Mode="@(Indeterminate ? ProgressBarMode.Indeterminate : ProgressBarMode.Determinate)"
+                       ShowValue="!NoValue"
+                       ProgressBarStyle="_style" />
+}
+
+@code {
+    /// <summary>Percentage complete, 0 to 100.</summary>
+    [Parameter] public double Value { get; set; }
+
+    /// <summary>Progress of unknown length: an animated bar with no value.</summary>
+    [Parameter] public bool Indeterminate { get; set; }
+
+    /// <summary>A ring instead of a bar.</summary>
+    [Parameter] public bool Circle { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>Hides the percentage text.</summary>
+    [Parameter] public bool NoValue { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    ProgressBarStyle _style;
+    Dictionary<string, object> _attributes = new();
+
+    protected override void OnParametersSet()
+    {
+        _style = StatusResolver.Resolve(success: Success, warning: Warning, danger: Danger) switch
+        {
+            Status.Success => ProgressBarStyle.Success,
+            Status.Warning => ProgressBarStyle.Warning,
+            Status.Danger => ProgressBarStyle.Danger,
+            _ => ProgressBarStyle.Primary,
+        };
+
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder().Add("lc-progress").If(Small && !Circle, "lc-progress-small").Add(Class).Build()!;
+    }
+}

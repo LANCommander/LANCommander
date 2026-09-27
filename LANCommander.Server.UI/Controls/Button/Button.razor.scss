@@ -1,0 +1,39 @@
+.lc-button {
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    .lc-button-icon {
+        font-size: 1.25em;
+    }
+
+    .lc-button-icon + .lc-button-text {
+        margin-inline-start: 0.125rem;
+    }
+}
+
+.lc-button-link {
+    padding-inline: 0;
+    min-width: 0;
+
+    &:hover:not(:disabled) .lc-button-text {
+        text-decoration: underline;
+    }
+}
+
+.lc-button-block {
+    display: block;
+    width: 100%;
+}
+
+// Link buttons render as <a>; keep them looking and aligning like <button>
+a.lc-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+
+    &.rz-state-disabled {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+}

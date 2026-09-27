@@ -1,0 +1,140 @@
+// The application shell: sidebar, content area, footer and the mobile header.
+// Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
+
+$lc-sidebar-width: 220px;
+$lc-mobile-breakpoint: 767px;
+
+body {
+    margin: 0;
+    background: var(--lc-body-background);
+    color: var(--lc-text-color);
+    font-family: var(--lc-font-family);
+    font-size: var(--lc-font-size);
+}
+
+.lc-layout {
+    display: flex;
+    min-height: 100vh;
+    background: var(--lc-body-background);
+    color: var(--lc-text-color);
+    font-family: var(--lc-font-family);
+    font-size: var(--lc-font-size);
+}
+
+.lc-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: $lc-sidebar-width;
+    height: 100vh;
+    background: var(--lc-body-background);
+    border-inline-end: 1px solid var(--lc-border-subtle-color);
+
+    .logo {
+        display: block;
+        width: 104%;
+    }
+}
+
+.lc-sidebar-menu {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.lc-sidebar-footer {
+    border-top: 1px solid var(--lc-border-subtle-color);
+}
+
+.lc-social {
+    display: flex;
+    justify-content: space-evenly;
+    padding: 12px 8px;
+
+    a {
+        color: var(--lc-text-secondary-color);
+        font-size: 20px;
+        transition: color 0.2s;
+
+        &:hover {
+            color: var(--lc-text-title-color);
+        }
+    }
+}
+
+.lc-layout-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    padding: 24px;
+    gap: 24px;
+}
+
+.lc-layout-content {
+    flex: 1;
+    border-radius: var(--lc-border-radius);
+    background: var(--lc-panel-background);
+}
+
+.lc-layout-content-basic {
+    padding: 24px;
+}
+
+.lc-layout-footer {
+    color: var(--lc-text-secondary-color);
+    text-align: center;
+}
+
+.lc-mobile-header {
+    display: none;
+}
+
+@media (max-width: $lc-mobile-breakpoint) {
+    .lc-layout {
+        flex-direction: column;
+    }
+
+    .lc-mobile-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--lc-body-background);
+        border-bottom: 1px solid var(--lc-border-subtle-color);
+
+        .lc-mobile-logo {
+            height: 28px;
+        }
+    }
+
+    .lc-sidebar {
+        display: none;
+        position: static;
+        width: 100%;
+        height: auto;
+        border-inline-end: 0;
+
+        .logo {
+            display: none;
+        }
+    }
+
+    .lc-layout-menu-open .lc-sidebar {
+        display: flex;
+    }
+
+    .lc-layout-main {
+        padding: 12px;
+    }
+}
+
+.hidden {
+    display: none;
+}

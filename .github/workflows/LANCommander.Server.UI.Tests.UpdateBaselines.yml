@@ -1,0 +1,93 @@
+name: LANCommander Server UI Tests — Update Visual Baselines
+
+# Operator-triggered: re-captures every server UI visual test on the CI host and commits the
+# captures over LANCommander.Server.UI.Tests/Baselines. Baselines must come from here rather than a
+# developer machine because font rasterization differs between platforms. Only runs when a human
+# dispatches it from the Actions tab, so accidental drift can't slip in.
+
+on:
+    workflow_dispatch:
+        inputs:
+            branch:
+                description: 'Branch to commit refreshed baselines to'
+                required: true
+                type: string
+            build_dotnet_version:
+                description: 'Build .NET Version'
+                required: false
+                type: string
+                default: '10.0.x'
+
+permissions:
+    contents: write
+
+jobs:
+    refresh:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.branch }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: ${{ inputs.build_dotnet_version }}
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            - name: Install Node packages
+              run: |
+                  npm install --prefix ./LANCommander.Server.UI
+                  npm install --prefix ./LANCommander.Server
+
+            - name: Generate PowerShell Completions
+              run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+
+            - name: Build test project
+              run: dotnet build LANCommander.Server.UI.Tests --configuration Release
+
+            - name: Install Playwright browsers
+              run: pwsh LANCommander.Server.UI.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+            # UPDATE_VISUAL_BASELINES makes every visual test write its capture over its baseline
+            # instead of comparing (see Visual/VisualAssert.cs). The folder is emptied first so
+            # baselines of renamed or removed fixtures go too.
+            - name: Capture fresh baselines
+              env:
+                  UPDATE_VISUAL_BASELINES: '1'
+              run: |
+                  set -euo pipefail
+                  dst=LANCommander.Server.UI.Tests/Baselines
+
+                  mkdir -p "$dst"
+                  rm -f "$dst"/*.png
+
+                  dotnet test LANCommander.Server.UI.Tests --configuration Release --no-build \
+                      --filter "FullyQualifiedName~LANCommander.Server.UI.Tests.Visual" \
+                      --logger "console;verbosity=normal"
+
+                  echo "## Updated server UI baselines" >> "$GITHUB_STEP_SUMMARY"
+                  echo "" >> "$GITHUB_STEP_SUMMARY"
+                  ls -1 "$dst"/*.png | xargs -n1 basename | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Commit + push refreshed baselines
+              run: |
+                  set -euo pipefail
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  # Staged first: a plain diff misses new baselines, which are untracked.
+                  git add -A LANCommander.Server.UI.Tests/Baselines
+
+                  if git diff --cached --quiet -- LANCommander.Server.UI.Tests/Baselines; then
+                      echo "Baselines unchanged — nothing to commit."
+                      exit 0
+                  fi
+
+                  git commit -m "Refresh server UI visual baselines from CI run ${GITHUB_RUN_ID}"
+                  git push origin HEAD:${{ inputs.branch }}

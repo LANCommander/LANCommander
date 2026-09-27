@@ -1,0 +1,45 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<header @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <div class="lc-page-header-heading">
+        <h1 class="lc-page-header-title">
+            @if (TitleTemplate != null)
+            {
+                @TitleTemplate
+            }
+            else
+            {
+                @Title
+            }
+        </h1>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <span class="lc-page-header-subtitle">@Subtitle</span>
+        }
+    </div>
+    @if (Extra != null)
+    {
+        <div class="lc-page-header-extra">@Extra</div>
+    }
+</header>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Muted text beside the title, e.g. a count or version.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    /// <summary>Page-level actions shown at the end of the header, typically buttons.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-page-header").Add(Class).Build();
+    }
+}

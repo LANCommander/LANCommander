@@ -1,28 +1,25 @@
+@page "/Servers/{id:guid}/Monitor"
 @page "/Servers/{id:guid}/Monitor/{logId}"
 @using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <ServerEditView Id="Id" Title="Monitor">
-    <TitleExtraTemplate>
-        @if (context != null && context.Id != Guid.Empty)
-        {
-            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-                <ServerControl ServerId="context.Id" />
-            </Flex>
-        }
-    </TitleExtraTemplate>
-    
-    <ChildContent>
-        @if (LogId == "Console") {
-            <Console ServerId="@context.Id" />
-        }
-        else if (LogId != null && LogId != Guid.Empty.ToString())
-        {
-            <Console ServerId="@context.Id" ServerConsoleId="@Guid.Parse(LogId)" />
-        }
-    </ChildContent>
+    @* "Console" (or no log) is the server process's own output; otherwise the Id of a log file console *@
+    @if (LogId == null || LogId == "Console")
+    {
+        <Console ServerId="@context.Id" />
+    }
+    else if (Guid.TryParse(LogId, out var consoleId) && consoleId != Guid.Empty)
+    {
+        <Console @key="consoleId" ServerId="@context.Id" ServerConsoleId="consoleId" />
+    }
+    else
+    {
+        <NotFound SubTitle="This server has no such console." />
+    }
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    [Parameter] public string LogId { get; set; }
+    [Parameter] public string? LogId { get; set; }
 }

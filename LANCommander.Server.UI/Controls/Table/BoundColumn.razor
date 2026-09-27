@@ -1,0 +1,133 @@
+@namespace LANCommander.Server.UI.Controls
+@using System.ComponentModel.DataAnnotations
+@using System.Linq.Expressions
+@using System.Reflection
+@typeparam TItem
+@typeparam TProp
+@implements IDisposable
+
+@* A column showing, and sortable by, one value of each row *@
+<RadzenDataGridColumn TItem="TItem"
+                      Title="@_info.Title"
+                      SortProperty="@(Sortable ? _info.Key : null)"
+                      Sortable="Sortable"
+                      SortOrder="@Host?.InitialSortOrder(_info, DefaultSort)"
+                      Visible="@(Host?.IsVisible(_info, Hide) ?? !Hide)"
+                      Pickable="true"
+                      Width="@Width"
+                      TextAlign="@(AlignEnd ? TextAlign.Right : TextAlign.Left)">
+    <Template Context="item">
+        @if (ChildContent != null)
+        {
+            @ChildContent(item)
+        }
+        else
+        {
+            @Format(item)
+        }
+    </Template>
+</RadzenDataGridColumn>
+
+@code {
+    /// <summary>The row's value for this column, e.g. <c>g =&gt; g.Title</c>. Also what the column sorts by.</summary>
+    [Parameter, EditorRequired] public Expression<Func<TItem, TProp>> Property { get; set; } = default!;
+
+    /// <summary>Header text. Defaults to the property's [Display(Name)] or name.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Custom cell content; the value is rendered as text without it.</summary>
+    [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
+
+    [Parameter] public bool Sortable { get; set; }
+
+    /// <summary>Sort by this column until the user chooses another.</summary>
+    [Parameter] public ColumnSort DefaultSort { get; set; }
+
+    /// <summary>Hidden until shown through the column picker.</summary>
+    [Parameter] public bool Hide { get; set; }
+
+    /// <summary>Navigation properties to load for this column, comma separated, e.g. <c>Keys</c>.</summary>
+    [Parameter] public string? Include { get; set; }
+
+    /// <summary>A .NET format string for the value, e.g. <c>N0</c>.</summary>
+    [Parameter] public string? FormatString { get; set; }
+
+    [Parameter] public string? Width { get; set; }
+
+    /// <summary>Right-align the column, e.g. for numbers.</summary>
+    [Parameter] public bool AlignEnd { get; set; }
+
+    /// <summary>Identifies the column in remembered settings. Defaults to the property path or title.</summary>
+    [Parameter] public string? Key { get; set; }
+
+    [CascadingParameter] internal ITableHost? Host { get; set; }
+
+    TableColumnInfo _info = default!;
+    Func<TItem, TProp>? _getValue;
+
+    protected override void OnInitialized()
+    {
+        var path = MemberPath(Property.Body);
+
+        _info = new TableColumnInfo
+        {
+            Key = Key ?? path ?? Title ?? $"column-{Guid.NewGuid():N}",
+            Title = Title ?? DisplayName(Property.Body),
+            SortExpression = Property,
+            Includes = TableColumnIncludes.Parse(Include),
+        };
+
+        _getValue = Property.Compile();
+
+        Host?.Register(_info);
+    }
+
+    string? Format(TItem item)
+    {
+        object? value;
+
+        try
+        {
+            value = _getValue!(item);
+        }
+        catch (NullReferenceException)
+        {
+            // A navigation that wasn't loaded; show nothing rather than breaking the table
+            return null;
+        }
+
+        return value switch
+        {
+            null => null,
+            IFormattable formattable when FormatString != null => formattable.ToString(FormatString, null),
+            _ => value.ToString(),
+        };
+    }
+
+    /// <summary>"CreatedBy.UserName" for <c>g =&gt; g.CreatedBy.UserName</c>; null for anything but a member chain.</summary>
+    static string? MemberPath(Expression expression)
+    {
+        var names = new Stack<string>();
+
+        while (expression is MemberExpression member)
+        {
+            names.Push(member.Member.Name);
+            expression = member.Expression!;
+        }
+
+        return expression is ParameterExpression && names.Count > 0 ? string.Join('.', names) : null;
+    }
+
+    static string? DisplayName(Expression expression)
+    {
+        if (expression is UnaryExpression { NodeType: ExpressionType.Convert } convert)
+            expression = convert.Operand;
+
+        if (expression is not MemberExpression { Member: PropertyInfo property })
+            return null;
+
+        return property.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? property.Name;
+    }
+
+    public void Dispose() => Host?.Unregister(_info);
+}

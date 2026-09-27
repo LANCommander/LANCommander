@@ -1,0 +1,33 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@*
+    A fixed-width side column (usually a section Menu) beside the main content, e.g. the tabs of an
+    edit page. On narrow screens the side column stacks above the content.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@_style">
+    <aside class="lc-side-layout-side">
+        @Side
+    </aside>
+    <div class="lc-side-layout-content">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Side { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Width of the side column in pixels.</summary>
+    [Parameter] public int SideWidth { get; set; } = 200;
+
+    string? _class;
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-side-layout").Add(Class).Build();
+        _style = new StyleBuilder().Add("--lc-side-layout-width", $"{SideWidth}px").Add(Style).Build();
+    }
+}

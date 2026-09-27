@@ -1,0 +1,66 @@
+.lc-file-manager {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--rz-base-background-color);
+    border: 1px solid var(--rz-base-700);
+    border-radius: var(--rz-border-radius);
+}
+
+.lc-file-manager-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 8px;
+    border-bottom: 1px solid var(--rz-base-700);
+}
+
+.lc-file-manager-path {
+    flex: 1;
+    min-width: 0;
+    padding: 0 8px;
+    overflow: hidden;
+
+    .lc-breadcrumb {
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+}
+
+.lc-file-manager-upload {
+    padding: 8px;
+    border-bottom: 1px solid var(--rz-base-700);
+}
+
+.lc-file-manager-loading {
+    display: flex;
+    justify-content: center;
+    padding: 48px;
+}
+
+.lc-file-manager-body {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+}
+
+.lc-file-manager-tree {
+    padding: 8px 4px;
+    border-right: 1px solid var(--rz-base-700);
+    overflow: auto;
+
+    .lc-tree-label {
+        white-space: nowrap;
+    }
+}
+
+.lc-file-manager-entries {
+    overflow: auto;
+
+    .lc-table {
+        border: none;
+    }
+}

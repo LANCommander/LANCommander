@@ -1,0 +1,279 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@inherits ControlBase
+
+@*
+    A hierarchy of items that can be expanded, selected and, with Draggable, rearranged by dragging
+    an item before, after or into another.
+*@
+@* Firefox only starts a drag when dragstart sets data; Blazor handlers can't, so a bubbling inline handler does *@
+<ul @attributes="AdditionalAttributes" class="@_class" style="@Style" role="tree"
+    ondragstart="@(Draggable ? "event.dataTransfer && event.dataTransfer.setData('text/plain', '')" : null)">
+    @foreach (var item in Items ?? [])
+    {
+        @RenderNode(item, 1)
+    }
+</ul>
+
+@code {
+    /// <summary>The top-level items.</summary>
+    [Parameter, EditorRequired] public IEnumerable<TItem>? Items { get; set; }
+
+    /// <summary>An item's children, or null/empty for a leaf.</summary>
+    [Parameter] public Func<TItem, IEnumerable<TItem>?>? Children { get; set; }
+
+    /// <summary>A stable identity for each item, used to remember which are expanded. Defaults to the item itself.</summary>
+    [Parameter] public Func<TItem, object>? Key { get; set; }
+
+    /// <summary>An item's label, when there is no <see cref="ChildContent"/> template.</summary>
+    [Parameter] public Func<TItem, string?>? Text { get; set; }
+
+    /// <summary>Custom content for each item's row.</summary>
+    [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
+
+    /// <summary>An icon for each item, e.g. a folder or a file.</summary>
+    [Parameter] public Func<TItem, IconType>? Icon { get; set; }
+
+    /// <summary>The selected item.</summary>
+    [Parameter] public TItem? Value { get; set; }
+
+    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
+
+    /// <summary>Starts with every item expanded.</summary>
+    [Parameter] public bool ExpandAll { get; set; }
+
+    /// <summary>Lets items be dragged onto others; handle the move in <see cref="OnDrop"/>.</summary>
+    [Parameter] public bool Draggable { get; set; }
+
+    [Parameter] public EventCallback<TreeDrop<TItem>> OnDrop { get; set; }
+
+    /// <summary>Adds a checkbox to every item; the checked leaves are bound through <see cref="CheckedValues"/>.</summary>
+    [Parameter] public bool Checkable { get; set; }
+
+    /// <summary>
+    /// With <see cref="Checkable"/>: the checked items. Only leaves are listed; a parent shows as
+    /// checked when all of its leaves are, and checking it checks them all.
+    /// </summary>
+    [Parameter] public IEnumerable<TItem>? CheckedValues { get; set; }
+
+    [Parameter] public EventCallback<IEnumerable<TItem>> CheckedValuesChanged { get; set; }
+
+    /// <summary>Called just before an item is expanded, e.g. to load its grandchildren.</summary>
+    [Parameter] public EventCallback<TItem> OnExpand { get; set; }
+
+    readonly HashSet<object> _expanded = [];
+    readonly HashSet<object> _collapsed = [];
+    string? _class;
+    TItem? _dragged;
+    object? _dropTargetKey;
+    TreeDropPosition _dropPosition;
+
+    protected override void OnParametersSet()
+    {
+        UpdateClass();
+    }
+
+    void UpdateClass() =>
+        _class = new ClassBuilder()
+            .Add("lc-tree")
+            .If(Draggable, "lc-tree-draggable")
+            .If(_dragged != null, "lc-tree-dragging")
+            .Add(Class)
+            .Build();
+
+    object KeyOf(TItem item) => Key?.Invoke(item) ?? item!;
+
+    IReadOnlyList<TItem> ChildrenOf(TItem item) => Children?.Invoke(item)?.ToList() ?? [];
+
+    bool IsExpanded(TItem item)
+    {
+        var key = KeyOf(item);
+
+        return _expanded.Contains(key) || (ExpandAll && !_collapsed.Contains(key));
+    }
+
+    bool IsSelected(TItem item) => Value != null && Equals(KeyOf(Value), KeyOf(item));
+
+    async Task ToggleAsync(TItem item)
+    {
+        var key = KeyOf(item);
+
+        if (IsExpanded(item))
+        {
+            _expanded.Remove(key);
+            _collapsed.Add(key);
+        }
+        else
+        {
+            await OnExpand.InvokeAsync(item);
+
+            _collapsed.Remove(key);
+            _expanded.Add(key);
+        }
+    }
+
+    IEnumerable<TItem> Leaves(TItem item)
+    {
+        var children = ChildrenOf(item);
+
+        return children.Count == 0 ? [item] : children.SelectMany(Leaves);
+    }
+
+    /// <summary>True when every leaf under the item is checked, false when none is, null in between.</summary>
+    bool? CheckState(TItem item)
+    {
+        var checkedKeys = (CheckedValues ?? []).Select(KeyOf).ToHashSet();
+        var leaves = Leaves(item).ToList();
+        var count = leaves.Count(l => checkedKeys.Contains(KeyOf(l)));
+
+        return count == 0 ? false : count == leaves.Count ? true : null;
+    }
+
+    async Task ToggleCheckedAsync(TItem item)
+    {
+        var leafKeys = Leaves(item).Select(KeyOf).ToHashSet();
+        var current = (CheckedValues ?? []).ToList();
+
+        List<TItem> updated = CheckState(item) == true
+            ? current.Where(c => !leafKeys.Contains(KeyOf(c))).ToList()
+            : [.. current.Where(c => !leafKeys.Contains(KeyOf(c))), .. Leaves(item)];
+
+        CheckedValues = updated;
+
+        await CheckedValuesChanged.InvokeAsync(updated);
+    }
+
+    async Task SelectAsync(TItem item)
+    {
+        Value = item;
+
+        await ValueChanged.InvokeAsync(item);
+    }
+
+    RenderFragment RenderNode(TItem item, int level) => __builder =>
+    {
+        var children = ChildrenOf(item);
+        var expanded = children.Count > 0 && IsExpanded(item);
+        var key = KeyOf(item);
+
+        var nodeClass = new ClassBuilder()
+            .Add("lc-tree-node")
+            .If(IsSelected(item), "lc-tree-node-selected")
+            .If(Equals(_dropTargetKey, key) && _dropPosition == TreeDropPosition.Before, "lc-tree-drop-before")
+            .If(Equals(_dropTargetKey, key) && _dropPosition == TreeDropPosition.Inside, "lc-tree-drop-inside")
+            .If(Equals(_dropTargetKey, key) && _dropPosition == TreeDropPosition.After, "lc-tree-drop-after")
+            .Build();
+
+        <li class="lc-tree-item" role="treeitem" aria-level="@level" aria-selected="@(IsSelected(item) ? "true" : "false")" aria-expanded="@(children.Count > 0 ? (expanded ? "true" : "false") : null)">
+            <div class="@nodeClass"
+                 style="padding-inline-start: @((level - 1) * 20 + 4)px"
+                 draggable="@(Draggable ? "true" : null)"
+                 @onclick="() => SelectAsync(item)"
+                 @ondragstart="() => StartDrag(item)"
+                 @ondragover="args => DragOver(item, args)"
+                 @ondragover:preventDefault="Draggable"
+                 @ondragleave="() => _dropTargetKey = null"
+                 @ondrop="() => DropAsync(item)"
+                 @ondragend="EndDrag">
+                @if (children.Count > 0)
+                {
+                    <button type="button" class="lc-tree-toggle" aria-label="@(expanded ? "Collapse" : "Expand")" @onclick="() => ToggleAsync(item)" @onclick:stopPropagation="true">
+                        <Icon Type="IconType.CaretRight" Class="@(expanded ? "lc-tree-caret lc-tree-caret-open" : "lc-tree-caret")" />
+                    </button>
+                }
+                else
+                {
+                    <span class="lc-tree-toggle-spacer"></span>
+                }
+                @if (Checkable)
+                {
+                    var state = CheckState(item);
+
+                    <button type="button" role="checkbox" class="lc-tree-checkbox"
+                            aria-checked="@(state switch { true => "true", false => "false", _ => "mixed" })"
+                            aria-label="@(Text?.Invoke(item) ?? "Check")"
+                            @onclick="() => ToggleCheckedAsync(item)" @onclick:stopPropagation="true">
+                        <span class="@(state == false ? "rz-chkbox-box" : "rz-chkbox-box rz-state-active")">
+                            @if (state != false)
+                            {
+                                <Icon Type="@(state == true ? IconType.Check : IconType.Minus)" Bold />
+                            }
+                        </span>
+                    </button>
+                }
+                @if (Icon != null)
+                {
+                    <Icon Type="@Icon(item)" Class="lc-tree-icon" />
+                }
+                <span class="lc-tree-label">
+                    @if (ChildContent != null)
+                    {
+                        @ChildContent(item)
+                    }
+                    else
+                    {
+                        @Text?.Invoke(item)
+                    }
+                </span>
+            </div>
+            @if (expanded)
+            {
+                <ul class="lc-tree-children" role="group">
+                    @foreach (var child in children)
+                    {
+                        @RenderNode(child, level + 1)
+                    }
+                </ul>
+            }
+        </li>
+    };
+
+    void DragOver(TItem target, DragEventArgs args)
+    {
+        if (!Draggable || _dragged == null || Equals(KeyOf(_dragged), KeyOf(target)))
+            return;
+
+        // Top quarter of the row drops before it, bottom quarter after it, the middle into it
+        _dropPosition = args.OffsetY < 8 ? TreeDropPosition.Before
+            : args.OffsetY > 24 ? TreeDropPosition.After
+            : TreeDropPosition.Inside;
+
+        _dropTargetKey = KeyOf(target);
+    }
+
+    async Task DropAsync(TItem target)
+    {
+        if (!Draggable || _dragged == null || Equals(KeyOf(_dragged), KeyOf(target)) || IsDescendant(_dragged, target))
+        {
+            EndDrag();
+            return;
+        }
+
+        var drop = new TreeDrop<TItem>(_dragged, target, _dropPosition);
+
+        EndDrag();
+
+        if (drop.Position == TreeDropPosition.Inside)
+            _expanded.Add(KeyOf(target));
+
+        await OnDrop.InvokeAsync(drop);
+    }
+
+    /// <summary>Whether <paramref name="candidate"/> sits somewhere beneath <paramref name="ancestor"/>.</summary>
+    bool IsDescendant(TItem ancestor, TItem candidate) =>
+        ChildrenOf(ancestor).Any(child => Equals(KeyOf(child), KeyOf(candidate)) || IsDescendant(child, candidate));
+
+    void StartDrag(TItem item)
+    {
+        _dragged = item;
+        UpdateClass();
+    }
+
+    void EndDrag()
+    {
+        _dragged = default;
+        _dropTargetKey = null;
+        UpdateClass();
+    }
+}

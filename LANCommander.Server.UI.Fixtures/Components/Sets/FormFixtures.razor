@@ -1,0 +1,149 @@
+@implements IComponentFixtureSet
+
+@code {
+    static readonly SelectItem<string>[] Genres =
+    [
+        new("action", "Action"),
+        new("racing", "Racing"),
+        new("rts", "Real-Time Strategy"),
+        new("rpg", "Role-Playing", Disabled: true),
+    ];
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Form.Vertical", "A form with every input type, labels above the inputs",
+            @<SampleForm />)
+        {
+            Width = 480,
+            Covers = [typeof(Form), typeof(FormItem), typeof(TextInput), typeof(TextArea), typeof(NumberInput<>), typeof(Switch), typeof(Checkbox), typeof(Select<>), typeof(SelectOption<>), typeof(EnumSelect<>)],
+        },
+        new("Form.Validation", "Required and data annotation messages after validating",
+            @<SampleForm ShowErrors />)
+        {
+            Width = 480,
+            Covers = [typeof(Form), typeof(FormItem)],
+        },
+        new("Form.Horizontal", "Labels beside the inputs",
+            @<SampleForm Horizontal />)
+        {
+            Width = 640,
+            Covers = [typeof(Form)],
+        },
+        new("Form.Disabled", "A disabled form",
+            @<SampleForm Disabled />)
+        {
+            Width = 480,
+            Covers = [typeof(Form)],
+        },
+        new("Inputs.States", "Inputs empty, filled, with an icon, read-only and disabled",
+            @<Flex Vertical Gap="Gap.Small">
+                <TextInput Placeholder="Placeholder text" />
+                <TextInput Value="Arena Blitz" />
+                <TextInput Icon="IconType.MagnifyingGlass" Placeholder="Search games" />
+                <TextInput Value="Read-only" ReadOnly />
+                <TextInput Value="Disabled" Disabled />
+                <PasswordInput Value="hunter2" />
+                <NumberInput TValue="int?" Placeholder="No limit" />
+                <Flex Gap="Gap.Large">
+                    <Switch Value="true">On</Switch>
+                    <Switch Value="false">Off</Switch>
+                    <Switch Value="true" Disabled>Disabled</Switch>
+                </Flex>
+                <Flex Gap="Gap.Large">
+                    <Checkbox Value="true">Checked</Checkbox>
+                    <Checkbox Value="false">Unchecked</Checkbox>
+                    <Checkbox Value="true" Disabled>Disabled</Checkbox>
+                </Flex>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(TextInput), typeof(PasswordInput), typeof(NumberInput<>), typeof(Switch), typeof(Checkbox)],
+        },
+        new("Select.Open", "An open dropdown with a disabled choice",
+            @<div style="height: 220px">
+                <Select TValue="string" Items="Genres" Value="@("racing")" id="select-target" Clearable />
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Click = "#select-target",
+            WaitFor = ".rz-dropdown-panel li",
+            Covers = [typeof(Select<>)],
+        },
+        new("InputGroup.Sizes", "Joined inputs: a byte size with its unit, and a width by height",
+            @<Flex Vertical Gap="Gap.Small">
+                <ByteSizeInput Value="52428800" />
+                <ByteSizeInput Value="3221225472" Disabled />
+                <InputGroup>
+                    <NumberInput TValue="int" Value="1920" NoButtons Style="width: 90px" />
+                    <InputAddon>x</InputAddon>
+                    <NumberInput TValue="int" Value="1080" NoButtons Style="width: 90px" />
+                </InputGroup>
+                <TextInput Prefix="https://lan.example/" Value="games" />
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(InputGroup), typeof(InputAddon), typeof(ByteSizeInput)],
+        },
+        new("TagsInput.Genres", "Picked items as removable tags, with room to type more",
+            @<Flex Vertical Gap="Gap.Small">
+                <TagsInput TItem="SelectItem<string>" Items="Roles" Values="AssignedRoles" Text="r => r.Label" />
+                <TagsInput TItem="SelectItem<string>" Items="Roles" Text="r => r.Label" Placeholder="Type to add a role" />
+                <TagsInput TItem="SelectItem<string>" Items="Roles" Values="AssignedRoles" Text="r => r.Label" Disabled />
+            </Flex>)
+        {
+            Width = 420,
+            Covers = [typeof(TagsInput<>)],
+        },
+        new("DatePicker.States", "Dates with and without a time, and empty",
+            @<Flex Vertical Gap="Gap.Small">
+                <DatePicker TValue="DateTime?" Value="new DateTime(2004, 11, 16)" />
+                <DatePicker TValue="DateTime?" Value="new DateTime(2004, 11, 16, 20, 30, 0)" ShowTime />
+                <DatePicker TValue="DateTime?" Placeholder="Not released yet" Clearable />
+            </Flex>)
+        {
+            Width = 320,
+            Covers = [typeof(DatePicker<>)],
+        },
+        new("Slider.Values", "A slider part of the way along, and disabled",
+            @<Flex Vertical Gap="Gap.Large" Style="padding: 8px">
+                <Slider TValue="double" Value="200" Min="50" Max="400" />
+                <Slider TValue="int" Value="30" Disabled />
+            </Flex>)
+        {
+            Width = 320,
+            Covers = [typeof(Slider<>)],
+        },
+        new("AutoComplete.Open", "Suggestions filtered by what has been typed",
+            @<div style="height: 200px">
+                <AutoComplete Value="@("name")" Options="ClaimSuggestions" id="auto-complete-target" />
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Click = "#auto-complete-target input",
+            WaitFor = ".rz-autocomplete-panel li",
+            Covers = [typeof(AutoComplete)],
+        },
+        new("Transfer.Roles", "Roles split between available and assigned, with search",
+            @<Transfer TItem="SelectItem<string>" Items="Roles" Values="AssignedRoles" Text="r => r.Label" Key="r => r.Value"
+                       SourceTitle="Available" TargetTitle="Assigned" Searchable Style="height: 260px" />)
+        {
+            Width = 560,
+            Covers = [typeof(Transfer<>)],
+        },
+    ];
+
+    static readonly string[] ClaimSuggestions = ["name", "preferred_username", "given_name", "family_name", "nickname", "email"];
+
+    static readonly SelectItem<string>[] Roles =
+    [
+        new("admin", "Administrator"),
+        new("players", "Players"),
+        new("moderators", "Moderators"),
+        new("guests", "Guests"),
+        new("tournament", "Tournament Staff"),
+    ];
+
+    static readonly SelectItem<string>[] AssignedRoles = [Roles[1], Roles[4]];
+}

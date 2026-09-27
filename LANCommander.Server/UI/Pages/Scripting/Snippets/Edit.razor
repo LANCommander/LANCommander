@@ -3,84 +3,83 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ScriptService ScriptService
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Edit> Logger
+@inject NotificationService Notifications
 
-<PageHeader Title="@(IsNew ? "Add Snippet" : $"{Snippet.Group} / {Snippet.Name}")">
-    <PageHeaderExtra>
-        <Flex Gap="FlexGap.Small">
-            <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Snippets"))">Back</Button>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </Flex>
-    </PageHeaderExtra>
+<PageHeader Title="@(IsNew ? "Add Snippet" : $"{_snippet.Group} / {_snippet.Name}")">
+    <Extra>
+        <Button Icon="IconType.ArrowLeft" Href="/Scripting/Snippets">Back</Button>
+        <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Form Model="@Snippet" Layout="@FormLayout.Vertical">
-        <FormItem Label="Group">
-            <Input @bind-Value="@context.Group" />
-        </FormItem>
-        <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" />
-        </FormItem>
+    <Form Model="_snippet" @ref="_form">
+        <Row Gap="Gap.Medium">
+            <Column Span="12">
+                <FormItem Label="Group" Required>
+                    <TextInput @bind-Value="_snippet.Group" />
+                </FormItem>
+            </Column>
+            <Column Span="12">
+                <FormItem Label="Name" Required>
+                    <TextInput @bind-Value="_snippet.Name" />
+                </FormItem>
+            </Column>
+        </Row>
         <FormItem Label="Content">
-            <PowerShellScriptEditor @bind-Value="@context.Content" OnSave="Save" Height="500" />
+            <PowerShellScriptEditor @bind-Value="_snippet.Content" OnSave="Save" Height="500" />
         </FormItem>
     </Form>
 </PageContent>
 
 @code {
-    [Parameter] public string Group { get; set; }
-    [Parameter] public string Name { get; set; }
+    [Parameter] public string? Group { get; set; }
+    [Parameter] public string? Name { get; set; }
 
-    Snippet Snippet { get; set; } = new();
-
-    string _originalGroup;
-    string _originalName;
+    Form? _form;
+    Snippet _snippet = new();
+    string? _originalGroup;
+    string? _originalName;
 
     bool IsNew => string.IsNullOrEmpty(_originalName);
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrEmpty(Name))
-        {
-            var snippet = ScriptService.GetSnippet(Group, Name);
+        if (string.IsNullOrEmpty(Name))
+            return;
 
-            if (snippet != null)
-            {
-                Snippet = snippet;
-                _originalGroup = snippet.Group;
-                _originalName = snippet.Name;
-            }
+        var snippet = ScriptService.GetSnippet(Group, Name);
+
+        if (snippet != null)
+        {
+            _snippet = snippet;
+            _originalGroup = snippet.Group;
+            _originalName = snippet.Name;
         }
     }
 
     void Save()
     {
+        if (_form != null && !_form.Validate())
+            return;
+
         try
         {
-            if (string.IsNullOrWhiteSpace(Snippet.Group) || string.IsNullOrWhiteSpace(Snippet.Name))
-            {
-                MessageService.Error("Group and Name are required.");
-                return;
-            }
-
-            if (!IsNew && (_originalGroup != Snippet.Group || _originalName != Snippet.Name))
+            if (!IsNew && (_originalGroup != _snippet.Group || _originalName != _snippet.Name))
                 ScriptService.DeleteSnippet(_originalGroup, _originalName);
 
-            ScriptService.SaveSnippet(Snippet);
+            ScriptService.SaveSnippet(_snippet);
 
-            _originalGroup = Snippet.Group;
-            _originalName = Snippet.Name;
+            _originalGroup = _snippet.Group;
+            _originalName = _snippet.Name;
 
-            MessageService.Success("Snippet saved!");
+            Notifications.Success("Snippet saved!");
 
             NavigationManager.NavigateTo("/Scripting/Snippets");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save snippet!");
-            Logger?.LogError(ex, "Could not save snippet");
+            Notifications.Error(ex, "Could not save snippet!");
         }
     }
 }

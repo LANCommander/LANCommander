@@ -1,4 +1,6 @@
 using Bunit;
+using LANCommander.Server.Services;
+using Microsoft.Extensions.DependencyInjection;
 using UsersIndex = LANCommander.Server.UI.Pages.Settings.Users.Index;
 
 namespace LANCommander.Server.UI.Tests.Components;
@@ -25,5 +27,28 @@ public class UserManagementComponentTests : BUnitTestContext
         cut.WaitForAssertion(
             () => Assert.Contains(TestConstants.AdminUserName, cut.Markup),
             timeout: TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public void Users_DeletingTheOnlyAdministrator_IsRefused()
+    {
+        var cut = Render<UsersIndex>();
+
+        cut.WaitForAssertion(
+            () => Assert.Contains(TestConstants.AdminUserName, cut.Markup),
+            timeout: TimeSpan.FromSeconds(10));
+
+        var row = cut.FindAll("tr.rz-data-row").First(r => r.TextContent.Contains(TestConstants.AdminUserName));
+
+        row.QuerySelector("button[title=Delete]")!.Click();
+        cut.WaitForAssertion(() => cut.FindAll(".lc-popconfirm-actions button").First(b => b.TextContent.Contains("Delete")).Click());
+
+        var notifications = Services.GetRequiredService<Radzen.NotificationService>();
+
+        cut.WaitForAssertion(() => Assert.Contains(notifications.Messages, m => m.Summary == "Cannot delete the only administrator!"));
+
+        var userService = Services.GetRequiredService<UserService>();
+
+        Assert.NotNull(userService.GetAsync(TestConstants.AdminUserName).GetAwaiter().GetResult());
     }
 }

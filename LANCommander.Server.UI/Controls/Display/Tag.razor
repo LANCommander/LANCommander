@@ -1,0 +1,58 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<span @attributes="AdditionalAttributes"
+      class="@_class"
+      style="@_style"
+      role="@(OnClick.HasDelegate ? "button" : null)"
+      tabindex="@(OnClick.HasDelegate ? "0" : null)"
+      @onclick="OnClick">
+    @if (Icon != IconType.None)
+    {
+        <Icon Type="Icon" />
+    }
+    <span class="lc-tag-text">@ChildContent</span>
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Makes the tag clickable.</summary>
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter] public bool Primary { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Info { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>A custom colour (any CSS colour) for user-defined tags. Overrides the status flags.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    string? _class;
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        var status = StatusResolver.Resolve(Primary, Success, Info, Warning, Danger);
+
+        _class = new ClassBuilder()
+            .Add("lc-tag")
+            .If(Color == null && status != Status.None, $"lc-tag-{status.ClassSuffix()}")
+            .If(Color != null, "lc-tag-custom")
+            .If(OnClick.HasDelegate, "lc-tag-clickable")
+            .Add(Class)
+            .Build();
+
+        _style = new StyleBuilder()
+            .Add("--lc-tag-color", Color)
+            .Add(Style)
+            .Build();
+    }
+}

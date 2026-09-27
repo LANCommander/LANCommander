@@ -1,0 +1,78 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.UI.Providers
+@implements IDisposable
+@inject TimeProvider TimeProvider
+
+@* A UTC timestamp shown in the browser's time zone, optionally as "3 days ago" with the exact time on hover *@
+@if (Value is { } value && value != DateTime.MinValue)
+{
+    if (Relative)
+    {
+        <Tooltip Title="@Absolute(value)">
+            <time datetime="@value.ToString("O")">@RelativeTo(value)</time>
+        </Tooltip>
+    }
+    else
+    {
+        <time datetime="@value.ToString("O")">@Absolute(value)</time>
+    }
+}
+
+@code {
+    /// <summary>The moment to show, in UTC (as stored).</summary>
+    [Parameter] public DateTime? Value { get; set; }
+
+    /// <summary>"3 days ago" instead of the date and time.</summary>
+    [Parameter] public bool Relative { get; set; }
+
+    [Parameter] public string Format { get; set; } = "MM/dd/yyyy hh:mm tt";
+
+    protected override void OnInitialized()
+    {
+        if (TimeProvider is LocalTimeProvider localTimeProvider)
+            localTimeProvider.LocalTimeZoneChanged += LocalTimeZoneChanged;
+    }
+
+    void LocalTimeZoneChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    string Absolute(DateTime value)
+    {
+        var local = value.Kind == DateTimeKind.Local
+            ? value
+            : TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeProvider.LocalTimeZone);
+
+        return local.ToString(Format);
+    }
+
+    string RelativeTo(DateTime value)
+    {
+        var utc = value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+        return Describe(TimeProvider.GetUtcNow().UtcDateTime - utc);
+    }
+
+    /// <summary>How long ago <paramref name="elapsed"/> was, in words.</summary>
+    public static string Describe(TimeSpan elapsed) => elapsed switch
+    {
+        { TotalSeconds: < 5 } => "Just now",
+        { TotalMinutes: < 1 } => $"{(int)elapsed.TotalSeconds} seconds ago",
+        { TotalMinutes: < 2 } => "A minute ago",
+        { TotalHours: < 1 } => $"{(int)elapsed.TotalMinutes} minutes ago",
+        { TotalHours: < 2 } => "An hour ago",
+        { TotalHours: < 24 } => $"{(int)elapsed.TotalHours} hours ago",
+        { TotalDays: < 2 } => "Yesterday",
+        { TotalDays: < 7 } => $"{(int)elapsed.TotalDays} days ago",
+        { TotalDays: < 14 } => "A week ago",
+        { TotalDays: < 31 } => $"{(int)(elapsed.TotalDays / 7)} weeks ago",
+        { TotalDays: < 60 } => "A month ago",
+        { TotalDays: < 365 } => $"{(int)(elapsed.TotalDays / 30)} months ago",
+        { TotalDays: < 730 } => "A year ago",
+        _ => $"{(int)(elapsed.TotalDays / 365)} years ago",
+    };
+
+    public void Dispose()
+    {
+        if (TimeProvider is LocalTimeProvider localTimeProvider)
+            localTimeProvider.LocalTimeZoneChanged -= LocalTimeZoneChanged;
+    }
+}

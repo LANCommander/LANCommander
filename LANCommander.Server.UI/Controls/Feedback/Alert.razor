@@ -1,0 +1,74 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<RadzenAlert Attributes="_attributes"
+             Style="@Style"
+             AlertStyle="_alertStyle"
+             Variant="Variant.Flat"
+             Shade="Shade.Lighter"
+             ShowIcon="false"
+             AllowClose="Closable"
+             Close="OnClose">
+    <div class="lc-alert-body">
+        @if (!NoIcon)
+        {
+            <Icon Type="@(Icon == IconType.None ? _status.Icon() : Icon)" Fill Class="lc-alert-icon" />
+        }
+        <div class="lc-alert-content">
+            @if (Title != null)
+            {
+                <div class="lc-alert-title">@Title</div>
+            }
+            @ChildContent
+        </div>
+    </div>
+</RadzenAlert>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>A bold first line, for alerts that also have a longer explanation.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Info { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>Replaces the status's usual icon.</summary>
+    [Parameter] public IconType Icon { get; set; }
+
+    [Parameter] public bool NoIcon { get; set; }
+
+    /// <summary>Shows a close button; the alert hides itself when it is pressed.</summary>
+    [Parameter] public bool Closable { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Status _status;
+    AlertStyle _alertStyle;
+    Dictionary<string, object> _attributes = new();
+
+    protected override void OnParametersSet()
+    {
+        _status = StatusResolver.Resolve(success: Success, info: Info, warning: Warning, danger: Danger);
+
+        // An alert with no status is informational
+        if (_status == Status.None)
+            _status = Status.Info;
+
+        _alertStyle = _status switch
+        {
+            Status.Success => AlertStyle.Success,
+            Status.Warning => AlertStyle.Warning,
+            Status.Danger => AlertStyle.Danger,
+            _ => AlertStyle.Info,
+        };
+
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder().Add("lc-alert").Add(Class).Build()!;
+    }
+}

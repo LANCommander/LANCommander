@@ -1,0 +1,19 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("ByteSize.Magnitudes", "Byte counts from bytes up to terabytes",
+            @<ul style="margin: 0; padding-left: 20px">
+                <li><ByteSize Value="0" /></li>
+                <li><ByteSize Value="512" /></li>
+                <li><ByteSize Value="1536" /></li>
+                <li><ByteSize Value="187_000_000" /></li>
+                <li><ByteSize Value="4_700_000_000" /></li>
+                <li><ByteSize Value="2_199_023_255_552" /></li>
+            </ul>)
+        {
+            Width = 240,
+        },
+    ];
+}

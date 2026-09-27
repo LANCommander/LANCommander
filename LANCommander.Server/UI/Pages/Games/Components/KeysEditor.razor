@@ -1,122 +1,79 @@
-@using LANCommander.SDK.Enums
 @inject KeyService KeyService
-@inject ModalService ModalService
-@inject IMessageService MessageService
-@inject ILogger<KeysEditor> Logger
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 
-@if (_keys != null)
-{
-    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
-        <GridRow>
-            <GridCol Span="8">
-                <Statistic Title="Available" Value="_keys.Count - _allocatedKeys" Style="text-align: center;" />
-            </GridCol>
-            <GridCol Span="8">
-                <Statistic Title="Allocated" Value="_allocatedKeys" Style="text-align: center;" />
-            </GridCol>
-            <GridCol Span="8">
-                <Statistic Title="Total" Value="_keys.Count" Style="text-align: center;" />
-            </GridCol>
-        </GridRow>
-        
-        <DataTable @ref="_dataTable"
-            TItem="Key"
-            Responsive
-            Query="k => k.GameId == GameId">
-            <RightToolbar>
-                <Button Type="@ButtonType.Default" OnClick="() => Edit()">Edit</Button>
-                <Button Type="@ButtonType.Primary" OnClick="() => Save()">Save</Button>
-            </RightToolbar>
-            <Columns>
-                <BoundDataColumn Property="k => k.Value">
-                    <InputPassword @bind-Value="@context.Value"/>
-                </BoundDataColumn>
-                <DataColumn TData="string" Title="Allocation Method">
-                    @if (context.AllocationMethod.HasValue)
-                    {
-                        @context.AllocationMethod.Value.GetDisplayName()
-                    }
-                </DataColumn>
-                <DataColumn TData="string" Title="Claimed By" Include="ClaimedByUser">
-                    @switch (context.AllocationMethod)
-                    {
-                        case KeyAllocationMethod.MacAddress:
-                            <text>@context.ClaimedByMacAddress</text>
-                            break;
+@* The CD keys of the game whose Id is cascaded, and who each is allocated to *@
+<Flex Vertical Gap="Gap.Medium">
+    <Row Class="keys-statistics">
+        <Column Span="8"><Statistic Title="Available" Value="@((_keys.Count - _allocatedKeys).ToString())" /></Column>
+        <Column Span="8"><Statistic Title="Allocated" Value="@_allocatedKeys.ToString()" /></Column>
+        <Column Span="8"><Statistic Title="Total" Value="@_keys.Count.ToString()" /></Column>
+    </Row>
 
-                        case KeyAllocationMethod.UserAccount:
-                            <text>@context.ClaimedByUser?.UserName</text>
-                            break;
-                    }
-                </DataColumn>
-                <BoundDataColumn Property="s => s.ClaimedOn" Title="Claimed" Sortable>
-                    @if (context.ClaimedOn.HasValue)
-                    {
-                        <LocalTime Value="context.ClaimedOn" Relative />
-                    }
-                </BoundDataColumn>
-                <DataActions TData="string">
-                    <Dropdown>
-                        <Overlay>
-                            <Menu>
-                                @if (!context.IsAllocated())
-                                {
-                                    <MenuItem OnClick="() => Assign(context)">Assign</MenuItem>
-                                }
-                                @if (context.IsAllocated())
-                                {
-                                    <MenuItem OnClick="() => Release(context)">Release</MenuItem>
-                                }
-                                <Popconfirm Title="Are you sure you want to remove this key?" OnConfirm="() => Remove(context)">
-                                    <MenuItem>Remove</MenuItem>
-                                </Popconfirm>
-                            </Menu>
-                        </Overlay>
-                        <ChildContent>
-                            <Button Icon="@IconType.Outline.Ellipsis" />
-                        </ChildContent>
-                    </Dropdown>
-                </DataActions>
-            </Columns>
-        </DataTable>
-    </Flex>
+    <DataTable @ref="_dataTable" TItem="Key" Small SettingsKey="game-keys" Query="k => k.GameId == GameId">
+        <RightToolbar>
+            <Button Icon="IconType.PencilSimple" OnClick="EditAsync">Edit</Button>
+            <Button Primary OnClick="SaveValuesAsync">Save</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="k => k.Value" Sortable>
+                <PasswordInput @bind-Value="context.Value" @bind-Value:after="() => _changed.Add(context)" Small />
+            </BoundColumn>
+            <BoundColumn Property="k => k.AllocationMethod" Title="Allocation Method" Sortable>
+                @context.AllocationMethod?.GetDisplayName()
+            </BoundColumn>
+            <TemplateColumn TItem="Key" Title="Claimed By" Include="ClaimedByUser">
+                @switch (context.AllocationMethod)
+                {
+                    case KeyAllocationMethod.MacAddress:
+                        @context.ClaimedByMacAddress
+                        break;
 
-    <Modal Title="Edit Keys" Visible="_editModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => _editModalVisible = false" OnOk="Save">
-        <StandaloneCodeEditor @ref="_editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
-    </Modal>
-}
-
-<style>
-    .monaco-editor-container {
-        height: 600px;
-    }
-</style>
+                    case KeyAllocationMethod.UserAccount:
+                        @context.ClaimedByUser?.UserName
+                        break;
+                }
+            </TemplateColumn>
+            <BoundColumn Property="k => k.ClaimedOn" Title="Claimed" Sortable>
+                @if (context.ClaimedOn.HasValue)
+                {
+                    <LocalTime Value="context.ClaimedOn" Relative />
+                }
+            </BoundColumn>
+            <ActionsColumn TItem="Key">
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @if (!context.IsAllocated())
+                            {
+                                <MenuItem Icon="IconType.UserPlus" OnClick="() => AssignAsync(context)">Assign</MenuItem>
+                            }
+                            else
+                            {
+                                <MenuItem Icon="IconType.UserMinus" OnClick="() => ReleaseAsync(context)">Release</MenuItem>
+                            }
+                            <MenuItem Icon="IconType.Trash" Danger OnClick="() => RemoveAsync(context)">Remove</MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Text Icon="IconType.DotsThree" title="More" />
+                    </ChildContent>
+                </Dropdown>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</Flex>
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
     ICollection<Key> _keys = new List<Key>();
+    readonly HashSet<Key> _changed = new();
 
     Guid _loadedGameId;
-
     int _allocatedKeys;
-    bool _editModalVisible = false;
 
     DataTable<Key>? _dataTable;
-    StandaloneCodeEditor? _editor;
-
-    StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
-    {
-        return new StandaloneEditorConstructionOptions
-        {
-            AutomaticLayout = true,
-            Language = "text",
-            Value = EditorContents(),
-            Theme = "vs-dark",
-        };
-    }
-
-    string EditorContents() => String.Join('\n', _keys.Select(k => k.Value));
 
     protected override async Task OnParametersSetAsync()
     {
@@ -126,119 +83,114 @@
         _loadedGameId = GameId;
 
         await LoadKeysAsync();
-
-        if (_dataTable != null)
-            await _dataTable.ReloadAsync();
     }
 
     async Task LoadKeysAsync()
     {
         _keys = await KeyService.GetAsync(k => k.GameId == GameId);
-
         _allocatedKeys = _keys.Count(k => k.IsAllocated());
     }
 
-    async Task Edit()
+    async Task ReloadAsync()
     {
-        if (_editor != null)
-            await _editor.SetValue(EditorContents());
-
-        _editModalVisible = true;
-    }
-
-    async Task Assign(Key key)
-    {
-        var modalOptions = new ModalOptions()
-        {
-            Title = "Assign Key",
-            Maximizable = false,
-            DefaultMaximized = false,
-            Closable = true,
-            Draggable = true,
-            OkText = "Assign"
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<AssignKeyDialog, Guid, bool>(modalOptions, key.Id);
-
-        modalRef.OnOk = async (result) =>
-        {
-            await LoadKeysAsync();
-
-            if (_dataTable != null)
-                await _dataTable.ReloadAsync();
-
-            await InvokeAsync(StateHasChanged);
-        };
-    }
-
-    async Task Remove(Key key)
-    {
-        await KeyService.DeleteAsync(key);
+        _changed.Clear();
 
         await LoadKeysAsync();
 
         if (_dataTable != null)
             await _dataTable.ReloadAsync();
-
-        await MessageService.SuccessAsync("Key was removed!");
     }
 
-    async Task Release(Key key)
-    {
-        await KeyService.ReleaseAsync(key);
-
-        await LoadKeysAsync();
-
-        if (_dataTable != null)
-            await _dataTable.ReloadAsync();
-
-        await MessageService.SuccessAsync("Key was unallocated!");
-    }
-
-    async Task Save()
+    // Keys edited in the table
+    async Task SaveValuesAsync()
     {
         try
         {
-            if (_editor == null)
-            {
-                _editModalVisible = false;
-                return;
-            }
+            foreach (var key in _changed)
+                await KeyService.UpdateAsync(key);
 
-            var value = await _editor.GetValue();
-            var keys = value
-                .Split("\n")
+            Notifications.Success(_changed.Count == 1 ? "Key updated!" : "Keys updated!");
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not update keys!");
+        }
+    }
+
+    // Every key at once, one per line
+    async Task EditAsync()
+    {
+        var text = await Dialogs.OpenAsync<KeysEditDialog, string, string>("Edit Keys", String.Join('\n', _keys.Select(k => k.Value)), new DialogSettings
+        {
+            Size = DialogSize.Large,
+            OkText = "Save",
+        });
+
+        if (text == null)
+            return;
+
+        try
+        {
+            var keys = text
+                .Split('\n')
                 .Select(k => k.Trim())
                 .Where(k => !String.IsNullOrWhiteSpace(k))
                 .Distinct()
                 .ToList();
 
-            var keysDeleted = _keys.Where(k => !keys.Contains(k.Value)).ToList();
-            var keysAdded = keys.Where(k => !_keys.Any(gk => gk.Value == k)).ToList();
-
-            foreach (var key in keysDeleted)
+            foreach (var key in _keys.Where(k => !keys.Contains(k.Value)).ToList())
                 await KeyService.DeleteAsync(key);
 
-            foreach (var key in keysAdded)
-                await KeyService.AddAsync(new Key()
-                {
-                    GameId = GameId,
-                    Value = key
-                });
+            foreach (var key in keys.Where(k => !_keys.Any(gk => gk.Value == k)))
+                await KeyService.AddAsync(new Key { GameId = GameId, Value = key });
 
-            _editModalVisible = false;
+            Notifications.Success("Keys updated!");
 
-            await LoadKeysAsync();
-
-            if (_dataTable != null)
-                await _dataTable.ReloadAsync();
-
-            MessageService.Success("Keys updated!");
+            await ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.ErrorAsync("Could not update keys!");
-            Logger.LogError(ex, "Could not update keys!");
+            Notifications.Error(ex, "Could not update keys!");
+        }
+    }
+
+    async Task AssignAsync(Key key)
+    {
+        if (await Dialogs.OpenAsync<AssignKeyDialog, Guid, bool>("Assign Key", key.Id, new DialogSettings { OkText = "Assign" }))
+            await ReloadAsync();
+    }
+
+    async Task RemoveAsync(Key key)
+    {
+        try
+        {
+            await KeyService.DeleteAsync(key);
+
+            Notifications.Success("Key was removed!");
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The key could not be removed");
+        }
+    }
+
+    async Task ReleaseAsync(Key key)
+    {
+        try
+        {
+            await KeyService.ReleaseAsync(key);
+
+            Notifications.Success("Key was unallocated!");
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The key could not be released");
         }
     }
 }

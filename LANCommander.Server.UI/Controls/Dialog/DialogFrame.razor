@@ -1,0 +1,101 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+@typeparam TDialog where TDialog : Dialog<TOptions, TResult>
+@typeparam TOptions
+@typeparam TResult
+@implements IDialogFrame
+@inject Radzen.DialogService RadzenDialogs
+
+@* Wraps a Dialog opened through DialogService: its content, an error area and the OK/Cancel footer *@
+<div class="lc-dialog">
+    <div class="lc-dialog-body">
+        @if (_error != null)
+        {
+            <Alert Danger Closable OnClose="() => _error = null">@_error</Alert>
+        }
+
+        <CascadingValue Value="(IDialogFrame)this" IsFixed>
+            <DynamicComponent Type="typeof(TDialog)" Parameters="_parameters" @ref="_content" />
+        </CascadingValue>
+    </div>
+
+    @if (!Settings.NoFooter)
+    {
+        <div class="lc-dialog-footer">
+            @if (!Settings.NoCancel)
+            {
+                <Button Disabled="_busy" OnClick="CancelAsync">@Settings.CancelText</Button>
+            }
+            <Button Primary Danger="Settings.Danger" Loading="_busy" Disabled="!_canConfirm" OnClick="ConfirmAsync">@Settings.OkText</Button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TOptions Options { get; set; } = default!;
+
+    [Parameter] public DialogSettings Settings { get; set; } = new();
+
+    /// <summary>Opened as a side drawer rather than a centred window.</summary>
+    [Parameter] public bool Drawer { get; set; }
+
+    DynamicComponent? _content;
+    Dictionary<string, object?> _parameters = new();
+    string? _error;
+    bool _busy;
+    bool _canConfirm = true;
+
+    TDialog? Dialog => _content?.Instance as TDialog;
+
+    protected override void OnParametersSet()
+    {
+        _parameters = new Dictionary<string, object?> { [nameof(Dialog<TOptions, TResult>.Options)] = Options };
+    }
+
+    public async Task ConfirmAsync()
+    {
+        if (Dialog == null || _busy || !_canConfirm)
+            return;
+
+        _busy = true;
+        _error = null;
+
+        try
+        {
+            if (await Dialog.InvokeOkAsync())
+                await CloseAsync(Dialog.ResultInternal);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    Task CancelAsync() => CloseAsync(default(TResult));
+
+    public Task CloseAsync(object? result)
+    {
+        if (Drawer)
+            RadzenDialogs.CloseSide(result);
+        else
+            RadzenDialogs.Close(result);
+
+        return Task.CompletedTask;
+    }
+
+    public void ContentRendered()
+    {
+        var canConfirm = Dialog?.CanConfirmInternal ?? true;
+
+        // Only re-render on change: re-rendering the frame re-renders the content, which calls back here
+        if (canConfirm != _canConfirm)
+        {
+            _canConfirm = canConfirm;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+}

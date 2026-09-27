@@ -1,0 +1,25 @@
+.lc-alert {
+    margin: 0 0 1rem;
+
+    .lc-alert-body {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .lc-alert-icon {
+        flex-shrink: 0;
+        margin-top: 0.1em;
+        font-size: 1.25em;
+    }
+
+    .lc-alert-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .lc-alert-title {
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+}

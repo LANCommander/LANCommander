@@ -14,7 +14,6 @@ function Build-Launcher {
 
     dotnet restore
 
-    npm install --prefix ./LANCommander.UI
     npm install --prefix ./LANCommander.Launcher
 
     dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"

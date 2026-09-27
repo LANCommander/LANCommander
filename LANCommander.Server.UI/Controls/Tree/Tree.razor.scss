@@ -1,0 +1,116 @@
+.lc-tree,
+.lc-tree-children {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-tree-node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding-inline-end: 8px;
+    border-radius: var(--rz-border-radius);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+        background: var(--rz-base-700);
+    }
+}
+
+.lc-tree-node-selected {
+    background: var(--rz-primary-lighter);
+    color: var(--rz-primary-light);
+
+    &:hover {
+        background: var(--rz-primary-lighter);
+    }
+}
+
+.lc-tree-toggle,
+.lc-tree-toggle-spacer {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.lc-tree-toggle {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--rz-text-secondary-color);
+    cursor: pointer;
+}
+
+.lc-tree-caret {
+    transition: transform 0.15s;
+}
+
+.lc-tree-caret-open {
+    transform: rotate(90deg);
+}
+
+.lc-tree-icon {
+    flex-shrink: 0;
+    color: var(--rz-text-secondary-color);
+}
+
+.lc-tree-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// Where a dragged item would land
+.lc-tree-drop-inside {
+    outline: 1px dashed var(--rz-primary);
+    outline-offset: -1px;
+}
+
+.lc-tree-drop-before::before,
+.lc-tree-drop-after::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    height: 2px;
+    background: var(--rz-primary);
+}
+
+.lc-tree-drop-before::before {
+    top: 0;
+}
+
+.lc-tree-drop-after::after {
+    bottom: 0;
+}
+
+// Drag offsets are measured against the element under the pointer; keep that the row itself
+.lc-tree-dragging .lc-tree-node * {
+    pointer-events: none;
+}
+
+.lc-tree-checkbox {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    .rz-chkbox-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--rz-on-primary);
+        font-size: 12px;
+    }
+}

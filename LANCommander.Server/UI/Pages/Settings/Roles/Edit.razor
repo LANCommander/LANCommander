@@ -1,86 +1,97 @@
-﻿@page "/Settings/Roles/{id:guid}"
+@page "/Settings/Roles/{id:guid}"
 @using Microsoft.EntityFrameworkCore
 @inject RoleService RoleService
 @inject CollectionService CollectionService
-@inject IMessageService MessageService
-@inject ILogger<Edit> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Edit Role">
-    <PageHeaderExtra>
-        <Space Direction="SpaceDirection.Horizontal">
-            <SpaceItem>
-                <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary Loading="_saving" OnClick="SaveAsync">Save</Button>
+    </Extra>
 </PageHeader>
 
-<PageContent>
-    <Form Model="@Role" Layout="@FormLayout.Vertical">
-        <FormItem Label="Name">
-            <Input @bind-Value="Role.Name" />
-        </FormItem>
-        <FormItem Label="Collections">
-            <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="SelectedCollections" />
-        </FormItem>
-        <FormItem Label="Storage Quota (MB)" Help="0 or blank = unlimited">
-            <AntDesign.InputNumber TValue="int?" @bind-Value="Role.StorageQuotaMB" Min="0" />
-        </FormItem>
-        <FormItem Label="Download Speed (KB/s)" Help="0 or blank = unlimited">
-            <AntDesign.InputNumber TValue="int?" @bind-Value="Role.DownloadSpeedKBps" Min="0" />
-        </FormItem>
-        <FormItem Label="Cloud Saves" Help="Disable cloud saves for users in this role">
-            <Select TItemValue="bool?" TItem="bool?" @bind-Value="Role.EnableSaves">
-                <SelectOptions>
-                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)null" Label="Not set" />
-                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)true" Label="Enabled" />
-                    <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)false" Label="Disabled" />
-                </SelectOptions>
-            </Select>
-        </FormItem>
-    </Form>
+<PageContent Loading="!_loaded">
+    @if (Role == null)
+    {
+        <NotFound SubTitle="This role does not exist." />
+    }
+    else
+    {
+        <Form Model="Role" OnSubmit="SaveAsync">
+            <FormItem Label="Name">
+                <TextInput @bind-Value="Role.Name" />
+            </FormItem>
+            <FormItem Label="Collections">
+                <Transfer TItem="Collection" Items="Collections" @bind-Values="SelectedCollections" Text="c => c.Name" SourceTitle="Available" TargetTitle="Allowed" Searchable Style="height: 320px" />
+            </FormItem>
+            <FormItem Label="Storage Quota (MB)" Help="0 or blank = unlimited">
+                <NumberInput TValue="int?" @bind-Value="Role.StorageQuotaMB" Min="0" />
+            </FormItem>
+            <FormItem Label="Download Speed (KB/s)" Help="0 or blank = unlimited">
+                <NumberInput TValue="int?" @bind-Value="Role.DownloadSpeedKBps" Min="0" />
+            </FormItem>
+            <FormItem Label="Cloud Saves" Help="Disable cloud saves for users in this role">
+                <Select TValue="bool?" Items="SaveOptions" @bind-Value="Role.EnableSaves" />
+            </FormItem>
+        </Form>
+    }
 </PageContent>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Role Role = new Role();
-    IEnumerable<Collection> Collections = new List<Collection>();
+    static readonly SelectItem<bool?>[] SaveOptions =
+    [
+        new(null, "Not set"),
+        new(true, "Enabled"),
+        new(false, "Disabled"),
+    ];
 
-    ICollection<Collection> SelectedCollections = new List<Collection>();
+    Role? Role;
+    IEnumerable<Collection> Collections = new List<Collection>();
+    IEnumerable<Collection> SelectedCollections = new List<Collection>();
+    bool _loaded;
+    bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
         Role = await RoleService
             .AsNoTracking()
-            .Query(q =>
-            {
-                return q
-                    .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User);
-            })
+            .Query(q => q
+                .Include(r => r.UserRoles)
+                .ThenInclude(ur => ur.User))
             .Include(r => r.Collections)
             .GetAsync(Id);
 
-        SelectedCollections = Role.Collections;
-        
-        Collections = await CollectionService.GetAsync();
+        if (Role != null)
+        {
+            SelectedCollections = Role.Collections;
+
+            Collections = await CollectionService.GetAsync();
+        }
+
+        _loaded = true;
     }
 
-    async Task Save()
+    async Task SaveAsync()
     {
+        _saving = true;
+
         try
         {
-            await RoleService.UpdateAsync(Role);
+            await RoleService.UpdateAsync(Role!);
             await RoleService.AssignCollections(Id, SelectedCollections.Select(c => c.Id));
 
-            MessageService.Success("Role updated!");
+            Notifications.Success("Role updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Role could not be updated!");
-            Logger.LogError(ex, "Role could not be updated!");
+            Notifications.Error(ex, "Role could not be updated!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 }

@@ -1,4 +1,4 @@
-using LANCommander.Server.UI.Tests.Pages;
+﻿using LANCommander.Server.UI.Tests.Pages;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -65,7 +65,7 @@ public class AdminNavigationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GamesPage_ShowsEmptyTable()
+    public async Task GamesPage_ListsTheSeededGame()
     {
         var dashboard = new AdminDashboardPage(_page);
         await dashboard.NavigateToGamesAsync();
@@ -74,8 +74,8 @@ public class AdminNavigationTests : IAsyncLifetime
         await Assertions.Expect(_page.GetByText("Games").First).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Add Game" })).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Import" })).ToBeVisibleAsync();
-        // Empty table should show "No data"
-        await Assertions.Expect(_page.GetByText("No data")).ToBeVisibleAsync();
+        // The fixture seeds one game
+        await Assertions.Expect(_page.Locator("td").GetByText(ConfiguredServerFixture.TestGameTitle, new() { Exact = true })).ToBeVisibleAsync();
     }
 
     [Fact]

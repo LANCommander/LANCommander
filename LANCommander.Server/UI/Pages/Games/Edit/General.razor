@@ -1,9 +1,9 @@
-﻿@page "/Games/{id:guid}/General"
+@page "/Games/{id:guid}/General"
 @page "/Games/{id:guid}"
 @page "/Games/Add"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using LANCommander.Server.Models
 @using PSC.Blazor.Components.MarkdownEditor
-@using PSC.Blazor.Components.MarkdownEditor.Models
 @inject CollectionService CollectionService
 @inject CompanyService CompanyService
 @inject EngineService EngineService
@@ -11,144 +11,90 @@
 @inject GenreService GenreService
 @inject PlatformService PlatformService
 @inject TagService TagService
-@inject IMessageService MessageService
-@inject ModalService ModalService
+@inject NotificationService Notifications
+@inject DialogService Dialogs
 @inject NavigationManager NavigationManager
-@inject ILogger<General> Logger
 
 <GameEditView Id="Id" LoadRelationships>
     <TitleTemplate>
-        @if (context.Id == Guid.Empty)
-        {
-            <Text>Add New Game</Text>
-        }
-        else
-        {
-            <Text>General</Text>
-        }
+        @(context.Id == Guid.Empty ? "Add New Game" : "General")
     </TitleTemplate>
     <TitleExtraTemplate>
-        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            @if (context != null && context.Id != Guid.Empty)
-            {
-                <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
-            }
+        @if (context.Id != Guid.Empty)
+        {
+            <Button Icon="IconType.Export" OnClick="() => OpenExportDialogAsync(context)">Export</Button>
+        }
 
-            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-        </Flex>
+        <Button Primary Loading="_saving" OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
 
     <ChildContent>
-        <Form
-            @ref="_form"
-            Model="@context"
-            Layout="@FormLayout.Vertical"
-            Context="formContext">
-            <FormItem Label="Title">
-                <GameMetadataLookup
-                    ButtonText="Lookup"
-                    AutoFocus="context.Id == Guid.Empty"
-                    @bind-Value="context.Title"
-                    GameId="@context.Id"
-                    OnImported="OnGameImported" />
+        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)">
+            <FormItem Label="Title" Required>
+                <GameMetadataLookup ButtonText="Lookup"
+                                    AutoFocus="context.Id == Guid.Empty"
+                                    @bind-Value="context.Title"
+                                    GameId="@context.Id"
+                                    OnImported="OnGameImported" />
             </FormItem>
             <FormItem Label="Sort Title">
-                <Input @bind-Value="@context.SortTitle" />
+                <TextInput @bind-Value="context.SortTitle" />
             </FormItem>
             <FormItem Label="Notes">
-                <MarkdownEditor
-                    @bind-Value="context.Notes"
-                    SpellChecker="false"
-                    CSSClass="ant-typography"
-                    MinHeight="200px" />
+                <MarkdownEditor @bind-Value="context.Notes" SpellChecker="false" MinHeight="200px" />
             </FormItem>
             <FormItem Label="Description">
-                <MarkdownEditor
-                    @bind-Value="context.Description"
-                    SpellChecker="false"
-                    CSSClass="ant-typography"
-                    MinHeight="500px" />
+                <MarkdownEditor @bind-Value="context.Description" SpellChecker="false" MinHeight="500px" />
             </FormItem>
             <FormItem Label="Engine">
-                <Select TItem="Engine"
-                        TItemValue="Guid?"
-                        DataSource="@Engines.OrderBy(e => e.Name)"
-                        @bind-Value="@context.EngineId"
-                        LabelName="Name"
-                        ValueName="Id"
-                        Placeholder="Select an Engine"
-                        DefaultActiveFirstOption="false"
-                        EnableSearch />
+                <Select TValue="Guid?" Items="EngineItems" @bind-Value="context.EngineId" Placeholder="Select an Engine" Searchable Clearable />
             </FormItem>
             <FormItem Label="Type">
-                <Select @bind-Value="@context.Type" TItem="GameType" TItemValue="GameType" DataSource="Enum.GetValues<GameType>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
+                <EnumSelect TEnum="GameType" @bind-Value="context.Type" />
             </FormItem>
             @if (context.Type != GameType.MainGame)
             {
-                <FormItem Label="Base Game" Rules="@(new[] { new FormValidationRule { Required = true } })">
-                    <Flex Gap="FlexGap.Small" Wrap="FlexWrap.NoWrap">
-                        <Select TItem="Game"
-                                TItemValue="Guid?"
-                                DataSource="@Games.Where(g => g.Id != context.Id).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
-                                @bind-Value="@context.BaseGameId"
-                                LabelName="Title"
-                                ValueName="Id"
+                <FormItem Label="Base Game" Required>
+                    <Flex Gap="Gap.Small">
+                        <Select TValue="Guid?"
+                                Items="BaseGameItems(context)"
+                                @bind-Value="context.BaseGameId"
                                 Placeholder="Select a Game"
-                                DefaultActiveFirstOption="false"
-                                EnableSearch>
-                            <ItemTemplate Context="baseGame">
-                                <Image Src="@GetIcon(baseGame)" Height="32" Width="32" Preview="false"></Image>
-                                @baseGame.Title
-                            </ItemTemplate>
-                        </Select>
+                                Searchable
+                                Style="flex: 1" />
 
-                        @if (context.BaseGameId == null || context.BaseGameId == Guid.Empty)
-                        {
-                            <Button Type="ButtonType.Primary" Disabled>Edit</Button>
-                        }
-                        else
-                        {
-                            <a href="@($"/Games/{context.BaseGameId}")" class="ant-btn ant-btn-primary" target="_blank">Edit</a>
-                        }
+                        <Button Primary Icon="IconType.PencilSimple"
+                                Disabled="@(context.BaseGameId == null || context.BaseGameId == Guid.Empty)"
+                                Href="@($"/Games/{context.BaseGameId}")"
+                                NewTab>
+                            Edit
+                        </Button>
                     </Flex>
                 </FormItem>
             }
             <FormItem Label="Key Allocation Method">
-                <Select @bind-Value="@context.KeyAllocationMethod" TItem="KeyAllocationMethod" TItemValue="KeyAllocationMethod" DataSource="Enum.GetValues<KeyAllocationMethod>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
+                <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="context.KeyAllocationMethod" />
             </FormItem>
             <FormItem Label="Released On">
-                <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
+                <DatePicker TValue="DateTime?" @bind-Value="context.ReleasedOn" Clearable />
             </FormItem>
             <FormItem Label="Singleplayer">
-                <Checkbox @bind-Checked="@context.Singleplayer" />
+                <Checkbox @bind-Value="context.Singleplayer" />
             </FormItem>
             <FormItem Label="External IDs">
-                <Space Direction="SpaceDirection.Vertical" Style="width: 100%">
-                    @if (context.ExternalIds != null)
+                <Flex Vertical Gap="Gap.Small">
+                    @foreach (var externalId in context.ExternalIds?.ToList() ?? [])
                     {
-                        @foreach (var externalId in context.ExternalIds.ToList())
-                        {
-                            <SpaceItem>
-                                <Flex Gap="FlexGap.Small">
-                                    <Input @bind-Value="@externalId.Provider" Placeholder="Provider (e.g. Steam, GOG, IGDB)" Style="width: 200px" />
-                                    <Input @bind-Value="@externalId.ExternalId" Placeholder="ID" Style="flex: 1" />
-                                    <Button Type="ButtonType.Text" Danger OnClick="() => RemoveExternalId(context, externalId)" Icon="@IconType.Outline.Close" />
-                                </Flex>
-                            </SpaceItem>
-                        }
-                    }
-                    <SpaceItem>
-                        <Flex Justify="FlexJustify.End">
-                            <Button Type="ButtonType.Primary" OnClick="() => AddExternalId(context)">Add</Button>
+                        <Flex Gap="Gap.Small" @key="externalId">
+                            <TextInput @bind-Value="externalId.Provider" Placeholder="Provider (e.g. Steam, GOG, IGDB)" Style="width: 220px" />
+                            <TextInput @bind-Value="externalId.ExternalId" Placeholder="ID" Style="flex: 1" />
+                            <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => context.ExternalIds?.Remove(externalId)" />
                         </Flex>
-                    </SpaceItem>
-                </Space>
+                    }
+                    <Flex Justify="Justify.End">
+                        <Button Primary Icon="IconType.Plus" OnClick="() => AddExternalId(context)">Add</Button>
+                    </Flex>
+                </Flex>
             </FormItem>
             <FormItem Label="Developers">
                 <TaxonomyInput DataService="CompanyService" @bind-Values="context.Developers" />
@@ -176,150 +122,95 @@
     [Parameter] public Guid Id { get; set; }
 
     bool _loaded;
-    bool _success;
-    bool _openingExportDialog;
+    bool _saving;
 
-    IEnumerable<Engine> Engines = new List<Engine>();
+    IEnumerable<SelectItem<Guid?>> EngineItems = [];
     IEnumerable<Game> Games = new List<Game>();
 
-    private GameMetadataLookup? GameMetadataLookup;
-
-    Form<Game> _form;
+    Form? _form;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!_loaded)
-            await LoadData();
-    }
+        if (_loaded)
+            return;
 
-    private async Task LoadData()
-    {
         var allowedTypes = new List<GameType> { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
 
-        Engines = await EngineService.SortBy(g => g.Name).GetAsync();
+        var engines = await EngineService.SortBy(e => e.Name).GetAsync();
+
+        EngineItems = engines.ToSelectItems(e => (Guid?)e.Id, e => e.Name).ToList();
+
         Games = (await GameService
-            .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
-            .GetAsync(g => allowedTypes.Contains(g.Type)))
-            .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+                .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
+                .GetAsync(g => allowedTypes.Contains(g.Type)))
+            .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .ToList();
 
         _loaded = true;
     }
 
-    private async Task Save(Game game)
+    IEnumerable<SelectItem<Guid?>> BaseGameItems(Game game) =>
+        Games.Where(g => g.Id != game.Id).ToSelectItems(g => (Guid?)g.Id, g => g.Title, image: GetIcon);
+
+    static string? GetIcon(Game game)
     {
+        var media = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : null;
+    }
+
+    async Task SaveAsync(Game game)
+    {
+        if (_form?.Validate() == false)
+        {
+            Notifications.Error("Could not save! Check fields and try again");
+            return;
+        }
+
+        _saving = true;
+
         try
         {
-            if (_form.Validate())
+            if (game.Id != Guid.Empty)
             {
-                if (game.Id != Guid.Empty)
-                {
-                    game.BaseGame = null; // clearing base game, model setup will write the BaseGameId value, referenced model will be loaded on update/get
-                    game = await GameService.UpdateAsync(game);
+                // The model writes BaseGameId; the referenced game is loaded again on update
+                game.BaseGame = null;
 
+                await GameService.UpdateAsync(game);
 
-                    await MessageService.SuccessAsync("Game updated!");
-                }
-                else
-                {
-                    game = await GameService.AddAsync(game);
-
-                    NavigationManager.LocationChanged += NotifyGameAdded;
-
-                    NavigationManager.NavigateTo($"/Games/{game.Id}");
-                }
+                Notifications.Success("Game updated!");
             }
             else
             {
-                MessageService.Error("Could not save! Check fields and try again");
+                game = await GameService.AddAsync(game);
+
+                Notifications.Success("Game added!");
+
+                NavigationManager.NavigateTo($"/Games/{game.Id}");
             }
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save game!");
-            Logger.LogError(ex, "Could not save game!");
+            Notifications.Error(ex, "Could not save game!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
-    private void NotifyGameAdded(object? sender, LocationChangedEventArgs e)
-    {
-        NavigationManager.LocationChanged -= NotifyGameAdded;
+    void OnGameImported(Guid gameId) => NavigationManager.NavigateTo($"/Games/{gameId}", true);
 
-        MessageService.Success("Game added!");
-    }
-
-    private void OnGameImported(Guid gameId)
-    {
-        NavigationManager.NavigateTo($"/Games/{gameId}");
-    }
-
-    private string GetIcon(Game game)
-    {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
-
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
-    }
-
-    private void AddExternalId(Game game)
+    static void AddExternalId(Game game)
     {
         game.ExternalIds ??= new List<GameExternalId>();
         game.ExternalIds.Add(new GameExternalId());
     }
 
-    private void RemoveExternalId(Game game, GameExternalId externalId)
-    {
-        game.ExternalIds?.Remove(externalId);
-    }
-
-
-    private async Task Delete(Game game)
-    {
-        Games = new List<Game>();
-
-        try
+    Task OpenExportDialogAsync(Game game) =>
+        Dialogs.OpenAsync<ExportDialog, ExportDialogOptions, bool>($"Export {game.Title}", new ExportDialogOptions
         {
-            await GameService.DeleteAsync(game);
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
-            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
-        }
-    }
-
-    private async Task OpenExportDialog()
-    {
-        _openingExportDialog = true;
-
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        var game = await GameService.GetAsync(Id);
-        
-        var modalOptions = new ModalOptions()
-        {
-            Title = $"Export {game.Title}",
-            Maximizable = false,
-            DefaultMaximized = false,
-            Closable = true,
-            OkText = "Add",
-            Footer = null,
-        };
-
-        var options = new ExportDialogOptions()
-        {
-            RecordId = Id,
-            RecordType = ImportExportRecordType.Game
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
-
-        _openingExportDialog = false;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-    }
-
+            RecordId = game.Id,
+            RecordType = ImportExportRecordType.Game,
+        }, new DialogSettings { OkText = "Export" });
 }

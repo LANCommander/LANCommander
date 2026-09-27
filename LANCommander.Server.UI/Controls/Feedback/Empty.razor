@@ -1,0 +1,47 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <Icon Type="Icon" DuoTone Class="lc-empty-icon" />
+    <div class="lc-empty-description">
+        @if (DescriptionTemplate != null)
+        {
+            @DescriptionTemplate
+        }
+        else
+        {
+            @(Description ?? "No data")
+        }
+    </div>
+    @if (ChildContent != null)
+    {
+        <div class="lc-empty-actions">@ChildContent</div>
+    }
+</div>
+
+@code {
+    /// <summary>What is missing, e.g. "No games match your search". Defaults to "No data".</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Rich description content; replaces <see cref="Description"/>.</summary>
+    [Parameter] public RenderFragment? DescriptionTemplate { get; set; }
+
+    /// <summary>Actions that fill the gap, e.g. an "Add game" button.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public IconType Icon { get; set; } = IconType.Tray;
+
+    /// <summary>A compact version for inside tables, selects and cards.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-empty")
+            .If(Small, "lc-empty-small")
+            .Add(Class)
+            .Build();
+    }
+}

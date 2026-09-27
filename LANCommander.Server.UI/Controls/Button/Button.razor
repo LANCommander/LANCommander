@@ -1,0 +1,127 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (Href != null)
+{
+    @* A link that looks like a button, using the same theme classes RadzenButton renders *@
+    <a @attributes="AdditionalAttributes"
+       href="@(IsDisabledLink ? null : Href)"
+       target="@(NewTab ? "_blank" : null)"
+       rel="@(NewTab ? "noopener" : null)"
+       aria-disabled="@(IsDisabledLink ? "true" : null)"
+       class="@_linkClass"
+       style="@Style">
+        <span class="rz-button-box">@Content</span>
+    </a>
+}
+else
+{
+<RadzenButton Attributes="_attributes"
+              Style="@Style"
+              ButtonStyle="_buttonStyle"
+              Variant="_variant"
+              Size="_size"
+              ButtonType="@(Submit ? Radzen.ButtonType.Submit : Radzen.ButtonType.Button)"
+              Disabled="@(Disabled || Loading)"
+              Click="OnClick">
+    @Content
+</RadzenButton>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>Makes the button a link to this address.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>With <see cref="Href"/>: opens the link in a new tab.</summary>
+    [Parameter] public bool NewTab { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>The main action of a view: filled with the primary colour.</summary>
+    [Parameter] public bool Primary { get; set; }
+
+    /// <summary>No border or fill until hovered, for secondary and in-table actions.</summary>
+    [Parameter] public bool Text { get; set; }
+
+    /// <summary>Looks like a hyperlink.</summary>
+    [Parameter] public bool Link { get; set; }
+
+    /// <summary>A destructive action. Combines with <see cref="Primary"/>, <see cref="Text"/> or <see cref="Link"/>.</summary>
+    [Parameter] public bool Danger { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    [Parameter] public bool Large { get; set; }
+
+    /// <summary>Stretches to the width of its container.</summary>
+    [Parameter] public bool Block { get; set; }
+
+    /// <summary>Submits the enclosing form.</summary>
+    [Parameter] public bool Submit { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Shows a spinner in place of the icon and blocks clicks until the work finishes.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    ButtonStyle _buttonStyle;
+    Variant _variant;
+    ButtonSize _size;
+    Dictionary<string, object> _attributes = new();
+    string? _linkClass;
+
+    bool IsDisabledLink => Disabled || Loading;
+
+    RenderFragment Content => @<text>
+        @if (Loading)
+        {
+            <Icon Type="IconType.CircleNotch" Spin Class="lc-button-icon" />
+        }
+        else if (Icon != IconType.None)
+        {
+            <Icon Type="Icon" Class="lc-button-icon" />
+        }
+
+        @if (ChildContent != null)
+        {
+            <span class="lc-button-text">@ChildContent</span>
+        }
+    </text>;
+
+    protected override void OnParametersSet()
+    {
+        // Precedence when several are set: Primary, then Link, then Text, then the outlined default
+        (_buttonStyle, _variant) = (Primary, Link, Text) switch
+        {
+            (true, _, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Filled),
+            (_, true, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Text),
+            (_, _, true) => (Danger ? ButtonStyle.Danger : ButtonStyle.Base, Variant.Text),
+            _ => (Danger ? ButtonStyle.Danger : ButtonStyle.Base, Variant.Outlined),
+        };
+
+        _size = Small ? ButtonSize.Small : Large ? ButtonSize.Large : ButtonSize.Medium;
+
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder()
+            .Add("lc-button")
+            .If(ChildContent == null, "rz-button-icon-only")
+            .If(Link, "lc-button-link")
+            .If(Block, "lc-button-block")
+            .Add(Class)
+            .Build()!;
+
+        _linkClass = new ClassBuilder()
+            .Add("rz-button")
+            .Add(_size switch { ButtonSize.Small => "rz-button-sm", ButtonSize.Large => "rz-button-lg", _ => "rz-button-md" })
+            .Add(_variant switch { Variant.Filled => "rz-variant-filled", Variant.Text => "rz-variant-text", _ => "rz-variant-outlined" })
+            .Add(_buttonStyle switch { ButtonStyle.Primary => "rz-primary", ButtonStyle.Danger => "rz-danger", _ => "rz-base" })
+            .Add("rz-shade-default")
+            .If(IsDisabledLink, "rz-state-disabled")
+            .Add((string)_attributes["class"])
+            .Build();
+    }
+}

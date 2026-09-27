@@ -1,4 +1,4 @@
-﻿@page "/Settings/Tools"
+@page "/Settings/Tools"
 @using Hangfire
 @using LANCommander.Helpers
 @using LANCommander.Server.Jobs.Background
@@ -8,9 +8,8 @@
 @inject PageService PageService
 @inject UpdateService UpdateService
 @inject StorageLocationService StorageLocationService
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject IFusionCache FusionCache
-@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Tools" />
@@ -20,7 +19,7 @@
     <p>
         Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
     </p>
-    <Button Type="ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
+    <Button Primary OnClick="RecalculateFileSizesAsync" Loading="RecalculatingFileSizes">Recalculate</Button>
 
     <Divider />
 
@@ -28,178 +27,179 @@
     <p>
         A cached list of games is sent to the clients on import. Click the button below to bust this cache if you don't see your changes.
     </p>
-    <Button Type="ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
+    <Button Primary OnClick="ClearCacheAsync">Clear Cache</Button>
 
     <Divider />
 
     <h3>Download Clients</h3>
     <p>Check for any client releases for the current version and download them to this server.</p>
-    <Button Type="ButtonType.Primary" OnClick="DownloadLaunchers" Loading="DownloadingLaunchers">Download</Button>
+    <Button Primary OnClick="DownloadLaunchersAsync" Loading="DownloadingLaunchers">Download</Button>
 
     <Divider />
 
     <h3>Missing Archives</h3>
     <p>List and fix all archives that are missing their backing files.</p>
-    <a href="/Settings/Tools/MissingArchives" class="ant-btn ant-btn-primary">View Missing Archives</a>
+    <Button Primary Href="/Settings/Tools/MissingArchives">View Missing Archives</Button>
 
     <Divider />
 
     <h3>Orphaned Files</h3>
     <p>Find and delete any files that don't exist in the database and may be taking up unnecessary disk space.</p>
-    <a href="/Settings/Tools/OrphanedFiles" class="ant-btn ant-btn-primary">View Orphaned Files</a>
+    <Button Primary Href="/Settings/Tools/OrphanedFiles">View Orphaned Files</Button>
 
     <Divider />
 
     <h3>Active Sessions</h3>
     <p>List and delete any active user play sessions.</p>
-    <a href="/Settings/Tools/ActiveSessions" class="ant-btn ant-btn-primary">View Active Sessions</a>
+    <Button Primary Href="/Settings/Tools/ActiveSessions">View Active Sessions</Button>
 
     <Divider />
 
     <h3>Long Sessions</h3>
     <p>Find and delete any play sessions that ran longer than a configurable threshold.</p>
-    <a href="/Settings/Tools/LongSessions" class="ant-btn ant-btn-primary">View Long Sessions</a>
+    <Button Primary Href="/Settings/Tools/LongSessions">View Long Sessions</Button>
 
     <Divider />
 
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
-    <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
+    <Button Primary OnClick="FixPageRoutesAsync" Loading="FixingPageRoutes">Fix Routes</Button>
 
     <Divider />
 
     <h3>Regenerate Thumbnails</h3>
     <p>Clear out the existing thumbnail cache and generate replacements.</p>
-    <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
+    <Button Primary OnClick="RegenerateThumbnailsAsync" Loading="RegeneratingThumbnails">Regenerate</Button>
 
     <Divider />
 
     <h3>Optimize Images</h3>
     <p>Convert opaque PNG art to JPEG, downscale oversized media, and strip metadata to reclaim disk space while preserving quality.</p>
-    <a href="/Settings/Tools/OptimizeImages" class="ant-btn ant-btn-primary">Optimize Images</a>
+    <Button Primary Href="/Settings/Tools/OptimizeImages">Optimize Images</Button>
 </PageContent>
 
 @code {
-    bool RecalculatingFileSizes = false;
-    bool DownloadingLaunchers = false;
-    bool FixingPageRoutes = false;
-    bool RegeneratingThumbnails = false;
+    bool RecalculatingFileSizes;
+    bool DownloadingLaunchers;
+    bool FixingPageRoutes;
+    bool RegeneratingThumbnails;
 
-    async Task RecalculateFileSizes()
+    async Task RecalculateFileSizesAsync()
     {
         RecalculatingFileSizes = true;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-        
-        var archives = await ArchiveService.AsNoTracking().GetAsync();
 
-        var results = new List<bool>();
-
-        foreach (var archive in archives)
+        try
         {
-            var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
-            results.Add(result);
+            var archives = await ArchiveService.AsNoTracking().GetAsync();
+
+            var results = new List<bool>();
+
+            foreach (var archive in archives)
+                results.Add(await ArchiveService.RecalculateFileSizeArchiveAsync(archive));
+
+            if (results.All(x => x))
+                Notifications.Success("File sizes recalculated!");
+            else
+                Notifications.Warning("File sizes recalculated but some failed!");
         }
-
-        if (results.All(x => x))
-            MessageService.Success("File sizes recalculated!");
-        else
-            MessageService.Warning("File sizes recalculated but some failed!");
-
-        RecalculatingFileSizes = false;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "File sizes could not be recalculated");
+        }
+        finally
+        {
+            RecalculatingFileSizes = false;
+        }
     }
 
-    async Task ClearCache()
+    async Task ClearCacheAsync()
     {
-        await FusionCache.RemoveByTagAsync("Games");
-        await FusionCache.RemoveByTagAsync("Depot");
-        await FusionCache.RemoveByTagAsync("Library");
-        await FusionCache.RemoveByTagAsync("Archives");
+        try
+        {
+            await FusionCache.RemoveByTagAsync("Games");
+            await FusionCache.RemoveByTagAsync("Depot");
+            await FusionCache.RemoveByTagAsync("Library");
+            await FusionCache.RemoveByTagAsync("Archives");
 
-        MessageService.Success("Cache cleared!");
+            Notifications.Success("Cache cleared!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The cache could not be cleared");
+        }
     }
 
-    async Task DownloadLaunchers()
+    async Task DownloadLaunchersAsync()
     {
         DownloadingLaunchers = true;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
 
         try
         {
             await UpdateService.DownloadLatestLauncherReleaseAsync();
 
-            MessageService.Success("Launchers downloaded!");
+            Notifications.Success("Launchers downloaded!");
         }
         catch (ReleaseNotFoundException ex)
         {
-            MessageService.Error($"Launchers could not be downloaded, unknown release {ex.Version}");
+            Notifications.Error($"Launchers could not be downloaded, unknown release {ex.Version}");
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "An unknown error occurred while trying to download launchers");
-            MessageService.Error("An unknown error occurred");
+            Notifications.Error(ex, "The launchers could not be downloaded");
         }
-
-        DownloadingLaunchers = false;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
+        finally
+        {
+            DownloadingLaunchers = false;
+        }
     }
 
-    async Task FixPageRoutes()
+    async Task FixPageRoutesAsync()
     {
         FixingPageRoutes = true;
-
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
 
         try
         {
             await PageService.FixRoutesAsync();
 
-            MessageService.Success("Routes fixed!");
+            Notifications.Success("Routes fixed!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not fix all routes!");
+            Notifications.Error(ex, "Could not fix all routes!");
         }
-
-        FixingPageRoutes = false;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
+        finally
+        {
+            FixingPageRoutes = false;
+        }
     }
 
-    async Task RegenerateThumbnails()
+    async Task RegenerateThumbnailsAsync()
     {
         RegeneratingThumbnails = true;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-        
-        var storageLocations = await StorageLocationService.GetAsync();
 
-        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+        try
         {
-            var thumbnailFiles = Directory.GetFiles(storageLocation.Path).Where(f => f.EndsWith(".Thumb"));
+            var storageLocations = await StorageLocationService.GetAsync();
 
-            foreach (var thumbnailFile in thumbnailFiles)
-                FileHelpers.DeleteIfExists(thumbnailFile);
+            foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+            {
+                var thumbnailFiles = Directory.GetFiles(storageLocation.Path).Where(f => f.EndsWith(".Thumb"));
+
+                foreach (var thumbnailFile in thumbnailFiles)
+                    FileHelpers.DeleteIfExists(thumbnailFile);
+            }
+
+            BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+
+            Notifications.Success("Cache has been cleared and is being regenerated in the background");
         }
-        
-        BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
-        
-        RegeneratingThumbnails = false;
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-
-        MessageService.Success("Cache has been cleared and is being regenerated in the background");
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Thumbnails could not be regenerated");
+        }
+        finally
+        {
+            RegeneratingThumbnails = false;
+        }
     }
 }

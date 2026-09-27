@@ -1,0 +1,74 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<long>
+
+@* A size in bytes, entered as a number and a unit (KiB, MiB, ...). *@
+<InputGroup Class="@BuildClass("lc-byte-size-input")" Style="@Style">
+    <NumberInput TValue="long" Value="_amount" ValueChanged="AmountChangedAsync" Min="0" Disabled="IsDisabled" Immediate />
+    <Select TValue="long" Value="_unit" ValueChanged="UnitChangedAsync" Items="_units" Disabled="IsDisabled" Class="lc-byte-size-unit" />
+</InputGroup>
+
+@code {
+    [Parameter] public long Minimum { get; set; }
+
+    /// <summary>The largest size allowed; 0 for no limit.</summary>
+    [Parameter] public long Maximum { get; set; }
+
+    static readonly SelectItem<long>[] Units =
+    [
+        new(ByteSizeLib.ByteSize.BytesInTebiByte, "TiB"),
+        new(ByteSizeLib.ByteSize.BytesInGibiByte, "GiB"),
+        new(ByteSizeLib.ByteSize.BytesInMebiByte, "MiB"),
+        new(ByteSizeLib.ByteSize.BytesInKibiByte, "KiB"),
+        new(1, "B"),
+    ];
+
+    SelectItem<long>[] _units = Units;
+    long _amount;
+    long _unit = ByteSizeLib.ByteSize.BytesInMebiByte;
+    long _shown = -1;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _units = Units.Where(u => Maximum == 0 || u.Value <= Maximum).ToArray();
+
+        // Show the value in the largest unit that divides it evenly, unless we produced it ourselves
+        if (Value != _shown)
+        {
+            _unit = _units.FirstOrDefault(u => Value != 0 && Value % u.Value == 0)?.Value ?? _unit;
+            _amount = Value / _unit;
+            _shown = Value;
+        }
+    }
+
+    Task AmountChangedAsync(long amount)
+    {
+        _amount = Math.Max(0, amount);
+
+        return UpdateAsync();
+    }
+
+    Task UnitChangedAsync(long unit)
+    {
+        if (unit > 0)
+            _unit = unit;
+
+        return UpdateAsync();
+    }
+
+    async Task UpdateAsync()
+    {
+        var value = _amount * _unit;
+
+        if (Maximum > 0 && value > Maximum)
+            value = Maximum;
+
+        if (value < Minimum)
+            value = Minimum;
+
+        _shown = value;
+
+        await SetValueAsync(value);
+    }
+}

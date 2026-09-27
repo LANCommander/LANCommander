@@ -1,0 +1,257 @@
+// Form, FormItem and inputs
+
+.lc-form-item {
+    margin-bottom: 16px;
+}
+
+.lc-form-item-label {
+    display: inline-block;
+    margin-bottom: 6px;
+    color: var(--rz-text-title-color);
+    font-weight: 600;
+}
+
+.lc-form-item-required {
+    margin-inline-start: 4px;
+    color: var(--rz-danger);
+}
+
+.lc-form-item-help {
+    margin-top: 4px;
+    color: var(--rz-text-secondary-color);
+    font-size: var(--rz-text-caption-font-size);
+}
+
+.lc-form-item-error {
+    margin-top: 4px;
+    color: var(--rz-danger);
+    font-size: var(--rz-text-caption-font-size);
+}
+
+// Horizontal forms put labels in a fixed-width column beside the control
+.lc-form-horizontal .lc-form-item {
+    display: grid;
+    grid-template-columns: minmax(120px, 25%) 1fr;
+    align-items: start;
+    column-gap: 16px;
+
+    .lc-form-item-label {
+        margin: 0;
+        padding-top: 8px;
+        text-align: end;
+    }
+
+    .lc-form-item-control {
+        grid-column: 2;
+    }
+}
+
+// Text-like inputs fill their FormItem
+.lc-form-item-control {
+    > .rz-textbox,
+    > .rz-numeric,
+    > .lc-input-affix,
+    > .lc-select {
+        width: 100%;
+    }
+}
+
+.lc-input-invalid,
+.lc-input-invalid.rz-state-focused {
+    border-color: var(--rz-danger) !important;
+    box-shadow: 0 0 0 1px var(--rz-danger-lighter);
+}
+
+.lc-input-affix {
+    position: relative;
+    display: inline-block;
+
+    .lc-input-affix-icon {
+        position: absolute;
+        top: 50%;
+        inset-inline-start: 10px;
+        transform: translateY(-50%);
+        color: var(--rz-text-secondary-color);
+        pointer-events: none;
+    }
+
+    .rz-textbox {
+        width: 100%;
+        padding-inline-start: 32px;
+    }
+}
+
+.lc-text-area {
+    position: relative;
+}
+
+.lc-text-area-counter {
+    margin-top: 2px;
+    color: var(--rz-text-secondary-color);
+    font-size: var(--rz-text-caption-font-size);
+    text-align: end;
+}
+
+.lc-switch,
+.lc-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lc-switch-label,
+.lc-checkbox-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.lc-input-affix.lc-input-invalid .rz-textbox {
+    border-color: var(--rz-danger) !important;
+}
+
+.lc-select-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lc-select-option-image {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.lc-input-group {
+    display: inline-flex;
+    align-items: stretch;
+
+    &.lc-input-group-block {
+        display: flex;
+        width: 100%;
+    }
+
+    // Join the children into one control: square the inner corners and overlap the shared borders
+    > *:not(:first-child) {
+        border-start-start-radius: 0;
+        border-end-start-radius: 0;
+        margin-inline-start: -1px;
+    }
+
+    > *:not(:last-child) {
+        border-start-end-radius: 0;
+        border-end-end-radius: 0;
+    }
+
+    > *:focus-within,
+    > *:focus {
+        z-index: 1;
+    }
+
+    .lc-input-addon {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid var(--lc-border-color);
+        border-radius: var(--rz-border-radius);
+        background: var(--rz-base-700);
+        color: var(--rz-text-secondary-color);
+        white-space: nowrap;
+    }
+
+    .rz-textbox,
+    .rz-numeric {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.lc-byte-size-input {
+    width: 100%;
+
+    .lc-byte-size-unit {
+        flex: 0 0 96px;
+        width: 96px;
+    }
+}
+
+.lc-auto-complete {
+    width: 100%;
+
+    input {
+        width: 100%;
+    }
+}
+
+.lc-transfer-title {
+    font-weight: 600;
+}
+
+// TagsInput: tags and a search input inside one input-like box
+.lc-tags-input {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-height: 36px;
+    padding: 2px 6px;
+    border: var(--rz-input-border);
+    border-radius: var(--rz-input-border-radius, var(--rz-border-radius));
+    background: var(--rz-input-background-color);
+
+    &:focus-within {
+        border-color: var(--rz-primary);
+    }
+
+    &.lc-tags-input-disabled {
+        opacity: .6;
+    }
+
+    .lc-tags-input-search {
+        flex: 1;
+        min-width: 120px;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+
+        input {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+}
+
+.lc-tags-input-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
+    padding: 1px 4px 1px 8px;
+    border-radius: var(--rz-border-radius);
+    background: var(--rz-base-700);
+    font-size: var(--rz-text-caption-font-size, 12px);
+}
+
+.lc-tags-input-tag-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-tags-input-remove {
+    display: inline-flex;
+    padding: 2px;
+    border: 0;
+    border-radius: var(--rz-border-radius);
+    background: none;
+    color: var(--rz-text-secondary-color);
+    cursor: pointer;
+
+    &:hover {
+        color: var(--rz-danger);
+    }
+}
+
+.lc-date-picker {
+    width: 100%;
+}

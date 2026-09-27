@@ -1,0 +1,43 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (Vertical)
+{
+    <span @attributes="AdditionalAttributes" class="@_class" style="@Style" role="separator" aria-orientation="vertical"></span>
+}
+else
+{
+    <div @attributes="AdditionalAttributes" class="@_class" style="@Style" role="separator">
+        @if (ChildContent != null)
+        {
+            <span class="lc-divider-text">@ChildContent</span>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>A label shown in the line, e.g. the heading of a group of settings.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>A short vertical rule between inline items.</summary>
+    [Parameter] public bool Vertical { get; set; }
+
+    /// <summary>Put the label near the start of the line instead of the centre.</summary>
+    [Parameter] public bool Left { get; set; }
+
+    /// <summary>Put the label near the end of the line instead of the centre.</summary>
+    [Parameter] public bool Right { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add(Vertical ? "lc-divider-vertical" : "lc-divider")
+            .If(!Vertical && ChildContent != null, "lc-divider-with-text")
+            .If(Left, "lc-divider-left")
+            .If(Right && !Left, "lc-divider-right")
+            .Add(Class)
+            .Build();
+    }
+}

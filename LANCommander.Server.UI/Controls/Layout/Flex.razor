@@ -1,0 +1,40 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Stack children top to bottom instead of left to right.</summary>
+    [Parameter] public bool Vertical { get; set; }
+
+    /// <summary>Let children flow onto more lines when they don't fit.</summary>
+    [Parameter] public bool Wrap { get; set; }
+
+    /// <summary>Render as an inline element, so the flex container sits within a line of text.</summary>
+    [Parameter] public bool Inline { get; set; }
+
+    [Parameter] public Gap Gap { get; set; }
+
+    [Parameter] public Align Align { get; set; }
+
+    [Parameter] public Justify Justify { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add(Inline ? "lc-flex-inline" : "lc-flex")
+            .If(Vertical, "lc-flex-vertical")
+            .If(Wrap, "lc-flex-wrap")
+            .Add(LayoutClasses.For(Gap))
+            .Add(LayoutClasses.For(Align))
+            .Add(LayoutClasses.For(Justify))
+            .Add(Class)
+            .Build();
+    }
+}

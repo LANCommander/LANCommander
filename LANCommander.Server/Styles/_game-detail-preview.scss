@@ -273,21 +273,6 @@
     &__media-section-actions {
         display: flex;
         gap: 4px;
-
-        .ant-btn {
-            color: rgba(255,255,255,0.65) !important;
-
-            &:hover {
-                color: #fff !important;
-            }
-        }
-
-        label.ant-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
     }
 
     &__carousel {
@@ -364,9 +349,5 @@
         align-items: center;
         justify-content: center;
         min-height: 120px;
-
-        .ant-empty-description {
-            color: rgba(255,255,255,0.45);
-        }
     }
 }

@@ -1,0 +1,505 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@inherits ControlBase
+@implements ITableHost
+@implements IDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject ILogger<Table<TItem>> Logger
+
+@*
+    A paged, sortable table. Rows come from Items (in memory) or Provider (e.g. a database query);
+    either way sorting uses the columns' expressions and paging happens in LoadDataAsync. Page size,
+    sort and hidden columns are remembered per page in local storage.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (Searchable || LeftToolbar != null || RightToolbar != null)
+    {
+        <div class="lc-table-toolbar">
+            <div class="lc-table-toolbar-start">
+                @if (Searchable)
+                {
+                    <TextInput Icon="IconType.MagnifyingGlass" Immediate Value="@_search" ValueChanged="SearchChanged" Placeholder="@SearchPlaceholder" Class="lc-table-search" />
+                }
+                @LeftToolbar
+            </div>
+            <div class="lc-table-toolbar-end">
+                @RightToolbar
+            </div>
+        </div>
+    }
+
+    @if (_error != null)
+    {
+        <Alert Danger Title="The table could not be loaded">
+            <div>@_error.Message</div>
+            <Button Small Icon="IconType.ArrowClockwise" OnClick="ReloadAsync" Style="margin-top: 8px">Retry</Button>
+        </Alert>
+    }
+
+    @if (!_ready)
+    {
+        <div class="lc-table-pending"><Spin /></div>
+    }
+    else
+    {
+        <CascadingValue Value="(ITableHost)this" IsFixed>
+            <RadzenDataGrid @ref="_grid"
+                            TItem="TItem"
+                            Data="_rows"
+                            Count="_total"
+                            LoadData="LoadDataAsync"
+                            IsLoading="_loading"
+                            AllowSorting="true"
+                            AllowPaging="!NoPaging"
+                            PageSize="_pageSize"
+                            PageSizeOptions="PageSizeOptions"
+                            PageSizeChanged="PageSizeChangedAsync"
+                            ShowPagingSummary="true"
+                            PagingSummaryFormat="{2} rows"
+                            PagerHorizontalAlign="HorizontalAlign.Right"
+                            PagerAlwaysVisible="false"
+                            AllowColumnPicking="ColumnPicker"
+                            PickedColumnsChanged="PickedColumnsChangedAsync"
+                            AllowColumnResize="true"
+                            Density="@(Small ? Density.Compact : Density.Default)"
+                            GridLines="DataGridGridLines.Horizontal"
+                            SelectionMode="DataGridSelectionMode.Multiple"
+                            AllowRowSelectOnRowClick="false"
+                            Value="_selected"
+                            KeyProperty="@_keyProperty"
+                            RowDoubleClick="RowDoubleClickAsync"
+                            RowClick="RowClickAsync"
+                            RowRender="RowRender"
+                            LoadChildData="@(Children != null || Expandable ? EventCallback.Factory.Create<DataGridLoadChildDataEventArgs<TItem>>(this, LoadChildData) : default)"
+                            EmptyTemplate="EmptyContent"
+                            Class="lc-table-grid">
+                <Columns>
+                    @if (Selectable)
+                    {
+                        @* Expandable rows put their toggle in the first column too, so it needs room for both *@
+                        <RadzenDataGridColumn TItem="TItem" Width="@(HasChildRows ? "88px" : "48px")" Sortable="false" Pickable="false" Resizable="false" CssClass="lc-table-select" HeaderCssClass="lc-table-select">
+                            <HeaderTemplate>
+                                @if (!Single)
+                                {
+                                    <RadzenCheckBox TValue="bool?" Value="PageSelectionState" ValueChanged="SelectPageAsync" AriaLabel="Select all rows on this page" />
+                                }
+                            </HeaderTemplate>
+                            <Template Context="item">
+                                @if (RowSelectable?.Invoke(item) ?? true)
+                                {
+                                    <RadzenCheckBox TValue="bool" Value="IsSelected(item)" ValueChanged="@(selected => SetSelectedAsync(item, selected))" AriaLabel="Select row" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                    @Columns
+                </Columns>
+            </RadzenDataGrid>
+        </CascadingValue>
+    }
+</div>
+
+@code {
+    /// <summary>The column definitions: BoundColumn, TemplateColumn and ActionsColumn.</summary>
+    [Parameter, EditorRequired] public RenderFragment Columns { get; set; } = default!;
+
+    /// <summary>All rows, for data already in memory. Use <see cref="Provider"/> to fetch pages on demand instead.</summary>
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+
+    /// <summary>Fetches one page of rows, e.g. from the database.</summary>
+    [Parameter] public Func<TableQuery, Task<TableResult<TItem>>>? Provider { get; set; }
+
+    /// <summary>With <see cref="Items"/>: the child rows of a row, shown when it is expanded.</summary>
+    [Parameter] public Func<TItem, IEnumerable<TItem>>? Children { get; set; }
+
+    /// <summary>
+    /// With <see cref="Provider"/>: rows may have children (returned in <see cref="TableResult{TItem}.Children"/>).
+    /// Leave unset otherwise, so no space is reserved for expand toggles.
+    /// </summary>
+    [Parameter] public bool Expandable { get; set; }
+
+    /// <summary>With <see cref="Items"/>: the text searched when <see cref="Searchable"/>.</summary>
+    [Parameter] public Func<TItem, string?>? SearchText { get; set; }
+
+    [Parameter] public RenderFragment? LeftToolbar { get; set; }
+
+    [Parameter] public RenderFragment? RightToolbar { get; set; }
+
+    /// <summary>Shows a search box in the toolbar.</summary>
+    [Parameter] public bool Searchable { get; set; }
+
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search";
+
+    /// <summary>Lets the user choose which columns are shown.</summary>
+    [Parameter] public bool ColumnPicker { get; set; }
+
+    /// <summary>Adds a checkbox column; the checked rows are bound through <see cref="Values"/>.</summary>
+    [Parameter] public bool Selectable { get; set; }
+
+    [Parameter] public IList<TItem>? Values { get; set; }
+
+    [Parameter] public EventCallback<IList<TItem>> ValuesChanged { get; set; }
+
+    /// <summary>With <see cref="Selectable"/>: checking a row unchecks the others.</summary>
+    [Parameter] public bool Single { get; set; }
+
+    /// <summary>With <see cref="Selectable"/>: which rows can be checked; others get no checkbox.</summary>
+    [Parameter] public Func<TItem, bool>? RowSelectable { get; set; }
+
+    /// <summary>Identifies a row across reloads, for selection. Defaults to an Id property, else the row itself.</summary>
+    [Parameter] public Func<TItem, object?>? Key { get; set; }
+
+    /// <summary>Tighter rows, for dense lists.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>Shows every row on one page.</summary>
+    [Parameter] public bool NoPaging { get; set; }
+
+    [Parameter] public int PageSize { get; set; } = 25;
+
+    [Parameter] public IEnumerable<int> PageSizeOptions { get; set; } = [25, 50, 100, 200];
+
+    /// <summary>The total number of rows, after searching and filtering.</summary>
+    [Parameter] public int Total { get; set; }
+
+    [Parameter] public EventCallback<int> TotalChanged { get; set; }
+
+    [Parameter] public EventCallback<TItem> OnRowClick { get; set; }
+
+    [Parameter] public EventCallback<TItem> OnRowDoubleClick { get; set; }
+
+    /// <summary>Shown when there are no rows.</summary>
+    [Parameter] public string EmptyText { get; set; } = "No data";
+
+    [Parameter] public RenderFragment? EmptyTemplate { get; set; }
+
+    /// <summary>Where page size, sort and visible columns are remembered. Defaults to the page's path.</summary>
+    [Parameter] public string? SettingsKey { get; set; }
+
+    RadzenDataGrid<TItem>? _grid;
+    readonly List<TableColumnInfo> _columns = [];
+    // Null until the first load: Radzen only calls LoadData while it has no data
+    List<TItem>? _rows;
+    IReadOnlyDictionary<TItem, IReadOnlyList<TItem>> _children = new Dictionary<TItem, IReadOnlyList<TItem>>();
+    IList<TItem> _selected = new List<TItem>();
+    int _total;
+    int _pageSize;
+    bool _loading;
+    bool _ready;
+    Exception? _error;
+    string? _search;
+    string? _class;
+    string? _keyProperty;
+    Func<TItem, object?> _keyOf = item => item;
+    TableSettings _settings = new();
+    CancellationTokenSource? _searchDebounce;
+
+    bool ITableHost.Small => Small;
+
+    bool HasChildRows => Children != null || Expandable;
+
+    string StorageKey => $"lc-table:{SettingsKey ?? new Uri(Navigation.Uri).AbsolutePath}";
+
+    protected override void OnInitialized()
+    {
+        _pageSize = PageSize;
+
+        var idProperty = typeof(TItem).GetProperty("Id");
+
+        if (Key != null)
+            _keyOf = Key;
+        else if (idProperty != null)
+        {
+            _keyProperty = "Id";
+            _keyOf = item => idProperty.GetValue(item);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-table").If(Small, "lc-table-small").Add(Class).Build();
+
+        if (Values != null && !ReferenceEquals(Values, _selected))
+            _selected = Values;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // New in-memory rows: show them without the caller having to reload
+        if (_ready && Items != null && _grid != null && !ReferenceEquals(Items, _lastItems))
+        {
+            _lastItems = Items;
+            await _grid.Reload();
+        }
+    }
+
+    IEnumerable<TItem>? _lastItems;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        // Restore before the grid first renders, so it starts with the remembered sort and page size
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+
+            if (!string.IsNullOrEmpty(json))
+                _settings = System.Text.Json.JsonSerializer.Deserialize<TableSettings>(json) ?? new();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not restore table settings");
+        }
+
+        if (_settings.PageSize is > 0)
+            _pageSize = _settings.PageSize.Value;
+
+        _lastItems = Items;
+        _ready = true;
+        StateHasChanged();
+    }
+
+    async Task LoadDataAsync(LoadDataArgs args)
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var sorts = args.Sorts?
+                .Select(s => (Column: _columns.FirstOrDefault(c => c.Key == s.Property), s.SortOrder))
+                .Where(s => s.Column?.SortExpression != null)
+                .Select(s => new TableSort(s.Column!.SortExpression!, s.SortOrder == SortOrder.Descending))
+                .ToList() ?? [];
+
+            var query = new TableQuery(args.Skip ?? 0, NoPaging ? int.MaxValue : args.Top ?? _pageSize, sorts, _search,
+                _columns.SelectMany(c => c.Includes).Distinct().ToList());
+
+            var result = Provider != null ? await Provider(query) : QueryItems(query);
+
+            _rows = result.Items.ToList();
+            _children = result.Children ?? new Dictionary<TItem, IReadOnlyList<TItem>>();
+            _total = result.Total;
+
+            if (_total != Total)
+            {
+                Total = _total;
+                await TotalChanged.InvokeAsync(_total);
+            }
+
+            await SaveSettingsAsync(sorts: args.Sorts);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load table rows");
+            _error = ex;
+            _rows = [];
+            _total = 0;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    TableResult<TItem> QueryItems(TableQuery query)
+    {
+        var rows = (Items ?? []).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.Search) && SearchText != null)
+            rows = rows.Where(item => (SearchText(item) ?? "").Contains(query.Search, StringComparison.OrdinalIgnoreCase));
+
+        var total = rows.Count();
+        var page = query.Apply(rows).ToList();
+
+        return new TableResult<TItem>(page, total)
+        {
+            Children = Children == null
+                ? null
+                : page.ToDictionary(item => item, item => (IReadOnlyList<TItem>)Children(item).ToList()),
+        };
+    }
+
+    /// <summary>Loads the current page again, e.g. after rows were added or deleted.</summary>
+    public async Task ReloadAsync()
+    {
+        _error = null;
+
+        if (_grid != null)
+            await _grid.Reload();
+    }
+
+    async Task SearchChanged(string? search)
+    {
+        _search = search;
+
+        _searchDebounce?.Cancel();
+        _searchDebounce = new CancellationTokenSource();
+        var token = _searchDebounce.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (_grid != null)
+            await _grid.FirstPage(true);
+    }
+
+    void RowRender(RowRenderEventArgs<TItem> args)
+    {
+        args.Expandable = _children.TryGetValue(args.Data, out var children) && children.Count > 0;
+    }
+
+    void LoadChildData(DataGridLoadChildDataEventArgs<TItem> args)
+    {
+        args.Data = _children.TryGetValue(args.Item, out var children) ? children : [];
+    }
+
+    Task RowClickAsync(DataGridRowMouseEventArgs<TItem> args) => OnRowClick.InvokeAsync(args.Data);
+
+    Task RowDoubleClickAsync(DataGridRowMouseEventArgs<TItem> args) => OnRowDoubleClick.InvokeAsync(args.Data);
+
+    RenderFragment EmptyContent => EmptyTemplate ?? (@<Empty Small Description="@EmptyText" />);
+
+    // Selection
+
+    bool IsSelected(TItem item) => _selected.Any(s => Equals(_keyOf(s), _keyOf(item)));
+
+    bool? PageSelectionState
+    {
+        get
+        {
+            var rows = _rows ?? [];
+            var selectedOnPage = rows.Count(IsSelected);
+
+            return selectedOnPage == 0 ? false : selectedOnPage == rows.Count ? true : null;
+        }
+    }
+
+    async Task SetSelectedAsync(TItem item, bool selected)
+    {
+        List<TItem> updated = Single ? [] : _selected.Where(s => !Equals(_keyOf(s), _keyOf(item))).ToList();
+
+        if (selected)
+            updated.Add(item);
+
+        await UpdateSelectionAsync(updated);
+    }
+
+    async Task SelectPageAsync(bool? selected)
+    {
+        var rows = _rows ?? [];
+        var updated = _selected.Where(s => !rows.Any(r => Equals(_keyOf(r), _keyOf(s)))).ToList();
+
+        if (selected == true)
+            updated.AddRange(RowSelectable == null ? rows : rows.Where(RowSelectable));
+
+        await UpdateSelectionAsync(updated);
+    }
+
+    async Task UpdateSelectionAsync(List<TItem> selected)
+    {
+        _selected = selected;
+
+        await ValuesChanged.InvokeAsync(selected);
+    }
+
+    /// <summary>Clears the selection.</summary>
+    public Task ClearSelectionAsync() => UpdateSelectionAsync([]);
+
+    // Columns
+
+    void ITableHost.Register(TableColumnInfo column)
+    {
+        if (_columns.All(c => c.Key != column.Key))
+            _columns.Add(column);
+    }
+
+    void ITableHost.Unregister(TableColumnInfo column) => _columns.Remove(column);
+
+    bool ITableHost.IsVisible(TableColumnInfo column, bool hiddenByDefault) =>
+        _settings.HiddenColumns?.Contains(column.Key) ?? !hiddenByDefault;
+
+    SortOrder? ITableHost.InitialSortOrder(TableColumnInfo column, ColumnSort defaultSort)
+    {
+        if (_settings.Sorts != null)
+        {
+            var stored = _settings.Sorts.FirstOrDefault(s => s.Key == column.Key);
+
+            return stored == null ? null : stored.Descending ? SortOrder.Descending : SortOrder.Ascending;
+        }
+
+        return defaultSort switch
+        {
+            ColumnSort.Ascending => SortOrder.Ascending,
+            ColumnSort.Descending => SortOrder.Descending,
+            _ => null,
+        };
+    }
+
+    // Settings
+
+    async Task PageSizeChangedAsync(int pageSize)
+    {
+        _pageSize = pageSize;
+
+        await SaveSettingsAsync();
+    }
+
+    async Task PickedColumnsChangedAsync(DataGridPickedColumnsChangedEventArgs<TItem> args)
+    {
+        // Picked columns are matched by title: template columns have no property to identify them by
+        var shown = args.Columns.Select(c => c.Title).ToHashSet();
+
+        _settings.HiddenColumns = _columns
+            .Where(c => c.Title != null && !shown.Contains(c.Title))
+            .Select(c => c.Key)
+            .ToList();
+
+        await SaveSettingsAsync();
+    }
+
+    async Task SaveSettingsAsync(IEnumerable<SortDescriptor>? sorts = null)
+    {
+        if (!_ready)
+            return;
+
+        _settings.PageSize = _pageSize;
+
+        if (sorts != null)
+            _settings.Sorts = sorts.Where(s => s.SortOrder != null)
+                .Select(s => new TableSettings.Sort(s.Property, s.SortOrder == SortOrder.Descending))
+                .ToList();
+
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, System.Text.Json.JsonSerializer.Serialize(_settings));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not save table settings");
+        }
+    }
+
+    public void Dispose() => _searchDebounce?.Cancel();
+
+    sealed class TableSettings
+    {
+        public int? PageSize { get; set; }
+
+        public List<Sort>? Sorts { get; set; }
+
+        public List<string>? HiddenColumns { get; set; }
+
+        public sealed record Sort(string Key, bool Descending);
+    }
+}

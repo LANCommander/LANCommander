@@ -1,0 +1,64 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (ChildContent == null)
+{
+    @if (Loading)
+    {
+        <span @attributes="AdditionalAttributes" class="@_class" style="@Style" role="status" aria-live="polite">
+            @Indicator
+        </span>
+    }
+}
+else
+{
+    <div @attributes="AdditionalAttributes" class="@_class" style="@Style" aria-busy="@(Loading ? "true" : "false")">
+        <div class="@(Loading ? "lc-spin-content lc-spin-blurred" : "lc-spin-content")">
+            @ChildContent
+        </div>
+        @if (Loading)
+        {
+            <div class="lc-spin-overlay" role="status" aria-live="polite">
+                @Indicator
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Content to cover with the spinner while <see cref="Loading"/>. Without it, just the spinner shows.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Loading { get; set; } = true;
+
+    /// <summary>Text under the spinner, e.g. what is being waited on.</summary>
+    [Parameter] public string? Tip { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    [Parameter] public bool Large { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add(ChildContent == null ? "lc-spin" : "lc-spin-container")
+            .Add(Class)
+            .Build();
+    }
+
+    RenderFragment Indicator => @<span class="lc-spin-indicator">
+        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                   ShowValue="false"
+                                   Size="@(Small ? ProgressBarCircularSize.ExtraSmall : Large ? ProgressBarCircularSize.Large : ProgressBarCircularSize.Small)" />
+        @if (Tip != null)
+        {
+            <span class="lc-spin-tip">@Tip</span>
+        }
+        else
+        {
+            <span class="lc-visually-hidden">Loading</span>
+        }
+    </span>;
+}

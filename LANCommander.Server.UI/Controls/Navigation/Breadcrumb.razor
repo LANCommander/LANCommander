@@ -1,0 +1,20 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<nav @attributes="AdditionalAttributes" class="@_class" style="@Style" aria-label="Breadcrumb">
+    <ol class="lc-breadcrumb-list">
+        @ChildContent
+    </ol>
+</nav>
+
+@code {
+    /// <summary>The BreadcrumbItem components, outermost first.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-breadcrumb").Add(Class).Build();
+    }
+}

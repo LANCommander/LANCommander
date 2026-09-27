@@ -1,0 +1,240 @@
+// Menu, SubMenu, MenuItem, Tabs, Steps, Breadcrumb
+
+.lc-menu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-menu-horizontal > .lc-menu-list {
+    display: flex;
+    gap: 4px;
+}
+
+.lc-menu-item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: var(--rz-border-radius);
+    background: transparent;
+    color: var(--rz-text-color);
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--rz-base-700);
+        color: var(--rz-text-title-color);
+        text-decoration: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--rz-primary);
+        outline-offset: -2px;
+    }
+}
+
+.lc-menu-item-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-menu-item-icon {
+    font-size: 1.15em;
+}
+
+.lc-menu-item-active {
+    background: var(--rz-primary-lighter);
+    color: var(--rz-primary-light);
+
+    &:hover {
+        background: var(--rz-primary-lighter);
+        color: var(--rz-primary-light);
+    }
+}
+
+.lc-menu-item-disabled .lc-menu-item-content {
+    color: var(--rz-text-disabled-color);
+    cursor: not-allowed;
+
+    &:hover {
+        background: transparent;
+    }
+}
+
+.lc-menu-item-danger .lc-menu-item-content {
+    color: var(--rz-danger);
+}
+
+.lc-submenu-caret {
+    transition: transform 0.15s;
+}
+
+.lc-submenu-open > .lc-submenu-title .lc-submenu-caret {
+    transform: rotate(180deg);
+}
+
+.lc-submenu-active > .lc-submenu-title {
+    color: var(--rz-primary-light);
+}
+
+.lc-submenu-list .lc-menu-item-content {
+    padding-inline-start: 42px;
+}
+
+.lc-menu-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--lc-border-subtle-color);
+}
+
+// Tabs
+
+.lc-tab-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+// Steps
+
+.lc-steps {
+    display: flex;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-step {
+    display: flex;
+    flex: 1;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+
+    &:not(:last-child)::after {
+        content: "";
+        flex: 1;
+        align-self: center;
+        height: 1px;
+        margin-inline-start: 6px;
+        background: var(--lc-border-color);
+    }
+}
+
+.lc-step-marker {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--lc-border-color);
+    border-radius: 50%;
+    color: var(--rz-text-secondary-color);
+    font-weight: 600;
+}
+
+.lc-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-top: 3px;
+}
+
+.lc-step-title {
+    color: var(--rz-text-secondary-color);
+    white-space: nowrap;
+}
+
+.lc-step-description {
+    color: var(--rz-text-secondary-color);
+    font-size: var(--rz-text-caption-font-size);
+}
+
+.lc-step-current {
+    .lc-step-marker {
+        border-color: var(--rz-primary);
+        background: var(--rz-primary);
+        color: var(--rz-on-primary, white);
+    }
+
+    .lc-step-title {
+        color: var(--rz-text-title-color);
+        font-weight: 600;
+    }
+}
+
+.lc-step-done {
+    .lc-step-marker {
+        border-color: var(--rz-primary);
+        color: var(--rz-primary);
+    }
+
+    .lc-step-title {
+        color: var(--rz-text-color);
+    }
+
+    &::after {
+        background: var(--rz-primary);
+    }
+}
+
+.lc-steps-small .lc-step-marker {
+    width: 22px;
+    height: 22px;
+    font-size: var(--rz-text-caption-font-size);
+}
+
+// Breadcrumb
+
+.lc-breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--rz-text-secondary-color);
+
+    &:not(:last-child)::after {
+        content: "/";
+        margin: 0 8px;
+        color: var(--rz-base-500);
+    }
+
+    &:last-child {
+        color: var(--rz-text-title-color);
+    }
+
+    a,
+    .lc-breadcrumb-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--rz-primary-light);
+        }
+    }
+}

@@ -1,0 +1,56 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (Code)
+{
+    <code @attributes="AdditionalAttributes" class="@_class" style="@Style">@ChildContent</code>
+}
+else
+{
+    <span @attributes="AdditionalAttributes" class="@_class" style="@Style">@ChildContent</span>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Muted colour for supporting information.</summary>
+    [Parameter] public bool Secondary { get; set; }
+
+    [Parameter] public bool Strong { get; set; }
+
+    [Parameter] public bool Italic { get; set; }
+
+    /// <summary>Smaller than body text.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>Monospaced, for paths, keys and other literal values.</summary>
+    [Parameter] public bool Code { get; set; }
+
+    /// <summary>Cut off with an ellipsis instead of wrapping.</summary>
+    [Parameter] public bool Ellipsis { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        var status = StatusResolver.Resolve(success: Success, warning: Warning, danger: Danger);
+
+        _class = new ClassBuilder()
+            .Add("lc-typography")
+            .If(Secondary, "lc-typography-secondary")
+            .If(Strong, "lc-typography-strong")
+            .If(Italic, "lc-typography-italic")
+            .If(Small, "lc-typography-small")
+            .If(Code, "lc-typography-code")
+            .If(Ellipsis, "lc-typography-ellipsis")
+            .If(status != Status.None, $"lc-typography-{status.ClassSuffix()}")
+            .Add(Class)
+            .Build();
+    }
+}

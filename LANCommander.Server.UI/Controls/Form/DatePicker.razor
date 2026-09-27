@@ -1,0 +1,27 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TValue
+@inherits FormInputBase<TValue>
+
+@* A date (and optionally time) picked from a calendar; bind a DateTime, DateTime?, DateOnly or DateTimeOffset *@
+<RadzenDatePicker TValue="TValue"
+                  Name="@InputId"
+                  Value="@Value"
+                  ValueChanged="@((TValue value) => SetValueAsync(value))"
+                  DateFormat="@(Format ?? (ShowTime ? "MM/dd/yyyy hh:mm tt" : "MM/dd/yyyy"))"
+                  ShowTime="ShowTime"
+                  HourFormat="12"
+                  AllowClear="Clearable"
+                  Disabled="IsDisabled"
+                  Placeholder="@Placeholder"
+                  Style="@Style"
+                  Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-date-picker"))' />
+
+@code {
+    [Parameter] public bool ShowTime { get; set; }
+
+    /// <summary>Lets the value be emptied again; only for nullable values.</summary>
+    [Parameter] public bool Clearable { get; set; }
+
+    /// <summary>A .NET date format string; defaults to month/day/year.</summary>
+    [Parameter] public string? Format { get; set; }
+}

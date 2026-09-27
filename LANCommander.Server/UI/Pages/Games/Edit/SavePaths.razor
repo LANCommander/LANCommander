@@ -1,13 +1,10 @@
-﻿@page "/Games/{id:guid}/SavePaths"
+@page "/Games/{id:guid}/SavePaths"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Save Paths">
     <TitleExtraTemplate>
-        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="() => _savePathEditor?.Save()">Save</Button>
-        </Flex>
+        <Button Primary OnClick="() => _savePathEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
         <SavePathEditor @ref="_savePathEditor" />
     </ChildContent>
@@ -16,5 +13,5 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    SavePathEditor _savePathEditor;
+    SavePathEditor? _savePathEditor;
 }

@@ -1,0 +1,178 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+@implements IDisposable
+
+@* A labelled field: the label, the input(s) inside it, help text, and the validation messages of those inputs *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (Label != null || LabelTemplate != null)
+    {
+        <label class="lc-form-item-label" for="@InputId">
+            @if (LabelTemplate != null)
+            {
+                @LabelTemplate
+            }
+            else
+            {
+                @Label
+            }
+            @if (Required)
+            {
+                <span class="lc-form-item-required" aria-hidden="true">*</span>
+            }
+        </label>
+    }
+    <div class="lc-form-item-control">
+        <CascadingValue Value="this" IsFixed>
+            @ChildContent
+        </CascadingValue>
+
+        @foreach (var message in _messages)
+        {
+            <div class="lc-form-item-error" role="alert">@message</div>
+        }
+
+        @if (Help != null || HelpTemplate != null)
+        {
+            <div class="lc-form-item-help">
+                @if (HelpTemplate != null)
+                {
+                    @HelpTemplate
+                }
+                else
+                {
+                    @Help
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Rich label content; replaces <see cref="Label"/>.</summary>
+    [Parameter] public RenderFragment? LabelTemplate { get; set; }
+
+    /// <summary>Explanatory text under the input.</summary>
+    [Parameter] public string? Help { get; set; }
+
+    /// <summary>Rich help content; replaces <see cref="Help"/>.</summary>
+    [Parameter] public RenderFragment? HelpTemplate { get; set; }
+
+    /// <summary>Marks the field as required and rejects an empty value when the form validates.</summary>
+    [Parameter] public bool Required { get; set; }
+
+    /// <summary>The message shown when a <see cref="Required"/> field is empty.</summary>
+    [Parameter] public string? RequiredMessage { get; set; }
+
+    [CascadingParameter] EditContext? EditContext { get; set; }
+
+    internal string InputId { get; } = $"lc-input-{Guid.NewGuid():N}";
+
+    readonly List<FieldIdentifier> _fields = [];
+    List<string> _messages = [];
+    ValidationMessageStore? _store;
+    EditContext? _subscribed;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(EditContext, _subscribed))
+        {
+            Unsubscribe();
+
+            if (EditContext != null)
+            {
+                _store = new ValidationMessageStore(EditContext);
+                EditContext.OnValidationRequested += ValidationRequested;
+                EditContext.OnFieldChanged += FieldChanged;
+                EditContext.OnValidationStateChanged += ValidationStateChanged;
+            }
+
+            _subscribed = EditContext;
+        }
+
+        _class = new ClassBuilder()
+            .Add("lc-form-item")
+            .If(_messages.Count > 0, "lc-form-item-has-error")
+            .Add(Class)
+            .Build();
+    }
+
+    internal void Register(FieldIdentifier field)
+    {
+        if (!_fields.Contains(field))
+            _fields.Add(field);
+    }
+
+    internal void Unregister(FieldIdentifier field) => _fields.Remove(field);
+
+    void ValidationRequested(object? sender, ValidationRequestedEventArgs e)
+    {
+        foreach (var field in _fields)
+            ValidateRequired(field);
+
+        // The data annotations validator raised its state change before these messages existed
+        if (Required && _fields.Count > 0)
+            EditContext?.NotifyValidationStateChanged();
+    }
+
+    void FieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        if (_fields.Contains(e.FieldIdentifier))
+        {
+            ValidateRequired(e.FieldIdentifier);
+            EditContext?.NotifyValidationStateChanged();
+        }
+    }
+
+    void ValidateRequired(FieldIdentifier field)
+    {
+        if (_store == null)
+            return;
+
+        _store.Clear(field);
+
+        if (Required && IsEmpty(ReadValue(field)))
+            _store.Add(field, RequiredMessage ?? $"{Label ?? field.FieldName} is required");
+    }
+
+    void ValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        var messages = _fields.SelectMany(f => EditContext!.GetValidationMessages(f)).Distinct().ToList();
+
+        if (!messages.SequenceEqual(_messages))
+        {
+            _messages = messages;
+            OnParametersSet();
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    static object? ReadValue(FieldIdentifier field) =>
+        field.Model.GetType().GetProperty(field.FieldName)?.GetValue(field.Model);
+
+    static bool IsEmpty(object? value) => value switch
+    {
+        null => true,
+        string text => string.IsNullOrWhiteSpace(text),
+        System.Collections.ICollection collection => collection.Count == 0,
+        Guid guid => guid == Guid.Empty,
+        _ => false,
+    };
+
+    void Unsubscribe()
+    {
+        if (_subscribed == null)
+            return;
+
+        _subscribed.OnValidationRequested -= ValidationRequested;
+        _subscribed.OnFieldChanged -= FieldChanged;
+        _subscribed.OnValidationStateChanged -= ValidationStateChanged;
+        _store?.Clear();
+    }
+
+    public void Dispose() => Unsubscribe();
+}

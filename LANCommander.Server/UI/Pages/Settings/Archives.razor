@@ -1,69 +1,72 @@
-﻿@page "/Settings/Archives"
+@page "/Settings/Archives"
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IMessageService MessageService
-@inject ILogger<Archives> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Archives" />
 
-<PageContent>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
-        <FormItem Label="Allow Insecure Downloads">
-            <Switch @bind-Checked="context.Server.Archives.AllowInsecureDownloads" />
-        </FormItem>
+<PageContent Loading="StorageLocations == null">
+    @if (StorageLocations != null)
+    {
+        <Form Model="Settings.Value" OnSubmit="SaveAsync" Loading="_saving">
+            <FormItem Label="Allow Insecure Downloads">
+                <Switch @bind-Value="Settings.Value.Server.Archives.AllowInsecureDownloads" />
+            </FormItem>
 
-        <FormItem Label="Max Upload Chunk Size (MB)">
-            <AntDesign.InputNumber @bind-Value="context.Server.Archives.MaxChunkSize" Min="1" DefaultValue="50" />
-        </FormItem>
+            <FormItem Label="Max Upload Chunk Size (MB)">
+                <NumberInput @bind-Value="Settings.Value.Server.Archives.MaxChunkSize" Min="1" />
+            </FormItem>
 
-        <FormItem Label="Storage Paths">
-            <Flex Vertical Gap="FlexGap.Large">
-                <Table TItem="Data.Models.StorageLocation" DataSource="@StorageLocations" HidePagination="true" Responsive Context="storageLocation">
-                    <PropertyColumn Property="l => l.Path">
-                        <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)"/>
-                    </PropertyColumn>
-                    <PropertyColumn Property="l => l.Default" Title="Default" Align="ColumnAlign.Right">
-                        <Checkbox @bind-Checked="storageLocation.Default"/>
-                    </PropertyColumn>
-                    <ActionColumn>
-                        <Space Style="display: flex; justify-content: end">
-                            <SpaceItem>
-                                <Popconfirm OnConfirm="() => RemoveStorageLocation(storageLocation)" Title="Are you sure you want to remove this storage location?">
-                                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            <FormItem Label="Storage Paths">
+                <Flex Vertical Gap="Gap.Medium">
+                    <Table TItem="StorageLocation" Items="StorageLocations" Key="l => l" NoPaging SettingsKey="settings-archive-storage">
+                        <Columns>
+                            <TemplateColumn TItem="StorageLocation" Title="Path">
+                                <FilePicker @bind-Value="context.Path" Title="Select Storage Location" Root="@RootPath" OnSelected="path => OnPathSelected(context, path)" />
+                            </TemplateColumn>
+                            <TemplateColumn TItem="StorageLocation" Title="Default" Width="100px">
+                                <Checkbox @bind-Value="context.Default" />
+                            </TemplateColumn>
+                            <ActionsColumn TItem="StorageLocation">
+                                <Popconfirm OnConfirm="() => RemoveStorageLocation(context)" Title="Are you sure you want to remove this storage location?" OkText="Remove" Danger>
+                                    <Button Text Danger Icon="IconType.X" title="Remove" />
                                 </Popconfirm>
-                            </SpaceItem>
-                        </Space>
-                    </ActionColumn>
-                </Table>
+                            </ActionsColumn>
+                        </Columns>
+                    </Table>
 
-                <Flex Justify="FlexJustify.End">
-                    <Button OnClick="AddStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
+                    <Flex Justify="Justify.End">
+                        <Button Primary OnClick="AddStorageLocation">Add Path</Button>
+                    </Flex>
                 </Flex>
-            </Flex>
-        </FormItem>
+            </FormItem>
 
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
-    </Form>
+            <FormItem>
+                <Button Primary Submit>Save</Button>
+            </FormItem>
+        </Form>
+    }
 </PageContent>
 
 @code {
-    ICollection<StorageLocation> StorageLocations;
+    List<StorageLocation>? StorageLocations;
+    bool _saving;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     protected override async Task OnInitializedAsync()
     {
-        StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        StorageLocations = (await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive)).ToList();
     }
 
-    async Task Save()
+    async Task SaveAsync()
     {
+        _saving = true;
+
         try
         {
             SettingsProvider.Update(s =>
@@ -71,23 +74,28 @@
                 s.Server.Archives = Settings.Value.Server.Archives;
             });
 
+            if (StorageLocations!.Count > 0 && !StorageLocations.Any(l => l.Default))
+                StorageLocations[0].Default = true;
+
             foreach (var storageLocation in StorageLocations)
             {
-                if (!StorageLocations.Any(l => l.Default))
-                    storageLocation.Default = true;
-                
+                storageLocation.Type = SDK.Enums.StorageLocationType.Archive;
+
                 if (storageLocation.Id != Guid.Empty)
                     await StorageLocationService.UpdateAsync(storageLocation);
                 else
                     await StorageLocationService.AddAsync(storageLocation);
             }
 
-            MessageService.Success("Settings saved!");
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
@@ -101,15 +109,10 @@
         storageLocation.Path = path;
     }
 
-    async Task AddStorageLocation()
-    {
-        StorageLocations.Add(new StorageLocation());
+    // New lists so the table notices the change
+    void AddStorageLocation() =>
+        StorageLocations = [.. StorageLocations!, new StorageLocation { Type = SDK.Enums.StorageLocationType.Archive }];
 
-        StateHasChanged();
-    }
-
-    async Task RemoveStorageLocation(StorageLocation storageLocation)
-    {
-        StorageLocations.Remove(storageLocation);
-    }
+    void RemoveStorageLocation(StorageLocation storageLocation) =>
+        StorageLocations = StorageLocations!.Where(l => l != storageLocation).ToList();
 }

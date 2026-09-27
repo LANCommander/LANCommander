@@ -1,122 +1,117 @@
-﻿@inject RedistributableService RedistributableService
+@inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
-@inject MessageService MessageService
-@inject ILogger<RedistributableEditView> Logger
+@inject NotificationService Notifications
 
-<Layout Class="panel-layout" Style="padding: 24px 0;">
-    <Sider Width="200">
-        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+<SideLayout>
+    <Side>
+        <Menu>
             @if (Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Redistributables/{Id}/General")">General</MenuItem>
-
-                <MenuItem RouterLink="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
-                <MenuItem RouterLink="@($"/Redistributables/{Id}/Options")">Options</MenuItem>
-                <MenuItem RouterLink="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem Icon="IconType.Info" Href="@($"/Redistributables/{Id}/General")" Exact>General</MenuItem>
+                <MenuItem Icon="IconType.Archive" Href="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem Icon="IconType.SlidersHorizontal" Href="@($"/Redistributables/{Id}/Options")">Options</MenuItem>
+                <MenuItem Icon="IconType.Code" Href="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
             }
             else
             {
-                @* Add button without RouterLink, prevents routing on disabled/inactive menu item *@
-                <MenuItem>General</MenuItem>
+                @* The other sections need a saved redistributable *@
+                <MenuItem Icon="IconType.Info" Href="/Redistributables/Add">General</MenuItem>
             }
         </Menu>
-    </Sider>
+    </Side>
 
-    <Content>
-        <CascadingValue Value="Redistributable">
-            <PageHeader>
-                <PageHeaderTitle>
-                    @if (TitleTemplate != null)
-                    {
-                        @TitleTemplate(Redistributable)
-                    }
-                    else {
-                        <Text>@Title</Text>
-                    }
-                </PageHeaderTitle>
+    <ChildContent>
+        <PageHeader>
+            <TitleTemplate>
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate(Redistributable)
+                }
+                else
+                {
+                    @Title
+                }
+            </TitleTemplate>
+            <Extra>
+                @TitleExtraTemplate?.Invoke(Redistributable)
+            </Extra>
+        </PageHeader>
 
-                <PageHeaderExtra>
-                    @TitleExtraTemplate?.Invoke(Redistributable)
-                </PageHeaderExtra>
-            </PageHeader>
-        </CascadingValue>
-
-        <div class="panel-layout-content">
-            @* Scoped to the content pane so a failing tab leaves the tab menu and header usable. *@
-            <ErrorHandler Title="This page could not be loaded">
-                <Body>
-                    @if (Redistributable?.Id == Id)
-                    {
-                        <CascadingValue Value="Redistributable.Id" Name="RedistributableId">
-                            @ChildContent?.Invoke(Redistributable)
-                        </CascadingValue>
-                    }
-                </Body>
-            </ErrorHandler>
-        </div>
-    </Content>
-</Layout>
+        @* PageContent catches errors, so a failing section leaves the menu and header usable *@
+        <PageContent Loading="_loading">
+            @if (!_loading && Redistributable.Id == Id)
+            {
+                <CascadingValue Value="Redistributable.Id" Name="RedistributableId">
+                    @ChildContent?.Invoke(Redistributable)
+                </CascadingValue>
+            }
+        </PageContent>
+    </ChildContent>
+</SideLayout>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    [Parameter] public string Title { get; set; }
+    [Parameter] public string? Title { get; set; }
     [Parameter] public RenderFragment<Redistributable>? TitleTemplate { get; set; }
     [Parameter] public RenderFragment<Redistributable>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Redistributable>? ChildContent { get; set; }
 
     Redistributable Redistributable { get; set; } = new();
-    Guid _id;
+    Guid? _id;
+    bool _loading = true;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_id != Id)
+        if (_id == Id)
+            return;
+
+        _id = Id;
+        _loading = true;
+
+        if (Id != Guid.Empty)
         {
-            _id = Id;
+            var redistributable = await RedistributableService
+                .Include(r => r.Games)
+                .Include(r => r.CreatedBy)
+                .Include(r => r.UpdatedBy)
+                .GetAsync(Id);
 
-            if (_id != Guid.Empty)
-                Redistributable = await RedistributableService
-                    .Include(r => r.Games)
-                    .Include(r => r.CreatedBy)
-                    .Include(r => r.UpdatedBy)
-                    .GetAsync(_id);
-            else
-                Redistributable = new();
-
-            if (Redistributable == null)
+            if (redistributable == null)
+            {
                 NavigationManager.NavigateTo("/Redistributables");
+                return;
+            }
+
+            Redistributable = redistributable;
         }
+        else
+            Redistributable = new();
+
+        _loading = false;
     }
 
     public async Task Save()
     {
         try
         {
-            if (_id != Guid.Empty)
+            if (Id != Guid.Empty)
             {
                 await RedistributableService.UpdateAsync(Redistributable);
 
-                MessageService.Success("Redistributable updated!");
+                Notifications.Success("Redistributable updated!");
             }
             else
             {
                 Redistributable = await RedistributableService.AddAsync(Redistributable);
 
-                NavigationManager.LocationChanged += NotifyRedistributableAdded;
+                Notifications.Success("Redistributable added!");
+
                 NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
             }
-            
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "Redistributable could not be saved!");
-            MessageService.Error("Redistributable could not be saved!");
+            Notifications.Error(ex, "Redistributable could not be saved!");
         }
-    }
-    
-    private void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
-    {
-        NavigationManager.LocationChanged -= NotifyRedistributableAdded;
-
-        MessageService.Success("Redistributable added!");
     }
 }

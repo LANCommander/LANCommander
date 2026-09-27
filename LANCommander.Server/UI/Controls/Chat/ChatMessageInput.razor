@@ -1,0 +1,68 @@
+@namespace LANCommander.Server.UI.Controls
+@using EasyMDE.Blazor
+@using LANCommander.SDK.Services
+@inject IChatClient ChatClient
+@inject NotificationService Notifications
+
+@* Writes a message in Markdown; Enter sends it, Ctrl+Enter starts a new line *@
+<EasyMdeEditor @bind-Value="_message"
+               Class="chat-message-input"
+               InterceptKeys="_keys"
+               OnKey="HandleKeyAsync"
+               ReadOnly="_sending"
+               Placeholder="@Placeholder"
+               Options="_options" />
+
+@code {
+    [Parameter] public Guid? ThreadId { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+
+    string _message = string.Empty;
+    bool _sending;
+
+    readonly EasyMdeOptions _options = new()
+    {
+        MinHeight = "0px",
+        Toolbar = EasyMdeToolbar.Disabled,
+        Status = EasyMdeStatus.Disabled,
+    };
+
+    readonly EasyMdeKeyRegistration[] _keys =
+    [
+        new() { Key = "Enter", NotifyDotNet = true },
+        new() { Key = "Enter", Ctrl = true, NotifyDotNet = true },
+    ];
+
+    async ValueTask<bool> HandleKeyAsync(EasyMdeKeyEvent e)
+    {
+        if (e.Key is "Enter" && !e.Ctrl)
+            await SendAsync();
+
+        return true;
+    }
+
+    async Task SendAsync()
+    {
+        if (_sending || string.IsNullOrWhiteSpace(_message) || ThreadId == null)
+            return;
+
+        _sending = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await ChatClient.SendMessageAsync(ThreadId.Value, _message);
+
+            _message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The message could not be sent");
+        }
+        finally
+        {
+            _sending = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

@@ -1,0 +1,148 @@
+// Chat (UI/Controls/Chat)
+.chat {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 280px;
+    padding: 0 1em 1em;
+    min-height: 0;
+}
+
+.chat-list-threads {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.chat-list-thread {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: var(--lc-border-radius);
+    background: none;
+    color: var(--lc-text-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-primary);
+        outline-offset: -2px;
+    }
+}
+
+.chat-list-thread-active {
+    background: var(--lc-hover-background);
+    color: var(--lc-text-title-color);
+}
+
+.chat-list-thread-title {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-thread {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+    min-height: 0;
+    background: var(--lc-body-background);
+}
+
+.chat-thread-empty {
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-thread-messages {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 1em;
+    overflow: hidden;
+
+    .infinite-scroll {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+}
+
+.chat-message-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.chat-message-group-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.chat-message-author {
+    font-weight: 600;
+    color: var(--lc-text-title-color);
+}
+
+.chat-message-timestamp {
+    font-size: 12px;
+    color: var(--lc-text-secondary-color);
+}
+
+.chat-message p {
+    margin-bottom: .25em;
+}
+
+.chat-message-input {
+    flex: 0 0 auto;
+
+    .EasyMDEContainer .CodeMirror {
+        margin: .5em;
+        border: none;
+        border-radius: 0;
+        background: var(--lc-panel-background);
+    }
+}
+
+.chat-users {
+    display: flex;
+    flex-direction: column;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.chat-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--lc-border-radius);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+}
+
+.chat-user-name {
+    flex-grow: 1;
+}

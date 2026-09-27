@@ -1,0 +1,32 @@
+@using LANCommander.SDK.Models
+
+@* One option's input, chosen by its type: a checkbox, a list of choices, or text *@
+@if (Definition.Type == "bool")
+{
+    <Checkbox Value="IsChecked" ValueChanged="CheckedChangedAsync" />
+}
+else if ((Definition.Type == "enum" || Definition.Type == "choice") && Definition.Choices != null)
+{
+    <Select TValue="string"
+            Items="@Definition.Choices.ToSelectItems(c => c.Value, c => c.Label)"
+            Value="@Value"
+            ValueChanged="EmitAsync"
+            Placeholder="@(Placeholder ?? "")" />
+}
+else
+{
+    <TextInput Value="@Value" ValueChanged="EmitAsync" Placeholder="@Placeholder" />
+}
+
+@code {
+    [Parameter, EditorRequired] public OptionDefinition Definition { get; set; } = default!;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    bool IsChecked => Value == "true";
+
+    Task CheckedChangedAsync(bool value) => EmitAsync(value ? "true" : "false");
+
+    Task EmitAsync(string? value) => ValueChanged.InvokeAsync(value);
+}

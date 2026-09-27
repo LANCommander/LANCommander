@@ -1,0 +1,92 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@inherits ControlBase
+
+@* A bar per item: vertical columns by default, horizontal bars with Horizontal *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (_points.Count == 0)
+    {
+        <Empty Small Description="@EmptyText" />
+    }
+    else
+    {
+        <RadzenChart Style="@($"height: {Height}px; width: 100%")" ColorScheme="ColorScheme.Palette">
+            @if (Horizontal)
+            {
+                <RadzenBarSeries Data="_points" CategoryProperty="@nameof(ChartPoint.Category)" ValueProperty="@nameof(ChartPoint.Value)" Title="@ValueTitle" Fills="_fills">
+                    <RadzenSeriesDataLabels Visible="DataLabels" Formatter="FormatValue" />
+                </RadzenBarSeries>
+            }
+            else
+            {
+                <RadzenColumnSeries Data="_points" CategoryProperty="@nameof(ChartPoint.Category)" ValueProperty="@nameof(ChartPoint.Value)" Title="@ValueTitle" Fills="_fills">
+                    <RadzenSeriesDataLabels Visible="DataLabels" Formatter="FormatValue" />
+                </RadzenColumnSeries>
+            }
+            @* Bars compare lengths, so the axis must start at zero *@
+            <RadzenValueAxis Formatter="FormatValue" Min="0" Max="_axisMax">
+                <RadzenGridLines Visible="true" />
+                @if (ValueTitle != null)
+                {
+                    <RadzenAxisTitle Text="@ValueTitle" />
+                }
+            </RadzenValueAxis>
+            <RadzenCategoryAxis>
+                @if (CategoryTitle != null)
+                {
+                    <RadzenAxisTitle Text="@CategoryTitle" />
+                }
+            </RadzenCategoryAxis>
+            <RadzenLegend Visible="false" />
+        </RadzenChart>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<TItem>? Items { get; set; }
+
+    /// <summary>The category each item is shown under, e.g. a game's title.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string> Label { get; set; } = default!;
+
+    [Parameter, EditorRequired] public Func<TItem, double> Value { get; set; } = default!;
+
+    /// <summary>How values read on the axis, labels and tooltips, e.g. as a duration.</summary>
+    [Parameter] public Func<double, string>? ValueFormat { get; set; }
+
+    [Parameter] public string? ValueTitle { get; set; }
+
+    [Parameter] public string? CategoryTitle { get; set; }
+
+    /// <summary>Bars grow left to right, with categories down the side.</summary>
+    [Parameter] public bool Horizontal { get; set; }
+
+    /// <summary>Writes each value on its bar.</summary>
+    [Parameter] public bool DataLabels { get; set; }
+
+    /// <summary>Every bar in the primary colour instead of one colour per item.</summary>
+    [Parameter] public bool SingleColor { get; set; }
+
+    /// <summary>Height in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 300;
+
+    [Parameter] public string EmptyText { get; set; } = "No data";
+
+    List<ChartPoint> _points = [];
+    double? _axisMax;
+    IEnumerable<string> _fills = [];
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _points = (Items ?? []).Select(item => new ChartPoint(Label(item), Value(item))).ToList();
+        // Headroom above the tallest bar so its label doesn't sit on the edge
+        _axisMax = _points.Count > 0 && _points.Max(p => p.Value) > 0 ? _points.Max(p => p.Value) * 1.15 : null;
+        _fills = SingleColor ? Enumerable.Repeat(ChartPalette.Colors[0], _points.Count) : ChartPalette.For(_points.Count);
+        _class = new ClassBuilder().Add("lc-chart").Add(Class).Build();
+    }
+
+    string FormatValue(object value) =>
+        ValueFormat != null && value is IConvertible convertible
+            ? ValueFormat(convertible.ToDouble(null))
+            : value?.ToString() ?? "";
+}

@@ -1,0 +1,45 @@
+@implements IComponentFixtureSet
+
+@code {
+    const FileManagerFeatures PickerFeatures = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs;
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("FileManager.Root", "The full file manager at the top of a storage location",
+            @<FileManager Source="MemoryFileSource.Sample()" Style="height: 360px" />)
+        {
+            Width = 880,
+            Covers = [typeof(FileManager)],
+            WaitFor = ".rz-data-row",
+        },
+        new("FileManager.Picker", "A single-selection picker inside a folder, where only archives can be picked",
+            @<FileManager Source="@(MemoryFileSource.Sample().At("Archives"))"
+                          Features="PickerFeatures"
+                          SelectMultiple="false"
+                          EntrySelectable="@(e => e.Name.EndsWith(".zip"))"
+                          Style="height: 300px" />)
+        {
+            Width = 880,
+            Covers = [typeof(FileManager)],
+            WaitFor = ".rz-data-row",
+        },
+        new("ChunkUploader.States", "Waiting for a file, and part way through an upload",
+            @<Flex Gap="Gap.Medium">
+                <ChunkUploader Accept=".zip" Hint="Archives up to 100 GB are uploaded in chunks" Style="flex: 1" />
+                <ChunkUploader Status="ChunkUploadStatus.Uploading" Style="flex: 1" />
+            </Flex>)
+        {
+            Width = 640,
+            Covers = [typeof(ChunkUploader)],
+        },
+        new("Upload.Default", "The drop area, with a hint and disabled",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Upload Action="/Upload/File" Multiple Hint="Files are copied to the current folder" />
+                <Upload Action="/Upload/File" Text="Uploads are disabled" Disabled />
+            </Flex>)
+        {
+            Width = 420,
+            Covers = [typeof(Upload)],
+        },
+    ];
+}

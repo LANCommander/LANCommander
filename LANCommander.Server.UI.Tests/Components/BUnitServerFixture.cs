@@ -1,4 +1,4 @@
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
@@ -11,7 +11,7 @@ namespace LANCommander.Server.UI.Tests.Components;
 /// Shared fixture for bUnit component tests. Reuses the proven <see cref="UITestApplicationFactory"/>
 /// to stand up the real server dependency-injection container backed by a file-based SQLite
 /// database, seeds an admin user and a single test game, then exposes the real service provider so
-/// bUnit can resolve the server's scoped services (GameService, AntDesign, etc.) while rendering
+/// bUnit can resolve the server's scoped services (GameService, etc.) while rendering
 /// components in-process.
 ///
 /// Unlike <see cref="ConfiguredServerFixture"/> this does NOT start Playwright — bUnit renders

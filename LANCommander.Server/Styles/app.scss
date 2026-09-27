@@ -1,17 +1,7 @@
 ﻿@use '_logo';
-@use '_sidebar';
-@use '_menu';
-@use '_layout';
 @use '_social';
 @use '_login';
-@use '_dashboard';
 @use '_launcher';
-@use '_select';
-@use '_steps';
-@use '_table';
-@use '_page-header';
-@use '_button';
-@use '_card';
 @use '_media-editor';
 @use '_game-detail-preview';
 @use '_media-grabber';
@@ -20,10 +10,12 @@
 @use '_page-editor';
 @use '_pages';
 @use '_uploader';
-@use '_mobile';
-@use '_tree';
 @use '_file-picker';
 @use '_packaging-dialog';
+@use '_shell';
+@use '_profile';
+@use '_settings';
+@use '_chat';
 
 // Fix Blazor rejoin dialog font color being white, force to black
 // see: https://github.com/dotnet/aspnetcore/issues/57453

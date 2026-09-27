@@ -1,0 +1,28 @@
+﻿@inherits LayoutComponentBase
+
+@*
+    A bare shell for fixtures: no sidebar, menu or footer, so captures only change when the
+    fixture's own controls do. Type settings are explicit rather than inherited from <body>, so
+    captures don't depend on the page's global styles.
+*@
+<style>
+    .fixture-layout {
+        min-height: 100vh;
+        padding: 24px;
+        box-sizing: border-box;
+        background: var(--rz-body-background-color);
+        color: var(--rz-text-color);
+        font-family: var(--rz-text-font-family);
+        font-size: var(--rz-body-font-size);
+    }
+
+    .fixture-frame {
+        box-sizing: border-box;
+        padding: 16px;
+        background: var(--rz-base-background-color);
+    }
+</style>
+
+<div class="fixture-layout">
+    @Body
+</div>

@@ -1,0 +1,29 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<bool>
+
+<span class="@BuildClass("lc-switch")" style="@Style">
+    <RadzenSwitch Name="@_id"
+                  Value="Value"
+                  ValueChanged="@((bool value) => SetValueAsync(value))"
+                  Disabled="IsDisabled"
+                  Attributes="AdditionalAttributes?.ToDictionary()" />
+    @if (ChildContent != null)
+    {
+        <label class="lc-switch-label" for="@_id">@ChildContent</label>
+    }
+</span>
+
+@code {
+    /// <summary>A label beside the switch, for switches outside a FormItem.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    readonly string _ownId = $"lc-switch-{Guid.NewGuid():N}";
+    string _id = "";
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _id = InputId ?? _ownId;
+    }
+}

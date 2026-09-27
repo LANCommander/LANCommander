@@ -1,276 +1,223 @@
-﻿@page "/Pages/Edit"
+@page "/Pages/Edit"
 @page "/Pages/Edit/{id:guid}"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@using LANCommander.Server.UI.Pages.Pages.Components
 @using PSC.Blazor.Components.MarkdownEditor
 @using PSC.Blazor.Components.MarkdownEditor.Models
 @inject MediaService MediaService
 @inject PageService PageService
-@inject ConfirmService ConfirmService
+@inject AlertService Alerts
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
 
-<Layout Class="panel-layout">
-    <Content>
-        <PageHeader>
-            <PageHeaderTitle>Pages</PageHeaderTitle>
-            <PageHeaderExtra>
-                <Space>
-                    @if (SelectedPage != null)
-                    {
-                        <SpaceItem>
-                            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
-                        </SpaceItem>
+<PageHeader Title="Pages">
+    <Extra>
+        @if (_selectedPage != null)
+        {
+            <Button Primary Icon="IconType.FloppyDisk" Loading="_saving" OnClick="SaveAsync">Save</Button>
+            <Dropdown>
+                <ChildContent><Button Icon="IconType.DotsThree" aria-label="More actions" /></ChildContent>
+                <Overlay>
+                    <Menu>
+                        <MenuItem Icon="IconType.Plus" OnClick="AddNewPageAsync">New Page</MenuItem>
+                        <MenuItem Icon="IconType.Trash" Danger OnClick="() => DeletePageAsync(_selectedPage)">Delete</MenuItem>
+                    </Menu>
+                </Overlay>
+            </Dropdown>
+        }
+        else
+        {
+            <Button Primary Icon="IconType.Plus" OnClick="AddNewPageAsync">New Page</Button>
+        }
+    </Extra>
+</PageHeader>
 
-                        <SpaceItem>
-                            <Dropdown>
-                                <Overlay>
-                                    <Menu>
-                                        <MenuItem OnClick="Delete">Delete</MenuItem>
-                                        <MenuItem OnClick="AddNewPage">New Page</MenuItem>
-                                    </Menu>
-                                </Overlay>
-                                
-                                <ChildContent>
-                                    <Button Type="ButtonType.Default" Icon="@IconType.Outline.Ellipsis" />
-                                </ChildContent>
+<SplitPane Class="page-editor-body">
+    <Pane Size="25%" Class="page-editor-tree-pane">
+        <Tree TItem="Page"
+              Items="_pages"
+              Children="p => p.Children?.OrderBy(c => c.SortOrder)"
+              Key="p => p.Id"
+              Value="_selectedPage"
+              ValueChanged="SelectPageAsync"
+              ExpandAll
+              Draggable
+              OnDrop="MoveAsync">
+            @{
+                var node = context;
+            }
+            <Dropdown ContextMenu Class="page-editor-tree-title">
+                <ChildContent>
+                    <Flex Align="Align.Center" Justify="Justify.SpaceBetween">
+                        <span>@node.Title</span>
+                        @* A nested click-triggered menu with the same actions; stopPropagation keeps it from selecting the row *@
+                        <span class="page-editor-tree-action" @onclick:stopPropagation="true">
+                            <Dropdown Overlay="PageMenuFor(node)">
+                                <Button Small Text Icon="IconType.DotsThree" aria-label="Page actions" />
                             </Dropdown>
-                        </SpaceItem>
-                    }
-                    else
-                    {
-                        <SpaceItem>
-                            <Button Type="ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
-                        </SpaceItem>
-                    }
-                </Space>
-            </PageHeaderExtra>
-        </PageHeader>
+                        </span>
+                    </Flex>
+                </ChildContent>
+                <Overlay>@PageMenuFor(node)</Overlay>
+            </Dropdown>
+        </Tree>
+    </Pane>
 
-        <SplitPane Class="page-editor-body">
-            <Pane Size="25%" Class="page-editor-tree-pane">
-                <Tree
-                    @ref="Tree"
-                      Draggable
-                      BlockNode
-                      ShowIcon
-                      DefaultExpandAll="true"
-                      TItem="Page"
-                      DataSource="Pages"
-                      ChildrenExpression="p => p.DataItem?.Children?.OrderBy(p => p.SortOrder)"
-                      KeyExpression="p => p.DataItem?.Id.ToString()"
-                      OnDrop="OnDrop"
-                      OnSelect="SelectPage">
-                    <TitleTemplate>
-                        @{
-                            // Shared menu so a right-click on the row and a click on the ellipsis
-                            // button below open the exact same actions.
-                            var node = context.DataItem;
+    <Pane Size="75%" Class="page-editor-markdown-pane">
+        @if (_selectedPage != null)
+        {
+            <Form @ref="_form" Model="_selectedPage">
+                <FormItem Required RequiredMessage="Title is required">
+                    <TextInput @bind-Value="_selectedPage.Title" @bind-Value:after="SyncSlugFromTitle" Large Placeholder="Page Title" AutoFocus />
+                </FormItem>
 
-                            RenderFragment contextMenu =
-                                @<Menu>
-                                    <MenuItem OnClick="() => AddSiblingPage(node)">New Page</MenuItem>
-                                    <MenuItem OnClick="() => AddChildPage(node)">Add Child Page</MenuItem>
-                                    <MenuItem OnClick="() => DeletePage(node)">Delete</MenuItem>
-                                </Menu>;
-                        }
-                        <Dropdown Trigger="@(new Trigger[] { Trigger.ContextMenu })" Class="page-editor-tree-title">
-                            <Overlay>@contextMenu</Overlay>
-                            <ChildContent>
-                                <Flex Align="FlexAlign.Center" Justify="FlexJustify.SpaceBetween">
-                                    <span>@node?.Title</span>
+                <FormItem Label="Slug">
+                    <SlugEditorInput @bind-Page="_selectedPage" />
+                </FormItem>
 
-                                    @* Nested click-triggered dropdown so the button opens the same menu;
-                                       stopPropagation keeps the click from also selecting the tree node. *@
-                                    <span class="page-editor-tree-action" @onclick:stopPropagation="true">
-                                        <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                                            <Overlay>@contextMenu</Overlay>
-                                            <ChildContent>
-                                                <Button Type="ButtonType.Text" Icon="@IconType.Outline.Ellipsis" />
-                                            </ChildContent>
-                                        </Dropdown>
-                                    </span>
-                                </Flex>
-                            </ChildContent>
-                        </Dropdown>
-                    </TitleTemplate>
-                </Tree>
-            </Pane>
-
-            <Pane Size="75%" Class="page-editor-markdown-pane">
-                @if (SelectedPage != null)
+                @if (_selectedPage.Children == null || !_selectedPage.Children.Any())
                 {
-                    <Form @ref="Form" Model="SelectedPage">
-                        <FormItem Style="margin-bottom: 8px" Rules="@(new[] { new FormValidationRule { Required = true, Message = "Title is required" } })">
-                            <Input @bind-Value="context.Title" @bind-Value:after="SyncSlugFromTitle" Size="InputSize.Large" Placeholder="Page Title" AutoFocus />
-                        </FormItem>
-
-                        <FormItem Label="Slug" Style="margin-bottom: 8px; padding-left: 8px">
-                            <SlugEditorInput @bind-Page="context" />
-                        </FormItem>
-
-                        @if (SelectedPage.Children == null || !SelectedPage.Children.Any())
-                        {
-                            <FormItem Style="margin-bottom: 8px">
-                                <FormItem Class="ant-typography">
-                                    <MarkdownEditor
-                                        @ref="MarkdownEditor"
-                                        @bind-Value="context.Contents"
+                    <FormItem>
+                        <MarkdownEditor @bind-Value="_selectedPage.Contents"
                                         UploadImage="true"
                                         ImageUploadEndpoint="/api/Media/Upload/PageImage"
-                                        CustomImageUpload="UploadImage"
+                                        CustomImageUpload="UploadImageAsync"
                                         SpellChecker="false"
-                                        CSSClass="ant-typography"
                                         MinHeight="500px" />
-                                </FormItem>
-                            </FormItem>
-                        }
-                    </Form>
+                    </FormItem>
                 }
-                else
-                {
-                    <Empty>
-                        <DescriptionTemplate>
-                            No page is selected
-                        </DescriptionTemplate>
-                        <ChildContent>
-                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
-                        </ChildContent>
-                    </Empty>
-                }
-            </Pane>
-        </SplitPane>
-    </Content>
-</Layout>
+            </Form>
+        }
+        else
+        {
+            <Empty Description="No page is selected">
+                <Button Primary Icon="IconType.Plus" OnClick="AddNewPageAsync">New Page</Button>
+            </Empty>
+        }
+    </Pane>
+</SplitPane>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    string NewPageTitle { get; set; }
+    Form? _form;
+    Page? _selectedPage;
+    ICollection<Page> _pages = new List<Page>();
+    bool _saving;
 
-    Tree<Page> Tree { get; set; }
-    Form<Page> Form { get; set; }
-    Page SelectedPage { get; set; }
-    MarkdownEditor MarkdownEditor { get; set; }
-    ICollection<Page> Pages { get; set; } = new List<Page>();
+    string? _originalContent;
+    string? _originalTitle;
 
-    string OriginalContent { get; set; }
-    string OriginalTitle { get; set; }
+    // The title the current slug was derived from, so the slug follows the title until customized
+    string? _lastTitle;
 
-    // Tracks the title the current slug was derived from, so the slug keeps following
-    // the title until the user manually customizes it.
-    string LastTitle { get; set; }
+    RenderFragment PageMenuFor(Page page) => @<Menu>
+        <MenuItem Icon="IconType.Plus" OnClick="() => CreatePageAsync(page.ParentId)">New Page</MenuItem>
+        <MenuItem Icon="IconType.TreeStructure" OnClick="() => CreatePageAsync(page.Id)">Add Child Page</MenuItem>
+        <MenuItem Icon="IconType.Trash" Danger OnClick="() => DeletePageAsync(page)">Delete</MenuItem>
+    </Menu>;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
+    protected override async Task OnInitializedAsync() => await LoadAsync();
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Id != Guid.Empty)
+        if (Id == Guid.Empty)
+            return;
+
+        // Include the parent so RenderRoute produces the nested route on save
+        _selectedPage = await PageService.Include(p => p.Parent).FirstOrDefaultAsync(p => p.Id == Id);
+
+        if (_selectedPage == null)
         {
-            // Include the parent so RenderRoute produces the correct nested route on save
-            // (the parent's stored Route holds the full ancestor path).
-            SelectedPage = await PageService.Include(p => p.Parent).FirstOrDefaultAsync(p => p.Id == Id);
-
-            if (SelectedPage == null)
-                NavigationManager.NavigateTo("/Pages/Edit");
-
-            OriginalContent = SelectedPage.Contents;
-            OriginalTitle = SelectedPage.Title;
-            LastTitle = SelectedPage.Title;
-
-            await InvokeAsync(StateHasChanged);
+            NavigationManager.NavigateTo("/Pages/Edit");
+            return;
         }
+
+        _originalContent = _selectedPage.Contents;
+        _originalTitle = _selectedPage.Title;
+        _lastTitle = _selectedPage.Title;
     }
 
     void SyncSlugFromTitle()
     {
-        var autoSlug = LastTitle.ToRouteSlug();
+        if (_selectedPage == null)
+            return;
 
-        if (String.IsNullOrEmpty(SelectedPage.Slug) || SelectedPage.Slug == autoSlug)
+        var autoSlug = (_lastTitle ?? "").ToRouteSlug();
+
+        if (String.IsNullOrEmpty(_selectedPage.Slug) || _selectedPage.Slug == autoSlug)
         {
-            SelectedPage.Slug = SelectedPage.Title.ToRouteSlug();
-            SelectedPage.Route = PageService.RenderRoute(SelectedPage);
+            _selectedPage.Slug = _selectedPage.Title.ToRouteSlug();
+            _selectedPage.Route = PageService.RenderRoute(_selectedPage);
         }
 
-        LastTitle = SelectedPage.Title;
+        _lastTitle = _selectedPage.Title;
     }
 
-    async Task LoadData()
+    async Task LoadAsync()
     {
-        var allPages = await PageService.SortBy(p => p.SortOrder).GetAsync();
-        var childrenByParent = allPages.ToLookup(p => p.ParentId);
-
-        foreach (var page in allPages)
+        try
         {
-            page.Children = childrenByParent[page.Id].ToList();
+            var allPages = await PageService.SortBy(p => p.SortOrder).GetAsync();
+            var childrenByParent = allPages.ToLookup(p => p.ParentId);
 
-            foreach (var child in page.Children)
-                child.Parent = page;
+            foreach (var page in allPages)
+            {
+                page.Children = childrenByParent[page.Id].ToList();
+
+                foreach (var child in page.Children)
+                    child.Parent = page;
+            }
+
+            _pages = childrenByParent[null].ToList();
         }
-
-        Pages = childrenByParent[null].ToList();
-
-        await InvokeAsync(StateHasChanged);
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load pages!");
+        }
     }
 
-    async Task OnDrop(TreeEventArgs<Page> e)
+    async Task MoveAsync(TreeDrop<Page> drop)
     {
-        List<Guid> childOrder = new List<Guid>();
-        
-        // DropBelow is true if a tree node is supposed to be placed beneath a sibling
-        if (e.DropBelow)
+        try
         {
-            var parentId = e.TargetNode.DataItem.Parent?.Id ?? Guid.Empty;
-            var parentNode = Tree.GetNode(parentId.ToString());
-            var sibling = e.TargetNode;
+            if (drop.Position == TreeDropPosition.Inside)
+            {
+                var order = drop.Target.Children?.Select(c => c.Id).Where(id => id != drop.Item.Id).ToList() ?? [];
 
-            if (parentId == Guid.Empty)
-                childOrder = (await PageService.GetAsync(p => p.Parent == null)).Select(p => p.Id).ToList();
+                order.Insert(0, drop.Item.Id);
+
+                await PageService.UpdateOrderAsync(drop.Target.Id, order);
+            }
             else
-                childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
+            {
+                var parentId = drop.Target.Parent?.Id ?? Guid.Empty;
+                var siblings = drop.Target.Parent?.Children ?? _pages;
+                var order = siblings.OrderBy(p => p.SortOrder).Select(p => p.Id).Where(id => id != drop.Item.Id).ToList();
 
-            childOrder.Remove(e.Node.DataItem.Id);
+                var targetIndex = order.IndexOf(drop.Target.Id);
 
-            var targetPosition = childOrder.FindIndex(c => c == e.TargetNode.DataItem.Id);
+                order.Insert(drop.Position == TreeDropPosition.After ? targetIndex + 1 : targetIndex, drop.Item.Id);
 
-            childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
+                await PageService.UpdateOrderAsync(parentId, order);
+            }
 
-            await PageService.UpdateOrderAsync(parentId, childOrder);
+            await LoadAsync();
         }
-        else
+        catch (Exception ex)
         {
-            childOrder = e.TargetNode.DataItem.Children.Select(c => c.Id).ToList();
-
-            childOrder.Remove(e.Node.DataItem.Id);
-            childOrder.Insert(0, e.Node.DataItem.Id);
-
-            await PageService.UpdateOrderAsync(e.TargetNode.DataItem.Id, childOrder);
+            Notifications.Error(ex, "Could not move the page!");
         }
-
-        await LoadData();
     }
 
-    async Task AddNewPage()
+    async Task AddNewPageAsync()
     {
         Guid? parentId = null;
 
-        if (SelectedPage != null)
-            parentId = SelectedPage.ParentId != null && SelectedPage.ParentId != Guid.Empty
-                ? SelectedPage.ParentId
-                : SelectedPage.Id;
+        if (_selectedPage != null)
+            parentId = _selectedPage.ParentId is Guid id && id != Guid.Empty ? id : _selectedPage.Id;
 
         await CreatePageAsync(parentId);
     }
-
-    // Context-menu action: create a page at the same level as the clicked page (its sibling).
-    async Task AddSiblingPage(Page page) => await CreatePageAsync(page?.ParentId);
-
-    // Context-menu action: create a child beneath the clicked page.
-    async Task AddChildPage(Page page) => await CreatePageAsync(page?.Id);
 
     async Task CreatePageAsync(Guid? parentId)
     {
@@ -286,148 +233,109 @@
             if (parentId is Guid pid && pid != Guid.Empty)
                 await PageService.ChangeParentAsync(newPage.Id, pid);
 
-            await LoadData();
+            await LoadAsync();
 
             NavigationManager.NavigateTo($"/Pages/Edit/{newPage.Id}");
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "An error occurred while trying to add a new page");
-            MessageService.Error("Error adding new page!");
+            Notifications.Error(ex, "Error adding new page!");
         }
     }
 
-    Task Delete() => DeletePage(SelectedPage);
-
-    async Task DeletePage(Page page)
+    async Task DeletePageAsync(Page? page)
     {
+        if (page == null || !await Alerts.ConfirmAsync($"Delete \"{page.Title}\"?", "Delete Page", okText: "Delete", danger: true))
+            return;
+
         try
         {
-            if (page == null)
-                return;
-
             var parentId = page.ParentId ?? Guid.Empty;
 
-            var entity = await PageService.GetAsync(page.Id);
+            await PageService.DeleteAsync(await PageService.GetAsync(page.Id));
 
-            await PageService.DeleteAsync(entity);
+            Notifications.Success("Page deleted!");
 
-            MessageService.Success("Page deleted!");
+            await LoadAsync();
 
-            await LoadData();
-
-            // Only navigate away if the deleted page was the one being edited.
-            if (SelectedPage?.Id == page.Id)
-            {
-                if (parentId != Guid.Empty)
-                    NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
-                else
-                    NavigationManager.NavigateTo($"/Pages/Edit");
-            }
+            // Only navigate away if the deleted page was the one being edited
+            if (_selectedPage?.Id == page.Id)
+                NavigationManager.NavigateTo(parentId != Guid.Empty ? $"/Pages/Edit/{parentId}" : "/Pages/Edit");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error deleting page!");
-            MessageService.Error("Error deleting page!");
+            Notifications.Error(ex, "Error deleting page!");
         }
     }
 
-    async Task Save()
+    async Task SaveAsync()
     {
+        if (_selectedPage == null || (_form != null && !_form.Validate()))
+            return;
+
+        _saving = true;
+
         try
         {
-            if (Form != null && !Form.Validate())
-                return;
+            await PageService.UpdateAsync(_selectedPage);
 
-            await PageService.UpdateAsync(SelectedPage);
-            MessageService.Success("Page updated!");
+            Notifications.Success("Page updated!");
 
-            // Reset the change-tracking baseline so navigating away doesn't falsely
-            // prompt about unsaved changes.
-            OriginalContent = SelectedPage.Contents;
-            OriginalTitle = SelectedPage.Title;
-            LastTitle = SelectedPage.Title;
+            // Reset the change-tracking baseline so navigating away doesn't prompt
+            _originalContent = _selectedPage.Contents;
+            _originalTitle = _selectedPage.Title;
+            _lastTitle = _selectedPage.Title;
 
-            await LoadData();
+            await LoadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save page!");
-            Logger.LogError(ex, "Could not save page!");
+            Notifications.Error(ex, "Could not save page!");
         }
-    }
-
-    async Task SelectPage(TreeEventArgs<Page> e)
-    {
-        var modified = SelectedPage?.Contents != OriginalContent || SelectedPage?.Title != OriginalTitle;
-
-        if (Form != null && modified)
+        finally
         {
-            var confirmResult = await ConfirmNavigate();
+            _saving = false;
+        }
+    }
 
-            if (confirmResult == ConfirmResult.Yes)
+    async Task SelectPageAsync(Page? page)
+    {
+        if (page == null)
+            return;
+
+        var modified = _selectedPage != null && (_selectedPage.Contents != _originalContent || _selectedPage.Title != _originalTitle);
+
+        if (modified)
+        {
+            switch (await Alerts.ConfirmUnsavedChangesAsync("You are about to leave this page with unsaved changes."))
             {
-                // Save
-                await Save();
+                case UnsavedChangesChoice.Save:
+                    await SaveAsync();
+                    break;
 
-                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
-            }
-            else if (confirmResult == ConfirmResult.No)
-            {
-                // Discard
-                await LoadData();
+                case UnsavedChangesChoice.Discard:
+                    await LoadAsync();
+                    break;
 
-                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
+                default:
+                    return;
             }
-            else return;
         }
 
-        NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
+        NavigationManager.NavigateTo($"/Pages/Edit/{page.Id}");
     }
 
-    async Task<ConfirmResult> ConfirmNavigate()
-    {
-        var confirmResult = await ConfirmService.Show(
-            "You are about to discard your unsaved changes.",
-            "Unsaved Changes",
-            ConfirmButtons.YesNoCancel,
-            ConfirmIcon.Warning,
-            new ConfirmButtonOptions
-                {
-                    Button1Props = new ButtonProps
-                    {
-                        Type = ButtonType.Primary,
-                        ChildContent = "Save",
-                    },
-                    Button2Props = new ButtonProps
-                    {
-                        Type = ButtonType.Default,
-                        ChildContent = "Discard",
-                        Danger = false,
-                    },
-                    Button3Props = new ButtonProps
-                    {
-                        Type = ButtonType.Text,
-                        ChildContent = "Cancel",
-                    }
-                }
-        );
-
-        return confirmResult;
-    }
-
-    async Task<FileEntry> UploadImage(MarkdownEditor editor, FileEntry entry)
+    async Task<FileEntry> UploadImageAsync(MarkdownEditor editor, FileEntry entry)
     {
         var stream = new MemoryStream(Convert.FromBase64String(entry.ContentBase64));
 
-        var media = new Media()
+        var media = await MediaService.AddAsync(new Media
         {
             Type = SDK.Enums.MediaType.PageImage,
             MimeType = entry.Type,
-            Crc32 = ""
-        };
-        
-        media = await MediaService.AddAsync(media);
+            Crc32 = "",
+        });
+
         media = await MediaService.WriteToFileAsync(media, stream);
         media = await MediaService.UpdateAsync(media);
 

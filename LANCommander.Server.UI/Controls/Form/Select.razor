@@ -1,0 +1,148 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TValue
+@inherits FormInputBase<TValue>
+@attribute [CascadingTypeParameter(nameof(TValue))]
+
+@*
+    A dropdown of choices given as Items and/or SelectOption children. Bind Value for one choice,
+    or set Multiple and bind Values for several.
+*@
+<CascadingValue Value="this" IsFixed>
+    @ChildContent
+</CascadingValue>
+
+@if (Multiple)
+{
+    <RadzenDropDown TValue="IEnumerable<TValue>"
+                    Name="@InputId"
+                    Data="_options"
+                    TextProperty="@nameof(SelectItem<TValue>.Label)"
+                    ValueProperty="@nameof(SelectItem<TValue>.Value)"
+                    DisabledProperty="@nameof(SelectItem<TValue>.Disabled)"
+                    Value="@Values"
+                    ValueChanged="@((IEnumerable<TValue> values) => SetValuesAsync(values))"
+                    Multiple="true"
+                    Chips="true"
+                    AllowFiltering="Searchable"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    AllowClear="Clearable"
+                    Disabled="IsDisabled"
+                    Placeholder="@Placeholder"
+                    Style="@_style"
+                    Template="ItemTemplate"
+                    Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-select"))' />
+}
+else
+{
+    <RadzenDropDown TValue="TValue"
+                    Name="@InputId"
+                    Data="_options"
+                    TextProperty="@nameof(SelectItem<TValue>.Label)"
+                    ValueProperty="@nameof(SelectItem<TValue>.Value)"
+                    DisabledProperty="@nameof(SelectItem<TValue>.Disabled)"
+                    Value="@Value"
+                    ValueChanged="@((TValue value) => SetValueAsync(value))"
+                    AllowFiltering="Searchable"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    AllowClear="Clearable"
+                    Disabled="IsDisabled"
+                    Placeholder="@Placeholder"
+                    Style="@_style"
+                    Template="ItemTemplate"
+                    ValueTemplate="ItemTemplate"
+                    Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-select"))' />
+}
+
+@code {
+    /// <summary>The choices. Combine with, or use instead of, <see cref="SelectOption{TValue}"/> children.</summary>
+    [Parameter] public IEnumerable<SelectItem<TValue>>? Items { get; set; }
+
+    /// <summary><see cref="SelectOption{TValue}"/> children listing static choices.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Allow choosing several values, bound through <see cref="Values"/>.</summary>
+    [Parameter] public bool Multiple { get; set; }
+
+    [Parameter] public IEnumerable<TValue>? Values { get; set; }
+
+    [Parameter] public EventCallback<IEnumerable<TValue>> ValuesChanged { get; set; }
+
+    [Parameter] public System.Linq.Expressions.Expression<Func<IEnumerable<TValue>?>>? ValuesExpression { get; set; }
+
+    /// <summary>Type to filter the choices.</summary>
+    [Parameter] public bool Searchable { get; set; }
+
+    /// <summary>Shows a button that clears the selection.</summary>
+    [Parameter] public bool Clearable { get; set; }
+
+    readonly List<SelectItem<TValue>> _childOptions = [];
+    List<SelectItem<TValue>> _options = [];
+    FieldIdentifier? _valuesField;
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (ValuesExpression != null && _valuesField == null)
+        {
+            _valuesField = FieldIdentifier.Create(ValuesExpression);
+            FormItem?.Register(_valuesField.Value);
+        }
+
+        RebuildOptions();
+
+        _style = new StyleBuilder().Add("width", "100%").Add(Style).Build();
+    }
+
+    internal void AddOption(SelectItem<TValue> option)
+    {
+        _childOptions.Add(option);
+        RebuildOptions();
+        StateHasChanged();
+    }
+
+    internal void RemoveOption(SelectItem<TValue> option)
+    {
+        _childOptions.Remove(option);
+        RebuildOptions();
+        StateHasChanged();
+    }
+
+    void RebuildOptions()
+    {
+        _options = [.. Items ?? [], .. _childOptions];
+        _hasImages = _options.Any(o => o.Image != null);
+    }
+
+    bool _hasImages;
+
+    // Only swap in a template when some option has an image; plain labels render faster without one
+    RenderFragment<dynamic>? ItemTemplate => _hasImages ? item => RenderOption((SelectItem<TValue>)item) : null;
+
+    RenderFragment RenderOption(SelectItem<TValue> option) => @<span class="lc-select-option">
+        @if (option.Image != null)
+        {
+            <img src="@option.Image" alt="" class="lc-select-option-image" />
+        }
+        <span>@option.Label</span>
+    </span>;
+
+    async Task SetValuesAsync(IEnumerable<TValue>? values)
+    {
+        Values = values;
+
+        await ValuesChanged.InvokeAsync(values ?? []);
+
+        if (_valuesField != null)
+            EditContext?.NotifyFieldChanged(_valuesField.Value);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        if (_valuesField != null)
+            FormItem?.Unregister(_valuesField.Value);
+    }
+}

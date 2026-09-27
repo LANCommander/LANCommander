@@ -1,7 +1,8 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using LANCommander.UI
+@using System.Reflection
+@inject IEnumerable<UIRouteAssembly> RouteAssemblies
 
-<Router AppAssembly="@typeof(Program).Assembly">
+<Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="@_additionalAssemblies">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
             <NotAuthorized>
@@ -15,3 +16,12 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    Assembly[] _additionalAssemblies = [];
+
+    protected override void OnInitialized()
+    {
+        _additionalAssemblies = UIRouteAssembly.Resolve(RouteAssemblies);
+    }
+}

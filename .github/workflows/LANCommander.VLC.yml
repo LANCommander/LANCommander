@@ -1,0 +1,95 @@
+# Builds the LGPL libvlc runtime the launcher bundles.
+#
+# Deliberately NOT part of the per-release build. A full contribs + VLC build takes
+# 1-2 hours per target; running it on every release would dominate build time for a
+# dependency that changes a few times a year. Run this manually when bumping the
+# VideoLAN.LibVLC.* versions in Directory.Packages.props, then point
+# LANCommander.Launcher.yml at the resulting release assets.
+#
+# See build/README.md for why a custom build is required at all (short version:
+# VideoLAN's prebuilt libavcodec_plugin is GPLv2+).
+
+name: LANCommander VLC Runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      vlc_version:
+        description: 'VLC version to build (must match Directory.Packages.props)'
+        required: true
+        default: '3.0.21'
+      publish_release:
+        description: 'Publish the runtimes as a GitHub release'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    # VideoLAN's own toolchain images, the same ones VLC builds with upstream.
+    # Building these toolchains from scratch on a bare runner is not practical.
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: win-x64
+            image: registry.videolan.org/vlc-debian-win64:latest
+            host: x86_64-w64-mingw32
+          - name: win-arm64
+            image: registry.videolan.org/vlc-debian-win-arm64:latest
+            host: aarch64-w64-mingw32
+          - name: linux-x64
+            image: registry.videolan.org/vlc-debian-unstable:latest
+            host: x86_64-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build LGPL libvlc
+        env:
+          VLC_VERSION: ${{ inputs.vlc_version }}
+        run: bash build/build-vlc-lgpl.sh "${{ matrix.host }}" "out/${{ matrix.name }}"
+
+      # build-vlc-lgpl.sh already runs this, but assert it here too so the gate is
+      # visible in the job log and a future refactor of the script cannot quietly
+      # drop it.
+      - name: Verify LGPL
+        run: bash build/prune-vlc.sh verify "out/${{ matrix.name }}"
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf "dist/libvlc-lgpl-${{ matrix.name }}.tar.gz" -C "out/${{ matrix.name }}" .
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libvlc-lgpl-${{ matrix.name }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: inputs.publish_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "libvlc-lgpl-${{ inputs.vlc_version }}" \
+            --repo "${{ github.repository }}" \
+            --title "LGPL libvlc runtime ${{ inputs.vlc_version }}" \
+            --notes "libvlc ${{ inputs.vlc_version }} built with LGPL contribs (no --enable-gpl, no libpostproc) and pruned to build/VlcPlugins.props. Consumed by LANCommander.Launcher.yml." \
+            dist/*.tar.gz

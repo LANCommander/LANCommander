@@ -1,0 +1,38 @@
+@page "/_fixtures/{Name}"
+@layout FixtureLayout
+
+<PageTitle>@Name</PageTitle>
+
+@if (_fixture == null)
+{
+    <p>No fixture named <code>@Name</code>. <a href="/_fixtures">Browse fixtures</a></p>
+}
+else
+{
+    @* data-ready appears once the fixture has rendered interactively; visual tests wait for it *@
+    <div class="fixture-frame" data-fixture="@_fixture.Name" data-ready="@_ready" style="width: @(_fixture.Width)px">
+        @_fixture.Content
+    </div>
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    ComponentFixture? _fixture;
+    bool _ready;
+
+    protected override void OnParametersSet()
+    {
+        _fixture = ComponentFixtureCatalog.Find(Name);
+        _ready = false;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!_ready && _fixture != null)
+        {
+            _ready = true;
+            StateHasChanged();
+        }
+    }
+}

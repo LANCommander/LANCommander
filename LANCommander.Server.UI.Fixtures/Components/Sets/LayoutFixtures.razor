@@ -1,0 +1,78 @@
+@implements IComponentFixtureSet
+
+@code {
+    RenderFragment Box(string label)
+    {
+        return @<div style="padding: 8px 12px; background: var(--rz-primary-lighter); border: 1px solid var(--rz-primary); border-radius: 4px">@label</div>;
+    }
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Flex.Gaps", "Horizontal rows with each gap size, and a vertical stack",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Flex>@Box("None") @Box("None")</Flex>
+                <Flex Gap="Gap.Small">@Box("Small") @Box("Small")</Flex>
+                <Flex Gap="Gap.Medium">@Box("Medium") @Box("Medium")</Flex>
+                <Flex Gap="Gap.Large">@Box("Large") @Box("Large")</Flex>
+                <Flex Vertical Gap="Gap.Small">@Box("Vertical") @Box("Vertical")</Flex>
+            </Flex>)
+        {
+            Width = 320,
+            Covers = [typeof(Flex)],
+        },
+        new("Flex.Alignment", "Justify and align options along a fixed-width row",
+            @<Flex Vertical Gap="Gap.Small">
+                <Flex Justify="Justify.End" Gap="Gap.Small" Style="border: 1px dashed var(--rz-base-600)">@Box("End") @Box("End")</Flex>
+                <Flex Justify="Justify.SpaceBetween" Style="border: 1px dashed var(--rz-base-600)">@Box("Between") @Box("Between")</Flex>
+                <Flex Justify="Justify.Center" Gap="Gap.Small" Style="border: 1px dashed var(--rz-base-600)">@Box("Center") @Box("Center")</Flex>
+                <Flex Align="Align.Center" Gap="Gap.Small" Style="height: 64px; border: 1px dashed var(--rz-base-600)">@Box("Middle") <div style="height: 56px">@Box("Tall")</div></Flex>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Flex)],
+        },
+        new("Row.Grid", "24-column grid rows with gutters, spans and fill columns",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Row Gap="Gap.Medium">
+                    <Column Span="8">@Box("8")</Column>
+                    <Column Span="8">@Box("8")</Column>
+                    <Column Span="8">@Box("8")</Column>
+                </Row>
+                <Row Gap="Gap.Medium" VerticalGap="Gap.Small">
+                    <Column Span="18">@Box("18")</Column>
+                    <Column Span="6">@Box("6")</Column>
+                    <Column Span="12">@Box("12 (wrapped)")</Column>
+                </Row>
+                <Row Gap="Gap.Small" NoWrap Align="Align.Center">
+                    <Column Fill>@Box("Fill")</Column>
+                    <Column>@Box("Content")</Column>
+                </Row>
+                <Row Justify="Justify.End">
+                    <Column>@Box("Justify end")</Column>
+                </Row>
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(Row), typeof(Column)],
+        },
+        new("SideLayout.EditPage", "A section menu beside the page it switches between, as on the game editor",
+            @<SideLayout SideWidth="180" Style="height: 260px">
+                <Side>
+                    <Menu>
+                        <MenuItem Icon="IconType.Info">General</MenuItem>
+                        <MenuItem Icon="IconType.Play">Actions</MenuItem>
+                        <MenuItem Icon="IconType.Archive">Archives</MenuItem>
+                        <MenuItem Icon="IconType.Code">Scripts</MenuItem>
+                    </Menu>
+                </Side>
+                <ChildContent>
+                    <PageHeader Title="General" />
+                    <PageContent>@Box("Page content")</PageContent>
+                </ChildContent>
+            </SideLayout>)
+        {
+            Width = 640,
+            Covers = [typeof(SideLayout)],
+        },
+    ];
+}

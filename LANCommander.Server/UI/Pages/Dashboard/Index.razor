@@ -1,32 +1,33 @@
-﻿@page "/"
+@page "/"
 @page "/Dashboard"
 @attribute [Authorize]
-@using LANCommander.Server.UI.Pages.Dashboard.Charts
 
-<PageHeader Title="Dashboard" Style="margin-bottom: 24px" />
+<PageHeader Title="Dashboard" />
 
-<GridRow Gutter="(16, 16)">
-    <GridCol Xs="24" Md="12">
-        <Card Title="Top 10 Total Playtime (By Player)" Bordered="false">
-            <Body>
-                <TopPlayersPlaytime />
-            </Body>
-        </Card>
-    </GridCol>
+<PageContent>
+    <Row Gap="Gap.Medium" VerticalGap="Gap.Medium">
+        <Column Xs="24" Md="12">
+            <Card Title="Top 10 Total Playtime (By Player)">
+                <ErrorHandler Inline>
+                    <TopPlayersPlaytime />
+                </ErrorHandler>
+            </Card>
+        </Column>
 
-    <GridCol Xs="24" Md="12">
-        <Card Title="Top 10 Total Playtime (By Game)" Bordered="false">
-            <Body>
-                <TopGamesPlaytime />
-            </Body>
-        </Card>
-    </GridCol>
+        <Column Xs="24" Md="12">
+            <Card Title="Top 10 Total Playtime (By Game)">
+                <ErrorHandler Inline>
+                    <TopGamesPlaytime />
+                </ErrorHandler>
+            </Card>
+        </Column>
 
-    <GridCol Xs="24">
-        <Card Title="Top Average Session Length (By Game)" Bordered="false">
-            <Body>
-                <TopGamesAverageSessionPlaytime />
-            </Body>
-        </Card>
-    </GridCol>
-</GridRow>
+        <Column Xs="24">
+            <Card Title="Top Average Session Length (By Game)">
+                <ErrorHandler Inline>
+                    <TopGamesAverageSessionPlaytime />
+                </ErrorHandler>
+            </Card>
+        </Column>
+    </Row>
+</PageContent>

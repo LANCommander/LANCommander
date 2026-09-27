@@ -1,0 +1,18 @@
+.lc-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    // Sit on the text baseline like a glyph would
+    vertical-align: -0.125em;
+}
+
+.lc-icon-spin {
+    animation: lc-icon-spin 1s linear infinite;
+}
+
+@keyframes lc-icon-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

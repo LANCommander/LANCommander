@@ -1,0 +1,44 @@
+.lc-tag {
+    --lc-tag-color: var(--rz-text-secondary-color);
+
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    margin-inline-end: 0.5em;
+    padding: 0 0.5em;
+    border: 1px solid color-mix(in srgb, var(--lc-tag-color) 45%, transparent);
+    border-radius: var(--rz-border-radius);
+    background: color-mix(in srgb, var(--lc-tag-color) 15%, transparent);
+    color: var(--lc-tag-color);
+    font-size: var(--rz-text-caption-font-size);
+    line-height: 1.5rem;
+    white-space: nowrap;
+    max-width: 100%;
+    vertical-align: middle;
+
+    // Long names shrink to fit their container, e.g. a table cell
+    .lc-tag-text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// User-chosen colours can be dark, so lighten the text against the tinted background
+.lc-tag-custom {
+    color: color-mix(in srgb, var(--lc-tag-color) 60%, white);
+}
+
+.lc-tag-primary { --lc-tag-color: var(--rz-primary); }
+.lc-tag-success { --lc-tag-color: var(--rz-success); }
+.lc-tag-info { --lc-tag-color: var(--rz-info); }
+.lc-tag-warning { --lc-tag-color: var(--rz-warning); }
+.lc-tag-danger { --lc-tag-color: var(--rz-danger); }
+
+.lc-tag-clickable {
+    cursor: pointer;
+
+    &:hover {
+        background: color-mix(in srgb, var(--lc-tag-color) 25%, transparent);
+    }
+}

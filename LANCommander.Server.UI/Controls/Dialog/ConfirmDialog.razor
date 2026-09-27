@@ -1,0 +1,16 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+@inherits Dialog<ConfirmDialogOptions, bool>
+
+<Flex Gap="Gap.Medium" Align="Align.Start" Class="lc-confirm">
+    <Icon Type="@(Options.Danger ? IconType.WarningCircle : IconType.Question)" Fill Class="@(Options.Danger ? "lc-confirm-icon lc-confirm-icon-danger" : "lc-confirm-icon")" />
+    <div class="lc-confirm-message">@Options.Message</div>
+</Flex>
+
+@code {
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = true;
+
+        return Task.FromResult(true);
+    }
+}

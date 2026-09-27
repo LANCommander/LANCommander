@@ -1,0 +1,134 @@
+@using Microsoft.Extensions.Options
+@using LANCommander.SDK.Enums
+@inherits OwningComponentBase
+@inject UserService UserService
+@inject MediaService MediaService
+@inject IOptions<Settings.Settings> Settings
+@inject NotificationService Notifications
+
+@*
+    Shows a user's avatar and replaces it when a new image is picked. Disabled shows the avatar
+    without the picker (nothing at all if the user has none).
+*@
+@if (Disabled)
+{
+    @if (!String.IsNullOrWhiteSpace(AvatarUrl))
+    {
+        <Image Class="avatar-uploader-image" Src="@AvatarUrl" Width="Size" Height="Size" Cover Rounded />
+    }
+}
+else
+{
+    <InputFile id="@_inputId" OnChange="UploadAsync" hidden accept=".jpg,.jpeg,.png,.webp" />
+
+    <label for="@_inputId" class="avatar-uploader" style="@($"width: {Size}px; height: {Size}px")" title="Upload avatar">
+        <Spin Class="avatar-uploader-spin" Loading="Uploading">
+            @if (String.IsNullOrWhiteSpace(AvatarUrl))
+            {
+                <span class="avatar-uploader-empty">
+                    <Icon Type="IconType.Plus" />
+                    <span>Upload</span>
+                </span>
+            }
+            else
+            {
+                <Image Class="avatar-uploader-image" Src="@AvatarUrl" Width="Size" Height="Size" Cover Rounded />
+            }
+        </Spin>
+    </label>
+}
+
+@code {
+    [Parameter] public Guid UserId { get; set; }
+
+    /// <summary>Width and height of the square avatar, in pixels.</summary>
+    [Parameter] public int Size { get; set; } = 104;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    readonly string _inputId = $"avatar-upload-{Guid.NewGuid():N}";
+
+    string? AvatarUrl;
+    bool Uploading;
+    Guid _loadedUserId;
+
+    static readonly string[] ValidMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UserId != _loadedUserId)
+        {
+            _loadedUserId = UserId;
+
+            await LoadAvatarAsync();
+        }
+    }
+
+    async Task LoadAvatarAsync()
+    {
+        var avatar = await MediaService.FirstOrDefaultAsync(m => m.Type == MediaType.Avatar && m.UserId == UserId);
+
+        // The file id changes on every upload, so the URL doubles as a cache buster.
+        AvatarUrl = avatar != null ? $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}" : null;
+    }
+
+    async Task UploadAsync(InputFileChangeEventArgs e)
+    {
+        if (Disabled)
+        {
+            Notifications.Error("Avatar uploads are disabled by the administrator");
+            return;
+        }
+
+        var config = Settings.Value.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
+
+        if (!ValidMimeTypes.Contains(e.File.ContentType))
+        {
+            Notifications.Error("Unsupported file type");
+            return;
+        }
+
+        if (e.File.Size > config.MaxFileSize)
+        {
+            Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
+            return;
+        }
+
+        Uploading = true;
+
+        try
+        {
+            var user = await UserService.Include(u => u.Media!).GetAsync(UserId);
+            var media = user.Media?.FirstOrDefault(m => m.Type == MediaType.Avatar)
+                        ?? new Media { Type = MediaType.Avatar, UserId = UserId };
+
+            media.SourceUrl = "";
+            media.MimeType = e.File.ContentType;
+
+            if (media.Id == Guid.Empty)
+            {
+                await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+            }
+            else
+            {
+                MediaService.DeleteLocalMediaFile(media);
+
+                media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+
+                await MediaService.UpdateAsync(media);
+            }
+
+            await LoadAvatarAsync();
+
+            Notifications.Success("Avatar updated");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The avatar could not be uploaded");
+        }
+        finally
+        {
+            Uploading = false;
+        }
+    }
+}

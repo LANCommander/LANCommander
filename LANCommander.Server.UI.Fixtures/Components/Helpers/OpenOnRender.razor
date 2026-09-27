@@ -1,0 +1,42 @@
+@using LANCommander.Server.UI.Services
+@inject DialogService Dialogs
+@inject AlertService Alerts
+@inject NotificationService Notifications
+
+@* Opens a dialog or notification as soon as it renders, so fixtures can capture overlays *@
+@code {
+    public enum Overlay
+    {
+        Dialog,
+        Confirm,
+        Notifications,
+    }
+
+    [Parameter] public Overlay What { get; set; }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        switch (What)
+        {
+            case Overlay.Dialog:
+                _ = Dialogs.OpenAsync<SampleDialog, SampleDialog.SampleOptions, string>("Add to Collection",
+                    new SampleDialog.SampleOptions("Arena Blitz"), new DialogSettings { OkText = "Add" });
+                break;
+
+            case Overlay.Confirm:
+                _ = Alerts.ConfirmAsync("Arena Blitz and its 2 archives will be deleted. This cannot be undone.",
+                    "Delete game?", okText: "Delete", danger: true);
+                break;
+
+            case Overlay.Notifications:
+                Notifications.Success("Game saved");
+                Notifications.Info("Import queued", "3 games are waiting to be imported");
+                Notifications.Warning("Storage almost full");
+                Notifications.Error("Could not start server", "Port 27960 is already in use");
+                break;
+        }
+    }
+}

@@ -1,152 +1,149 @@
-﻿@page "/Settings/Users/{username}"
-@using Microsoft.AspNetCore.Components.Authorization;
+@page "/Settings/Users/{username}"
 @inject UserService UserService
-@inject IMessageService MessageService
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject ILogger<Index> Logger
-@attribute [Authorize]
+@inject NotificationService Notifications
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Edit User">
-    <PageHeaderExtra>
-        <Button Type="@ButtonType.Primary" Disabled="!Form.IsModified && !FieldsModified" OnClick="Save">Save</Button>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary Disabled="!IsModified" Loading="_saving" OnClick="SaveAsync">Save</Button>
+    </Extra>
 </PageHeader>
 
-<PageContent>
-    <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
-        <FormItem Label="Avatar">
-            <AvatarUploader UserId="User.Id" />
-        </FormItem>
+<PageContent Loading="!_loaded">
+    @if (User == null)
+    {
+        <NotFound SubTitle="@($"There is no user named {Username}.")" />
+    }
+    else
+    {
+        <Form @ref="_form" Model="User" OnSubmit="SaveAsync" OnFieldChanged="StateHasChanged">
+            <FormItem Label="Avatar">
+                <AvatarUploader UserId="User.Id" />
+            </FormItem>
 
-        <FormItem Label="Username" Help="Username changes require a relog">
-            <Input @bind-Value="context.UserName" />
-        </FormItem>
+            <FormItem Label="Username" Help="Username changes require a relog">
+                <TextInput @bind-Value="User.UserName" />
+            </FormItem>
 
-        <FormItem Label="Alias">
-            <Input @bind-Value="context.Alias" />
-        </FormItem>
+            <FormItem Label="Alias">
+                <TextInput @bind-Value="User.Alias" />
+            </FormItem>
 
-        <FormItem Label="Email Address" Help="Email changes require a relog">
-            <Input @bind-Value="context.Email" />
-        </FormItem>
+            <FormItem Label="Email Address" Help="Email changes require a relog">
+                <TextInput @bind-Value="User.Email" />
+            </FormItem>
 
-        @if (IsAdministrator)
-        {
             <Divider>Limits</Divider>
 
             <FormItem Label="Storage Quota (MB)" Help="0 or blank = unlimited; overrides role limits">
-                <AntDesign.InputNumber TValue="int?" @bind-Value="context.StorageQuotaMB" Min="0" />
+                <NumberInput TValue="int?" @bind-Value="User.StorageQuotaMB" Min="0" />
             </FormItem>
 
             <FormItem Label="Download Speed (KB/s)" Help="0 or blank = unlimited; overrides role limits">
-                <AntDesign.InputNumber TValue="int?" @bind-Value="context.DownloadSpeedKBps" Min="0" />
+                <NumberInput TValue="int?" @bind-Value="User.DownloadSpeedKBps" Min="0" />
             </FormItem>
 
             <FormItem Label="Cloud Saves" Help="Overrides role limits">
-                <Select TItemValue="bool?" TItem="bool?" @bind-Value="context.EnableSaves">
-                    <SelectOptions>
-                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)null" Label="Not set" />
-                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)true" Label="Enabled" />
-                        <SelectOption TItemValue="bool?" TItem="bool?" Value="(bool?)false" Label="Disabled" />
-                    </SelectOptions>
-                </Select>
+                <Select TValue="bool?" Items="SaveOptions" @bind-Value="User.EnableSaves" />
             </FormItem>
-        }
 
-        <Divider>Custom Fields</Divider>
+            <Divider>Custom Fields</Divider>
 
-        @if (context.CustomFields == null || context.CustomFields?.Count == 0)
-        {
-            <Empty>
-                <DescriptionTemplate>
-                    No custom fields exist for this user
-                </DescriptionTemplate>
-                <ChildContent>
-                    <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
-                </ChildContent>
-            </Empty>
-        }
-        else
-        {
-            foreach (var customField in context.CustomFields)
+            @if (User.CustomFields.Count == 0)
             {
-                <FormItem>
-                    <GridRow Gutter="(16, 16)">
-                        <GridCol Flex="@("auto")">
-                            <Input @bind-Value="customField.Name" Placeholder="Name" MaxLength="64" />
-                        </GridCol>
-                        <GridCol Flex="@("auto")">
-                            <Input @bind-Value="customField.Value" Placeholder="Value" MaxLength="1024" />
-                        </GridCol>
-                        <GridCol>
-                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => RemoveField(customField)" />
-                        </GridCol>
-                    </GridRow>
-                </FormItem>
+                <Empty Description="No custom fields exist for this user">
+                    <Button Primary OnClick="AddField">Add Field</Button>
+                </Empty>
             }
+            else
+            {
+                foreach (var customField in User.CustomFields)
+                {
+                    <FormItem>
+                        <Flex Gap="Gap.Medium" Align="Align.Center">
+                            <TextInput @bind-Value="customField.Name" Placeholder="Name" MaxLength="64" Style="flex: 1" />
+                            <TextInput @bind-Value="customField.Value" Placeholder="Value" MaxLength="1024" Style="flex: 1" />
+                            <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveField(customField)" />
+                        </Flex>
+                    </FormItem>
+                }
 
-            <Flex Justify="FlexJustify.End">
-                <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
-            </Flex>
-        }
-    </Form>
+                <Flex Justify="Justify.End">
+                    <Button Primary OnClick="AddField">Add Field</Button>
+                </Flex>
+            }
+        </Form>
+    }
 </PageContent>
 
 @code {
-    [Parameter] public string Username { get; set; }
+    [Parameter] public string Username { get; set; } = "";
 
-    User User = new User();
-    Form<User> Form;
+    static readonly SelectItem<bool?>[] SaveOptions =
+    [
+        new(null, "Not set"),
+        new(true, "Enabled"),
+        new(false, "Disabled"),
+    ];
 
-    bool FieldsModified = false;
-    bool IsAdministrator = false;
+    User? User;
+    Form? _form;
+
+    bool _loaded;
+    bool _saving;
+    bool FieldsModified;
+
+    bool IsModified => (_form?.IsModified ?? false) || FieldsModified;
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        User = await UserService
+            .Include(u => u.CustomFields)
+            .FirstOrDefaultAsync(u => u.UserName == Username);
 
-        IsAdministrator = authState.User.IsInRole(RoleService.AdministratorRoleName);
+        if (User != null)
+            User.CustomFields ??= new List<UserCustomField>();
 
-        if (authState.User.Identity.IsAuthenticated)
-        {
-            User = await UserService
-                .Include(u => u.CustomFields)
-                .FirstOrDefaultAsync(u => u.UserName == Username);
-
-            if (User.CustomFields == null)
-                User.CustomFields = new List<UserCustomField>();
-        }
+        _loaded = true;
     }
 
     void AddField()
     {
-        User.CustomFields.Add(new UserCustomField());
+        User!.CustomFields.Add(new UserCustomField());
 
         FieldsModified = true;
     }
 
-    async Task RemoveField(UserCustomField customField)
+    void RemoveField(UserCustomField customField)
     {
-        User.CustomFields.Remove(customField);
+        User!.CustomFields.Remove(customField);
 
         FieldsModified = true;
-    } 
+    }
 
-    async Task Save()
+    async Task SaveAsync()
     {
+        if (!IsModified)
+            return;
+
+        _saving = true;
+
         try
         {
-            if (Form.IsModified || FieldsModified)
-            {
-                await UserService.UpdateAsync(User);
+            await UserService.UpdateAsync(User!);
 
-                MessageService.Success("User updated!");
-            }
+            _form?.MarkAsUnmodified();
+            FieldsModified = false;
+
+            Notifications.Success("User updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The user could not be saved");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 }

@@ -1,10 +1,8 @@
-﻿@page "/Games/{id:guid}/Scripts"
+@page "/Games/{id:guid}/Scripts"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Scripts">
-    <CascadingValue Name="GameId" Value="context.Id">
-        <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
-    </CascadingValue>
+    <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
 </GameEditView>
 
 @code {

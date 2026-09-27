@@ -1,52 +1,50 @@
-﻿@inject SavePathService SavePathService
+@using LANCommander.Server.Models
+@inject SavePathService SavePathService
 @inject ArchiveService ArchiveService
 @inject GameVersionService GameVersionService
-@inject ModalService ModalService
-@inject IMessageService MessageService
-@inject ILogger<SavePathEditor> Logger
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 
-<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    <Table TItem="SavePath" DataSource="@_savePaths" HidePagination="true" Responsive>
-        <PropertyColumn Property="p => p.Type">
-            <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
-                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-            </Select>
-        </PropertyColumn>
-        <PropertyColumn Property="p => p.Path">
-            @if (context.Type == SavePathType.Registry)
-            {
-                <InputRegistry @bind-Value="context.Path" />
-            }
-            else
-            {
-                <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                    <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories="true" />
-                    <Button Icon="@IconType.Outline.Code" Type="ButtonType.Text" OnClick="() => OpenVariablePicker(context, nameof(SavePath.Path))" Size="ButtonSize.Small" />
+@* Where the game whose Id is cascaded keeps its saves, so they can be backed up and restored *@
+<Flex Vertical Gap="Gap.Large">
+    <Table TItem="SavePath" Items="_savePaths" Key="p => p" NoPaging EmptyText="No save paths" SettingsKey="game-save-paths">
+        <Columns>
+            <TemplateColumn TItem="SavePath" Title="Type" Width="130px">
+                <EnumSelect TEnum="SavePathType" @bind-Value="context.Type" />
+            </TemplateColumn>
+            <TemplateColumn TItem="SavePath" Title="Path">
+                @if (context.Type == SavePathType.Registry)
+                {
+                    <InputRegistry @bind-Value="context.Path" />
+                }
+                else
+                {
+                    <Flex Gap="Gap.Small" Align="Align.Center">
+                        <FilePicker @bind-Value="context.Path" ArchiveId="@(_archive?.Id ?? Guid.Empty)" Title="Select Save Path" />
+                        <Button Text Small Icon="IconType.BracketsCurly" title="Insert variables" OnClick="() => PickVariablesAsync(context, nameof(SavePath.Path))" />
+                    </Flex>
+                }
+            </TemplateColumn>
+            <TemplateColumn TItem="SavePath" Title="Working Directory">
+                <Flex Gap="Gap.Small" Align="Align.Center">
+                    <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@(_archive?.Id ?? Guid.Empty)" Title="Select Working Directory" />
+                    <Button Text Small Icon="IconType.BracketsCurly" title="Insert variables" Disabled="@(context.Type == SavePathType.Registry)" OnClick="() => PickVariablesAsync(context, nameof(SavePath.WorkingDirectory))" />
                 </Flex>
-            }
-        </PropertyColumn>
-        <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center">
-                <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@(_archive?.Id ?? Guid.Empty)" AllowDirectories Title="Select Working Directory" />
-                <Button Icon="@IconType.Outline.Code" Type="ButtonType.Text" OnClick="() => OpenVariablePicker(context, nameof(SavePath.WorkingDirectory))" Disabled="@(context.Type == SavePathType.Registry)" Size="ButtonSize.Small" />
-            </Flex>
-        </PropertyColumn>
-        <PropertyColumn Property="p => p.IsRegex" Title="Regex">
-            <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
-        </PropertyColumn>
-        <PropertyColumn Property="p => p.Platforms" Title="Platforms">
-            <RuntimePlatformSelect @bind-Value="context.Platforms" />
-        </PropertyColumn>
-        <ActionColumn>
-            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                <Button OnClick="() => RemovePath(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-            </Flex>
-        </ActionColumn>
+            </TemplateColumn>
+            <TemplateColumn TItem="SavePath" Title="Regex" Width="80px">
+                <Checkbox @bind-Value="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" aria-label="Regex" />
+            </TemplateColumn>
+            <TemplateColumn TItem="SavePath" Title="Platforms" Width="160px">
+                <RuntimePlatformSelect @bind-Value="context.Platforms" Style="width: 100%" />
+            </TemplateColumn>
+            <ActionsColumn TItem="SavePath" Width="64px">
+                <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveAsync(context)" />
+            </ActionsColumn>
+        </Columns>
     </Table>
 
-    <Flex Justify="FlexJustify.End">
-        <Button OnClick="AddPath" Type="@ButtonType.Primary">Add Path</Button>
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Path</Button>
     </Flex>
 </Flex>
 
@@ -54,80 +52,68 @@
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
     Archive? _archive;
-    ICollection<SavePath> _savePaths = new List<SavePath>();
 
-    // Save paths are version-scoped: they belong to the game's latest GameVersion.
+    // Replaced rather than changed in place, so the table notices additions and removals
+    List<SavePath> _savePaths = new();
+
+    // Save paths belong to the game's latest version rather than the game itself
     Guid? _gameVersionId;
 
     protected override async Task OnInitializedAsync()
     {
-        if (GameId != Guid.Empty)
-            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId);
+        try
+        {
+            if (GameId != Guid.Empty)
+                _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId);
 
-        _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
-        await LoadPaths();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The save paths could not be loaded");
+        }
     }
 
-    async Task LoadPaths()
-        => _savePaths = await SavePathService.GetAsync(p => p.GameVersionId == _gameVersionId);
+    async Task LoadAsync() =>
+        _savePaths = (await SavePathService.GetAsync(p => p.GameVersionId == _gameVersionId)).ToList();
 
-    void AddPath()
+    void Add() => _savePaths = [.. _savePaths, new SavePath { GameId = GameId, WorkingDirectory = "{InstallDir}" }];
+
+    async Task RemoveAsync(SavePath path)
     {
-        _savePaths.Add(new SavePath
+        try
         {
-            GameId = GameId,
-            WorkingDirectory = "{InstallDir}"
-        });
+            // Unsaved paths only need dropping from the list
+            if (path.Id != Guid.Empty)
+                await SavePathService.DeleteAsync(path);
+
+            _savePaths = _savePaths.Where(p => p != path).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The save path could not be removed");
+        }
     }
 
-    async Task RemovePath(SavePath path)
+    async Task PickVariablesAsync(SavePath savePath, string fieldName)
     {
-        await SavePathService.DeleteAsync(path);
+        var current = fieldName == nameof(SavePath.Path) ? savePath.Path : savePath.WorkingDirectory;
 
-        await LoadPaths();
-    }
-
-    async Task OpenVariablePicker(SavePath savePath, string fieldName)
-    {
-        var currentValue = fieldName switch
+        var result = await Dialogs.OpenAsync<VariablePickerDialog, VariablePickerOptions, string>($"Edit {fieldName}", new VariablePickerOptions
         {
-            nameof(SavePath.Path) => savePath.Path ?? "",
-            nameof(SavePath.WorkingDirectory) => savePath.WorkingDirectory ?? "",
-            _ => ""
-        };
+            Value = current ?? "",
+            FieldName = fieldName,
+        }, new DialogSettings { OkText = "Apply" });
 
-        var modalOptions = new ModalOptions
-        {
-            Title = $"Edit {fieldName}",
-            Maximizable = false,
-            Closable = true,
-            OkText = "Apply"
-        };
+        if (result == null)
+            return;
 
-        var pickerOptions = new VariablePickerOptions
-        {
-            Value = currentValue,
-            FieldName = fieldName
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<VariablePickerDialog, VariablePickerOptions, string>(modalOptions, pickerOptions);
-
-        modalRef.OnOk = (result) =>
-        {
-            switch (fieldName)
-            {
-                case nameof(SavePath.Path):
-                    savePath.Path = result;
-                    break;
-                case nameof(SavePath.WorkingDirectory):
-                    savePath.WorkingDirectory = result;
-                    break;
-            }
-
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
+        if (fieldName == nameof(SavePath.Path))
+            savePath.Path = result;
+        else
+            savePath.WorkingDirectory = result;
     }
 
     public async Task Save()
@@ -142,14 +128,13 @@
                     await SavePathService.UpdateAsync(savePath);
             }
 
-            MessageService.SuccessAsync("Save paths updated!");
+            Notifications.Success("Save paths updated!");
         }
         catch (Exception ex)
         {
-            MessageService.ErrorAsync("Could not update save paths!");
-            Logger.LogError(ex, "Could not update save paths!");
+            Notifications.Error(ex, "Could not update save paths!");
         }
-        
-        await LoadPaths();
+
+        await LoadAsync();
     }
 }

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Deterministic fixtures for the server UI: a gallery of LANCommander.Server.UI Controls in known
+    states (routed under /_fixtures) and a seeder that fills a database with a known data set.
+    Referenced by the UI tests always, and by LANCommander.Server in Debug builds only.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.UI\LANCommander.Server.UI.csproj" />
+  </ItemGroup>
+
+</Project>

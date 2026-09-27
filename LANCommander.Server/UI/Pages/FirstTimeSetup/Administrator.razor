@@ -1,41 +1,35 @@
-﻿@page "/FirstTimeSetup/Administrator"
+@page "/FirstTimeSetup/Administrator"
 @using LANCommander.Server.Services.Exceptions
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
 @inject RoleService RoleService
 @inject UserService UserService
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject ILogger<Administrator> Logger
 
 <PageTitle>Create Administrator User - First Time Setup</PageTitle>
 
-<Form Model="@Model" Loading="Loading" OnFinish="CreateAdministratorUser" Layout="FormLayout.Vertical">
-    <FormItem>
-        To get started, you will need to create an administrator user.
+<Form Model="Model" Loading="Loading" OnSubmit="CreateAdministratorAsync">
+    <p>To get started, you will need to create an administrator user.</p>
+
+    <FormItem Label="Username" Required>
+        <TextInput @bind-Value="Model.Username" AutoFocus />
     </FormItem>
-    <FormItem Label="Username">
-        <Input @bind-Value="@context.Username" />
+    <FormItem Label="Password" Required>
+        <PasswordInput @bind-Value="Model.Password" />
     </FormItem>
-    <FormItem Label="Password">
-        <InputPassword @bind-Value="@context.Password" />
+    <FormItem Label="Confirm Password" Required>
+        <PasswordInput @bind-Value="Model.PasswordConfirm" />
     </FormItem>
-    <FormItem Label="Confirm Password">
-        <InputPassword @bind-Value="@context.PasswordConfirm" />
-    </FormItem>
-    <FormItem>
-        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
-            <GridCol>
-                <Button Type="ButtonType.Primary" HtmlType="submit">
-                    Create
-                </Button>
-            </GridCol>
-        </GridRow>
-    </FormItem>
+
+    <Flex Justify="Justify.End" Class="first-time-setup-actions">
+        <Button Primary Submit Loading="Loading">Create</Button>
+    </Flex>
 </Form>
 
 @code {
-    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; } = default!;
 
     FirstTimeSetupModel Model = new();
 
@@ -45,108 +39,65 @@
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Administrator);
 
-        var isSetupInitialized = await SetupService.IsSetupInitialized();
-        if (isSetupInitialized)
+        if (await SetupService.IsSetupInitialized())
             NavigationManager.NavigateTo("/");
     }
 
-    async Task CreateAdministratorUser()
+    async Task CreateAdministratorAsync()
     {
-        Loading = true;
-        StateHasChanged();
-        await Task.Yield();
-
         if (Model.Password != Model.PasswordConfirm)
         {
-            MessageService.Error("Passwords do not match");
-            Loading = false;
-            StateHasChanged();
-            await Task.Yield();
-
+            Notifications.Error("Passwords do not match");
             return;
         }
 
+        Loading = true;
+
         try
         {
-            var role = await RoleService.GetAsync(RoleService.AdministratorRoleName);
-
-            try
-            {
-                if (role == null)
-                    role = await RoleService.AddAsync(new Role
-                    {
-                        Name = RoleService.AdministratorRoleName,
-                    });
-            }
-            catch (AddRoleException ex)
-            {
-                foreach (var error in ex.IdentityResult.Errors)
-                {
-                    MessageService.Error(error.Description);
-                }
-
-                Loading = false;
-                StateHasChanged();
-                await Task.Yield();
-
-                return;
-            }
+            var role = await RoleService.GetAsync(RoleService.AdministratorRoleName)
+                       ?? await RoleService.AddAsync(new Role { Name = RoleService.AdministratorRoleName });
 
             var administrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
             if (administrators != null && administrators.Any())
-                NavigationManager.NavigateTo("/");
-            else
             {
-                var user = Activator.CreateInstance<User>();
-
-                user.Approved = true;
-                user.ApprovedOn = DateTime.UtcNow;
-                user.UserName = Model.Username;
-
-                try
-                {
-                    await UserService.AddAsync(user, bypassPasswordPolicy: true, Model.Password);
-                    await UserService.AddToRolesAsync(user.UserName, [RoleService.AdministratorRoleName]);
-
-                    Logger?.LogInformation("Administrator created a new account with password.");
-
-                    await MessageService.SuccessAsync("Setup completed! Redirecting...", 3);
-
-                    Loading = false;
-
-                    NavigationManager.NavigateTo("/");
-                }
-                catch (UserRegistrationException ex)
-                {
-                    foreach (var error in ex.IdentityResult.Errors)
-                    {
-                        MessageService.Error(error.Description);
-                    }
-
-                    Loading = false;
-                    StateHasChanged();
-                    await Task.Yield();
-                }
-                catch (AddRoleException ex)
-                {
-                    foreach (var error in ex.IdentityResult.Errors)
-                    {
-                        MessageService.Error(error.Description);
-                    }
-
-                    Loading = false;
-                    StateHasChanged();
-                    await Task.Yield();
-                }
+                NavigationManager.NavigateTo("/");
+                return;
             }
+
+            var user = Activator.CreateInstance<User>();
+
+            user.Approved = true;
+            user.ApprovedOn = DateTime.UtcNow;
+            user.UserName = Model.Username;
+
+            await UserService.AddAsync(user, bypassPasswordPolicy: true, Model.Password);
+            await UserService.AddToRolesAsync(user.UserName, [role.Name]);
+
+            Logger.LogInformation("Administrator created a new account with password.");
+
+            Notifications.Success("Setup completed! Redirecting...");
+
+            NavigationManager.NavigateTo("/");
+        }
+        catch (UserRegistrationException ex)
+        {
+            foreach (var error in ex.IdentityResult.Errors)
+                Notifications.Error(error.Description);
+        }
+        catch (AddRoleException ex)
+        {
+            foreach (var error in ex.IdentityResult.Errors)
+                Notifications.Error(error.Description);
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "Could not create administrator");
-            MessageService.Error($"Could not create administrator: {ex.Message}", 10);
+            Notifications.Error(ex, "Could not create administrator");
         }
-
-        Loading = false;
+        finally
+        {
+            Loading = false;
+        }
     }
 }

@@ -1,175 +1,114 @@
-﻿@using LANCommander.SDK.Enums
+@using LANCommander.SDK.Enums
 @using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
 @inject ServerConsoleService ServerConsoleService
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Console> Logger
+@inject NotificationService Notifications
 @implements IAsyncDisposable
 
-<Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
-
-@if (ServerConsole != null && ServerConsole.Type == ServerConsoleType.RCON)
+@* Follows a server's process output, or one of its log file consoles, as it is written *@
+@if (_serverConsole?.Type == ServerConsoleType.RCON)
 {
-    <Input @ref="CommandInput" @bind-Value="Command" BindOnInput OnPressEnter="OnPressEnter" @onkeyup="OnCommandKeyDown" />
+    <Alert Info>Sending commands to RCON consoles isn't available yet.</Alert>
+}
+else
+{
+    <div class="server-console">
+        <Xterm @ref="_terminal" Options="_options" AddonIds="_addons" />
+    </div>
 }
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
+
+    /// <summary>A log file console to follow instead of the process's own output.</summary>
     [Parameter] public Guid ServerConsoleId { get; set; }
 
-    Xterm? Terminal;
-    HubConnection? HubConnection;
-    ServerConsole ServerConsole;
+    Xterm? _terminal;
+    HubConnection? _hub;
+    ServerConsole? _serverConsole;
 
-    Input<string> CommandInput;
-    string Command;
-    string[] History;
-    int HistoryPosition;
-
-    TerminalOptions TerminalOptions = new TerminalOptions
+    readonly TerminalOptions _options = new()
     {
         CursorBlink = true,
-        CursorStyle = CursorStyle.Block
+        CursorStyle = CursorStyle.Block,
     };
 
-    string[] TerminalAddons = new string[]
-    {
-        "xterm-addon-fit"
-    };
+    readonly string[] _addons = ["xterm-addon-fit"];
 
     protected override async Task OnInitializedAsync()
     {
-        if (ServerConsoleId != Guid.Empty)
+        try
         {
-            ServerConsole = await ServerConsoleService.GetAsync(ServerConsoleId);
+            if (ServerConsoleId != Guid.Empty)
+                _serverConsole = await ServerConsoleService.GetAsync(ServerConsoleId);
 
-            await Connect(ServerConsole);
+            if (_serverConsole?.Type == ServerConsoleType.RCON)
+                return;
+
+            _hub = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            if (_serverConsole == null)
+            {
+                _hub.On<Guid, string>("Log", (serverId, message) =>
+                {
+                    if (serverId == ServerId)
+                        _ = WriteAsync(message);
+                });
+            }
+            else
+            {
+                _hub.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
+                {
+                    if (serverId == ServerId && logId == ServerConsoleId)
+                        _ = WriteAsync(message);
+                });
+            }
+
+            await _hub.StartAsync();
         }
-        else
+        catch (Exception ex)
         {
-            await Connect();
+            Notifications.Error(ex, "Could not connect to the server's output");
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender || _terminal == null)
+            return;
+
+        // Let the terminal lay out before fitting it to its container
+        await Task.Delay(100);
+
+        try
         {
-            await Task.Delay(100);
+            await _terminal.Addon("xterm-addon-fit").InvokeVoidAsync("fit");
 
-            if (Terminal != null)
-                await Terminal.Addon("xterm-addon-fit").InvokeVoidAsync("fit");
-
-            if (ServerConsoleId != Guid.Empty)
+            if (_serverConsole != null)
             {
-                var log = await ServerConsoleService.ReadLogAsync(ServerConsoleId);
-
-                foreach (var line in log)
-                {
-                    await Terminal.WriteLine(line);
-                }
+                foreach (var line in await ServerConsoleService.ReadLogAsync(ServerConsoleId))
+                    await _terminal.WriteLine(line);
             }
         }
-    }
-
-    async Task Connect()
-    {
-        HubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
-            .Build();
-
-        HubConnection.On<Guid, string>("Log", (serverId, message) =>
+        catch (Exception ex)
         {
-            if (serverId == ServerId)
-                Terminal.WriteLine(message);
-        });
-
-        await HubConnection.StartAsync();
-    }
-
-    async Task Connect(ServerConsole serverConsole)
-    {
-        History = new string[50];
-        HistoryPosition = 0;
-
-        if (ServerConsole.Type == ServerConsoleType.LogFile)
-        {
-            HubConnection = new HubConnectionBuilder()
-                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
-                .Build();
-
-            HubConnection.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
-            {
-                if (serverId == ServerId && logId == ServerConsoleId)
-                    Terminal.WriteLine(message);
-            });
-
-            await HubConnection.StartAsync();
-        }
-        else if (ServerConsole.Type == ServerConsoleType.RCON)
-        {
-            try
-            {
-                // ServerProcessService.RconConnect(ServerConsole);
-            }
-            catch (Exception ex)
-            {
-                MessageService.Error($"Could not connect to RCON server: {ex.Message}");
-                Logger.LogError($"Could not connect to RCON server");
-            }
+            Notifications.Error(ex, "The log could not be read");
         }
     }
 
-    public async Task OnPressEnter() {
-        // await ServerProcessService.RconSendCommandAsync(Command, ServerConsole);
-
-        Array.Copy(History, 0, History, 1, History.Length - 1);
-        History[0] = Command;
-        HistoryPosition = -1;
-        Command = "";
-        CommandInput.Value = "";
-        await Task.Yield();
-        await CommandInput.ValueChanged.InvokeAsync();
-        await CommandInput.Focus(FocusBehavior.FocusAndClear);
-
-        StateHasChanged();
-    }
-
-    public async Task OnCommandKeyDown(KeyboardEventArgs args)
+    Task WriteAsync(string message) => InvokeAsync(async () =>
     {
-        switch (args.Key)
-        {
-            case "ArrowUp":
-                if (HistoryPosition < History.Length && History[HistoryPosition + 1] != null)
-                    HistoryPosition++;
-
-                Command = History[HistoryPosition];
-
-                StateHasChanged();
-                break;
-
-            case "ArrowDown":
-                if (HistoryPosition >= 0)
-                {
-                    HistoryPosition--;
-
-                    if (HistoryPosition >= 0)
-                        Command = History[HistoryPosition];
-                    else
-                    {
-                        Command = "";
-                    }
-                }
-
-                StateHasChanged();
-                break;
-        }
-    }
+        if (_terminal != null)
+            await _terminal.WriteLine(message);
+    });
 
     public async ValueTask DisposeAsync()
     {
-        if (HubConnection is not null)
-            await HubConnection.DisposeAsync();
+        if (_hub is not null)
+            await _hub.DisposeAsync();
     }
 }

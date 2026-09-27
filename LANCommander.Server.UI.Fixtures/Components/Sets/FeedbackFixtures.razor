@@ -1,0 +1,63 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Alert.Statuses", "Alerts in each status, with a title, without an icon, and closable",
+            @<div>
+                <Alert>Informational message</Alert>
+                <Alert Success>The import finished.</Alert>
+                <Alert Warning Title="Storage almost full">Only 2.1 GB remain on the archive storage location.</Alert>
+                <Alert Danger>The server could not be started.</Alert>
+                <Alert NoIcon>An alert without an icon</Alert>
+                <Alert Info Closable>Dismiss me</Alert>
+            </div>)
+        {
+            Width = 480,
+            Covers = [typeof(Alert)],
+        },
+        new("Spin.States", "Standalone spinners in three sizes and a spinner covering content",
+            @<Flex Vertical Gap="Gap.Large">
+                <Flex Gap="Gap.Large" Align="Align.Center">
+                    <Spin Small />
+                    <Spin />
+                    <Spin Large />
+                    <Spin Tip="Checking for updates" />
+                </Flex>
+                <Spin Loading Tip="Loading games">
+                    <div style="height: 120px; padding: 12px; border: 1px solid var(--rz-base-600)">Content behind the spinner</div>
+                </Spin>
+            </Flex>)
+        {
+            Width = 420,
+            Covers = [typeof(Spin)],
+        },
+        new("Empty.States", "Default and custom empty states, with an action, and the small version",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Empty />
+                <Empty Icon="IconType.GameController" Description="No games match your search">
+                    <Button Primary Icon="IconType.Plus">Add game</Button>
+                </Empty>
+                <Empty Small />
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Empty)],
+        },
+        new("Result.Statuses", "Results for success, warning and danger outcomes",
+            @<Flex Vertical>
+                <Result Success Title="Import complete" SubTitle="12 games were added to the library">
+                    <Button Primary>View games</Button>
+                </Result>
+                <Result Warning Title="Some files were skipped" />
+                <Result Danger Title="Something went wrong" SubTitle="The page could not be loaded">
+                    <Content><Typography Code>NullReferenceException</Typography></Content>
+                    <ChildContent><Button>Back</Button><Button Primary>Try again</Button></ChildContent>
+                </Result>
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(Result)],
+        },
+    ];
+}

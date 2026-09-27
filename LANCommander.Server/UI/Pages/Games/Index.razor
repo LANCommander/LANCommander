@@ -1,160 +1,121 @@
-﻿@page "/Games"
-@using SortDirection = AntDesign.SortDirection
-@using AntDesign.TableModels
-@attribute [Authorize]
+@page "/Games"
+@using LANCommander.Server.Models
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
 @inject MetadataService MetadataService
 @inject NavigationManager NavigationManager
-@inject ModalService ModalService
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 
 <PageHeader Title="Games" Subtitle="@Total.ToString()" />
 
-<DataTable
-    @ref="Table"
-    TItem="Game"
-    @bind-SelectedRows="Selected"
-    @bind-Total="Total"
-    Size="@TableSize.Small"
-    Responsive
-    ColumnPicker
-    Searchable
-    SearchProperty="g => g.Title"
-    Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
-    OnRowDoubleClick="@(game => NavigationManager.NavigateTo($"/Games/{game.Id}"))"
-    Query="g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod)">
-    <RightToolbar>
-        @if (Selected != null && Selected.Count() > 0)
-        {
-            <Button OnClick="() => AddToCollection()" Type="@ButtonType.Default">Add to Collection</Button>
-        }
-        <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
-        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
-    </RightToolbar>
-    <Columns>
-        <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
+<PageContent>
+    <DataTable @ref="Table"
+               TItem="Game"
+               Small
+               ColumnPicker
+               Selectable
+               @bind-Values="Selected"
+               @bind-Total="Total"
+               SearchProperty="g => g.Title"
+               Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
+               Query="g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod)"
+               OnRowDoubleClick="@(game => NavigationManager.NavigateTo($"/Games/{game.Id}"))">
+        <RightToolbar>
+            @if (Selected.Any())
+            {
+                <Button Icon="IconType.Stack" OnClick="AddToCollectionAsync">Add to Collection</Button>
+            }
+            <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
+            <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Game</Button>
+        </RightToolbar>
+        <Columns>
+            <TemplateColumn TItem="Game" Title="Icon" Include="Media" Width="64px">
+                <Image Src="@GetIcon(context)" Width="32" Height="32" />
+            </TemplateColumn>
 
-        <DataColumn TData="string" Title="Icon" Include="Media">
-            <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-        </DataColumn>
+            <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
 
-        <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
+            <BoundColumn Property="g => g.MultiplayerModes.Any()" Title="Multiplayer" Include="MultiplayerModes" Sortable>
+                <Checkbox Value="context.MultiplayerModes?.Count > 0" Disabled aria-label="Multiplayer" />
+            </BoundColumn>
 
-        <BoundDataColumn Property="g => g.MultiplayerModes.Any()" Include="MultiplayerModes" Sortable Title="Multiplayer">
-            <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
-        </BoundDataColumn>
+            <BoundColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable>
+                @context.Keys?.Count
+            </BoundColumn>
+            <BoundColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable>
+                @context.Keys?.Count(k => k.ClaimedOn.HasValue)
+            </BoundColumn>
 
-        <BoundDataColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable>
-            @context.Keys?.Count
-        </BoundDataColumn>
-        <BoundDataColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable>
-            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-        </BoundDataColumn>
-
-        <DataColumn TData="string[]" Title="Collections" Include="Collections">
-            @if (context.Collections != null)
-                foreach (var collection in context.Collections)
+            <TemplateColumn TItem="Game" Title="Collections" Include="Collections">
+                @foreach (var collection in context.Collections ?? [])
                 {
                     <Tag>@collection.Name</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <DataColumn TData="string[]" Title="Developers" Include="Developers" Hide>
-            @if (context.Developers != null)
-                foreach (var dev in context.Developers)
+            <TemplateColumn TItem="Game" Title="Developers" Include="Developers" Hide>
+                @foreach (var developer in context.Developers ?? [])
                 {
-                    <Tag>@dev.Name</Tag>
+                    <Tag>@developer.Name</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <DataColumn TData="string[]" Title="Publishers" Include="Publishers" Hide>
-            @if (context.Publishers != null)
-                foreach (var pub in context.Publishers)
+            <TemplateColumn TItem="Game" Title="Publishers" Include="Publishers" Hide>
+                @foreach (var publisher in context.Publishers ?? [])
                 {
-                    <Tag>@pub.Name</Tag>
+                    <Tag>@publisher.Name</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <DataColumn TData="string[]" Title="Genres" Include="Genres" Hide>
-            @if (context.Genres != null)
-                foreach (var genre in context.Genres)
+            <TemplateColumn TItem="Game" Title="Genres" Include="Genres" Hide>
+                @foreach (var genre in context.Genres ?? [])
                 {
                     <Tag>@genre.Name</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <DataColumn TData="string[]" Title="Platforms" Include="Platforms" Hide>
-            @if (context.Platforms != null)
-                foreach (var platform in context.Platforms)
+            <TemplateColumn TItem="Game" Title="Platforms" Include="Platforms" Hide>
+                @foreach (var platform in context.Platforms ?? [])
                 {
                     <Tag>@platform.Name</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Include="MultiplayerModes" Hide>
-            @if (context.MultiplayerModes != null)
-                foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+            <TemplateColumn TItem="Game" Title="Multiplayer Modes" Include="MultiplayerModes" Hide>
+                @foreach (var mode in context.MultiplayerModes?.Select(mm => mm.Type).Distinct() ?? [])
                 {
                     <Tag>@mode.GetDisplayName()</Tag>
                 }
-        </DataColumn>
+            </TemplateColumn>
 
-        <BoundDataColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
-            <LocalTime Value="context.CreatedOn" />
-        </BoundDataColumn>
+            <BoundColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
 
-        <BoundDataColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
+            <BoundColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
 
-        <BoundDataColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Sortable Title="Created By" Include="CreatedBy">
-            @context.CreatedBy?.UserName
-        </BoundDataColumn>
+            <BoundColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
 
-        <BoundDataColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy">
-            @context.UpdatedBy?.UserName
-        </BoundDataColumn>
+            <BoundColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Include="UpdatedBy" Sortable />
 
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <a href="@($"/Games/{context.Id}")" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            <ActionsColumn TItem="Game">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Games/{context.Id}")" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this game?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-
-    <PaginationTemplate>
-        <Pagination
-            Total="context.Total"
-            PageSize="context.PageSize"
-            Current="context.PageIndex"
-            DefaultPageSize="25"
-            PageSizeOptions="new [] { 25, 50, 100, 200 }"
-            ShowSizeChanger
-            OnChange="context.HandlePageChange" />
-    </PaginationTemplate>
-</DataTable>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
 @code {
-    bool Visibility = false;
-
-    IEnumerable<Game> Selected;
+    IList<Game> Selected = new List<Game>();
     int Total;
 
-    DataTable<Game> Table;
-
-    string GetIcon(Game game)
-    {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
-
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
-    }
+    DataTable<Game> Table = default!;
 
     bool _hasMetadataProviders;
 
@@ -163,92 +124,67 @@
         _hasMetadataProviders = MetadataService.GetProviderNames().Any();
     }
 
-    async Task Add()
+    static string GetIcon(Game game)
     {
-        if (_hasMetadataProviders)
-        {
-            var modalOptions = new ModalOptions
-            {
-                Title = "Add Game",
-                Maximizable = false,
-                DefaultMaximized = false,
-                Closable = true,
-                Footer = null,
-            };
+        var media = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
 
-            var modalRef = ModalService.CreateModal<AddGameDialog, AddGameDialogOptions>(modalOptions, new AddGameDialogOptions());
-            modalRef.OnClose = Reload;
-        }
-        else
-        {
-            NavigationManager.NavigateTo("/Games/Add");
-        }
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
     }
 
-    async Task Delete(Game game)
+    async Task AddAsync()
+    {
+        if (!_hasMetadataProviders)
+        {
+            NavigationManager.NavigateTo("/Games/Add");
+            return;
+        }
+
+        // The dialog goes to the new game itself; closing it without adding one changes nothing
+        await Dialogs.OpenAsync<AddGameDialog, bool>("Add Game", new DialogSettings
+        {
+            Size = DialogSize.ExtraLarge,
+            NoFooter = true,
+        });
+    }
+
+    async Task DeleteAsync(Game game)
     {
         try
         {
             await GameService.DeleteAsync(game);
 
-            MessageService.Success($"{game.Title} was successfully deleted!");
+            Notifications.Success($"{game.Title} was successfully deleted!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete the game!");
-            Logger.LogError(ex, "Could not delete the game!");
+            Notifications.Error(ex, "Could not delete the game!");
         }
 
-        await Reload();
+        await Table.ReloadAsync();
     }
 
-    async void AddToCollection()
+    async Task AddToCollectionAsync()
     {
-        var modalOptions = new ModalOptions()
-            {
-                Title = "Add to Collection",
-                Maximizable = false,
-                DefaultMaximized = false,
-                Closable = true,
-                OkText = "Add"
-            };
-
-        var options = new AddToCollectionOptions()
+        var collections = await Dialogs.OpenAsync<AddToCollectionDialog, AddToCollectionOptions, IEnumerable<Collection>>("Add to Collection", new AddToCollectionOptions
         {
-            GameIds = Selected.Select(g => g.Id)
-        };
+            GameIds = Selected.Select(g => g.Id),
+        }, new DialogSettings { OkText = "Add" });
 
-        var modalRef = await ModalService.CreateModalAsync<AddToCollectionDialog, AddToCollectionOptions, IEnumerable<Collection>>(modalOptions, options);
-
-        modalRef.OnOk = async (collections) =>
+        if (collections != null)
         {
-            Table.UnselectAll();
-            await Reload();
-        };
+            await Table.ClearSelectionAsync();
+            await Table.ReloadAsync();
+        }
     }
 
-    async Task OpenImportDialog()
+    async Task OpenImportDialogAsync()
     {
-        var options = new ImportDialogOptions
+        await Dialogs.OpenAsync<ImportUploadDialog, ImportDialogOptions, bool>("Import Game", new ImportDialogOptions
         {
             Hint = "Only LCX files are supported for importing games",
             ManifestType = ManifestType.Game,
-        };
+        }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
 
-        var modalOptions = new ModalOptions
-        {
-            Title = "Import Game",
-            DestroyOnClose = true,
-            MaskClosable = false,
-            Footer = null,
-        };
-
-        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
-        modalRef.OnOk = modalRef.OnCancel = modalRef.OnClose = Reload;
-    }
-
-    async Task Reload()
-    {
         await Table.ReloadAsync();
     }
 }

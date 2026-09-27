@@ -1,0 +1,77 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+@implements IDisposable
+@inject TooltipService Tooltips
+
+@* Shows Title in a bubble while the pointer is over, or focus is within, the wrapped content *@
+<span @ref="_target"
+      @attributes="AdditionalAttributes"
+      class="@_class"
+      style="@Style"
+      @onmouseenter="Open"
+      @onmouseleave="Close"
+      @onfocusin="Open"
+      @onfocusout="Close">
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Rich tooltip content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    [Parameter] public Placement Placement { get; set; } = Placement.Top;
+
+    /// <summary>Milliseconds the pointer must rest before the tooltip opens.</summary>
+    [Parameter] public int Delay { get; set; } = 300;
+
+    ElementReference _target;
+    string? _class;
+    bool _open;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-tooltip-trigger").Add(Class).Build();
+    }
+
+    void Open()
+    {
+        if (string.IsNullOrEmpty(Title) && TitleTemplate == null)
+            return;
+
+        var options = new TooltipOptions
+        {
+            Position = Placement switch
+            {
+                Placement.Bottom => TooltipPosition.Bottom,
+                Placement.Left => TooltipPosition.Left,
+                Placement.Right => TooltipPosition.Right,
+                _ => TooltipPosition.Top,
+            },
+            Delay = Delay,
+            // Stays until the pointer leaves
+            Duration = null,
+            CssClass = "lc-tooltip",
+        };
+
+        if (TitleTemplate != null)
+            Tooltips.Open(_target, _ => TitleTemplate, options);
+        else
+            Tooltips.Open(_target, Title!, options);
+
+        _open = true;
+    }
+
+    void Close()
+    {
+        if (_open)
+            Tooltips.Close();
+
+        _open = false;
+    }
+
+    public void Dispose() => Close();
+}

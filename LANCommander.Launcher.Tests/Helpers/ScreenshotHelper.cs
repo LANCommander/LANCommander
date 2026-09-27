@@ -5,6 +5,7 @@ using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
+using LANCommander.Testing.Visual;
 
 namespace LANCommander.Launcher.Tests.Helpers;
 

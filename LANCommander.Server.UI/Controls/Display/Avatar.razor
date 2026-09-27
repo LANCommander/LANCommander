@@ -1,0 +1,59 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A person's picture, or their initial (or an icon) when there is no picture or it fails to load *@
+<span @attributes="AdditionalAttributes" class="@_class" style="@Style" title="@Name" role="img" aria-label="@(Name ?? "Avatar")">
+    @if (!String.IsNullOrWhiteSpace(Src))
+    {
+        <Image Src="@Src" Alt="@Name" Cover>
+            @Fallback
+        </Image>
+    }
+    else
+    {
+        @Fallback
+    }
+</span>
+
+@code {
+    /// <summary>The picture; the fallback shows while it is missing or broken.</summary>
+    [Parameter] public string? Src { get; set; }
+
+    /// <summary>Whose avatar it is; the fallback shows its first letter.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Shown when there is neither a picture nor a name, e.g. a group icon.</summary>
+    [Parameter] public IconType Icon { get; set; } = IconType.User;
+
+    [Parameter] public bool Small { get; set; }
+
+    [Parameter] public bool Large { get; set; }
+
+    /// <summary>Rounded square corners instead of a circle.</summary>
+    [Parameter] public bool Square { get; set; }
+
+    string? _class;
+
+    RenderFragment Fallback => __builder =>
+    {
+        if (!String.IsNullOrWhiteSpace(Name))
+        {
+            <span class="lc-avatar-initial">@Name.Trim()[..1].ToUpperInvariant()</span>
+        }
+        else
+        {
+            <Icon Type="Icon" />
+        }
+    };
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-avatar")
+            .If(Small, "lc-avatar-small")
+            .If(Large, "lc-avatar-large")
+            .If(Square, "lc-avatar-square")
+            .Add(Class)
+            .Build();
+    }
+}

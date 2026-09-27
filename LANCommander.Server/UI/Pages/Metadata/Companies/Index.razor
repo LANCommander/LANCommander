@@ -1,128 +1,104 @@
-﻿@page "/Metadata/Companies"
+@page "/Metadata/Companies"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CompanyService CompanyService
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject AlertService Alerts
 
 <PageHeader Title="Companies" />
 
-<DataTable
-    TItem="Company"
-    @ref="Table"
-    Size="TableSize.Small"
-    Responsive
-    Searchable
-    OnRowDoubleClick="OpenEdit"
-    SearchProperty="c => c.Name">
-    <RightToolbar>
-        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>
-    </RightToolbar>
-    <Columns>
-        <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <BoundDataColumn Property="c => c.CreatedOn" Title="Created On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="c => c.UpdatedOn" Title="Updated On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <BoundDataColumn Property="c => c.DevelopedGames.Count" Sortable Title="Developed Games" Include="DevelopedGames" />
-        <BoundDataColumn Property="c => c.PublishedGames.Count" Sortable Title="Published Games" Include="PublishedGames" />
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
-                @* TODO: Add seperate Edit page and navigate to it *@
-                @* <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
-
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this company?">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger/>
+<PageContent>
+    <DataTable TItem="Company"
+               @ref="_table"
+               Small
+               SearchProperty="c => c.Name"
+               OnRowDoubleClick="EditAsync">
+        <RightToolbar>
+            <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Company</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="c => c.Name" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="c => c.DevelopedGames.Count" Title="Developed Games" Sortable Include="DevelopedGames" />
+            <BoundColumn Property="c => c.PublishedGames.Count" Title="Published Games" Sortable Include="PublishedGames" />
+            <BoundColumn Property="c => c.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+            <BoundColumn Property="c => c.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+            <ActionsColumn TItem="Company">
+                <Button Text Icon="IconType.PencilSimple" OnClick="() => EditAsync(context)" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this company?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-</DataTable>
-
-<Modal Title="@(CompanyContext.Id == Guid.Empty ? "New Company" : "Edit Company")"
-    @bind-Visible="@EditCompanyVisible"
-    OnOk="UpdateOrAdd"
-    OnCancel="CloseEdit">
-    <Form Model="@CompanyContext">
-        <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" AutoFocus />
-        </FormItem>
-    </Form>
-</Modal>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
 @code {
-    DataTable<Company> Table;
-    bool EditCompanyVisible = false;
-    Company CompanyContext = new();
+    DataTable<Company> _table = default!;
 
-    async Task UpdateOrAdd()
+    async Task AddAsync()
     {
+        var name = await Alerts.PromptAsync("New Company", "Name", okText: "Add");
+
+        if (name == null)
+            return;
+
         try
         {
-            if (CompanyContext.Id == Guid.Empty)
-            {
-                await CompanyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
+            await CompanyService.AddMissingAsync(x => x.Name == name, new Company { Name = name });
 
-                MessageService.Success($"{CompanyContext.Name} was added!");
-            }
-            else
-            {
-                await CompanyService.UpdateAsync(CompanyContext);
+            Notifications.Success($"{name} was added!");
 
-                MessageService.Success($"{CompanyContext.Name} was updated!");
-            }
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            if (CompanyContext.Id == Guid.Empty)
-                MessageService.Error($"Could not add {CompanyContext.Name}!");
-            else
-                MessageService.Error($"Could not update {CompanyContext.Name}!");
-
-            Logger.LogError(ex, $"Could not update/add {CompanyContext.Name}!");
+            Notifications.Error(ex, $"Could not add {name}!");
         }
-
-        await Table.ReloadAsync();
-
-        await CloseEdit();
     }
 
-    async Task OpenEdit(Company? company)
+    async Task EditAsync(Company company)
     {
-        // query new instance, or create a new Edit context instance
-        CompanyContext = company != null ? await CompanyService.GetAsync(company.Id) : default!;
-        CompanyContext ??= new();
+        var name = await Alerts.PromptAsync("Edit Company", "Name", company.Name, okText: "Save");
 
-        EditCompanyVisible = true;
+        if (name == null || name == company.Name)
+            return;
 
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var existing = await CompanyService.GetAsync(company.Id);
+
+            existing.Name = name;
+
+            await CompanyService.UpdateAsync(existing);
+
+            Notifications.Success($"{name} was updated!");
+
+            await _table.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not update {name}!");
+        }
     }
 
-    async Task CloseEdit()
-    {
-        EditCompanyVisible = false;
-
-        await InvokeAsync(StateHasChanged);
-    }
-    
-    async Task Delete(Company company)
+    async Task DeleteAsync(Company company)
     {
         try
         {
             await CompanyService.DeleteAsync(company);
 
-            MessageService.Success("Company deleted!");
+            Notifications.Success("Company deleted!");
 
-            await Table.ReloadAsync();
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete company!");
-            Logger?.LogError(ex, "Could not delete company");
+            Notifications.Error(ex, "Could not delete company!");
         }
     }
 }

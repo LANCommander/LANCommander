@@ -1,0 +1,19 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("MouseArea.States", "Enabled and disabled areas with custom class and style",
+            @<div style="display: flex; gap: 12px">
+                <MouseArea Cursor="Cursors.Pointer" Style="padding: 12px; border: 1px dashed var(--rz-base-500)">
+                    Clickable
+                </MouseArea>
+                <MouseArea Disabled Style="padding: 12px; border: 1px dashed var(--rz-base-600); opacity: 0.5">
+                    Disabled
+                </MouseArea>
+            </div>)
+        {
+            Width = 320,
+        },
+    ];
+}

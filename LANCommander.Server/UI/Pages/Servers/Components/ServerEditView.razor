@@ -1,94 +1,120 @@
+@using LANCommander.SDK.Enums
 @using Microsoft.EntityFrameworkCore
 @inject ServerService ServerService
 @inject NavigationManager NavigationManager
 
-<Layout Class="panel-layout" Style="padding: 24px 0;">
-    <Sider Width="200">
-        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
-            <MenuItem RouterLink="@($"/Servers/{Id}/General")">General</MenuItem>
-            
+<SideLayout>
+    <Side>
+        <Menu>
+            <MenuItem Icon="IconType.Info" Href="@(Id == Guid.Empty ? "/Servers/Add" : $"/Servers/{Id}/General")" Exact>General</MenuItem>
+
             @if (Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/Monitor")" Disabled="Server.ServerConsoles != null && Server.ServerConsoles.Any()">Monitor</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem Icon="IconType.Play" Href="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
+                <MenuItem Icon="IconType.Power" Href="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
+                <MenuItem Icon="IconType.Globe" Href="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
+                <MenuItem Icon="IconType.TerminalWindow" Href="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
+
+                @if (LogConsoles.Any())
+                {
+                    <SubMenu Icon="IconType.Monitor" Title="Monitor">
+                        <MenuItem Href="@($"/Servers/{Id}/Monitor/Console")">Process Output</MenuItem>
+                        @foreach (var console in LogConsoles)
+                        {
+                            <MenuItem Href="@($"/Servers/{Id}/Monitor/{console.Id}")">@console.Name</MenuItem>
+                        }
+                    </SubMenu>
+                }
+                else
+                {
+                    <MenuItem Icon="IconType.Monitor" Href="@($"/Servers/{Id}/Monitor")">Monitor</MenuItem>
+                }
+
+                <MenuItem Icon="IconType.Code" Href="@($"/Servers/{Id}/Scripts")">Scripts</MenuItem>
             }
         </Menu>
-    </Sider>
-    
-    <Content>
-        <CascadingValue Value="Server">
-            <PageHeader>
-                <PageHeaderTitle>
-                    @if (TitleTemplate != null)
-                    {
-                        @TitleTemplate(Server)
-                    }
-                    else
-                    {
-                        <Text>@Title</Text>
-                    }
-                </PageHeaderTitle>
-                
-                <PageHeaderExtra>
-                    @TitleExtraTemplate?.Invoke(Server)
-                </PageHeaderExtra>
-            </PageHeader>
-        </CascadingValue>
-        
-        <div class="panel-layout-content">
-            @* Scoped to the content pane so a failing tab leaves the tab menu and header usable. *@
-            <ErrorHandler Title="This page could not be loaded">
-                <Body>
-                    @if (Server?.Id == Id)
-                    {
-                        <CascadingValue Value="Server.Id" Name="ServerId">
-                            @ChildContent?.Invoke(Server)
-                        </CascadingValue>
-                    }
-                </Body>
-            </ErrorHandler>
-        </div>
-    </Content>
-</Layout>
+    </Side>
+
+    <ChildContent>
+        <PageHeader>
+            <TitleTemplate>
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate(Server)
+                }
+                else
+                {
+                    @Title
+                }
+            </TitleTemplate>
+            <Extra>
+                @if (ShowControl && Server.Id != Guid.Empty)
+                {
+                    <ServerControl ServerId="Server.Id" />
+                }
+                @TitleExtraTemplate?.Invoke(Server)
+            </Extra>
+        </PageHeader>
+
+        @* PageContent catches errors, so a failing section leaves the menu and header usable *@
+        <PageContent Loading="_loading">
+            @if (!_loading && Server.Id == Id)
+            {
+                <CascadingValue Value="Server.Id" Name="ServerId">
+                    @ChildContent?.Invoke(Server)
+                </CascadingValue>
+            }
+        </PageContent>
+    </ChildContent>
+</SideLayout>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    [Parameter] public string Title { get; set; }
+    [Parameter] public string? Title { get; set; }
     [Parameter] public RenderFragment<Server>? TitleTemplate { get; set; }
     [Parameter] public RenderFragment<Server>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Server>? ChildContent { get; set; }
 
+    /// <summary>Shows the server's status and start/stop button in the header.</summary>
+    [Parameter] public bool ShowControl { get; set; } = true;
+
     Server Server { get; set; } = new();
-    Guid _id;
+    Guid? _id;
+    bool _loading = true;
+
+    IEnumerable<ServerConsole> LogConsoles => Server.ServerConsoles?.Where(c => c.Type == ServerConsoleType.LogFile) ?? [];
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_id != Id)
+        if (_id == Id)
+            return;
+
+        _id = Id;
+        _loading = true;
+
+        if (Id != Guid.Empty)
         {
-            _id = Id;
-            
-            if (_id != Guid.Empty)
-                Server = await ServerService
-                    .Query(query =>
-                    {
-                        return query
-                            .Include(s => s.Actions)
-                            .Include(s => s.Game)
-                            .ThenInclude(g => g.Archives)
-                            .Include(s => s.HttpPaths)
-                            .Include(s => s.Scripts)
-                            .Include(s => s.ServerConsoles);
-                    })
-                    .GetAsync(_id);
-            else
-                Server = new Server();
-            
-            if (Server == null)
+            var server = await ServerService
+                .Query(query => query
+                    .Include(s => s.Actions)
+                    .Include(s => s.Game)
+                    .ThenInclude(g => g.Archives)
+                    .Include(s => s.HttpPaths)
+                    .Include(s => s.Scripts)
+                    .Include(s => s.ServerConsoles))
+                .GetAsync(Id);
+
+            if (server == null)
+            {
                 NavigationManager.NavigateTo("/Servers");
+                return;
+            }
+
+            Server = server;
         }
+        else
+            Server = new Server();
+
+        _loading = false;
     }
 }

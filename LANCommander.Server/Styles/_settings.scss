@@ -1,0 +1,113 @@
+// Settings pages and the dialogs they open
+.stylesheet-editor {
+    height: 65vh;
+}
+
+.release-date {
+    margin-inline: 4px 6px;
+    font-size: 70%;
+    font-weight: normal;
+    color: var(--lc-text-secondary-color);
+}
+
+.log-viewer {
+    padding: 8px;
+    background: #000;
+}
+
+.media-tool-path {
+    word-break: break-all;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+// Servers > Monitor
+.server-console {
+    min-height: 480px;
+    padding: 8px;
+    background: #000;
+}
+
+// A scrolling list of choices in a picker dialog, e.g. UI/Controls/RedistributablePickerDialog.razor
+.picker-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.picker-list-item {
+    padding: 8px 12px;
+    border: 0;
+    border-radius: var(--lc-border-radius);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+
+    &.picker-list-item-selected {
+        background: var(--lc-primary-light);
+    }
+}
+
+// Redistributable options (UI/Controls/RenderOptionGroups.razor, RenderListOption.razor)
+.option-description {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.option-list-row {
+    margin-bottom: 8px;
+}
+
+.option-list-fields {
+    flex: 1;
+    min-width: 0;
+}
+
+.option-list-field {
+    flex: 1;
+    min-width: 140px;
+}
+
+.option-list-empty {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.pdf-reader {
+    height: 75vh;
+}
+
+// First time setup (UI/Pages/FirstTimeSetup)
+.first-time-setup {
+    max-width: 760px;
+    margin: 48px auto;
+}
+
+.first-time-setup-logo {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.first-time-setup-steps {
+    margin-bottom: 24px;
+}
+
+.first-time-setup-actions {
+    margin-top: 16px;
+}
+
+// UI/Controls/HqFeatureCards.razor
+.hq-feature-card {
+    flex: 1;
+    min-width: 240px;
+    max-width: 360px;
+}

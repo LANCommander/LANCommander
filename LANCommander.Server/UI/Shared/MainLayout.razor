@@ -1,35 +1,52 @@
 @using LANCommander.Server.Services.Abstractions
-@using LANCommander.UI.Services
 @inherits LayoutComponentBase
 @inject IVersionProvider VersionProvider
 @inject UploadTracker UploadTracker
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
-<Layout Class="layout">
+<div class="@(_menuOpen ? "lc-layout lc-layout-menu-open" : "lc-layout")">
+    <header class="lc-mobile-header">
+        <img src="/static/logo-dark.svg" alt="LANCommander" class="lc-mobile-logo" />
+        <Button Text Icon="IconType.List" OnClick="ToggleMenu" aria-label="Menu" />
+    </header>
+
     <Sidebar />
 
-    <Flex Vertical Justify="FlexJustify.SpaceBetween" Gap="FlexGap.Large" Class="layout-wrapper" >
-        <ErrorHandler Title="Unexpected Error">
-            <Body>
-            <Content>
-                <ServerProcessMonitor>
-                    @Body
-                </ServerProcessMonitor>
-            </Content>
-            </Body>
-        </ErrorHandler>
+    <div class="lc-layout-main">
+        <main class="lc-layout-content">
+            <ErrorHandler Title="Unexpected Error">
+                @Body
+            </ErrorHandler>
+        </main>
 
-        <Footer>
+        <footer class="lc-layout-footer">
             LANCommander v@(VersionProvider.GetCurrentVersion().WithoutMetadata().ToString())
-        </Footer>
-    </Flex>
-</Layout>
+        </footer>
+    </div>
+</div>
 
 @code {
+    bool _menuOpen;
+
+    protected override void OnInitialized() => NavigationManager.LocationChanged += CloseMenu;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-        {
             await UploadTracker.InitializeAsync();
-        }
     }
+
+    void ToggleMenu() => _menuOpen = !_menuOpen;
+
+    void CloseMenu(object? sender, LocationChangedEventArgs e)
+    {
+        if (!_menuOpen)
+            return;
+
+        _menuOpen = false;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => NavigationManager.LocationChanged -= CloseMenu;
 }

@@ -1,0 +1,32 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<RadzenTabs Attributes="_attributes"
+            Style="@Style"
+            SelectedIndex="SelectedIndex"
+            SelectedIndexChanged="SelectedIndexChanged"
+            RenderMode="@(RenderAll ? TabRenderMode.Client : TabRenderMode.Server)">
+    <Tabs>
+        @ChildContent
+    </Tabs>
+</RadzenTabs>
+
+@code {
+    /// <summary>The Tab components.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public int SelectedIndex { get; set; }
+
+    [Parameter] public EventCallback<int> SelectedIndexChanged { get; set; }
+
+    /// <summary>Render every tab's content up front and switch between them in the browser, keeping their state.</summary>
+    [Parameter] public bool RenderAll { get; set; }
+
+    Dictionary<string, object> _attributes = new();
+
+    protected override void OnParametersSet()
+    {
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder().Add("lc-tabs").Add(Class).Build()!;
+    }
+}

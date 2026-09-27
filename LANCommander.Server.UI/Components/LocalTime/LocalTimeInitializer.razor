@@ -1,0 +1,32 @@
+@using LANCommander.Server.UI.Extensions
+@using LANCommander.Server.UI.Providers
+@using Microsoft.JSInterop
+@inject TimeProvider TimeProvider
+@inject ScriptProvider ScriptProvider
+@inject IJSRuntime JS
+@namespace LANCommander.Server.UI.Components
+
+@code {
+    IJSObjectReference? _timeProvider;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && TimeProvider is LocalTimeProvider localTimeProvider && !localTimeProvider.IsLocalTimeZoneSet)
+        {
+            try
+            {
+                _timeProvider ??= await ScriptProvider.ImportModuleAsync("TimeProvider");
+                
+                var timeZone = await _timeProvider.InvokeAsync<string>("GetLocalTimeZone");
+
+                localTimeProvider.SetLocalTimeZone(timeZone);
+            }
+            catch
+            {
+                var timeZone = await JS.InvokeAsync<string>("eval", "Intl.DateTimeFormat().resolvedOptions().timeZone");
+                
+                localTimeProvider.SetLocalTimeZone(timeZone);
+            }
+        }
+    }
+}

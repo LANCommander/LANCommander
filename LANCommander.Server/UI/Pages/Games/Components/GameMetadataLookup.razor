@@ -1,17 +1,10 @@
 @inject MetadataService MetadataService
+@inject DialogService Dialogs
 
-<Modal Visible="_modalVisible" Title="Game Metadata Lookup" Footer="null" Class="game-metadata-lookup-modal" OnCancel="Close">
-    <MetadataLookupPanel
-        GameId="GameId"
-        AutoFocus="true"
-        Search="@Value"
-        OnImported="OnPanelImported"
-        OnCancel="Close" />
-</Modal>
-
-<Flex Gap="FlexGap.Small">
-    <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" AutoFocus="AutoFocus" />
-    <Button OnClick="OpenLookup" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value) || !_hasProviders)">@ButtonText</Button>
+@* A title input with a button that looks the title up with a metadata provider and imports the result *@
+<Flex Gap="Gap.Small">
+    <TextInput Value="@Value" ValueChanged="ValueChangedAsync" Immediate OnEnter="OpenLookupAsync" AutoFocus="AutoFocus" Style="flex: 1" />
+    <Button Primary Icon="IconType.MagnifyingGlass" Disabled="@(String.IsNullOrWhiteSpace(Value) || !_hasProviders)" OnClick="OpenLookupAsync">@ButtonText</Button>
 </Flex>
 
 @code {
@@ -19,10 +12,9 @@
     [Parameter] public EventCallback<Guid> OnImported { get; set; }
     [Parameter] public string ButtonText { get; set; } = "Lookup";
     [Parameter] public bool AutoFocus { get; set; }
-    [Parameter] public string Value { get; set; }
-    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
 
-    bool _modalVisible;
     bool _hasProviders;
 
     protected override void OnInitialized()
@@ -30,25 +22,25 @@
         _hasProviders = MetadataService.GetProviderNames().Any();
     }
 
-    private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
+    async Task ValueChangedAsync(string? value)
     {
-        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && !String.IsNullOrWhiteSpace(Value))
-            OpenLookup();
+        Value = value;
+
+        await ValueChanged.InvokeAsync(value);
     }
 
-    private void OpenLookup()
+    async Task OpenLookupAsync()
     {
-        _modalVisible = true;
-    }
+        if (String.IsNullOrWhiteSpace(Value) || !_hasProviders)
+            return;
 
-    private void Close()
-    {
-        _modalVisible = false;
-    }
+        var gameId = await Dialogs.OpenAsync<GameMetadataLookupDialog, GameMetadataLookupOptions, Guid?>("Game Metadata Lookup", new GameMetadataLookupOptions(GameId, Value), new DialogSettings
+        {
+            Size = DialogSize.ExtraLarge,
+            NoFooter = true,
+        });
 
-    private async Task OnPanelImported(Guid gameId)
-    {
-        _modalVisible = false;
-        await OnImported.InvokeAsync(gameId);
+        if (gameId is { } id)
+            await OnImported.InvokeAsync(id);
     }
 }

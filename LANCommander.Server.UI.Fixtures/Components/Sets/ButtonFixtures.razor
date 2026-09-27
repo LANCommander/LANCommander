@@ -1,0 +1,61 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Button.Variants", "Default, primary, text and link buttons, each also as danger",
+            @<div style="display: grid; grid-template-columns: repeat(4, max-content); gap: 12px; align-items: center">
+                <Button>Default</Button>
+                <Button Primary>Primary</Button>
+                <Button Text>Text</Button>
+                <Button Link>Link</Button>
+                <Button Danger>Default</Button>
+                <Button Primary Danger>Primary</Button>
+                <Button Text Danger>Text</Button>
+                <Button Link Danger>Link</Button>
+            </div>)
+        {
+            Width = 420,
+            Covers = [typeof(Button)],
+        },
+        new("Button.Sizes", "Small, medium and large, with and without icons",
+            @<div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 12px; align-items: center">
+                <Button Small Icon="IconType.Plus">Add</Button>
+                <Button Icon="IconType.Plus">Add</Button>
+                <Button Large Icon="IconType.Plus">Add</Button>
+                <Button Small Primary Icon="IconType.FloppyDisk">Save</Button>
+                <Button Primary Icon="IconType.FloppyDisk">Save</Button>
+                <Button Large Primary Icon="IconType.FloppyDisk">Save</Button>
+            </div>)
+        {
+            Width = 320,
+            Covers = [typeof(Button)],
+        },
+        new("Button.IconOnly", "Icon-only buttons as used in table rows and toolbars",
+            @<div style="display: flex; gap: 8px; align-items: center">
+                <Button Text Icon="IconType.PencilSimple" title="Edit" />
+                <Button Text Danger Icon="IconType.X" title="Delete" />
+                <Button Icon="IconType.MagnifyingGlass" title="Search" />
+                <Button Primary Icon="IconType.Plus" title="Add" />
+                <Button Small Text Icon="IconType.DotsThree" title="More" />
+            </div>)
+        {
+            Width = 280,
+            Covers = [typeof(Button)],
+        },
+        new("Button.States", "Disabled, loading and full-width buttons",
+            @<div style="display: grid; gap: 12px">
+                <div style="display: flex; gap: 12px">
+                    <Button Disabled>Disabled</Button>
+                    <Button Primary Disabled>Disabled</Button>
+                    <Button Primary Loading>Saving</Button>
+                    <Button Loading Icon="IconType.UploadSimple">Uploading</Button>
+                </div>
+                <Button Primary Block>Full width</Button>
+            </div>)
+        {
+            Width = 460,
+            Covers = [typeof(Button)],
+        },
+    ];
+}

@@ -8,7 +8,7 @@ using LANCommander.Server.Providers;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.Server.Services.Providers;
-using LANCommander.UI.Extensions;
+using LANCommander.Server.UI.Extensions;
 
 namespace LANCommander.Server.Startup;
 
@@ -24,9 +24,8 @@ public static class Services
         builder.Services.AddLANCommanderClient<Settings.Settings>();
         builder.Services.AddLANCommanderServer();
         builder.Services.AddLANCommanderImportExport();
-        builder.Services.AddLANCommanderUI();
+        builder.Services.AddLANCommanderServerUI();
         
-        builder.Services.AddAntDesign();
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();
         builder.AddServiceDefaults();

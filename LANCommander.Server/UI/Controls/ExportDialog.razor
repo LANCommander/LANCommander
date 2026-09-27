@@ -1,0 +1,90 @@
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Models
+@using LANCommander.Server.ImportExport
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.ImportExport.Models
+@using LANCommander.Server.ImportExport.Services
+@inherits Dialog<ExportDialogOptions, bool>
+@inject ExportService ExportService
+@inject ExportContextFactory ExportContextFactory
+@inject NavigationManager NavigationManager
+
+@* Lists what exporting the record will include, grouped by type, and downloads the checked items as an .lcx *@
+<Spin Loading="_loading" Tip="Gathering export details">
+    @if (!_loading && !_nodes.Any())
+    {
+        <Empty Small Description="There is nothing to export" />
+    }
+    else
+    {
+        <Tree TItem="ExportNode"
+              Items="_nodes"
+              Children="n => n.Children"
+              Key="n => n.Key"
+              Text="n => n.Name"
+              Checkable
+              @bind-CheckedValues="_checked"
+              Class="export-tree">
+            <Flex Justify="Justify.SpaceBetween" Gap="Gap.Medium" Style="width: 100%">
+                <span>@context.Name</span>
+                @if (context.Size > 0)
+                {
+                    <Typography Secondary><ByteSize Value="context.Size" /></Typography>
+                }
+            </Flex>
+        </Tree>
+    }
+</Spin>
+
+@code {
+    public sealed record ExportNode(string Key, string Name, long Size, IReadOnlyList<ExportNode>? Children = null, Guid? Id = null);
+
+    ExportContext _exportContext = default!;
+
+    List<ExportNode> _nodes = new();
+    IEnumerable<ExportNode> _checked = [];
+    bool _loading = true;
+
+    /// <summary>The records that will be exported.</summary>
+    public IReadOnlyList<Guid> SelectedIds => _checked.Where(n => n.Id.HasValue).Select(n => n.Id!.Value).ToList();
+
+    protected override bool CanConfirm => !_loading && SelectedIds.Count > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _exportContext = ExportContextFactory.Create();
+
+        IEnumerable<ExportItemInfo> items = [];
+
+        if (Options != null && Options.RecordId != Guid.Empty)
+            items = await _exportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+
+        _nodes = items
+            .GroupBy(i => i.Type)
+            .Select(g => new ExportNode(
+                $"group:{g.Key}",
+                $"{g.Key.GetDisplayName()} ({g.Count()})",
+                g.Sum(i => i.Size),
+                g.Select(i => new ExportNode(i.Id.ToString(), i.Name, i.Size, Id: i.Id)).ToList()))
+            .ToList();
+
+        // Everything is exported unless unchecked
+        _checked = _nodes.SelectMany(n => n.Children!).ToList();
+
+        _loading = false;
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        await _exportContext.PrepareExportQueueAsync(SelectedIds);
+
+        var contextId = ExportService.EnqueueContext(_exportContext);
+
+        // The endpoint answers with a file download, so the page stays where it is
+        NavigationManager.NavigateTo($"/api/Export/{contextId}", true);
+
+        Result = true;
+
+        return true;
+    }
+}

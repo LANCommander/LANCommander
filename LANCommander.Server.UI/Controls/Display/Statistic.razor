@@ -1,0 +1,33 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A labelled figure, e.g. "Keys allocated: 3" *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <div class="lc-statistic-title">@Title</div>
+    <div class="lc-statistic-value">
+        @if (ChildContent != null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            @Value
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public string? Value { get; set; }
+
+    /// <summary>Rich value content; replaces <see cref="Value"/>.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-statistic").Add(Class).Build();
+    }
+}

@@ -1,0 +1,72 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<string>
+
+@if (Prefix != null)
+{
+    <span class="lc-input-group" style="@Style">
+        <span class="lc-input-addon">@Prefix</span>
+        @Input
+    </span>
+}
+else if (Icon != IconType.None)
+{
+    @* With an icon, Class and Style size the wrapper so the icon stays inside the input *@
+    <span class="@_affixClass" style="@Style">
+        <Icon Type="Icon" Class="lc-input-affix-icon" />
+        @Input
+    </span>
+}
+else
+{
+    @Input
+}
+
+@code {
+    /// <summary>Update the bound value on every keystroke instead of when the input loses focus.</summary>
+    [Parameter] public bool Immediate { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    [Parameter] public bool Large { get; set; }
+
+    [Parameter] public bool AutoFocus { get; set; }
+
+    [Parameter] public int? MaxLength { get; set; }
+
+    /// <summary>Fixed text joined to the start of the input, e.g. the parent part of a URL.</summary>
+    [Parameter] public string? Prefix { get; set; }
+
+    /// <summary>An icon inside the start of the input, e.g. a magnifying glass for search.</summary>
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Called when Enter is pressed, e.g. to run a search.</summary>
+    [Parameter] public EventCallback OnEnter { get; set; }
+
+    RenderFragment Input => @<RadzenTextBox Name="@InputId"
+                                             Value="@Value"
+                                             ValueChanged="@((string? value) => SetValueAsync(value))"
+                                             Immediate="Immediate"
+                                             InputSize="@(Large ? InputSize.Large : Small ? InputSize.Small : InputSize.Medium)"
+                                             ReadOnly="ReadOnly"
+                                             MaxLength="MaxLength"
+                                             Disabled="IsDisabled"
+                                             Placeholder="@Placeholder"
+                                             Style="@(Icon == IconType.None && Prefix == null ? Style : null)"
+                                             Attributes='@InputAttributes.Build(this, AutoFocus, OnEnter, Icon == IconType.None && Prefix == null ? BuildClass("lc-text-input") : "lc-text-input")' />;
+
+    string? _affixClass;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _affixClass = new ClassBuilder()
+            .Add("lc-input-affix")
+            .If(IsDisabled, "lc-input-affix-disabled")
+            .If(IsInvalid, "lc-input-invalid")
+            .Add(Class)
+            .Build();
+    }
+}

@@ -1,0 +1,101 @@
+@namespace LANCommander.Server.UI.Controls
+@using Microsoft.AspNetCore.Components.Routing
+@inherits ControlBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+@* A collapsible group of menu items; opens by itself while one of its items' pages is open *@
+<li @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <button type="button" class="lc-menu-item-content lc-submenu-title" aria-expanded="@(_open ? "true" : "false")" @onclick="Toggle">
+        @if (Icon != IconType.None)
+        {
+            <Icon Type="Icon" Class="lc-menu-item-icon" />
+        }
+        <span class="lc-menu-item-text">
+            @if (TitleTemplate != null)
+            {
+                @TitleTemplate
+            }
+            else
+            {
+                @Title
+            }
+        </span>
+        <Icon Type="IconType.CaretDown" Class="lc-submenu-caret" />
+    </button>
+    <ul class="lc-menu-list lc-submenu-list" hidden="@(!_open)">
+        <CascadingValue Value="this" IsFixed>
+            @ChildContent
+        </CascadingValue>
+    </ul>
+</li>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Starts open regardless of the current page.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    readonly List<MenuItem> _items = [];
+    bool _open;
+    bool _toggledByUser;
+    string? _class;
+
+    protected override void OnInitialized()
+    {
+        _open = Open;
+        Navigation.LocationChanged += LocationChanged;
+    }
+
+    protected override void OnParametersSet() => UpdateClass();
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Items register while rendering, so the first chance to see if one is active is after it
+        if (firstRender && !_open && _items.Any(i => i.IsActive))
+        {
+            _open = true;
+            UpdateClass();
+            StateHasChanged();
+        }
+    }
+
+    internal void Register(MenuItem item) => _items.Add(item);
+
+    internal void Unregister(MenuItem item) => _items.Remove(item);
+
+    void Toggle()
+    {
+        _open = !_open;
+        _toggledByUser = true;
+        UpdateClass();
+    }
+
+    void LocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!_open && !_toggledByUser && _items.Any(i => i.IsActive))
+        {
+            _open = true;
+            UpdateClass();
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    void UpdateClass() =>
+        _class = new ClassBuilder()
+            .Add("lc-menu-item")
+            .Add("lc-submenu")
+            .If(_open, "lc-submenu-open")
+            .If(_items.Any(i => i.IsActive), "lc-submenu-active")
+            .Add(Class)
+            .Build();
+
+    public void Dispose() => Navigation.LocationChanged -= LocationChanged;
+}

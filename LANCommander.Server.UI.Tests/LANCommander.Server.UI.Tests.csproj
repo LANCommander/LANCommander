@@ -14,16 +14,28 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Playwright" />
+    <!-- Only tests may reference Radzen directly (JS interop setups, service assertions) -->
+    <PackageReference Include="Radzen.Blazor" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.Server\LANCommander.Server.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.UI.Fixtures\LANCommander.Server.UI.Fixtures.csproj" />
+    <ProjectReference Include="..\LANCommander.Testing.Visual\LANCommander.Testing.Visual.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets tests locate source-tree files (baselines, source guards) from the build output -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ProjectDirectory</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

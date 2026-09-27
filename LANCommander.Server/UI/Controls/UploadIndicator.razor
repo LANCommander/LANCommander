@@ -1,0 +1,132 @@
+@using LANCommander.Server.Models
+@implements IDisposable
+@inject UploadTracker UploadTracker
+@inject NotificationService Notifications
+@inject DialogService Dialogs
+
+@* Lists background uploads in the sidebar, and offers to continue an import once its upload finishes *@
+@if (UploadTracker.ActiveUploads.Any())
+{
+    <Popover MaxWidth="400">
+        <Content>
+            <div class="upload-indicator-list">
+                @foreach (var upload in UploadTracker.ActiveUploads.Values.ToList())
+                {
+                    <div class="upload-indicator-item">
+                        <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Gap="Gap.Small">
+                            <span class="upload-indicator-name" title="@upload.FileName">@upload.FileName</span>
+                            <Flex Gap="Gap.Small">
+                                @if (upload.Status == UploadStatus.Complete && upload.Type == UploadType.Import && !string.IsNullOrEmpty(upload.CompletedObjectKey))
+                                {
+                                    <Tooltip Title="Continue Import">
+                                        <Button Text Small Icon="IconType.DownloadSimple" aria-label="Continue import" OnClick="() => ContinueImportAsync(upload)" />
+                                    </Tooltip>
+                                }
+
+                                @if (upload.Status == UploadStatus.Uploading)
+                                {
+                                    <Tooltip Title="Cancel Upload">
+                                        <Button Text Small Danger Icon="IconType.X" aria-label="Cancel upload" OnClick="() => UploadTracker.CancelUploadAsync(upload.UploadId)" />
+                                    </Tooltip>
+                                }
+                                else
+                                {
+                                    <Tooltip Title="Dismiss">
+                                        <Button Text Small Icon="IconType.X" aria-label="Dismiss" OnClick="() => UploadTracker.RemoveUpload(upload.UploadId)" />
+                                    </Tooltip>
+                                }
+                            </Flex>
+                        </Flex>
+
+                        @switch (upload.Status)
+                        {
+                            case UploadStatus.Uploading:
+                                <Progress Small Value="upload.Percent" />
+                                @if (upload.Speed > 0)
+                                {
+                                    <Typography Small Secondary>@FormatSpeed(upload.Speed)</Typography>
+                                }
+                                break;
+
+                            case UploadStatus.Complete:
+                                <Progress Small Success Value="100" />
+                                break;
+
+                            case UploadStatus.Error:
+                                <Progress Small Danger Value="upload.Percent" />
+                                <Typography Small Danger>@(upload.ErrorMessage ?? "Upload failed")</Typography>
+                                break;
+                        }
+                    </div>
+                }
+            </div>
+        </Content>
+        <ChildContent>
+            <Button Text Block Icon="IconType.CloudArrowUp" Class="upload-indicator-button">
+                Uploads
+                @if (ActiveCount > 0)
+                {
+                    <Tag Primary Class="upload-indicator-count">@ActiveCount</Tag>
+                }
+            </Button>
+        </ChildContent>
+    </Popover>
+}
+
+@code {
+    int ActiveCount => UploadTracker.ActiveUploads.Values.Count(u => u.Status == UploadStatus.Uploading);
+
+    protected override void OnInitialized()
+    {
+        UploadTracker.OnStateChanged += StateChangedHandler;
+        UploadTracker.OnUploadCompleted += UploadCompletedAsync;
+    }
+
+    void StateChangedHandler() => _ = InvokeAsync(StateHasChanged);
+
+    Task UploadCompletedAsync(BackgroundUploadInfo info) => InvokeAsync(() =>
+    {
+        if (info.Type == UploadType.Import && !string.IsNullOrEmpty(info.CompletedObjectKey))
+        {
+            var objectKey = info.CompletedObjectKey;
+
+            Notifications.ShowAction(
+                NotificationLevel.Success,
+                "Import Ready",
+                $"\"{info.FileName}\" has finished uploading and is ready to import.",
+                "Continue Import",
+                () =>
+                {
+                    UploadTracker.RemoveUpload(info.UploadId);
+
+                    return OpenImportDialogAsync(objectKey);
+                });
+        }
+        else if (info.Type == UploadType.Archive)
+        {
+            Notifications.Success($"\"{info.FileName}\" uploaded successfully!");
+        }
+    });
+
+    Task ContinueImportAsync(BackgroundUploadInfo info)
+    {
+        UploadTracker.RemoveUpload(info.UploadId);
+
+        return OpenImportDialogAsync(info.CompletedObjectKey!);
+    }
+
+    Task OpenImportDialogAsync(string objectKey) =>
+        Dialogs.OpenAsync<ImportUploadDialog, ImportDialogOptions, bool>("Import", new ImportDialogOptions
+        {
+            Hint = "Select items to import",
+            PreUploadedObjectKey = objectKey,
+        }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
+
+    static string FormatSpeed(double bytesPerSecond) => $"{ByteSizeLib.ByteSize.FromBytes(bytesPerSecond).ToString("0.0")}/s";
+
+    public void Dispose()
+    {
+        UploadTracker.OnStateChanged -= StateChangedHandler;
+        UploadTracker.OnUploadCompleted -= UploadCompletedAsync;
+    }
+}

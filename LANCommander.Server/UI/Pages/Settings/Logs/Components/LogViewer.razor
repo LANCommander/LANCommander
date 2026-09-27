@@ -1,9 +1,9 @@
 ﻿@using LANCommander.Server.Logging
 @using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
-@inject ILogger<LogViewer> Logger
-@inject MessageService MessageService
+@inject NotificationService Notifications
 @inject NavigationManager NavigationManager
+@implements IAsyncDisposable
 
 <Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" />
 
@@ -28,8 +28,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Log viewer failed to connect");
-            MessageService.Error("Log viewer failed to connect");
+            Notifications.Error(ex, "Log viewer failed to connect");
         }
     }
 

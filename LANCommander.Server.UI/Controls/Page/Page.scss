@@ -1,0 +1,41 @@
+.lc-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 16px 24px;
+
+    .lc-page-header-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .lc-page-header-title {
+        margin: 0;
+        overflow: hidden;
+        color: var(--rz-text-title-color);
+        font-size: 1.25rem;
+        font-weight: 600;
+        line-height: 2rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lc-page-header-subtitle {
+        color: var(--rz-text-secondary-color);
+    }
+
+    .lc-page-header-extra {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+.lc-page-content {
+    padding: 0 24px 24px;
+}

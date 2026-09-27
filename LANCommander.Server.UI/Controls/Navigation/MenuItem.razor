@@ -1,0 +1,96 @@
+@namespace LANCommander.Server.UI.Controls
+@using Microsoft.AspNetCore.Components.Routing
+@inherits ControlBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<li @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (Href != null)
+    {
+        <NavLink href="@Href" Match="@(Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)" class="lc-menu-item-content" ActiveClass="lc-menu-item-active" @onclick="ClickAsync">
+            @Content
+        </NavLink>
+    }
+    else
+    {
+        <button type="button" class="lc-menu-item-content" disabled="@Disabled" @onclick="ClickAsync">
+            @Content
+        </button>
+    }
+</li>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Where the item navigates. It is highlighted while that page (or one under it) is open.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>Highlight only on exactly <see cref="Href"/>, not on pages beneath it.</summary>
+    [Parameter] public bool Exact { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Draws the item as destructive, e.g. "Delete".</summary>
+    [Parameter] public bool Danger { get; set; }
+
+    [CascadingParameter] Menu? Menu { get; set; }
+
+    [CascadingParameter] SubMenu? SubMenu { get; set; }
+
+    string? _class;
+
+    /// <summary>Whether the current page is this item's page.</summary>
+    internal bool IsActive
+    {
+        get
+        {
+            if (Href == null)
+                return false;
+
+            var current = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].TrimEnd('/');
+            var target = "/" + Href.TrimStart('/').TrimEnd('/');
+
+            return Exact
+                ? string.Equals(current, target, StringComparison.OrdinalIgnoreCase)
+                : current.Equals(target, StringComparison.OrdinalIgnoreCase)
+                  || current.StartsWith(target + "/", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    protected override void OnInitialized() => SubMenu?.Register(this);
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-menu-item")
+            .If(Disabled, "lc-menu-item-disabled")
+            .If(Danger, "lc-menu-item-danger")
+            .Add(Class)
+            .Build();
+    }
+
+    RenderFragment Content => @<text>
+        @if (Icon != IconType.None)
+        {
+            <Icon Type="Icon" Class="lc-menu-item-icon" />
+        }
+        <span class="lc-menu-item-text">@ChildContent</span>
+    </text>;
+
+    async Task ClickAsync(MouseEventArgs args)
+    {
+        if (Disabled)
+            return;
+
+        await OnClick.InvokeAsync(args);
+
+        if (Menu != null)
+            await Menu.ItemClickedAsync();
+    }
+
+    public void Dispose() => SubMenu?.Unregister(this);
+}

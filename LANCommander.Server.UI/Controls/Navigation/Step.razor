@@ -1,0 +1,57 @@
+@namespace LANCommander.Server.UI.Controls
+@implements IDisposable
+
+<li class="@_class" aria-current="@(_state == State.Current ? "step" : null)">
+    <span class="lc-step-marker">
+        @if (_state == State.Done)
+        {
+            <Icon Type="IconType.Check" Bold />
+        }
+        else
+        {
+            @(_index + 1)
+        }
+    </span>
+    <span class="lc-step-text">
+        <span class="lc-step-title">@Title</span>
+        @if (Description != null)
+        {
+            <span class="lc-step-description">@Description</span>
+        }
+    </span>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public string? Description { get; set; }
+
+    [CascadingParameter] Steps? Steps { get; set; }
+
+    enum State { Done, Current, Pending }
+
+    int _index;
+    State _state;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _index = Steps?.Register(this) ?? 0;
+
+        var current = Steps?.Current ?? 0;
+
+        _state = _index < current ? State.Done : _index == current ? State.Current : State.Pending;
+
+        _class = new ClassBuilder()
+            .Add("lc-step")
+            .Add(_state switch
+            {
+                State.Done => "lc-step-done",
+                State.Current => "lc-step-current",
+                _ => "lc-step-pending",
+            })
+            .Build();
+    }
+
+    public void Dispose() => Steps?.Unregister(this);
+}

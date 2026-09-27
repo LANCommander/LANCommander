@@ -1,0 +1,55 @@
+// Avatar picker (UI/Controls/AvatarUploader.razor)
+.avatar-uploader {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--lc-border-color);
+    border-radius: var(--lc-border-radius);
+    background: var(--lc-panel-background);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color .2s;
+
+    &:hover {
+        border-color: var(--lc-primary);
+    }
+
+}
+
+.avatar-uploader-spin,
+.avatar-uploader-spin > .lc-spin-content {
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-uploader-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    color: var(--lc-text-secondary-color);
+}
+
+// Profile > Connected Accounts
+.connected-accounts {
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-border-radius);
+}
+
+.connected-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 24px;
+
+    & + & {
+        border-top: 1px solid var(--lc-border-color);
+    }
+
+    h3 {
+        margin: 0;
+    }
+}

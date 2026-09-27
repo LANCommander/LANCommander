@@ -5,94 +5,108 @@
 @inject UserService UserService
 @inject UserCustomFieldService UserCustomFieldService
 @inject IOptions<Settings> Settings
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
 
 <PageHeader Title="Connected Accounts" />
 
-<div style="padding: 0 24px">
-    <AntList DataSource="Settings.Value.Server.Authentication.AuthenticationProviders" Bordered Size="ListSize.Large">
-        <ListItem>
-            <Flex Align="FlexAlign.Center" Justify="FlexJustify.SpaceBetween" Style="width: 100%">
-                <Flex Align="FlexAlign.Center" Gap="FlexGap.Large">
-                    @if (!String.IsNullOrWhiteSpace(context.Icon))
-                    {
-                        <BootstrapIcon Type="@context.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(context.Color) ? "" : context.Color)"/>
-                    }
+<PageContent Loading="_loading">
+    @if (!Providers.Any())
+    {
+        <Empty Description="No authentication providers are configured" />
+    }
+    else
+    {
+        <div class="connected-accounts">
+            @foreach (var provider in Providers)
+            {
+                var customField = CustomFields.FirstOrDefault(cf => cf.Name == provider.GetCustomFieldName());
 
-                    <h3 style="margin: 0;">@context.Name</h3>
-                </Flex>
+                <div class="connected-account">
+                    <Flex Align="Align.Center" Gap="Gap.Large">
+                        @if (!String.IsNullOrWhiteSpace(provider.Icon))
+                        {
+                            <BootstrapIcon Type="@provider.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(provider.Color) ? "currentColor" : provider.Color)" />
+                        }
 
-                @{
-                    var customField = CustomFields.FirstOrDefault(cf => cf.Name == context.GetCustomFieldName());
+                        <h3>@provider.Name</h3>
+                    </Flex>
 
-                    if (customField != null)
+                    @if (customField != null)
                     {
                         var wouldLockOut = !HasPassword && CustomFields.Count <= 1;
 
                         <Tooltip Title="@(wouldLockOut ? "You can't unlink your only sign-in method. Set a password first." : null)">
-                            <Button Type="@ButtonType.Primary" Disabled="wouldLockOut" OnClick="() => Unlink(customField)">Unlink</Button>
+                            <Button Primary Disabled="wouldLockOut" OnClick="() => UnlinkAsync(customField)">Unlink</Button>
                         </Tooltip>
                     }
                     else
                     {
-                        <Button Type="@ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/AccountLink?Provider={context.Slug}&ReturnUrl={NavigationManager.Uri}", true))">
+                        <Button Primary OnClick="@(() => NavigationManager.NavigateTo($"/AccountLink?Provider={provider.Slug}&ReturnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", true))">
                             Link
                         </Button>
                     }
-                }
-            </Flex>
-        </ListItem>
-    </AntList>
-</div>
+                </div>
+            }
+        </div>
+    }
+</PageContent>
 
 @code {
     User User = new();
     List<UserCustomField> CustomFields = new();
+    bool _loading = true;
 
-    private bool HasPassword => !String.IsNullOrEmpty(User.PasswordHash);
+    IEnumerable<LANCommander.Server.Settings.Models.AuthenticationProvider> Providers => Settings.Value.Server.Authentication.AuthenticationProviders ?? [];
+
+    bool HasPassword => !String.IsNullOrEmpty(User.PasswordHash);
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (authState.User.Identity.IsAuthenticated)
-        {
-            User = await UserService.GetAsync(authState.User.Identity.Name);
-        }
+        if (authState.User.Identity?.IsAuthenticated == true)
+            User = await UserService.GetAsync(authState.User.Identity.Name) ?? new();
 
-        await LoadData();
+        await LoadDataAsync();
     }
 
-    async Task LoadData()
+    async Task LoadDataAsync()
     {
-        CustomFields.Clear();
+        var customFields = new List<UserCustomField>();
 
-        foreach (var authenticationProvider in Settings.Value.Server.Authentication.AuthenticationProviders)
+        foreach (var provider in Providers)
         {
-            var customField = await UserCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
+            var customField = await UserCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == provider.GetCustomFieldName() && cf.UserId == User.Id);
 
             if (customField != null)
-                CustomFields.Add(customField);
+                customFields.Add(customField);
         }
 
-        await InvokeAsync(StateHasChanged);
+        CustomFields = customFields;
+        _loading = false;
     }
 
-    async Task Unlink(UserCustomField customField)
+    async Task UnlinkAsync(UserCustomField customField)
     {
         // Prevent locking the user out: a passwordless account must retain at least one linked provider.
         if (!HasPassword && CustomFields.Count <= 1)
         {
-            MessageService.Error("You can't unlink your only sign-in method. Set a password first.");
+            Notifications.Error("You can't unlink your only sign-in method. Set a password first.");
             return;
         }
 
-        await UserCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
+        try
+        {
+            await UserCustomFieldService.DeleteAsync(customField.UserId!.Value, customField.Name);
 
-        await LoadData();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The account could not be unlinked");
+        }
     }
-
 }

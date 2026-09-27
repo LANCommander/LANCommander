@@ -1,0 +1,103 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Settings
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SettingsProvider<Settings> SettingsProvider
+
+<Menu>
+    @if (_user?.Identity?.IsAuthenticated ?? false)
+    {
+        <SubMenu Title="@_user.Identity.Name" Icon="IconType.UserCircle">
+            <MenuItem Href="/Profile" Exact>General</MenuItem>
+            @if (SettingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
+            {
+                <MenuItem Href="/Profile/Library">Library</MenuItem>
+            }
+            <MenuItem Href="/Profile/ConnectedAccounts">Connected Accounts</MenuItem>
+            @if (SettingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+            {
+                <MenuItem Href="/Profile/ChangePassword">Change Password</MenuItem>
+            }
+            <MenuItem Href="/Profile/Saves">Saves</MenuItem>
+            <MenuItem Href="/Logout" Icon="IconType.SignOut">Logout</MenuItem>
+        </SubMenu>
+        <MenuDivider />
+    }
+
+    <SubMenu Title="Dashboards" Icon="IconType.Gauge">
+        <MenuItem Href="/" Exact>Overview</MenuItem>
+        <MenuItem Href="/Dashboard/SessionPlaytime">Average Session Playtime</MenuItem>
+    </SubMenu>
+    <MenuDivider />
+
+    @if (_user != null && _user.IsInRole(RoleService.AdministratorRoleName))
+    {
+        <MenuItem Href="/Games" Icon="IconType.GameController">Games</MenuItem>
+        <SubMenu Title="Metadata" Icon="IconType.Tag">
+            <MenuItem Href="/Metadata/Collections">Collections</MenuItem>
+            <MenuItem Href="/Metadata/Companies">Companies</MenuItem>
+            <MenuItem Href="/Metadata/Engines">Engines</MenuItem>
+            <MenuItem Href="/Metadata/Genres">Genres</MenuItem>
+            <MenuItem Href="/Metadata/Platforms">Platforms</MenuItem>
+            <MenuItem Href="/Metadata/Tags">Tags</MenuItem>
+        </SubMenu>
+        <MenuItem Href="/Redistributables" Icon="IconType.Package">Redistributables</MenuItem>
+        <MenuItem Href="/Tools" Icon="IconType.Wrench">Tools</MenuItem>
+        <MenuItem Href="/Servers" Icon="IconType.HardDrives">Servers</MenuItem>
+        <SubMenu Title="Scripting" Icon="IconType.Code">
+            <MenuItem Href="/Scripting/Snippets">Snippets</MenuItem>
+            <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
+        </SubMenu>
+        <MenuDivider />
+        <SubMenu Title="Pages" Icon="IconType.BookOpen">
+            <MenuItem Href="/Pages/Edit">Edit</MenuItem>
+            <MenuItem Href="/Pages" Exact>View</MenuItem>
+        </SubMenu>
+        <MenuItem Href="/Issues" Icon="IconType.Bug">Issues</MenuItem>
+        <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
+        <SubMenu Title="Settings" Icon="IconType.Gear">
+            <MenuItem Href="/Settings/General">General</MenuItem>
+            <MenuItem Href="/Settings/Database">Database</MenuItem>
+            <MenuItem Href="/Settings/Users">Users</MenuItem>
+            <MenuItem Href="/Settings/Roles">Roles</MenuItem>
+            <MenuItem Href="/Settings/Authentication">Authentication</MenuItem>
+            <MenuItem Href="/Settings/Appearance">Appearance</MenuItem>
+            <MenuItem Href="/Settings/UserSaves">User Saves</MenuItem>
+            <MenuItem Href="/Settings/Library">Library</MenuItem>
+            <MenuItem Href="/Settings/Archives">Archives</MenuItem>
+            <MenuItem Href="/Settings/Media">Media</MenuItem>
+            <MenuItem Href="/Settings/Scripts">Scripts</MenuItem>
+            <MenuItem Href="/Settings/IPXRelay">IPX Relay</MenuItem>
+            <MenuItem Href="/Settings/Servers">Servers</MenuItem>
+            <MenuItem Href="/Settings/Beacon">Beacon</MenuItem>
+            <MenuItem Href="/Settings/Tools">Tools</MenuItem>
+            <MenuItem Href="/Settings/Logs">Logs</MenuItem>
+            <MenuItem Href="/Settings/Launcher">Launcher</MenuItem>
+            <MenuItem Href="/Settings/Updates">Updates</MenuItem>
+            <SubMenu Title="Integrations">
+                <MenuItem Href="/Settings/Integrations/HQ">HQ</MenuItem>
+                <MenuItem Href="/Settings/Integrations/IGDB">IGDB</MenuItem>
+                <MenuItem Href="/Settings/Integrations/PCGamingWiki">PCGamingWiki</MenuItem>
+                <MenuItem Href="/Settings/Integrations/Steam">Steam</MenuItem>
+                <MenuItem Href="/Settings/Integrations/SteamGridDB">SteamGridDB</MenuItem>
+            </SubMenu>
+            <MenuItem Href="/api">API</MenuItem>
+        </SubMenu>
+    }
+    else
+    {
+        <MenuItem Href="/Pages" Icon="IconType.BookOpen">Pages</MenuItem>
+    }
+</Menu>
+
+@code {
+    ClaimsPrincipal? _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity?.IsAuthenticated ?? false)
+            _user = authState.User;
+    }
+}

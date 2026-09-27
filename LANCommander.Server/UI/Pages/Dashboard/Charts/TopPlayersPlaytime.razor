@@ -1,78 +1,28 @@
-﻿@using AntDesign.Charts
 @inject PlaySessionService PlaySessionService
 
-<Spin Spinning="Loading">
-    <div class="dashboard-chart">
-        <Bar Data="Data" Config="Config" JsConfig="@JsConfig" />
-    </div>
-</Spin>
+<AsyncContent T="List<Playtime>" Load="LoadAsync" LoadingText="Loading playtime">
+    <BarChart Items="context"
+              Label="p => p.Label"
+              Value="p => p.Seconds"
+              ValueFormat="Playtime.Format"
+              ValueTitle="Total Playtime"
+              Horizontal
+              EmptyText="No sessions have been played yet" />
+</AsyncContent>
 
 @code {
-    object[] Data;
-
-    bool Loading = true;
-
-    string JsConfig = @"{
-        meta: {
-            playtime: {
-                alias: 'Total Playtime',
-                formatter: (v) => Math.floor(v / 3600) > 0 ? `${Math.floor(v / 3600)}h ${Math.floor((v % 3600) / 60)}m` : `${Math.floor((v % 3600) / 60)}m`
-            }
-        },
-        label: {
-            visible: true,
-            type: 'outer-center',
-            style: {
-                fontSize: '10px'
-            }
-        }
-    }";
-
-    BarConfig Config = new BarConfig
+    async Task<List<Playtime>> LoadAsync()
     {
-        YField = "player",
-        XField = "playtime",
-        ColorField = "player",
-        ForceFit = true,
-        Label = new BarViewConfigLabel
-        {
-            Visible = false
-        }
-    };
-
-    protected override async Task OnInitializedAsync()
-    {
-        Config.Theme = "dark";
-
-        Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
-        
         var sessions = await PlaySessionService
             .AsNoTracking()
-            .Include(ps => ps.Game)
-            .Include(ps => ps.CreatedBy)
             .Include(ps => ps.User)
-            .GetAsync();
+            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
 
-        foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
-        {
-            var total = new TimeSpan();
-
-            foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
-            {
-                total = total.Add(session.End.Value.Subtract(session.Start.Value));
-            }
-
-            playtimes[gameSessions.First().User.UserName] = total;
-        }
-
-        Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
-        {
-            Player = pt.Key,
-            Playtime = (int)pt.Value.TotalSeconds
-        }).ToArray();
-
-        Loading = false;
-
-        StateHasChanged();
+        return sessions
+            .GroupBy(s => s.UserId)
+            .Select(player => new Playtime(player.First().User?.UserName ?? "Unknown", Playtime.Total(player)))
+            .OrderByDescending(p => p.Time)
+            .Take(10)
+            .ToList();
     }
 }

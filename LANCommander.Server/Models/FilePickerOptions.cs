@@ -1,4 +1,4 @@
-﻿using LANCommander.UI.Components;
+﻿using LANCommander.Server.UI.Components;
 
 namespace LANCommander.Server.Models
 {

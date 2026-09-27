@@ -1,0 +1,105 @@
+@implements IComponentFixtureSet
+
+@code {
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Typography.Styles", "Text emphasis, status colours and code",
+            @<Flex Vertical Gap="Gap.Small">
+                <Typography>Regular text</Typography>
+                <Typography Secondary>Secondary text</Typography>
+                <Typography Strong>Strong text</Typography>
+                <Typography Italic>Italic text</Typography>
+                <Typography Small Secondary>Small secondary text</Typography>
+                <Flex Gap="Gap.Medium">
+                    <Typography Success>Success</Typography>
+                    <Typography Warning>Warning</Typography>
+                    <Typography Danger>Danger</Typography>
+                </Flex>
+                <Typography>Installed to <Typography Code>C:\Games\Arena Blitz</Typography></Typography>
+                <div style="width: 160px"><Typography Ellipsis>A very long game title that does not fit</Typography></div>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Typography)],
+        },
+        new("Tag.Colors", "Tags in every status colour, with icons, custom colours and click handling",
+            @<Flex Vertical Gap="Gap.Small">
+                <div>
+                    <Tag>Default</Tag>
+                    <Tag Primary>Primary</Tag>
+                    <Tag Success>Success</Tag>
+                    <Tag Info>Info</Tag>
+                    <Tag Warning>Warning</Tag>
+                    <Tag Danger>Danger</Tag>
+                </div>
+                <div>
+                    <Tag Icon="IconType.Tag">With icon</Tag>
+                    <Tag Color="#9b59b6">Custom purple</Tag>
+                    <Tag Color="#1abc9c" Icon="IconType.Star">Custom teal</Tag>
+                    <Tag OnClick="() => { }">Clickable</Tag>
+                </div>
+            </Flex>)
+        {
+            Width = 460,
+            Covers = [typeof(Tag)],
+        },
+        new("Badge.States", "Status dots for server and issue states",
+            @<Flex Vertical Gap="Gap.Small">
+                <Badge Success>Running</Badge>
+                <Badge Processing>Starting</Badge>
+                <Badge Warning>Stopping</Badge>
+                <Badge Danger>Error</Badge>
+                <Badge>Stopped</Badge>
+            </Flex>)
+        {
+            Width = 200,
+            Covers = [typeof(Badge)],
+        },
+        new("Divider.Styles", "Plain, labelled and vertical dividers",
+            @<div>
+                <Typography>Above a plain divider</Typography>
+                <Divider />
+                <Divider>Security</Divider>
+                <Divider Left>Left label</Divider>
+                <Divider Right>Right label</Divider>
+                <Typography>Created by admin</Typography><Divider Vertical /><Typography>Updated yesterday</Typography>
+            </div>)
+        {
+            Width = 400,
+            Covers = [typeof(Divider)],
+        },
+        new("Card.Variants", "Cards with titles, extra actions, small padding, no border and loading",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Card Title="Arena Blitz Dedicated">
+                    <Extra><Button Small Icon="IconType.Play">Start</Button></Extra>
+                    <ChildContent><Typography Secondary>Port 27960, 16 players</Typography></ChildContent>
+                </Card>
+                <Card Small Title="Small card">Compact padding</Card>
+                <Card Borderless>Borderless card without a header</Card>
+                <Card Title="Loading" Loading><Typography>Content being refreshed</Typography></Card>
+            </Flex>)
+        {
+            Width = 420,
+            Covers = [typeof(Card)],
+        },
+        new("Avatar.Variants", "Initials, an icon, sizes, square corners and a group",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Flex Gap="Gap.Small" Align="Align.Center">
+                    <Avatar Name="alex" Small />
+                    <Avatar Name="jordan" />
+                    <Avatar Name="sam" Large />
+                    <Avatar Name="admin" Large Square />
+                    <Avatar Icon="IconType.UsersThree" Large Square />
+                </Flex>
+                <AvatarGroup Overflow="2">
+                    <Avatar Name="alex" />
+                    <Avatar Name="jordan" />
+                    <Avatar Name="sam" />
+                </AvatarGroup>
+            </Flex>)
+        {
+            Width = 280,
+            Covers = [typeof(Avatar), typeof(AvatarGroup)],
+        },
+    ];
+}

@@ -52,7 +52,7 @@ jobs:
         LANCommander.Server.Settings/
         LANCommander.ServiceDefaults/
         LANCommander.Steam/
-        LANCommander.UI/
+        LANCommander.Server.UI/
         Directory.Packages.props
         Microsoft.Common.props
         LANCommander.slnx

@@ -1,0 +1,16 @@
+@namespace LANCommander.Server.UI.Controls
+
+@* Content with a small question-mark button beside it that explains it in a popover *@
+<Flex Inline Gap="Gap.Small" Align="Align.Center">
+    @ChildContent
+    <Popover Content="Description">
+        <Button Small Link Icon="IconType.Question" aria-label="Help" Class="lc-help-button" />
+    </Popover>
+</Flex>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The explanation shown in the popover.</summary>
+    [Parameter, EditorRequired] public RenderFragment Description { get; set; } = default!;
+}

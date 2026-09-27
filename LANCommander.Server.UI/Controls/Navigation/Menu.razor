@@ -1,0 +1,43 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A list of navigation links and actions: the sidebar, section navigation, dropdown menus *@
+<nav @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <ul class="lc-menu-list">
+        <CascadingValue Value="this" IsFixed>
+            @ChildContent
+        </CascadingValue>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Items side by side instead of stacked.</summary>
+    [Parameter] public bool Horizontal { get; set; }
+
+    /// <summary>Called when any item is clicked, e.g. so a dropdown can close.</summary>
+    [Parameter] public EventCallback OnItemClick { get; set; }
+
+    /// <summary>The dropdown this menu is in, if any; it closes when an item is chosen.</summary>
+    [CascadingParameter] Dropdown? Dropdown { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-menu")
+            .Add(Horizontal ? "lc-menu-horizontal" : "lc-menu-vertical")
+            .Add(Class)
+            .Build();
+    }
+
+    internal async Task ItemClickedAsync()
+    {
+        await OnItemClick.InvokeAsync();
+
+        if (Dropdown != null)
+            await Dropdown.CloseAsync();
+    }
+}

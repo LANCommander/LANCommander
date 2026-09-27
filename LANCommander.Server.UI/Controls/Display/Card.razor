@@ -1,0 +1,62 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<RadzenCard Attributes="_attributes" Style="@Style" Variant="@(Borderless ? Variant.Flat : Variant.Outlined)">
+    @if (Title != null || TitleTemplate != null || Extra != null)
+    {
+        <div class="lc-card-header">
+            <div class="lc-card-title">
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate
+                }
+                else
+                {
+                    @Title
+                }
+            </div>
+            @if (Extra != null)
+            {
+                <div class="lc-card-extra">@Extra</div>
+            }
+        </div>
+    }
+    <div class="lc-card-body">
+        <Spin Loading="Loading">
+            @ChildContent
+        </Spin>
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    /// <summary>Content at the end of the header, typically actions.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    /// <summary>Tighter padding.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>No outline; the card is only set apart by its background.</summary>
+    [Parameter] public bool Borderless { get; set; }
+
+    /// <summary>Covers the body with a spinner.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    Dictionary<string, object> _attributes = new();
+
+    protected override void OnParametersSet()
+    {
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder()
+            .Add("lc-card")
+            .If(Small, "lc-card-small")
+            .Add(Class)
+            .Build()!;
+    }
+}

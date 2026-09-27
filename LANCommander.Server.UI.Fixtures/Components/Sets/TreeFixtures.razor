@@ -1,0 +1,38 @@
+@implements IComponentFixtureSet
+
+@code {
+    public sealed record Node(string Name, bool Folder, Node[]? Children = null);
+
+    static readonly Node[] Modules =
+    [
+        new("Networking", true, [new("Get-LanAddress", false), new("Test-Port", false)]),
+        new("Games", true, [new("Arena Blitz", true, [new("Set-PlayerName", false)]), new("Neon Drift", true)]),
+        new("Utilities.psm1", false),
+    ];
+
+    static readonly Node Selected = Modules[0].Children![1];
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Tree.Expanded", "A fully expanded tree with icons and a selected item",
+            @<Tree TItem="Node" Items="Modules" Children="n => n.Children" Key="n => n.Name" Text="n => n.Name"
+                   Icon="@(n => n.Folder ? IconType.Folder : IconType.FileCode)" Value="Selected" ExpandAll />)
+        {
+            Width = 320,
+            Covers = [typeof(Tree<>)],
+        },
+        new("Tree.Checkable", "Checkboxes with a partially checked parent",
+            @<Tree TItem="Node" Items="Modules" Children="n => n.Children" Key="n => n.Name" Text="n => n.Name"
+                   Checkable CheckedValues="@(new[] { Modules[0].Children![0], Modules[1].Children![0].Children![0] })" ExpandAll />)
+        {
+            Width = 320,
+            Covers = [typeof(Tree<>)],
+        },
+        new("Tree.Collapsed", "A tree with only the top level shown",
+            @<Tree TItem="Node" Items="Modules" Children="n => n.Children" Key="n => n.Name" Text="n => n.Name" />)
+        {
+            Width = 320,
+            Covers = [typeof(Tree<>)],
+        },
+    ];
+}

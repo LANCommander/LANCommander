@@ -80,12 +80,11 @@ public class AdminDashboardPage
     public async Task<IReadOnlyList<string>> GetMainMenuItemsAsync()
     {
         // Wait for sidebar menu items to render
-        await _page.GetByRole(AriaRole.Complementary)
-            .Locator("[role='menuitem']")
-            .First
-            .WaitForAsync(new() { Timeout = 10000 });
+        // Sidebar entries are links (pages) and buttons (groups that expand)
+        var menuItems = _page.GetByRole(AriaRole.Complementary).GetByRole(AriaRole.Navigation).Locator("a, button");
 
-        var menuItems = _page.GetByRole(AriaRole.Complementary).Locator("[role='menuitem']");
+        await menuItems.First.WaitForAsync(new() { Timeout = 10000 });
+
         var count = await menuItems.CountAsync();
         var items = new List<string>();
 

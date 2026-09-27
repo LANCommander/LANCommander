@@ -1,0 +1,80 @@
+@inject GameVersionService GameVersionService
+@inject AlertService Alerts
+@inject NotificationService Notifications
+
+@* The versions of the game whose Id is cascaded; new versions snapshot the game's current archive, scripts, actions and save paths *@
+<Flex Vertical Gap="Gap.Large">
+    <FormItem Label="Changelog" Help="Recorded with the next version you create">
+        <TextArea @bind-Value="_newChangelog" MaxLength="500" Counter Rows="2" />
+    </FormItem>
+
+    <DataTable @ref="_table" TItem="GameVersion" NoPaging Small SettingsKey="game-versions" Query="v => v.GameId == GameId">
+        <Columns>
+            <BoundColumn Property="v => v.SortOrder" Title="Sort Order" Sortable DefaultSort="ColumnSort.Descending" Hide />
+            <BoundColumn Property="v => v.Version" Sortable />
+            <BoundColumn Property="v => v.Changelog" />
+            <BoundColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive" Sortable>
+                @if (context.Archive != null)
+                {
+                    <ByteSize Value="context.Archive.CompressedSize" />
+                }
+                else
+                {
+                    <Typography Secondary>None</Typography>
+                }
+            </BoundColumn>
+            <BoundColumn Property="v => v.Scripts != null ? v.Scripts.Count : 0" Title="Scripts" Include="Scripts" />
+            <BoundColumn Property="v => v.Actions != null ? v.Actions.Count : 0" Title="Actions" Include="Actions" />
+            <BoundColumn Property="v => v.SavePaths != null ? v.SavePaths.Count : 0" Title="Save Paths" Include="SavePaths" />
+            <BoundColumn Property="v => v.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <ActionsColumn TItem="GameVersion">
+                @if (context.Archive != null)
+                {
+                    <Tooltip Title="Download Archive">
+                        <Button Text Icon="IconType.DownloadSimple" aria-label="Download archive" Href="@($"/Download/Archive/{context.Archive.Id}")" NewTab />
+                    </Tooltip>
+                }
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</Flex>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [Parameter] public EventCallback OnVersionCreated { get; set; }
+
+    DataTable<GameVersion>? _table;
+
+    string? _newChangelog = string.Empty;
+
+    /// <summary>Asks for a version number and creates the version.</summary>
+    public async Task OpenCreateVersion()
+    {
+        var version = await Alerts.PromptAsync("Create New Version", "Version", okText: "Create", placeholder: "e.g. 1.1.0");
+
+        if (String.IsNullOrWhiteSpace(version))
+            return;
+
+        try
+        {
+            await GameVersionService.CreateAsync(GameId, version, _newChangelog);
+
+            _newChangelog = string.Empty;
+
+            if (_table != null)
+                await _table.ReloadAsync();
+
+            await OnVersionCreated.InvokeAsync();
+
+            Notifications.Success("Version created!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Version could not be created.");
+        }
+
+        StateHasChanged();
+    }
+}

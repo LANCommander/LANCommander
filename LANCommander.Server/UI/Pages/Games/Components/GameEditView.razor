@@ -1,112 +1,107 @@
-﻿@using Microsoft.EntityFrameworkCore
+@using Microsoft.EntityFrameworkCore
 @inject GameService GameService
 @inject GameVersionService GameVersionService
 @inject NavigationManager NavigationManager
 
-<Layout Class="panel-layout" Style="padding: 24px 0;">
-    <Sider Width="200">
-        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
-            <MenuItem RouterLink="@($"/Games/{Id}/General")">General</MenuItem>
+<SideLayout>
+    <Side>
+        <Menu>
+            <MenuItem Icon="IconType.Info" Href="@(Id == Guid.Empty ? "/Games/Add" : $"/Games/{Id}/General")" Exact>General</MenuItem>
 
             @if (Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Games/{Id}/Preview")">Preview</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Media")">Media</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Archives")">Archives</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Versions")">Versions</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Actions")">Actions</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Multiplayer")">Multiplayer</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/SavePaths")">Save Paths</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Keys")">Keys</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Redistributables")">Redistributables</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Options")">Options</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Scripts")">Scripts</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/CustomFields")">Custom Fields</MenuItem>
+                <MenuItem Icon="IconType.Eye" Href="@($"/Games/{Id}/Preview")">Preview</MenuItem>
+                <MenuItem Icon="IconType.Image" Href="@($"/Games/{Id}/Media")">Media</MenuItem>
+                <MenuItem Icon="IconType.Archive" Href="@($"/Games/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem Icon="IconType.GitBranch" Href="@($"/Games/{Id}/Versions")">Versions</MenuItem>
+                <MenuItem Icon="IconType.Play" Href="@($"/Games/{Id}/Actions")">Actions</MenuItem>
+                <MenuItem Icon="IconType.UsersThree" Href="@($"/Games/{Id}/Multiplayer")">Multiplayer</MenuItem>
+                <MenuItem Icon="IconType.FloppyDisk" Href="@($"/Games/{Id}/SavePaths")">Save Paths</MenuItem>
+                <MenuItem Icon="IconType.Key" Href="@($"/Games/{Id}/Keys")">Keys</MenuItem>
+                <MenuItem Icon="IconType.Package" Href="@($"/Games/{Id}/Redistributables")">Redistributables</MenuItem>
+                <MenuItem Icon="IconType.SlidersHorizontal" Href="@($"/Games/{Id}/Options")">Options</MenuItem>
+                <MenuItem Icon="IconType.Code" Href="@($"/Games/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem Icon="IconType.ListPlus" Href="@($"/Games/{Id}/CustomFields")">Custom Fields</MenuItem>
 
-                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Expansion))
+                @if (Game.DependentGames?.Any(g => g.Type == GameType.Expansion) == true)
                 {
-                    <MenuItem RouterLink="@($"/Games/{Id}/Expansions")">Expansions</MenuItem>
+                    <MenuItem Icon="IconType.PuzzlePiece" Href="@($"/Games/{Id}/Expansions")">Expansions</MenuItem>
                 }
 
-                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Mod))
+                @if (Game.DependentGames?.Any(g => g.Type == GameType.Mod) == true)
                 {
-                    <MenuItem RouterLink="@($"/Games/{Id}/Mods")">Mods</MenuItem>
+                    <MenuItem Icon="IconType.Wrench" Href="@($"/Games/{Id}/Mods")">Mods</MenuItem>
                 }
-                
-                <MenuItem RouterLink="@($"/Games/{Id}/PlaySessions")">Play Sessions</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Id}/Saves")">Saves</MenuItem>
+
+                <MenuItem Icon="IconType.Clock" Href="@($"/Games/{Id}/PlaySessions")">Play Sessions</MenuItem>
+                <MenuItem Icon="IconType.CloudArrowUp" Href="@($"/Games/{Id}/Saves")">Saves</MenuItem>
             }
         </Menu>
-    </Sider>
+    </Side>
 
-    <Content>
-        <CascadingValue Value="Game">
-            <PageHeader>
-                <PageHeaderTitle>
-                    @if (TitleTemplate != null)
-                    {
-                        @TitleTemplate(Game)
-                    }
-                    else {
-                        <Text>@Title</Text>
-                    }
+    <ChildContent>
+        <PageHeader>
+            <TitleTemplate>
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate(Game)
+                }
+                else
+                {
+                    @Title
+                }
 
-                    @if (!String.IsNullOrWhiteSpace(_latestVersionNumber))
-                    {
-                        <span class="ant-typography ant-typography-secondary" style="margin-left: 8px;">@_latestVersionNumber</span>
-                    }
-                </PageHeaderTitle>
+                @if (!String.IsNullOrWhiteSpace(_latestVersionNumber))
+                {
+                    <Tag Primary Class="game-version-tag">@_latestVersionNumber</Tag>
+                }
+            </TitleTemplate>
+            <Extra>
+                @TitleExtraTemplate?.Invoke(Game)
+            </Extra>
+        </PageHeader>
 
-                <PageHeaderExtra>
-                    @TitleExtraTemplate?.Invoke(Game)
-                </PageHeaderExtra>
-            </PageHeader>
-        </CascadingValue>
-
-        <div class="panel-layout-content">
-            @* Scoped to the content pane so a failing tab leaves the tab menu and header usable. *@
-            <ErrorHandler Title="This page could not be loaded">
-                <Body>
-                    @if (Game?.Id == Id)
-                    {
-                        <CascadingValue Value="Game.Id" Name="GameId">
-                            @ChildContent?.Invoke(Game)
-                        </CascadingValue>
-                    }
-                </Body>
-            </ErrorHandler>
-        </div>
-    </Content>
-</Layout>
+        @* PageContent catches errors, so a failing section leaves the menu and header usable *@
+        <PageContent Loading="_loading">
+            @if (!_loading && Game.Id == Id)
+            {
+                <CascadingValue Value="Game.Id" Name="GameId">
+                    @ChildContent?.Invoke(Game)
+                </CascadingValue>
+            }
+        </PageContent>
+    </ChildContent>
+</SideLayout>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    [Parameter] public string Title { get; set; }
+    [Parameter] public string? Title { get; set; }
     [Parameter] public RenderFragment<Game>? TitleTemplate { get; set; }
     [Parameter] public RenderFragment<Game>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
 
+    /// <summary>Also loads the game's related records, for sections that edit them.</summary>
     [Parameter] public bool LoadRelationships { get; set; }
 
-    Game Game { get; set; } = new Game();
-    Guid _id;
+    Game Game { get; set; } = new();
+    Guid? _id;
+    bool _loading = true;
     string _latestVersionNumber = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_id != Id)
+        if (_id == Id)
+            return;
+
+        _id = Id;
+        _loading = true;
+
+        if (Id == Guid.Empty)
         {
-            _id = Id;
-
-            if (_id == Guid.Empty)
-            {
-                Game = new Game();
-
-                await RefreshVersionAsync();
-
-                return;
-            }
-
+            Game = new Game();
+        }
+        else
+        {
             var query = GameService
                 .AsSplitQuery()
                 .Include(g => g.DependentGames);
@@ -131,21 +126,28 @@
                     .Include(g => g.Tags)
                     .Include(g => g.UpdatedBy);
 
-            Game = await query.GetAsync(_id);
+            var game = await query.GetAsync(Id);
 
-            if (Game == null)
+            if (game == null)
+            {
                 NavigationManager.NavigateTo("/Games");
+                return;
+            }
 
-            await RefreshVersionAsync();
+            Game = game;
         }
+
+        await RefreshVersionAsync();
+
+        _loading = false;
     }
 
+    /// <summary>Shows the latest version number again, e.g. after a new version is added.</summary>
     public async Task RefreshVersionAsync()
     {
-        if (_id != Guid.Empty)
-            _latestVersionNumber = await GameVersionService.GetLatestVersionNumberAsync(_id) ?? string.Empty;
-        else
-            _latestVersionNumber = string.Empty;
+        _latestVersionNumber = Id != Guid.Empty
+            ? await GameVersionService.GetLatestVersionNumberAsync(Id) ?? string.Empty
+            : string.Empty;
 
         await InvokeAsync(StateHasChanged);
     }

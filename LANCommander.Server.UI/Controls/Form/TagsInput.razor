@@ -1,0 +1,173 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@inherits ControlBase
+@inject IJSRuntime JS
+
+@*
+    Picks several of Items, shown as removable tags. Typing suggests matching items; Enter adds the
+    typed text, creating a new item through OnCreate when none matches.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style" @onkeydown="KeyDownAsync">
+    @foreach (var item in Values ?? [])
+    {
+        <span class="lc-tags-input-tag" @key="Label(item)">
+            <span class="lc-tags-input-tag-text">@Label(item)</span>
+            @if (!Disabled)
+            {
+                <button type="button" class="lc-tags-input-remove" aria-label="@($"Remove {Label(item)}")" @onclick="() => RemoveAsync(item)">
+                    <Icon Type="IconType.X" />
+                </button>
+            }
+        </span>
+    }
+
+    <RadzenAutoComplete Data="Suggestions"
+                        Value="@_text"
+                        ValueChanged="@((string value) => _text = value)"
+                        SelectedItemChanged="SuggestionPickedAsync"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        FilterOperator="StringFilterOperator.Contains"
+                        MinLength="0"
+                        OpenOnFocus="true"
+                        Disabled="@(Disabled || _creating)"
+                        Placeholder="@(Values?.Any() == true ? null : Placeholder)"
+                        InputAttributes="_inputAttributes"
+                        class="lc-tags-input-search" />
+
+    @if (_creating)
+    {
+        <Spin Small />
+    }
+</div>
+
+@code {
+    /// <summary>Everything that can be picked.</summary>
+    [Parameter, EditorRequired] public IEnumerable<TItem> Items { get; set; } = [];
+
+    [Parameter] public IEnumerable<TItem>? Values { get; set; }
+
+    [Parameter] public EventCallback<IEnumerable<TItem>> ValuesChanged { get; set; }
+
+    /// <summary>The label shown for an item; labels also identify items, ignoring case.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string?> Text { get; set; } = default!;
+
+    /// <summary>Creates an item for text that matches none of <see cref="Items"/>. Without it only existing items can be added.</summary>
+    [Parameter] public Func<string, Task<TItem>>? OnCreate { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; } = "Type to add";
+
+    [Parameter] public bool Disabled { get; set; }
+
+    string? _text;
+    readonly string _inputId = $"lc-tags-input-{Guid.NewGuid():N}";
+    Dictionary<string, object> _inputAttributes = new();
+    bool _creating;
+    string? _class;
+    readonly List<TItem> _created = [];
+
+    string Label(TItem item) => Text(item) ?? "";
+
+    IEnumerable<TItem> AllItems => Items.Concat(_created);
+
+    IEnumerable<string> Suggestions
+    {
+        get
+        {
+            var chosen = (Values ?? []).Select(Label).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return AllItems.Select(Label).Distinct(StringComparer.OrdinalIgnoreCase).Where(l => !chosen.Contains(l)).OrderBy(l => l).ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _inputAttributes = new() { ["id"] = _inputId };
+    }
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-tags-input")
+            .If(Disabled, "lc-tags-input-disabled")
+            .Add(Class)
+            .Build();
+    }
+
+    Task SuggestionPickedAsync(object? item) => item is string label ? AddAsync(label) : Task.CompletedTask;
+
+    async Task KeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is not ("Enter" or "Backspace"))
+            return;
+
+        // The autocomplete only reports typing after a delay, so read what is in the box now
+        var text = await TypedTextAsync();
+
+        if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(text))
+            await AddAsync(text);
+        else if (args.Key == "Backspace" && string.IsNullOrEmpty(text) && Values?.Any() == true)
+            await RemoveAsync(Values.Last());
+    }
+
+    async Task<string?> TypedTextAsync()
+    {
+        try
+        {
+            return await JS.InvokeAsync<string?>("Radzen.getInputValue", _inputId) ?? _text;
+        }
+        catch (JSException)
+        {
+            return _text;
+        }
+    }
+
+    async Task AddAsync(string label)
+    {
+        label = label.Trim();
+        _text = null;
+
+        // Clear the box even when the autocomplete never reported the text, so Value didn't change
+        try
+        {
+            await JS.InvokeVoidAsync("Radzen.setInputValue", _inputId, "");
+        }
+        catch (JSException)
+        {
+        }
+
+        if (label.Length == 0 || (Values ?? []).Any(v => string.Equals(Label(v), label, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        var item = AllItems.FirstOrDefault(i => string.Equals(Label(i), label, StringComparison.OrdinalIgnoreCase));
+
+        if (item == null)
+        {
+            if (OnCreate == null)
+                return;
+
+            _creating = true;
+
+            try
+            {
+                item = await OnCreate(label);
+                _created.Add(item);
+            }
+            finally
+            {
+                _creating = false;
+            }
+        }
+
+        await UpdateAsync([.. Values ?? [], item]);
+    }
+
+    Task RemoveAsync(TItem item) =>
+        UpdateAsync((Values ?? []).Where(v => !string.Equals(Label(v), Label(item), StringComparison.OrdinalIgnoreCase)).ToList());
+
+    async Task UpdateAsync(List<TItem> values)
+    {
+        Values = values;
+
+        await ValuesChanged.InvokeAsync(values);
+    }
+}

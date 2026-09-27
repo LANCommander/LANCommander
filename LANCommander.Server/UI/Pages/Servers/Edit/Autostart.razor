@@ -1,39 +1,29 @@
 @page "/Servers/{id:guid}/Autostart"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
+@inject NotificationService Notifications
 
 <ServerEditView Id="Id" Title="Autostart">
     <TitleExtraTemplate>
-        <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-            @if (context != null && context.Id != Guid.Empty)
-            {
-                <ServerControl ServerId="context.Id"/>
-                
-                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-            }
-        </Flex>
+        <Button Primary OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
-        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+        <Form Model="context" OnSubmit="() => SaveAsync(context)">
             <FormItem Label="Enable">
-                <Switch @bind-Checked="context.Autostart" />
+                <Switch @bind-Value="context.Autostart" />
             </FormItem>
 
             <FormItem Label="Method">
-                <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
+                <EnumSelect TEnum="ServerAutostartMethod" @bind-Value="context.AutostartMethod" />
             </FormItem>
 
             <FormItem Label="Delay">
-                <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
-                    <Suffix>Seconds</Suffix>
-                </AntDesign.Input>
+                <InputGroup>
+                    <NumberInput @bind-Value="context.AutostartDelay" Min="0" Placeholder="0" />
+                    <InputAddon>seconds</InputAddon>
+                </InputGroup>
             </FormItem>
         </Form>
     </ChildContent>
@@ -41,19 +31,18 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
-    async Task Save(Server server)
+
+    async Task SaveAsync(Server server)
     {
         try
         {
-            server = await ServerService.UpdateAsync(server);
+            await ServerService.UpdateAsync(server);
 
-            await MessageService.SuccessAsync("Autostart configuration updated!");
+            Notifications.Success("Autostart configuration updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
+            Notifications.Error(ex, "Could not save!");
         }
     }
 }

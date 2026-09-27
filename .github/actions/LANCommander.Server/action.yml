@@ -56,7 +56,6 @@ runs:
           'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
           'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
           'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
-          'wwwroot/_content/AntDesign/less',
           'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
           'wwwroot/Identity/lib/bootstrap',
           'LANCommander.ico',

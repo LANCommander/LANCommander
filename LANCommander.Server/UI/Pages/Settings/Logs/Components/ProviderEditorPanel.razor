@@ -1,63 +1,56 @@
 @using LANCommander.Server.Parsers
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
-<Form Model="Provider" Layout="FormLayout.Vertical" OnFieldChanged="OnChanged">
+@using LANCommander.Server.UI.Components
+
+<Form Model="Provider" OnFieldChanged="OnChangedAsync">
     <FormItem Label="Name">
-        <Input @bind-Value="Provider.Name" BindOnInput/>
+        <TextInput @bind-Value="Provider.Name" Immediate />
     </FormItem>
     <FormItem Label="Type">
-        <EnumSelect TEnum="LoggingProviderType" @bind-Value="Provider.Type" OnSelectedItemChanged="ProviderTypeChanged" />
+        <EnumSelect TEnum="LoggingProviderType" @bind-Value="Provider.Type" @bind-Value:after="ProviderTypeChanged" />
     </FormItem>
     <FormItem Label="Minimum Level">
-        <EnumSelect TEnum="LogLevel" @bind-Value="Provider.MinimumLevel"/>
+        <EnumSelect TEnum="LogLevel" @bind-Value="Provider.MinimumLevel" />
     </FormItem>
 
     @if (Provider.Type == LoggingProviderType.File)
     {
         <FormItem Label="Path">
-            <FilePicker Root="@_rootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Provider.ConnectionString" OkText="Select Path" Title="Choose Path" OnSelected="(p) => OnPathSelected(p)"/>
+            <FilePicker Root="@_rootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="Provider.ConnectionString" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
         <FormItem Label="Archive Every">
-            <EnumSelect TEnum="LogInterval?" DefaultValue="LogInterval.Day" @bind-Value="Provider.ArchiveEvery"/>
+            <Select TValue="LogInterval?" Items="Intervals" @bind-Value="Provider.ArchiveEvery" Placeholder="Day" Clearable />
         </FormItem>
         <FormItem Label="Max Archive Files">
-            <AntDesign.InputNumber @bind-Value="Provider.MaxArchiveFiles"/>
+            <NumberInput @bind-Value="Provider.MaxArchiveFiles" Min="0" />
         </FormItem>
     }
 
     @if (Provider.Type == LoggingProviderType.Seq || Provider.Type == LoggingProviderType.ElasticSearch)
     {
         <FormItem Label="Connection String">
-            <Input @bind-Value="Provider.ConnectionString"/>
+            <TextInput @bind-Value="Provider.ConnectionString" />
         </FormItem>
     }
 </Form>
 
 @code {
-    [Parameter] public LoggingProvider Provider { get; set; }
+    [Parameter, EditorRequired] public LoggingProvider Provider { get; set; } = default!;
     [Parameter] public EventCallback<LoggingProvider> ProviderChanged { get; set; }
-    
+
+    static readonly SelectItem<LogInterval?>[] Intervals = Enum.GetValues<LogInterval>()
+        .Select(i => new SelectItem<LogInterval?>(i, i.ToString()))
+        .ToArray();
+
     string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? string.Empty;
 
-    public async Task OnChanged(FieldChangedEventArgs args)
+    Task OnChangedAsync() => ProviderChanged.InvokeAsync(Provider);
+
+    void ProviderTypeChanged()
     {
-        await InvokeAsync(StateHasChanged);
-        
-        if (ProviderChanged.HasDelegate)
-            await ProviderChanged.InvokeAsync(Provider);
-        
-    }
-    
-    void ProviderTypeChanged(LoggingProviderType type)
-    {
-        switch (type)
-        {
-            case LoggingProviderType.Seq:
-                Provider.ConnectionString = SeqOptions.DefaultConnectionString;
-                break;
-        }
-        
-        StateHasChanged();
+        if (Provider.Type == LoggingProviderType.Seq)
+            Provider.ConnectionString = SeqOptions.DefaultConnectionString;
     }
 
     void OnPathSelected(string path)
@@ -67,8 +60,6 @@
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Provider.ConnectionString = path;
-        
-        StateHasChanged();
+        Provider.ConnectionString = path ?? string.Empty;
     }
 }

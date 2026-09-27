@@ -1,134 +1,103 @@
-﻿@page "/Metadata/Tags"
+@page "/Metadata/Tags"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject TagService TagService
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject AlertService Alerts
 
 <PageHeader Title="Tags" />
 
-<DataTable
-    TItem="Data.Models.Tag"
-    @ref="Table"
-    Size="@TableSize.Small"
-    Searchable
-    OnRowDoubleClick="OpenEdit"
-    SearchProperty="t => t.Name">
-    <RightToolbar>
-        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Tag</Button>
-    </RightToolbar>
-    <Columns>
-        <BoundDataColumn Property="t => t.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <BoundDataColumn Property="t => t.Games.Count" Sortable Title="Games" Include="Games" />
-        <BoundDataColumn Property="t => t.CreatedOn" Title="Created On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="t => t.CreatedBy != null ? t.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="t => t.UpdatedOn" Title="Updated On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="t => t.UpdatedBy != null ? t.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
-                @* TODO: Add seperate Edit page and navigate to it *@
-                @* <a href="@($"/Metadata/Tags/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
-
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this tag?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+<PageContent>
+    <DataTable TItem="Data.Models.Tag"
+               @ref="_table"
+               Small
+               SearchProperty="t => t.Name"
+               OnRowDoubleClick="EditAsync">
+        <RightToolbar>
+            <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Tag</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="t => t.Name" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="t => t.Games.Count" Title="Games" Sortable Include="Games" />
+            <BoundColumn Property="t => t.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="t => t.CreatedBy != null ? t.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+            <BoundColumn Property="t => t.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="t => t.UpdatedBy != null ? t.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+            <ActionsColumn TItem="Data.Models.Tag">
+                <Button Text Icon="IconType.PencilSimple" OnClick="() => EditAsync(context)" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this tag?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-</DataTable>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
-<Modal Title="@(TagContext.Id == Guid.Empty ? "New Tag" : "Edit Tag")"
-    @bind-Visible="@EditTagVisible"
-    OnOk="UpdateOrAdd"
-    OnCancel="CloseEdit">
-    <Form Model="@TagContext">
-        <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" AutoFocus />
-        </FormItem>
-    </Form>
-</Modal>
+@code {
+    DataTable<Data.Models.Tag> _table = default!;
 
- @code {
-    bool Loading = true;
-
-    bool EditTagVisible;
-    Data.Models.Tag TagContext = new();
-
-    DataTable<Data.Models.Tag> Table;
-
-    protected override async Task OnInitializedAsync()
+    async Task AddAsync()
     {
-        Loading = false;
-    }
-    
-    async Task UpdateOrAdd()
-    {
+        var name = await Alerts.PromptAsync("New Tag", "Name", okText: "Add");
+
+        if (name == null)
+            return;
+
         try
         {
-            if (TagContext.Id == Guid.Empty)
-            {
-                await TagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
+            await TagService.AddMissingAsync(x => x.Name == name, new Data.Models.Tag { Name = name });
 
-                MessageService.Success($"{TagContext.Name} was added!");
-            }
-            else
-            {
-                await TagService.UpdateAsync(TagContext);
+            Notifications.Success($"{name} was added!");
 
-                MessageService.Success($"{TagContext.Name} was updated!");
-            }
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            if (TagContext.Id == Guid.Empty)
-                MessageService.Error($"Could not add {TagContext.Name}!");
-            else
-                MessageService.Error($"Could not update {TagContext.Name}!");
-
-            Logger.LogError(ex, $"Could not update/add {TagContext.Name}!");
+            Notifications.Error(ex, $"Could not add {name}!");
         }
-
-        await Table.ReloadAsync();
-
-        await CloseEdit();
     }
 
-    async Task OpenEdit(Data.Models.Tag? tag)
+    async Task EditAsync(Data.Models.Tag tag)
     {
-        // query new instance, or create a new Edit context instance
-        TagContext = tag != null ? await TagService.GetAsync(tag.Id) : default!;
-        TagContext ??= new();
+        var name = await Alerts.PromptAsync("Edit Tag", "Name", tag.Name, okText: "Save");
 
-        EditTagVisible = true;
+        if (name == null || name == tag.Name)
+            return;
 
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var existing = await TagService.GetAsync(tag.Id);
+
+            existing.Name = name;
+
+            await TagService.UpdateAsync(existing);
+
+            Notifications.Success($"{name} was updated!");
+
+            await _table.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not update {name}!");
+        }
     }
 
-    async Task CloseEdit()
-    {
-        EditTagVisible = false;
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    async Task Delete(Data.Models.Tag tag)
+    async Task DeleteAsync(Data.Models.Tag tag)
     {
         try
         {
             await TagService.DeleteAsync(tag);
 
-            MessageService.Success("Tag deleted!");
+            Notifications.Success("Tag deleted!");
 
-            await Table.ReloadAsync();
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete tag!");
-            Logger?.LogError(ex, "Could not delete tag");
+            Notifications.Error(ex, "Could not delete tag!");
         }
     }
 }

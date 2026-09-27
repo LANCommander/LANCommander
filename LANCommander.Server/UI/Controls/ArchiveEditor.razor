@@ -1,0 +1,240 @@
+@using Hangfire
+@using LANCommander.Server.Jobs.Background
+@using LANCommander.Server.Models
+@inject ArchiveService ArchiveService
+@inject ScriptService ScriptService
+@inject GameService GameService
+@inject ToolService ToolService
+@inject RedistributableService RedistributableService
+@inject DialogService Dialogs
+@inject AlertService Alerts
+@inject NotificationService Notifications
+
+@* The archives of the game, redistributable or tool whose Id is cascaded *@
+<DataTable @ref="_table"
+           TItem="Archive"
+           NoPaging
+           Small
+           SettingsKey="archive-editor"
+           Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId) || (ToolId != Guid.Empty && a.ToolId == ToolId)">
+    <RightToolbar>
+        @if (_hasPackageScript)
+        {
+            <Button Icon="IconType.Package" OnClick="PackageAsync">Package</Button>
+        }
+        <Button Icon="IconType.ArrowsClockwise" Loading="_recalculating" OnClick="RecalculateFileSizesAsync">Recalculate File Sizes</Button>
+        <Button Primary Icon="IconType.UploadSimple" OnClick="() => _uploader!.Open()">Upload Archive</Button>
+    </RightToolbar>
+
+    <Columns>
+        <BoundColumn Property="a => a.Version" Sortable>
+            <TextInput @bind-Value="context.Version" @bind-Value:after="() => UpdateAsync(context)" Small />
+        </BoundColumn>
+        <BoundColumn Property="a => a.CompressedSize" Title="Compressed Size" Sortable>
+            <ByteSize Value="context.CompressedSize" />
+        </BoundColumn>
+        <BoundColumn Property="a => a.UncompressedSize" Title="Uncompressed Size" Sortable>
+            <ByteSize Value="context.UncompressedSize" />
+        </BoundColumn>
+        <BoundColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+        <BoundColumn Property="a => a.CreatedOn" Title="Created On" Sortable DefaultSort="ColumnSort.Descending">
+            <LocalTime Value="context.CreatedOn" />
+        </BoundColumn>
+
+        <ActionsColumn TItem="Archive" Width="230px">
+            <Tooltip Title="Recalculate File Size">
+                <Button Text Icon="IconType.ArrowsClockwise" aria-label="Recalculate file size" OnClick="() => RecalculateFileSizeAsync(context)" />
+            </Tooltip>
+
+            <Tooltip Title="Check Streaming Compatibility">
+                <Button Text Icon="IconType.ShieldCheck" aria-label="Check streaming compatibility" Loading="_checking == context.Id" OnClick="() => CheckStreamingCompatibilityAsync(context)" />
+            </Tooltip>
+
+            <Tooltip Title="Download">
+                <Button Text Icon="IconType.DownloadSimple" aria-label="Download" Href="@($"/Download/Archive/{context.Id}")" NewTab />
+            </Tooltip>
+
+            <Tooltip Title="Browse">
+                <Button Text Icon="IconType.FolderOpen" aria-label="Browse" OnClick="() => BrowseAsync(context)" />
+            </Tooltip>
+
+            <Popconfirm Title="Are you sure you want to delete this archive?" OkText="Delete" Danger OnConfirm="() => DeleteAsync(context)">
+                <Button Text Danger Icon="IconType.X" title="Delete" />
+            </Popconfirm>
+        </ActionsColumn>
+    </Columns>
+</DataTable>
+
+<ArchiveUploader @ref="_uploader" GameId="GameId" RedistributableId="RedistributableId" ToolId="ToolId" OnArchiveUploaded="_ => ReloadAsync()" />
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "RedistributableId")] public Guid RedistributableId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid ToolId { get; set; }
+
+    DataTable<Archive>? _table;
+    ArchiveUploader? _uploader;
+
+    bool _recalculating;
+    Guid? _checking;
+    bool _hasPackageScript;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (GameId != Guid.Empty)
+            _hasPackageScript = await ScriptService.ExistsAsync(s => s.GameId == GameId && s.Type == SDK.Enums.ScriptType.Package);
+        else if (RedistributableId != Guid.Empty)
+            _hasPackageScript = await ScriptService.ExistsAsync(s => s.RedistributableId == RedistributableId && s.Type == SDK.Enums.ScriptType.Package);
+        else if (ToolId != Guid.Empty)
+            _hasPackageScript = await ScriptService.ExistsAsync(s => s.ToolId == ToolId && s.Type == SDK.Enums.ScriptType.Package);
+    }
+
+    Task ReloadAsync() => _table?.ReloadAsync() ?? Task.CompletedTask;
+
+    async Task PackageAsync()
+    {
+        var title = "Package";
+
+        if (GameId != Guid.Empty)
+            title = $"Package {(await GameService.GetAsync(GameId))?.Title}";
+        else if (ToolId != Guid.Empty)
+            title = $"Package {(await ToolService.GetAsync(ToolId))?.Name}";
+        else if (RedistributableId != Guid.Empty)
+            title = $"Package {(await RedistributableService.GetAsync(RedistributableId))?.Name}";
+
+        await Dialogs.OpenAsync<PackagingDialog, PackagingDialogOptions, bool>(title, new PackagingDialogOptions
+        {
+            GameId = GameId,
+            ToolId = ToolId,
+            RedistributableId = RedistributableId,
+        }, new DialogSettings { Size = DialogSize.Large, NoFooter = true });
+
+        await ReloadAsync();
+    }
+
+    async Task RecalculateFileSizesAsync()
+    {
+        _recalculating = true;
+
+        try
+        {
+            var archives = await ArchiveService.AsNoTracking().GetAsync(a =>
+                (GameId != Guid.Empty && a.GameId == GameId) ||
+                (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId) ||
+                (ToolId != Guid.Empty && a.ToolId == ToolId));
+
+            var results = new List<bool>();
+
+            foreach (var archive in archives)
+                results.Add(await ArchiveService.RecalculateFileSizeArchiveAsync(archive));
+
+            if (results.All(x => x))
+                Notifications.Success("File sizes recalculated!");
+            else
+                Notifications.Warning("File sizes recalculated but some failed!");
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "File sizes could not be recalculated");
+        }
+        finally
+        {
+            _recalculating = false;
+        }
+    }
+
+    async Task RecalculateFileSizeAsync(Archive archive)
+    {
+        try
+        {
+            archive = await ArchiveService.AsNoTracking().GetAsync(archive.Id);
+
+            if (await ArchiveService.RecalculateFileSizeArchiveAsync(archive))
+                Notifications.Success("File sizes recalculated!");
+            else
+                Notifications.Error("Recalculating file sizes failed!");
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Recalculating file sizes failed!");
+        }
+    }
+
+    async Task CheckStreamingCompatibilityAsync(Archive archive)
+    {
+        _checking = archive.Id;
+
+        try
+        {
+            var report = await ArchiveService.InspectStreamingCompatibilityAsync(archive.Id);
+
+            if (report.IsStreamingSafe)
+            {
+                Notifications.Success("This archive is streaming-safe and can be installed by launchers.");
+                return;
+            }
+
+            var count = report.ProblemEntries.Count;
+
+            if (await Alerts.ConfirmAsync(
+                    $"This archive has {count} entr{(count == 1 ? "y" : "ies")} that launchers cannot extract reliably because they are stored uncompressed with a streaming data descriptor. Repack it into a streaming-safe layout? This runs in the background and may take a while for large archives.",
+                    "Repack Archive?",
+                    "Repack"))
+            {
+                BackgroundJob.Enqueue<RepackArchiveBackgroundJob>(x => x.Execute(archive.Id));
+
+                Notifications.Info("Repack queued. The archive will be rewritten in the background.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not inspect the archive.");
+        }
+        finally
+        {
+            _checking = null;
+        }
+    }
+
+    Task BrowseAsync(Archive archive) =>
+        Dialogs.OpenAsync<ArchiveBrowserDialog, Guid, bool>($"Browse {archive.Version}", archive.Id, new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Close",
+            NoCancel = true,
+        });
+
+    async Task UpdateAsync(Archive archive)
+    {
+        try
+        {
+            await ArchiveService.UpdateAsync(archive);
+
+            Notifications.Success("Archive updated!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Archive could not be updated.");
+        }
+    }
+
+    async Task DeleteAsync(Archive archive)
+    {
+        try
+        {
+            await ArchiveService.DeleteAsync(archive);
+
+            await ReloadAsync();
+
+            Notifications.Success("Archive deleted!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Archive could not be deleted.");
+        }
+    }
+}

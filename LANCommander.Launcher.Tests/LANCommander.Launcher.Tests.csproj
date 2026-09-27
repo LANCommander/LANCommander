@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.Launcher\LANCommander.Launcher.csproj" />
+    <ProjectReference Include="..\LANCommander.Testing.Visual\LANCommander.Testing.Visual.csproj" />
   </ItemGroup>
 
   <!-- Baselines are read from and refreshed in the source tree (see ScreenshotHelper) -->

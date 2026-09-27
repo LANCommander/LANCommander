@@ -1,166 +1,152 @@
-﻿@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
-@inject IJSRuntime JSRuntime
+@inject NotificationService Notifications
 
-<Flex Vertical Gap="FlexGap.Large">
+<Flex Vertical Gap="Gap.Large">
     @if (!_providers.Any())
     {
-        <Empty Description="@("No external authentication providers have been configured")" />
+        <Empty Description="No external authentication providers have been configured" />
     }
 
     <Collapse>
         @foreach (var externalProvider in _providers)
         {
             <Panel Header="@externalProvider.Name">
-                <ExtraTemplate>
-                    <Popconfirm Title="Are you sure you want to delete this provider?" OnConfirm="() => Remove(externalProvider)">
-                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger />
+                <Extra>
+                    <Popconfirm Title="Are you sure you want to delete this provider?" OkText="Delete" Danger OnConfirm="() => RemoveAsync(externalProvider)">
+                        <Button Text Small Danger Icon="IconType.X" title="Delete" />
                     </Popconfirm>
-                </ExtraTemplate>
+                </Extra>
                 <ChildContent>
-                    <Form Model="externalProvider" Layout="FormLayout.Vertical">
+                    <Form Model="externalProvider">
                         <FormItem Label="Name">
-                            <Space Style="width: 100%">
-                                <SpaceItem Style="width: 100%">
-                                    <Input @bind-Value="context.Name" BindOnInput/>
-                                </SpaceItem>
+                            <Flex Gap="Gap.Small" Align="Align.Center">
+                                <TextInput @bind-Value="externalProvider.Name" Immediate Style="flex: 1" />
 
-                                <SpaceItem>
-                                    <Space>
-                                        @if (_templates.Any())
-                                        {
-                                            <SpaceItem>
-                                                <Dropdown>
-                                                    <Overlay>
-                                                        <Menu>
-                                                            @foreach (var template in _templates)
-                                                            {
-                                                                <MenuItem OnClick="() => UseTemplate(externalProvider, template)">
-                                                                    @template.Name
-                                                                </MenuItem>
-                                                            }
-                                                        </Menu>
-                                                    </Overlay>
-                                                    <ChildContent>
-                                                        <Button>Templates</Button>
-                                                    </ChildContent>
-                                                </Dropdown>
-                                            </SpaceItem>
-                                        }
+                                @if (_templates.Any())
+                                {
+                                    <Dropdown>
+                                        <Overlay>
+                                            <Menu>
+                                                @foreach (var template in _templates)
+                                                {
+                                                    <MenuItem OnClick="() => UseTemplate(externalProvider, template)">@template.Name</MenuItem>
+                                                }
+                                            </Menu>
+                                        </Overlay>
+                                        <ChildContent>
+                                            <Button Icon="IconType.CaretDown">Templates</Button>
+                                        </ChildContent>
+                                    </Dropdown>
+                                }
 
-                                        @if (!String.IsNullOrWhiteSpace(externalProvider.Documentation))
-                                        {
-                                            <SpaceItem>
-                                                <Tooltip Title="Documentation">
-                                                    <Button Type="ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)"/>
-                                                </Tooltip>
-                                            </SpaceItem>
-                                        }
-                                    </Space>
-                                </SpaceItem>
-                            </Space>
+                                @if (!String.IsNullOrWhiteSpace(externalProvider.Documentation))
+                                {
+                                    <Tooltip Title="Documentation">
+                                        <Button Text Icon="IconType.Question" Href="@externalProvider.Documentation" NewTab aria-label="Documentation" />
+                                    </Tooltip>
+                                }
+                            </Flex>
                         </FormItem>
 
                         <FormItem Label="Color">
-                            <Input @bind-Value="context.Color" />
+                            <TextInput @bind-Value="externalProvider.Color" />
                         </FormItem>
 
                         <FormItem Label="Icon">
-                            <Input @bind-Value="context.Icon" />
+                            <TextInput @bind-Value="externalProvider.Icon" />
                         </FormItem>
 
                         <FormItem Label="Type">
-                            <EnumSelect TEnum="AuthenticationProviderType" @bind-Value="context.Type"/>
+                            <EnumSelect TEnum="AuthenticationProviderType" @bind-Value="externalProvider.Type" />
                         </FormItem>
 
                         <FormItem Label="Client ID">
-                            <Input @bind-Value="context.ClientId"/>
+                            <TextInput @bind-Value="externalProvider.ClientId" />
                         </FormItem>
 
                         <FormItem Label="Client Secret">
-                            <InputPassword @bind-Value="context.ClientSecret"/>
+                            <PasswordInput @bind-Value="externalProvider.ClientSecret" />
                         </FormItem>
-                        
-                        @if (context.Type == AuthenticationProviderType.OAuth2)
+
+                        @if (externalProvider.Type == AuthenticationProviderType.OAuth2)
                         {
                             <FormItem Label="Authorization Endpoint">
-                                <Input @bind-Value="context.AuthorizationEndpoint"/>
+                                <TextInput @bind-Value="externalProvider.AuthorizationEndpoint" />
                             </FormItem>
 
                             <FormItem Label="Token Endpoint">
-                                <Input @bind-Value="context.TokenEndpoint"/>
+                                <TextInput @bind-Value="externalProvider.TokenEndpoint" />
                             </FormItem>
 
                             <FormItem Label="User Info Endpoint">
-                                <Input @bind-Value="context.UserInfoEndpoint"/>
+                                <TextInput @bind-Value="externalProvider.UserInfoEndpoint" />
                             </FormItem>
                         }
-                        else if (context.Type == AuthenticationProviderType.OpenIdConnect)
+                        else if (externalProvider.Type == AuthenticationProviderType.OpenIdConnect)
                         {
                             <FormItem Label="Configuration Endpoint">
-                                <Input @bind-Value="context.ConfigurationUrl"/>
+                                <TextInput @bind-Value="externalProvider.ConfigurationUrl" />
                             </FormItem>
                         }
 
                         <FormItem Label="Scopes">
-                            <ScopesEditor @bind-Values="context.Scopes"/>
+                            <ScopesEditor @bind-Values="externalProvider.Scopes" />
                         </FormItem>
 
                         <FormItem Label="Claim Mappings">
-                            <ClaimMappingsEditor @bind-Values="context.ClaimMappings" @bind-Scopes="context.Scopes" ConfigurationUrl="@context.ConfigurationUrl"/>
+                            <ClaimMappingsEditor @bind-Values="externalProvider.ClaimMappings" @bind-Scopes="externalProvider.Scopes" ConfigurationUrl="@externalProvider.ConfigurationUrl" />
                         </FormItem>
                     </Form>
                 </ChildContent>
             </Panel>
         }
     </Collapse>
-    
-    <Flex Justify="FlexJustify.Center">
-        <Button OnClick="Add" Type="ButtonType.Primary">Add Provider</Button>
+
+    <Flex Justify="Justify.Center">
+        <Button Primary OnClick="AddAsync">Add Provider</Button>
     </Flex>
 </Flex>
 
 @code {
-    [Parameter] public IEnumerable<AuthenticationProvider> Values { get; set; }
+    [Parameter] public IEnumerable<AuthenticationProvider> Values { get; set; } = [];
     [Parameter] public EventCallback<IEnumerable<AuthenticationProvider>> ValuesChanged { get; set; }
 
     List<AuthenticationProvider> _templates = new();
     List<AuthenticationProvider> _providers = new();
 
-    AuthenticationProvider _selectedTemplate;
-
     protected override async Task OnInitializedAsync()
     {
-        _templates = await AuthenticationService.GetAuthenticationProviderTemplatesAsync();
+        try
+        {
+            _templates = await AuthenticationService.GetAuthenticationProviderTemplatesAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The provider templates could not be loaded");
+        }
     }
 
     protected override void OnParametersSet()
     {
-        _providers = Values.ToList();
+        _providers = (Values ?? []).ToList();
     }
 
-    void OpenDocumentation(AuthenticationProvider authenticationProvider)
-    {
-        JSRuntime.InvokeVoidAsync("open", authenticationProvider.Documentation, "_blank");
-    }
-
-    async Task Add()
+    async Task AddAsync()
     {
         _providers.Add(new AuthenticationProvider());
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(_providers);
+        await ValuesChanged.InvokeAsync(_providers);
     }
 
-    async Task Remove(AuthenticationProvider authenticationProvider)
+    async Task RemoveAsync(AuthenticationProvider authenticationProvider)
     {
         _providers.Remove(authenticationProvider);
 
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(_providers);
+        await ValuesChanged.InvokeAsync(_providers);
     }
 
-    async Task UseTemplate(AuthenticationProvider authenticationProvider, AuthenticationProvider template)
+    void UseTemplate(AuthenticationProvider authenticationProvider, AuthenticationProvider template)
     {
         authenticationProvider.ClaimMappings = template.ClaimMappings;
         authenticationProvider.ClientId = template.ClientId;
@@ -174,7 +160,5 @@
         authenticationProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
         authenticationProvider.TokenEndpoint = template.TokenEndpoint;
         authenticationProvider.UserInfoEndpoint = template.UserInfoEndpoint;
-
-        await InvokeAsync(StateHasChanged);
     }
 }

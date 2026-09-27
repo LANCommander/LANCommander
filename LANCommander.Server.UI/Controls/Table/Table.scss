@@ -1,0 +1,52 @@
+.lc-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .lc-table-toolbar-start,
+    .lc-table-toolbar-end {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .lc-table-toolbar-end {
+        flex-grow: 1;
+        justify-content: flex-end;
+    }
+
+    .lc-table-search {
+        width: 240px;
+    }
+}
+
+.lc-table-pending {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.lc-table-grid {
+    .lc-table-actions {
+        white-space: nowrap;
+    }
+
+    .lc-table-actions-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .lc-table-select {
+        text-align: center;
+    }
+
+    // Tags in cells wrap onto several lines
+    .lc-tag {
+        margin-block: 2px;
+    }
+}

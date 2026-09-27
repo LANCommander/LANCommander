@@ -1,0 +1,27 @@
+@page "/_fixtures"
+@layout FixtureLayout
+
+<PageTitle>Fixtures</PageTitle>
+
+<h1>Control fixtures</h1>
+
+@if (!ComponentFixtureCatalog.All.Any())
+{
+    <p>No fixtures yet.</p>
+}
+
+@foreach (var group in ComponentFixtureCatalog.All.GroupBy(f => f.Group))
+{
+    <h2>@group.Key</h2>
+
+    @foreach (var fixture in group)
+    {
+        <section style="margin-bottom: 24px">
+            <p><a href="/_fixtures/@fixture.Name">@fixture.Name</a> &mdash; @fixture.Description</p>
+
+            <div class="fixture-frame" style="width: @(fixture.Width)px">
+                @fixture.Content
+            </div>
+        </section>
+    }
+}

@@ -1,44 +1,19 @@
 @page "/Servers/{id:guid}/HTTP"
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject ServerService ServerService
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <ServerEditView Id="Id" Title="HTTP Paths">
     <TitleExtraTemplate>
-        @if (context != null && context.Id != Guid.Empty)
-        {
-            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-                <ServerControl ServerId="context.Id" />
-                
-                <Button Type="ButtonType.Primary" OnClick="() => _httpPathEditor?.Save()">Save</Button>
-            </Flex>
-        }
+        <Button Primary OnClick="() => _httpPathEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
-        <Text>HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</Text>
-        <ServerHttpPathEditor @ref="_httpPathEditor" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" />
+        <Typography Secondary>HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</Typography>
+        <ServerHttpPathEditor @ref="_httpPathEditor" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" Style="margin-top: 16px" />
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    ServerHttpPathEditor _httpPathEditor;
-    
-    async Task Save(Server server)
-    {
-        try
-        {
-            server = await ServerService.UpdateAsync(server);
-
-            await MessageService.SuccessAsync("HTTP paths updated!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
-        }
-    }
+    ServerHttpPathEditor? _httpPathEditor;
 }

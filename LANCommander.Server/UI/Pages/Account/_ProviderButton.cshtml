@@ -1,0 +1,12 @@
+﻿@model LANCommander.Server.Models.ProviderButtonModel
+
+@* A provider's sign-in button, in the provider's own colour when it has one *@
+<button lc-button lc-primary lc-block type="submit" style="@(!String.IsNullOrWhiteSpace(Model.Provider.Color) ? $"background-color: {Model.Provider.Color}; border-color: {Model.Provider.Color}" : "")">
+    @if (!String.IsNullOrWhiteSpace(Model.Provider.Icon))
+    {
+        <svg class="lc-button-icon" focusable="false" width="1em" height="1em" fill="currentColor" aria-hidden="true">
+            <use xlink:href="_content/LANCommander.Server.UI/bootstrap-icons.svg#@Model.Provider.Icon"/>
+        </svg>
+    }
+    @Model.Text
+</button>

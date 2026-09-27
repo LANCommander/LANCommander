@@ -1,0 +1,435 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.SDK.Services
+@using LANCommander.Server.UI.Components
+@using Microsoft.Extensions.DependencyInjection
+@inherits ControlBase
+@inject IServiceProvider Services
+@inject LANCommander.Server.UI.Services.NotificationService Notifications
+@inject LANCommander.Server.UI.Services.AlertService Alerts
+
+@*
+    Browses a folder on the server's disk (WorkingDirectory), the contents of an archive (ArchiveId)
+    or any other IFileManagerSource: a folder tree beside the current folder's entries, which can be
+    selected. Features picks the toolbar buttons.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <div class="lc-file-manager-nav">
+        @if (Has(FileManagerFeatures.NavigationBack))
+        {
+            <Tooltip Title="Back">
+                <Button Text Icon="IconType.ArrowLeft" OnClick="NavigateBackAsync" Disabled="@(_past.Count == 0)" aria-label="Back" />
+            </Tooltip>
+        }
+
+        @if (Has(FileManagerFeatures.NavigationForward))
+        {
+            <Tooltip Title="Forward">
+                <Button Text Icon="IconType.ArrowRight" OnClick="NavigateForwardAsync" Disabled="@(_future.Count == 0)" aria-label="Forward" />
+            </Tooltip>
+        }
+
+        @if (Has(FileManagerFeatures.UpALevel))
+        {
+            <Tooltip Title="Up a Level">
+                <Button Text Icon="IconType.ArrowUp" OnClick="NavigateUpAsync" Disabled="@(_source?.GetCurrentPath()?.Parent == null)" aria-label="Up a level" />
+            </Tooltip>
+        }
+
+        @if (Has(FileManagerFeatures.Refresh))
+        {
+            <Tooltip Title="Refresh">
+                <Button Text Icon="IconType.ArrowClockwise" OnClick="RefreshAsync" aria-label="Refresh" />
+            </Tooltip>
+        }
+
+        <div class="lc-file-manager-path">
+            @if (Has(FileManagerFeatures.Breadcrumbs))
+            {
+                <Breadcrumb>
+                    @foreach (var directory in _breadcrumbs)
+                    {
+                        <BreadcrumbItem OnClick="() => ChangeDirectoryAsync(directory, false)">@DirectoryName(directory)</BreadcrumbItem>
+                    }
+                </Breadcrumb>
+            }
+        </div>
+
+        @if (Has(FileManagerFeatures.NewFolder))
+        {
+            <Tooltip Title="New Folder">
+                <Button Text Icon="IconType.FolderPlus" OnClick="NewFolderAsync" aria-label="New folder" />
+            </Tooltip>
+        }
+
+        @if (Has(FileManagerFeatures.UploadFile))
+        {
+            <Tooltip Title="Upload Files">
+                <Button Text Icon="IconType.UploadSimple" OnClick="() => _uploading = !_uploading" aria-label="Upload files" />
+            </Tooltip>
+        }
+
+        @if (Has(FileManagerFeatures.Delete))
+        {
+            <Popconfirm OnConfirm="DeleteAsync" Title="@($"Are you sure you want to delete the selected {(_selected.Count == 1 ? "entry" : "entries")}?")" OkText="Delete" Danger Disabled="_selected.Count == 0">
+                <Button Text Danger Icon="IconType.Trash" Disabled="_selected.Count == 0" aria-label="Delete" />
+            </Popconfirm>
+        }
+    </div>
+
+    @if (_uploading && _source != null)
+    {
+        <div class="lc-file-manager-upload">
+            <Upload Action="@UploadAction" Data="@(new Dictionary<string, string> { ["path"] = _source.GetCurrentPath()?.Path ?? "" })" Multiple OnCompleted="RefreshAsync" />
+        </div>
+    }
+
+    @if (_error != null)
+    {
+        <Alert Danger Title="The files could not be listed">@_error</Alert>
+    }
+    else if (_source == null)
+    {
+        <div class="lc-file-manager-loading"><Spin /></div>
+    }
+    else
+    {
+        <SplitPane Class="lc-file-manager-body">
+            <Pane Size="25%" Class="lc-file-manager-tree">
+                <Tree TItem="FileManagerDirectory"
+                      Items="_directories"
+                      Children="d => d.Children"
+                      Key="d => d.Path"
+                      Text="d => d.Name"
+                      Icon="d => IconType.Folder"
+                      Value="_currentPath"
+                      ValueChanged="d => ChangeDirectoryAsync(d!, true)"
+                      OnExpand="d => _source.ExpandNode(d)" />
+            </Pane>
+            <Pane Size="75%" Class="lc-file-manager-entries">
+                <Table TItem="IFileManagerEntry"
+                       @ref="_table"
+                       Items="_entries"
+                       Key="e => e.Path"
+                       Selectable
+                       Single="!SelectMultiple"
+                       RowSelectable="EntrySelectable"
+                       Values="_selected"
+                       ValuesChanged="SelectionChangedAsync"
+                       OnRowDoubleClick="OpenAsync"
+                       ColumnPicker="Has(FileManagerFeatures.ColumnPicker)"
+                       SettingsKey="file-manager"
+                       PageSize="100"
+                       Small>
+                    <Columns>
+                        <TemplateColumn TItem="IFileManagerEntry" Title="" Width="40px" Key="icon">
+                            <Icon Type="EntryIcon(context)" />
+                        </TemplateColumn>
+                        <BoundColumn Property="e => e.Name" Title="Name" Sortable DefaultSort="ColumnSort.Ascending">
+                            @_source.GetEntryName(context)
+                        </BoundColumn>
+                        <BoundColumn Property="e => e.Size" Title="Size" Sortable Width="120px">
+                            @if (context is FileManagerFile)
+                            {
+                                <ByteSize Value="context.Size" />
+                            }
+                        </BoundColumn>
+                        <BoundColumn Property="e => e.Name" Title="Type" Key="type" Hide Width="100px">
+                            @(context is FileManagerFile file ? file.Extension.ToUpperInvariant() : "Folder")
+                        </BoundColumn>
+                        <BoundColumn Property="e => e.ModifiedOn" Title="Modified" Sortable FormatString="MM/dd/yyyy hh:mm tt" Width="180px" />
+                        <BoundColumn Property="e => e.CreatedOn" Title="Created" Sortable FormatString="MM/dd/yyyy hh:mm tt" Hide Width="180px" />
+                    </Columns>
+                </Table>
+            </Pane>
+        </SplitPane>
+    }
+</div>
+
+@code {
+    /// <summary>Browse the server's disk, starting in this folder.</summary>
+    [Parameter] public string? WorkingDirectory { get; set; }
+
+    /// <summary>Browse the contents of this archive.</summary>
+    [Parameter] public Guid? ArchiveId { get; set; }
+
+    /// <summary>Browse any other source. Takes precedence over <see cref="WorkingDirectory"/> and <see cref="ArchiveId"/>.</summary>
+    [Parameter] public IFileManagerSource? Source { get; set; }
+
+    [Parameter] public bool SelectMultiple { get; set; } = true;
+
+    [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete | FileManagerFeatures.ColumnPicker;
+
+    /// <summary>The folder being shown.</summary>
+    [Parameter] public FileManagerDirectory? CurrentPath { get; set; }
+
+    [Parameter] public EventCallback<FileManagerDirectory> CurrentPathChanged { get; set; }
+
+    [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = [];
+
+    [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
+
+    /// <summary>Which entries can be selected, e.g. only folders.</summary>
+    [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
+
+    /// <summary>Which entries are listed at all.</summary>
+    [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+
+    /// <summary>Where uploaded files are posted, with the destination folder as the "path" field.</summary>
+    [Parameter] public string UploadAction { get; set; } = "/Upload/File";
+
+    IFileManagerSource? _source;
+    FileManagerDirectory? _currentPath;
+    List<FileManagerDirectory> _past = [];
+    List<FileManagerDirectory> _future = [];
+    List<FileManagerDirectory> _breadcrumbs = [];
+    List<FileManagerDirectory> _directories = [];
+    List<IFileManagerEntry> _entries = [];
+    IList<IFileManagerEntry> _selected = new List<IFileManagerEntry>();
+    Table<IFileManagerEntry>? _table;
+    bool _uploading;
+    string? _error;
+    string? _class;
+
+    bool Has(FileManagerFeatures feature) => Features.HasFlag(feature);
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-file-manager")
+            .Add(Class)
+            .Build();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Both built-in sources read the disk or download an archive listing synchronously
+            _source = Source ?? await Task.Run<IFileManagerSource?>(() =>
+            {
+                if (!String.IsNullOrWhiteSpace(WorkingDirectory))
+                    return new FileManagerLocalDiskSource(WorkingDirectory);
+
+                if (ArchiveId != null && ArchiveId != Guid.Empty)
+                    return new FileManagerArchiveSource(Services.GetRequiredService<IArchiveClient>(), ArchiveId.Value);
+
+                return null;
+            });
+
+            if (_source == null)
+            {
+                _error = "There is nothing to browse.";
+                return;
+            }
+
+            _directories = await Task.Run(() => _source.GetDirectoryTree().ToList());
+
+            var start = _source is FileManagerLocalDiskSource && !String.IsNullOrWhiteSpace(WorkingDirectory)
+                ? BuildDirectoryChain(WorkingDirectory)
+                : _source.GetCurrentPath() ?? _directories.FirstOrDefault();
+
+            if (start != null)
+                await ChangeDirectoryAsync(start, true);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    async Task ChangeDirectoryAsync(FileManagerDirectory directory, bool clearFuture)
+    {
+        var current = _source!.GetCurrentPath();
+
+        if (current != null && !String.IsNullOrWhiteSpace(current.Path) && directory.Path != current.Path && _past.LastOrDefault()?.Path != directory.Path)
+            _past.Add(current);
+
+        _currentPath = directory;
+        _source.SetCurrentPath(directory);
+
+        if (clearFuture)
+            _future.Clear();
+
+        UpdateEntries();
+        UpdateBreadcrumbs();
+
+        if (_selected.Count > 0)
+            await SelectionChangedAsync(new List<IFileManagerEntry>());
+
+        await CurrentPathChanged.InvokeAsync(directory);
+    }
+
+    void UpdateEntries() =>
+        _entries = _source!.GetEntries().Where(EntryVisible).ToList();
+
+    void UpdateBreadcrumbs()
+    {
+        _breadcrumbs.Clear();
+
+        for (var directory = _source!.GetCurrentPath(); directory != null; directory = directory.Parent)
+            _breadcrumbs.Insert(0, directory);
+    }
+
+    static string DirectoryName(FileManagerDirectory directory) =>
+        directory.Parent == null ? directory.Name : directory.Name.TrimEnd('/', '\\');
+
+    async Task SelectionChangedAsync(IList<IFileManagerEntry> selected)
+    {
+        _selected = selected;
+
+        await SelectedChanged.InvokeAsync(selected);
+    }
+
+    async Task OpenAsync(IFileManagerEntry entry)
+    {
+        if (entry is FileManagerDirectory directory)
+            await ChangeDirectoryAsync(directory, true);
+    }
+
+    async Task NavigateBackAsync()
+    {
+        if (_past.Count == 0)
+            return;
+
+        var target = _past[^1];
+
+        _past.RemoveAt(_past.Count - 1);
+        _future.Insert(0, _source!.GetCurrentPath());
+
+        await ChangeDirectoryWithoutHistoryAsync(target);
+    }
+
+    async Task NavigateForwardAsync()
+    {
+        if (_future.Count == 0)
+            return;
+
+        var target = _future[0];
+
+        _future.RemoveAt(0);
+        _past.Add(_source!.GetCurrentPath());
+
+        await ChangeDirectoryWithoutHistoryAsync(target);
+    }
+
+    async Task ChangeDirectoryWithoutHistoryAsync(FileManagerDirectory directory)
+    {
+        var past = _past.ToList();
+
+        await ChangeDirectoryAsync(directory, false);
+
+        _past = past;
+    }
+
+    async Task NavigateUpAsync()
+    {
+        var parent = _source?.GetCurrentPath()?.Parent;
+
+        if (parent != null)
+            await ChangeDirectoryAsync(parent, true);
+    }
+
+    /// <summary>Lists the current folder again.</summary>
+    public Task RefreshAsync()
+    {
+        if (_source == null)
+            return Task.CompletedTask;
+
+        UpdateEntries();
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    async Task NewFolderAsync()
+    {
+        var name = await Alerts.PromptAsync("New Folder", "Name", required: true, okText: "Create");
+
+        if (String.IsNullOrWhiteSpace(name))
+            return;
+
+        try
+        {
+            _source!.CreateDirectory(name);
+
+            await RefreshAsync();
+
+            Notifications.Success("Folder created!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Error creating folder!");
+        }
+    }
+
+    async Task DeleteAsync()
+    {
+        try
+        {
+            foreach (var entry in _selected)
+                _source!.DeleteEntry(entry);
+
+            Notifications.Success("Deleted!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Error deleting file/folder!");
+        }
+
+        await SelectionChangedAsync(new List<IFileManagerEntry>());
+        await RefreshAsync();
+    }
+
+    FileManagerDirectory BuildDirectoryChain(string path)
+    {
+        var segments = new List<string>();
+
+        for (var current = path; !String.IsNullOrEmpty(current);)
+        {
+            segments.Insert(0, current);
+
+            var parentPath = Path.GetDirectoryName(current);
+
+            if (parentPath == current)
+                break;
+
+            current = parentPath;
+        }
+
+        // Start from the matching tree root, so the tree and breadcrumbs share it
+        var directory = _directories.FirstOrDefault(root => String.Equals(
+                root.Path.TrimEnd(Path.DirectorySeparatorChar),
+                segments[0].TrimEnd(Path.DirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (directory == null)
+        {
+            directory = _source!.GetDirectory(segments[0]);
+            directory.Parent = null;
+        }
+
+        foreach (var segment in segments.Skip(1))
+        {
+            var child = _source!.GetDirectory(segment);
+
+            child.Parent = directory;
+            directory = child;
+        }
+
+        return directory;
+    }
+
+    static IconType EntryIcon(IFileManagerEntry entry) => entry switch
+    {
+        FileManagerDirectory => IconType.Folder,
+        FileManagerFile file => file.Extension.ToLowerInvariant() switch
+        {
+            "zip" or "rar" or "7z" or "gz" or "tar" or "wad" or "pk3" or "pak" or "cab" => IconType.FileZip,
+            "txt" or "cfg" or "config" or "ini" or "yml" or "yaml" or "log" or "doc" or "nfo" => IconType.FileText,
+            "exe" or "bat" or "ps1" or "json" or "dll" => IconType.FileCode,
+            "bik" or "avi" or "mov" or "mp4" or "m4v" or "mkv" or "wmv" or "mpg" or "mpeg" or "flv" => IconType.FileVideo,
+            "png" or "bmp" or "jpeg" or "jpg" or "gif" or "webp" => IconType.FileImage,
+            _ => IconType.File,
+        },
+        _ => IconType.File,
+    };
+}

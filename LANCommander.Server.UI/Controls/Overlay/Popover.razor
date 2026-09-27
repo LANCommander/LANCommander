@@ -1,0 +1,51 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Extra information or controls in a panel opened by clicking the wrapped content *@
+<span @ref="_trigger" @attributes="AdditionalAttributes" class="@_class" style="@Style" @onclick="ToggleAsync">
+    @ChildContent
+</span>
+
+<RadzenPopup @ref="_popup" Style="display: none; position: absolute" Lazy="true" CloseOnClickOutside="true">
+    <div class="lc-popover" style="@(MaxWidth == null ? null : $"max-width: {MaxWidth}px")">
+        @if (Title != null)
+        {
+            <div class="lc-popover-title">@Title</div>
+        }
+        <div class="lc-popover-content">@Content</div>
+    </div>
+</RadzenPopup>
+
+@code {
+    /// <summary>What opens the popover when clicked.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public RenderFragment? Content { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Maximum width in pixels. Defaults to 320.</summary>
+    [Parameter] public int? MaxWidth { get; set; } = 320;
+
+    ElementReference _trigger;
+    RadzenPopup? _popup;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-popover-trigger").Add(Class).Build();
+    }
+
+    async Task ToggleAsync()
+    {
+        if (_popup != null)
+            await _popup.ToggleAsync(_trigger);
+    }
+
+    /// <summary>Closes the popover, e.g. after an action inside it.</summary>
+    public async Task CloseAsync()
+    {
+        if (_popup != null)
+            await _popup.CloseAsync();
+    }
+}

@@ -1,0 +1,40 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A status dot with an optional label, e.g. a server's running state *@
+<span @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <span class="lc-badge-dot"></span>
+    @if (ChildContent != null)
+    {
+        <span class="lc-badge-text">@ChildContent</span>
+    }
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Info { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>Pulses, for states that are in progress (starting, stopping, syncing).</summary>
+    [Parameter] public bool Processing { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        var status = StatusResolver.Resolve(success: Success, info: Info || Processing, warning: Warning, danger: Danger);
+
+        _class = new ClassBuilder()
+            .Add("lc-badge")
+            .If(status != Status.None, $"lc-badge-{status.ClassSuffix()}")
+            .If(Processing, "lc-badge-processing")
+            .Add(Class)
+            .Build();
+    }
+}

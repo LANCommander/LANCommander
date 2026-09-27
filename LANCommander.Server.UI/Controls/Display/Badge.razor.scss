@@ -1,0 +1,42 @@
+.lc-badge {
+    --lc-badge-color: var(--rz-base-400);
+
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    white-space: nowrap;
+}
+
+.lc-badge-dot {
+    position: relative;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-badge-color);
+}
+
+.lc-badge-success { --lc-badge-color: var(--rz-success); }
+.lc-badge-info { --lc-badge-color: var(--rz-info); }
+.lc-badge-warning { --lc-badge-color: var(--rz-warning); }
+.lc-badge-danger { --lc-badge-color: var(--rz-danger); }
+
+.lc-badge-processing .lc-badge-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--lc-badge-color);
+    border-radius: 50%;
+    animation: lc-badge-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes lc-badge-pulse {
+    from {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}

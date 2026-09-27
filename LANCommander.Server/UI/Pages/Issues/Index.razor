@@ -1,78 +1,66 @@
-﻿@page "/Issues"
+@page "/Issues"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject IssueService IssueService
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
 
 <PageHeader Title="Issues" />
 
-<DataTable
-    @ref="Table"
-    TItem="Issue"
-    Size="@TableSize.Small"
-    Responsive
-    Searchable
-    OnRowDoubleClick="@(issue => NavigationManager.NavigateTo($"/Issues/{issue.Id}"))"
-    SearchProperty="i => i.Game.Title">
-    <RightToolbar>
-        <Button OnClick="() => Add()" Type="ButtonType.Primary">Add Issue</Button>
-    </RightToolbar>
-    <Columns>
-        <BoundDataColumn Property="i => i.Game.Title" Title="Game" Include="Game" Sortable />
-        <BoundDataColumn Property="i => i.CreatedOn" Title="Opened" Sortable DefaultSortOrder="SortDirection.Descending">
-            <LocalTime Value="context.CreatedOn" Relative />
-        </BoundDataColumn>
-        <BoundDataColumn Property="i => i.CreatedBy != null ? i.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
-        <BoundDataColumn Property="i => i.ResolvedOn" Title="Resolved" Sortable>
-            <LocalTime Value="context.ResolvedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="i => i.ResolvedBy != null ? i.ResolvedBy.UserName : String.Empty" Title="Resolved By" Include="ResolvedBy" Sortable />
-        <DataColumn TData="string" Title="Status" Sortable Filterable>
-            @if (context.ResolvedOn == null)
-            {
-                <Badge Color="BadgeColor.Blue" Text="Open" />
-            }
-            else
-            {
-                <Badge Status="BadgeStatus.Success" Text="Resolved" />
-            }
-        </DataColumn>
-
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <a href="/Issues/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
-
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this issue?">
-                    <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+<PageContent>
+    <DataTable TItem="Issue"
+               @ref="_table"
+               Small
+               SearchProperty="i => i.Game.Title"
+               OnRowDoubleClick="@(issue => NavigationManager.NavigateTo($"/Issues/{issue.Id}"))">
+        <RightToolbar>
+            <Button Primary Icon="IconType.Plus" Href="/Issues/Add">Add Issue</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="i => i.Game.Title" Title="Game" Include="Game" Sortable />
+            <BoundColumn Property="i => i.CreatedOn" Title="Opened" Sortable DefaultSort="ColumnSort.Descending">
+                <LocalTime Value="context.CreatedOn" Relative />
+            </BoundColumn>
+            <BoundColumn Property="i => i.CreatedBy != null ? i.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+            <BoundColumn Property="i => i.ResolvedOn" Title="Resolved" Sortable>
+                <LocalTime Value="context.ResolvedOn" />
+            </BoundColumn>
+            <BoundColumn Property="i => i.ResolvedBy != null ? i.ResolvedBy.UserName : String.Empty" Title="Resolved By" Include="ResolvedBy" Sortable />
+            <BoundColumn Property="i => i.ResolvedOn != null" Title="Status" Sortable>
+                @if (context.ResolvedOn == null)
+                {
+                    <Badge Info>Open</Badge>
+                }
+                else
+                {
+                    <Badge Success>Resolved</Badge>
+                }
+            </BoundColumn>
+            <ActionsColumn TItem="Issue">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Issues/{context.Id}")" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this issue?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-</DataTable>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
- @code {
-    DataTable<Issue> Table;
+@code {
+    DataTable<Issue> _table = default!;
 
-    void Add()
-    {
-        NavigationManager.NavigateTo("/Issues/Add");
-    }
-
-    async Task Delete(Issue issue)
+    async Task DeleteAsync(Issue issue)
     {
         try
         {
             await IssueService.DeleteAsync(issue);
 
-            MessageService.Success("Issue was successfully deleted!");
-            
-            Table.ReloadData();
+            Notifications.Success("Issue was successfully deleted!");
+
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete issue!");
-            Logger.LogError(ex, "Could not delete issue!");
+            Notifications.Error(ex, "Could not delete issue!");
         }
     }
 }

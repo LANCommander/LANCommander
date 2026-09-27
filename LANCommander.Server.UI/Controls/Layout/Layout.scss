@@ -1,0 +1,121 @@
+// Shared layout utilities used by Flex, Row and Column
+
+$lc-gap-small: 8px;
+$lc-gap-medium: 16px;
+$lc-gap-large: 24px;
+
+.lc-flex {
+    display: flex;
+}
+
+.lc-flex-inline {
+    display: inline-flex;
+}
+
+.lc-flex-vertical {
+    flex-direction: column;
+}
+
+.lc-flex-wrap {
+    flex-wrap: wrap;
+}
+
+.lc-gap-none { gap: 0; }
+.lc-gap-small { gap: $lc-gap-small; }
+.lc-gap-medium { gap: $lc-gap-medium; }
+.lc-gap-large { gap: $lc-gap-large; }
+
+.lc-align-stretch { align-items: stretch; }
+.lc-align-start { align-items: flex-start; }
+.lc-align-center { align-items: center; }
+.lc-align-end { align-items: flex-end; }
+.lc-align-baseline { align-items: baseline; }
+
+.lc-justify-start { justify-content: flex-start; }
+.lc-justify-center { justify-content: center; }
+.lc-justify-end { justify-content: flex-end; }
+.lc-justify-space-between { justify-content: space-between; }
+.lc-justify-space-around { justify-content: space-around; }
+.lc-justify-space-evenly { justify-content: space-evenly; }
+
+// 24-column grid (Row / Column). Gutters are set per row through --lc-gutter.
+
+.lc-row {
+    --lc-gutter: 0px;
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: var(--lc-row-gap, 0px);
+    margin-inline: calc(var(--lc-gutter) / -2);
+
+    &.lc-row-nowrap {
+        flex-wrap: nowrap;
+    }
+}
+
+.lc-col {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-inline: calc(var(--lc-gutter) / 2);
+}
+
+@mixin lc-col-spans($prefix) {
+    @for $i from 1 through 24 {
+        .lc-col#{$prefix}-#{$i} {
+            flex: 0 0 percentage(calc($i / 24));
+            max-width: percentage(calc($i / 24));
+        }
+    }
+}
+
+@include lc-col-spans("");
+
+$lc-breakpoints: (
+    "sm": 576px,
+    "md": 768px,
+    "lg": 992px,
+    "xl": 1200px,
+);
+
+// Xs is the base (mobile-first) span; wider breakpoints override it
+@include lc-col-spans("-xs");
+
+@each $name, $width in $lc-breakpoints {
+    @media (min-width: $width) {
+        @include lc-col-spans("-#{$name}");
+    }
+}
+
+// SideLayout
+.lc-side-layout {
+    display: flex;
+    align-items: flex-start;
+    min-height: 100%;
+}
+
+.lc-side-layout-side {
+    flex: 0 0 var(--lc-side-layout-width, 200px);
+    position: sticky;
+    top: 0;
+    padding: 24px 8px;
+    border-inline-end: 1px solid var(--rz-base-700);
+    align-self: stretch;
+}
+
+.lc-side-layout-content {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .lc-side-layout {
+        flex-direction: column;
+    }
+
+    .lc-side-layout-side {
+        flex-basis: auto;
+        width: 100%;
+        position: static;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--rz-base-700);
+    }
+}

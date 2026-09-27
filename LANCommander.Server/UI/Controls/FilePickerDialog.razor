@@ -1,0 +1,31 @@
+@using LANCommander.Server.Models
+@using LANCommander.Server.UI.Components
+@inherits Dialog<FilePickerOptions, IEnumerable<IFileManagerEntry>>
+
+<FileManager ArchiveId="Options.ArchiveId"
+             WorkingDirectory="@Options.Root"
+             @bind-CurrentPath="_currentPath"
+             @bind-Selected="_selected"
+             EntrySelectable="Options.EntrySelectable"
+             EntryVisible="Options.EntryVisible"
+             SelectMultiple="Options.Multiple"
+             Features="FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs"
+             Style="height: 65vh" />
+
+@code {
+    FileManagerDirectory? _currentPath;
+    IEnumerable<IFileManagerEntry> _selected = [];
+
+    protected override Task<bool> OnOkAsync()
+    {
+        // Nothing selected picks the folder being shown
+        if (_selected.Any())
+            Result = _selected;
+        else if (_currentPath != null && Options.EntrySelectable(_currentPath))
+            Result = [_currentPath];
+        else
+            Result = [];
+
+        return Task.FromResult(true);
+    }
+}

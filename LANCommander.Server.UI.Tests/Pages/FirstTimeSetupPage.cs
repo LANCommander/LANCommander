@@ -63,7 +63,7 @@ public class FirstTimeSetupPage
     // Step 4: Administrator
     public async Task CreateAdministratorAsync(string username, string password)
     {
-        // AntDesign doesn't use standard label/for associations, so use role-based selection
+        // Select by role and name rather than by label
         // Username is the first textbox on the Administrator step
         await _page.WaitForSelectorAsync("text=To get started", new() { Timeout = 10000 });
         await _page.GetByRole(AriaRole.Textbox).First.FillAsync(username);

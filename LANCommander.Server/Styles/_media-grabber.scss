@@ -20,11 +20,36 @@
 
 .media-grabber-group + .media-grabber-group {
     padding-top: 16px;
-    border-top: 1px solid rgba(0, 0, 0, 0.85);
+    border-top: 1px solid var(--lc-border-color);
 }
 
-[data-theme="Dark"] .media-grabber-group + .media-grabber-group {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+.media-grabber {
+    position: relative;
+    min-height: 200px;
+}
+
+.media-grabber-toolbar {
+    margin-bottom: 8px;
+}
+
+.media-grabber-loading {
+    display: flex;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+// Covers the results while the pick downloads
+.media-grabber-downloading {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: var(--lc-border-radius);
+    background: rgba(0, 0, 0, 0.75);
 }
 
 .media-grabber-loading-more {

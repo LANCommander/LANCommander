@@ -1,0 +1,23 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Joins inputs and InputAddon labels into one bordered row, e.g. a width, "x" and a height. *@
+<span @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Stretches the group to the width of its container.</summary>
+    [Parameter] public bool Block { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet() =>
+        _class = new ClassBuilder()
+            .Add("lc-input-group")
+            .If(Block, "lc-input-group-block")
+            .Add(Class)
+            .Build();
+}

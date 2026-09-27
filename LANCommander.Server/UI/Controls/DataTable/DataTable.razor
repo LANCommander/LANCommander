@@ -1,0 +1,172 @@
+@namespace LANCommander.Server.UI.Controls
+@using System.Linq.Expressions
+@using LANCommander.Server.Services.Extensions
+@typeparam TItem where TItem : class, IBaseModel
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+
+@* A Table whose rows are queried from the database a page at a time *@
+<Table TItem="TItem"
+       @ref="_table"
+       Provider="FetchAsync"
+       Expandable="@(Children != null)"
+       Columns="Columns"
+       LeftToolbar="LeftToolbar"
+       RightToolbar="RightToolbar"
+       Searchable="@(SearchProperty != null)"
+       SearchPlaceholder="@SearchPlaceholder"
+       ColumnPicker="ColumnPicker"
+       Selectable="Selectable"
+       Values="Values"
+       ValuesChanged="ValuesChanged"
+       Small="Small"
+       NoPaging="NoPaging"
+       Total="Total"
+       TotalChanged="TotalChanged"
+       OnRowClick="OnRowClick"
+       OnRowDoubleClick="OnRowDoubleClick"
+       EmptyText="@EmptyText"
+       EmptyTemplate="EmptyTemplate"
+       SettingsKey="@SettingsKey"
+       Class="@Class"
+       Style="@Style" />
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment Columns { get; set; } = default!;
+
+    [Parameter] public RenderFragment? LeftToolbar { get; set; }
+
+    [Parameter] public RenderFragment? RightToolbar { get; set; }
+
+    /// <summary>Only rows matching this are shown, e.g. <c>g =&gt; g.BaseGameId == null</c>.</summary>
+    [Parameter] public Expression<Func<TItem, bool>>? Query { get; set; }
+
+    /// <summary>
+    /// The text searched by the search box, which is shown when this is set. Matching ignores case
+    /// and punctuation, so "starfall tactics" finds "Starfall: Tactics".
+    /// </summary>
+    [Parameter] public Expression<Func<TItem, string>>? SearchProperty { get; set; }
+
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search";
+
+    /// <summary>
+    /// Which rows are children of which, e.g. <c>(game, dlc) =&gt; dlc.BaseGameId == game.Id</c>.
+    /// Rows with children can be expanded to show them.
+    /// </summary>
+    [Parameter] public Expression<Func<TItem, TItem, bool>>? Children { get; set; }
+
+    [Parameter] public bool ColumnPicker { get; set; }
+
+    [Parameter] public bool Selectable { get; set; }
+
+    [Parameter] public IList<TItem>? Values { get; set; }
+
+    [Parameter] public EventCallback<IList<TItem>> ValuesChanged { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    [Parameter] public bool NoPaging { get; set; }
+
+    [Parameter] public int Total { get; set; }
+
+    [Parameter] public EventCallback<int> TotalChanged { get; set; }
+
+    [Parameter] public EventCallback<TItem> OnRowClick { get; set; }
+
+    [Parameter] public EventCallback<TItem> OnRowDoubleClick { get; set; }
+
+    [Parameter] public string EmptyText { get; set; } = "No data";
+
+    [Parameter] public RenderFragment? EmptyTemplate { get; set; }
+
+    [Parameter] public string? SettingsKey { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    Table<TItem>? _table;
+
+    /// <summary>Queries the current page again, e.g. after rows were added or deleted.</summary>
+    public Task ReloadAsync() => _table?.ReloadAsync() ?? Task.CompletedTask;
+
+    public Task ClearSelectionAsync() => _table?.ClearSelectionAsync() ?? Task.CompletedTask;
+
+    async Task<TableResult<TItem>> FetchAsync(TableQuery query)
+    {
+        await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+        var rows = WithIncludes(context, query.Includes);
+
+        if (Query != null)
+            rows = rows.Where(Query);
+
+        if (!string.IsNullOrWhiteSpace(query.Search) && SearchProperty != null)
+            rows = rows.Where(SearchPredicate(SearchProperty, query.Search));
+
+        var total = await rows.CountAsync();
+        var page = await query.Apply(rows, page: !NoPaging).ToListAsync();
+
+        Dictionary<TItem, IReadOnlyList<TItem>>? children = null;
+
+        if (Children != null)
+        {
+            children = new Dictionary<TItem, IReadOnlyList<TItem>>();
+
+            foreach (var parent in page)
+            {
+                var childRows = await WithIncludes(context, query.Includes)
+                    .Where(ForParent(Children, parent))
+                    .ToListAsync();
+
+                if (childRows.Count > 0)
+                    children[parent] = childRows;
+            }
+        }
+
+        return new TableResult<TItem>(page, total) { Children = children };
+    }
+
+    static IQueryable<TItem> WithIncludes(DatabaseContext context, IEnumerable<string> includes)
+    {
+        var rows = context.Set<TItem>().AsNoTracking().AsSplitQuery();
+
+        foreach (var include in includes)
+            rows = rows.Include(include);
+
+        return rows;
+    }
+
+    /// <summary>x =&gt; property(x) with punctuation removed and lowercased contains the search.</summary>
+    static Expression<Func<TItem, bool>> SearchPredicate(Expression<Func<TItem, string>> property, string search)
+    {
+        var term = search.StripPunctuation().ToLower().Trim();
+
+        Expression body = property.Body;
+
+        var replace = typeof(string).GetMethod(nameof(string.Replace), [typeof(string), typeof(string)])!;
+
+        // Translated to nested REPLACE calls in SQL
+        foreach (var symbol in new[] { ".", ",", "!", "?", ";", ":", "'", "\"", "-", "(", ")", "[", "]", "{", "}", "/" })
+            body = Expression.Call(body, replace, Expression.Constant(symbol), Expression.Constant(""));
+
+        body = Expression.Call(body, typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!);
+        body = Expression.Call(body, typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!, Expression.Constant(term));
+
+        return Expression.Lambda<Func<TItem, bool>>(body, property.Parameters[0]);
+    }
+
+    /// <summary>Turns (parent, child) =&gt; condition into child =&gt; condition for one parent.</summary>
+    static Expression<Func<TItem, bool>> ForParent(Expression<Func<TItem, TItem, bool>> relation, TItem parent)
+    {
+        var body = new ReplaceParameter(relation.Parameters[0], Expression.Constant(parent)).Visit(relation.Body);
+
+        return Expression.Lambda<Func<TItem, bool>>(body, relation.Parameters[1]);
+    }
+
+    sealed class ReplaceParameter(ParameterExpression parameter, Expression replacement) : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node) =>
+            node == parameter ? replacement : base.VisitParameter(node);
+    }
+}

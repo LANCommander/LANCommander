@@ -1,172 +1,144 @@
-﻿@page "/Servers"
-@using ManifestType = LANCommander.SDK.Enums.ManifestType
+@page "/Servers"
+@using LANCommander.Server.Models
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.UI.Pages.Servers.Components
+@using ManifestType = LANCommander.SDK.Enums.ManifestType
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
 @inject NavigationManager NavigationManager
-@inject ModalService ModalService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 @inject IServiceProvider ServiceProvider
 
 <PageHeader Title="Servers" Subtitle="@Total.ToString()" />
 
-<DataTable
-    @ref="Table"
-    TItem="Server"
-    Size="TableSize.Small"
-    @bind-SelectedRows="SelectedServers"
-    @bind-Total="Total"
-    Responsive
-    ColumnPicker
-    Searchable
-    OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))"
-    SearchProperty="s => s.Name">
-    <RightToolbar>
-        @if (SelectedServers != null && SelectedServers.Count() > 0)
-        {
-            <Button Type="@ButtonType.Primary" OnClick="() => StartServers()">Start</Button>
-            <Popconfirm OnConfirm="() => StopServers()" Title="Are you sure you want to kill these server processes?">
-                <Button Danger Type="@ButtonType.Primary">Stop</Button>
-            </Popconfirm>
-        }
+<PageContent>
+    <DataTable TItem="Server"
+               @ref="Table"
+               Small
+               ColumnPicker
+               Selectable
+               @bind-Values="SelectedServers"
+               @bind-Total="Total"
+               SearchProperty="s => s.Name"
+               OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))">
+        <RightToolbar>
+            @if (SelectedServers.Any())
+            {
+                <Button Primary Icon="IconType.Play" OnClick="StartServersAsync">Start</Button>
+                <Popconfirm OnConfirm="StopServersAsync" Title="Are you sure you want to kill these server processes?" OkText="Stop" Danger>
+                    <Button Primary Danger Icon="IconType.Stop">Stop</Button>
+                </Popconfirm>
+            }
 
-        <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
-
-        <Button OnClick="@(() => NavigationManager.NavigateTo("/Servers/Add"))" Type="@ButtonType.Primary">Add Server</Button>
-    </RightToolbar>
-    <Columns>
-        <Selection Key="@(context.Id.ToString())" />
-        <BoundDataColumn
-            Property="s => s.Game"
-            Include="Game.Media">
-            <Flex Align="FlexAlign.Center" Gap="FlexGap.Middle">
+            <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
+            <Button Primary Icon="IconType.Plus" Href="/Servers/Add">Add Server</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="s => s.Game != null ? s.Game.Title : String.Empty" Title="Game" Include="Game,Game.Media" Sortable>
                 @if (context.Game != null)
                 {
-                    <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
-                    <span>@context.Game?.Title</span>                    
+                    <Flex Align="Align.Center" Gap="Gap.Small">
+                        <Image Src="@GetIcon(context.Game)" Width="32" Height="32" />
+                        <span>@context.Game.Title</span>
+                    </Flex>
                 }
-            </Flex>
-        </BoundDataColumn>
-        <BoundDataColumn Property="s => s.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <BoundDataColumn Property="s => s.Port" Sortable />
-        <BoundDataColumn Property="s => s.CreatedOn" Title="Created On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="s => s.UpdatedOn" Title="Updated On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <ServerControl ServerId="context.Id"/>
-
-                <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
-
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            </BoundColumn>
+            <BoundColumn Property="s => s.Name" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="s => s.Port" Sortable />
+            <BoundColumn Property="s => s.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+            <BoundColumn Property="s => s.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+            <ActionsColumn TItem="Server" Width="300px">
+                <ServerControl ServerId="context.Id" />
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/{context.Id}")" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this server?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-
-    <PaginationTemplate>
-        <Pagination
-            Total="context.Total"
-            PageSize="context.PageSize"
-            Current="context.PageIndex"
-            DefaultPageSize="25"
-            PageSizeOptions="new [] { 25, 50, 100, 200 }"
-            ShowSizeChanger
-            OnChange="context.HandlePageChange" />
-    </PaginationTemplate>
-</DataTable>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
 @code {
-    DataTable<Server> Table;
-    
-    bool Loading = true;
+    DataTable<Server> Table = default!;
 
     int Total;
 
-    IEnumerable<Server> SelectedServers;
+    IList<Server> SelectedServers = new List<Server>();
 
-    protected override async Task OnInitializedAsync()
+    async Task DeleteAsync(Server server)
     {
-        Loading = false;
+        try
+        {
+            await ServerService.DeleteAsync(server);
+
+            Notifications.Success($"Deleted {server.Name}");
+
+            await Table.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete the server!");
+        }
     }
 
-    async Task Delete(Server server)
+    static string GetIcon(Game game)
     {
-        Loading = true;
+        var media = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-        
-        await ServerService.DeleteAsync(server);
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-
-        Loading = false;
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
     }
 
-    string GetIcon(Game game)
-    {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
-
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
-    }
-
-    async Task StartServers()
+    async Task StartServersAsync()
     {
         foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
         {
-            foreach (var server in SelectedServers)
+            foreach (var server in SelectedServers.Where(s => engine.IsManaging(s.Id)))
             {
                 try
                 {
-                    if (engine.IsManaging(server.Id))
-                        engine.StartAsync(server.Id);
+                    await engine.StartAsync(server.Id);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Notifications.Error(ex, $"{server.Name} could not be started");
+                }
             }
-            
         }
     }
 
-    void StopServers()
+    async Task StopServersAsync()
     {
         foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
         {
-            foreach (var server in SelectedServers)
+            foreach (var server in SelectedServers.Where(s => engine.IsManaging(s.Id)))
             {
-                if (engine.IsManaging(server.Id))
-                    engine.StopAsync(server.Id);
+                try
+                {
+                    await engine.StopAsync(server.Id);
+                }
+                catch (Exception ex)
+                {
+                    Notifications.Error(ex, $"{server.Name} could not be stopped");
+                }
             }
         }
     }
 
-    async Task OpenImportDialog()
+    async Task OpenImportDialogAsync()
     {
-        var options = new ImportDialogOptions
+        await Dialogs.OpenAsync<ImportUploadDialog, ImportDialogOptions, bool>("Import Server", new ImportDialogOptions
         {
             Hint = "Only LCX files are supported for importing servers",
             ManifestType = ManifestType.Server,
-        };
+        }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
 
-        var modalOptions = new ModalOptions
-        {
-            Title = "Import Game",
-            DestroyOnClose = true,
-            MaskClosable = false,
-            Footer = null,
-        };
-
-        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
-        modalRef.OnOk = modalRef.OnCancel;
+        await Table.ReloadAsync();
     }
 }

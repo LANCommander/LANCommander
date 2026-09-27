@@ -1,0 +1,6 @@
+@* Throws while rendering, to show how error handling looks *@
+@code {
+    [Parameter] public string Message { get; set; } = "Object reference not set to an instance of an object.";
+
+    protected override void OnInitialized() => throw new InvalidOperationException(Message);
+}

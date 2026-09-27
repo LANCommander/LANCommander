@@ -1,109 +1,103 @@
-@using Microsoft.Extensions.Options
-@using LANCommander.Server.Settings
+@using System.Net.Mime
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Services.Models
+@using LANCommander.Server.Settings
 @using Microsoft.EntityFrameworkCore
-@using System.Net.Mime
+@using Microsoft.Extensions.Options
 @inject MediaService MediaService
 @inject GameService GameService
 @inject IMediaGrabberService MediaGrabberService
-@inject ModalService ModalService
-@inject IMessageService MessageService
-@inject NavigationManager NavigationManager
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 @inject IOptions<Settings> Settings
-@inject ILogger<MediaEditor> Logger
 
-<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
-    <Table @ref="ResultsTable" TItem="Media" DataSource="@_media" RowKey="c => c.Id" @bind-SelectedRows="Selected" HidePagination="true" Responsive>
-        <TitleTemplate>
-            <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="@("10")">
-                @if (Selected.Any())
+@* The art, videos and manuals of the game whose Id is cascaded: upload, grab from the web, retype or delete them *@
+<Flex Vertical Gap="Gap.Large" Class="media-editor">
+    <Spin Loading="_game == null">
+        <Table TItem="Media" Items="_media" Key="m => m.Id" Selectable @bind-Values="_selected" NoPaging EmptyText="No media yet" SettingsKey="game-media">
+            <RightToolbar>
+                @if (_selected.Any())
                 {
-                    <span>@Selected.Count() selected</span>
+                    <Typography Secondary>@_selected.Count selected</Typography>
                 }
-                <Popconfirm Disabled="!Selected.Any()" OnConfirm="DeleteAll" Title="Are you sure you want to delete all selected media?">
-                    <Button Disabled="!Selected.Any()" Danger>Delete</Button>
+                <Popconfirm Disabled="!_selected.Any()" OnConfirm="DeleteSelectedAsync" Title="Are you sure you want to delete all selected media?" OkText="Delete" Danger>
+                    <Button Danger Icon="IconType.Trash" Disabled="!_selected.Any()">Delete</Button>
                 </Popconfirm>
-            </Flex>
-        </TitleTemplate>
-        <ColumnDefinitions Context="row">
-            <Selection Type="SelectionType.Checkbox" />
-            <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
-                @if (MediaService.FileExists(row))
-                {
-                    string originalPath = $"/api/Media/{row.Id}/Download?fileId={row.FileId}";
-                    string thumbnailPath = row.Thumbnail != null
-                        ? $"/api/Media/{row.Thumbnail?.Id}/Download?fileId={row.Thumbnail?.FileId}"
-                        : $"/api/Media/{row.Id}/Thumbnail?fileId={row.FileId}";
+            </RightToolbar>
+            <Columns>
+                <TemplateColumn TItem="Media" Title="Preview" Width="130px">
+                    @if (MediaService.FileExists(context))
+                    {
+                        var originalPath = $"/api/Media/{context.Id}/Download?fileId={context.FileId}";
+                        var thumbnailPath = context.Thumbnail != null
+                            ? $"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}"
+                            : $"/api/Media/{context.Id}/Thumbnail?fileId={context.FileId}";
 
-                    if (row.Type == MediaType.Manual)
+                        if (context.Type == MediaType.Manual)
+                        {
+                            <button type="button" class="media-editor-manual" title="Read manual" @onclick="() => OpenManualAsync(context)">
+                                <Image Src="@thumbnailPath" Width="100" Alt="@context.Name" />
+                            </button>
+                        }
+                        else if (context.Type == MediaType.Video)
+                        {
+                            <video width="100" src="@originalPath" class="media-editor-video" controls></video>
+                        }
+                        else
+                        {
+                            <Image Src="@thumbnailPath" PreviewSrc="@originalPath" Width="100" Alt="@context.Type.ToString()" />
+                        }
+                    }
+                </TemplateColumn>
+                <TemplateColumn TItem="Media" Title="Type" Width="180px">
+                    <EnumSelect TEnum="MediaType" @bind-Value="context.Type" @bind-Value:after="() => UpdateAsync(context)" Only="AllowedMediaTypes" />
+                </TemplateColumn>
+                <TemplateColumn TItem="Media" Title="Name">
+                    @if (context.Type == MediaType.Manual)
                     {
-                        <Image Width="100px" Src="@thumbnailPath" PreviewVisible="false" OnClick="() => OpenManual(row)" />
+                        <TextInput @bind-Value="context.Name" @bind-Value:after="() => UpdateAsync(context)" />
                     }
-                    else if (row.Type == MediaType.Video)
-                    {
-                        <video width="100" src="@originalPath" style="max-width: 100px; max-height: 60px;" controls />
-                    }
-                    else
-                    {
-                        <Image Width="100px" Src="@thumbnailPath" PreviewSrc="@originalPath" />
-                    }
-                }
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Type">
-                <Select @key="row.Id" @bind-Value="row.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes" />
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Name">
-                @if (row.Type == MediaType.Manual)
-                {
-                    <Input @bind-Value="row.Name" OnBlur="() => Update(row)" />
-                }
-            </PropertyColumn>
-            <ActionColumn>
-                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                    @{
-                        var fileInputId = Guid.NewGuid();
-                    }
-                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept="@GetAcceptedExtensions(row)"/>
-                    <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
-                        <Icon Type="@IconType.Outline.Upload"/>
+                </TemplateColumn>
+                <ActionsColumn TItem="Media" Width="150px">
+                    <InputFile id="@($"media-upload-{context.Id}")" OnChange="e => UploadAsync(e, context)" hidden accept="@GetAcceptedExtensions(context)" />
+                    <label for="@($"media-upload-{context.Id}")" class="media-editor-upload" title="Upload">
+                        <Icon Type="IconType.UploadSimple" />
                     </label>
 
                     @if (String.IsNullOrWhiteSpace(Settings.Value.Server.Media.SteamGridDbApiKey)
-                        && row.Type != MediaType.Video
-                        && row.Type != MediaType.Screenshot)
+                         && context.Type != MediaType.Video
+                         && context.Type != MediaType.Screenshot)
                     {
-                        <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
-                            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
+                        <Popconfirm OnConfirm="NavigateToSettings" Title="Invalid SteamGridDB credentials. Setup now?" OkText="Setup">
+                            <Button Text Icon="IconType.MagnifyingGlass" title="Search" />
                         </Popconfirm>
                     }
                     else
                     {
-                        <Button OnClick="() => SearchMedia(row)" Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
+                        <Button Text Icon="IconType.MagnifyingGlass" title="Search" OnClick="() => SearchAsync(context)" />
                     }
 
-                    <Popconfirm OnConfirm="() => RemoveMedia(row)" Title="Are you sure you want to delete this media?">
-                        <Button Type="ButtonType.Text" Danger Icon="@IconType.Outline.Close"/>
+                    <Popconfirm OnConfirm="() => RemoveAsync(context)" Title="Are you sure you want to delete this media?" OkText="Delete" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Delete" />
                     </Popconfirm>
-                </Flex>
-            </ActionColumn>
-        </ColumnDefinitions>
-    </Table>
+                </ActionsColumn>
+            </Columns>
+        </Table>
+    </Spin>
 
-    <GridRow Justify="RowJustify.End">
-        <GridCol>
-            <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
-        </GridCol>
-    </GridRow>
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Media</Button>
+    </Flex>
 </Flex>
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    IEnumerable<Media> Selected = new List<Media>();
-    ITable? ResultsTable;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
 
-    MediaType[] AllowedMediaTypes =
+    IList<Media> _selected = new List<Media>();
+
+    static readonly MediaType[] AllowedMediaTypes =
     [
         MediaType.Icon,
         MediaType.Cover,
@@ -112,10 +106,10 @@
         MediaType.Logo,
         MediaType.Manual,
         MediaType.Screenshot,
-        MediaType.Video
+        MediaType.Video,
     ];
 
-    string[] ValidMimeTypes =
+    static readonly string[] ValidMimeTypes =
     [
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
@@ -125,7 +119,7 @@
         MediaTypeNames.Image.Icon,
         "video/mp4",
         "video/webm",
-        "video/x-matroska"
+        "video/x-matroska",
     ];
 
     const string AcceptedExtensions = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.ico,.mp4,.webm,.mkv";
@@ -136,124 +130,114 @@
     static bool IsExecutable(IBrowserFile file) =>
         Path.GetExtension(file.Name).Equals(".exe", StringComparison.OrdinalIgnoreCase);
 
+    // Replaced rather than changed in place, so the table notices additions and removals
     List<Media> _media = new();
-    Game _game;
+    Game? _game;
 
     protected override async Task OnInitializedAsync()
     {
-        _game = await GameService.Query(q =>
-            {
-                return q
-                    .Include(g => g.Media)
-                    .ThenInclude(m => m.StorageLocation);
-            })
-            .GetAsync(GameId);
-
-        _media = _game.Media.ToList();
-    }
-
-    async Task Update(Media media)
-    {
         try
         {
-            if (media.Id != Guid.Empty)
-            {
-                await MediaService.UpdateAsync(media);
+            _game = await GameService
+                .Query(q => q.Include(g => g.Media).ThenInclude(m => m.StorageLocation))
+                .GetAsync(GameId);
 
-                MessageService.Success($"{media.Type} updated!");
-            }
+            _media = _game.Media.ToList();
         }
         catch (Exception ex)
         {
-            MessageService.Error($"{media.Type} could not be updated.");
-            Logger.LogError(ex, $"{media.Type} could not be updated.");
+            Notifications.Error(ex, "The game's media could not be loaded");
         }
     }
 
-    async Task AddMedia()
+    async Task ReloadAsync() =>
+        _media = (await MediaService.GetAsync(m => m.GameId == GameId)).ToList();
+
+    async Task UpdateAsync(Media media)
+    {
+        if (media.Id == Guid.Empty)
+            return;
+
+        try
+        {
+            await MediaService.UpdateAsync(media);
+
+            Notifications.Success($"{media.Type} updated!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{media.Type} could not be updated.");
+        }
+    }
+
+    async Task AddAsync()
     {
         try
         {
-            var types = Enum.GetValues<MediaType>();
-            var nextType = types.FirstOrDefault(t => !_media.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
-            
-            var media = new Media
+            var nextType = Enum.GetValues<MediaType>().FirstOrDefault(t => !_media.Any(m => m.Type == t) && AllowedMediaTypes.Contains(t));
+
+            var media = await MediaService.AddAsync(new Media
             {
                 GameId = GameId,
-                Type = nextType == MediaType.Icon && _media.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
+                Type = nextType == MediaType.Icon && _media.Any(m => m.Type == MediaType.Icon) ? MediaType.Manual : nextType,
                 StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
-                Crc32 = String.Empty
-            };
+                Crc32 = String.Empty,
+            });
 
-            media = await MediaService.AddAsync(media);
-
-            _media.Add(media);
+            _media = [.. _media, media];
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not add new media!");
-            Logger.LogError(ex, "Could not add new media!");
+            Notifications.Error(ex, "Could not add new media!");
         }
     }
 
-    async Task SearchMedia(Media media)
+    async Task SearchAsync(Media media)
     {
-        var modalOptions = new ModalOptions
-        {
-            Title = $"Download {media.Type}",
-            Maximizable = false,
-            DefaultMaximized = true,
-            Closable = true,
-            OkText = "Select",
-        };
-
-        var grabberOptions = new MediaGrabberOptions()
+        var downloadResult = await Dialogs.OpenAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>($"Download {media.Type}", new MediaGrabberOptions
         {
             Type = media.Type,
-            Search = _game.Title
-        };
+            Search = _game?.Title ?? "",
+        }, new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Select",
+        });
 
-        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberDownloadResult>(modalOptions, grabberOptions);
+        if (downloadResult?.Download == null)
+            return;
 
-        modalRef.OnOk = async (downloadResult) =>
+        try
         {
             using var download = downloadResult.Download;
 
             media.SourceUrl = downloadResult.Result.SourceUrl;
             media.MimeType = download.MimeType;
 
-            if (media.Id == Guid.Empty)
-            {
-                media = await MediaService.WriteToFileAsync(media, download.Stream);
-            }
-            else
-            {
+            if (media.Id != Guid.Empty)
                 MediaService.DeleteLocalMediaFile(media);
-                media = await MediaService.WriteToFileAsync(media, download.Stream);
-            }
 
-            _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+            await MediaService.WriteToFileAsync(media, download.Stream);
 
-            await InvokeAsync(() =>
-            {
-                ResultsTable?.ReloadData();
-                StateHasChanged();
-            });
-        };
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The download could not be saved");
+        }
     }
 
-    async Task UploadMedia(InputFileChangeEventArgs e, Media media)
+    async Task UploadAsync(InputFileChangeEventArgs e, Media media)
     {
         if (IsExecutable(e.File))
         {
-            await UploadIconFromExecutable(e.File, media);
+            await UploadIconFromExecutableAsync(e.File, media);
             return;
         }
 
         if (!ValidMimeTypes.Contains(e.File.ContentType))
         {
-            MessageService.Error("Unsupported file type");
-            Logger.LogError($"Unsupported file type {e.File.ContentType}");
+            Notifications.Error("Unsupported file type", e.File.ContentType);
             return;
         }
 
@@ -261,44 +245,49 @@
 
         if (e.File.Size > config.MaxFileSize)
         {
-            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
+            Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}");
             return;
         }
 
-        media.SourceUrl = "";
-        media.MimeType = e.File.ContentType;
-        
-        if (media.Id == Guid.Empty)
+        try
         {
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+            media.SourceUrl = "";
+            media.MimeType = e.File.ContentType;
 
-            await MediaService.AddAsync(media);
+            if (media.Id == Guid.Empty)
+            {
+                media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+
+                await MediaService.AddAsync(media);
+            }
+            else
+            {
+                MediaService.DeleteLocalMediaFile(media);
+
+                media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+
+                await MediaService.UpdateAsync(media);
+            }
+
+            await ReloadAsync();
         }
-        else
+        catch (Exception ex)
         {
-            MediaService.DeleteLocalMediaFile(media);
-            
-            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
-            
-            await MediaService.UpdateAsync(media);
+            Notifications.Error(ex, "The file could not be uploaded");
         }
-
-        _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
-
-        ResultsTable?.ReloadData();
     }
 
-    async Task UploadIconFromExecutable(IBrowserFile file, Media media)
+    async Task UploadIconFromExecutableAsync(IBrowserFile file, Media media)
     {
         if (media.Type != MediaType.Icon)
         {
-            MessageService.Error("Executables can only be used as a source for icons");
+            Notifications.Error("Executables can only be used as a source for icons");
             return;
         }
 
         if (file.Size > MediaService.MaxIconSourceExecutableSize)
         {
-            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(MediaService.MaxIconSourceExecutableSize).ToBinaryString()}");
+            Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(MediaService.MaxIconSourceExecutableSize).ToBinaryString()}");
             return;
         }
 
@@ -306,67 +295,61 @@
         {
             await using var stream = file.OpenReadStream(maxAllowedSize: MediaService.MaxIconSourceExecutableSize);
 
-            media = await MediaService.WriteIconFromExecutableAsync(media, stream);
+            await MediaService.WriteIconFromExecutableAsync(media, stream);
 
-            MessageService.Success($"Extracted icon from {file.Name}");
+            Notifications.Success($"Extracted icon from {file.Name}");
+
+            await ReloadAsync();
         }
         catch (InvalidDataException ex)
         {
-            MessageService.Error(ex.Message);
-            Logger.LogError(ex, "Could not extract an icon from {FileName}", file.Name);
-            return;
+            Notifications.Error(ex, ex.Message);
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not extract an icon from the executable");
-            Logger.LogError(ex, "Could not extract an icon from {FileName}", file.Name);
-            return;
+            Notifications.Error(ex, "Could not extract an icon from the executable");
         }
-
-        _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
-
-        ResultsTable?.ReloadData();
     }
 
-    async Task DeleteAll()
+    async Task DeleteSelectedAsync()
     {
-        if (!Selected.Any())
+        if (!_selected.Any())
             return;
 
-        _media = _media.Except(Selected).ToList();
-        await MediaService.DeleteRangeAsync(Selected);
-
-        Selected = [];
-        ResultsTable.ReloadData();
-    }
-
-    async Task RemoveMedia(Media media)
-    {
-        _media.Remove(media);
-        
-        if (media.Id != Guid.Empty)
-            await MediaService.DeleteAsync(media);
-    }
-
-    async Task OpenManual(Media media)
-    {
-        var modalOptions = new ModalOptions()
+        try
         {
-            Title = media.Name,
-            Maximizable = true,
-            DefaultMaximized = true,
-            Closable = true,
-            Footer = null,
-            Draggable = true,
-            Resizable = true,
-            WrapClassName = "pdf-reader-dialog",
-        };
+            await MediaService.DeleteRangeAsync(_selected);
 
-        var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+            _media = _media.Except(_selected).ToList();
+            _selected = new List<Media>();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The selected media could not be deleted");
+        }
     }
 
-    void NavigateToSettings()
+    async Task RemoveAsync(Media media)
     {
-        NavigationManager.NavigateTo("/Settings/Media", true);
+        try
+        {
+            if (media.Id != Guid.Empty)
+                await MediaService.DeleteAsync(media);
+
+            _media = _media.Where(m => m != media).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The media could not be deleted");
+        }
     }
+
+    Task OpenManualAsync(Media media) =>
+        Dialogs.OpenAsync<PdfReaderDialog, Media, bool>(media.Name ?? "Manual", media, new DialogSettings
+        {
+            Size = DialogSize.Full,
+            NoFooter = true,
+        });
+
+    void NavigateToSettings() => NavigationManager.NavigateTo("/Settings/Integrations/SteamGridDB");
 }

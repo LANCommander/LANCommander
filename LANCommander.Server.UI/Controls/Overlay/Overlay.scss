@@ -1,0 +1,75 @@
+.lc-tooltip-trigger,
+.lc-popconfirm-trigger {
+    display: inline-block;
+}
+
+.lc-popconfirm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 280px;
+    padding: 12px;
+    border: 1px solid var(--lc-border-subtle-color);
+    border-radius: var(--rz-border-radius);
+    background: var(--rz-panel-background-color);
+    box-shadow: var(--rz-card-shadow);
+
+    .lc-popconfirm-message {
+        display: flex;
+        gap: 8px;
+    }
+
+    .lc-popconfirm-icon {
+        flex-shrink: 0;
+        margin-top: 0.15em;
+        font-size: 1.15em;
+        color: var(--rz-warning);
+    }
+
+    .lc-popconfirm-title {
+        color: var(--rz-text-title-color);
+    }
+
+    .lc-popconfirm-description {
+        margin-top: 4px;
+        color: var(--rz-text-secondary-color);
+    }
+
+    .lc-popconfirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+}
+
+.lc-popover-trigger,
+.lc-dropdown-trigger {
+    display: inline-block;
+}
+
+.lc-popover,
+.lc-dropdown {
+    border: 1px solid var(--lc-border-subtle-color);
+    border-radius: var(--rz-border-radius);
+    background: var(--rz-panel-background-color);
+    box-shadow: var(--rz-card-shadow);
+}
+
+.lc-popover {
+    padding: 12px;
+
+    .lc-popover-title {
+        margin-bottom: 6px;
+        color: var(--rz-text-title-color);
+        font-weight: 600;
+    }
+}
+
+.lc-dropdown {
+    min-width: 180px;
+    padding: 4px;
+
+    .lc-menu-item-content {
+        padding: 6px 12px;
+    }
+}

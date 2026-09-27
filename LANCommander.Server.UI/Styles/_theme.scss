@@ -1,0 +1,45 @@
+// Theme customization for the Controls. The Radzen Standard Dark theme is the base; adjust it by
+// overriding --rz-* variables here rather than restyling Radzen classes. --lc-* variables are
+// LANCommander tokens used by our own controls.
+
+// Controls size boxes including their padding and borders
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --lc-font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    --lc-border-color: var(--rz-base-600);
+    --lc-border-subtle-color: var(--rz-base-700);
+
+    // Tokens for application styles (LANCommander.Server), which never reference Radzen directly
+    --lc-font-family: var(--rz-text-font-family);
+    --lc-font-size: var(--rz-body-font-size);
+    --lc-body-background: var(--rz-body-background-color);
+    --lc-panel-background: var(--rz-base-background-color);
+    --lc-hover-background: var(--rz-base-700);
+    --lc-text-color: var(--rz-text-color);
+    --lc-text-title-color: var(--rz-text-title-color);
+    --lc-text-secondary-color: var(--rz-text-secondary-color);
+    --lc-primary: var(--rz-primary);
+    --lc-primary-light: var(--rz-primary-light);
+    --lc-danger: var(--rz-danger);
+    --lc-success: var(--rz-success);
+    --lc-warning: var(--rz-warning);
+    --lc-border-radius: var(--rz-border-radius);
+    --lc-shadow: var(--rz-card-shadow);
+}
+
+.lc-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

@@ -1,0 +1,24 @@
+.lc-typography-secondary { color: var(--rz-text-secondary-color); }
+.lc-typography-strong { font-weight: 600; }
+.lc-typography-italic { font-style: italic; }
+.lc-typography-small { font-size: var(--rz-text-caption-font-size); }
+.lc-typography-success { color: var(--rz-success); }
+.lc-typography-warning { color: var(--rz-warning); }
+.lc-typography-danger { color: var(--rz-danger); }
+
+.lc-typography-code {
+    padding: 0.125em 0.375em;
+    border-radius: var(--rz-border-radius);
+    background: var(--rz-base-700);
+    font-family: var(--lc-font-mono);
+    font-size: 0.9em;
+}
+
+.lc-typography-ellipsis {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}

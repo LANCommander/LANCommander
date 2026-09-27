@@ -1,0 +1,28 @@
+@typeparam TTaxonomy where TTaxonomy : BaseTaxonomyModel
+
+@* Picks genres, tags, companies and the like; typing a new name creates it *@
+<TagsInput TItem="TTaxonomy" Items="_entities" Values="Values" ValuesChanged="ChangedAsync" Text="t => t.Name" OnCreate="AddAsync" />
+
+@code {
+    [Parameter, EditorRequired] public BaseDatabaseService<TTaxonomy> DataService { get; set; } = default!;
+    [Parameter] public ICollection<TTaxonomy>? Values { get; set; }
+    [Parameter] public EventCallback<ICollection<TTaxonomy>> ValuesChanged { get; set; }
+
+    ICollection<TTaxonomy> _entities = new List<TTaxonomy>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entities = await DataService.AsNoTracking().GetAsync();
+    }
+
+    Task ChangedAsync(IEnumerable<TTaxonomy> values) => ValuesChanged.InvokeAsync(values.ToList());
+
+    async Task<TTaxonomy> AddAsync(string name)
+    {
+        var taxonomy = Activator.CreateInstance<TTaxonomy>();
+
+        taxonomy.Name = name;
+
+        return await DataService.AddAsync(taxonomy);
+    }
+}

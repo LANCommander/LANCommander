@@ -1,0 +1,42 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TValue
+@inherits FormInputBase<TValue>
+
+<RadzenNumeric TValue="TValue"
+               Name="@InputId"
+               Value="@Value"
+               ValueChanged="@((TValue value) => SetValueAsync(value))"
+               Min="Min"
+               Max="Max"
+               Step="@Step"
+               Format="@Format"
+               ShowUpDown="!NoButtons"
+               Immediate="Immediate"
+               ReadOnly="ReadOnly"
+               Disabled="IsDisabled"
+               Placeholder="@Placeholder"
+               Style="@Style"
+               Attributes='@InputAttributes.Build(this, AutoFocus, OnEnter, BuildClass("lc-number-input"))' />
+
+@code {
+    [Parameter] public decimal? Min { get; set; }
+
+    [Parameter] public decimal? Max { get; set; }
+
+    /// <summary>How much the up/down buttons and arrow keys change the value. Defaults to 1.</summary>
+    [Parameter] public string? Step { get; set; }
+
+    /// <summary>A .NET numeric format string for display, e.g. <c>0.00</c>.</summary>
+    [Parameter] public string? Format { get; set; }
+
+    /// <summary>Hides the up/down buttons.</summary>
+    [Parameter] public bool NoButtons { get; set; }
+
+    [Parameter] public bool Immediate { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool AutoFocus { get; set; }
+
+    [Parameter] public EventCallback OnEnter { get; set; }
+}

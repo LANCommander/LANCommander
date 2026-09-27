@@ -1,0 +1,80 @@
+// Dialog windows opened through DialogService, and the frame around their content
+
+.lc-dialog-window {
+    .rz-dialog-content {
+        padding: 0;
+    }
+}
+
+.lc-dialog {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 160px);
+}
+
+.lc-drawer-window .lc-dialog {
+    height: 100%;
+    max-height: none;
+}
+
+.lc-dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem 1.25rem;
+}
+
+.lc-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--lc-border-subtle-color);
+}
+
+.lc-confirm {
+    .lc-confirm-icon {
+        font-size: 1.75rem;
+        color: var(--rz-info);
+    }
+
+    .lc-confirm-icon-danger {
+        color: var(--rz-danger);
+    }
+
+    .lc-confirm-message {
+        padding-top: 0.25rem;
+        white-space: pre-line;
+    }
+}
+
+// Notifications: Radzen draws a Material Symbols glyph per severity; ours goes in the summary instead
+.rz-notification-item {
+    > .rzi,
+    .rz-notification-icon {
+        display: none;
+    }
+
+    .lc-notification-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .lc-notification-icon {
+        font-size: 1.25em;
+    }
+}
+
+.lc-confirm-icon-warning {
+    color: var(--rz-warning) !important;
+}
+
+// A footer rendered by the dialog itself (NoFooter dialogs with their own buttons)
+.lc-dialog-footer-inline {
+    margin: 16px -20px -16px;
+}
+
+.lc-notification-action {
+    margin-top: 8px;
+}

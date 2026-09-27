@@ -1,9 +1,9 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Bunit;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.UI.Components;
 using LANCommander.Server.UI.Pages.Games.Components;
-using LANCommander.UI.Components;
+using LANCommander.Server.UI.Controls;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,11 +12,10 @@ namespace LANCommander.Server.UI.Tests.Components;
 
 /// <summary>
 /// bUnit component tests for the crash-handling path: the <see cref="ErrorHandler"/> boundary
-/// wrapped around the layout body, and the <see cref="DataTable{TItem}"/> data load that feeds it.
+/// wrapped around the layout body, and the <see cref="DataTable{TItem}"/> data load.
 ///
 /// The behaviour under test is the one that broke with a corrupt database: a failing table load
-/// used to leave a spinner up forever (AntDesign invokes the table's OnChange callback without
-/// awaiting it, so the exception was never observed) and the boundary, once tripped, never cleared.
+/// used to leave a spinner up forever and the boundary, once tripped, never cleared.
 /// </summary>
 [Collection("BUnit")]
 public class ErrorHandlingComponentTests : BUnitTestContext
@@ -59,7 +58,7 @@ public class ErrorHandlingComponentTests : BUnitTestContext
     {
         var cut = Render<ErrorHandler>(parameters => parameters
             .Add(p => p.Title, "Unexpected Error")
-            .Add(p => p.Body, ThrowingBody(() => true)));
+            .Add(p => p.ChildContent, ThrowingBody(() => true)));
 
         Assert.Contains("Simulated page failure", cut.Markup);
         Assert.DoesNotContain("Page loaded", cut.Markup);
@@ -70,7 +69,7 @@ public class ErrorHandlingComponentTests : BUnitTestContext
     {
         var cut = Render<ErrorHandler>(parameters => parameters
             .Add(p => p.Title, "Unexpected Error")
-            .Add(p => p.Body, ThrowingBody(() => true)));
+            .Add(p => p.ChildContent, ThrowingBody(() => true)));
 
         Assert.Contains("Simulated page failure", cut.Markup);
 
@@ -88,7 +87,7 @@ public class ErrorHandlingComponentTests : BUnitTestContext
 
         var cut = Render<ErrorHandler>(parameters => parameters
             .Add(p => p.Title, "Unexpected Error")
-            .Add(p => p.Body, ThrowingBody(() => shouldThrow)));
+            .Add(p => p.ChildContent, ThrowingBody(() => shouldThrow)));
 
         Assert.Contains("Simulated page failure", cut.Markup);
 
@@ -103,38 +102,28 @@ public class ErrorHandlingComponentTests : BUnitTestContext
     }
 
     [Fact]
-    public void DataTable_SurfacesLoadFailureToTheErrorBoundary_InsteadOfLoadingForever()
+    public void DataTable_ShowsLoadFailure_InsteadOfLoadingForever()
     {
-        RenderFragment body = builder =>
-        {
-            builder.OpenComponent<DataTable<UnmappedEntity>>(0);
-            builder.AddAttribute(1, nameof(DataTable<UnmappedEntity>.HidePagination), true);
-            builder.AddAttribute(2, nameof(DataTable<UnmappedEntity>.Query),
-                (Expression<Func<UnmappedEntity, bool>>)(e => e.Id != Guid.Empty));
-            builder.AddAttribute(3, nameof(DataTable<UnmappedEntity>.Columns),
-                (RenderFragment<UnmappedEntity>)(_ => columnBuilder =>
-                {
-                    columnBuilder.OpenComponent<BoundDataColumn<UnmappedEntity, Guid>>(0);
-                    columnBuilder.AddAttribute(1, nameof(BoundDataColumn<UnmappedEntity, Guid>.Property),
-                        (Expression<Func<UnmappedEntity, Guid>>)(e => e.Id));
-                    columnBuilder.CloseComponent();
-                }));
-            builder.CloseComponent();
-        };
+        var cut = Render<DataTable<UnmappedEntity>>(parameters => parameters
+            .Add(p => p.NoPaging, true)
+            .Add(p => p.Query, (Expression<Func<UnmappedEntity, bool>>)(e => e.Id != Guid.Empty))
+            .Add(p => p.Columns, (RenderFragment)(builder =>
+            {
+                builder.OpenComponent<BoundColumn<UnmappedEntity, Guid>>(0);
+                builder.AddAttribute(1, nameof(BoundColumn<UnmappedEntity, Guid>.Property),
+                    (Expression<Func<UnmappedEntity, Guid>>)(e => e.Id));
+                builder.CloseComponent();
+            })));
 
-        var cut = Render<ErrorHandler>(parameters => parameters
-            .Add(p => p.Title, "Unexpected Error")
-            .Add(p => p.Body, body));
-
-        // The load runs as an unawaited task off the first render, so give it a moment to fail
-        // and push the exception back through the render pipeline.
+        // The load runs after the first render, so give it a moment to fail
         cut.WaitForAssertion(
             () => Assert.Contains("Cannot create a DbSet", cut.Markup),
             TimeSpan.FromSeconds(10));
 
+        Assert.Empty(cut.FindAll(".lc-table-pending"));
         Assert.Contains(
             cut.FindAll("button"),
-            b => b.TextContent.Contains("Back", StringComparison.OrdinalIgnoreCase));
+            b => b.TextContent.Contains("Retry", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -152,7 +141,7 @@ public class ErrorHandlingComponentTests : BUnitTestContext
         foreach (var tab in new[] { "General", "Archives", "Actions", "Scripts" })
         {
             Assert.Contains(
-                cut.FindAll("li.ant-menu-item"),
+                cut.FindAll(".lc-menu-item-content"),
                 item => item.TextContent.Contains(tab, StringComparison.Ordinal));
         }
     }

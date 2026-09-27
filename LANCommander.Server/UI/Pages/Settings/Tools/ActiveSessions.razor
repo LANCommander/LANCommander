@@ -1,7 +1,6 @@
-﻿@page "/Settings/Tools/ActiveSessions"
+@page "/Settings/Tools/ActiveSessions"
 @inject PlaySessionService PlaySessionService
-@inject IMessageService MessageService
-@inject ILogger<ActiveSessions> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Active Sessions" />
@@ -10,66 +9,46 @@
     <p>
         These play sessions are considered active because they never ended. This may cause servers set to autostart with "Player Activity" to not stop when a player has quit a game.
     </p>
+
+    <DataTable TItem="PlaySession" @ref="_table" Query="ps => !ps.End.HasValue" Small>
+        <Columns>
+            <BoundColumn Property="ps => ps.Game.Title" Title="Game" Include="Game" Sortable />
+            <BoundColumn Property="ps => ps.Start" Title="Start" Sortable>
+                <LocalTime Value="context.Start" />
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.End" Title="End">
+                <LocalTime Value="context.End" />
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.CreatedOn" Title="Created On" Sortable DefaultSort="ColumnSort.Descending">
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="ps => ps.CreatedBy != null ? ps.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+            <ActionsColumn TItem="PlaySession">
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this session?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
 </PageContent>
 
-<Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
-    <PropertyColumn Property="ps => ps.Game.Title" Title="Game" />
-    <PropertyColumn Property="ps => ps.Start">
-        <LocalTime Value="context.Start" />
-    </PropertyColumn>
-    <PropertyColumn Property="ps => ps.End">
-        <LocalTime Value="context.End" />
-    </PropertyColumn>
-    <PropertyColumn Property="ps => ps.CreatedOn" Sortable DefaultSortOrder="@SortDirection.Descending">
-        <LocalTime Value="context.CreatedOn" />
-    </PropertyColumn>
-    <PropertyColumn Property="ps => ps.CreatedBy" Sortable>
-        @context.CreatedBy?.UserName
-    </PropertyColumn>
-    <ActionColumn Title="" Style="text-align: right">
-        <Space Direction="SpaceDirection.Horizontal">
-            <SpaceItem>
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                </Popconfirm>
-            </SpaceItem>
-        </Space>
-    </ActionColumn>
-</Table>
+@code {
+    DataTable<PlaySession>? _table;
 
-
- @code {
-    ICollection<PlaySession> PlaySessions;
-    bool Loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
-
-    async Task LoadData()
-    {
-        Loading = true;
-        
-        PlaySessions = await PlaySessionService.GetAsync(ps => !ps.End.HasValue);
-
-        Loading = false;
-    }
-
-    async Task Delete(PlaySession playSession)
+    async Task DeleteAsync(PlaySession playSession)
     {
         try
         {
             await PlaySessionService.DeleteAsync(playSession);
 
-            await LoadData();
+            Notifications.Success("Session deleted!");
 
-            MessageService.Success("Session deleted!");
+            if (_table != null)
+                await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Session could not be deleted.");
-            Logger.LogError(ex, "Session could not be deleted.");
+            Notifications.Error(ex, "Session could not be deleted.");
         }
     }
 }

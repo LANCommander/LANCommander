@@ -1,0 +1,51 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@implements IDisposable
+
+@* A column of custom content that isn't tied to one sortable value, e.g. a list of tags *@
+<RadzenDataGridColumn TItem="TItem"
+                      Title="@Title"
+                      Sortable="false"
+                      Visible="@(Host?.IsVisible(_info, Hide) ?? !Hide)"
+                      Pickable="true"
+                      Width="@Width"
+                      WhiteSpace="WhiteSpace.Wrap">
+    <Template Context="item">
+        @ChildContent(item)
+    </Template>
+</RadzenDataGridColumn>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired] public RenderFragment<TItem> ChildContent { get; set; } = default!;
+
+    /// <summary>Hidden until shown through the column picker.</summary>
+    [Parameter] public bool Hide { get; set; }
+
+    /// <summary>Navigation properties to load for this column, comma separated.</summary>
+    [Parameter] public string? Include { get; set; }
+
+    [Parameter] public string? Width { get; set; }
+
+    /// <summary>Identifies the column in remembered settings. Defaults to the title.</summary>
+    [Parameter] public string? Key { get; set; }
+
+    [CascadingParameter] internal ITableHost? Host { get; set; }
+
+    TableColumnInfo _info = default!;
+
+    protected override void OnInitialized()
+    {
+        _info = new TableColumnInfo
+        {
+            Key = Key ?? Title,
+            Title = Title,
+            Includes = TableColumnIncludes.Parse(Include),
+        };
+
+        Host?.Register(_info);
+    }
+
+    public void Dispose() => Host?.Unregister(_info);
+}

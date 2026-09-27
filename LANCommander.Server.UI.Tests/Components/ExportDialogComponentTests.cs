@@ -1,11 +1,10 @@
-using System.Reflection;
 using Bunit;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
-using LANCommander.Server.UI.Components;
+using LANCommander.Server.UI.Controls;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.UI.Tests.Components;
@@ -63,11 +62,8 @@ public class ExportDialogComponentTests : BUnitTestContext
         return redistributable.Id;
     }
 
-    [Fact]
-    public async Task AllArchivesStayCheckedForRedistributable()
+    private IRenderedComponent<ExportDialog> RenderDialog(Guid redistributableId)
     {
-        var redistributableId = await AddRedistributableWithArchivesAsync(3);
-
         var cut = Render<ExportDialog>(parameters => parameters
             .Add(p => p.Options, new ExportDialogOptions
             {
@@ -75,22 +71,26 @@ public class ExportDialogComponentTests : BUnitTestContext
                 RecordType = ImportExportRecordType.Redistributable,
             }));
 
-        var selectedKeys = (string[]?)typeof(ExportDialog)
-            .GetField("_selectedKeys", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(cut.Instance);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".lc-tree-checkbox")));
 
-        var checkboxes = cut.FindAll(".ant-tree-checkbox");
-        var titles = cut.FindAll(".ant-tree-title");
+        return cut;
+    }
 
-        System.Console.WriteLine($"checkboxes={checkboxes.Count} titles={titles.Count}");
-        System.Console.WriteLine(cut.Markup.Length > 4000 ? cut.Markup.Substring(0, 4000) : cut.Markup);
-        System.Console.WriteLine("keys=" + string.Join(",", selectedKeys ?? System.Array.Empty<string>()));
+    private static void ExpandAll(IRenderedComponent<ExportDialog> cut)
+    {
+        // Expanding re-renders the tree, so look the toggles up again each time
+        while (cut.FindAll(".lc-tree-toggle[aria-label=Expand]").FirstOrDefault() is { } toggle)
+            toggle.Click();
+    }
 
-        Assert.NotNull(selectedKeys);
+    [Fact]
+    public async Task AllArchivesStayCheckedForRedistributable()
+    {
+        var redistributableId = await AddRedistributableWithArchivesAsync(3);
 
-        var parsed = selectedKeys!.Where(k => Guid.TryParse(k, out _)).ToArray();
+        var cut = RenderDialog(redistributableId);
 
-        Assert.Equal(3, parsed.Length);
+        Assert.Equal(3, cut.Instance.SelectedIds.Count);
     }
 
     [Fact]
@@ -98,27 +98,11 @@ public class ExportDialogComponentTests : BUnitTestContext
     {
         var redistributableId = await AddRedistributableWithArchivesAsync(3, 2);
 
-        var cut = Render<ExportDialog>(parameters => parameters
-            .Add(p => p.Options, new ExportDialogOptions
-            {
-                RecordId = redistributableId,
-                RecordType = ImportExportRecordType.Redistributable,
-            }));
+        var cut = RenderDialog(redistributableId);
 
-        foreach (var switcher in cut.FindAll(".ant-tree-switcher").ToList())
-            switcher.Click();
+        ExpandAll(cut);
 
-        var selectedKeys = (string[]?)typeof(ExportDialog)
-            .GetField("_selectedKeys", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(cut.Instance);
-
-        System.Console.WriteLine("expanded keys=" + string.Join(",", selectedKeys ?? System.Array.Empty<string>()));
-        System.Console.WriteLine("checkboxes=" + cut.FindAll(".ant-tree-checkbox").Count);
-        System.Console.WriteLine("checked=" + cut.FindAll(".ant-tree-checkbox-checked").Count);
-
-        var parsed = selectedKeys!.Where(k => Guid.TryParse(k, out _)).ToArray();
-
-        Assert.Equal(5, parsed.Length);
+        Assert.Equal(5, cut.Instance.SelectedIds.Count);
     }
 
     [Fact]
@@ -126,30 +110,20 @@ public class ExportDialogComponentTests : BUnitTestContext
     {
         var redistributableId = await AddRedistributableWithArchivesAsync(3, 2);
 
-        var cut = Render<ExportDialog>(parameters => parameters
-            .Add(p => p.Options, new ExportDialogOptions
-            {
-                RecordId = redistributableId,
-                RecordType = ImportExportRecordType.Redistributable,
-            }));
+        var cut = RenderDialog(redistributableId);
 
-        foreach (var switcher in cut.FindAll(".ant-tree-switcher").ToList())
-            switcher.Click();
+        ExpandAll(cut);
 
-        string[]? Keys() => (string[]?)typeof(ExportDialog)
-            .GetField("_selectedKeys", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(cut.Instance);
+        // The first archive in the group of three
+        AngleSharp.Dom.IElement Archive() => cut.FindAll(".lc-tree-item[aria-level='1']")
+            .First(i => i.QuerySelector(".lc-tree-node")!.TextContent.Contains("(3)"))
+            .QuerySelector(".lc-tree-children .lc-tree-checkbox")!;
 
-        var checkboxes = cut.FindAll(".ant-tree-checkbox").ToList();
+        Archive().Click();
+        Assert.Equal(4, cut.Instance.SelectedIds.Count);
 
-        // Index 0 is the "Archive" group node; 1..3 are the individual archives.
-        checkboxes[1].Click();
-        System.Console.WriteLine("after uncheck: " + Keys()!.Count(k => Guid.TryParse(k, out _)));
-
-        cut.FindAll(".ant-tree-checkbox")[1].Click();
-        System.Console.WriteLine("after recheck: " + Keys()!.Count(k => Guid.TryParse(k, out _)));
-
-        Assert.Equal(5, Keys()!.Count(k => Guid.TryParse(k, out _)));
+        Archive().Click();
+        Assert.Equal(5, cut.Instance.SelectedIds.Count);
     }
 
     [Fact]
@@ -157,26 +131,18 @@ public class ExportDialogComponentTests : BUnitTestContext
     {
         var redistributableId = await AddRedistributableWithArchivesAsync(3, 2);
 
-        var cut = Render<ExportDialog>(parameters => parameters
-            .Add(p => p.Options, new ExportDialogOptions
-            {
-                RecordId = redistributableId,
-                RecordType = ImportExportRecordType.Redistributable,
-            }));
+        var cut = RenderDialog(redistributableId);
 
-        foreach (var switcher in cut.FindAll(".ant-tree-switcher").ToList())
-            switcher.Click();
+        ExpandAll(cut);
 
-        string[]? Keys() => (string[]?)typeof(ExportDialog)
-            .GetField("_selectedKeys", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(cut.Instance);
+        AngleSharp.Dom.IElement Group() => cut.FindAll(".lc-tree-item[aria-level='1']")
+            .First(i => i.QuerySelector(".lc-tree-node")!.TextContent.Contains("(3)"))
+            .QuerySelector(".lc-tree-checkbox")!;
 
-        cut.FindAll(".ant-tree-checkbox")[0].Click();
-        System.Console.WriteLine("group uncheck: " + Keys()!.Count(k => Guid.TryParse(k, out _)));
+        Group().Click();
+        Assert.Equal(2, cut.Instance.SelectedIds.Count);
 
-        cut.FindAll(".ant-tree-checkbox")[0].Click();
-        System.Console.WriteLine("group recheck: " + Keys()!.Count(k => Guid.TryParse(k, out _)));
-
-        Assert.Equal(5, Keys()!.Count(k => Guid.TryParse(k, out _)));
+        Group().Click();
+        Assert.Equal(5, cut.Instance.SelectedIds.Count);
     }
 }

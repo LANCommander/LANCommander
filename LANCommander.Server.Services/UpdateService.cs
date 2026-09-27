@@ -75,7 +75,14 @@ namespace LANCommander.Server.Services
             logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
 
             var release = await gitHubService.GetReleaseAsync(tag);
-            
+
+            // Development and unpublished builds have no matching release
+            if (release == null)
+            {
+                logger.LogWarning("No release found with the tag {Tag}", tag);
+                yield break;
+            }
+
             var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
             
             if (assets.Any())

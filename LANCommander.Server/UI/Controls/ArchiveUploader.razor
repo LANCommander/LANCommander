@@ -1,0 +1,24 @@
+@inject DialogService Dialogs
+
+@*
+    Opens the archive upload dialog for a game, redistributable or tool and reports each archive
+    whose upload completes, including uploads that finish in the background.
+*@
+
+@code {
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
+    [Parameter] public Guid ToolId { get; set; }
+    [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
+
+    /// <summary>Uploads a new archive, or a replacement file for <paramref name="archiveId"/>.</summary>
+    public Task Open(Guid? archiveId = null) =>
+        Dialogs.OpenAsync<ArchiveUploadDialog, ArchiveUploadOptions, bool>("Upload Archive", new ArchiveUploadOptions
+        {
+            ArchiveId = archiveId,
+            GameId = GameId != Guid.Empty ? GameId : null,
+            RedistributableId = RedistributableId != Guid.Empty ? RedistributableId : null,
+            ToolId = ToolId != Guid.Empty ? ToolId : null,
+            OnUploaded = id => InvokeAsync(() => OnArchiveUploaded.InvokeAsync(id)),
+        }, new DialogSettings { NoFooter = true });
+}

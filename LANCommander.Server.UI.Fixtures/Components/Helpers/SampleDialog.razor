@@ -1,0 +1,10 @@
+@inherits Dialog<SampleDialog.SampleOptions, string>
+
+<Flex Vertical Gap="Gap.Small">
+    <Typography>Choose the collections to add <Typography Strong>@Options.GameTitle</Typography> to.</Typography>
+    <Alert Info>Collections control which roles can see a game.</Alert>
+</Flex>
+
+@code {
+    public sealed record SampleOptions(string GameTitle);
+}

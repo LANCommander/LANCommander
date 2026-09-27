@@ -14,7 +14,7 @@ function Build-Server {
 
     dotnet restore
 
-    npm install --prefix ./LANCommander.UI
+    npm install --prefix ./LANCommander.Server.UI
     npm install --prefix ./LANCommander.Server
 
     dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
@@ -28,7 +28,6 @@ function Build-Server {
         'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
         'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
         'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
-        'wwwroot/_content/AntDesign/less',
         'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
         'wwwroot/Identity/lib/bootstrap',
         'LANCommander.ico',

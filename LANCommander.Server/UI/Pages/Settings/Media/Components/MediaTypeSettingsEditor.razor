@@ -1,63 +1,59 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings.Models
+
 @if (Value != null)
 {
     <Panel Header="@Value.Type.ToString()">
-        <Form Model="@Value" Layout="FormLayout.Vertical" OnFieldChanged="OnChange">
+        <Form Model="Value" OnFieldChanged="OnChangeAsync">
             <FormItem Label="Enabled">
-                <Switch @bind-Value="context.Thumbnails.Enabled" />
+                <Switch @bind-Value="Value.Thumbnails.Enabled" />
             </FormItem>
             <FormItem Label="Max File Size">
-                <ByteSizeInput @bind-Value="context.MaxFileSize" />
+                <ByteSizeInput @bind-Value="Value.MaxFileSize" />
             </FormItem>
 
-            <Divider Text="Animated Images"/>
+            <Divider>Animated Images</Divider>
 
             <FormItem Label="Convert APNG to Video">
-                <Switch @bind-Value="context.AnimatedImage.ConvertToVideo" />
+                <Switch @bind-Value="Value.AnimatedImage.ConvertToVideo" />
             </FormItem>
 
             <FormItem Label="Video Quality (CRF — lower = higher quality, 0 lossless, 23 default, 51 worst)">
-                <AntDesign.InputNumber @bind-Value="context.AnimatedImage.Quality" Min="0" Max="51" />
+                <NumberInput @bind-Value="Value.AnimatedImage.Quality" Min="0" Max="51" />
             </FormItem>
 
-            <Divider Text="Thumbnails"/>
+            <Divider>Thumbnails</Divider>
 
             <FormItem Label="Minimum Size">
-                <InputGroup Compact>
-                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MinSize.Width"/>
-                    <Input TValue="string" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled />
-                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MinSize.Height"/>
+                <InputGroup>
+                    <NumberInput @bind-Value="Value.Thumbnails.MinSize.Width" Min="0" NoButtons Style="width: 120px" />
+                    <InputAddon>x</InputAddon>
+                    <NumberInput @bind-Value="Value.Thumbnails.MinSize.Height" Min="0" NoButtons Style="width: 120px" />
                 </InputGroup>
             </FormItem>
 
             <FormItem Label="Maximum Size">
-                <InputGroup Compact>
-                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MaxSize.Width"/>
-                    <Input TValue="string" Style="width: 38px; border-left: 0; border-right: 0; pointer-events: none;" Placeholder="x" Disabled/>
-                    <AntDesign.InputNumber @bind-Value="context.Thumbnails.MaxSize.Height"/>
+                <InputGroup>
+                    <NumberInput @bind-Value="Value.Thumbnails.MaxSize.Width" Min="0" NoButtons Style="width: 120px" />
+                    <InputAddon>x</InputAddon>
+                    <NumberInput @bind-Value="Value.Thumbnails.MaxSize.Height" Min="0" NoButtons Style="width: 120px" />
                 </InputGroup>
             </FormItem>
 
             <FormItem Label="Scale">
-                <AntDesign.InputNumber @bind-Value="context.Thumbnails.Scale" />
+                <NumberInput @bind-Value="Value.Thumbnails.Scale" />
             </FormItem>
 
             <FormItem Label="Quality">
-                <AntDesign.InputNumber @bind-Value="context.Thumbnails.Quality" />
+                <NumberInput @bind-Value="Value.Thumbnails.Quality" />
             </FormItem>
         </Form>
     </Panel>
 }
 
-
 @code {
-    [Parameter] public MediaTypeSettings Value { get; set; }
-    [Parameter] public EventCallback<MediaTypeSettings> ValueChanged { get; set; }
+    [Parameter] public MediaTypeSettings? Value { get; set; }
+    [Parameter] public EventCallback<MediaTypeSettings?> ValueChanged { get; set; }
 
-    async Task OnChange()
-    {
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
-    }
+    Task OnChangeAsync() => ValueChanged.InvokeAsync(Value);
 }

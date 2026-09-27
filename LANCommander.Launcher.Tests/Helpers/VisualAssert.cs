@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Avalonia.Controls;
+using LANCommander.Testing.Visual;
 using Xunit;
 
 namespace LANCommander.Launcher.Tests.Helpers;

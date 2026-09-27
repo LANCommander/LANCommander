@@ -1,0 +1,171 @@
+@using LANCommander.Server.UI.Fixtures.Data
+@implements IComponentFixtureSet
+
+@code {
+    // Hrefs pointing at a fixture page are "active" while that fixture is shown
+    const string Here = "/_fixtures/Menu.Sidebar";
+
+    // A small generated image so captures never depend on external files
+    const string Cover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='160'><rect width='120' height='160' fill='%233871ff'/><text x='60' y='88' font-size='20' text-anchor='middle' fill='white' font-family='sans-serif'>COVER</text></svg>";
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Menu.Sidebar", "Sidebar navigation with an active item, an open group and a divider",
+            @<div style="width: 220px">
+                <Menu>
+                    <MenuItem Href="/Games" Icon="IconType.GameController">Games</MenuItem>
+                    <SubMenu Title="Metadata" Icon="IconType.Tag" Open>
+                        <MenuItem Href="/Metadata/Genres">Genres</MenuItem>
+                        <MenuItem Href="@Here" Exact>Tags</MenuItem>
+                    </SubMenu>
+                    <SubMenu Title="Scripting" Icon="IconType.Code">
+                        <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
+                    </SubMenu>
+                    <MenuDivider />
+                    <MenuItem Href="/Settings" Icon="IconType.Gear">Settings</MenuItem>
+                    <MenuItem Disabled Icon="IconType.Lock">Disabled</MenuItem>
+                </Menu>
+            </div>)
+        {
+            Width = 260,
+            Covers = [typeof(Menu), typeof(SubMenu), typeof(MenuItem), typeof(MenuDivider)],
+        },
+        new("Dropdown.Open", "A button that opens a menu of actions",
+            @<div style="height: 200px">
+                <Dropdown>
+                    <ChildContent><Button Icon="IconType.DotsThree" id="dropdown-target">Actions</Button></ChildContent>
+                    <Overlay>
+                        <Menu>
+                            <MenuItem Icon="IconType.Copy">Duplicate</MenuItem>
+                            <MenuItem Icon="IconType.Export">Export</MenuItem>
+                            <MenuDivider />
+                            <MenuItem Icon="IconType.Trash" Danger>Delete</MenuItem>
+                        </Menu>
+                    </Overlay>
+                </Dropdown>
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Click = "#dropdown-target",
+            WaitFor = ".lc-dropdown",
+            Covers = [typeof(Dropdown)],
+        },
+        new("HelpButton.Open", "A label with a help button, and its popover open",
+            @<div style="height: 180px">
+                <HelpButton>
+                    <ChildContent><Typography Strong>Key allocation</Typography></ChildContent>
+                    <Description>Keys are handed out per user account, so a player keeps the same key on every machine.</Description>
+                </HelpButton>
+            </div>)
+        {
+            Width = 360,
+            FullPage = true,
+            Click = ".lc-help-button",
+            WaitFor = ".lc-popover",
+            Covers = [typeof(HelpButton), typeof(Popover)],
+        },
+        new("Tabs.Default", "Tabs with icons and a disabled tab",
+            @<Tabs>
+                <Tab Title="General" Icon="IconType.Info"><Typography>General settings</Typography></Tab>
+                <Tab Title="Archives" Icon="IconType.Archive"><Typography>Archive list</Typography></Tab>
+                <Tab Title="Scripts" Icon="IconType.Code" Disabled />
+            </Tabs>)
+        {
+            Width = 480,
+            Covers = [typeof(Tabs), typeof(Tab)],
+        },
+        new("Steps.Progress", "A multi-step flow on its second step, in both sizes",
+            @<Flex Vertical Gap="Gap.Large">
+                <Steps Current="1">
+                    <Step Title="Database" />
+                    <Step Title="Administrator" Description="Create an account" />
+                    <Step Title="Storage" />
+                    <Step Title="Finish" />
+                </Steps>
+                <Steps Current="2" Small>
+                    <Step Title="Upload" />
+                    <Step Title="Review" />
+                    <Step Title="Import" />
+                </Steps>
+            </Flex>)
+        {
+            Width = 640,
+            Covers = [typeof(Steps), typeof(Step)],
+        },
+        new("Breadcrumb.Default", "A path of links ending at the current page",
+            @<Breadcrumb>
+                <BreadcrumbItem Href="/Games" Icon="IconType.GameController">Games</BreadcrumbItem>
+                <BreadcrumbItem Href="/Games/1">Arena Blitz</BreadcrumbItem>
+                <BreadcrumbItem>Archives</BreadcrumbItem>
+            </Breadcrumb>)
+        {
+            Width = 400,
+            Covers = [typeof(Breadcrumb), typeof(BreadcrumbItem)],
+        },
+        new("Collapse.Panels", "Collapsible panels, one open, one with header actions",
+            @<Collapse>
+                <Panel Header="Options" Open><Typography>Launch options for the game.</Typography></Panel>
+                <Panel Header="Advanced">
+                    <Extra><Tag Warning>3 overrides</Tag></Extra>
+                    <ChildContent><Typography>Hidden until expanded.</Typography></ChildContent>
+                </Panel>
+                <Panel Header="Variables" />
+            </Collapse>)
+        {
+            Width = 420,
+            Covers = [typeof(Collapse), typeof(Panel)],
+        },
+        new("Progress.States", "Bars and rings in each status",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Progress Value="35" />
+                <Progress Value="100" Success />
+                <Progress Value="62" Danger />
+                <Progress Value="50" Small NoValue />
+                <Flex Gap="Gap.Large">
+                    <Progress Circle Value="75" />
+                    <Progress Circle Small Value="20" Warning />
+                </Flex>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Progress)],
+        },
+        new("Statistic.Row", "Key figures side by side",
+            @<Flex Gap="Gap.Large">
+                <Statistic Title="Total keys" Value="8" />
+                <Statistic Title="Allocated" Value="3" />
+                <Statistic Title="Available"><Typography Success>5</Typography></Statistic>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Statistic)],
+        },
+        new("LocalTime.Formats", "Absolute and relative times",
+            @<Flex Vertical Gap="Gap.Small">
+                <LocalTime Value="FixtureIds.Epoch.AddHours(-5)" />
+                <LocalTime Value="FixtureIds.Epoch.AddHours(-5)" Format="yyyy-MM-dd HH:mm" />
+                <LocalTime Value="FixtureIds.Epoch.AddMinutes(-12)" Relative />
+                <LocalTime Value="FixtureIds.Epoch.AddDays(-3)" Relative />
+            </Flex>)
+        {
+            Width = 280,
+            Covers = [typeof(LocalTime)],
+        },
+        new("Image.States", "A loaded image, a cropped cover, and fallbacks for missing and broken images",
+            @<Flex Gap="Gap.Medium" Align="Align.Center">
+                <Image Src="@Cover" Width="60" Height="80" Rounded />
+                <Image Src="@Cover" Width="80" Height="80" Cover Rounded />
+                <Image Width="60" Height="80">
+                    <div style="width: 60px; height: 80px; display: flex; align-items: center; justify-content: center; background: var(--rz-base-700)"><Icon Type="IconType.ImageBroken" /></div>
+                </Image>
+                <Image Src="/does-not-exist.png" Width="60" Height="80">
+                    <div style="width: 60px; height: 80px; display: flex; align-items: center; justify-content: center; background: var(--rz-base-700)"><Icon Type="IconType.ImageBroken" /></div>
+                </Image>
+            </Flex>)
+        {
+            Width = 360,
+            Covers = [typeof(Image)],
+        },
+    ];
+}

@@ -1,0 +1,144 @@
+@using System.Linq.Expressions
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Models
+@inject ScriptService ScriptService
+@inject GameVersionService GameVersionService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+
+@*
+    The scripts of the game, redistributable, server or tool whose Id is cascaded, or the system
+    scripts when none is. AllowedTypes limits which kinds can be added.
+*@
+<Flex Vertical Gap="Gap.Large">
+    <DataTable @ref="_table" TItem="Script" NoPaging Small SettingsKey="script-editor" Query="GetQueryExpression()">
+        <Columns>
+            <BoundColumn Property="s => s.Name" Sortable />
+            <BoundColumn Property="s => s.Type" Sortable>
+                @context.Type.GetDisplayName()
+            </BoundColumn>
+            <BoundColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+            <BoundColumn Property="s => s.CreatedOn" Title="Created On" Sortable DefaultSort="ColumnSort.Descending">
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <ActionsColumn TItem="Script">
+                <Button Text Icon="IconType.PencilSimple" title="Edit" OnClick="() => EditAsync(context.Id)" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this script?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+
+    <Flex Justify="Justify.End">
+        <Dropdown>
+            <Overlay>
+                <Menu>
+                    @foreach (var type in AllowedTypes ?? Enum.GetValues<ScriptType>())
+                    {
+                        <MenuItem OnClick="() => AddAsync(type)">@type.GetDisplayName()</MenuItem>
+                    }
+                </Menu>
+            </Overlay>
+            <ChildContent>
+                <Button Primary Icon="IconType.Plus">Add Script</Button>
+            </ChildContent>
+        </Dropdown>
+    </Flex>
+</Flex>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "RedistributableId")] public Guid? RedistributableId { get; set; }
+    [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
+    [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
+
+    [Parameter] public IEnumerable<ScriptType>? AllowedTypes { get; set; }
+
+    DataTable<Script>? _table;
+
+    // For games, scripts belong to the game's latest version rather than the game itself. Resolved
+    // (creating an initial version if needed) so the table can filter to it; the service assigns
+    // it on save.
+    Guid? _gameVersionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (GameId is { } gameId && gameId != Guid.Empty)
+            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(gameId);
+    }
+
+    Expression<Func<Script, bool>> GetQueryExpression()
+    {
+        if (GameId.HasValue)
+            return s => s.GameVersionId == _gameVersionId;
+
+        if (RedistributableId.HasValue)
+            return s => s.RedistributableId == RedistributableId;
+
+        if (ServerId.HasValue)
+            return s => s.ServerId == ServerId;
+
+        if (ToolId.HasValue)
+            return s => s.ToolId == ToolId;
+
+        return s =>
+            (s.GameId == null || s.GameId == Guid.Empty) &&
+            (s.RedistributableId == null || s.RedistributableId == Guid.Empty) &&
+            (s.ServerId == null || s.ServerId == Guid.Empty) &&
+            (s.ToolId == null || s.ToolId == Guid.Empty);
+    }
+
+    ScriptEditorOptions CreateOptions() => new()
+    {
+        AllowedTypes = AllowedTypes ?? [],
+        GameId = GameId,
+        RedistributableId = RedistributableId,
+        ServerId = ServerId,
+        ToolId = ToolId,
+    };
+
+    static DialogSettings EditorSettings => new()
+    {
+        Size = DialogSize.Full,
+        OkText = "Save",
+    };
+
+    async Task AddAsync(ScriptType scriptType)
+    {
+        var options = CreateOptions();
+
+        options.ScriptType = scriptType;
+
+        if (await Dialogs.OpenAsync<ScriptEditorDialog, ScriptEditorOptions, Script>($"Add {scriptType.GetDisplayName()} Script", options, EditorSettings) != null)
+            await ReloadAsync();
+    }
+
+    async Task EditAsync(Guid scriptId)
+    {
+        var options = CreateOptions();
+
+        options.ScriptId = scriptId;
+
+        if (await Dialogs.OpenAsync<ScriptEditorDialog, ScriptEditorOptions, Script>("Edit Script", options, EditorSettings) != null)
+            await ReloadAsync();
+    }
+
+    Task ReloadAsync() => _table?.ReloadAsync() ?? Task.CompletedTask;
+
+    async Task DeleteAsync(Script script)
+    {
+        try
+        {
+            await ScriptService.DeleteAsync(script);
+
+            await ReloadAsync();
+
+            Notifications.Success("Script deleted!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete script!");
+        }
+    }
+}

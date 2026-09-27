@@ -1,0 +1,100 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+@implements IDisposable
+
+@*
+    Wraps inputs bound to Model: validates them (data annotations plus FormItem Required) and calls
+    OnSubmit when submitted with valid input. Labels sit above inputs unless Horizontal is set.
+*@
+<EditForm EditContext="_editContext" OnValidSubmit="OnValidSubmitAsync" OnInvalidSubmit="InvalidSubmitAsync" class="@_class" style="@Style" @attributes="AdditionalAttributes">
+    <DataAnnotationsValidator />
+    <CascadingValue Value="IsDisabled" Name="@DisabledCascadeName">
+        <Spin Loading="Loading">
+            @ChildContent
+        </Spin>
+    </CascadingValue>
+</EditForm>
+
+@code {
+    internal const string DisabledCascadeName = "LANCommander.Form.Disabled";
+
+    /// <summary>The object the form's inputs bind to.</summary>
+    [Parameter, EditorRequired] public object Model { get; set; } = default!;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Called on submit when every field is valid.</summary>
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    [Parameter] public EventCallback OnInvalidSubmit { get; set; }
+
+    /// <summary>Called whenever any bound field changes.</summary>
+    [Parameter] public EventCallback<FieldIdentifier> OnFieldChanged { get; set; }
+
+    /// <summary>Labels to the left of inputs instead of above them.</summary>
+    [Parameter] public bool Horizontal { get; set; }
+
+    /// <summary>Covers the form with a spinner, e.g. while it is saved.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>Disables every input in the form.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    EditContext? _editContext;
+    string? _class;
+
+    bool IsDisabled => Disabled || Loading;
+
+    /// <summary>The form's validation context, for inputs and advanced validation.</summary>
+    public EditContext EditContext => _editContext!;
+
+    protected override void OnParametersSet()
+    {
+        if (_editContext == null || !ReferenceEquals(_editContext.Model, Model))
+        {
+            if (_editContext != null)
+                _editContext.OnFieldChanged -= FieldChanged;
+
+            _editContext = new EditContext(Model);
+            _editContext.OnFieldChanged += FieldChanged;
+        }
+
+        _class = new ClassBuilder()
+            .Add("lc-form")
+            .Add(Horizontal ? "lc-form-horizontal" : "lc-form-vertical")
+            .Add(Class)
+            .Build();
+    }
+
+    /// <summary>Whether any bound field has changed since the model was set or <see cref="MarkAsUnmodified"/> was called.</summary>
+    public bool IsModified => _editContext?.IsModified() ?? false;
+
+    /// <summary>Treats the current values as saved, so <see cref="IsModified"/> is false again.</summary>
+    public void MarkAsUnmodified() => _editContext?.MarkAsUnmodified();
+
+    /// <summary>Validates every field and shows messages; returns whether the form is valid.</summary>
+    public bool Validate() => _editContext!.Validate();
+
+    /// <summary>Validates, then calls <see cref="OnSubmit"/> if valid. For submit buttons outside the form.</summary>
+    public async Task SubmitAsync()
+    {
+        if (Validate())
+            await OnSubmit.InvokeAsync();
+        else
+            await OnInvalidSubmit.InvokeAsync();
+
+        StateHasChanged();
+    }
+
+    Task OnValidSubmitAsync() => OnSubmit.InvokeAsync();
+
+    Task InvalidSubmitAsync() => OnInvalidSubmit.InvokeAsync();
+
+    void FieldChanged(object? sender, FieldChangedEventArgs e) => _ = InvokeAsync(() => OnFieldChanged.InvokeAsync(e.FieldIdentifier));
+
+    public void Dispose()
+    {
+        if (_editContext != null)
+            _editContext.OnFieldChanged -= FieldChanged;
+    }
+}

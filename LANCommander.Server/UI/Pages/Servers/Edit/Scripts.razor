@@ -1,22 +1,10 @@
 @page "/Servers/{id:guid}/Scripts"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <ServerEditView Id="Id" Title="Scripts">
-    <TitleExtraTemplate>
-        @if (context != null && context.Id != Guid.Empty)
-        {
-            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-                <ServerControl ServerId="context.Id" />
-            </Flex>
-        }
-    </TitleExtraTemplate>
-    
-    <ChildContent>
-        <CascadingValue Name="ServerId" Value="context.Id">
-            <ScriptEditor AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }"/>
-        </CascadingValue>
-    </ChildContent>
+    <ScriptEditor AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }" />
 </ServerEditView>
 
 @code {

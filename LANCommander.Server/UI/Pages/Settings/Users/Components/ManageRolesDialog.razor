@@ -1,88 +1,57 @@
-﻿@using Microsoft.EntityFrameworkCore
-@inherits FeedbackComponent<Guid, Guid>
+@using Microsoft.EntityFrameworkCore
+@inherits Dialog<Guid, bool>
 @inject RoleService RoleService
 @inject UserService UserService
-@inject IMessageService MessageService
-@inject ILogger<ManageRolesDialog> Logger
+@inject NotificationService Notifications
 
-<Transfer DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="@(new string[] { "Available", "Assigned" })" />
+@* Assigns roles to the user whose Id is passed as the options *@
+@if (User == null)
+{
+    <Spin />
+}
+else
+{
+    <Transfer TItem="Role" Items="Roles" @bind-Values="SelectedRoles" Text="r => r.Name" SourceTitle="Available" TargetTitle="Assigned" Style="height: 320px" />
+}
 
 @code {
-    User User;
+    User? User;
     ICollection<Role> Roles = new List<Role>();
-    ICollection<Role> SelectedRoles = new List<Role>();
-    IEnumerable<TransferItem> TransferItems { get; set; } = new List<TransferItem>();
-    List<string> TargetKeys { get; set; } = new List<string>();
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            TransferItems = Roles.Select(r => new TransferItem()
-            {
-                Key = r.Id.ToString(),
-                Title = r.Name
-            });
-
-            if (SelectedRoles != null)
-                TargetKeys = SelectedRoles.Select(i => i.Id.ToString()).ToList();
-        }
-    }
+    IEnumerable<Role> SelectedRoles = new List<Role>();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-    }
-
-    private async Task LoadData()
-    {
         User = await UserService
-            .Query(q =>
-            {
-                return q.Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role);
-            })
+            .Query(q => q.Include(u => u.UserRoles).ThenInclude(ur => ur.Role))
             .GetAsync(Options);
-        
+
         Roles = await RoleService.GetAsync();
 
         SelectedRoles = Roles.Where(r => User.Roles?.Any(cr => r.Name == cr.Name) ?? false).ToList();
     }
 
-    async Task OnChange(TransferChangeArgs e)
-    {
-        SelectedRoles = Roles.Where(r => e.TargetKeys.Contains(r.Id.ToString())).ToList();
-    }
-
-    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    protected override async Task<bool> OnOkAsync()
     {
         var currentAdmins = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
+        var currentRoles = await UserService.GetRolesAsync(User!);
 
-        try
+        await UserService.AddToRolesAsync(User!.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
+
+        foreach (var role in currentRoles)
         {
-            var currentRoles = await UserService.GetRolesAsync(User);
+            if (SelectedRoles.Any(r => r.Name == role.Name))
+                continue;
 
-            await UserService.AddToRolesAsync(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
-
-            foreach (var role in currentRoles)
-            {
-                if (!SelectedRoles.Any(r => r.Name == role.Name))
-                {
-                    if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Count() == 1)
-                        MessageService.Warning("Cannot demote the only administrator!");
-                    else
-                        await UserService.RemoveFromRole(User.UserName, role.Name);
-                }
-            }
-
-            MessageService.Success("Updated user roles!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not update user roles!");
-            Logger.LogError(ex, "Could not update user roles!");
+            if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Count() == 1)
+                Notifications.Warning("Cannot demote the only administrator!");
+            else
+                await UserService.RemoveFromRole(User.UserName, role.Name);
         }
 
-        await base.OkCancelRefWithResult!.OnOk(User.Id);
+        Notifications.Success("Updated user roles!");
+
+        Result = true;
+
+        return true;
     }
 }

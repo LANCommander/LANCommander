@@ -1,4 +1,4 @@
-using Bunit;
+﻿using Bunit;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Services;
 using LANCommander.Server.UI.Pages.Games.Components;
@@ -80,10 +80,10 @@ public class KeysEditorComponentTests : BUnitTestContext
 
         var cut = RenderEditor(game.Id);
 
-        var statistics = cut.FindAll(".ant-statistic")
+        var statistics = cut.FindAll(".lc-statistic")
             .Select(s => (
-                Title: s.QuerySelector(".ant-statistic-title")?.TextContent?.Trim(),
-                Value: s.QuerySelector(".ant-statistic-content-value")?.TextContent?.Trim()))
+                Title: s.QuerySelector(".lc-statistic-title")?.TextContent?.Trim(),
+                Value: s.QuerySelector(".lc-statistic-value")?.TextContent?.Trim()))
             .ToList();
 
         Assert.Equal("4", statistics.Single(s => s.Title == "Total").Value);
@@ -110,10 +110,10 @@ public class KeysEditorComponentTests : BUnitTestContext
 
         cut.Render(parameters => parameters.Add(p => p.Id, second.Id));
 
-        var total = cut.FindAll(".ant-statistic")
+        var total = cut.FindAll(".lc-statistic")
             .Select(s => (
-                Title: s.QuerySelector(".ant-statistic-title")?.TextContent?.Trim(),
-                Value: s.QuerySelector(".ant-statistic-content-value")?.TextContent?.Trim()))
+                Title: s.QuerySelector(".lc-statistic-title")?.TextContent?.Trim(),
+                Value: s.QuerySelector(".lc-statistic-value")?.TextContent?.Trim()))
             .Single(s => s.Title == "Total");
 
         Assert.Equal("5", total.Value);

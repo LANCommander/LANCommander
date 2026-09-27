@@ -1,4 +1,4 @@
-﻿@page "/FirstTimeSetup"
+@page "/FirstTimeSetup"
 @page "/FirstTimeSetup/Database"
 @layout FirstTimeSetupLayout
 @using LANCommander.SDK
@@ -10,58 +10,39 @@
 @using Npgsql
 @inject SetupService SetupService
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IOptions<Settings> Settings 
+@inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject ILogger<Database> Logger
 
 <PageTitle>Database Config - First Time Setup</PageTitle>
 
-<Form Model="@Settings.Value" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="FormLayout.Vertical">
-    <FormItem>
-        LANCommander requires a database to run. If you require something other than SQLite, configure that here.
-    </FormItem>
+<Form Model="Settings.Value" Loading="Loading" OnSubmit="ConnectAsync">
+    <p>LANCommander requires a database to run. If you require something other than SQLite, configure that here.</p>
+
     <FormItem Label="Database Provider">
-        <Select
-            @bind-Value="context.Server.Database.Provider"
-            TItem="DatabaseProvider"
-            TItemValue="DatabaseProvider"
-            DataSource="Enum.GetValues<DatabaseProvider>()"
-            OnSelectedItemChanged="OnDatabaseProviderChanged">
-            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-        </Select>
+        <EnumSelect TEnum="DatabaseProvider" @bind-Value="Settings.Value.Server.Database.Provider" @bind-Value:after="OnDatabaseProviderChanged" />
     </FormItem>
-    <DatabaseConnectionStringEditor Provider="context.Server.Database.Provider" @bind-ConnectionString="context.Server.Database.ConnectionString" />
-    <FormItem WrapperColOffset="8" WrapperColSpan="16">
-        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
-            <GridCol>
-                <Button OnClick="TestDatabaseConnection" Loading="Loading">
-                    Test
-                </Button>
-                <Button Type="ButtonType.Primary" HtmlType="submit" Loading="Loading" Style="margin-left: 8px;">
-                    Connect
-                </Button>
-            </GridCol>
-        </GridRow>
-    </FormItem>
+
+    <DatabaseConnectionStringEditor Provider="Settings.Value.Server.Database.Provider" @bind-ConnectionString="Settings.Value.Server.Database.ConnectionString" />
+
+    <Flex Justify="Justify.End" Gap="Gap.Small" Class="first-time-setup-actions">
+        <Button Loading="Loading" OnClick="TestAsync">Test</Button>
+        <Button Primary Submit Loading="Loading">Connect</Button>
+    </Flex>
 </Form>
 
 @code {
-    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
-    
-    bool Loading = false;
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; } = default!;
+
+    bool Loading;
 
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
 
-        if (Settings.Value.Server.Database.Provider != DatabaseProvider.Unknown)
-        {
-            var isSetupInitialized = await SetupService.IsSetupInitialized();
-            if (isSetupInitialized)
-                NavigationManager.NavigateTo("/");
-        }
+        if (Settings.Value.Server.Database.Provider != DatabaseProvider.Unknown && await SetupService.IsSetupInitialized())
+            NavigationManager.NavigateTo("/");
     }
 
     void OnDatabaseProviderChanged()
@@ -69,9 +50,7 @@
         switch (Settings.Value.Server.Database.Provider)
         {
             case DatabaseProvider.SQLite:
-                var dbPath = AppPaths.GetConfigPath("LANCommander.db");
-                
-                Settings.Value.Server.Database.ConnectionString = $"Data Source={dbPath};Cache=Shared";
+                Settings.Value.Server.Database.ConnectionString = $"Data Source={AppPaths.GetConfigPath("LANCommander.db")};Cache=Shared";
                 break;
 
             case DatabaseProvider.MySQL:
@@ -94,41 +73,40 @@
         }
         catch (SqliteException ex)
         {
-            Logger?.LogError(ex, "Could not use SQLite database connection");
-            MessageService.Error($"Could not use SQLite database: {ex.Message}", 10);
+            Logger.LogError(ex, "Could not use SQLite database connection");
+            Notifications.Error("Could not use SQLite database", ex.Message);
         }
         catch (MySqlException ex)
         {
-            Logger?.LogError(ex, "Could not connect to MySQL database");
-            MessageService.Error($"Could not connect to MySQL database: {ex.Message}", 10);
+            Logger.LogError(ex, "Could not connect to MySQL database");
+            Notifications.Error("Could not connect to MySQL database", ex.Message);
         }
         catch (NpgsqlException ex)
         {
-            Logger?.LogError(ex, "Could not connect to PostgreSQL database");
-            MessageService.Error($"Could not connect to PostgreSQL database: {ex.Message}", 10);
+            Logger.LogError(ex, "Could not connect to PostgreSQL database");
+            Notifications.Error("Could not connect to PostgreSQL database", ex.Message);
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "An unknown error occurred trying to access the database", 10);
-            MessageService.Error("Could not validate the connection string!");
+            Notifications.Error(ex, "Could not validate the connection string!");
         }
 
         return false;
     }
 
-    async Task TestDatabaseConnection()
+    async Task TestAsync()
     {
         Loading = true;
         StateHasChanged();
         await Task.Yield();
 
         if (TestConnection())
-            MessageService.Success("Database connection successful!");
+            Notifications.Success("Database connection successful!");
 
         Loading = false;
     }
 
-    async Task ValidateDatabaseConnection()
+    async Task ConnectAsync()
     {
         Loading = true;
         StateHasChanged();
@@ -138,23 +116,19 @@
         {
             try
             {
-                await InvokeAsync(async () =>
-                {
-                    await SetupService.ChangeProviderAsync(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
-                    
-                    SettingsProvider.Update(s =>
-                    {
-                        s.Server.Database.Provider = Settings.Value.Server.Database.Provider;
-                        s.Server.Database.ConnectionString = Settings.Value.Server.Database.ConnectionString;
-                    });
+                await SetupService.ChangeProviderAsync(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
 
-                    NavigationManager.NavigateTo("/FirstTimeSetup/Paths", true);
+                SettingsProvider.Update(s =>
+                {
+                    s.Server.Database.Provider = Settings.Value.Server.Database.Provider;
+                    s.Server.Database.ConnectionString = Settings.Value.Server.Database.ConnectionString;
                 });
+
+                NavigationManager.NavigateTo("/FirstTimeSetup/Paths", true);
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not initialize database!");
-                MessageService.Error($"Could not initialize database: {ex.Message}", 10);
+                Notifications.Error(ex, "Could not initialize database");
             }
         }
 

@@ -1,0 +1,18 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A bordered stack of Panels *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-collapse").Add(Class).Build();
+    }
+}

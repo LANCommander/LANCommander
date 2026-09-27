@@ -1,0 +1,151 @@
+@using LANCommander.SDK.PowerShell
+@using LANCommander.Server.Models
+@using LANCommander.Server.Services.PowerShell
+@using XtermBlazor
+@using LogLevel = Microsoft.Extensions.Logging.LogLevel
+@inherits Dialog<PackagingDialogOptions, bool>
+@implements IDisposable
+@inject ScriptDebugger ScriptDebugger
+@inject GameService GameService
+@inject ToolService ToolService
+@inject RedistributableService RedistributableService
+@inject ILogger<PackagingDialog> Logger
+
+@* Runs the Package script of a game, tool or redistributable and streams its output *@
+<div class="packaging-dialog">
+    @switch (_status)
+    {
+        case PackagingStatus.Complete:
+            <Result Success Title="Packaging Complete" SubTitle="@($"Completed in {FormatTimeSpan(_elapsed)}")" />
+            break;
+
+        case PackagingStatus.Failed:
+            <Result Danger Title="Packaging Failed" SubTitle="@(_errorMessage ?? "The packaging script encountered an error.")" />
+            break;
+    }
+
+    <div class="packaging-terminal">
+        @if (_status == PackagingStatus.Running)
+        {
+            @* The package services can't be cancelled, so there is deliberately no Stop button *@
+            <Flex Gap="Gap.Small" Align="Align.Center">
+                <Spin Small />
+                <span>@FormatElapsed()</span>
+            </Flex>
+        }
+
+        <LANCommander.Server.UI.Components.Terminal @ref="_terminal" Id="@_id.ToString()" Options="_terminalOptions" OnFirstRender="OnTerminalReadyAsync" />
+    </div>
+</div>
+
+@code {
+    enum PackagingStatus { Running, Complete, Failed }
+
+    readonly Guid _id = Guid.NewGuid();
+    LANCommander.Server.UI.Components.Terminal? _terminal;
+    DateTime? _startTime;
+    TimeSpan _elapsed;
+    System.Threading.Timer? _elapsedTimer;
+
+    PackagingStatus _status = PackagingStatus.Running;
+    bool _hasErrors;
+    string? _errorMessage;
+
+    readonly TerminalOptions _terminalOptions = new()
+    {
+        CursorBlink = false,
+        CursorStyle = CursorStyle.Bar,
+    };
+
+    protected override void OnInitialized()
+    {
+        ScriptDebugger.OnStart = _ => InvokeAsync(StateHasChanged);
+        ScriptDebugger.OnEnd = EndAsync;
+        ScriptDebugger.OnOutput = OutputAsync;
+        ScriptDebugger.OnBreak = null;
+
+        _startTime = DateTime.UtcNow;
+
+        _elapsedTimer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    async Task OnTerminalReadyAsync()
+    {
+        if (_terminal != null)
+            await _terminal.FitAsync();
+
+        try
+        {
+            if (Options.GameId != Guid.Empty)
+                await GameService.PackageAsync(Options.GameId);
+            else if (Options.ToolId != Guid.Empty)
+                await ToolService.PackageAsync(Options.ToolId);
+            else if (Options.RedistributableId != Guid.Empty)
+                await RedistributableService.PackageAsync(Options.RedistributableId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Packaging failed with an exception");
+
+            _hasErrors = true;
+            _errorMessage = ex.Message;
+
+            if (_terminal != null)
+                await _terminal.WriteLine(ex.Message, LogLevel.Error);
+
+            Finish(PackagingStatus.Failed);
+        }
+    }
+
+    async Task EndAsync(IScriptDebugContext context)
+    {
+        if (_status != PackagingStatus.Running)
+            return;
+
+        Finish(_hasErrors ? PackagingStatus.Failed : PackagingStatus.Complete);
+
+        if (_terminal != null)
+            await _terminal.WriteLine($"\nCompleted in {FormatTimeSpan(_elapsed)}", LogLevel.Information);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OutputAsync(IScriptDebugContext context, LogLevel level, string message)
+    {
+        if (level == LogLevel.Error)
+        {
+            _hasErrors = true;
+            _errorMessage ??= message;
+        }
+
+        try
+        {
+            if (_terminal != null)
+                await _terminal.WriteLine(message, level);
+        }
+        catch
+        {
+            // The dialog may have closed while the script was still writing
+        }
+    }
+
+    void Finish(PackagingStatus status)
+    {
+        _elapsedTimer?.Dispose();
+        _elapsedTimer = null;
+
+        _elapsed = _startTime.HasValue ? DateTime.UtcNow - _startTime.Value : TimeSpan.Zero;
+        _status = status;
+
+        Result = status == PackagingStatus.Complete;
+    }
+
+    string FormatElapsed() => _startTime.HasValue ? FormatTimeSpan(DateTime.UtcNow - _startTime.Value) : "";
+
+    static string FormatTimeSpan(TimeSpan ts) => ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss");
+
+    public void Dispose()
+    {
+        _elapsedTimer?.Dispose();
+    }
+}

@@ -1,0 +1,62 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* The outcome of a whole page or flow: an import finished, a page wasn't found, something crashed *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <Icon Type="@(Icon == IconType.None ? _status.Icon() : Icon)" Fill Class="lc-result-icon" />
+    @if (Title != null)
+    {
+        <div class="lc-result-title">@Title</div>
+    }
+    @if (SubTitle != null)
+    {
+        <div class="lc-result-subtitle">@SubTitle</div>
+    }
+    @if (Content != null)
+    {
+        <div class="lc-result-content">@Content</div>
+    }
+    @if (ChildContent != null)
+    {
+        <div class="lc-result-actions">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public string? SubTitle { get; set; }
+
+    /// <summary>Details below the titles, such as an error message or a summary of what happened.</summary>
+    [Parameter] public RenderFragment? Content { get; set; }
+
+    /// <summary>Actions: what to do next.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Success { get; set; }
+
+    [Parameter] public bool Info { get; set; }
+
+    [Parameter] public bool Warning { get; set; }
+
+    [Parameter] public bool Danger { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    Status _status;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _status = StatusResolver.Resolve(success: Success, info: Info, warning: Warning, danger: Danger);
+
+        if (_status == Status.None)
+            _status = Status.Info;
+
+        _class = new ClassBuilder()
+            .Add("lc-result")
+            .Add($"lc-result-{_status.ClassSuffix()}")
+            .Add(Class)
+            .Build();
+    }
+}

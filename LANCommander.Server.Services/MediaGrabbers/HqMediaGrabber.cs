@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
@@ -104,10 +105,10 @@ public class HqMediaGrabber(
                 {
                     results.Add(new MediaGrabberResult
                     {
-                        Id = $"{gameDto.Id}:{(int)hqMediaType}:{media.FileId}",
+                        Id = $"{gameDto.Id}:{(int)hqMediaType}:{ResolveMediaId(media)}",
                         Type = type,
                         SourceUrl = media.SourceUrl ?? media.Url ?? string.Empty,
-                        ThumbnailUrl = result.CoverUrl ?? string.Empty,
+                        ThumbnailUrl = ResolveThumbnailUrl(type, media, result.CoverUrl),
                         Group = result.Title,
                         MimeType = media.MimeType ?? "application/octet-stream",
                     });
@@ -123,6 +124,54 @@ public class HqMediaGrabber(
         }
     }
 
+    internal static Guid ResolveMediaId(HqModels.MediaDto media)
+    {
+        if (media.Id != Guid.Empty)
+            return media.Id;
+
+        if (string.IsNullOrWhiteSpace(media.Url))
+            return Guid.Empty;
+
+        var path = media.Url;
+        var queryStart = path.IndexOfAny(['?', '#']);
+
+        if (queryStart >= 0)
+            path = path[..queryStart];
+
+        var lastSegment = path.TrimEnd('/').Split('/').LastOrDefault();
+
+        return Guid.TryParse(lastSegment, out var parsed) ? parsed : Guid.Empty;
+    }
+
+    internal static string ResolveThumbnailUrl(MediaType type, HqModels.MediaDto media, string? gameCoverUrl)
+        => type switch
+        {
+            MediaType.Video => gameCoverUrl ?? string.Empty,
+            MediaType.Manual => "/static/pdf.png",
+            _ => Downscale(media.SourceUrl) ?? gameCoverUrl ?? string.Empty,
+        };
+
+    internal static string? Downscale(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || !uri.Host.Equals("images.igdb.com", StringComparison.OrdinalIgnoreCase))
+            return url;
+
+        return IgdbSizeToken.Replace(url, match => match.Groups["kind"].Value.ToLowerInvariant() switch
+        {
+            "screenshot" => "/t_screenshot_med/",
+            "cover" => "/t_cover_small/",
+            _ => match.Value,
+        }, 1);
+    }
+
+    private static readonly Regex IgdbSizeToken = new(
+        @"/t_(?<kind>screenshot|cover)_[a-z0-9_]+/",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     public async Task<MediaGrabberDownload> DownloadAsync(MediaGrabberResult result)
     {
         return await DownloadAsync(result, null);
@@ -137,10 +186,15 @@ public class HqMediaGrabber(
 
         var gameId = Guid.Parse(parts[0]);
         var hqMediaType = (HqModels.MediaType)int.Parse(parts[1]);
+        var mediaId = parts.Length > 2 && Guid.TryParse(parts[2], out var parsedMediaId)
+            ? parsedMediaId
+            : Guid.Empty;
 
         try
         {
-            using var response = await hqConnection.TrackAsync(() => hqClient.Games.GetMediaAsync(gameId, hqMediaType));
+            using var response = await hqConnection.TrackAsync(() => mediaId == Guid.Empty
+                ? hqClient.Games.GetMediaAsync(gameId, hqMediaType)
+                : hqClient.Games.GetMediaByIdAsync(gameId, mediaId));
             response.EnsureSuccessStatusCode();
 
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
@@ -158,7 +212,7 @@ public class HqMediaGrabber(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error downloading media from HQ for game {GameId}, media type {MediaType}", gameId, hqMediaType);
+            logger.LogError(ex, "Error downloading media from HQ for game {GameId}, media type {MediaType}, media {MediaId}", gameId, hqMediaType, mediaId);
             throw;
         }
     }

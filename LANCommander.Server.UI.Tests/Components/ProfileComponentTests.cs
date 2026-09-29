@@ -19,7 +19,7 @@ public class ProfileComponentTests : BUnitTestContext
     [Fact]
     public void Profile_ShowsCurrentUsername()
     {
-        var cut = RenderComponent<ProfileIndex>();
+        var cut = Render<ProfileIndex>();
 
         // The authenticated admin's username is bound into the username input.
         Assert.Contains(TestConstants.AdminUserName, cut.Markup);
@@ -28,7 +28,7 @@ public class ProfileComponentTests : BUnitTestContext
     [Fact]
     public void Profile_ShowsFormElements()
     {
-        var cut = RenderComponent<ProfileIndex>();
+        var cut = Render<ProfileIndex>();
 
         foreach (var label in new[] { "Username", "Alias", "Email Address" })
         {

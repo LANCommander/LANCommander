@@ -1,4 +1,5 @@
 @page "/Scripting/Modules"
+@using AntDesign.TableModels
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ModuleService ModuleService
 @inject NavigationManager NavigationManager
@@ -12,11 +13,11 @@
 </PageHeader>
 
 <PageContent>
-    <Table TItem="Module" DataSource="@Modules" Size="@TableSize.Small" Context="module" Responsive>
+    <Table TItem="Module" DataSource="@Modules" Size="@TableSize.Small" Context="module" Responsive OnRow="RowAttributes">
         <PropertyColumn Property="m => m.Name" Title="Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <ActionColumn Title="" Style="text-align: right">
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <a href="@($"/Scripting/Modules/{module.Name}")" class="ant-btn ant-btn-primary">Edit</a>
+                <a href="@($"/Scripting/Modules/{module.Name}")" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
                 <Popconfirm OnConfirm="() => Delete(module)" Title="Are you sure you want to delete this module?">
                     <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
                 </Popconfirm>
@@ -27,6 +28,11 @@
 
 @code {
     IEnumerable<Module> Modules { get; set; } = new List<Module>();
+
+    Dictionary<string, object> RowAttributes(RowData<Module> row) => new()
+    {
+        ["ondblclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, () => NavigationManager.NavigateTo($"/Scripting/Modules/{row.Data.Name}")),
+    };
 
     protected override void OnInitialized()
     {

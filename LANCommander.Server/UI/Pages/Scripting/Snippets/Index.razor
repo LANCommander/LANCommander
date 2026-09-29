@@ -1,4 +1,5 @@
 @page "/Scripting/Snippets"
+@using AntDesign.TableModels
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ScriptService ScriptService
 @inject NavigationManager NavigationManager
@@ -12,12 +13,12 @@
 </PageHeader>
 
 <PageContent>
-    <Table TItem="Snippet" DataSource="@Snippets" Size="@TableSize.Small" Context="snippet" Responsive>
+    <Table TItem="Snippet" DataSource="@Snippets" Size="@TableSize.Small" Context="snippet" Responsive OnRow="RowAttributes">
         <PropertyColumn Property="s => s.Group" Title="Group" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <PropertyColumn Property="s => s.Name" Title="Name" Sortable />
         <ActionColumn Title="" Style="text-align: right">
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <a href="@($"/Scripting/Snippets/{snippet.Group}/{snippet.Name}")" class="ant-btn ant-btn-primary">Edit</a>
+                <a href="@($"/Scripting/Snippets/{snippet.Group}/{snippet.Name}")" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
                 <Popconfirm OnConfirm="() => Delete(snippet)" Title="Are you sure you want to delete this snippet?">
                     <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
                 </Popconfirm>
@@ -28,6 +29,13 @@
 
 @code {
     IEnumerable<Snippet> Snippets { get; set; } = new List<Snippet>();
+
+    // AntDesign has no row double click event, but OnRow's dictionary is splatted onto the
+    // <tr>, so "ondblclick" binds like it would on any element we controlled ourselves.
+    Dictionary<string, object> RowAttributes(RowData<Snippet> row) => new()
+    {
+        ["ondblclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, () => NavigationManager.NavigateTo($"/Scripting/Snippets/{row.Data.Group}/{row.Data.Name}")),
+    };
 
     protected override void OnInitialized()
     {

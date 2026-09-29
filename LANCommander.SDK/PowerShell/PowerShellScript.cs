@@ -1,4 +1,4 @@
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -162,9 +162,9 @@ namespace LANCommander.SDK.PowerShell
 
         private bool RequiresAdmin()
         {
-            var pattern = @"^#(\s?Requires\s?Admin|Requires -RunAsAdministrator)\s*";
+            var pattern = @"^[ \t]*#(\s?Requires\s?Admin|Requires -RunAsAdministrator)";
 
-            return Regex.IsMatch(Contents, pattern);
+            return Regex.IsMatch(Contents, pattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
         }
 
         /// <summary>
@@ -259,13 +259,19 @@ namespace LANCommander.SDK.PowerShell
             var settingsProvider = ServiceProvider.GetService<ISettingsProvider>();
             if (settingsProvider is not null)
             {
-                runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ISettingsProvider", settingsProvider);
+                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.SettingsProviderKey, settingsProvider);
             }
 
             var apiRequestFactory = ServiceProvider.GetService<ApiRequestFactory>();
             if (apiRequestFactory is not null)
             {
-                runspace.SessionStateProxy.SetVariable("LANCommander.SDK.ApiRequestFactory", apiRequestFactory);
+                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.ApiRequestFactoryKey, apiRequestFactory);
+            }
+
+            var profileClient = ServiceProvider.GetService<Services.ProfileClient>();
+            if (profileClient is not null)
+            {
+                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.ProfileClientKey, profileClient);
             }
 
             // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)

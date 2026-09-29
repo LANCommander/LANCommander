@@ -65,9 +65,13 @@ public class ToolImporter(
             existing.Description = record.Description;
             existing.Notes = record.Notes;
             existing.CreatedOn = record.CreatedOn;
-            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.UpdatedOn = record.UpdatedOn;
-            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
+
+            if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+                existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
+
+            if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+                existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
             await toolService.UpdateAsync(existing);
 

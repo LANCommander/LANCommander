@@ -27,58 +27,13 @@ public static class KeysEndpoints
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
         [FromServices] ILoggerFactory loggerFactory)
-    {
-        var logger = loggerFactory.CreateLogger("KeysApi");
+        => await GetAllocatedAsync(keyRequest.GameId, keyRequest, userPrincipal, mapper, keyService, gameService, userService, loggerFactory);
 
-        try
-        {
-            Data.Models.Key? key = null;
-
-            var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
-            var game = await gameService
-                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
-                .GetAsync(keyRequest.GameId);
-
-            if (game == null)
-            {
-                logger.LogError("Requested game with ID {GameId} does not exist", keyRequest.GameId);
-                return TypedResults.NotFound();
-            }
-
-            switch (game.KeyAllocationMethod)
-            {
-                case KeyAllocationMethod.MacAddress:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.MacAddress &&
-                        k.ClaimedByMacAddress == keyRequest.MacAddress);
-                    break;
-
-                case KeyAllocationMethod.UserAccount:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.UserAccount &&
-                        k.ClaimedByUser?.Id == user?.Id);
-                    break;
-
-                default:
-                    logger.LogError("Unhandled key allocation method {KeyAllocationMethod}", game.KeyAllocationMethod);
-                    return TypedResults.NotFound();
-            }
-
-            if (key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
-
-            var allocated = await AllocateNewKeyAsync(game.Id, keyRequest, game.KeyAllocationMethod, userPrincipal, mapper, keyService, userService);
-
-            return TypedResults.Ok(allocated);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An unknown error occurred while trying to get an allocated key for game with ID {GameId}", keyRequest.GameId);
-
-            return TypedResults.NotFound();
-        }
-    }
-
+    /// <summary>
+    /// Returns the key this claimant already holds for the game, allocating one if they do not
+    /// hold one yet. Every launcher run funnels through here, so returning the existing claim
+    /// rather than a new key is what keeps a game's pool from draining.
+    /// </summary>
     internal static async Task<IResult> GetAllocatedAsync(
         Guid id,
         [FromBody] KeyRequest keyRequest,
@@ -93,44 +48,24 @@ public static class KeysEndpoints
 
         try
         {
-            Data.Models.Key? key = null;
+            var request = await ResolveAsync(id, keyRequest, userPrincipal, gameService, userService, logger);
 
-            var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
-            var game = await gameService
-                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
-                .GetAsync(id);
+            if (request == null)
+                return TypedResults.NotFound();
 
-            if (game == null)
+            if (request.HeldKey != null)
+                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(request.HeldKey));
+
+            var availableKey = request.Game.Keys.FirstOrDefault(k => k.IsAvailable());
+
+            if (availableKey == null)
             {
-                logger.LogError("Requested game with ID {GameId} does not exist", keyRequest.GameId);
+                logger.LogWarning("No keys are available for game with ID {GameId}", id);
+
                 return TypedResults.NotFound();
             }
 
-            switch (game.KeyAllocationMethod)
-            {
-                case KeyAllocationMethod.MacAddress:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.MacAddress &&
-                        k.ClaimedByMacAddress == keyRequest.MacAddress);
-                    break;
-
-                case KeyAllocationMethod.UserAccount:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.UserAccount &&
-                        k.ClaimedByUser?.Id == user?.Id);
-                    break;
-
-                default:
-                    logger.LogError("Unhandled key allocation method {KeyAllocationMethod}", game.KeyAllocationMethod);
-                    return TypedResults.NotFound();
-            }
-
-            if (key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
-
-            var allocated = await AllocateNewKeyAsync(id, keyRequest, game.KeyAllocationMethod, userPrincipal, mapper, keyService, userService);
-
-            return TypedResults.Ok(allocated);
+            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(await AllocateToAsync(keyService, request, availableKey)));
         }
         catch (Exception ex)
         {
@@ -140,6 +75,11 @@ public static class KeysEndpoints
         }
     }
 
+    /// <summary>
+    /// Moves the claimant onto a different key, returning the one they were holding to the pool.
+    /// Falls back to the held key when nothing else is free so a re-roll can never leave a
+    /// claimant with no key at all.
+    /// </summary>
     internal static async Task<IResult> AllocateAsync(
         Guid id,
         [FromBody] KeyRequest keyRequest,
@@ -154,61 +94,23 @@ public static class KeysEndpoints
 
         try
         {
-            Data.Models.Key? key = null;
+            var request = await ResolveAsync(id, keyRequest, userPrincipal, gameService, userService, logger);
 
-            var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
-            var game = await gameService
-                .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
-                .GetAsync(id);
-
-            if (game == null)
-            {
-                logger.LogError("Requested game with ID {GameId} does not exist", keyRequest.GameId);
+            if (request == null)
                 return TypedResults.NotFound();
-            }
 
-            switch (game.KeyAllocationMethod)
-            {
-                case KeyAllocationMethod.MacAddress:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.MacAddress &&
-                        k.ClaimedByMacAddress == keyRequest.MacAddress);
-                    break;
+            var availableKey = request.Game.Keys.FirstOrDefault(k => k.IsAvailable() && k.Id != request.HeldKey?.Id);
 
-                case KeyAllocationMethod.UserAccount:
-                    key = game.Keys.FirstOrDefault(k =>
-                        k.AllocationMethod == KeyAllocationMethod.UserAccount &&
-                        k.ClaimedByUser?.Id == user?.Id);
-                    break;
-
-                default:
-                    logger.LogError("Unhandled key allocation method {KeyAllocationMethod}", game.KeyAllocationMethod);
-                    return TypedResults.NotFound();
-            }
-
-            var availableKey = game.Keys.FirstOrDefault(k => k.IsAvailable());
-
-            if (availableKey == null && key != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+            if (availableKey == null && request.HeldKey != null)
+                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(request.HeldKey));
 
             if (availableKey == null)
                 return TypedResults.NotFound();
 
-            if (key != null)
-                await keyService.ReleaseAsync(key.Id);
+            if (request.HeldKey != null)
+                await keyService.ReleaseAsync(request.HeldKey.Id);
 
-            switch (game.KeyAllocationMethod)
-            {
-                case KeyAllocationMethod.MacAddress:
-                    key = await keyService.AllocateAsync(availableKey, keyRequest.MacAddress);
-                    break;
-
-                case KeyAllocationMethod.UserAccount:
-                    key = await keyService.AllocateAsync(availableKey, user);
-                    break;
-            }
-
-            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(key));
+            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(await AllocateToAsync(keyService, request, availableKey)));
         }
         catch (Exception ex)
         {
@@ -218,31 +120,89 @@ public static class KeysEndpoints
         }
     }
 
-    private static async Task<SDK.Models.Key?> AllocateNewKeyAsync(
+    /// <summary>
+    /// The game, the claimant the request is for, and the key that claimant already holds.
+    /// </summary>
+    private sealed record KeyAllocationRequest(
+        Data.Models.Game Game,
+        Data.Models.User? User,
+        string? MacAddress,
+        Data.Models.Key? HeldKey);
+
+    /// <summary>
+    /// Loads the game and works out who the request is claiming for, or returns null when that
+    /// cannot be established.
+    /// </summary>
+    private static async Task<KeyAllocationRequest?> ResolveAsync(
         Guid id,
         KeyRequest keyRequest,
-        KeyAllocationMethod keyAllocationMethod,
         ClaimsPrincipal userPrincipal,
-        IMapper mapper,
-        KeyService keyService,
-        UserService userService)
+        GameService gameService,
+        UserService userService,
+        ILogger logger)
     {
-        var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
+        var game = await gameService
+            .Query(q => q.Include(g => g.Keys).ThenInclude(k => k.ClaimedByUser))
+            .GetAsync(id);
 
-        var keys = await keyService.GetAsync(k => k.GameId == id);
-        var availableKey = keys.FirstOrDefault(k => k.IsAvailable());
-
-        if (availableKey == null)
+        if (game == null)
+        {
+            logger.LogError("Requested game with ID {GameId} does not exist", id);
             return null;
+        }
 
-        if (keyAllocationMethod == KeyAllocationMethod.MacAddress)
-            return mapper.Map<SDK.Models.Key>(await keyService.AllocateAsync(availableKey, keyRequest.MacAddress));
+        switch (game.KeyAllocationMethod)
+        {
+            case KeyAllocationMethod.MacAddress:
+                if (String.IsNullOrWhiteSpace(keyRequest.MacAddress))
+                {
+                    logger.LogError(
+                        "Cannot allocate a key for game with ID {GameId}: the game allocates by MAC address but the request did not supply one",
+                        id);
 
-        if (keyAllocationMethod == KeyAllocationMethod.UserAccount)
-            return mapper.Map<SDK.Models.Key>(await keyService.AllocateAsync(availableKey, user));
+                    return null;
+                }
 
-        return null;
+                return new KeyAllocationRequest(
+                    game,
+                    User: null,
+                    keyRequest.MacAddress,
+                    game.Keys.FirstOrDefault(k =>
+                        k.AllocationMethod == KeyAllocationMethod.MacAddress &&
+                        k.ClaimedByMacAddress == keyRequest.MacAddress));
+
+            case KeyAllocationMethod.UserAccount:
+                var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
+
+                if (user == null)
+                {
+                    logger.LogError(
+                        "Cannot allocate a key for game with ID {GameId}: the game allocates by user account but the requesting user {UserName} could not be resolved",
+                        id,
+                        userPrincipal?.Identity?.Name);
+
+                    return null;
+                }
+
+                return new KeyAllocationRequest(
+                    game,
+                    user,
+                    MacAddress: null,
+                    game.Keys.FirstOrDefault(k =>
+                        k.AllocationMethod == KeyAllocationMethod.UserAccount &&
+                        k.ClaimedByUserId == user.Id));
+
+            default:
+                logger.LogError("Unhandled key allocation method {KeyAllocationMethod}", game.KeyAllocationMethod);
+                return null;
+        }
     }
+
+    private static async Task<Data.Models.Key> AllocateToAsync(
+        KeyService keyService,
+        KeyAllocationRequest request,
+        Data.Models.Key key)
+        => request.User != null
+            ? await keyService.AllocateAsync(key, request.User)
+            : await keyService.AllocateAsync(key, request.MacAddress!);
 }
-
-

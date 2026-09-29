@@ -1,4 +1,4 @@
-﻿@using Microsoft.Extensions.Options
+@using Microsoft.Extensions.Options
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Services.Models
@@ -64,7 +64,7 @@
                     @{
                         var fileInputId = Guid.NewGuid();
                     }
-                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.ico,.mp4,.webm,.mkv"/>
+                    <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, row)" hidden accept="@GetAcceptedExtensions(row)"/>
                     <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
                         <Icon Type="@IconType.Outline.Upload"/>
                     </label>
@@ -127,6 +127,14 @@
         "video/webm",
         "video/x-matroska"
     ];
+
+    const string AcceptedExtensions = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.ico,.mp4,.webm,.mkv";
+
+    static string GetAcceptedExtensions(Media media) =>
+        media.Type == MediaType.Icon ? $"{AcceptedExtensions},.exe" : AcceptedExtensions;
+
+    static bool IsExecutable(IBrowserFile file) =>
+        Path.GetExtension(file.Name).Equals(".exe", StringComparison.OrdinalIgnoreCase);
 
     List<Media> _media = new();
     Game _game;
@@ -236,6 +244,12 @@
 
     async Task UploadMedia(InputFileChangeEventArgs e, Media media)
     {
+        if (IsExecutable(e.File))
+        {
+            await UploadIconFromExecutable(e.File, media);
+            return;
+        }
+
         if (!ValidMimeTypes.Contains(e.File.ContentType))
         {
             MessageService.Error("Unsupported file type");
@@ -267,6 +281,46 @@
             media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
             
             await MediaService.UpdateAsync(media);
+        }
+
+        _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();
+
+        ResultsTable?.ReloadData();
+    }
+
+    async Task UploadIconFromExecutable(IBrowserFile file, Media media)
+    {
+        if (media.Type != MediaType.Icon)
+        {
+            MessageService.Error("Executables can only be used as a source for icons");
+            return;
+        }
+
+        if (file.Size > MediaService.MaxIconSourceExecutableSize)
+        {
+            MessageService.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(MediaService.MaxIconSourceExecutableSize).ToBinaryString()}");
+            return;
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: MediaService.MaxIconSourceExecutableSize);
+
+            media = await MediaService.WriteIconFromExecutableAsync(media, stream);
+
+            MessageService.Success($"Extracted icon from {file.Name}");
+        }
+        catch (InvalidDataException ex)
+        {
+            MessageService.Error(ex.Message);
+            Logger.LogError(ex, "Could not extract an icon from {FileName}", file.Name);
+            return;
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not extract an icon from the executable");
+            Logger.LogError(ex, "Could not extract an icon from {FileName}", file.Name);
+            return;
         }
 
         _media = (await MediaService.GetAsync(m => m.GameId == media.GameId)).ToList();

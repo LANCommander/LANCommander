@@ -28,5 +28,9 @@ public interface IElevatedProcessLauncher
     /// Starts the elevated process described by <paramref name="request"/> and completes only once
     /// that process has exited.
     /// </summary>
-    Task LaunchAndWaitAsync(ElevatedProcessRequest request);
+    /// <returns>
+    /// The child's exit code. Callers must not treat a completed wait as a successful run — an
+    /// elevated child that crashes during startup exits just as promptly as one that did the work.
+    /// </returns>
+    Task<int> LaunchAndWaitAsync(ElevatedProcessRequest request);
 }

@@ -33,6 +33,105 @@ namespace LANCommander.SDK.Helpers
             }
         }
         
+        public static int DeletePartialExtraction(string destination, IEnumerable<string> createdFiles, bool removeDestinationIfEmpty = false)
+        {
+            if (String.IsNullOrWhiteSpace(destination) || createdFiles == null)
+                return 0;
+
+            var root = NormalizeDirectory(destination);
+            var deleted = 0;
+            var parents = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var file in createdFiles)
+            {
+                if (String.IsNullOrWhiteSpace(file))
+                    continue;
+
+                try
+                {
+                    if (!IsUnder(root, file))
+                        continue;
+
+                    if (File.Exists(file))
+                    {
+                        File.Delete(file);
+                        deleted++;
+                    }
+
+                    var parent = Path.GetDirectoryName(file);
+
+                    if (!String.IsNullOrWhiteSpace(parent))
+                        parents.Add(parent);
+                }
+                catch
+                {
+                    // A file we cannot remove is not worth failing the cleanup over; the caller is
+                    // already handling an install failure.
+                }
+            }
+
+            // Deepest first, so a nested directory empties before its parent is considered.
+            foreach (var parent in parents.OrderByDescending(d => d.Length))
+            {
+                var current = parent;
+
+                while (!String.IsNullOrWhiteSpace(current) && IsUnder(root, current))
+                {
+                    try
+                    {
+                        if (!Directory.Exists(current) || Directory.EnumerateFileSystemEntries(current).Any())
+                            break;
+
+                        Directory.Delete(current);
+                    }
+                    catch
+                    {
+                        break;
+                    }
+
+                    current = Path.GetDirectoryName(current);
+                }
+            }
+
+            if (removeDestinationIfEmpty)
+            {
+                try
+                {
+                    if (Directory.Exists(root) && !Directory.EnumerateFileSystemEntries(root).Any())
+                        Directory.Delete(root);
+                }
+                catch
+                {
+                    // Leaving an empty directory behind is harmless.
+                }
+            }
+
+            return deleted;
+        }
+
+        /// <summary>Whether <paramref name="path"/> sits strictly inside <paramref name="root"/>.</summary>
+        private static bool IsUnder(string root, string path)
+        {
+            string candidate;
+
+            try
+            {
+                candidate = NormalizeDirectory(path);
+            }
+            catch
+            {
+                return false;
+            }
+
+            return candidate.Length > root.Length
+                   && candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                   && (candidate[root.Length] == Path.DirectorySeparatorChar
+                       || candidate[root.Length] == Path.AltDirectorySeparatorChar);
+        }
+
+        private static string NormalizeDirectory(string path) =>
+            Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
         public static bool IsDirectoryWritable(string path)
         {
             try

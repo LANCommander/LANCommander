@@ -1,0 +1,40 @@
+---
+title: 2.1.16
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.16 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- The launcher's render backend can now be overridden with environment variables on Windows, which is useful when a machine's graphics drivers don't get along with Avalonia's default pick. `LANCOMMANDER_RENDERING_MODE` accepts `software`, `angle`, `wgl`, and `vulkan`; `LANCOMMANDER_COMPOSITION_MODE` accepts `winui`, `directcomposition`, `lowlatency`, and `redirection`. Both take a comma-separated list that is tried in order, anything unset or unrecognized leaves Avalonia's detection alone, and the override in effect is written to the log at startup.
+- `LANCOMMANDER_RENDER_OVERLAY` turns on Avalonia's renderer debug overlays for diagnosing display problems. It accepts any combination of `fps`, `dirtyrects`, `layout`, and `render`, or `all`.
+
+## Bug Fixes
+- Fixed the launcher crashing when installing a tool. Tool archives were also being downloaded, extracted, and run through their post-install script twice; that duplicate pass has been removed. Fixes [#459](https://github.com/LANCommander/LANCommander/issues/459).
+- Fixed games with special characters in their name failing to add from PCGamingWiki. Fixes [#460](https://github.com/LANCommander/LANCommander/issues/460).
+- Fixed `$IPXRelayHost` and `$IPXRelayPort` never reaching scripts. The variables were only added to play actions, so install, uninstall, before start, after stop, name change, and key change scripts, along with redistributable and tool scripts, all ran without them despite the script editor advertising them.
+- Fixed the IPX relay being ignored whenever its host was left blank, which is the normal setup for a relay hosted by the LANCommander server. A blank host now falls back to the server's address, and the relay's **Enabled** setting decides whether the variables are injected instead of whether a host happens to be filled in.
+- Fixed `Get-UserCustomField`, `Update-UserCustomField`, and `Out-PlayerAvatar` failing to run.
+- Fixed game exports leaving out keys, saves, and play sessions.
+- Fixed tool exports leaving out actions and archives.
+- Fixed server exports leaving out HTTP paths. They were being exported but never written into the manifest.
+- Fixed archive and media files being silently dropped from an export when something else had the file open, such as the download endpoint streaming the same archive to a launcher, a backup agent, or a virus scanner.
+- Fixed exports including records that weren't selected and listing selected ones twice. 
+- Fixed a record that fails to export leaving an empty entry in the manifest. Failures are now logged with the record type and ID, and skipped.
+- Fixed importing a game's custom fields writing empty records.
+- Fixed the launcher's avatar download failing when the media directory didn't exist yet, and failing again on every later download once an avatar was already there.
+- Fixed routine launcher activity being logged as errors. Downloading your profile and deleting a cached media file were never being marked as finished, so they were reported as failures.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.16" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.15" to="v2.1.16" />

@@ -14,6 +14,30 @@ public static class AppPaths
     public const string DataDirectoryEnvironmentVariable = "LANCOMMANDER_DATA_DIR";
 
     /// <summary>
+    /// Pins the config directory explicitly, bypassing the working-directory-based resolution in
+    /// <see cref="GetConfigDirectory"/>. Must be called before anything else touches the config
+    /// directory, since the resolved value is cached for the process lifetime.
+    /// </summary>
+    /// <remarks>
+    /// Exists for processes that are spawned by another LANCommander process and must share its data
+    /// root. The <see cref="DataDirectoryEnvironmentVariable"/> override cannot be used for that:
+    /// setting a child's environment requires <c>UseShellExecute = false</c>, which is incompatible
+    /// with the <c>runas</c> verb used to elevate. Without this, an elevated child resolves its config
+    /// directory from its own working directory and silently boots an empty profile.
+    /// </remarks>
+    /// <param name="path">The config directory to use. Created if it does not exist.</param>
+    public static void UseConfigDirectory(string path)
+    {
+        if (String.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("A config directory must be provided.", nameof(path));
+
+        _configDirectory = Path.GetFullPath(path);
+
+        if (!Directory.Exists(_configDirectory))
+            Directory.CreateDirectory(_configDirectory);
+    }
+
+    /// <summary>
     /// Builds a full path under the application's config directory.
     /// </summary>
     /// <param name="paths">Additional path segments appended to the config directory.</param>

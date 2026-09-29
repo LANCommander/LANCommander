@@ -40,12 +40,17 @@
         </CascadingValue>
         
         <div class="panel-layout-content">
-            @if (Server?.Id == Id)
-            {
-                <CascadingValue Value="Server.Id" Name="ServerId">
-                    @ChildContent?.Invoke(Server)
-                </CascadingValue>
-            }
+            @* Scoped to the content pane so a failing tab leaves the tab menu and header usable. *@
+            <ErrorHandler Title="This page could not be loaded">
+                <Body>
+                    @if (Server?.Id == Id)
+                    {
+                        <CascadingValue Value="Server.Id" Name="ServerId">
+                            @ChildContent?.Invoke(Server)
+                        </CascadingValue>
+                    }
+                </Body>
+            </ErrorHandler>
         </div>
     </Content>
 </Layout>

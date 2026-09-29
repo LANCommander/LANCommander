@@ -49,7 +49,9 @@ namespace LANCommander.Server.Services
 
         public IBaseDatabaseService<T> Include(params string[] includes)
         {
-            return Include(includes);
+            // Cast so this binds to the IEnumerable overload. A string[] argument is an exact match
+            // for this method's own parameter, so an uncast call recurses until the stack overflows.
+            return Include((IEnumerable<string>)includes);
         }
 
         public IBaseDatabaseService<T> Include(IEnumerable<string> includes)
@@ -150,7 +152,11 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
                 
-                return await queryable.Where(predicate).ToListAsync();
+                var entities = await queryable.Where(predicate).ToListAsync();
+
+                EntityLoadState.Record(context);
+
+                return entities;
             }
             finally
             {
@@ -188,7 +194,11 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
                 
-                return await queryable.FirstAsync(predicate);
+                var entity = await queryable.FirstAsync(predicate);
+
+                EntityLoadState.Record(context);
+
+                return entity;
             }
             finally
             {
@@ -226,7 +236,11 @@ namespace LANCommander.Server.Services
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable.FirstOrDefaultAsync(predicate);
+                var entity = await queryable.FirstOrDefaultAsync(predicate);
+
+                EntityLoadState.Record(context);
+
+                return entity;
             }
             finally
             {

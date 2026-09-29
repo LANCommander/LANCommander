@@ -1,0 +1,41 @@
+---
+title: 2.1.13
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.13 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- Switching tabs on a game edit page is now much faster.
+- Errors in the server UI are now scoped to the part of the page that failed. A tab that fails to load leaves the page header and tab menu usable instead of replacing the entire screen with a crash page.
+- The crash page now offers a **Back** button alongside **Copy Error**.
+- Data tables in the server UI now report load failures instead of spinning forever.
+- Dependency updates across the project to clear outstanding CVEs.
+
+## Bug Fixes
+- Fixed the launcher's local media cache going stale.
+- Fixed the server not marking a game as modified when its media changed, which left launchers with no way to notice the change during an import.
+- Fixed `#Requires -RunAsAdministrator` and `# Requires Admin` only being recognized at the very start of a script. The directive is now matched on any line, in any casing, and with leading whitespace.
+- Fixed elevated script execution resolving the wrong LANCommander data directory.
+
+## Contributions
+This release includes contributions from the following community members:
+
+**@aaronpowell**
+- PR [#448](https://github.com/LANCommander/LANCommander/pull/448): Move Launcher Visual-Diff PR Comment To `workflow_run` Trigger
+- PR [#450](https://github.com/LANCommander/LANCommander/pull/450): Refresh LoginView Visual Baseline
+- PR [#453](https://github.com/LANCommander/LANCommander/pull/453): CVE Fixes
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.13" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.12" to="v2.1.13" />

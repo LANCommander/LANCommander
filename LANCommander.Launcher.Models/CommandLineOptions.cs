@@ -35,6 +35,9 @@ namespace LANCommander.Launcher.Models
 
         [Option("AllocatedKey", HelpText = "The new key to use in a key change script")]
         public string AllocatedKey { get; set; }
+
+        [Option("DataDirectory", HelpText = "The data directory of the launcher that spawned this process. Keeps an elevated child on the same profile, database and settings as its parent.")]
+        public string DataDirectory { get; set; }
     }
 
     [Verb("Install", HelpText = "Install a game from the server")]

@@ -140,7 +140,9 @@ public class ConnectionClient(
             }
 
             if (serverVersion.ComparePrecedenceTo(clientVersion) != 0)
-                logger?.LogWarning("API version mismatch: server is v{ServerVersion}, launcher is v{ClientVersion}", serverVersion, clientVersion);
+                logger?.LogWarning("API version mismatch: server is v{ServerVersion}, launcher is v{ClientVersion}{EnforcementNote}",
+                    serverVersion, clientVersion,
+                    VersionHelper.EnforceCompatibility ? string.Empty : " (compatibility enforcement is disabled)");
             else
                 logger?.LogDebug("API versions match (v{ClientVersion})", clientVersion);
         }

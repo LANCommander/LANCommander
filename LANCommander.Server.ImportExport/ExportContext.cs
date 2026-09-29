@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
@@ -171,10 +171,13 @@ public class ExportContext(
                 .Include(g => g.DependentGames)
                 .Include(g => g.Developers)
                 .Include(g => g.Engine)
+                .Include(g => g.GameSaves)
                 .Include(g => g.Genres)
+                .Include(g => g.Keys)
                 .Include(g => g.Media)
                 .Include(g => g.MultiplayerModes)
                 .Include(g => g.Platforms)
+                .Include(g => g.PlaySessions)
                 .Include(g => g.Publishers)
                 .Include(g => g.Redistributables)
                 .Include(g => g.Scripts)
@@ -272,6 +275,7 @@ public class ExportContext(
             .Query(q =>
             {
                 return q
+                    .Include(t => t.Actions)
                     .Include(t => t.Archives)
                     .Include(t => t.Scripts);
             })
@@ -282,6 +286,7 @@ public class ExportContext(
         
         var exportItemInfo = new List<ExportItemInfo>();
         
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(tool.Actions, Actions).ToListAsync());
         exportItemInfo.AddRange(await GetExportItemInfoAsync(tool.Archives, Archives).ToListAsync());
         exportItemInfo.AddRange(await GetExportItemInfoAsync(tool.Scripts, Scripts).ToListAsync());
 
@@ -344,6 +349,7 @@ public class ExportContext(
     
     public async Task PrepareToolExportQueueAsync(Data.Models.Tool tool)
     {
+        await AddToExportQueueAsync(ImportExportRecordType.Action, tool.Actions);
         await AddToExportQueueAsync(ImportExportRecordType.Archive, tool.Archives);
         await AddToExportQueueAsync(ImportExportRecordType.Script, tool.Scripts);
     }
@@ -408,43 +414,49 @@ public class ExportContext(
         var manifest = await Games.ExportAsync(game.Id);
 
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Game>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {
             if (queueItem.Type == ImportExportRecordType.Action)
-                manifest.Actions.Add(await ExportRecordAsync(queueItem, Actions));
+                await AddExportedRecordAsync(manifest.Actions, queueItem, Actions);
             else if (queueItem.Type == ImportExportRecordType.Archive)
-                manifest.Archives.Add(await ExportRecordAsync(queueItem, Archives));
+                await AddExportedRecordAsync(manifest.Archives, queueItem, Archives);
             else if (queueItem.Type == ImportExportRecordType.Collection)
-                manifest.Collections.Add(await ExportRecordAsync(queueItem, Collections));
+                await AddExportedRecordAsync(manifest.Collections, queueItem, Collections);
             else if (queueItem.Type == ImportExportRecordType.CustomField)
-                manifest.CustomFields.Add(await ExportRecordAsync(queueItem, CustomFields));
+                await AddExportedRecordAsync(manifest.CustomFields, queueItem, CustomFields);
             else if (queueItem.Type == ImportExportRecordType.Developer)
-                manifest.Developers.Add(await ExportRecordAsync(queueItem, Developers));
+                await AddExportedRecordAsync(manifest.Developers, queueItem, Developers);
             else if (queueItem.Type == ImportExportRecordType.Publisher)
-                manifest.Publishers.Add(await ExportRecordAsync(queueItem, Publishers));
+                await AddExportedRecordAsync(manifest.Publishers, queueItem, Publishers);
             else if (queueItem.Type == ImportExportRecordType.Engine)
-                manifest.Engine = await ExportRecordAsync(queueItem, Engines);
+            {
+                var engine = await ExportRecordAsync(queueItem, Engines);
+
+                if (engine != null)
+                    manifest.Engine = engine;
+            }
             else if (queueItem.Type == ImportExportRecordType.Genre)
-                manifest.Genres.Add(await ExportRecordAsync(queueItem, Genres));
+                await AddExportedRecordAsync(manifest.Genres, queueItem, Genres);
             else if (queueItem.Type == ImportExportRecordType.Key)
-                manifest.Keys.Add(await ExportRecordAsync(queueItem, Keys));
+                await AddExportedRecordAsync(manifest.Keys, queueItem, Keys);
             else if (queueItem.Type == ImportExportRecordType.Media)
-                manifest.Media.Add(await ExportRecordAsync(queueItem, Media));
+                await AddExportedRecordAsync(manifest.Media, queueItem, Media);
             else if (queueItem.Type == ImportExportRecordType.MultiplayerMode)
-                manifest.MultiplayerModes.Add(await ExportRecordAsync(queueItem, MultiplayerModes));
+                await AddExportedRecordAsync(manifest.MultiplayerModes, queueItem, MultiplayerModes);
             else if (queueItem.Type == ImportExportRecordType.Platform)
-                manifest.Platforms.Add(await ExportRecordAsync(queueItem, Platforms));
+                await AddExportedRecordAsync(manifest.Platforms, queueItem, Platforms);
             else if (queueItem.Type == ImportExportRecordType.PlaySession)
-                manifest.PlaySessions.Add(await ExportRecordAsync(queueItem, PlaySessions));
+                await AddExportedRecordAsync(manifest.PlaySessions, queueItem, PlaySessions);
             else if (queueItem.Type == ImportExportRecordType.Save)
-                manifest.Saves.Add(await ExportRecordAsync(queueItem, Saves));
+                await AddExportedRecordAsync(manifest.Saves, queueItem, Saves);
             else if (queueItem.Type == ImportExportRecordType.SavePath)
-                manifest.SavePaths.Add(await ExportRecordAsync(queueItem, SavePaths));
+                await AddExportedRecordAsync(manifest.SavePaths, queueItem, SavePaths);
             else if (queueItem.Type == ImportExportRecordType.Script)
-                manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
+                await AddExportedRecordAsync(manifest.Scripts, queueItem, Scripts);
             else if (queueItem.Type == ImportExportRecordType.Tag)
-                manifest.Tags.Add(await ExportRecordAsync(queueItem, Tags));
+                await AddExportedRecordAsync(manifest.Tags, queueItem, Tags);
         }
 
         return manifest;
@@ -455,13 +467,14 @@ public class ExportContext(
         var manifest = await Redistributables.ExportAsync(redistributable.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Redistributable>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {
             if (queueItem.Type == ImportExportRecordType.Archive)
-                manifest.Archives.Add(await ExportRecordAsync(queueItem, Archives));
+                await AddExportedRecordAsync(manifest.Archives, queueItem, Archives);
             else if (queueItem.Type == ImportExportRecordType.Script)
-                manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
+                await AddExportedRecordAsync(manifest.Scripts, queueItem, Scripts);
         }
 
         return manifest;
@@ -472,17 +485,18 @@ public class ExportContext(
         var manifest = await Servers.ExportAsync(server.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Server>(manifest.ManifestVersion);
 
         foreach (var queueItem in _queue)
         {
             if (queueItem.Type == ImportExportRecordType.Action)
-                manifest.Actions.Add(await ExportRecordAsync(queueItem, Actions));
+                await AddExportedRecordAsync(manifest.Actions, queueItem, Actions);
             else if (queueItem.Type == ImportExportRecordType.Script)
-                manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
+                await AddExportedRecordAsync(manifest.Scripts, queueItem, Scripts);
             else if (queueItem.Type == ImportExportRecordType.ServerConsole)
-                manifest.ServerConsoles.Add(await ExportRecordAsync(queueItem, ServerConsoles));
+                await AddExportedRecordAsync(manifest.ServerConsoles, queueItem, ServerConsoles);
             else if (queueItem.Type == ImportExportRecordType.ServerHttpPath)
-                await ExportRecordAsync(queueItem, ServerHttpPaths);
+                await AddExportedRecordAsync(manifest.HttpPaths, queueItem, ServerHttpPaths);
         }
 
         return manifest;
@@ -493,15 +507,16 @@ public class ExportContext(
         var manifest = await Tools.ExportAsync(tool.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Tool>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {
             if (queueItem.Type == ImportExportRecordType.Archive)
-                manifest.Archives.Add(await ExportRecordAsync(queueItem, Archives));
+                await AddExportedRecordAsync(manifest.Archives, queueItem, Archives);
             else if (queueItem.Type == ImportExportRecordType.Script)
-                manifest.Scripts.Add(await ExportRecordAsync(queueItem, Scripts));
+                await AddExportedRecordAsync(manifest.Scripts, queueItem, Scripts);
             else if (queueItem.Type == ImportExportRecordType.Action)
-                manifest.Actions.Add(await ExportRecordAsync(queueItem, Actions));
+                await AddExportedRecordAsync(manifest.Actions, queueItem, Actions);
         }
 
         return manifest;
@@ -518,6 +533,17 @@ public class ExportContext(
             }
     }
     
+    private async Task AddExportedRecordAsync<TRecord, TEntity>(
+        ICollection<TRecord> collection,
+        ExportQueueItem queueItem,
+        BaseExporter<TRecord, TEntity> exporter) where TEntity : BaseModel
+    {
+        var record = await ExportRecordAsync(queueItem, exporter);
+
+        if (record != null)
+            collection.Add(record);
+    }
+
     private async Task<TRecord> ExportRecordAsync<TRecord, TEntity>(ExportQueueItem queueItem, BaseExporter<TRecord, TEntity> exporter) where TEntity : BaseModel
     {
         var entity = queueItem.Record as TEntity;
@@ -533,7 +559,9 @@ public class ExportContext(
         }
         catch (Exception ex)
         {
-            Errored.Add(queueItem, ex.Message);
+            logger.LogError(ex, "Could not export {RecordType} {RecordId}, it will be missing from the export file", queueItem.Type, queueItem.Id);
+
+            Errored[queueItem] = ex.Message;
             OnRecordError?.Invoke(this, queueItem);
 
             return default;

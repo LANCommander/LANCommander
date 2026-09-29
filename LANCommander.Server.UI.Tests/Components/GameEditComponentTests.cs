@@ -20,7 +20,7 @@ public class GameEditComponentTests : BUnitTestContext
     }
 
     private IRenderedComponent<General> RenderGeneral()
-        => RenderComponent<General>(parameters => parameters
+        => Render<General>(parameters => parameters
             .Add(p => p.Id, Fixture.TestGameId));
 
     [Fact]

@@ -42,10 +42,12 @@ public class KeyImporter(
             var key = new Data.Models.Key
             {
                 Game = await gameService.GetAsync(game.Id),
+                Value = record.Value,
                 AllocationMethod = record.AllocationMethod,
                 ClaimedByComputerName = record.ClaimedByComputerName,
                 ClaimedByIpv4Address = record.ClaimedByIpv4Address,
                 ClaimedByMacAddress = record.ClaimedByMacAddress,
+                ClaimedOn = record.ClaimedOn,
                 CreatedOn = record.CreatedOn,
                 UpdatedOn = record.UpdatedOn,
             };
@@ -63,15 +65,24 @@ public class KeyImporter(
 
     public override async Task<bool> UpdateAsync(Key record)
     {
-        var existing = await keyService.FirstOrDefaultAsync(k => k.Value == record.Value);
-
         try
         {
+            var game = ImportContext.Manifest as Game;
+
+            if (game == null)
+                return false;
+
+            var existing = await keyService.FirstOrDefaultAsync(k => k.Value == record.Value && k.GameId == game.Id);
+
+            if (existing == null)
+                return false;
+
             existing.AllocationMethod = record.AllocationMethod;
             existing.ClaimedByComputerName = record.ClaimedByComputerName;
             existing.ClaimedByIpv4Address = record.ClaimedByIpv4Address;
             existing.ClaimedByMacAddress = record.ClaimedByMacAddress;
-            
+            existing.ClaimedOn = record.ClaimedOn;
+
             await keyService.UpdateAsync(existing);
 
             return true;

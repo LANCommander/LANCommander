@@ -11,6 +11,7 @@
     @ref="Table"
     Size="@TableSize.Small"
     Searchable
+    OnRowDoubleClick="OpenEdit"
     SearchProperty="p => p.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Platform</Button>
@@ -28,7 +29,7 @@
         <BoundDataColumn Property="p => p.UpdatedBy != null ? p.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions TData="string">
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
                 @* TODO: Add seperate Edit page and navigate to it *@
                 @* <a href="@($"/Metadata/Platforms/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
 

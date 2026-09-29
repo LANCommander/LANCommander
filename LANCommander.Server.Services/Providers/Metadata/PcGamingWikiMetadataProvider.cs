@@ -42,6 +42,9 @@ public class PcGamingWikiMetadataProvider(
 
     internal const string WikiUrlPrefix = "https://www.pcgamingwiki.com/wiki/";
 
+    internal static string ToPageTitle(string url)
+        => Uri.UnescapeDataString(url.Replace(WikiUrlPrefix, string.Empty)).Replace('_', ' ');
+
     private HttpClient CreateClient() => httpClientFactory.CreateClient(HttpClientName);
 
     public async Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, int limit = 10, int offset = 0)
@@ -951,7 +954,7 @@ public class PcGamingWikiMetadataProvider(
                     Description = string.IsNullOrWhiteSpace(descriptions[i])
                         ? null
                         : descriptions[i],
-                    Url = urls[i].Replace(WikiUrlPrefix, "")
+                    Url = ToPageTitle(urls[i])
                 });
             }
 

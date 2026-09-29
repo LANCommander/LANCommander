@@ -17,6 +17,7 @@ public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
     protected GameClient GameClient => ApplicationFixture.Instance.GameClient;
     protected SaveClient SaveClient => ApplicationFixture.Instance.SaveClient;
     protected TagClient TagClient => ApplicationFixture.Instance.TagClient;
+    protected ToolClient ToolClient => ApplicationFixture.Instance.ToolClient;
 
     protected readonly IServiceProvider ServiceProvider;
 
@@ -49,22 +50,30 @@ public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
             })
             .FirstOrDefaultAsync(u => u.UserName == TestConstants.AdminUserName);
 
-        // Assume user already exists in correct role
-        if (user != null)
-            return user;
-
-        roleService.AddAsync(new Role
+        // Reconcile the role rather than assuming it. The admin account is shared across the whole
+        // run, and endpoints guarded by RequireAuthorization("Administrator") reject a token whose
+        // user is not in the role. Returning early on "user exists" left that unverified, so whether
+        // an administrator-authorized test passed depended on test ordering.
+        if (await roleService.GetAsync(RoleService.AdministratorRoleName) == null)
         {
-            Name = RoleService.AdministratorRoleName,
-        });
+            await roleService.AddAsync(new Role
+            {
+                Name = RoleService.AdministratorRoleName,
+            });
+        }
 
-        user = await userService.AddAsync(new User
+        if (user == null)
         {
-            UserName = TestConstants.AdminUserName,
-        });
+            user = await userService.AddAsync(new User
+            {
+                UserName = TestConstants.AdminUserName,
+            });
 
-        await userService.ChangePassword(user.UserName, TestConstants.AdminInitialPassword);
-        await userService.AddToRoleAsync(user.UserName, RoleService.AdministratorRoleName);
+            await userService.ChangePassword(user.UserName, TestConstants.AdminInitialPassword);
+        }
+
+        if (!await userService.IsInRoleAsync(user, RoleService.AdministratorRoleName))
+            await userService.AddToRoleAsync(user.UserName, RoleService.AdministratorRoleName);
 
         user = await userService
             .Query(q =>

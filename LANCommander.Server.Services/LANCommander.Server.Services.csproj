@@ -1,12 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="AsmResolver.PE.Win32Resources" />
     <PackageReference Include="AutoMapper" />
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" />
@@ -17,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="NuGet.CommandLine" />
     <PackageReference Include="rix0rrr.BeaconLib" />
     <PackageReference Include="Semver" />
     <PackageReference Include="SixLabors.ImageSharp" />

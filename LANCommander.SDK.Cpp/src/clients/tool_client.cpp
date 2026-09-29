@@ -26,7 +26,7 @@ Result<Tool> ToolClient::get(const std::string& tool_id)
 
 Result<std::vector<Script>> ToolClient::get_scripts(const std::string& tool_id)
 {
-    HttpResponse resp = m_http.get("/api/Tool/" + tool_id + "/Scripts");
+    HttpResponse resp = m_http.get("/api/Tools/" + tool_id + "/Scripts");
     if (!resp.ok()) {
         std::ostringstream e;
         e << "GetToolScripts failed (HTTP " << resp.status_code << ")";

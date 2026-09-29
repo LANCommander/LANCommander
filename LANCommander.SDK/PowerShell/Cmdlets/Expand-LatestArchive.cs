@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Management.Automation;
 using System.Threading;
@@ -18,8 +18,6 @@ namespace LANCommander.SDK.PowerShell.Cmdlets;
 [OutputType(typeof(DirectoryInfo))]
 public class ExpandLatestArchiveCmdlet : AsyncCmdlet
 {
-    private const string ApiRequestFactoryKey = "LANCommander.SDK.ApiRequestFactory";
-
     [Parameter(Mandatory = false, Position = 0, HelpMessage = "The destination directory to extract the archive contents into. Defaults to the current working directory.")]
     [Alias("Destination", "OutputPath")]
     public string DestinationPath { get; set; }
@@ -102,7 +100,7 @@ public class ExpandLatestArchiveCmdlet : AsyncCmdlet
             return;
         }
 
-        var apiRequestFactory = SessionState.PSVariable.GetValue(ApiRequestFactoryKey) as ApiRequestFactory;
+        var apiRequestFactory = SessionState.PSVariable.GetValue(ScriptServicesProvider.ApiRequestFactoryKey) as ApiRequestFactory;
 
         if (apiRequestFactory == null)
         {

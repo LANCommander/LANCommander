@@ -22,6 +22,7 @@ public static class SettingsEndpoints
         {
             IPXRelay = new
             {
+                Enabled = settingsProvider.CurrentValue.Server.IPXRelay.Enabled,
                 Host = settingsProvider.CurrentValue.Server.IPXRelay.Host,
                 Port = settingsProvider.CurrentValue.Server.IPXRelay.Port,
             },

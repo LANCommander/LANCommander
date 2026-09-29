@@ -1,0 +1,33 @@
+---
+title: 2.1.14
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.14 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Improvements
+- Game icons can now be pulled straight out of a Windows executable. Uploading a `.exe` to a game's **Icon** media slot extracts the executable's primary icon and stores it as an ICO. Icons are also now decoded when generating thumbnails, and thumbnails are served with the type they were actually encoded as rather than the source media's.
+- The **Notes** field is now added back into the new Avalonia-based launcher. It has also been updated to support markdown.
+
+## Bug Fixes
+- Fixed updating a game wiping out its archives and other related records. Relationships that hadn't been loaded were being read by the change tracker as "remove every reference", so editing something as small as a description could drop a game's archive. Fixes [#456](https://github.com/LANCommander/LANCommander/issues/456).
+- Fixed the launcher failing to start on some Linux distributions. `Tmds.DBus.Protocol` is pinned back to 0.21.3; newer versions cause X11 startup failures.
+- Fixed a game with the **user account** or **MAC address** allocation method handing out a key without a valid user or MAC address to allocate it to.
+- Fixed key availability being decided by whether an allocation method was set rather than whether the key was already allocated.
+- Fixed browsing between games, or opening and closing the key editor, producing duplicate keys or leaving one game's keys visible on another.
+- Fixed blank or missing usernames in a manifest blocking redistributable, server, and tool imports.
+- Fixed the games list not being sortable by **Multiplayer**, **Total Keys**, **Keys Allocated**, **Created By**, and **Updated By**.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.14" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.13" to="v2.1.14" />

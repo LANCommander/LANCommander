@@ -26,6 +26,7 @@ public class ApplicationFixture : ApplicationFactory<Program>
     public GameClient GameClient { get; }
     public SaveClient SaveClient { get; }
     public TagClient TagClient { get; }
+    public ToolClient ToolClient { get; }
 
     public ApplicationFixture(ApplicationFactory<Program> factory)
     {
@@ -56,6 +57,7 @@ public class ApplicationFixture : ApplicationFactory<Program>
         GameClient = ClientServiceProvider.GetRequiredService<GameClient>();
         SaveClient = ClientServiceProvider.GetRequiredService<SaveClient>();
         TagClient = ClientServiceProvider.GetRequiredService<TagClient>();
+        ToolClient = ClientServiceProvider.GetRequiredService<ToolClient>();
 
         Instance = this;
     }

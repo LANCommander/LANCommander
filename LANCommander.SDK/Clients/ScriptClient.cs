@@ -36,6 +36,35 @@ namespace LANCommander.SDK.Services
             return EnvironmentHelper.SupportsCurrentRuntime(platforms);
         }
 
+        /// <summary>
+        /// Adds the IPX relay variables to a launcher-side script. Mirrors what
+        /// <see cref="GameClient.RunAsync"/> puts into the process execution context so that
+        /// scripts and play actions are pointed at the same relay.
+        /// </summary>
+        private async Task AddIPXRelayVariablesAsync(PowerShellScript script)
+        {
+            try
+            {
+                if (!connectionClient.IsConnected() || !settingsProvider.CurrentValue.IPXRelay.Enabled)
+                    return;
+
+                var host = await IPXRelayHelper.ResolveHostAsync(
+                    settingsProvider.CurrentValue.IPXRelay.Host,
+                    connectionClient.GetServerAddress(),
+                    logger);
+
+                if (String.IsNullOrWhiteSpace(host))
+                    return;
+
+                script.AddVariable("IPXRelayHost", host);
+                script.AddVariable("IPXRelayPort", settingsProvider.CurrentValue.IPXRelay.Port.ToString());
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not populate IPX relay variables for script");
+            }
+        }
+
         private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)
         {
             var scriptRunners = serviceProvider.GetServices<IScriptInterceptor>();

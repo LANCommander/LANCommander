@@ -17,6 +17,7 @@ public static class ToolsEndpoints
         group.MapGet("/", GetAsync);
         group.MapGet("/{id:guid}", GetByIdAsync);
         group.MapGet("/{id:guid}/Manifest", GetManifestByIdAsync);
+        group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Download", DownloadAsync);
         group.MapPost("/Import/{objectKey:guid}", ImportAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
@@ -71,7 +72,7 @@ public static class ToolsEndpoints
             var results = await scriptService
                 .AsSplitQuery()
                 .AsNoTracking()
-                .GetAsync(s => s.RedistributableId == id && s.Type != SDK.Enums.ScriptType.Package);
+                .GetAsync(s => s.ToolId == id && s.Type != SDK.Enums.ScriptType.Package);
 
             return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
         }, tags: ["Scripts", $"Tools/{id}/Scripts", "Tools", $"Tools/{id}"]);

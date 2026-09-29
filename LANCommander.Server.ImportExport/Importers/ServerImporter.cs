@@ -76,12 +76,16 @@ public class ServerImporter(
             existing.UseShellExecute = record.UseShellExecute;
             existing.Game = await gameService.FirstOrDefaultAsync(g =>
                 g.Id.ToString() == record.Game || g.Title == record.Game);
-            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
-            existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
-            existing.UpdatedOn = DateTime.Now;
             existing.ProcessTerminationMethod = record.ProcessTerminationMethod;
-            
+            existing.CreatedOn = record.CreatedOn;
+            existing.UpdatedOn = DateTime.Now;
+
+            if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+                existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
+
+            if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+                existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
+
             await serverService.UpdateAsync(existing);
 
             AddAsset(new ImportAssetArchiveEntry

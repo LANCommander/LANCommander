@@ -18,7 +18,7 @@ public class SettingsComponentTests : BUnitTestContext
     [Fact]
     public void SettingsGeneral_ShowsFormElements()
     {
-        var cut = RenderComponent<SettingsGeneral>();
+        var cut = Render<SettingsGeneral>();
 
         Assert.Contains("Port", cut.Markup);
         Assert.Contains("Use SSL", cut.Markup);

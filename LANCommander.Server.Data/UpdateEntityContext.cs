@@ -87,6 +87,10 @@ public class UpdateEntityContext<TEntity>
         if (updatedCollection == null)
             return;
 
+        if (!updatedCollection.Any() &&
+            EntityLoadState.IsKnownUnloaded(_updatedEntity, navigation.Metadata.Name))
+            return;
+
         if (updatedCollection is IEnumerable<TRelatedEntity> updatedEntities)
         {
             var existingCollection = compiledExpression(_entity);

@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
+using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
@@ -35,6 +36,51 @@ namespace LANCommander.Launcher.Services
                 .Where(g => idSet.Contains(g.Id))
                 .Select(g => new { g.Id, g.ImportedOn })
                 .ToDictionaryAsync(g => g.Id, g => g.ImportedOn);
+        }
+
+        /// <summary>
+        /// Loads a game from the local database along with everything the detail view renders.
+        /// </summary>
+        public async Task<Game?> GetWithDetailsAsync(Guid id)
+        {
+            return await Context.Games
+                .AsSplitQuery()
+                .Include(g => g.Media)
+                .Include(g => g.Platforms)
+                .Include(g => g.Collections)
+                .Include(g => g.Genres)
+                .Include(g => g.Engine)
+                .Include(g => g.Publishers)
+                .Include(g => g.Developers)
+                .Include(g => g.Tags)
+                .Include(g => g.Tools)
+                .Include(g => g.MultiplayerModes)
+                .Include(g => g.DependentGames)
+                .FirstOrDefaultAsync(g => g.Id == id);
+        }
+
+        public async Task<SDK.Models.Game?> GetDetailsAsync(Guid id, bool offline)
+        {
+            var localGame = await GetWithDetailsAsync(id);
+
+            if (offline || (localGame?.Installed ?? false))
+                return localGame?.ToSdkGame();
+
+            try
+            {
+                var game = await gameClient.GetAsync(id);
+
+                if (game != null)
+                    return game;
+
+                Logger.LogWarning("Server returned no game {GameId}; falling back to the local database", id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to fetch game {GameId} from the server; falling back to the local database", id);
+            }
+
+            return localGame?.ToSdkGame();
         }
 
         public delegate Task OnUninstallCompleteHandler(Game game);

@@ -19,6 +19,7 @@
     Responsive
     ColumnPicker
     Searchable
+    OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))"
     SearchProperty="s => s.Name">
     <RightToolbar>
         @if (SelectedServers != null && SelectedServers.Count() > 0)
@@ -60,7 +61,7 @@
             <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
                 <ServerControl ServerId="context.Id"/>
 
-                <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-default">Edit</a>
+                <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
 
                 <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
                     <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>

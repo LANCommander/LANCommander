@@ -45,15 +45,7 @@ public class MediaExporter(
             var fileInfo = new FileInfo(path);
 
             if (fileInfo.Exists)
-            {
-                var mediaEntry = ExportContext.Archive.CreateEntry($"Media/{entity.Id}");
-
-                using (var mediaEntryStream = mediaEntry.Open())
-                using (var mediaFileStream = new FileStream(path, FileMode.Open))
-                {
-                    await mediaFileStream.CopyToAsync(mediaEntryStream);
-                }
-            }
+                await WriteEntryFromFileAsync($"Media/{entity.Id}", path);
         
             return await mediaService.GetAsync<Media>(id);
         }

@@ -18,7 +18,7 @@ public class UserManagementComponentTests : BUnitTestContext
     [Fact]
     public void Users_ShowsSeededAdminUser()
     {
-        var cut = RenderComponent<UsersIndex>();
+        var cut = Render<UsersIndex>();
 
         // The DataTable loads rows asynchronously after first render; poll until the seeded
         // admin user appears.

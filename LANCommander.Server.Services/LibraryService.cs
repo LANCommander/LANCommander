@@ -84,7 +84,8 @@ namespace LANCommander.Server.Services
                 addonIds ??= [];
                 foreach (var dependentGame in game.DependentGames)
                 {
-                    if (dependentGame.IsAddon || addonIds.Contains(dependentGame.Id))
+                    // Addons shown in the library are removed on their own
+                    if ((dependentGame.IsAddon && !dependentGame.ShowInLibrary) || addonIds.Contains(dependentGame.Id))
                     {
                         if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
                             library.Games.Remove(dependentGame);

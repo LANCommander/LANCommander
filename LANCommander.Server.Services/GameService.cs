@@ -123,7 +123,7 @@ namespace LANCommander.Server.Services
 
         public async Task<ICollection<Game>> GetAddonsAsync(Game game)
         {
-            return await GetAsync(g => g.AddonTypes.Contains(g.Type));
+            return await GetAsync(g => g.BaseGameId == game.Id && g.Type != GameType.MainGame && !g.ShowInLibrary);
         }
 
         public async Task<SDK.Models.Manifest.Game?> GetManifestAsync(Guid id)

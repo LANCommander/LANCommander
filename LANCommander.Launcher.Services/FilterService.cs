@@ -117,7 +117,7 @@ namespace LANCommander.Launcher.Services
                 if (Filter.Installed)
                     items = items.Where(i => (i.DataItem as Game).Installed);
 
-                items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+                items = items.Where(i => (i.DataItem as Game).ShowInLibrary);
 
                 op.Complete();
             }

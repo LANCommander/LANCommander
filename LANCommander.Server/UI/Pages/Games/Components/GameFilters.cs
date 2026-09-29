@@ -43,9 +43,12 @@ public sealed record GameFilters
 {
     public const string AllGames = "all";
 
-    /// <summary>The rows the Games page lists at all: base games, with expansions and mods under them.</summary>
+    /// <summary>
+    /// The rows the Games page lists at all: games shown in the library, with the addons that
+    /// aren't listed under their base game.
+    /// </summary>
     public static readonly Expression<Func<Game, bool>> Listed =
-        g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod);
+        g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || g.Type == GameType.MainGame || g.ShowInLibrary;
 
     /// <summary>The <see cref="GameFacet.Missing"/> values, in the order the rail lists them.</summary>
     public static IReadOnlyList<string> MissingValues { get; } = ["Cover", "Icon", "Background", "Logo", "Description"];

@@ -32,8 +32,11 @@ The "General" panel of the game editor contains most of the metadata fields for 
 | Notes                 | Private notes for a game for admin use                                                               | String       |
 | Description           | A description about the game                                                                         | String       |
 | Engine                | The engine that a game is built upon                                                                 | Lookup       |
-| Type                  | Represents if the game is standalone, mod, expansion, etc. See [Game Types]() for more information   | Select       |
-| Base Game             | Only accessible in games that are not marked as "Main Game" in the Type field                        | Select       |
+| Type                  | Main Game, Expansion, or Mod. See [Game Types and Addons](#game-types-and-addons)                    | Select       |
+| Base Game             | The game an expansion or mod belongs to. Only available when Type is not "Main Game"                 | Select       |
+| Install To            | Where the archive is extracted. Always "Own Directory" for main games                                | Select       |
+| Directory Name        | Overrides the name of the folder the game is installed to. Defaults to the title                     | String       |
+| Show in Library       | Lists the game as its own entry in the depot and library. Always on for main games                   | Switch       |
 | Key Allocation Method | The method in which to allocate keys, e.g. user account or computer MAC address                      | Select       |
 | Released On           | The release date for the game                                                                        | DateTime     |
 | Singleplayer          | Denotes the game has a singleplayer mode                                                             | Checkbox     |
@@ -48,16 +51,44 @@ The "General" panel of the game editor contains most of the metadata fields for 
 #### Redistributable Options
 When a game has redistributables assigned that define an [Option Schema](/Server/Redistributables#option-schema), additional form fields appear below the Redistributables selection. These fields are generated from the schema and allow you to configure per-game option values for each compatibility shim. For example, you might set the `GAMEID` for umu-launcher or the `PROTONPATH` for a specific Proton version. See [Redistributables - Compatibility Shims](/Server/Redistributables#compatibility-shims) for details.
 
-### Game Types
-If you have a game that requires another game to be installed, you may have to specify the game type to modify the behavior of the installation.
+### Game Types and Addons
+Most games are a **Main Game**: they don't depend on any other game and are installed to their own directory under the player's install directory. That folder is named after the game's title unless **Directory Name** is set.
 
-|         Type          |                                                                                                            Description                                                                                                            |   |
-|:---------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|---|
-| Main Game             | The game requires no special treatment. It is not dependent on any  other game being installed. Most games will utilize this type.                                                                                                |   |
-| Expansion             | This "game" is an expansion for another game. When starting a game,  the base game and expansion actions are selectable in Playnite. The  expansion's archive is extracted to the same directory as the base game.                |   |
-| Standalone Expansion  | This game entry is displayed separate from the base game in the game  library. Installing a standalone expansion will initiate the install of  the base game. The archive files are extracted to the expansion's own  directory.  |   |
-| Mod                   | The contents of the archive are extracted to the same location as  the base game and installed when the base game is installed. Actions are  merged and displayed on the client.                                                  |   |
-| Standalone Mod        | The contents of the archive are extracted to the same location as  the base game, but the mod is presented as a separate game in the  library. Installing a standalone mod will trigger the install of the  base game.            |   |
+An **Expansion** or **Mod** is an *addon* for a base game. The type only describes what the addon is; how it's installed and listed is controlled by two fields.
+
+#### Install To
+| Option                | Result                                                                                                                                 |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Base Game's Directory | The archive is extracted directly into the base game's directory, overlaying its files. Directory Name is not used.                    |
+| Sub Directory         | The archive is extracted to a folder inside the base game's directory, named by Directory Name (or the addon's title).                |
+| Own Directory         | The archive is extracted to its own folder under the player's install directory, named by Directory Name (or the addon's title).      |
+
+Installing an addon always installs its base game first if it isn't already installed.
+
+#### Show in Library
+When **Show in Library** is off, the addon doesn't appear in the depot or library on its own. Players choose it from the base game's install options instead, and its actions are merged into the base game's actions. Uninstalling the base game also uninstalls it.
+
+When it's on, the addon is listed as its own game with its own actions and lifecycle. Uninstalling it leaves the base game installed.
+
+#### Common setups
+| Addon                                                    | Type      | Install To            | Show in Library |
+|----------------------------------------------------------|-----------|-----------------------|-----------------|
+| Expansion pack that patches the base game's files        | Expansion | Base Game's Directory | Off             |
+| Mod loaded from a folder in the game (e.g. Quake mods)   | Mod       | Sub Directory         | Off             |
+| Total conversion played as a separate game               | Mod       | Base Game's Directory | On              |
+| Standalone expansion with its own executable             | Expansion | Own Directory         | On              |
+
+#### Upgrading from earlier versions
+Earlier versions used the types "Standalone Expansion" and "Standalone Mod". They're converted automatically:
+
+| Previous Type         | Type      | Install To                                          | Show in Library |
+|-----------------------|-----------|-----------------------------------------------------|-----------------|
+| Expansion             | Expansion | Base Game's Directory (Own Directory if no base game) | Off             |
+| Mod                   | Mod       | Base Game's Directory (Own Directory if no base game) | Off             |
+| Standalone Expansion  | Expansion | Own Directory                                       | On              |
+| Standalone Mod        | Mod       | Base Game's Directory (Own Directory if no base game) | On              |
+
+Games already installed under their title stay where they are, even if a Directory Name is set later.
 
 ### Actions
 This is a table-based form for defining actions for a game. Actions are the entry points to your game. For *Call of Duty* we can specify two actions: singleplayer and multiplayer. The game has two separate executables (`CoDSP.exe` and `CoDMP.exe` respectively) for launching the game. By adding two separate actions, we can allow the user to choose either of these when launching the game from the launcher. Add two actions and populate them with the following information:

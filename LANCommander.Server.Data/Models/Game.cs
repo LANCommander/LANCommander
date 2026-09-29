@@ -24,6 +24,21 @@ namespace LANCommander.Server.Data.Models
         public KeyAllocationMethod KeyAllocationMethod { get; set; } = KeyAllocationMethod.UserAccount;
 
         public GameType Type { get; set; }
+
+        /// <summary>
+        /// Where the game's archive is extracted. Always <see cref="GameInstallLocation.OwnDirectory"/>
+        /// for main games. <see cref="DirectoryName"/> overrides the folder name for own and sub directories.
+        /// </summary>
+        [Display(Name = "Install To")]
+        public GameInstallLocation InstallTo { get; set; } = GameInstallLocation.OwnDirectory;
+
+        /// <summary>
+        /// Whether the game appears as its own entry in the depot and library. Always true for main
+        /// games. Addons that aren't shown are offered as options when installing their base game.
+        /// </summary>
+        [Display(Name = "Show in Library")]
+        public bool ShowInLibrary { get; set; } = true;
+
         public Guid? BaseGameId { get; set; }
         [ForeignKey(nameof(BaseGameId))]
         public virtual Game? BaseGame { get; set; }
@@ -71,7 +86,7 @@ namespace LANCommander.Server.Data.Models
         public ICollection<GameCustomField>? CustomFields { get; set; }
         
         [NotMapped]
-        public bool IsAddon => AddonTypes.Contains(Type);
+        public bool IsAddon => Type != GameType.MainGame;
 
         /// <summary>The letter a title is filed under in an A–Z list; "#" for digits and symbols.</summary>
         [NotMapped]
@@ -80,19 +95,16 @@ namespace LANCommander.Server.Data.Models
         public static string InitialOf(string? title) =>
             !string.IsNullOrEmpty(title) && char.IsLetter(title[0]) ? char.ToUpperInvariant(title[0]).ToString() : "#";
 
-        [NotMapped]
-        public GameType[] AddonTypes =
-        [
-            GameType.Expansion,
-            GameType.Mod
-        ];
-        
+        /// <summary>
+        /// Dependent games that aren't shown in the library on their own, and are instead
+        /// selected when installing this game
+        /// </summary>
         [NotMapped]
         public IEnumerable<Game> Addons {
             get
             {
                 if (DependentGames != null)
-                    return DependentGames.Where(g => AddonTypes.Contains(g.Type));
+                    return DependentGames.Where(g => g.IsAddon && !g.ShowInLibrary);
                 else
                     return [];
             }

@@ -94,7 +94,7 @@ public partial class GamesListViewModel : GamesCollectionViewModel
                     {
                         if (item.DataItem is SDK.Models.DepotGame depotGame)
                         {
-                            if (depotGame.Type == GameType.Mod || depotGame.Type == GameType.Expansion)
+                            if (!depotGame.ShowInLibrary)
                                 continue;
 
                             var inLibrary = await libraryService.IsInLibraryAsync(depotGame.Id);

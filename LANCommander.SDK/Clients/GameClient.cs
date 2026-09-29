@@ -169,11 +169,13 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        if (ManifestHelper.Exists(installDirectory, addon.Id))
-                        {
-                            var addonManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, addon.Id);
+                        var addonDirectory = GetAddonInstallDirectory(installDirectory, addon);
 
-                            if (addonManifest?.Type == GameType.Expansion || addonManifest?.Type == GameType.Mod)
+                        if (ManifestHelper.Exists(addonDirectory, addon.Id))
+                        {
+                            var addonManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(addonDirectory, addon.Id);
+
+                            if (addonManifest?.IsAddon == true)
                                 manifests.Add(addon);
                         }
                     }
@@ -724,6 +726,16 @@ namespace LANCommander.SDK.Services
                 installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
 
             var game = await GetAsync(gameId);
+
+            // Addons depend on their base game, install it first if it isn't already
+            if (game.IsAddon && game.BaseGameId != Guid.Empty && !Path.Exists(Path.Combine(installDirectory, ".lancommander")))
+            {
+                var baseGame = await GetAsync(game.BaseGameId);
+
+                if (!await IsInstalled(installDirectory, baseGame))
+                    await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts, cancellationToken);
+            }
+
             var destination = await GetInstallDirectory(game, installDirectory);
 
             _installProgress.Game = game;
@@ -735,20 +747,6 @@ namespace LANCommander.SDK.Services
             _installProgress.BytesTransferred = 0;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
-
-            // Handle Standalone Mods
-            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
-            {
-                var baseGame = await GetAsync(game.BaseGameId);
-
-                destination = await GetInstallDirectory(baseGame, installDirectory);
-
-                if (!Directory.Exists(destination))
-                {
-                    var baseGameFileList = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts, cancellationToken);
-                    destination = installResult.InstallDirectory;
-                }
-            }
 
             try
             {
@@ -898,7 +896,7 @@ namespace LANCommander.SDK.Services
                     }
                 }
                 
-                var mods = addons.Where(a => a?.Type == GameType.Mod).ToList();
+                var mods = addons.Where(a => a != null && a.IsAddon && a.Type != GameType.Expansion).ToList();
 
                 foreach (var mod in mods)
                 {
@@ -986,21 +984,16 @@ namespace LANCommander.SDK.Services
 
             logger?.LogInformation("[InstallQueue] GenerateInstallPlan: Resolved install directory to {Destination}", destination);
 
-            // Handle standalone mods — the base game must be installed first, and the
-            // standalone mod's archive extracts into the base game's directory. The mod is
-            // still a separate library entity with an independent lifecycle from the base game.
-            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
+            // Addons depend on their base game, plan its install first if it isn't installed yet
+            if (game.IsAddon && game.BaseGameId != Guid.Empty && !Path.Exists(Path.Combine(installDirectory, ".lancommander")))
             {
                 var baseGame = await GetAsync(game.BaseGameId);
-                var baseDestination = await GetInstallDirectory(baseGame, installDirectory);
 
-                if (!Directory.Exists(baseDestination))
+                if (!await IsInstalled(installDirectory, baseGame))
                 {
                     var basePlan = await GenerateInstallPlanAsync(game.BaseGameId, installDirectory);
                     plan.Items.AddRange(basePlan.Items);
                 }
-
-                destination = baseDestination;
             }
 
             // Base game item
@@ -1130,12 +1123,20 @@ namespace LANCommander.SDK.Services
                 {
                     var addon = await GetAsync(addonId);
 
+                    // Addons can live in the base game's directory, a sub directory of it, or their own directory
+                    var addonDestination = addon.InstallTo switch
+                    {
+                        GameInstallLocation.BaseGameDirectory => destination,
+                        GameInstallLocation.SubDirectory => Path.Combine(destination, GetDirectoryName(addon.DirectoryName, addon.Title)),
+                        _ => await GetInstallDirectory(addon, installDirectory),
+                    };
+
                     var addonItem = new InstallPlanItem
                     {
                         EntityId = addon.Id,
                         Title = addon.Title,
                         Type = InstallPlanItemType.Addon,
-                        InstallDirectory = destination,
+                        InstallDirectory = addonDestination,
                         Order = plan.Items.Count,
                         DependsOnId = game.Id,
                     };
@@ -1555,9 +1556,11 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        if (ManifestHelper.Exists(installDirectory, addon.Id))
+                        var addonDirectory = GetAddonInstallDirectory(installDirectory, addon);
+
+                        if (ManifestHelper.Exists(addonDirectory, addon.Id))
                         {
-                            var dependentResult = await UninstallAsync(installDirectory, addon.Id);
+                            var dependentResult = await UninstallAsync(addonDirectory, addon.Id);
                             gameFileList.MergeDependentGames(dependentResult.FileList);
                         }
                     }
@@ -1725,7 +1728,7 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var dependentResult = await UninstallAddonAsync(installDirectory, addon.Id);
+                    var dependentResult = await UninstallAddonAsync(GetAddonInstallDirectory(installDirectory, addon), addon.Id);
                     gameFileList.MergeBaseAsDependentGame(addon.Id, dependentResult.FileList);
                 }
                 catch (Exception ex)
@@ -1777,14 +1780,23 @@ namespace LANCommander.SDK.Services
             {
                 var dependentGame = await GetAsync(dependentGameId);
 
-                if (dependentGame.IsAddon)
+                // Addons in their own directory don't move with the base game
+                if (dependentGame.IsAddon && dependentGame.InstallTo != GameInstallLocation.OwnDirectory)
                     gameAndAddons.Add(dependentGame);
             }
 
+            // Both directories are the game's own install directory; sub directory addons live inside it
+            string EntryDirectory(string gameDirectory, Game entry) =>
+                entry.Id != game.Id && entry.InstallTo == GameInstallLocation.SubDirectory
+                    ? Path.Combine(gameDirectory, GetDirectoryName(entry.DirectoryName, entry.Title))
+                    : gameDirectory;
+
             foreach (var entry in gameAndAddons)
             {
-                if (await IsInstalled(oldInstallDirectory, game, entry.Id))
-                    await saveClient.UploadAsync(oldInstallDirectory, entry.Id);
+                var entryDirectory = EntryDirectory(oldInstallDirectory, entry);
+
+                if (ManifestHelper.Exists(entryDirectory, entry.Id))
+                    await saveClient.UploadAsync(entryDirectory, entry.Id);
             }
 
             if (Directory.Exists(newInstallDirectory))
@@ -1854,11 +1866,15 @@ namespace LANCommander.SDK.Services
 
             foreach (var entry in gameAndAddons)
             {
-                if (await IsInstalled(newInstallDirectory, game, entry.Id))
+                var entryDirectory = EntryDirectory(newInstallDirectory, entry);
+
+                if (ManifestHelper.Exists(entryDirectory, entry.Id))
                 {
+                    entry.InstallDirectory = entryDirectory;
+
                     await RunPostInstallScripts(entry);
-                    
-                    await saveClient.DownloadAsync(newInstallDirectory, entry.Id);
+
+                    await saveClient.DownloadAsync(entryDirectory, entry.Id);
                 }
             }
 
@@ -2252,28 +2268,87 @@ namespace LANCommander.SDK.Services
             return extractionResult;
         }
 
+        /// <summary>
+        /// Resolves where a game's archive is extracted, based on <see cref="Game.InstallTo"/>.
+        /// </summary>
+        /// <param name="installDirectory">
+        /// Either an install root, or (when modifying an existing installation) the base game's
+        /// existing install directory.
+        /// </param>
         public async Task<string> GetInstallDirectory(Game game, string installDirectory)
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = settingsProvider.CurrentValue.Games.InstallDirectories.First();
 
-            if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
-            {
-                // modify installation passes the original installation of the game including the game folder, use the existing folder,
-                // otherwise a name change could lead to installing files into differnt folder
-                if (Path.Exists(installDirectory) && Path.Exists(Path.Combine(installDirectory, ".lancommander")))
-                {
-                    return installDirectory;
-                }
-                else
-                {
-                    var baseGame = await GetAsync(game.BaseGameId);
+            // Modify installation passes the base game's existing folder instead of the root. Use it
+            // as-is, otherwise a title change could lead to installing files into a different folder.
+            var isExistingGameDirectory = Path.Exists(Path.Combine(installDirectory, ".lancommander"));
 
-                    return await GetInstallDirectory(baseGame, installDirectory);
-                }
+            if (!game.IsAddon || game.BaseGameId == Guid.Empty || game.InstallTo == GameInstallLocation.OwnDirectory)
+            {
+                var root = game.IsAddon && isExistingGameDirectory
+                    ? Path.GetDirectoryName(installDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                    : installDirectory;
+
+                return ResolveOwnDirectory(game, root);
             }
-            else
-                return Path.Combine(installDirectory, game.Title.SanitizeFilename());
+
+            var baseDirectory = isExistingGameDirectory
+                ? installDirectory
+                : await GetInstallDirectory(await GetAsync(game.BaseGameId), installDirectory);
+
+            if (game.InstallTo == GameInstallLocation.SubDirectory)
+                return Path.Combine(baseDirectory, GetDirectoryName(game.DirectoryName, game.Title));
+
+            return baseDirectory;
+        }
+
+        /// <summary>
+        /// The folder name a game uses for its own or sub directory: <paramref name="directoryName"/>
+        /// if set, otherwise the title, sanitized for the file system.
+        /// </summary>
+        public static string GetDirectoryName(string directoryName, string title)
+        {
+            return (String.IsNullOrWhiteSpace(directoryName) ? title : directoryName).SanitizeFilename();
+        }
+
+        /// <summary>
+        /// Resolves where an addon listed in a base game's manifest is installed, relative to
+        /// the base game's install directory.
+        /// </summary>
+        public static string GetAddonInstallDirectory(string baseInstallDirectory, Models.Manifest.Game addon)
+        {
+            var directoryName = GetDirectoryName(addon.DirectoryName, addon.Title);
+
+            switch (addon.InstallTo ?? GameInstallLocation.BaseGameDirectory)
+            {
+                case GameInstallLocation.SubDirectory:
+                    return Path.Combine(baseInstallDirectory, directoryName);
+
+                case GameInstallLocation.OwnDirectory:
+                    var root = Path.GetDirectoryName(baseInstallDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+                    return Path.Combine(root ?? baseInstallDirectory, directoryName);
+
+                default:
+                    return baseInstallDirectory;
+            }
+        }
+
+        private static string ResolveOwnDirectory(Game game, string root)
+        {
+            var directory = Path.Combine(root, GetDirectoryName(game.DirectoryName, game.Title));
+
+            // Installs made before DirectoryName was honored live under the sanitized title
+            if (!String.IsNullOrWhiteSpace(game.DirectoryName) && !ManifestHelper.Exists(directory, game.Id))
+            {
+                var legacyDirectory = Path.Combine(root, game.Title.SanitizeFilename());
+
+                if (ManifestHelper.Exists(legacyDirectory, game.Id))
+                    return legacyDirectory;
+            }
+
+            return directory;
         }
 
         public void CancelInstall()
@@ -2297,9 +2372,9 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, addon.Id);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(GetAddonInstallDirectory(installDirectory, addon), addon.Id);
 
-                        if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
+                        if (dependentGameManifest?.IsAddon == true)
                             manifests.Add(dependentGameManifest);
                     }
                     catch (Exception ex)
@@ -2355,7 +2430,8 @@ namespace LANCommander.SDK.Services
                 return gameArchives;
 
             // Retrieves and processes the base game manifest and its archive entries.
-            var baseManifest = gameArchives.BaseGame.Manifest = manifests.FirstOrDefault(mf => mf.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+            var baseManifest = gameArchives.BaseGame.Manifest = manifests.FirstOrDefault(mf => mf.Type == GameType.MainGame)
+                ?? manifests.FirstOrDefault(mf => mf.ShowInLibrary == true);
             
             if (baseManifest != null)
             {

@@ -560,6 +560,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("InstallTo")
+                        .HasColumnType("integer");
+
                     b.Property<int>("KeyAllocationMethod")
                         .HasColumnType("integer");
 
@@ -574,6 +577,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ShowInLibrary")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("Singleplayer")
                         .HasColumnType("boolean");

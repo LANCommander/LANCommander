@@ -60,7 +60,7 @@
         Games = await GameService
             .AsNoTracking()
             .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+            .GetAsync(g => g.Type == GameType.MainGame || g.ShowInLibrary || g.BaseGame == null);
 
         Games = Games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
     }

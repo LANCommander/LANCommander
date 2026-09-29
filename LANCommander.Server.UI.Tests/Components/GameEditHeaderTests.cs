@@ -69,6 +69,23 @@ public class GameEditHeaderTests : BUnitTestContext
     }
 
     [Fact]
+    public void MainGame_LocksInstallToAndShowInLibrary()
+    {
+        var cut = RenderGeneral();
+
+        var installTo = cut.FindAll(".lc-form-item")
+            .Single(i => i.QuerySelector("label.lc-form-item-label")?.TextContent.Trim() == "Install to");
+        Assert.NotNull(installTo.QuerySelector(".rz-dropdown.rz-state-disabled"));
+
+        var showInLibrary = cut.FindAll(".game-general-switch")
+            .Single(s => s.TextContent.Contains("Show in library"));
+        Assert.NotNull(showInLibrary.QuerySelector(".rz-switch.rz-state-disabled"));
+
+        // The main game's own folder can still be renamed
+        Assert.False(InputFor(cut, "Directory name").HasAttribute("disabled"));
+    }
+
+    [Fact]
     public void Header_ShowsHidden_WhenShowInDepotIsTurnedOff()
     {
         var cut = RenderGeneral();
@@ -157,6 +174,21 @@ public class GameEditFormatTests
         game = NewGame();
         saved = GameEditSnapshot.Of(game);
         game.Type = GameType.Mod;
+        Assert.NotEqual(saved, GameEditSnapshot.Of(game));
+
+        game = NewGame();
+        saved = GameEditSnapshot.Of(game);
+        game.InstallTo = GameInstallLocation.SubDirectory;
+        Assert.NotEqual(saved, GameEditSnapshot.Of(game));
+
+        game = NewGame();
+        saved = GameEditSnapshot.Of(game);
+        game.ShowInLibrary = false;
+        Assert.NotEqual(saved, GameEditSnapshot.Of(game));
+
+        game = NewGame();
+        saved = GameEditSnapshot.Of(game);
+        game.DirectoryName = "arena";
         Assert.NotEqual(saved, GameEditSnapshot.Of(game));
     }
 }

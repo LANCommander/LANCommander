@@ -1,4 +1,5 @@
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
@@ -27,6 +28,20 @@ public class GameImporter(
 
     public override async Task<bool> CanImportAsync(Game record) => true;
 
+    /// <summary>
+    /// Records exported before InstallTo/ShowInLibrary existed only carry a (possibly legacy)
+    /// Type; derive the install behavior from it the same way the database migration does.
+    /// </summary>
+    private static void ApplyInstallBehavior(Data.Models.Game game, Game record)
+    {
+        var hasBaseGame = record.BaseGameId != Guid.Empty || !String.IsNullOrWhiteSpace(record.BaseGame);
+        var resolved = GameTypeHelper.FromLegacyType(record.Type, hasBaseGame);
+
+        game.Type = resolved.Type;
+        game.InstallTo = record.InstallTo ?? resolved.InstallTo;
+        game.ShowInLibrary = record.ShowInLibrary ?? resolved.ShowInLibrary;
+    }
+
     public override async Task<bool> AddAsync(Game record)
     {
         var game = new Data.Models.Game
@@ -48,7 +63,9 @@ public class GameImporter(
             UpdatedOn = record.UpdatedOn,
             DirectoryName = record.DirectoryName,
         };
-        
+
+        ApplyInstallBehavior(game, record);
+
         if (!String.IsNullOrWhiteSpace(record.CreatedBy))
             game.CreatedBy = await userService.GetAsync(record.CreatedBy);
         
@@ -91,7 +108,9 @@ public class GameImporter(
             }).ToList();
             existing.CreatedOn = record.CreatedOn;
             existing.DirectoryName = record.DirectoryName;
-            
+
+            ApplyInstallBehavior(existing, record);
+
             if (!String.IsNullOrWhiteSpace(record.CreatedBy))
                 existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
         

@@ -18,6 +18,10 @@ namespace LANCommander.SDK.Models.Manifest
         public DateTime ReleasedOn { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
+        // Nullable so manifests written before these fields existed can be detected and
+        // normalized from Type (see GameTypeHelper.Normalize)
+        public GameInstallLocation? InstallTo { get; set; }
+        public bool? ShowInLibrary { get; set; }
         public string BaseGame { get; set; }
         public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
@@ -48,7 +52,7 @@ namespace LANCommander.SDK.Models.Manifest
         {
             get
             {
-                return Type == GameType.Expansion || Type == GameType.Mod;
+                return Type != GameType.MainGame;
             }
         } 
     }

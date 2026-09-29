@@ -53,8 +53,12 @@
                 <FormItem Label="Released on">
                     <DatePicker TValue="DateTime?" @bind-Value="context.ReleasedOn" Format="yyyy-MM-dd" Clearable Class="game-general-date" />
                 </FormItem>
-                <FormItem Label="Type">
-                    <EnumSelect TEnum="GameType" @bind-Value="context.Type" />
+                <FormItem Label="Type" Help="Expansions and mods are addons for a base game.">
+                    <EnumSelect TEnum="GameType"
+                                Value="context.Type"
+                                ValueChanged="type => OnTypeChanged(context, type)"
+                                ValueExpression="() => context.Type"
+                                Only="SelectableTypes" />
                 </FormItem>
             </div>
             @if (context.Type != GameType.MainGame)
@@ -77,6 +81,16 @@
                     </Flex>
                 </FormItem>
             }
+            <div class="game-form-pair">
+                <FormItem Label="Install to" Help="@(context.Type == GameType.MainGame ? "Main games are always installed to their own directory." : "Where this addon's files are extracted.")">
+                    <EnumSelect TEnum="GameInstallLocation" @bind-Value="context.InstallTo" Disabled="context.Type == GameType.MainGame" />
+                </FormItem>
+                <FormItem Label="Directory name" Help="@DirectoryNameHelp(context)">
+                    <TextInput @bind-Value="context.DirectoryName"
+                               Placeholder="@DefaultDirectoryName(context)"
+                               Disabled="IsDirectoryNameUnused(context)" />
+                </FormItem>
+            </div>
             @* Description is Markdown, which the launcher renders: a plain field by default, the editor on demand *@
             <FormItem Label="Description">
                 <ChildContent>
@@ -110,6 +124,10 @@
             <Switch @bind-Value="context.Published" Class="game-general-switch">
                 <span class="game-general-switch-title">Show in depot</span>
                 <span class="game-general-switch-help">Players can install this title from the launcher.</span>
+            </Switch>
+            <Switch @bind-Value="context.ShowInLibrary" Disabled="context.Type == GameType.MainGame" Class="game-general-switch">
+                <span class="game-general-switch-title">Show in library</span>
+                <span class="game-general-switch-help">Lists this title as its own game in the depot and library. Addons that aren't shown are offered when installing their base game.</span>
             </Switch>
             <Switch @bind-Value="context.Singleplayer" Class="game-general-switch">
                 <span class="game-general-switch-title">Singleplayer</span>
@@ -186,15 +204,13 @@
         if (_loaded)
             return;
 
-        var allowedTypes = new List<GameType> { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
-
         var engines = await EngineService.SortBy(e => e.Name).GetAsync();
 
         EngineItems = engines.ToSelectItems(e => (Guid?)e.Id, e => e.Name).ToList();
 
         Games = (await GameService
                 .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
-                .GetAsync(g => allowedTypes.Contains(g.Type)))
+                .GetAsync(g => g.Type == GameType.MainGame || g.ShowInLibrary))
             .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .ToList();
 
@@ -215,6 +231,42 @@
 
         if (_view != null)
             await _view.ReloadAsync();
+    }
+
+    static readonly GameType[] SelectableTypes = [GameType.MainGame, GameType.Expansion, GameType.Mod];
+
+    static void OnTypeChanged(Game game, GameType type)
+    {
+        if (type == GameType.MainGame)
+        {
+            game.InstallTo = GameInstallLocation.OwnDirectory;
+            game.ShowInLibrary = true;
+        }
+        else if (game.Type == GameType.MainGame)
+        {
+            // Most addons overlay their base game and are picked when installing it
+            game.InstallTo = GameInstallLocation.BaseGameDirectory;
+            game.ShowInLibrary = false;
+        }
+
+        game.Type = type;
+    }
+
+    static bool IsDirectoryNameUnused(Game game) =>
+        game.Type != GameType.MainGame && game.InstallTo == GameInstallLocation.BaseGameDirectory;
+
+    static string DefaultDirectoryName(Game game) =>
+        String.IsNullOrWhiteSpace(game.Title) ? "" : LANCommander.SDK.Extensions.StringExtensions.SanitizeFilename(game.Title);
+
+    static string DirectoryNameHelp(Game game)
+    {
+        if (IsDirectoryNameUnused(game))
+            return "Not used; files are extracted directly into the base game's directory.";
+
+        if (game.Type != GameType.MainGame && game.InstallTo == GameInstallLocation.SubDirectory)
+            return "Folder created inside the base game's directory. Defaults to the title.";
+
+        return "Folder created in the player's install directory. Defaults to the title.";
     }
 
     IEnumerable<SelectItem<Guid?>> BaseGameItems(Game game) =>

@@ -7,12 +7,21 @@
 
 namespace lancommander {
 
+// Numbered to match LANCommander.SDK.Enums.GameType. StandaloneExpansion and StandaloneMod are
+// legacy values; servers now send Expansion/Mod with install_to and show_in_library instead.
 enum class GameType {
     MainGame = 0,
-    Expansion,
-    StandaloneExpansion,
-    Mod,
-    StandaloneMod
+    Expansion = 1,
+    StandaloneExpansion = 2,
+    Mod = 3,
+    StandaloneMod = 4
+};
+
+// Where a game's archive is extracted (LANCommander.SDK.Enums.GameInstallLocation)
+enum class GameInstallLocation {
+    OwnDirectory = 0,
+    BaseGameDirectory = 1,
+    SubDirectory = 2
 };
 
 struct Action {
@@ -40,6 +49,9 @@ struct Game {
     std::string notes;
     int released_year = 0;
     GameType type = GameType::MainGame;
+    GameInstallLocation install_to = GameInstallLocation::OwnDirectory;
+    bool show_in_library = true;
+    std::string directory_name;
     std::string base_game_id;
     bool in_library = false;
     std::string install_directory;

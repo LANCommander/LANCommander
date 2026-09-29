@@ -474,7 +474,7 @@ All models are plain structs in the `lancommander` namespace. String fields that
 
 | Struct | Key Fields |
 |--------|------------|
-| `Game` | `id`, `title`, `sort_title`, `description`, `type`, `base_game_id`, `in_library`, `media`, `genres`, `developers`, `publishers` |
+| `Game` | `id`, `title`, `sort_title`, `description`, `type`, `install_to`, `show_in_library`, `directory_name`, `base_game_id`, `in_library`, `media`, `genres`, `developers`, `publishers` |
 | `GameManifest` | `id`, `title`, `version`, `actions`, `save_paths`, `redistributables` |
 | `Tool` | `id`, `name`, `description`, `archives`, `scripts` |
 | `Archive` | `id`, `version`, `changelog`, `compressed_size`, `uncompressed_size` |
@@ -529,7 +529,8 @@ All models are plain structs in the `lancommander` namespace. String fields that
 
 | Enum | Values |
 |------|--------|
-| `GameType` | `MainGame`, `Expansion`, `StandaloneExpansion`, `Mod`, `StandaloneMod` |
+| `GameType` | `MainGame`, `Expansion`, `Mod` (`StandaloneExpansion`, `StandaloneMod` are legacy; use `install_to` and `show_in_library`) |
+| `GameInstallLocation` | `OwnDirectory`, `BaseGameDirectory`, `SubDirectory` |
 | `MediaType` | `Icon`, `Cover`, `Background`, `Avatar`, `Logo`, `Manual`, `Thumbnail`, `PageImage`, `Grid`, `Screenshot`, `Video` |
 | `ScriptType` | `Install`, `Uninstall`, `NameChange`, `KeyChange`, `SaveUpload`, `SaveDownload`, `DetectInstall`, `BeforeStart`, `AfterStop`, `GameStarted`, `GameStopped`, `UserRegistration`, `UserLogin`, `ApplicationStart`, `Package`, `RunWrapper`, `Unknown` |
 | `MultiplayerType` | `Local`, `LAN`, `Online` |

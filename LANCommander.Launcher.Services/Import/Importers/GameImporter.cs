@@ -37,6 +37,20 @@ public class GameImporter(
             (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
     }
 
+    /// <summary>
+    /// Manifests from servers that predate InstallTo/ShowInLibrary only carry a (possibly legacy)
+    /// Type; derive the install behavior from it.
+    /// </summary>
+    private static void ApplyInstallBehavior(Data.Models.Game game, Game record)
+    {
+        var hasBaseGame = record.BaseGameId != Guid.Empty || !String.IsNullOrWhiteSpace(record.BaseGame);
+        var resolved = GameTypeHelper.FromLegacyType(record.Type, hasBaseGame);
+
+        game.Type = resolved.Type;
+        game.InstallTo = record.InstallTo ?? resolved.InstallTo;
+        game.ShowInLibrary = record.ShowInLibrary ?? resolved.ShowInLibrary;
+    }
+
     public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)
     {
         try
@@ -62,7 +76,9 @@ public class GameImporter(
                 ImportedOn = DateTime.UtcNow,
                 LatestVersion = importItemInfo.Record.Version,
             };
-            
+
+            ApplyInstallBehavior(game, importItemInfo.Record);
+
             await gameService.AddAsync(game);
             await UpdateRelationships(importItemInfo.Record);
             await libraryService.AddToLibraryAsync(game);
@@ -94,6 +110,8 @@ public class GameImporter(
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
+
+            ApplyInstallBehavior(existing, importItemInfo.Record);
 
             await gameService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record, existing);

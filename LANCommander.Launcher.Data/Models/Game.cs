@@ -11,7 +11,6 @@ namespace LANCommander.Launcher.Data.Models
         public string Title { get; set; }
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }
-        [Display(Name = "Directory Name")]
         public string? Description { get; set; }
         public string? Notes { get; set; }
 
@@ -25,6 +24,8 @@ namespace LANCommander.Launcher.Data.Models
         public DateTime? ReleasedOn { get; set; }
 
         public GameType Type { get; set; }
+        public GameInstallLocation InstallTo { get; set; }
+        public bool ShowInLibrary { get; set; } = true;
 
         public string? OptionSchema { get; set; }
         public string? Options { get; set; }

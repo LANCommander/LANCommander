@@ -89,6 +89,12 @@ public partial class GameItemViewModel : ViewModelBase
     [ObservableProperty]
     private GameType _type;
 
+    /// <summary>
+    /// Whether the game gets its own entry in the depot and library. Addons that aren't shown
+    /// are only offered when installing their base game.
+    /// </summary>
+    public bool ShowInLibrary { get; set; } = true;
+
     public GameItemViewModel() { }
 
     public GameItemViewModel(SDK.Models.DepotGame game, string? coverPath = null, string? coverMimeType = null, bool inLibrary = false, bool showInLibraryBadge = true)
@@ -99,6 +105,7 @@ public partial class GameItemViewModel : ViewModelBase
         SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
         ReleasedOn = game.ReleasedOn;
         Type = game.Type;
+        ShowInLibrary = game.ShowInLibrary;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
@@ -124,6 +131,7 @@ public partial class GameItemViewModel : ViewModelBase
         SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
         ReleasedOn = game.ReleasedOn;
         Type = game.Type;
+        ShowInLibrary = game.ShowInLibrary;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;
@@ -149,6 +157,7 @@ public partial class GameItemViewModel : ViewModelBase
         SortTitle = game.SortTitle ?? game.Title ?? string.Empty;
         ReleasedOn = game.ReleasedOn ?? DateTime.MinValue;
         Type = game.Type;
+        ShowInLibrary = game.ShowInLibrary;
         Singleplayer = game.Singleplayer;
         Genres = game.Genres != null ? string.Join(", ", game.Genres.Select(g => g.Name)) : string.Empty;
         Collections = game.Collections != null ? string.Join(", ", game.Collections.Select(c => c.Name)) : string.Empty;

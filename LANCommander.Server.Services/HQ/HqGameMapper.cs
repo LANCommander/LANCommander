@@ -15,8 +15,9 @@ public static class HqGameMapper
             Description = dto.Description,
             ReleasedOn = dto.ReleasedOn ?? default,
             Singleplayer = dto.Singleplayer,
-            Type = MapGameType(dto.Type),
         };
+
+        (game.Type, game.InstallTo, game.ShowInLibrary) = MapGameType(dto.Type);
 
         if (dto.IGDBId.HasValue)
             game.ExternalIds = new List<GameExternalId>
@@ -48,14 +49,13 @@ public static class HqGameMapper
         return game;
     }
 
-    private static SDK.Enums.GameType MapGameType(HqModels.GameType hqType) => hqType switch
+    private static (SDK.Enums.GameType, SDK.Enums.GameInstallLocation?, bool?) MapGameType(HqModels.GameType hqType) => hqType switch
     {
-        HqModels.GameType.MainGame => SDK.Enums.GameType.MainGame,
-        HqModels.GameType.Addon => SDK.Enums.GameType.Expansion,
-        HqModels.GameType.Expansion => SDK.Enums.GameType.Expansion,
-        HqModels.GameType.StandaloneExpansion => SDK.Enums.GameType.StandaloneExpansion,
-        HqModels.GameType.Mod => SDK.Enums.GameType.Mod,
-        _ => SDK.Enums.GameType.MainGame,
+        HqModels.GameType.Addon => (SDK.Enums.GameType.Expansion, SDK.Enums.GameInstallLocation.BaseGameDirectory, false),
+        HqModels.GameType.Expansion => (SDK.Enums.GameType.Expansion, SDK.Enums.GameInstallLocation.BaseGameDirectory, false),
+        HqModels.GameType.StandaloneExpansion => (SDK.Enums.GameType.Expansion, SDK.Enums.GameInstallLocation.OwnDirectory, true),
+        HqModels.GameType.Mod => (SDK.Enums.GameType.Mod, SDK.Enums.GameInstallLocation.BaseGameDirectory, false),
+        _ => (SDK.Enums.GameType.MainGame, SDK.Enums.GameInstallLocation.OwnDirectory, true),
     };
 
     private static MultiplayerMode MapMultiplayerMode(HqModels.MultiplayerModeDto dto) => new()

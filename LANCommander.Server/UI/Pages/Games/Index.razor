@@ -54,7 +54,7 @@
                            @bind-Total="Total"
                            SearchProperty="g => g.Title"
                            SearchPlaceholder="Search titles"
-                           Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
+                           Children="(g, dg) => dg.BaseGameId == g.Id && dg.Type != GameType.MainGame && !dg.ShowInLibrary"
                            ChildSummary="children => GameListFormat.ChildSummary(children)"
                            Query="_query"
                            Group="g => g.TitleInitial"
@@ -347,8 +347,8 @@
         }
     }
 
-    /// <summary>Expansions and mods, listed under their base game.</summary>
-    static bool IsChild(Game game) => game.BaseGameId != null && game.BaseGameId != Guid.Empty && game.IsAddon;
+    /// <summary>Addons not shown in the library on their own, listed under their base game.</summary>
+    static bool IsChild(Game game) => game.BaseGameId != null && game.BaseGameId != Guid.Empty && game.IsAddon && !game.ShowInLibrary;
 
     static bool MissingCover(Game game) => game.Media != null && game.Media.All(m => m.Type != MediaType.Cover);
 

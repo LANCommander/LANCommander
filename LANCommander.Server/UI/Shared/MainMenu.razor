@@ -119,9 +119,9 @@
         {
             await using var context = await DatabaseContextFactory.CreateDbContextAsync();
 
-            // The same rows the Games page lists: base games, with expansions and mods under them
+            // The same rows the Games page lists (GameFilters.Listed)
             _games = await context.Set<Game>().CountAsync(g =>
-                g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod));
+                g.BaseGameId == null || g.BaseGameId == Guid.Empty || g.Type == GameType.MainGame || g.ShowInLibrary);
 
             _openIssues = await context.Set<Issue>().CountAsync(i => i.ResolvedOn == null);
 

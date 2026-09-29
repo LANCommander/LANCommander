@@ -106,10 +106,11 @@ namespace LANCommander.Launcher.Services
 
                     await gameClient.UninstallAsync(game.InstallDirectory, game.Id);
 
-                    // Only addons that share the base game's install directory (Mod/Expansion)
-                    // may clean up orphaned base game files. Standalone types keep an independent
-                    // lifecycle, so uninstalling them must leave the base game installed.
-                    if (game.BaseGameId.HasValue && (game.Type == GameType.Mod || game.Type == GameType.Expansion))
+                    // Only addons that are extracted into the base game's install directory and
+                    // aren't shown in the library may clean up orphaned base game files. Addons
+                    // shown in the library keep an independent lifecycle, so uninstalling them
+                    // must leave the base game installed.
+                    if (game.BaseGameId.HasValue && game.Type != GameType.MainGame && game.InstallTo == GameInstallLocation.BaseGameDirectory && !game.ShowInLibrary)
                     {
                         var libraryService = serviceProvider.GetService<LibraryService>();
                         var isInstalled = await libraryService!.IsInstalledAsync(game.BaseGameId.Value);

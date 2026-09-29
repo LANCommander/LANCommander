@@ -165,9 +165,7 @@ public partial class DepotViewModel : ViewModelBase
             
             foreach (var item in depotItems ?? [])
             {
-                if (item.DataItem is DepotGame dg &&
-                    dg.Type != GameType.Mod &&
-                    dg.Type != GameType.Expansion)
+                if (item.DataItem is DepotGame dg && dg.ShowInLibrary)
                     allGames.Add(dg);
             }
 
@@ -330,7 +328,7 @@ public partial class DepotViewModel : ViewModelBase
 
         var localGames = await gameService.GetAsync() ?? [];
 
-        foreach (var game in localGames.OrderBy(g => g.SortTitle ?? g.Title))
+        foreach (var game in localGames.Where(g => g.ShowInLibrary).OrderBy(g => g.SortTitle ?? g.Title))
         {
             string? GetLocalPath(MediaType type)
             {

@@ -121,21 +121,21 @@ public class FilterServiceTests
     }
 
     [Fact]
-    public void FilterLibraryItems_excludes_non_main_game_types()
+    public void FilterLibraryItems_excludes_addons_not_shown_in_library()
     {
         var subject = CreateSubject();
 
         var items = new[]
         {
-            GameFactory.Make("Half-Life",   type: GameType.MainGame).AsListItem(),
-            GameFactory.Make("Opposing Force", type: GameType.Expansion).AsListItem(),
-            GameFactory.Make("Blue Shift",  type: GameType.StandaloneExpansion).AsListItem(),
+            GameFactory.Make("Half-Life",      type: GameType.MainGame).AsListItem(),
+            GameFactory.Make("Opposing Force", type: GameType.Expansion, showInLibrary: false).AsListItem(),
+            GameFactory.Make("Blue Shift",     type: GameType.Expansion, showInLibrary: true).AsListItem(),
+            GameFactory.Make("Counter-Strike", type: GameType.Mod,       showInLibrary: true).AsListItem(),
+            GameFactory.Make("Day of Defeat",  type: GameType.Mod,       showInLibrary: false).AsListItem(),
         };
 
         var names = subject.FilterLibraryItems(items).Select(i => i.Name).ToList();
 
-        names.ShouldContain("Half-Life");
-        names.ShouldContain("Blue Shift");
-        names.ShouldNotContain("Opposing Force");
+        names.ShouldBe(["Half-Life", "Blue Shift", "Counter-Strike"], ignoreOrder: true);
     }
 }

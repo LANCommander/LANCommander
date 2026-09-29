@@ -555,6 +555,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("InstallTo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("KeyAllocationMethod")
                         .HasColumnType("INTEGER");
 
@@ -569,6 +572,9 @@ namespace LANCommander.Migrations
 
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("ShowInLibrary")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("Singleplayer")
                         .HasColumnType("INTEGER");

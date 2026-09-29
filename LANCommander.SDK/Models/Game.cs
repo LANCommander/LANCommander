@@ -17,6 +17,8 @@ namespace LANCommander.SDK.Models
         public bool InLibrary { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
+        public GameInstallLocation InstallTo { get; set; }
+        public bool ShowInLibrary { get; set; } = true;
         public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
         public string OptionSchema { get; set; }
@@ -46,8 +48,8 @@ namespace LANCommander.SDK.Models
         {
             get
             {
-                return Type == GameType.Expansion || Type == GameType.Mod;
+                return Type != GameType.MainGame;
             }
-        } 
+        }
     }
 }

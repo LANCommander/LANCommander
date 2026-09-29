@@ -28,6 +28,7 @@ public sealed record FixtureGame(
     public bool Installed { get; init; }
     public bool UpdateAvailable { get; init; }
     public GameType Type { get; init; } = GameType.MainGame;
+    public bool ShowInLibrary { get; init; } = true;
 
     public Guid Id => FixtureGames.IdFor(Title);
 
@@ -53,6 +54,7 @@ public sealed record FixtureGame(
         Description = Description,
         ReleasedOn = ReleasedOn,
         Type = Type,
+        ShowInLibrary = ShowInLibrary,
         Singleplayer = Singleplayer,
         Genres = Genres,
         Collections = Collections,
@@ -260,6 +262,7 @@ public static class FixtureGames
         "The Italian campaign, with new vehicles and armies.")
     {
         Type = GameType.Expansion,
+        ShowInLibrary = false,
         LanPlayers = 64,
     };
 

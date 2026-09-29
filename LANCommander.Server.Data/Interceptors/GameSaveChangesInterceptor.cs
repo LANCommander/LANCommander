@@ -18,11 +18,13 @@ namespace LANCommander.Server.Data.Interceptors
                 {
                     var game = entry.Entity;
 
-                    // If the game type is MainGame, clear the BaseGame relationship.
+                    // Main games have no base game, get their own directory, and are always listed
                     if (game.Type == GameType.MainGame)
                     {
                         game.BaseGame = null;
                         game.BaseGameId = null;
+                        game.InstallTo = GameInstallLocation.OwnDirectory;
+                        game.ShowInLibrary = true;
                     }
                     // prevent recursion, referencing itself as base
                     else if (game.BaseGameId == game.Id)

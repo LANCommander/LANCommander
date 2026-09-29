@@ -18,7 +18,8 @@ internal static class GameFactory
         IEnumerable<Company>? publishers = null,
         IEnumerable<Platform>? platforms = null,
         IEnumerable<MultiplayerMode>? multiplayerModes = null,
-        GameType type = GameType.MainGame)
+        GameType type = GameType.MainGame,
+        bool showInLibrary = true)
     {
         return new Game
         {
@@ -31,6 +32,7 @@ internal static class GameFactory
             Singleplayer = singleplayer,
             Engine = engine,
             Type = type,
+            ShowInLibrary = showInLibrary,
             Genres = genres?.ToList() ?? new List<Genre>(),
             Tags = tags?.ToList() ?? new List<Tag>(),
             Developers = developers?.ToList() ?? new List<Company>(),

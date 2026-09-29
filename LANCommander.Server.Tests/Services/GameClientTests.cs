@@ -23,7 +23,9 @@ public class GameClientTests(ApplicationFixture fixture) : BaseTest(fixture)
             game.SortTitle.ShouldBe("Lord of the Rings: The Battle for Middle-earth II - The Rise of the Witch-king");
             game.Description.ShouldBe(
                 "In this add-on for The Lord of the Rings: The Battle for Middle-Earth II it is your goal to lead the great armies of the Witch-King called the Angmar to victory. But there are also other mentionable additions and changes which come with this add-on:\n\nAll six factions from the main game now have access to new units and heroes like Prince Brand a Dwarven captain or the Uruk Deathbringers on the side of Isengard which are powerful two-handed swords-fighters.");
-            game.Type.ShouldBe(GameType.StandaloneExpansion);
+            game.Type.ShouldBe(GameType.Expansion);
+            game.InstallTo.ShouldBe(GameInstallLocation.OwnDirectory);
+            game.ShowInLibrary.ShouldBeTrue();
             game.ReleasedOn.Value.Year.ShouldBe(2006);
             game.ReleasedOn.Value.Month.ShouldBe(11);
             game.ReleasedOn.Value.Day.ShouldBe(28);

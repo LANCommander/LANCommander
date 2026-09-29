@@ -238,7 +238,7 @@ public static class GameEndpoints
             var dataActions = new List<Data.Models.Action>();
 
             dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
-            dataActions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
+            dataActions.AddRange(game.Addons.OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
 
             var mappedActions = dataActions.Select(sdkMapper.ToSdk).ToList();
 
@@ -281,7 +281,7 @@ public static class GameEndpoints
                 .Include(g => g.Archives)
                 .AsSplitQuery()
                 .AsNoTracking()
-                .GetAsync(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
+                .GetAsync(g => g.BaseGameId == id && g.Type != GameType.MainGame && !g.ShowInLibrary);
 
             return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Games", $"Games/{id}"]);

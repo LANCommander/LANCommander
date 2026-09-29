@@ -20,6 +20,7 @@ namespace LANCommander.SDK.Models
         public DateTime ReleasedOn { get; set; }
         public bool InLibrary { get; set; }
         public GameType Type { get; set; }
+        public bool ShowInLibrary { get; set; } = true;
         public Media Cover { get; set; }
         public IEnumerable<Collection> Collections { get; set; }
         public IEnumerable<Company> Developers { get; set; }

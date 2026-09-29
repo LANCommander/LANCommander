@@ -67,6 +67,7 @@ public static class LcxBuilderService
         
         manifest.Id = manifest.Id == Guid.Empty ? Guid.NewGuid() : manifest.Id;
         manifest.ManifestVersion = "1.0.0";
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Game>(VersionHelper.GetCurrentVersion().ToString());
         manifest.CreatedOn = DateTime.UtcNow;
         manifest.CreatedBy = "LANCommander.Packager";
         manifest.UpdatedOn = DateTime.UtcNow;

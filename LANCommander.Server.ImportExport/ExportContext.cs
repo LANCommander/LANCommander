@@ -414,6 +414,7 @@ public class ExportContext(
         var manifest = await Games.ExportAsync(game.Id);
 
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Game>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {
@@ -466,6 +467,7 @@ public class ExportContext(
         var manifest = await Redistributables.ExportAsync(redistributable.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Redistributable>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {
@@ -483,6 +485,7 @@ public class ExportContext(
         var manifest = await Servers.ExportAsync(server.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Server>(manifest.ManifestVersion);
 
         foreach (var queueItem in _queue)
         {
@@ -504,6 +507,7 @@ public class ExportContext(
         var manifest = await Tools.ExportAsync(tool.Id);
         
         manifest.ManifestVersion = VersionHelper.GetCurrentVersion().ToString();
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Tool>(manifest.ManifestVersion);
         
         foreach (var queueItem in _queue)
         {

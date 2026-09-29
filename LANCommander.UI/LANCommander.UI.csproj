@@ -1,12 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-<<<<<<< HEAD
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-
   <ItemGroup>
     <PowerShellCompletionsOutput Include="Components\MonacoCodeEditor\PowerShellCompletions.g.ts" />
   </ItemGroup>
@@ -14,9 +7,6 @@
   <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources"
           Inputs="$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\**\*.cs"
           Outputs="@(PowerShellCompletionsOutput)">
-=======
-  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
->>>>>>> origin/main
     <Message Text="Generating PowerShell completion data" Importance="high" />
     <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
   </Target>

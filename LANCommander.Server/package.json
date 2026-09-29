@@ -4,7 +4,7 @@
   "description": "The admin UI for the LANCommander digital game distribution platform",
   "main": "index.js",
   "scripts": {
-    "package": "webpack"
+    "package": "vite build"
   },
   "repository": {
     "type": "git",
@@ -17,12 +17,7 @@
   },
   "homepage": "https://github.com/LANCommander/LANCommander#readme",
   "devDependencies": {
-    "cli-loader": "^1.1.1",
-    "css-loader": "^7.1.2",
-    "mini-css-extract-plugin": "^2.9.2",
     "sass": "^1.85.1",
-    "sass-loader": "^16.0.5",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1"
+    "vite": "^6.3.5"
   }
 }
